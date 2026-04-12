@@ -31,7 +31,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -89,7 +89,7 @@ struct UniversePoly {
 
   public:
     // CREATORS
-    explicit poption(Pnone _v) : d_v_(std::move(_v)) {}
+    explicit poption(Pnone _v) : d_v_(_v) {}
 
     explicit poption(Psome _v) : d_v_(std::move(_v)) {}
 
@@ -161,16 +161,17 @@ struct UniversePoly {
 
   static inline const std::shared_ptr<poption<unsigned int>> test_map_some =
       poption_map<unsigned int, unsigned int>(
-          [](unsigned int n) { return (n + 1u); },
+          [](const unsigned int n) { return (n + 1u); },
           poption<unsigned int>::psome(5u));
   static inline const std::shared_ptr<poption<unsigned int>> test_map_none =
       poption_map<unsigned int, unsigned int>(
-          [](unsigned int n) { return (n + 1u); },
+          [](const unsigned int n) { return (n + 1u); },
           poption<unsigned int>::pnone());
   static inline const std::shared_ptr<poption<unsigned int>> test_bind =
       poption_bind<unsigned int, unsigned int>(
-          poption<unsigned int>::psome(3u),
-          [](unsigned int n) { return poption<unsigned int>::psome((n + n)); });
+          poption<unsigned int>::psome(3u), [](const unsigned int n) {
+            return poption<unsigned int>::psome((n + n));
+          });
 
   template <typename T1>
   __attribute__((pure)) static unsigned int

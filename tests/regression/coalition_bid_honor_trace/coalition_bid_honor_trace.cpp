@@ -562,8 +562,8 @@ CoalitionBidHonorTraceCase::force_metrics(
         List<std::shared_ptr<CoalitionBidHonorTraceCase::Unit>>> &f) {
   return f->template fold_right<
       std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics>>(
-      [](std::shared_ptr<CoalitionBidHonorTraceCase::Unit> u,
-         std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics> acc) {
+      [](const std::shared_ptr<CoalitionBidHonorTraceCase::Unit> &u,
+         const std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics> &acc) {
         return metrics_add(unit_to_metrics(u), acc);
       },
       empty_metrics);
@@ -582,9 +582,8 @@ CoalitionBidHonorTraceCase::coalition_force(
         &c) {
   return c
       ->template flat_map<std::shared_ptr<CoalitionBidHonorTraceCase::Unit>>(
-          [](std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember> c0) {
-            return c0->cm_force;
-          });
+          [](const std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>
+                 &c0) { return c0->cm_force; });
 }
 
 std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics>
@@ -600,8 +599,8 @@ __attribute__((pure)) bool CoalitionBidHonorTraceCase::coalition_contains_clan(
         List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>> &c,
     const CoalitionBidHonorTraceCase::Clan clan) {
   return c->existsb(
-      [=](std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>
-              m) mutable { return clan_eqb(m->cm_clan, clan); });
+      [=](const std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>
+              &m) mutable { return clan_eqb(m->cm_clan, clan); });
 }
 
 __attribute__((pure)) unsigned int
@@ -723,9 +722,10 @@ CoalitionBidHonorTraceCase::valid_coalition_member_bid_b(
               force_metrics(cbid->cmb_new_force),
               force_metrics(
                   c->template map<CoalitionBidHonorTraceCase::Force>(
-                       [](std::shared_ptr<
-                           CoalitionBidHonorTraceCase::CoalitionMember>
-                              c0) { return c0->cm_force; })
+                       [](const std::shared_ptr<
+                           CoalitionBidHonorTraceCase::CoalitionMember> &c0) {
+                         return c0->cm_force;
+                       })
                       ->nth(cbid->cmb_member_index,
                             List<std::shared_ptr<
                                 CoalitionBidHonorTraceCase::Unit>>::nil()))));

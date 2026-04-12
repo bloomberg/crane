@@ -33,7 +33,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -402,7 +402,7 @@ struct Cotree {
   static inline const unsigned int test_doubled_root =
       sample_cotree
           ->template comap_cotree<unsigned int>(
-              [](unsigned int n) { return (n * 2u); })
+              [](const unsigned int n) { return (n * 2u); })
           ->root();
   static std::shared_ptr<colist<unsigned int>> nats(const unsigned int n);
   static inline const std::shared_ptr<List<unsigned int>> test_first_five =

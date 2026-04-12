@@ -77,7 +77,7 @@ struct InductiveInModule {
 
       public:
         // CREATORS
-        explicit option(None _v) : d_v_(std::move(_v)) {}
+        explicit option(None _v) : d_v_(_v) {}
 
         explicit option(Some _v) : d_v_(std::move(_v)) {}
 

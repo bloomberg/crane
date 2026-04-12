@@ -31,7 +31,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -149,43 +149,43 @@ struct InstructionClassifiers {
 
     explicit instr_acc(BBL _v) : d_v_(std::move(_v)) {}
 
-    explicit instr_acc(SBM _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(SBM _v) : d_v_(_v) {}
 
-    explicit instr_acc(RDM _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(RDM _v) : d_v_(_v) {}
 
-    explicit instr_acc(RDR _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(RDR _v) : d_v_(_v) {}
 
-    explicit instr_acc(ADM _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(ADM _v) : d_v_(_v) {}
 
-    explicit instr_acc(RD0 _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(RD0 _v) : d_v_(_v) {}
 
-    explicit instr_acc(RD1 _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(RD1 _v) : d_v_(_v) {}
 
-    explicit instr_acc(RD2 _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(RD2 _v) : d_v_(_v) {}
 
-    explicit instr_acc(RD3 _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(RD3 _v) : d_v_(_v) {}
 
-    explicit instr_acc(CLB _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(CLB _v) : d_v_(_v) {}
 
-    explicit instr_acc(CMA _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(CMA _v) : d_v_(_v) {}
 
-    explicit instr_acc(IAC _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(IAC _v) : d_v_(_v) {}
 
-    explicit instr_acc(DAC _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(DAC _v) : d_v_(_v) {}
 
-    explicit instr_acc(RAL _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(RAL _v) : d_v_(_v) {}
 
-    explicit instr_acc(RAR _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(RAR _v) : d_v_(_v) {}
 
-    explicit instr_acc(TCC _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(TCC _v) : d_v_(_v) {}
 
-    explicit instr_acc(TCS _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(TCS _v) : d_v_(_v) {}
 
-    explicit instr_acc(DAA _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(DAA _v) : d_v_(_v) {}
 
-    explicit instr_acc(KBP _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(KBP _v) : d_v_(_v) {}
 
-    explicit instr_acc(NOP_acc _v) : d_v_(std::move(_v)) {}
+    explicit instr_acc(NOP_acc _v) : d_v_(_v) {}
 
     static std::shared_ptr<instr_acc> ldm(unsigned int a0) {
       return std::make_shared<instr_acc>(LDM{std::move(a0)});
@@ -464,19 +464,19 @@ struct InstructionClassifiers {
 
   public:
     // CREATORS
-    explicit instr_ram(WRM _v) : d_v_(std::move(_v)) {}
+    explicit instr_ram(WRM _v) : d_v_(_v) {}
 
-    explicit instr_ram(WMP _v) : d_v_(std::move(_v)) {}
+    explicit instr_ram(WMP _v) : d_v_(_v) {}
 
-    explicit instr_ram(WR0 _v) : d_v_(std::move(_v)) {}
+    explicit instr_ram(WR0 _v) : d_v_(_v) {}
 
-    explicit instr_ram(WR1 _v) : d_v_(std::move(_v)) {}
+    explicit instr_ram(WR1 _v) : d_v_(_v) {}
 
-    explicit instr_ram(WR2 _v) : d_v_(std::move(_v)) {}
+    explicit instr_ram(WR2 _v) : d_v_(_v) {}
 
-    explicit instr_ram(WR3 _v) : d_v_(std::move(_v)) {}
+    explicit instr_ram(WR3 _v) : d_v_(_v) {}
 
-    explicit instr_ram(NOP_ram _v) : d_v_(std::move(_v)) {}
+    explicit instr_ram(NOP_ram _v) : d_v_(_v) {}
 
     explicit instr_ram(ADD_ram _v) : d_v_(std::move(_v)) {}
 
@@ -632,7 +632,7 @@ struct InstructionClassifiers {
 
     explicit instr_regs(ISZ _v) : d_v_(std::move(_v)) {}
 
-    explicit instr_regs(NOP_regs _v) : d_v_(std::move(_v)) {}
+    explicit instr_regs(NOP_regs _v) : d_v_(_v) {}
 
     explicit instr_regs(ADD_regs _v) : d_v_(std::move(_v)) {}
 
@@ -815,7 +815,7 @@ struct InstructionClassifiers {
 
     explicit instr_jump(ADD_jump _v) : d_v_(std::move(_v)) {}
 
-    explicit instr_jump(NOP_jump _v) : d_v_(std::move(_v)) {}
+    explicit instr_jump(NOP_jump _v) : d_v_(_v) {}
 
     static std::shared_ptr<instr_jump> jcn(unsigned int a0, unsigned int a1) {
       return std::make_shared<instr_jump>(JCN{std::move(a0), std::move(a1)});

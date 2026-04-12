@@ -17,7 +17,7 @@ LoopifyNestedConstructs::multi_let(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -29,8 +29,8 @@ LoopifyNestedConstructs::multi_let(const unsigned int n) {
                               unsigned int n_ = n - 1;
                               unsigned int b = (n_ * 2u);
                               unsigned int c = (b + 3u);
-                              _stack.push_back(_Call1{c});
-                              _stack.push_back(_Enter{n_});
+                              _stack.emplace_back(_Call1{c});
+                              _stack.emplace_back(_Enter{n_});
                             }
                           },
                           [&](_Call1 _f) { _result = (_f._s0 + _result); }},
@@ -115,7 +115,7 @@ LoopifyNestedConstructs::deep_nest(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -125,8 +125,8 @@ LoopifyNestedConstructs::deep_nest(const unsigned int n) {
                               _result = 0u;
                             } else {
                               unsigned int n_ = n - 1;
-                              _stack.push_back(_Call1{});
-                              _stack.push_back(_Enter{n_});
+                              _stack.emplace_back(_Call1{});
+                              _stack.emplace_back(_Enter{n_});
                             }
                           },
                           [&](_Call1) {
@@ -152,7 +152,7 @@ LoopifyNestedConstructs::let_nested(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -163,8 +163,8 @@ LoopifyNestedConstructs::let_nested(const unsigned int n) {
                             } else {
                               unsigned int n_ = n - 1;
                               unsigned int a = (n_ + 1u);
-                              _stack.push_back(_Call1{a});
-                              _stack.push_back(_Enter{n_});
+                              _stack.emplace_back(_Call1{a});
+                              _stack.emplace_back(_Enter{n_});
                             }
                           },
                           [&](_Call1 _f) { _result = (_f._s0 + _result); }},
@@ -189,7 +189,7 @@ LoopifyNestedConstructs::mod_pattern_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n, fuel});
+  _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -203,8 +203,8 @@ LoopifyNestedConstructs::mod_pattern_fuel(const unsigned int fuel,
                               if (n <= 1u) {
                                 _result = 1u;
                               } else {
-                                _stack.push_back(_Call1{n, 1u});
-                                _stack.push_back(_Enter{
+                                _stack.emplace_back(_Call1{n, 1u});
+                                _stack.emplace_back(_Enter{
                                     (((n - 1u) > n ? 0 : (n - 1u))), fuel_});
                               }
                             }
@@ -238,7 +238,7 @@ LoopifyNestedConstructs::tuple_constr(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::pair<std::pair<unsigned int, unsigned int>, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -249,8 +249,8 @@ LoopifyNestedConstructs::tuple_constr(const unsigned int n) {
                        _result = std::make_pair(std::make_pair(0u, 0u), 0u);
                      } else {
                        unsigned int n_ = n - 1;
-                       _stack.push_back(_Call1{n});
-                       _stack.push_back(_Enter{n_});
+                       _stack.emplace_back(_Call1{n});
+                       _stack.emplace_back(_Enter{n_});
                      }
                    },
                    [&](_Call1 _f) {
@@ -285,7 +285,7 @@ LoopifyNestedConstructs::alternating_ops(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -296,11 +296,11 @@ LoopifyNestedConstructs::alternating_ops(const unsigned int n) {
                             } else {
                               unsigned int n_ = n - 1;
                               if ((2u ? n % 2u : n) == 0u) {
-                                _stack.push_back(_Call1{n});
-                                _stack.push_back(_Enter{n_});
+                                _stack.emplace_back(_Call1{n});
+                                _stack.emplace_back(_Enter{n_});
                               } else {
-                                _stack.push_back(_Call2{(n * 2u)});
-                                _stack.push_back(_Enter{n_});
+                                _stack.emplace_back(_Call2{(n * 2u)});
+                                _stack.emplace_back(_Enter{n_});
                               }
                             }
                           },
@@ -331,7 +331,7 @@ LoopifyNestedConstructs::chained_comp_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _After, _Combine>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n, fuel});
+  _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -346,16 +346,16 @@ LoopifyNestedConstructs::chained_comp_fuel(const unsigned int fuel,
                        if (n <= 2u) {
                          _result = true;
                        } else {
-                         _stack.push_back(
+                         _stack.emplace_back(
                              _After{(((n - 1u) > n ? 0 : (n - 1u))), fuel_});
-                         _stack.push_back(
+                         _stack.emplace_back(
                              _Enter{(((n - 2u) > n ? 0 : (n - 2u))), fuel_});
                        }
                      }
                    },
                    [&](_After _f) {
-                     _stack.push_back(_Combine{_result});
-                     _stack.push_back(_Enter{_f._a0, _f._a1});
+                     _stack.emplace_back(_Combine{_result});
+                     _stack.emplace_back(_Enter{_f._a0, _f._a1});
                    },
                    [&](_Combine _f) { _result = (_result && _f._left); }},
         _frame);
@@ -389,7 +389,7 @@ LoopifyNestedConstructs::compute_with_lets(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -403,16 +403,16 @@ LoopifyNestedConstructs::compute_with_lets(const unsigned int n) {
                                 _result = 1u;
                               } else {
                                 unsigned int n__ = n_ - 1;
-                                _stack.push_back(_Call1{n__});
-                                _stack.push_back(_Enter{n_});
+                                _stack.emplace_back(_Call1{n__});
+                                _stack.emplace_back(_Enter{n_});
                               }
                             }
                           },
                           [&](_Call1 _f) {
                             unsigned int n__ = _f._s0;
                             unsigned int x = _result;
-                            _stack.push_back(_Call2{x});
-                            _stack.push_back(_Enter{n__});
+                            _stack.emplace_back(_Call2{x});
+                            _stack.emplace_back(_Enter{n__});
                           },
                           [&](_Call2 _f) {
                             unsigned int x = _f._s0;
@@ -438,7 +438,7 @@ LoopifyNestedConstructs::nested_match(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -452,8 +452,8 @@ LoopifyNestedConstructs::nested_match(const unsigned int n) {
                                 _result = 1u;
                               } else {
                                 unsigned int n__ = n_ - 1;
-                                _stack.push_back(_Call1{n});
-                                _stack.push_back(_Enter{n__});
+                                _stack.emplace_back(_Call1{n});
+                                _stack.emplace_back(_Enter{n__});
                               }
                             }
                           },

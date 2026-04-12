@@ -21,7 +21,7 @@ __attribute__((pure)) unsigned int LoopifyExpr::sum_shapes(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -54,8 +54,8 @@ __attribute__((pure)) unsigned int LoopifyExpr::sum_shapes(
                                   return _args0.d_a0;
                                 }},
                             _args.d_a0->v());
-                        _stack.push_back(_Call1{val});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{val});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -81,7 +81,7 @@ LoopifyExpr::count_by_shape(
   using _Frame = std::variant<_Enter, _Call1>;
   std::pair<std::pair<unsigned int, unsigned int>, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -99,8 +99,8 @@ LoopifyExpr::count_by_shape(
                       [&](const typename List<
                           std::shared_ptr<LoopifyExpr::shape>>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },

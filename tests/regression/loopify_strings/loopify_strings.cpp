@@ -112,7 +112,7 @@ LoopifyStrings::repeat_string(const std::shared_ptr<List<unsigned int>> &s,
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -123,8 +123,8 @@ LoopifyStrings::repeat_string(const std::shared_ptr<List<unsigned int>> &s,
                        _result = List<unsigned int>::nil();
                      } else {
                        unsigned int n_ = n - 1;
-                       _stack.push_back(_Call1{s});
-                       _stack.push_back(_Enter{n_});
+                       _stack.emplace_back(_Call1{s});
+                       _stack.emplace_back(_Enter{n_});
                      }
                    },
                    [&](_Call1 _f) { _result = append(_f._s0, _result); }},
@@ -149,7 +149,7 @@ LoopifyStrings::repeat_with_sep(std::shared_ptr<List<unsigned int>> s,
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -163,8 +163,8 @@ LoopifyStrings::repeat_with_sep(std::shared_ptr<List<unsigned int>> s,
                                 _result = std::move(s);
                               } else {
                                 unsigned int _x = n_ - 1;
-                                _stack.push_back(_Call1{s, sep});
-                                _stack.push_back(_Enter{n_});
+                                _stack.emplace_back(_Call1{s, sep});
+                                _stack.emplace_back(_Enter{n_});
                               }
                             }
                           },
@@ -194,7 +194,7 @@ std::shared_ptr<List<unsigned int>> LoopifyStrings::string_chain_fuel(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n, fuel});
+  _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -208,8 +208,8 @@ std::shared_ptr<List<unsigned int>> LoopifyStrings::string_chain_fuel(
                               if (n <= 0u) {
                                 _result = List<unsigned int>::nil();
                               } else {
-                                _stack.push_back(_Call1{s, sep, end_marker});
-                                _stack.push_back(_Enter{
+                                _stack.emplace_back(_Call1{s, sep, end_marker});
+                                _stack.emplace_back(_Enter{
                                     (((n - 1u) > n ? 0 : (n - 1u))), fuel_});
                               }
                             }
@@ -246,7 +246,7 @@ LoopifyStrings::reverse(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -261,9 +261,9 @@ LoopifyStrings::reverse(const std::shared_ptr<List<unsigned int>> &l) {
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{List<unsigned int>::cons(
+                        _stack.emplace_back(_Call1{List<unsigned int>::cons(
                             _args.d_a0, List<unsigned int>::nil())});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -290,7 +290,7 @@ LoopifyStrings::list_eq(const std::shared_ptr<List<unsigned int>> &l1,
   using _Frame = std::variant<_Enter, _Call1>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l2, l1});
+  _stack.emplace_back(_Enter{l2, l1});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -318,9 +318,9 @@ LoopifyStrings::list_eq(const std::shared_ptr<List<unsigned int>> &l1,
                                     -> void { _result = false; },
                                 [&](const typename List<unsigned int>::Cons
                                         &_args0) -> void {
-                                  _stack.push_back(
+                                  _stack.emplace_back(
                                       _Call1{_args.d_a0 == _args0.d_a0});
-                                  _stack.push_back(
+                                  _stack.emplace_back(
                                       _Enter{_args0.d_a1, _args.d_a1});
                                 }},
                             l2->v());
@@ -413,7 +413,7 @@ std::shared_ptr<List<unsigned int>> LoopifyStrings::intercalate(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{ll});
+  _stack.emplace_back(_Enter{ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -438,8 +438,8 @@ std::shared_ptr<List<unsigned int>> LoopifyStrings::intercalate(
                                     -> void { _result = _args.d_a0; },
                                 [&](const typename List<std::shared_ptr<
                                         List<unsigned int>>>::Cons &) -> void {
-                                  _stack.push_back(_Call1{_args.d_a0, sep});
-                                  _stack.push_back(_Enter{_args.d_a1});
+                                  _stack.emplace_back(_Call1{_args.d_a0, sep});
+                                  _stack.emplace_back(_Enter{_args.d_a1});
                                 }},
                             _args.d_a1->v());
                       }},

@@ -34,7 +34,7 @@ struct FixPartialApp {
 
   public:
     // CREATORS
-    explicit tree(Leaf _v) : d_v_(std::move(_v)) {}
+    explicit tree(Leaf _v) : d_v_(_v) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
@@ -176,7 +176,7 @@ struct FixPartialApp {
   static inline const unsigned int map_partial_bug = []() {
     std::function<std::shared_ptr<tree>(std::shared_ptr<tree>)> g =
         [](const std::shared_ptr<tree> &_x0) -> std::shared_ptr<tree> {
-      return tree_map([](unsigned int x) { return (x + 1u); }, _x0);
+      return tree_map([](const unsigned int x) { return (x + 1u); }, _x0);
     };
     std::shared_ptr<tree> t1 = tree::node(tree::leaf(), 10u, tree::leaf());
     std::shared_ptr<tree> t2 = tree::node(tree::leaf(), 20u, tree::leaf());

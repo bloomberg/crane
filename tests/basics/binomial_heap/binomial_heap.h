@@ -33,7 +33,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -81,7 +81,7 @@ struct BinomialHeap {
     // CREATORS
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
-    explicit tree(Leaf _v) : d_v_(std::move(_v)) {}
+    explicit tree(Leaf _v) : d_v_(_v) {}
 
     static std::shared_ptr<tree> node(key a0, const std::shared_ptr<tree> &a1,
                                       const std::shared_ptr<tree> &a2) {
@@ -154,22 +154,23 @@ struct BinomialHeap {
   __attribute__((pure)) static priqueue unzip(const std::shared_ptr<tree> &t,
                                               F1 &&cont) {
     return std::visit(
-        Overloaded{[&](const typename tree::Node &_args)
-                       -> std::shared_ptr<List<std::shared_ptr<tree>>> {
-                     std::function<std::shared_ptr<List<std::shared_ptr<tree>>>(
-                         std::shared_ptr<List<std::shared_ptr<tree>>>)>
-                         f = [=](std::shared_ptr<List<std::shared_ptr<tree>>>
-                                     q) mutable {
-                           return List<std::shared_ptr<tree>>::cons(
-                               tree::node(_args.d_a0, _args.d_a1, tree::leaf()),
-                               cont(q));
-                         };
-                     return unzip(_args.d_a2, f);
-                   },
-                   [&](const typename tree::Leaf &)
-                       -> std::shared_ptr<List<std::shared_ptr<tree>>> {
-                     return cont(List<std::shared_ptr<tree>>::nil());
-                   }},
+        Overloaded{
+            [&](const typename tree::Node &_args)
+                -> std::shared_ptr<List<std::shared_ptr<tree>>> {
+              std::function<std::shared_ptr<List<std::shared_ptr<tree>>>(
+                  std::shared_ptr<List<std::shared_ptr<tree>>>)>
+                  f = [=](const std::shared_ptr<List<std::shared_ptr<tree>>>
+                              &q) mutable {
+                    return List<std::shared_ptr<tree>>::cons(
+                        tree::node(_args.d_a0, _args.d_a1, tree::leaf()),
+                        cont(q));
+                  };
+              return unzip(_args.d_a2, f);
+            },
+            [&](const typename tree::Leaf &)
+                -> std::shared_ptr<List<std::shared_ptr<tree>>> {
+              return cont(List<std::shared_ptr<tree>>::nil());
+            }},
         t->v());
   }
 

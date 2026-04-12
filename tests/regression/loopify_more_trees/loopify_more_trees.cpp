@@ -28,7 +28,7 @@ LoopifyMoreTrees::mirror(const std::shared_ptr<LoopifyMoreTrees::tree> &t) {
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<LoopifyMoreTrees::tree> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{t});
+  _stack.emplace_back(_Enter{t});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -42,14 +42,14 @@ LoopifyMoreTrees::mirror(const std::shared_ptr<LoopifyMoreTrees::tree> &t) {
                           -> void { _result = tree::leaf(); },
                       [&](const typename LoopifyMoreTrees::tree::Node &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args.d_a2, _args.d_a1});
-                        _stack.push_back(_Enter{_args.d_a0});
+                        _stack.emplace_back(_Call1{_args.d_a2, _args.d_a1});
+                        _stack.emplace_back(_Enter{_args.d_a0});
                       }},
                   t->v());
             },
             [&](_Call1 _f) {
-              _stack.push_back(_Call2{_result, _f._s1});
-              _stack.push_back(_Enter{_f._s0});
+              _stack.emplace_back(_Call2{_result, _f._s1});
+              _stack.emplace_back(_Enter{_f._s0});
             },
             [&](_Call2 _f) { _result = tree::node(_result, _f._s1, _f._s0); }},
         _frame);
@@ -79,7 +79,7 @@ __attribute__((pure)) bool LoopifyMoreTrees::same_shape(
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{t2, t1});
+  _stack.emplace_back(_Enter{t2, t1});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -108,9 +108,9 @@ __attribute__((pure)) bool LoopifyMoreTrees::same_shape(
                                         &) -> void { _result = false; },
                                 [&](const typename LoopifyMoreTrees::tree::Node
                                         &_args0) -> void {
-                                  _stack.push_back(
+                                  _stack.emplace_back(
                                       _Call1{_args0.d_a0, _args.d_a0});
-                                  _stack.push_back(
+                                  _stack.emplace_back(
                                       _Enter{_args0.d_a2, _args.d_a2});
                                 }},
                             t2->v());
@@ -118,8 +118,8 @@ __attribute__((pure)) bool LoopifyMoreTrees::same_shape(
                   t1->v());
             },
             [&](_Call1 _f) {
-              _stack.push_back(_Call2{_result});
-              _stack.push_back(_Enter{_f._s0, _f._s1});
+              _stack.emplace_back(_Call2{_result});
+              _stack.emplace_back(_Enter{_f._s0, _f._s1});
             },
             [&](_Call2 _f) { _result = (_result && _f._s0); }},
         _frame);
@@ -151,7 +151,7 @@ std::shared_ptr<List<unsigned int>> LoopifyMoreTrees::tree_to_list(
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{t});
+  _stack.emplace_back(_Enter{t});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -165,17 +165,17 @@ std::shared_ptr<List<unsigned int>> LoopifyMoreTrees::tree_to_list(
                           -> void { _result = List<unsigned int>::nil(); },
                       [&](const typename LoopifyMoreTrees::tree::Node &_args)
                           -> void {
-                        _stack.push_back(
+                        _stack.emplace_back(
                             _Call1{_args.d_a0,
                                    List<unsigned int>::cons(
                                        _args.d_a1, List<unsigned int>::nil())});
-                        _stack.push_back(_Enter{_args.d_a2});
+                        _stack.emplace_back(_Enter{_args.d_a2});
                       }},
                   t->v());
             },
             [&](_Call1 _f) {
-              _stack.push_back(_Call2{_result, _f._s1});
-              _stack.push_back(_Enter{_f._s0});
+              _stack.emplace_back(_Call2{_result, _f._s1});
+              _stack.emplace_back(_Enter{_f._s0});
             },
             [&](_Call2 _f) { _result = _result->app(_f._s1->app(_f._s0)); }},
         _frame);
@@ -208,7 +208,7 @@ __attribute__((pure)) unsigned int LoopifyMoreTrees::count_nodes(
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{t});
+  _stack.emplace_back(_Enter{t});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -222,14 +222,14 @@ __attribute__((pure)) unsigned int LoopifyMoreTrees::count_nodes(
                           -> void { _result = 0u; },
                       [&](const typename LoopifyMoreTrees::tree::Node &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args.d_a0, 1u});
-                        _stack.push_back(_Enter{_args.d_a2});
+                        _stack.emplace_back(_Call1{_args.d_a0, 1u});
+                        _stack.emplace_back(_Enter{_args.d_a2});
                       }},
                   t->v());
             },
             [&](_Call1 _f) {
-              _stack.push_back(_Call2{_result, _f._s1});
-              _stack.push_back(_Enter{_f._s0});
+              _stack.emplace_back(_Call2{_result, _f._s1});
+              _stack.emplace_back(_Enter{_f._s0});
             },
             [&](_Call2 _f) { _result = ((_f._s1 + _result) + _f._s0); }},
         _frame);
@@ -267,7 +267,7 @@ LoopifyMoreTrees::tree_max(std::shared_ptr<LoopifyMoreTrees::tree> t1,
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<LoopifyMoreTrees::tree> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{t2, t1});
+  _stack.emplace_back(_Enter{t2, t1});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -288,10 +288,10 @@ LoopifyMoreTrees::tree_max(std::shared_ptr<LoopifyMoreTrees::tree> t1,
                                         &) -> void { _result = std::move(t1); },
                                 [&](const typename LoopifyMoreTrees::tree::Node
                                         &_args0) -> void {
-                                  _stack.push_back(_Call1{
+                                  _stack.emplace_back(_Call1{
                                       _args0.d_a0, _args.d_a0,
                                       std::max(_args.d_a1, _args0.d_a1)});
-                                  _stack.push_back(
+                                  _stack.emplace_back(
                                       _Enter{_args0.d_a2, _args.d_a2});
                                 }},
                             t2->v());
@@ -299,8 +299,8 @@ LoopifyMoreTrees::tree_max(std::shared_ptr<LoopifyMoreTrees::tree> t1,
                   t1->v());
             },
             [&](_Call1 _f) {
-              _stack.push_back(_Call2{_result, _f._s2});
-              _stack.push_back(_Enter{_f._s0, _f._s1});
+              _stack.emplace_back(_Call2{_result, _f._s2});
+              _stack.emplace_back(_Enter{_f._s0, _f._s1});
             },
             [&](_Call2 _f) { _result = tree::node(_result, _f._s1, _f._s0); }},
         _frame);
@@ -330,7 +330,7 @@ __attribute__((pure)) unsigned int LoopifyMoreTrees::sum_of_max_branches(
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{t});
+  _stack.emplace_back(_Enter{t});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -344,14 +344,14 @@ __attribute__((pure)) unsigned int LoopifyMoreTrees::sum_of_max_branches(
                           -> void { _result = 0u; },
                       [&](const typename LoopifyMoreTrees::tree::Node &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args.d_a0, _args.d_a1});
-                        _stack.push_back(_Enter{_args.d_a2});
+                        _stack.emplace_back(_Call1{_args.d_a0, _args.d_a1});
+                        _stack.emplace_back(_Enter{_args.d_a2});
                       }},
                   t->v());
             },
             [&](_Call1 _f) {
-              _stack.push_back(_Call2{_result, _f._s1});
-              _stack.push_back(_Enter{_f._s0});
+              _stack.emplace_back(_Call2{_result, _f._s1});
+              _stack.emplace_back(_Enter{_f._s0});
             },
             [&](_Call2 _f) { _result = (_f._s1 + std::max(_result, _f._s0)); }},
         _frame);
@@ -383,7 +383,7 @@ LoopifyMoreTrees::insert_bst(const unsigned int x,
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<LoopifyMoreTrees::tree> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{t});
+  _stack.emplace_back(_Enter{t});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -400,11 +400,11 @@ LoopifyMoreTrees::insert_bst(const unsigned int x,
                       [&](const typename LoopifyMoreTrees::tree::Node &_args)
                           -> void {
                         if (x <= _args.d_a1) {
-                          _stack.push_back(_Call1{_args.d_a2, _args.d_a1});
-                          _stack.push_back(_Enter{_args.d_a0});
+                          _stack.emplace_back(_Call1{_args.d_a2, _args.d_a1});
+                          _stack.emplace_back(_Enter{_args.d_a0});
                         } else {
-                          _stack.push_back(_Call2{_args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
+                          _stack.emplace_back(_Call2{_args.d_a1, _args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a2});
                         }
                       }},
                   t->v());
@@ -430,7 +430,7 @@ LoopifyMoreTrees::build_bst(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<LoopifyMoreTrees::tree> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -443,8 +443,8 @@ LoopifyMoreTrees::build_bst(const std::shared_ptr<List<unsigned int>> &l) {
                                  -> void { _result = tree::leaf(); },
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
-                               _stack.push_back(_Call1{_args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a1});
+                               _stack.emplace_back(_Call1{_args.d_a0});
+                               _stack.emplace_back(_Enter{_args.d_a1});
                              }},
                          l->v());
                    },
@@ -504,7 +504,7 @@ std::shared_ptr<List<unsigned int>> LoopifyMoreTrees::flatten(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{ll});
+  _stack.emplace_back(_Enter{ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -522,8 +522,8 @@ std::shared_ptr<List<unsigned int>> LoopifyMoreTrees::flatten(
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args.d_a0});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args.d_a0});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   ll->v());
             },
@@ -657,7 +657,7 @@ LoopifyMoreTrees::concat_map_children(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::shared_ptr<LoopifyMoreTrees::tree>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{lt});
+  _stack.emplace_back(_Enter{lt});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -678,8 +678,8 @@ LoopifyMoreTrees::concat_map_children(
                       [&](const typename List<
                           std::shared_ptr<LoopifyMoreTrees::tree>>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{tree_children(_args.d_a0)});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{tree_children(_args.d_a0)});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   lt->v());
             },

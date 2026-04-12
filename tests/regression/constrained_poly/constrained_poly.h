@@ -51,7 +51,7 @@ struct ConstrainedPoly {
     // CREATORS
     explicit UOption(USome _v) : d_v_(std::move(_v)) {}
 
-    explicit UOption(UNone _v) : d_v_(std::move(_v)) {}
+    explicit UOption(UNone _v) : d_v_(_v) {}
 
     static std::shared_ptr<UOption<t_A>> usome(t_A a0) {
       return std::make_shared<UOption<t_A>>(USome{std::move(a0)});
@@ -116,7 +116,7 @@ struct ConstrainedPoly {
   static inline const bool test_snd = test_pair->usnd;
   static inline const std::shared_ptr<UOption<unsigned int>> test_umap =
       uoption_map<unsigned int, unsigned int>(
-          [](unsigned int n) { return (n + 1u); },
+          [](const unsigned int n) { return (n + 1u); },
           UOption<unsigned int>::usome(9u));
 };
 

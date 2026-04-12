@@ -24,7 +24,7 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::process_twice_fuel(
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -44,8 +44,8 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::process_twice_fuel(
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{_args, fuel_});
-                          _stack.push_back(_Enter{_args.d_a1, fuel_});
+                          _stack.emplace_back(_Call1{_args, fuel_});
+                          _stack.emplace_back(_Enter{_args.d_a1, fuel_});
                         }},
                     l->v());
               }
@@ -54,8 +54,8 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::process_twice_fuel(
               const typename List<unsigned int>::Cons _args = _f._s0;
               unsigned int fuel_ = _f._s1;
               std::shared_ptr<List<unsigned int>> first = _result;
-              _stack.push_back(_Call2{_args});
-              _stack.push_back(_Enter{std::move(first), fuel_});
+              _stack.emplace_back(_Call2{_args});
+              _stack.emplace_back(_Enter{std::move(first), fuel_});
             },
             [&](_Call2 _f) {
               const typename List<unsigned int>::Cons _args = _f._s0;
@@ -87,7 +87,7 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::double_append(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l2, l1});
+  _stack.emplace_back(_Enter{l2, l1});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -103,8 +103,8 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::double_append(
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args});
-                        _stack.push_back(_Enter{std::move(l2), _args.d_a1});
+                        _stack.emplace_back(_Call1{_args});
+                        _stack.emplace_back(_Enter{std::move(l2), _args.d_a1});
                       }},
                   l1->v());
             },
@@ -234,7 +234,7 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::collect_sorted(
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{t});
+  _stack.emplace_back(_Enter{t});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -248,14 +248,14 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::collect_sorted(
                           -> void { _result = List<unsigned int>::nil(); },
                       [&](const typename LoopifySpecialRecursion::tree::Node
                               &_args) -> void {
-                        _stack.push_back(_Call1{_args.d_a0, _args.d_a1});
-                        _stack.push_back(_Enter{_args.d_a2});
+                        _stack.emplace_back(_Call1{_args.d_a0, _args.d_a1});
+                        _stack.emplace_back(_Enter{_args.d_a2});
                       }},
                   t->v());
             },
             [&](_Call1 _f) {
-              _stack.push_back(_Call2{_result, _f._s1});
-              _stack.push_back(_Enter{_f._s0});
+              _stack.emplace_back(_Call2{_result, _f._s1});
+              _stack.emplace_back(_Enter{_f._s0});
             },
             [&](_Call2 _f) {
               _result = _result->app(List<unsigned int>::cons(_f._s1, _f._s0));
@@ -280,7 +280,7 @@ __attribute__((pure)) unsigned int LoopifySpecialRecursion::sum_odd_indices_aux(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{idx, l});
+  _stack.emplace_back(_Enter{idx, l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -297,10 +297,10 @@ __attribute__((pure)) unsigned int LoopifySpecialRecursion::sum_odd_indices_aux(
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
                         if ((2u ? idx % 2u : idx) == 1u) {
-                          _stack.push_back(_Call1{_args.d_a0});
-                          _stack.push_back(_Enter{(idx + 1u), _args.d_a1});
+                          _stack.emplace_back(_Call1{_args.d_a0});
+                          _stack.emplace_back(_Enter{(idx + 1u), _args.d_a1});
                         } else {
-                          _stack.push_back(_Enter{(idx + 1u), _args.d_a1});
+                          _stack.emplace_back(_Enter{(idx + 1u), _args.d_a1});
                         }
                       }},
                   l->v());
@@ -337,7 +337,7 @@ __attribute__((pure)) unsigned int LoopifySpecialRecursion::categorize_by(
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -351,15 +351,15 @@ __attribute__((pure)) unsigned int LoopifySpecialRecursion::categorize_by(
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
                                if (k < _args.d_a0) {
-                                 _stack.push_back(_Call1{3u});
-                                 _stack.push_back(_Enter{_args.d_a1});
+                                 _stack.emplace_back(_Call1{3u});
+                                 _stack.emplace_back(_Enter{_args.d_a1});
                                } else {
                                  if (_args.d_a0 == k) {
-                                   _stack.push_back(_Call2{2u});
-                                   _stack.push_back(_Enter{_args.d_a1});
+                                   _stack.emplace_back(_Call2{2u});
+                                   _stack.emplace_back(_Enter{_args.d_a1});
                                  } else {
-                                   _stack.push_back(_Call3{1u});
-                                   _stack.push_back(_Enter{_args.d_a1});
+                                   _stack.emplace_back(_Call3{1u});
+                                   _stack.emplace_back(_Enter{_args.d_a1});
                                  }
                                }
                              }},
@@ -431,7 +431,7 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::merge_levels(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{ll});
+  _stack.emplace_back(_Enter{ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -449,8 +449,8 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::merge_levels(
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args.d_a0});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args.d_a0});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   ll->v());
             },

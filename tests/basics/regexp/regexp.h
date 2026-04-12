@@ -32,7 +32,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -95,17 +95,17 @@ struct Matcher {
 
   public:
     // CREATORS
-    explicit regexp(Any _v) : d_v_(std::move(_v)) {}
+    explicit regexp(Any _v) : d_v_(_v) {}
 
     explicit regexp(Char _v) : d_v_(std::move(_v)) {}
 
-    explicit regexp(Eps _v) : d_v_(std::move(_v)) {}
+    explicit regexp(Eps _v) : d_v_(_v) {}
 
     explicit regexp(Cat _v) : d_v_(std::move(_v)) {}
 
     explicit regexp(Alt _v) : d_v_(std::move(_v)) {}
 
-    explicit regexp(Zero _v) : d_v_(std::move(_v)) {}
+    explicit regexp(Zero _v) : d_v_(_v) {}
 
     explicit regexp(Star _v) : d_v_(std::move(_v)) {}
 

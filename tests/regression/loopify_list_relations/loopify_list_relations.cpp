@@ -23,7 +23,7 @@ __attribute__((pure)) bool LoopifyListRelations::is_prefix_of(
   using _Frame = std::variant<_Enter, _Call1>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l2, l1});
+  _stack.emplace_back(_Enter{l2, l1});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -45,9 +45,9 @@ __attribute__((pure)) bool LoopifyListRelations::is_prefix_of(
                                     -> void { _result = false; },
                                 [&](const typename List<unsigned int>::Cons
                                         &_args0) -> void {
-                                  _stack.push_back(
+                                  _stack.emplace_back(
                                       _Call1{_args.d_a0 == _args0.d_a0});
-                                  _stack.push_back(
+                                  _stack.emplace_back(
                                       _Enter{_args0.d_a1, _args.d_a1});
                                 }},
                             l2->v());
@@ -273,7 +273,7 @@ LoopifyListRelations::list_eq(const std::shared_ptr<List<unsigned int>> &l1,
   using _Frame = std::variant<_Enter, _Call1>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l2, l1});
+  _stack.emplace_back(_Enter{l2, l1});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -301,9 +301,9 @@ LoopifyListRelations::list_eq(const std::shared_ptr<List<unsigned int>> &l1,
                                     -> void { _result = false; },
                                 [&](const typename List<unsigned int>::Cons
                                         &_args0) -> void {
-                                  _stack.push_back(
+                                  _stack.emplace_back(
                                       _Call1{_args.d_a0 == _args0.d_a0});
-                                  _stack.push_back(
+                                  _stack.emplace_back(
                                       _Enter{_args0.d_a1, _args.d_a1});
                                 }},
                             l2->v());
@@ -740,7 +740,7 @@ LoopifyListRelations::union_(const std::shared_ptr<List<unsigned int>> &l1,
                       using _Frame = std::variant<_Enter, _Call1>;
                       bool _result{};
                       std::vector<_Frame> _stack;
-                      _stack.push_back(_Enter{ys});
+                      _stack.emplace_back(_Enter{ys});
                       while (!_stack.empty()) {
                         _Frame _frame = std::move(_stack.back());
                         _stack.pop_back();
@@ -758,9 +758,9 @@ LoopifyListRelations::union_(const std::shared_ptr<List<unsigned int>> &l1,
                                           [&](const typename List<
                                               unsigned int>::Cons &_args)
                                               -> void {
-                                            _stack.push_back(
+                                            _stack.emplace_back(
                                                 _Call1{y == _args.d_a0});
-                                            _stack.push_back(
+                                            _stack.emplace_back(
                                                 _Enter{_args.d_a1});
                                           }},
                                       ys->v());
@@ -835,7 +835,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListRelations::intersection(
                       using _Frame = std::variant<_Enter, _Call1>;
                       bool _result{};
                       std::vector<_Frame> _stack;
-                      _stack.push_back(_Enter{ys});
+                      _stack.emplace_back(_Enter{ys});
                       while (!_stack.empty()) {
                         _Frame _frame = std::move(_stack.back());
                         _stack.pop_back();
@@ -853,9 +853,9 @@ std::shared_ptr<List<unsigned int>> LoopifyListRelations::intersection(
                                           [&](const typename List<
                                               unsigned int>::Cons &_args)
                                               -> void {
-                                            _stack.push_back(
+                                            _stack.emplace_back(
                                                 _Call1{y == _args.d_a0});
-                                            _stack.push_back(
+                                            _stack.emplace_back(
                                                 _Enter{_args.d_a1});
                                           }},
                                       ys->v());

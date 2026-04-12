@@ -31,7 +31,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -67,7 +67,7 @@ public:
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{_self});
+    _stack.emplace_back(_Enter{_self});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -81,8 +81,8 @@ public:
                           _result = 0u;
                         },
                         [&](const typename List<t_A>::Cons &_args) -> void {
-                          _stack.push_back(_Call1{});
-                          _stack.push_back(_Enter{_args.d_a1.get()});
+                          _stack.emplace_back(_Call1{});
+                          _stack.emplace_back(_Enter{_args.d_a1.get()});
                         }},
                     _self->v());
               },
@@ -144,7 +144,7 @@ struct LoopifySpecialRecursion {
 
   public:
     // CREATORS
-    explicit tree(Leaf _v) : d_v_(std::move(_v)) {}
+    explicit tree(Leaf _v) : d_v_(_v) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
@@ -197,7 +197,7 @@ struct LoopifySpecialRecursion {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     T1 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
+    _stack.emplace_back(_Enter{t});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -210,16 +210,16 @@ struct LoopifySpecialRecursion {
                                  _result = f;
                                },
                                [&](const typename tree::Node &_args) -> void {
-                                 _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
-                                                         _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a2});
+                                 _stack.emplace_back(
+                                     _Call1{_args.d_a0, _args.d_a2, _args.d_a1,
+                                            _args.d_a0});
+                                 _stack.emplace_back(_Enter{_args.d_a2});
                                }},
                     t->v());
               },
               [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.push_back(_Enter{_f._s0});
+                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+                _stack.emplace_back(_Enter{_f._s0});
               },
               [&](_Call2 _f) {
                 _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
@@ -254,7 +254,7 @@ struct LoopifySpecialRecursion {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     T1 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
+    _stack.emplace_back(_Enter{t});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -267,16 +267,16 @@ struct LoopifySpecialRecursion {
                                  _result = f;
                                },
                                [&](const typename tree::Node &_args) -> void {
-                                 _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
-                                                         _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a2});
+                                 _stack.emplace_back(
+                                     _Call1{_args.d_a0, _args.d_a2, _args.d_a1,
+                                            _args.d_a0});
+                                 _stack.emplace_back(_Enter{_args.d_a2});
                                }},
                     t->v());
               },
               [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.push_back(_Enter{_f._s0});
+                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+                _stack.emplace_back(_Enter{_f._s0});
               },
               [&](_Call2 _f) {
                 _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
@@ -311,7 +311,7 @@ struct LoopifySpecialRecursion {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{n});
+    _stack.emplace_back(_Enter{n});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -321,8 +321,8 @@ struct LoopifySpecialRecursion {
                                 _result = x;
                               } else {
                                 unsigned int n_ = n - 1;
-                                _stack.push_back(_Call1{});
-                                _stack.push_back(_Enter{n_});
+                                _stack.emplace_back(_Call1{});
+                                _stack.emplace_back(_Enter{n_});
                               }
                             },
                             [&](_Call1) { _result = f(_result); }},

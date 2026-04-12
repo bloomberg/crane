@@ -32,7 +32,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -92,7 +92,7 @@ struct ProgramTargetsRegionScan {
 
     explicit instruction(JMS _v) : d_v_(std::move(_v)) {}
 
-    explicit instruction(NOP _v) : d_v_(std::move(_v)) {}
+    explicit instruction(NOP _v) : d_v_(_v) {}
 
     static std::shared_ptr<instruction> jun(unsigned int a0) {
       return std::make_shared<instruction>(JUN{std::move(a0)});

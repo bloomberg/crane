@@ -60,7 +60,7 @@ LoopifySequences::collatz_list_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n, fuel});
+  _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -76,9 +76,9 @@ LoopifySequences::collatz_list_fuel(const unsigned int fuel,
                          1u, List<unsigned int>::nil());
                    } else {
                      if ((2u ? n % 2u : n) == 0u) {
-                       _stack.push_back(_Enter{(2u ? n / 2u : 0), f});
+                       _stack.emplace_back(_Enter{(2u ? n / 2u : 0), f});
                      } else {
-                       _stack.push_back(_Enter{((3u * n) + 1u), f});
+                       _stack.emplace_back(_Enter{((3u * n) + 1u), f});
                      }
                    }
                  }
@@ -239,7 +239,7 @@ LoopifySequences::repeat_string(const std::shared_ptr<List<unsigned int>> &s,
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -249,8 +249,8 @@ LoopifySequences::repeat_string(const std::shared_ptr<List<unsigned int>> &s,
                               _result = List<unsigned int>::nil();
                             } else {
                               unsigned int m = n - 1;
-                              _stack.push_back(_Call1{s});
-                              _stack.push_back(_Enter{m});
+                              _stack.emplace_back(_Call1{s});
+                              _stack.emplace_back(_Enter{m});
                             }
                           },
                           [&](_Call1 _f) { _result = _f._s0->app(_result); }},
@@ -275,7 +275,7 @@ std::shared_ptr<List<unsigned int>> LoopifySequences::repeat_with_sep(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -289,8 +289,8 @@ std::shared_ptr<List<unsigned int>> LoopifySequences::repeat_with_sep(
                                 _result = std::move(s);
                               } else {
                                 unsigned int _x = m - 1;
-                                _stack.push_back(_Call1{s, sep});
-                                _stack.push_back(_Enter{m});
+                                _stack.emplace_back(_Call1{s, sep});
+                                _stack.emplace_back(_Enter{m});
                               }
                             }
                           },
@@ -322,31 +322,32 @@ std::shared_ptr<List<unsigned int>> LoopifySequences::string_chain_fuel(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n, fuel});
+  _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(
-        Overloaded{[&](_Enter _f) {
-                     const unsigned int n = _f.n;
-                     const unsigned int fuel = _f.fuel;
-                     if (fuel <= 0) {
-                       _result = List<unsigned int>::nil();
-                     } else {
-                       unsigned int f = fuel - 1;
-                       if (n <= 0u) {
-                         _result = List<unsigned int>::nil();
-                       } else {
-                         _stack.push_back(_Call1{s, sep, sep->app(end_marker)});
-                         _stack.push_back(
-                             _Enter{(((n - 1u) > n ? 0 : (n - 1u))), f});
-                       }
-                     }
-                   },
-                   [&](_Call1 _f) {
-                     _result = _f._s0->app(_f._s1->app(_result->app(_f._s2)));
-                   }},
-        _frame);
+    std::visit(Overloaded{[&](_Enter _f) {
+                            const unsigned int n = _f.n;
+                            const unsigned int fuel = _f.fuel;
+                            if (fuel <= 0) {
+                              _result = List<unsigned int>::nil();
+                            } else {
+                              unsigned int f = fuel - 1;
+                              if (n <= 0u) {
+                                _result = List<unsigned int>::nil();
+                              } else {
+                                _stack.emplace_back(
+                                    _Call1{s, sep, sep->app(end_marker)});
+                                _stack.emplace_back(
+                                    _Enter{(((n - 1u) > n ? 0 : (n - 1u))), f});
+                              }
+                            }
+                          },
+                          [&](_Call1 _f) {
+                            _result =
+                                _f._s0->app(_f._s1->app(_result->app(_f._s2)));
+                          }},
+               _frame);
   }
   return _result;
 }
@@ -526,7 +527,7 @@ LoopifySequences::cycle(const unsigned int n,
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -544,8 +545,8 @@ LoopifySequences::cycle(const unsigned int n,
                           _result = List<unsigned int>::nil();
                         },
                         [&](const typename List<unsigned int>::Cons &) -> void {
-                          _stack.push_back(_Call1{l});
-                          _stack.push_back(_Enter{m});
+                          _stack.emplace_back(_Call1{l});
+                          _stack.emplace_back(_Enter{m});
                         }},
                     l->v());
               }
@@ -733,7 +734,7 @@ LoopifySequences::string_subsequences(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{s});
+  _stack.emplace_back(_Enter{s});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -752,8 +753,8 @@ LoopifySequences::string_subsequences(
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   s->v());
             },
@@ -785,7 +786,7 @@ LoopifySequences::string_subsequences(
                 std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
                     _result{};
                 std::vector<_Frame> _stack;
-                _stack.push_back(_Enter{lsts});
+                _stack.emplace_back(_Enter{lsts});
                 while (!_stack.empty()) {
                   _Frame _frame = std::move(_stack.back());
                   _stack.pop_back();
@@ -806,10 +807,10 @@ LoopifySequences::string_subsequences(
                                     [&](const typename List<std::shared_ptr<
                                             List<unsigned int>>>::Cons &_args0)
                                         -> void {
-                                      _stack.push_back(
+                                      _stack.emplace_back(
                                           _Call1{List<unsigned int>::cons(
                                               _args.d_a0, _args0.d_a0)});
-                                      _stack.push_back(_Enter{_args0.d_a1});
+                                      _stack.emplace_back(_Enter{_args0.d_a1});
                                     }},
                                 lsts->v());
                           },
@@ -1043,7 +1044,7 @@ LoopifySequences::elem(const unsigned int x,
   using _Frame = std::variant<_Enter, _Call1>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1056,8 +1057,8 @@ LoopifySequences::elem(const unsigned int x,
                                  -> void { _result = false; },
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
-                               _stack.push_back(_Call1{x == _args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a1});
+                               _stack.emplace_back(_Call1{x == _args.d_a0});
+                               _stack.emplace_back(_Enter{_args.d_a1});
                              }},
                          l->v());
                    },
@@ -1188,7 +1189,7 @@ LoopifySequences::group_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1224,14 +1225,16 @@ LoopifySequences::group_fuel(const unsigned int fuel,
                                   [&](const typename List<unsigned int>::Cons
                                           &_args0) -> void {
                                     if (_args.d_a0 == _args0.d_a0) {
-                                      _stack.push_back(_Call1{_args});
-                                      _stack.push_back(_Enter{_args.d_a1, f});
+                                      _stack.emplace_back(_Call1{_args});
+                                      _stack.emplace_back(
+                                          _Enter{_args.d_a1, f});
                                     } else {
-                                      _stack.push_back(
+                                      _stack.emplace_back(
                                           _Call2{List<unsigned int>::cons(
                                               _args.d_a0,
                                               List<unsigned int>::nil())});
-                                      _stack.push_back(_Enter{_args.d_a1, f});
+                                      _stack.emplace_back(
+                                          _Enter{_args.d_a1, f});
                                     }
                                   }},
                               _args.d_a1->v());
@@ -1346,7 +1349,7 @@ LoopifySequences::run_length_encode_fuel(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1380,8 +1383,8 @@ LoopifySequences::run_length_encode_fuel(
                                   },
                                   [&](const typename List<unsigned int>::Cons &)
                                       -> void {
-                                    _stack.push_back(_Call1{_args});
-                                    _stack.push_back(_Enter{_args.d_a1, f});
+                                    _stack.emplace_back(_Call1{_args});
+                                    _stack.emplace_back(_Enter{_args.d_a1, f});
                                   }},
                               _args.d_a1->v());
                         }},

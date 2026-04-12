@@ -33,7 +33,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -87,11 +87,11 @@ struct ClosuresInData {
   static inline const std::shared_ptr<
       List<std::function<unsigned int(unsigned int)>>>
       fn_list = List<std::function<unsigned int(unsigned int)>>::cons(
-          [](unsigned int x) { return (x + 1); },
+          [](const unsigned int x) { return (x + 1); },
           List<std::function<unsigned int(unsigned int)>>::cons(
-              [](unsigned int x) { return (x + x); },
+              [](const unsigned int x) { return (x + x); },
               List<std::function<unsigned int(unsigned int)>>::cons(
-                  [](unsigned int x) { return (x * x); },
+                  [](const unsigned int x) { return (x * x); },
                   List<std::function<unsigned int(unsigned int)>>::nil())));
   /// apply_all fns x applies every function in fns to x,
   /// returning the list of results.
@@ -109,8 +109,8 @@ struct ClosuresInData {
   /// A transform that doubles via addition and halves via division.
   static inline const std::shared_ptr<transform> double_transform =
       std::make_shared<transform>(
-          transform{[](unsigned int x) { return (x + x); },
-                    [](unsigned int x) { return (2u ? x / 2u : 0); }});
+          transform{[](const unsigned int x) { return (x + x); },
+                    [](const unsigned int x) { return (2u ? x / 2u : 0); }});
   __attribute__((pure)) static unsigned int
   apply_forward(const std::shared_ptr<transform> &t, const unsigned int x);
   __attribute__((pure)) static unsigned int
@@ -125,11 +125,11 @@ struct ClosuresInData {
   static inline const std::shared_ptr<
       List<std::function<unsigned int(unsigned int)>>>
       pipeline = List<std::function<unsigned int(unsigned int)>>::cons(
-          [](unsigned int x) { return (x + 1u); },
+          [](const unsigned int x) { return (x + 1u); },
           List<std::function<unsigned int(unsigned int)>>::cons(
-              [](unsigned int x) { return (x * 2u); },
+              [](const unsigned int x) { return (x * 2u); },
               List<std::function<unsigned int(unsigned int)>>::cons(
-                  [](unsigned int x) { return (x + 10u); },
+                  [](const unsigned int x) { return (x + 10u); },
                   List<std::function<unsigned int(unsigned int)>>::nil())));
   /// maybe_apply mf x applies function mf to x if present,
   /// otherwise returns x unchanged.
@@ -145,7 +145,7 @@ struct ClosuresInData {
   static inline const unsigned int test_compose = compose_all(pipeline, 3u);
   static inline const unsigned int test_maybe_some =
       maybe_apply(std::make_optional<std::function<unsigned int(unsigned int)>>(
-                      [](unsigned int x) { return (x + 1); }),
+                      [](const unsigned int x) { return (x + 1); }),
                   41u);
   static inline const unsigned int test_maybe_none = maybe_apply(
       std::optional<std::function<unsigned int(unsigned int)>>(), 42u);

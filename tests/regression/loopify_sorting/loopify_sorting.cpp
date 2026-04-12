@@ -66,7 +66,7 @@ LoopifySorting::insertion_sort(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -81,8 +81,8 @@ LoopifySorting::insertion_sort(const std::shared_ptr<List<unsigned int>> &l) {
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args.d_a0});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args.d_a0});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -209,7 +209,7 @@ LoopifySorting::merge_sort_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -244,8 +244,8 @@ LoopifySorting::merge_sort_fuel(const unsigned int fuel,
                                           &l1 = _cs.first;
                                       const std::shared_ptr<List<unsigned int>>
                                           &l2 = _cs.second;
-                                      _stack.push_back(_Call1{l1, f});
-                                      _stack.push_back(_Enter{l2, f});
+                                      _stack.emplace_back(_Call1{l1, f});
+                                      _stack.emplace_back(_Enter{l2, f});
                                     }},
                                 _args.d_a1->v());
                           }},
@@ -254,8 +254,8 @@ LoopifySorting::merge_sort_fuel(const unsigned int fuel,
               }
             },
             [&](_Call1 _f) {
-              _stack.push_back(_Call2{_result});
-              _stack.push_back(_Enter{_f._s0, _f._s1});
+              _stack.emplace_back(_Call2{_result});
+              _stack.emplace_back(_Enter{_f._s0, _f._s1});
             },
             [&](_Call2 _f) { _result = merge(_result, _f._s0); }},
         _frame);
@@ -286,7 +286,7 @@ LoopifySorting::partition(const unsigned int pivot,
             std::shared_ptr<List<unsigned int>>>
       _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -302,8 +302,8 @@ LoopifySorting::partition(const unsigned int pivot,
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{pivot, _args});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{pivot, _args});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -349,7 +349,7 @@ LoopifySorting::quicksort_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -376,16 +376,16 @@ LoopifySorting::quicksort_fuel(const unsigned int fuel,
                                 _cs.first;
                             const std::shared_ptr<List<unsigned int>> &hi =
                                 _cs.second;
-                            _stack.push_back(_Call1{lo, f, _args.d_a0});
-                            _stack.push_back(_Enter{hi, f});
+                            _stack.emplace_back(_Call1{lo, f, _args.d_a0});
+                            _stack.emplace_back(_Enter{hi, f});
                           }},
                       l->v());
                 }
               }
             },
             [&](_Call1 _f) {
-              _stack.push_back(_Call2{_result, _f._s2});
-              _stack.push_back(_Enter{_f._s0, _f._s1});
+              _stack.emplace_back(_Call2{_result, _f._s2});
+              _stack.emplace_back(_Enter{_f._s0, _f._s1});
             },
             [&](_Call2 _f) {
               _result = _result->app(List<unsigned int>::cons(_f._s1, _f._s0));

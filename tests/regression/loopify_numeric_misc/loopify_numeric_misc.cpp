@@ -19,7 +19,7 @@ LoopifyNumericMisc::sum_abs(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -32,8 +32,8 @@ LoopifyNumericMisc::sum_abs(const std::shared_ptr<List<unsigned int>> &l) {
                                  -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
-                               _stack.push_back(_Call1{_args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a1});
+                               _stack.emplace_back(_Call1{_args.d_a0});
+                               _stack.emplace_back(_Enter{_args.d_a1});
                              }},
                          l->v());
                    },
@@ -60,7 +60,7 @@ LoopifyNumericMisc::alternating_ops(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -71,11 +71,11 @@ LoopifyNumericMisc::alternating_ops(const unsigned int n) {
                             } else {
                               unsigned int n_ = n - 1;
                               if ((2u ? (n_ + 1) % 2u : (n_ + 1)) == 0u) {
-                                _stack.push_back(_Call1{(n_ + 1)});
-                                _stack.push_back(_Enter{n_});
+                                _stack.emplace_back(_Call1{(n_ + 1)});
+                                _stack.emplace_back(_Enter{n_});
                               } else {
-                                _stack.push_back(_Call2{((n_ + 1) * 2u)});
-                                _stack.push_back(_Enter{n_});
+                                _stack.emplace_back(_Call2{((n_ + 1) * 2u)});
+                                _stack.emplace_back(_Enter{n_});
                               }
                             }
                           },
@@ -99,7 +99,7 @@ LoopifyNumericMisc::count_even(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -113,10 +113,10 @@ LoopifyNumericMisc::count_even(const std::shared_ptr<List<unsigned int>> &l) {
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
                                if ((2u ? _args.d_a0 % 2u : _args.d_a0) == 0u) {
-                                 _stack.push_back(_Call1{1u});
-                                 _stack.push_back(_Enter{_args.d_a1});
+                                 _stack.emplace_back(_Call1{1u});
+                                 _stack.emplace_back(_Enter{_args.d_a1});
                                } else {
-                                 _stack.push_back(_Enter{_args.d_a1});
+                                 _stack.emplace_back(_Enter{_args.d_a1});
                                }
                              }},
                          l->v());
@@ -140,7 +140,7 @@ LoopifyNumericMisc::count_odd(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -154,10 +154,10 @@ LoopifyNumericMisc::count_odd(const std::shared_ptr<List<unsigned int>> &l) {
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
                                if ((2u ? _args.d_a0 % 2u : _args.d_a0) == 1u) {
-                                 _stack.push_back(_Call1{1u});
-                                 _stack.push_back(_Enter{_args.d_a1});
+                                 _stack.emplace_back(_Call1{1u});
+                                 _stack.emplace_back(_Enter{_args.d_a1});
                                } else {
-                                 _stack.push_back(_Enter{_args.d_a1});
+                                 _stack.emplace_back(_Enter{_args.d_a1});
                                }
                              }},
                          l->v());
@@ -182,7 +182,7 @@ LoopifyNumericMisc::product(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -195,8 +195,8 @@ LoopifyNumericMisc::product(const std::shared_ptr<List<unsigned int>> &l) {
                                  -> void { _result = 1u; },
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
-                               _stack.push_back(_Call1{_args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a1});
+                               _stack.emplace_back(_Call1{_args.d_a0});
+                               _stack.emplace_back(_Enter{_args.d_a1});
                              }},
                          l->v());
                    },
@@ -221,7 +221,7 @@ __attribute__((pure)) unsigned int LoopifyNumericMisc::sum_of_squares(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -236,8 +236,8 @@ __attribute__((pure)) unsigned int LoopifyNumericMisc::sum_of_squares(
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{(_args.d_a0 * _args.d_a0)});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{(_args.d_a0 * _args.d_a0)});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -270,7 +270,7 @@ LoopifyNumericMisc::list_max(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -291,8 +291,8 @@ LoopifyNumericMisc::list_max(const std::shared_ptr<List<unsigned int>> &l) {
                                     -> void { _result = _args.d_a0; },
                                 [&](const typename List<unsigned int>::Cons &)
                                     -> void {
-                                  _stack.push_back(_Call1{_args.d_a0});
-                                  _stack.push_back(_Enter{_args.d_a1});
+                                  _stack.emplace_back(_Call1{_args.d_a0});
+                                  _stack.emplace_back(_Enter{_args.d_a1});
                                 }},
                             _args.d_a1->v());
                       }},
@@ -317,7 +317,7 @@ LoopifyNumericMisc::list_min(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -338,8 +338,8 @@ LoopifyNumericMisc::list_min(const std::shared_ptr<List<unsigned int>> &l) {
                                     -> void { _result = _args.d_a0; },
                                 [&](const typename List<unsigned int>::Cons &)
                                     -> void {
-                                  _stack.push_back(_Call1{_args});
-                                  _stack.push_back(_Enter{_args.d_a1});
+                                  _stack.emplace_back(_Call1{_args});
+                                  _stack.emplace_back(_Enter{_args.d_a1});
                                 }},
                             _args.d_a1->v());
                       }},

@@ -61,7 +61,8 @@ OptionClosureEscape::match_pair(
       Overloaded{[](const typename OptionClosureEscape::tree::Leaf &)
                      -> std::pair<std::function<unsigned int(unsigned int)>,
                                   unsigned int> {
-                   return std::make_pair([](unsigned int x) { return x; }, 0u);
+                   return std::make_pair([](const unsigned int x) { return x; },
+                                         0u);
                  },
                  [](const typename OptionClosureEscape::tree::Node &_args)
                      -> std::pair<std::function<unsigned int(unsigned int)>,

@@ -42,7 +42,7 @@ private:
 
 public:
   // CREATORS
-  explicit Tree(Leaf _v) : d_v_(std::move(_v)) {}
+  explicit Tree(Leaf _v) : d_v_(_v) {}
 
   explicit Tree(Node _v) : d_v_(std::move(_v)) {}
 

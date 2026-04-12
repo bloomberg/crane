@@ -66,7 +66,7 @@ private:
 
 public:
   // CREATORS
-  explicit Uint(Nil _v) : d_v_(std::move(_v)) {}
+  explicit Uint(Nil _v) : d_v_(_v) {}
 
   explicit Uint(D0 _v) : d_v_(std::move(_v)) {}
 
@@ -254,7 +254,7 @@ private:
 
 public:
   // CREATORS
-  explicit Uint0(Nil0 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(Nil0 _v) : d_v_(_v) {}
 
   explicit Uint0(D10 _v) : d_v_(std::move(_v)) {}
 
@@ -511,7 +511,7 @@ struct HofTreeLoopify {
 
   public:
     // CREATORS
-    explicit tree(Leaf _v) : d_v_(std::move(_v)) {}
+    explicit tree(Leaf _v) : d_v_(_v) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
@@ -565,7 +565,7 @@ struct HofTreeLoopify {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
+    _stack.emplace_back(_Enter{t});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -579,15 +579,15 @@ struct HofTreeLoopify {
                           _result = f;
                         },
                         [&](const typename tree<T1>::Node &_args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
-                                                  _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
+                          _stack.emplace_back(_Call1{_args.d_a0, _args.d_a2,
+                                                     _args.d_a1, _args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a2});
                         }},
                     t->v());
               },
               [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.push_back(_Enter{_f._s0});
+                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+                _stack.emplace_back(_Enter{_f._s0});
               },
               [&](_Call2 _f) {
                 _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
@@ -623,7 +623,7 @@ struct HofTreeLoopify {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
+    _stack.emplace_back(_Enter{t});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -637,15 +637,15 @@ struct HofTreeLoopify {
                           _result = f;
                         },
                         [&](const typename tree<T1>::Node &_args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
-                                                  _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
+                          _stack.emplace_back(_Call1{_args.d_a0, _args.d_a2,
+                                                     _args.d_a1, _args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a2});
                         }},
                     t->v());
               },
               [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.push_back(_Enter{_f._s0});
+                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+                _stack.emplace_back(_Enter{_f._s0});
               },
               [&](_Call2 _f) {
                 _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
@@ -677,7 +677,7 @@ struct HofTreeLoopify {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     std::shared_ptr<tree<T2>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
+    _stack.emplace_back(_Enter{t});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -691,14 +691,15 @@ struct HofTreeLoopify {
                           _result = tree<T2>::leaf();
                         },
                         [&](const typename tree<T1>::Node &_args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0, f(_args.d_a1)});
-                          _stack.push_back(_Enter{_args.d_a2});
+                          _stack.emplace_back(
+                              _Call1{_args.d_a0, f(_args.d_a1)});
+                          _stack.emplace_back(_Enter{_args.d_a2});
                         }},
                     t->v());
               },
               [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1});
-                _stack.push_back(_Enter{_f._s0});
+                _stack.emplace_back(_Call2{_result, _f._s1});
+                _stack.emplace_back(_Enter{_f._s0});
               },
               [&](_Call2 _f) {
                 _result = tree<T2>::node(_result, _f._s1, _f._s0);
@@ -728,7 +729,7 @@ struct HofTreeLoopify {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
+    _stack.emplace_back(_Enter{t});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -742,14 +743,14 @@ struct HofTreeLoopify {
                           _result = base;
                         },
                         [&](const typename tree<T1>::Node &_args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0, _args.d_a1});
-                          _stack.push_back(_Enter{_args.d_a2});
+                          _stack.emplace_back(_Call1{_args.d_a0, _args.d_a1});
+                          _stack.emplace_back(_Enter{_args.d_a2});
                         }},
                     t->v());
               },
               [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1});
-                _stack.push_back(_Enter{_f._s0});
+                _stack.emplace_back(_Call2{_result, _f._s1});
+                _stack.emplace_back(_Enter{_f._s0});
               },
               [&](_Call2 _f) { _result = f(_result, _f._s1, _f._s0); }},
           _frame);
@@ -780,7 +781,7 @@ struct HofTreeLoopify {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     std::shared_ptr<tree<T3>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t2, t1});
+    _stack.emplace_back(_Enter{t2, t1});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -802,10 +803,10 @@ struct HofTreeLoopify {
                                   },
                                   [&](const typename tree<T2>::Node &_args0)
                                       -> void {
-                                    _stack.push_back(
+                                    _stack.emplace_back(
                                         _Call1{_args0.d_a0, _args.d_a0,
                                                f(_args.d_a1, _args0.d_a1)});
-                                    _stack.push_back(
+                                    _stack.emplace_back(
                                         _Enter{_args0.d_a2, _args.d_a2});
                                   }},
                               t2->v());
@@ -813,8 +814,8 @@ struct HofTreeLoopify {
                     t1->v());
               },
               [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s2});
-                _stack.push_back(_Enter{_f._s0, _f._s1});
+                _stack.emplace_back(_Call2{_result, _f._s2});
+                _stack.emplace_back(_Enter{_f._s0, _f._s1});
               },
               [&](_Call2 _f) {
                 _result = tree<T3>::node(_result, _f._s1, _f._s0);
@@ -846,7 +847,7 @@ struct HofTreeLoopify {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     std::pair<T3, std::shared_ptr<tree<T2>>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t, acc});
+    _stack.emplace_back(_Enter{t, acc});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -861,8 +862,8 @@ struct HofTreeLoopify {
                           _result = std::make_pair(acc, tree<T2>::leaf());
                         },
                         [&](const typename tree<T1>::Node &_args) -> void {
-                          _stack.push_back(_Call1{f, _args});
-                          _stack.push_back(_Enter{_args.d_a0, acc});
+                          _stack.emplace_back(_Call1{f, _args});
+                          _stack.emplace_back(_Enter{_args.d_a0, acc});
                         }},
                     t->v());
               },
@@ -874,8 +875,8 @@ struct HofTreeLoopify {
                 auto _cs = f(acc1, _args.d_a1);
                 const T3 &acc2 = _cs.first;
                 const T2 &x_ = _cs.second;
-                _stack.push_back(_Call2{x_, l_});
-                _stack.push_back(_Enter{_args.d_a2, acc2});
+                _stack.emplace_back(_Call2{x_, l_});
+                _stack.emplace_back(_Enter{_args.d_a2, acc2});
               },
               [&](_Call2 _f) {
                 T2 x_ = _f._s0;
@@ -906,11 +907,11 @@ struct HofTreeLoopify {
                                        tree<unsigned int>::leaf())));
   static inline const std::shared_ptr<tree<unsigned int>> mapped =
       tree_map<unsigned int, unsigned int>(
-          [](unsigned int x) { return (x * 2u); }, small_tree);
+          [](const unsigned int x) { return (x * 2u); }, small_tree);
   static inline const unsigned int folded =
       tree_fold<unsigned int, unsigned int>(
           0u,
-          [](unsigned int l, unsigned int x, unsigned int r) {
+          [](const unsigned int l, const unsigned int x, const unsigned int r) {
             return ((l + x) + r);
           },
           small_tree);
@@ -923,7 +924,7 @@ struct HofTreeLoopify {
   static inline const std::pair<unsigned int,
                                 std::shared_ptr<tree<unsigned int>>>
       accum = tree_map_accum<unsigned int, unsigned int, unsigned int>(
-          [](unsigned int s, unsigned int x) {
+          [](const unsigned int s, const unsigned int x) {
             return std::make_pair((s + x), s);
           },
           0u, small_tree);

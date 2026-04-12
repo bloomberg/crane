@@ -18,7 +18,7 @@ LoopifyAlgorithms::len_impl(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -31,8 +31,8 @@ LoopifyAlgorithms::len_impl(const std::shared_ptr<List<unsigned int>> &l) {
                                  -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
-                               _stack.push_back(_Call1{});
-                               _stack.push_back(_Enter{_args.d_a1});
+                               _stack.emplace_back(_Call1{});
+                               _stack.emplace_back(_Enter{_args.d_a1});
                              }},
                          l->v());
                    },
@@ -105,7 +105,7 @@ LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
                     using _Frame = std::variant<_Enter, _Call1>;
                     std::shared_ptr<List<unsigned int>> _result{};
                     std::vector<_Frame> _stack;
-                    _stack.push_back(_Enter{rest});
+                    _stack.emplace_back(_Enter{rest});
                     while (!_stack.empty()) {
                       _Frame _frame = std::move(_stack.back());
                       _stack.pop_back();
@@ -124,12 +124,12 @@ LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
                                                 Cons &_args0) -> void {
                                           if ((p ? _args0.d_a0 % p
                                                  : _args0.d_a0) == 0u) {
-                                            _stack.push_back(
+                                            _stack.emplace_back(
                                                 _Enter{_args0.d_a1});
                                           } else {
-                                            _stack.push_back(
+                                            _stack.emplace_back(
                                                 _Call1{_args0.d_a0});
-                                            _stack.push_back(
+                                            _stack.emplace_back(
                                                 _Enter{_args0.d_a1});
                                           }
                                         }},
@@ -185,7 +185,7 @@ LoopifyAlgorithms::run_length_encode(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -201,8 +201,8 @@ LoopifyAlgorithms::run_length_encode(
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -451,7 +451,7 @@ LoopifyAlgorithms::nub_aux(const std::shared_ptr<List<unsigned int>> &l,
                   using _Frame = std::variant<_Enter, _Call1>;
                   std::shared_ptr<List<unsigned int>> _result{};
                   std::vector<_Frame> _stack;
-                  _stack.push_back(_Enter{rest});
+                  _stack.emplace_back(_Enter{rest});
                   while (!_stack.empty()) {
                     _Frame _frame = std::move(_stack.back());
                     _stack.pop_back();
@@ -469,10 +469,13 @@ LoopifyAlgorithms::nub_aux(const std::shared_ptr<List<unsigned int>> &l,
                                       [&](const typename List<
                                           unsigned int>::Cons &_args0) -> void {
                                         if (val == _args0.d_a0) {
-                                          _stack.push_back(_Enter{_args0.d_a1});
+                                          _stack.emplace_back(
+                                              _Enter{_args0.d_a1});
                                         } else {
-                                          _stack.push_back(_Call1{_args0.d_a0});
-                                          _stack.push_back(_Enter{_args0.d_a1});
+                                          _stack.emplace_back(
+                                              _Call1{_args0.d_a0});
+                                          _stack.emplace_back(
+                                              _Enter{_args0.d_a1});
                                         }
                                       }},
                                   rest->v());
@@ -797,7 +800,7 @@ __attribute__((pure)) unsigned int LoopifyAlgorithms::max_prefix_sum(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -810,8 +813,8 @@ __attribute__((pure)) unsigned int LoopifyAlgorithms::max_prefix_sum(
                                  -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
-                               _stack.push_back(_Call1{_args});
-                               _stack.push_back(_Enter{_args.d_a1});
+                               _stack.emplace_back(_Call1{_args});
+                               _stack.emplace_back(_Enter{_args.d_a1});
                              }},
                          l->v());
                    },
@@ -852,7 +855,7 @@ LoopifyAlgorithms::weighted_sum(const unsigned int i,
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, i});
+  _stack.emplace_back(_Enter{l, i});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -866,8 +869,8 @@ LoopifyAlgorithms::weighted_sum(const unsigned int i,
                                  -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
-                               _stack.push_back(_Call1{(i * _args.d_a0)});
-                               _stack.push_back(_Enter{_args.d_a1, (i + 1)});
+                               _stack.emplace_back(_Call1{(i * _args.d_a0)});
+                               _stack.emplace_back(_Enter{_args.d_a1, (i + 1)});
                              }},
                          l->v());
                    },
@@ -891,7 +894,7 @@ LoopifyAlgorithms::step_sum(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -910,8 +913,8 @@ LoopifyAlgorithms::step_sum(const std::shared_ptr<List<unsigned int>> &l) {
                                } else {
                                  contribution = (_args.d_a0 * 2u);
                                }
-                               _stack.push_back(_Call1{contribution});
-                               _stack.push_back(_Enter{_args.d_a1});
+                               _stack.emplace_back(_Call1{contribution});
+                               _stack.emplace_back(_Enter{_args.d_a1});
                              }},
                          l->v());
                    },
@@ -948,7 +951,7 @@ LoopifyAlgorithms::suffix_sums(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -963,8 +966,8 @@ LoopifyAlgorithms::suffix_sums(const std::shared_ptr<List<unsigned int>> &l) {
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },

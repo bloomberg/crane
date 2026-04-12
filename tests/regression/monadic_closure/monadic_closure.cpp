@@ -33,12 +33,13 @@ int64_t MonadicClosure::test_apply_after() {
 std::function<std::string(std::string)> MonadicClosure::make_greeter() {
   std::string prefix;
   std::getline(std::cin, prefix);
-  return [=](std::string name) mutable { return prefix + name; };
+  return [=](const std::string name) mutable { return prefix + name; };
 }
 
 int64_t MonadicClosure::test_with_length() {
-  return with_length(
-      [](int64_t n) { return ((n + int64_t(1)) & 0x7FFFFFFFFFFFFFFFLL); });
+  return with_length([](const int64_t n) {
+    return ((n + int64_t(1)) & 0x7FFFFFFFFFFFFFFFLL);
+  });
 }
 
 /// 5. Nested closures over bindings
@@ -53,11 +54,12 @@ int64_t MonadicClosure::nested_capture() {
 }
 
 unsigned int MonadicClosure::test_count() {
-  return count_matching([](std::string s) { return s.length() == int64_t(0); },
-                        List<std::string>::cons(
-                            "a", List<std::string>::cons(
-                                     "", List<std::string>::cons(
-                                             "bc", List<std::string>::nil()))));
+  return count_matching(
+      [](const std::string s) { return s.length() == int64_t(0); },
+      List<std::string>::cons(
+          "a",
+          List<std::string>::cons(
+              "", List<std::string>::cons("bc", List<std::string>::nil()))));
 }
 
 /// 7. Effect inside a let, result used later

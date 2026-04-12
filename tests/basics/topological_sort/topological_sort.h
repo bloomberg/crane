@@ -35,7 +35,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -263,10 +263,10 @@ struct TopologicalSort {
                   -> std::shared_ptr<List<T1>> {
                 const T1 &e1 = _args.d_a0.first;
                 const T1 &e2 = _args.d_a0.second;
-                std::optional<T1> f1 =
-                    h->find([=](T1 x) mutable { return eqb_node(e1, x); });
-                std::optional<T1> f2 =
-                    h->find([=](T1 x) mutable { return eqb_node(e2, x); });
+                std::optional<T1> f1 = h->find(
+                    [=](const T1 x) mutable { return eqb_node(e1, x); });
+                std::optional<T1> f2 = h->find(
+                    [=](const T1 x) mutable { return eqb_node(e2, x); });
                 if (f1.has_value()) {
                   const T1 &_x = *f1;
                   if (f2.has_value()) {
@@ -299,16 +299,16 @@ struct TopologicalSort {
   __attribute__((pure)) static entry<T1>
   make_entry(F0 &&eqb_node, const std::shared_ptr<List<std::pair<T1, T1>>> &l,
              const T1 e) {
-    return std::make_pair(
-        e, l->template fold_right<std::shared_ptr<List<T1>>>(
-               [=](std::pair<T1, T1> x, std::shared_ptr<List<T1>> ret) mutable {
-                 if (eqb_node(e, x.first)) {
-                   return List<T1>::cons(x.second, ret);
-                 } else {
-                   return ret;
-                 }
-               },
-               List<T1>::nil()));
+    return std::make_pair(e, l->template fold_right<std::shared_ptr<List<T1>>>(
+                                 [=](const std::pair<T1, T1> x,
+                                     std::shared_ptr<List<T1>> ret) mutable {
+                                   if (eqb_node(e, x.first)) {
+                                     return List<T1>::cons(x.second, ret);
+                                   } else {
+                                     return ret;
+                                   }
+                                 },
+                                 List<T1>::nil()));
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
@@ -317,7 +317,7 @@ struct TopologicalSort {
     std::shared_ptr<List<T1>> elems = get_elems<T1>(eqb_node, l);
     return std::move(elems)
         ->template fold_right<std::shared_ptr<List<entry<T1>>>>(
-            [=](T1 e,
+            [=](const T1 e,
                 std::shared_ptr<List<std::pair<T1, std::shared_ptr<List<T1>>>>>
                     ret) mutable {
               return List<std::pair<T1, std::shared_ptr<List<T1>>>>::cons(
@@ -332,7 +332,7 @@ struct TopologicalSort {
       const std::shared_ptr<List<std::pair<T1, std::shared_ptr<List<T1>>>>>
           &graph0) {
     auto _cs = graph0->find(
-        [=](std::pair<T1, std::shared_ptr<List<T1>>> entry0) mutable {
+        [=](const std::pair<T1, std::shared_ptr<List<T1>>> entry0) mutable {
           return eqb_node(elem, entry0.first);
         });
     if (_cs.has_value()) {
@@ -348,7 +348,7 @@ struct TopologicalSort {
   template <typename T1, MapsTo<bool, T1, T1> F0>
   __attribute__((pure)) static bool
   contains(F0 &&eqb_node, const T1 elem, const std::shared_ptr<List<T1>> &es) {
-    auto _cs = es->find([=](T1 x) mutable { return eqb_node(elem, x); });
+    auto _cs = es->find([=](const T1 x) mutable { return eqb_node(elem, x); });
     if (_cs.has_value()) {
       const T1 &_x = *_cs;
       return true;
@@ -469,7 +469,7 @@ struct TopologicalSort {
       } else {
         std::shared_ptr<List<T1>> mins =
             graph0
-                ->filter([](std::pair<T1, std::shared_ptr<List<T1>>> p) {
+                ->filter([](const std::pair<T1, std::shared_ptr<List<T1>>> p) {
                   return null<T1>(p.second);
                 })
                 ->template map<T1>(
@@ -483,18 +483,18 @@ struct TopologicalSort {
           mins_ = mins;
         }
         std::shared_ptr<List<std::pair<T1, std::shared_ptr<List<T1>>>>> rest =
-            graph0->filter(
-                [=](std::pair<T1, std::shared_ptr<List<T1>>> entry0) mutable {
-                  return !(contains<T1>(eqb_node, entry0.first, mins_));
-                });
+            graph0->filter([=](const std::pair<T1, std::shared_ptr<List<T1>>>
+                                   entry0) mutable {
+              return !(contains<T1>(eqb_node, entry0.first, mins_));
+            });
         std::shared_ptr<List<std::pair<T1, std::shared_ptr<List<T1>>>>> rest_ =
             std::move(rest)
                 ->template map<std::pair<T1, std::shared_ptr<List<T1>>>>(
-                    [=](std::pair<T1, std::shared_ptr<List<T1>>>
+                    [=](const std::pair<T1, std::shared_ptr<List<T1>>>
                             entry0) mutable {
                       return std::make_pair(
                           entry0.first,
-                          entry0.second->filter([=](T1 e) mutable {
+                          entry0.second->filter([=](const T1 e) mutable {
                             return !(contains<T1>(eqb_node, e, mins_));
                           }));
                     });
@@ -532,11 +532,11 @@ struct TopologicalSort {
     return lorder
         ->template combine<unsigned int>(ListDef::seq(0u, lorder->length()))
         ->template map<std::shared_ptr<List<std::pair<T1, unsigned int>>>>(
-            [](std::pair<std::shared_ptr<List<T1>>, unsigned int> x) {
+            [](const std::pair<std::shared_ptr<List<T1>>, unsigned int> x) {
               const std::shared_ptr<List<T1>> &fs = x.first;
               const unsigned int &rk = x.second;
               return fs->template map<std::pair<T1, unsigned int>>(
-                  [=](T1 f) mutable { return std::make_pair(f, rk); });
+                  [=](const T1 f) mutable { return std::make_pair(f, rk); });
             })
         ->template concat<std::pair<T1, unsigned int>>();
   }

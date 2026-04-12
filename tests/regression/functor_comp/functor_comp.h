@@ -33,7 +33,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -159,7 +159,10 @@ struct FunctorComp {
     push_list(const std::shared_ptr<List<unsigned int>> &l,
               const typename C::t c) {
       return l->template fold_left<typename C::t>(
-          [](typename C::t acc, unsigned int x) { return C::push(x, acc); }, c);
+          [](const typename C::t acc, const unsigned int x) {
+            return C::push(x, acc);
+          },
+          c);
     }
 
     static std::shared_ptr<List<unsigned int>> to_list(const typename C::t c) {

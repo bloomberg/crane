@@ -14,7 +14,7 @@
 void EffectHigherOrder::greet_all(
     const std::shared_ptr<List<std::string>> &names) {
   for_each_str(
-      [](std::string name) {
+      [](const std::string name) {
         std::cout << "Hello, "s + name << '\n';
         return;
       },
@@ -59,7 +59,7 @@ EffectHigherOrder::lookup_all(const std::shared_ptr<List<std::string>> &names) {
 
 /// 8. Effect in let-bound function
 std::string EffectHigherOrder::process_input() {
-  std::function<std::string(std::string)> format = [](std::string s) {
+  std::function<std::string(std::string)> format = [](const std::string s) {
     return "["s + s + "]"s;
   };
   std::string line;

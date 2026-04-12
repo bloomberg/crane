@@ -2407,7 +2407,7 @@ let register_frame frames_ref ~name ~saved_types ~saved_exprs ~env ~handler =
 let make_stack_push arg =
   Sexpr
     (CPPfun_call
-       ( CPPmember (CPPvar (Id.of_string "_stack"), Id.of_string "push_back"),
+       ( CPPmember (CPPvar (Id.of_string "_stack"), Id.of_string "emplace_back"),
          [arg] ) )
 
 (** Read the [i]-th saved field from frame variable [_f]. Generates [_f._sI]. *)
@@ -4208,7 +4208,7 @@ and find_combine_op_stmt check = function
     from frame, frame lambdas, and the while-loop dispatch. These helpers
     factor out the common patterns. *)
 
-(** Generate the initial [_stack.push_back(_Enter\{...\})] statement.
+(** Generate the initial [_stack.emplace_back(_Enter\{...\})] statement.
 
     @param varying_params The parameters to include in the Enter frame
     @return A raw C++ statement pushing the initial Enter frame *)
@@ -4415,15 +4415,15 @@ let make_decltype_ty pp_type env expr =
 
     let f x_init =
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{x_init});
+      _stack.emplace_back(_Enter{x_init});
       T _result;
       while (!_stack.empty()) {
         std::visit(Overloaded{
           [&](_Enter _f) {
             if (base(_f.x)) { _result = result; }
             else {
-              _stack.push_back(_Call1{_f.x});      // save x
-              _stack.push_back(_Enter{next(_f.x)});  // recurse
+              _stack.emplace_back(_Call1{_f.x});      // save x
+              _stack.emplace_back(_Enter{next(_f.x)});  // recurse
             }
           },
           [&](_Call1 _f) { _result = combine(_f._s0, _result); }

@@ -35,14 +35,14 @@ ClosureChain::make_chain(const unsigned int n,
                          const unsigned int _x0) {
   return [&]() -> std::function<unsigned int(unsigned int)> {
     if (n <= 0) {
-      return [=](unsigned int x) mutable { return (tree_sum(t) + x); };
+      return [=](const unsigned int x) mutable { return (tree_sum(t) + x); };
     } else {
       unsigned int n_ = n - 1;
       std::function<unsigned int(unsigned int)> f =
           [=](unsigned int _x0) mutable -> unsigned int {
         return make_chain(n_, t, _x0);
       };
-      return [=](unsigned int x) mutable { return f((x + 1u)); };
+      return [=](const unsigned int x) mutable { return f((x + 1u)); };
     }
   }()(_x0);
 }

@@ -33,7 +33,7 @@ struct RecRecord {
 
   public:
     // CREATORS
-    explicit rlist(Rnil _v) : d_v_(std::move(_v)) {}
+    explicit rlist(Rnil _v) : d_v_(_v) {}
 
     explicit rlist(Rcons _v) : d_v_(std::move(_v)) {}
 

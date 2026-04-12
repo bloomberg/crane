@@ -32,7 +32,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -272,7 +272,7 @@ struct CpuEmulator {
 
   public:
     // CREATORS
-    explicit instr(NOP _v) : d_v_(std::move(_v)) {}
+    explicit instr(NOP _v) : d_v_(_v) {}
 
     explicit instr(LDM _v) : d_v_(std::move(_v)) {}
 
@@ -286,31 +286,31 @@ struct CpuEmulator {
 
     explicit instr(SUB _v) : d_v_(std::move(_v)) {}
 
-    explicit instr(IAC _v) : d_v_(std::move(_v)) {}
+    explicit instr(IAC _v) : d_v_(_v) {}
 
-    explicit instr(DAC _v) : d_v_(std::move(_v)) {}
+    explicit instr(DAC _v) : d_v_(_v) {}
 
-    explicit instr(CLC _v) : d_v_(std::move(_v)) {}
+    explicit instr(CLC _v) : d_v_(_v) {}
 
-    explicit instr(STC _v) : d_v_(std::move(_v)) {}
+    explicit instr(STC _v) : d_v_(_v) {}
 
-    explicit instr(CMC _v) : d_v_(std::move(_v)) {}
+    explicit instr(CMC _v) : d_v_(_v) {}
 
-    explicit instr(CMA _v) : d_v_(std::move(_v)) {}
+    explicit instr(CMA _v) : d_v_(_v) {}
 
-    explicit instr(CLB _v) : d_v_(std::move(_v)) {}
+    explicit instr(CLB _v) : d_v_(_v) {}
 
-    explicit instr(RAL _v) : d_v_(std::move(_v)) {}
+    explicit instr(RAL _v) : d_v_(_v) {}
 
-    explicit instr(RAR _v) : d_v_(std::move(_v)) {}
+    explicit instr(RAR _v) : d_v_(_v) {}
 
-    explicit instr(TCC _v) : d_v_(std::move(_v)) {}
+    explicit instr(TCC _v) : d_v_(_v) {}
 
-    explicit instr(TCS _v) : d_v_(std::move(_v)) {}
+    explicit instr(TCS _v) : d_v_(_v) {}
 
-    explicit instr(DAA _v) : d_v_(std::move(_v)) {}
+    explicit instr(DAA _v) : d_v_(_v) {}
 
-    explicit instr(KBP _v) : d_v_(std::move(_v)) {}
+    explicit instr(KBP _v) : d_v_(_v) {}
 
     explicit instr(JUN _v) : d_v_(std::move(_v)) {}
 

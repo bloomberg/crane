@@ -38,7 +38,7 @@ DeepMap::build_right(const unsigned int n,
 std::shared_ptr<DeepMap::tree<unsigned int>>
 DeepMap::map_inc(const std::shared_ptr<DeepMap::tree<unsigned int>> &t) {
   return tmap<unsigned int, unsigned int>(
-      [](unsigned int x) { return (x + 1u); }, t);
+      [](const unsigned int x) { return (x + 1u); }, t);
 }
 
 /// Get root value.

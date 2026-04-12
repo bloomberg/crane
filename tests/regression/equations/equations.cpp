@@ -38,7 +38,7 @@ __attribute__((pure)) unsigned int PeanoNat::div2(const unsigned int n) {
 __attribute__((pure)) unsigned int
 Equations::gcd(const std::pair<unsigned int, unsigned int> x) {
   return gcd_functional(
-      x, [](std::pair<unsigned int, unsigned int> y) { return gcd(y); });
+      x, [](const std::pair<unsigned int, unsigned int> y) { return gcd(y); });
 }
 
 __attribute__((pure)) unsigned int
@@ -114,7 +114,7 @@ Equations::gcd_graph_correct(const std::pair<unsigned int, unsigned int> x) {
 __attribute__((pure)) unsigned int
 Equations::collatz_steps(const unsigned int x) {
   return collatz_steps_functional(
-      x, [](unsigned int y) { return collatz_steps(y); });
+      x, [](const unsigned int y) { return collatz_steps(y); });
 }
 
 __attribute__((pure)) unsigned int

@@ -120,7 +120,7 @@ LoopifyHofs::subsequences(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -139,8 +139,8 @@ LoopifyHofs::subsequences(const std::shared_ptr<List<unsigned int>> &l) {
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -172,7 +172,7 @@ LoopifyHofs::subsequences(const std::shared_ptr<List<unsigned int>> &l) {
                 std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
                     _result{};
                 std::vector<_Frame> _stack;
-                _stack.push_back(_Enter{lsts});
+                _stack.emplace_back(_Enter{lsts});
                 while (!_stack.empty()) {
                   _Frame _frame = std::move(_stack.back());
                   _stack.pop_back();
@@ -193,10 +193,10 @@ LoopifyHofs::subsequences(const std::shared_ptr<List<unsigned int>> &l) {
                                     [&](const typename List<std::shared_ptr<
                                             List<unsigned int>>>::Cons &_args0)
                                         -> void {
-                                      _stack.push_back(
+                                      _stack.emplace_back(
                                           _Call1{List<unsigned int>::cons(
                                               _args.d_a0, _args0.d_a0)});
-                                      _stack.push_back(_Enter{_args0.d_a1});
+                                      _stack.emplace_back(_Enter{_args0.d_a1});
                                     }},
                                 lsts->v());
                           },
@@ -274,7 +274,7 @@ LoopifyHofs::cartesian(const std::shared_ptr<List<unsigned int>> &l1,
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l1});
+  _stack.emplace_back(_Enter{l1});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -290,8 +290,9 @@ LoopifyHofs::cartesian(const std::shared_ptr<List<unsigned int>> &l1,
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{pair_with_all(_args.d_a0, l2)});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(
+                            _Call1{pair_with_all(_args.d_a0, l2)});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l1->v());
             },
@@ -462,7 +463,7 @@ LoopifyHofs::power_set(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -481,8 +482,8 @@ LoopifyHofs::power_set(const std::shared_ptr<List<unsigned int>> &l) {
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -514,7 +515,7 @@ LoopifyHofs::power_set(const std::shared_ptr<List<unsigned int>> &l) {
                 std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
                     _result{};
                 std::vector<_Frame> _stack;
-                _stack.push_back(_Enter{lsts});
+                _stack.emplace_back(_Enter{lsts});
                 while (!_stack.empty()) {
                   _Frame _frame = std::move(_stack.back());
                   _stack.pop_back();
@@ -535,10 +536,10 @@ LoopifyHofs::power_set(const std::shared_ptr<List<unsigned int>> &l) {
                                     [&](const typename List<std::shared_ptr<
                                             List<unsigned int>>>::Cons &_args0)
                                         -> void {
-                                      _stack.push_back(
+                                      _stack.emplace_back(
                                           _Call1{List<unsigned int>::cons(
                                               _args.d_a0, _args0.d_a0)});
-                                      _stack.push_back(_Enter{_args0.d_a1});
+                                      _stack.emplace_back(_Enter{_args0.d_a1});
                                     }},
                                 lsts->v());
                           },

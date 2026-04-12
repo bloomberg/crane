@@ -114,7 +114,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListCombining::intercalate(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{ll});
+  _stack.emplace_back(_Enter{ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -139,8 +139,8 @@ std::shared_ptr<List<unsigned int>> LoopifyListCombining::intercalate(
                                     -> void { _result = _args.d_a0; },
                                 [&](const typename List<std::shared_ptr<
                                         List<unsigned int>>>::Cons &) -> void {
-                                  _stack.push_back(_Call1{_args.d_a0, sep});
-                                  _stack.push_back(_Enter{_args.d_a1});
+                                  _stack.emplace_back(_Call1{_args.d_a0, sep});
+                                  _stack.emplace_back(_Enter{_args.d_a1});
                                 }},
                             _args.d_a1->v());
                       }},
@@ -169,7 +169,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListCombining::concat(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{ll});
+  _stack.emplace_back(_Enter{ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -187,8 +187,8 @@ std::shared_ptr<List<unsigned int>> LoopifyListCombining::concat(
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args.d_a0});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args.d_a0});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   ll->v());
             },
@@ -215,7 +215,7 @@ LoopifyListCombining::mapcat(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -230,11 +230,11 @@ LoopifyListCombining::mapcat(const std::shared_ptr<List<unsigned int>> &l) {
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{List<unsigned int>::cons(
+                        _stack.emplace_back(_Call1{List<unsigned int>::cons(
                             _args.d_a0,
                             List<unsigned int>::cons(
                                 _args.d_a0, List<unsigned int>::nil()))});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -324,7 +324,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListCombining::concat_sep(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{ll});
+  _stack.emplace_back(_Enter{ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -349,8 +349,8 @@ std::shared_ptr<List<unsigned int>> LoopifyListCombining::concat_sep(
                                     -> void { _result = _args.d_a0; },
                                 [&](const typename List<std::shared_ptr<
                                         List<unsigned int>>>::Cons &) -> void {
-                                  _stack.push_back(_Call1{_args.d_a0, sep});
-                                  _stack.push_back(_Enter{_args.d_a1});
+                                  _stack.emplace_back(_Call1{_args.d_a0, sep});
+                                  _stack.emplace_back(_Enter{_args.d_a1});
                                 }},
                             _args.d_a1->v());
                       }},

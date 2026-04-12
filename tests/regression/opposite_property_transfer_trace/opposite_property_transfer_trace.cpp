@@ -33,16 +33,16 @@ OppositePropertyTransferTraceCase::triangle_identity_duality(
     const std::shared_ptr<OppositePropertyTransferTraceCase::PreStableCategory>
         &) {
   return std::make_pair(
-      [](std::shared_ptr<OppositePropertyTransferTraceCase::Triangle1Witness>
-             h) {
+      [](const std::shared_ptr<
+          OppositePropertyTransferTraceCase::Triangle1Witness> &h) {
         unsigned int t1_seed0 = h->t1_seed;
         unsigned int t1_value0 = h->t1_value;
         return std::make_shared<
             OppositePropertyTransferTraceCase::Triangle2Witness>(
             Triangle2Witness{t1_seed0, t1_value0});
       },
-      [](std::shared_ptr<OppositePropertyTransferTraceCase::Triangle2Witness>
-             h) {
+      [](const std::shared_ptr<
+          OppositePropertyTransferTraceCase::Triangle2Witness> &h) {
         unsigned int t2_seed0 = h->t2_seed;
         unsigned int t2_value0 = h->t2_value;
         return std::make_shared<
@@ -73,7 +73,8 @@ OppositePropertyTransferTraceCase::dual_property_equiv(
     const std::shared_ptr<OppositePropertyTransferTraceCase::PreStableCategory>
         &) {
   return std::make_pair(
-      [](std::shared_ptr<OppositePropertyTransferTraceCase::LeftProperty> h) {
+      [](const std::shared_ptr<OppositePropertyTransferTraceCase::LeftProperty>
+             &h) {
         unsigned int lp_seed0 = h->lp_seed;
         unsigned int lp_value0 = h->lp_value;
         unsigned int lp_tag0 = h->lp_tag;
@@ -81,7 +82,8 @@ OppositePropertyTransferTraceCase::dual_property_equiv(
             OppositePropertyTransferTraceCase::RightProperty>(
             RightProperty{lp_seed0, lp_value0, lp_tag0});
       },
-      [](std::shared_ptr<OppositePropertyTransferTraceCase::RightProperty> h) {
+      [](const std::shared_ptr<OppositePropertyTransferTraceCase::RightProperty>
+             &h) {
         unsigned int rp_seed0 = h->rp_seed;
         unsigned int rp_value0 = h->rp_value;
         unsigned int rp_tag0 = h->rp_tag;

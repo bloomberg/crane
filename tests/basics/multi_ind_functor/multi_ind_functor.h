@@ -43,7 +43,7 @@ template <Elem E> struct Container {
 
   public:
     // CREATORS
-    explicit maybe(Nothing _v) : d_v_(std::move(_v)) {}
+    explicit maybe(Nothing _v) : d_v_(_v) {}
 
     explicit maybe(Just _v) : d_v_(std::move(_v)) {}
 
@@ -99,7 +99,7 @@ template <Elem E> struct Container {
 
   public:
     // CREATORS
-    explicit mlist(MNil _v) : d_v_(std::move(_v)) {}
+    explicit mlist(MNil _v) : d_v_(_v) {}
 
     explicit mlist(MCons _v) : d_v_(std::move(_v)) {}
 

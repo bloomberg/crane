@@ -30,7 +30,7 @@ __attribute__((pure)) std::optional<unsigned int>
 Monadic::div_then_sub(const unsigned int a, const unsigned int b,
                       const unsigned int c) {
   return option_bind<unsigned int, unsigned int>(
-      safe_div(a, b), [=](unsigned int x) mutable {
+      safe_div(a, b), [=](const unsigned int x) mutable {
         return option_bind<unsigned int, unsigned int>(
             safe_sub(x, c), option_return<unsigned int>);
       });

@@ -33,7 +33,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -120,7 +120,7 @@ private:
 
 public:
   // CREATORS
-  explicit Uint(Nil _v) : d_v_(std::move(_v)) {}
+  explicit Uint(Nil _v) : d_v_(_v) {}
 
   explicit Uint(D0 _v) : d_v_(std::move(_v)) {}
 
@@ -308,7 +308,7 @@ private:
 
 public:
   // CREATORS
-  explicit Uint0(Nil0 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(Nil0 _v) : d_v_(_v) {}
 
   explicit Uint0(D10 _v) : d_v_(std::move(_v)) {}
 
@@ -764,7 +764,7 @@ struct HistoricalEventSafetyTraceCase {
   static inline const std::shared_ptr<PlantConfig> hist_witness_plant =
       std::make_shared<PlantConfig>(
           PlantConfig{500u, 500u, 500u, 1u, 5u, 10u, 100u, 100u,
-                      [](unsigned int) { return 100u; }, 100u, 1u});
+                      [](const unsigned int) { return 100u; }, 100u, 1u});
   __attribute__((pure)) static unsigned int
   hist_witness_stage(const unsigned int out);
   __attribute__((pure)) static unsigned int
@@ -782,7 +782,7 @@ struct HistoricalEventSafetyTraceCase {
   static inline const std::shared_ptr<PlantConfig> hoover_dam_config =
       std::make_shared<PlantConfig>(
           PlantConfig{2200u, 100u, 500u, 15u, 5u, 10u, 1000u, 1000u,
-                      [](unsigned int) { return 1000u; }, 200u, 60u});
+                      [](const unsigned int) { return 1000u; }, 200u, 60u});
   static inline const std::shared_ptr<State> hoover_initial_state =
       std::make_shared<State>(State{1500u, 20u, 0u});
   __attribute__((pure)) static unsigned int

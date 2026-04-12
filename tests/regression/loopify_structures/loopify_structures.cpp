@@ -36,7 +36,7 @@ __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -63,13 +63,13 @@ __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
                               Overloaded{
                                   [&](const typename LoopifyStructures::nested::
                                           Elem &_args0) -> void {
-                                    _stack.push_back(_Call1{_args0.d_a0});
-                                    _stack.push_back(_Enter{_args.d_a1, f});
+                                    _stack.emplace_back(_Call1{_args0.d_a0});
+                                    _stack.emplace_back(_Enter{_args.d_a1, f});
                                   },
                                   [&](const typename LoopifyStructures::nested::
                                           NList &_args0) -> void {
-                                    _stack.push_back(_Call2{_args0.d_a0, f});
-                                    _stack.push_back(_Enter{_args.d_a1, f});
+                                    _stack.emplace_back(_Call2{_args0.d_a0, f});
+                                    _stack.emplace_back(_Enter{_args.d_a1, f});
                                   }},
                               _args.d_a0->v());
                         }},
@@ -78,8 +78,8 @@ __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
             },
             [&](_Call1 _f) { _result = (_f._s0 + _result); },
             [&](_Call2 _f) {
-              _stack.push_back(_Call3{_result});
-              _stack.push_back(_Enter{_f._s0, _f._s1});
+              _stack.emplace_back(_Call3{_result});
+              _stack.emplace_back(_Enter{_f._s0, _f._s1});
             },
             [&](_Call3 _f) { _result = (_result + _f._s0); }},
         _frame);
@@ -111,7 +111,7 @@ __attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -138,13 +138,13 @@ __attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
                               Overloaded{
                                   [&](const typename LoopifyStructures::nested::
                                           Elem &) -> void {
-                                    _stack.push_back(_Call1{});
-                                    _stack.push_back(_Enter{_args.d_a1, f});
+                                    _stack.emplace_back(_Call1{});
+                                    _stack.emplace_back(_Enter{_args.d_a1, f});
                                   },
                                   [&](const typename LoopifyStructures::nested::
                                           NList &_args0) -> void {
-                                    _stack.push_back(_Call2{_args, f});
-                                    _stack.push_back(_Enter{_args0.d_a0, f});
+                                    _stack.emplace_back(_Call2{_args, f});
+                                    _stack.emplace_back(_Enter{_args0.d_a0, f});
                                   }},
                               _args.d_a0->v());
                         }},
@@ -165,8 +165,8 @@ __attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
                   _f._s0;
               unsigned int f = _f._s1;
               unsigned int d = (_result + 1);
-              _stack.push_back(_Call3{d});
-              _stack.push_back(_Enter{_args.d_a1, f});
+              _stack.emplace_back(_Call3{d});
+              _stack.emplace_back(_Enter{_args.d_a1, f});
             },
             [&](_Call3 _f) {
               unsigned int d = _f._s0;
@@ -210,7 +210,7 @@ std::shared_ptr<List<unsigned int>> LoopifyStructures::flatten_nested_list_fuel(
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -237,13 +237,13 @@ std::shared_ptr<List<unsigned int>> LoopifyStructures::flatten_nested_list_fuel(
                               Overloaded{
                                   [&](const typename LoopifyStructures::nested::
                                           Elem &_args0) -> void {
-                                    _stack.push_back(_Call1{_args0.d_a0});
-                                    _stack.push_back(_Enter{_args.d_a1, f});
+                                    _stack.emplace_back(_Call1{_args0.d_a0});
+                                    _stack.emplace_back(_Enter{_args.d_a1, f});
                                   },
                                   [&](const typename LoopifyStructures::nested::
                                           NList &_args0) -> void {
-                                    _stack.push_back(_Call2{_args0.d_a0, f});
-                                    _stack.push_back(_Enter{_args.d_a1, f});
+                                    _stack.emplace_back(_Call2{_args0.d_a0, f});
+                                    _stack.emplace_back(_Enter{_args.d_a1, f});
                                   }},
                               _args.d_a0->v());
                         }},
@@ -254,8 +254,8 @@ std::shared_ptr<List<unsigned int>> LoopifyStructures::flatten_nested_list_fuel(
               _result = List<unsigned int>::cons(_f._s0, _result);
             },
             [&](_Call2 _f) {
-              _stack.push_back(_Call3{_result});
-              _stack.push_back(_Enter{_f._s0, _f._s1});
+              _stack.emplace_back(_Call3{_result});
+              _stack.emplace_back(_Enter{_f._s0, _f._s1});
             },
             [&](_Call3 _f) { _result = _result->app(_f._s0); }},
         _frame);
@@ -316,7 +316,7 @@ LoopifyStructures::ltree_max(std::shared_ptr<LoopifyStructures::ltree> t1,
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<LoopifyStructures::ltree> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{t2, t1});
+  _stack.emplace_back(_Enter{t2, t1});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -379,9 +379,9 @@ LoopifyStructures::ltree_max(std::shared_ptr<LoopifyStructures::ltree> t1,
                                          } else {
                                            max_val = _args.d_a0;
                                          }
-                                         _stack.push_back(_Call1{
+                                         _stack.emplace_back(_Call1{
                                              _args0.d_a1, _args.d_a1, max_val});
-                                         _stack.push_back(
+                                         _stack.emplace_back(
                                              _Enter{_args0.d_a2, _args.d_a2});
                                        }},
                             t2->v());
@@ -389,8 +389,8 @@ LoopifyStructures::ltree_max(std::shared_ptr<LoopifyStructures::ltree> t1,
                   t1->v());
             },
             [&](_Call1 _f) {
-              _stack.push_back(_Call2{_result, _f._s2});
-              _stack.push_back(_Enter{_f._s0, _f._s1});
+              _stack.emplace_back(_Call2{_result, _f._s2});
+              _stack.emplace_back(_Enter{_f._s0, _f._s1});
             },
             [&](_Call2 _f) {
               _result = ltree::lnode(_f._s1, _result, _f._s0);

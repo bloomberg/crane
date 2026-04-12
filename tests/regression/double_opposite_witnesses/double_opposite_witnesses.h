@@ -88,7 +88,7 @@ struct DoubleOppositeWitnessesCase {
 
   public:
     // CREATORS
-    explicit Path(Path_refl _v) : d_v_(std::move(_v)) {}
+    explicit Path(Path_refl _v) : d_v_(_v) {}
 
     static std::shared_ptr<Path<t_A>> path_refl() {
       return std::make_shared<Path<t_A>>(Path_refl{});
@@ -141,8 +141,8 @@ struct DoubleOppositeWitnessesCase {
   static std::shared_ptr<Functor> compose_functor(std::shared_ptr<Functor> f,
                                                   std::shared_ptr<Functor> g) {
     return std::make_shared<Functor>(Functor{
-        [=](std::any x) mutable { return f->object_of(g->object_of(x)); },
-        [=](std::any x, std::any y, std::any f0) mutable {
+        [=](const std::any x) mutable { return f->object_of(g->object_of(x)); },
+        [=](const std::any x, const std::any y, const std::any f0) mutable {
           return f->morphism_of(g->object_of(x), g->object_of(y),
                                 g->morphism_of(x, y, f0));
         }});
@@ -184,16 +184,16 @@ struct DoubleOppositeWitnessesCase {
 
   template <PreCategory _tcI0>
   static std::shared_ptr<Functor> into_double_opposite_functor() {
-    return std::make_shared<Functor>(
-        Functor{[](std::any x) { return x; },
-                [](std::any, std::any, std::any f) { return f; }});
+    return std::make_shared<Functor>(Functor{
+        [](const std::any x) { return x; },
+        [](const std::any, const std::any, const std::any f) { return f; }});
   }
 
   template <PreCategory _tcI0>
   static std::shared_ptr<Functor> out_of_double_opposite_functor() {
-    return std::make_shared<Functor>(
-        Functor{[](std::any x) { return x; },
-                [](std::any, std::any, std::any f) { return f; }});
+    return std::make_shared<Functor>(Functor{
+        [](const std::any x) { return x; },
+        [](const std::any, const std::any, const std::any f) { return f; }});
   }
 
   template <PreStableCategory _tcI0>
@@ -230,11 +230,11 @@ struct DoubleOppositeWitnessesCase {
                     out_of_double_opposite_functor<
                         typename _tcI0::base_category>(),
                     std::make_pair(
-                        [](typename _tcI0::base_category::Obj) {
+                        [](const typename _tcI0::base_category::Obj) {
                           return Path<
                               typename _tcI0::base_category::Obj>::path_refl();
                         },
-                        [](typename _tcI0::base_category::Obj) {
+                        [](const typename _tcI0::base_category::Obj) {
                           return Path<
                               typename _tcI0::base_category::Obj>::path_refl();
                         })));

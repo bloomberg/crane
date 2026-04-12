@@ -33,7 +33,7 @@ struct LoopifyPairs {
 
   public:
     // CREATORS
-    explicit list(Nil _v) : d_v_(std::move(_v)) {}
+    explicit list(Nil _v) : d_v_(_v) {}
 
     explicit list(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -73,7 +73,7 @@ struct LoopifyPairs {
     using _Frame = std::variant<_Enter, _Call1>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -87,8 +87,8 @@ struct LoopifyPairs {
                           _result = f;
                         },
                         [&](const typename list<T1>::Cons &_args) -> void {
-                          _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -113,7 +113,7 @@ struct LoopifyPairs {
     using _Frame = std::variant<_Enter, _Call1>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -127,8 +127,8 @@ struct LoopifyPairs {
                           _result = f;
                         },
                         [&](const typename list<T1>::Cons &_args) -> void {
-                          _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -155,7 +155,7 @@ struct LoopifyPairs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::pair<std::shared_ptr<list<T1>>, std::shared_ptr<list<T1>>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -170,8 +170,8 @@ struct LoopifyPairs {
                               std::make_pair(list<T1>::nil(), list<T1>::nil());
                         },
                         [&](const typename list<T1>::Cons &_args) -> void {
-                          _stack.push_back(_Call1{p, _args});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{p, _args});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -364,7 +364,7 @@ struct LoopifyPairs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::pair<std::shared_ptr<list<T1>>, std::shared_ptr<list<T1>>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l, n});
+    _stack.emplace_back(_Enter{l, n});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -384,8 +384,8 @@ struct LoopifyPairs {
                                                      list<T1>::nil());
                           },
                           [&](const typename list<T1>::Cons &_args) -> void {
-                            _stack.push_back(_Call1{_args});
-                            _stack.push_back(_Enter{_args.d_a1, m});
+                            _stack.emplace_back(_Call1{_args});
+                            _stack.emplace_back(_Enter{_args.d_a1, m});
                           }},
                       l->v());
                 }
@@ -419,7 +419,7 @@ struct LoopifyPairs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::pair<std::shared_ptr<list<T1>>, std::shared_ptr<list<T1>>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -444,8 +444,8 @@ struct LoopifyPairs {
                                   },
                                   [&](const typename list<T1>::Cons &_args0)
                                       -> void {
-                                    _stack.push_back(_Call1{_args0, _args});
-                                    _stack.push_back(_Enter{_args0.d_a1});
+                                    _stack.emplace_back(_Call1{_args0, _args});
+                                    _stack.emplace_back(_Enter{_args0.d_a1});
                                   }},
                               _args.d_a1->v());
                         }},
@@ -480,7 +480,7 @@ struct LoopifyPairs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::pair<std::shared_ptr<list<T1>>, std::shared_ptr<list<T1>>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -496,8 +496,8 @@ struct LoopifyPairs {
                         },
                         [&](const typename list<T1>::Cons &_args) -> void {
                           if (p(_args.d_a0)) {
-                            _stack.push_back(_Call1{_args});
-                            _stack.push_back(_Enter{_args.d_a1});
+                            _stack.emplace_back(_Call1{_args});
+                            _stack.emplace_back(_Enter{_args.d_a1});
                           } else {
                             _result = std::make_pair(
                                 list<T1>::nil(),
@@ -555,7 +555,7 @@ struct LoopifyPairs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::pair<unsigned int, std::shared_ptr<list<unsigned int>>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l, acc});
+    _stack.emplace_back(_Enter{l, acc});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -575,8 +575,8 @@ struct LoopifyPairs {
                           auto _cs = f(acc, _args.d_a0);
                           const unsigned int &acc_ = _cs.first;
                           const unsigned int &y = _cs.second;
-                          _stack.push_back(_Call1{y});
-                          _stack.push_back(_Enter{_args.d_a1, acc_});
+                          _stack.emplace_back(_Call1{y});
+                          _stack.emplace_back(_Enter{_args.d_a1, acc_});
                         }},
                     l->v());
               },

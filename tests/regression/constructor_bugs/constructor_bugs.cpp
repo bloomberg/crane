@@ -545,7 +545,7 @@ std::pair<std::pair<std::shared_ptr<ConstructorBugs::State>, unsigned int>,
           unsigned int>
 ConstructorBugs::test_apply(const std::shared_ptr<ConstructorBugs::State> &s) {
   return apply_twice(
-      [](std::shared_ptr<ConstructorBugs::State> s0) {
+      [](const std::shared_ptr<ConstructorBugs::State> &s0) {
         return s0->value_inline;
       },
       s);

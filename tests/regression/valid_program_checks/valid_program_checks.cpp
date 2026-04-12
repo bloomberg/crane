@@ -8,5 +8,5 @@
 __attribute__((pure)) bool ValidProgramChecks::valid_program(
     const std::shared_ptr<List<unsigned int>> &bytes) {
   return ((2u ? bytes->length() % 2u : bytes->length()) == 0u &&
-          bytes->forallb([](unsigned int b) { return b < 256u; }));
+          bytes->forallb([](const unsigned int b) { return b < 256u; }));
 }

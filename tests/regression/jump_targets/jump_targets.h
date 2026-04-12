@@ -32,7 +32,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -92,7 +92,7 @@ struct JumpTargets {
 
     explicit instr_collection(JMS_coll _v) : d_v_(std::move(_v)) {}
 
-    explicit instr_collection(NOP_coll _v) : d_v_(std::move(_v)) {}
+    explicit instr_collection(NOP_coll _v) : d_v_(_v) {}
 
     static std::shared_ptr<instr_collection> jun_coll(unsigned int a0) {
       return std::make_shared<instr_collection>(JUN_coll{std::move(a0)});
@@ -204,7 +204,7 @@ struct JumpTargets {
 
     explicit instr_region(JMS_reg _v) : d_v_(std::move(_v)) {}
 
-    explicit instr_region(NOP_reg _v) : d_v_(std::move(_v)) {}
+    explicit instr_region(NOP_reg _v) : d_v_(_v) {}
 
     static std::shared_ptr<instr_region> jun_reg(unsigned int a0) {
       return std::make_shared<instr_region>(JUN_reg{std::move(a0)});
@@ -310,7 +310,7 @@ struct JumpTargets {
 
     explicit instr_jms(JMS_jms _v) : d_v_(std::move(_v)) {}
 
-    explicit instr_jms(NOP_jms _v) : d_v_(std::move(_v)) {}
+    explicit instr_jms(NOP_jms _v) : d_v_(_v) {}
 
     static std::shared_ptr<instr_jms> jun_jms(unsigned int a0) {
       return std::make_shared<instr_jms>(JUN_jms{std::move(a0)});
@@ -407,7 +407,7 @@ struct JumpTargets {
 
     explicit instr_jun(JMS_jun _v) : d_v_(std::move(_v)) {}
 
-    explicit instr_jun(NOP_jun _v) : d_v_(std::move(_v)) {}
+    explicit instr_jun(NOP_jun _v) : d_v_(_v) {}
 
     static std::shared_ptr<instr_jun> jun_jun(unsigned int a0) {
       return std::make_shared<instr_jun>(JUN_jun{std::move(a0)});

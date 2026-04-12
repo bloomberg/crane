@@ -31,7 +31,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -107,11 +107,11 @@ struct EncodeOps {
 
   public:
     // CREATORS
-    explicit instruction1(CLB _v) : d_v_(std::move(_v)) {}
+    explicit instruction1(CLB _v) : d_v_(_v) {}
 
-    explicit instruction1(CMC _v) : d_v_(std::move(_v)) {}
+    explicit instruction1(CMC _v) : d_v_(_v) {}
 
-    explicit instruction1(DAA _v) : d_v_(std::move(_v)) {}
+    explicit instruction1(DAA _v) : d_v_(_v) {}
 
     explicit instruction1(FIM _v) : d_v_(std::move(_v)) {}
 
@@ -119,15 +119,15 @@ struct EncodeOps {
 
     explicit instruction1(LDM1 _v) : d_v_(std::move(_v)) {}
 
-    explicit instruction1(NOP1 _v) : d_v_(std::move(_v)) {}
+    explicit instruction1(NOP1 _v) : d_v_(_v) {}
 
-    explicit instruction1(RDM _v) : d_v_(std::move(_v)) {}
+    explicit instruction1(RDM _v) : d_v_(_v) {}
 
-    explicit instruction1(TCS _v) : d_v_(std::move(_v)) {}
+    explicit instruction1(TCS _v) : d_v_(_v) {}
 
-    explicit instruction1(WPM _v) : d_v_(std::move(_v)) {}
+    explicit instruction1(WPM _v) : d_v_(_v) {}
 
-    explicit instruction1(WR0 _v) : d_v_(std::move(_v)) {}
+    explicit instruction1(WR0 _v) : d_v_(_v) {}
 
     static std::shared_ptr<instruction1> clb() {
       return std::make_shared<instruction1>(CLB{});
@@ -326,7 +326,7 @@ struct EncodeOps {
 
   public:
     // CREATORS
-    explicit instruction2(NOP2 _v) : d_v_(std::move(_v)) {}
+    explicit instruction2(NOP2 _v) : d_v_(_v) {}
 
     explicit instruction2(LDM2 _v) : d_v_(std::move(_v)) {}
 
@@ -410,7 +410,7 @@ struct EncodeOps {
 
   public:
     // CREATORS
-    explicit instruction3(NOP3 _v) : d_v_(std::move(_v)) {}
+    explicit instruction3(NOP3 _v) : d_v_(_v) {}
 
     explicit instruction3(LDM3 _v) : d_v_(std::move(_v)) {}
 

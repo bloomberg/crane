@@ -18,7 +18,7 @@ std::shared_ptr<MatchClosureEscape::fn_box> MatchClosureEscape::match_arm_box(
   return std::visit(
       Overloaded{[](const typename MatchClosureEscape::tree::Leaf &)
                      -> std::shared_ptr<MatchClosureEscape::fn_box> {
-                   return fn_box::box([](unsigned int x) { return x; });
+                   return fn_box::box([](const unsigned int x) { return x; });
                  },
                  [](const typename MatchClosureEscape::tree::Node &_args)
                      -> std::shared_ptr<MatchClosureEscape::fn_box> {

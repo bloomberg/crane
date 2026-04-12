@@ -33,7 +33,7 @@ struct IifeNameClash {
     // CREATORS
     explicit wrapper(Wrap _v) : d_v_(std::move(_v)) {}
 
-    explicit wrapper(Empty _v) : d_v_(std::move(_v)) {}
+    explicit wrapper(Empty _v) : d_v_(_v) {}
 
     static std::shared_ptr<wrapper> wrap(unsigned int n) {
       return std::make_shared<wrapper>(Wrap{std::move(n)});

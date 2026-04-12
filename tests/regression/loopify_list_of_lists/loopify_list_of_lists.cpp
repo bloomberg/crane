@@ -23,7 +23,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListOfLists::intercalate(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{ll});
+  _stack.emplace_back(_Enter{ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -48,8 +48,8 @@ std::shared_ptr<List<unsigned int>> LoopifyListOfLists::intercalate(
                                     -> void { _result = _args.d_a0; },
                                 [&](const typename List<std::shared_ptr<
                                         List<unsigned int>>>::Cons &) -> void {
-                                  _stack.push_back(_Call1{_args.d_a0, sep});
-                                  _stack.push_back(_Enter{_args.d_a1});
+                                  _stack.emplace_back(_Call1{_args.d_a0, sep});
+                                  _stack.emplace_back(_Enter{_args.d_a1});
                                 }},
                             _args.d_a1->v());
                       }},
@@ -302,7 +302,7 @@ LoopifyListOfLists::list_len(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -315,8 +315,8 @@ LoopifyListOfLists::list_len(const std::shared_ptr<List<unsigned int>> &l) {
                                  -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
-                               _stack.push_back(_Call1{1u});
-                               _stack.push_back(_Enter{_args.d_a1});
+                               _stack.emplace_back(_Call1{1u});
+                               _stack.emplace_back(_Enter{_args.d_a1});
                              }},
                          l->v());
                    },
@@ -342,7 +342,7 @@ __attribute__((pure)) unsigned int LoopifyListOfLists::total_length(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{ll});
+  _stack.emplace_back(_Enter{ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -360,8 +360,8 @@ __attribute__((pure)) unsigned int LoopifyListOfLists::total_length(
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{list_len(_args.d_a0)});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{list_len(_args.d_a0)});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   ll->v());
             },
@@ -392,7 +392,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListOfLists::flatten(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{ll});
+  _stack.emplace_back(_Enter{ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -410,8 +410,8 @@ std::shared_ptr<List<unsigned int>> LoopifyListOfLists::flatten(
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args.d_a0});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args.d_a0});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   ll->v());
             },
@@ -437,7 +437,7 @@ __attribute__((pure)) unsigned int LoopifyListOfLists::count_total(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{ll});
+  _stack.emplace_back(_Enter{ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -455,8 +455,8 @@ __attribute__((pure)) unsigned int LoopifyListOfLists::count_total(
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{list_len(_args.d_a0)});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{list_len(_args.d_a0)});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   ll->v());
             },
@@ -646,7 +646,7 @@ __attribute__((pure)) unsigned int LoopifyListOfLists::max_length(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{ll});
+  _stack.emplace_back(_Enter{ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -664,8 +664,8 @@ __attribute__((pure)) unsigned int LoopifyListOfLists::max_length(
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{list_len(_args.d_a0)});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{list_len(_args.d_a0)});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   ll->v());
             },

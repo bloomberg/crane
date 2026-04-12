@@ -30,7 +30,7 @@ private:
 
 public:
   // CREATORS
-  explicit Nat(O _v) : d_v_(std::move(_v)) {}
+  explicit Nat(O _v) : d_v_(_v) {}
 
   explicit Nat(S _v) : d_v_(std::move(_v)) {}
 
@@ -68,7 +68,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -122,7 +122,7 @@ struct NestedTree {
 
   public:
     // CREATORS
-    explicit tree(Leaf _v) : d_v_(std::move(_v)) {}
+    explicit tree(Leaf _v) : d_v_(_v) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
@@ -210,7 +210,7 @@ struct NestedTree {
   flatten_tree(const std::shared_ptr<tree<T1>> &t) {
     return _flatten_tree_go<T1,
                             std::shared_ptr<List<std::shared_ptr<List<T1>>>>>(
-        [](T1 x) { return List<T1>::cons(x, List<T1>::nil()); }, t);
+        [](const T1 x) { return List<T1>::cons(x, List<T1>::nil()); }, t);
   }
 };
 

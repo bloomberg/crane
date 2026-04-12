@@ -144,7 +144,7 @@ struct PolyInductive {
 
   public:
     // CREATORS
-    explicit pmaybe(PNothing _v) : d_v_(std::move(_v)) {}
+    explicit pmaybe(PNothing _v) : d_v_(_v) {}
 
     explicit pmaybe(PJust _v) : d_v_(std::move(_v)) {}
 
@@ -317,7 +317,7 @@ struct PolyInductive {
       pmaybe_default<unsigned int>(0u, pmaybe<unsigned int>::pnothing());
   static inline const unsigned int test_pmap = pmaybe_default<unsigned int>(
       0u, pmaybe<unsigned int>::pjust(5u)->template pmaybe_map<unsigned int>(
-              [](unsigned int x) { return (x + 1); }));
+              [](const unsigned int x) { return (x + 1); }));
   static inline const unsigned int test_ptree =
       ptree<unsigned int>::pnode(
           ptree<unsigned int>::pleaf(1u),

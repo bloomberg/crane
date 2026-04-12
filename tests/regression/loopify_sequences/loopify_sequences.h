@@ -32,7 +32,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -68,7 +68,7 @@ public:
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{_self});
+    _stack.emplace_back(_Enter{_self});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -82,8 +82,8 @@ public:
                           _result = 0u;
                         },
                         [&](const typename List<t_A>::Cons &_args) -> void {
-                          _stack.push_back(_Call1{});
-                          _stack.push_back(_Enter{_args.d_a1.get()});
+                          _stack.emplace_back(_Call1{});
+                          _stack.emplace_back(_Enter{_args.d_a1.get()});
                         }},
                     _self->v());
               },
@@ -151,7 +151,7 @@ struct LoopifySequences {
     using _Frame = std::variant<_Enter, _Call1>;
     std::shared_ptr<List<T1>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{lists});
+    _stack.emplace_back(_Enter{lists});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -173,9 +173,10 @@ struct LoopifySequences {
                                          [&](const typename List<
                                              std::shared_ptr<List<T1>>>::Cons &)
                                              -> void {
-                                           _stack.push_back(
+                                           _stack.emplace_back(
                                                _Call1{_args.d_a0, sep});
-                                           _stack.push_back(_Enter{_args.d_a1});
+                                           _stack.emplace_back(
+                                               _Enter{_args.d_a1});
                                          }},
                               _args.d_a1->v());
                         }},
@@ -214,7 +215,7 @@ struct LoopifySequences {
                 using _Frame = std::variant<_Enter, _Call1>;
                 std::shared_ptr<List<T1>> _result{};
                 std::vector<_Frame> _stack;
-                _stack.push_back(_Enter{rest});
+                _stack.emplace_back(_Enter{rest});
                 while (!_stack.empty()) {
                   _Frame _frame = std::move(_stack.back());
                   _stack.pop_back();
@@ -228,9 +229,9 @@ struct LoopifySequences {
                                         -> void { _result = List<T1>::nil(); },
                                     [&](const typename List<T1>::Cons &_args0)
                                         -> void {
-                                      _stack.push_back(
+                                      _stack.emplace_back(
                                           _Call1{sep, _args0.d_a0});
-                                      _stack.push_back(_Enter{_args0.d_a1});
+                                      _stack.emplace_back(_Enter{_args0.d_a1});
                                     }},
                                 rest->v());
                           },
@@ -327,7 +328,7 @@ struct LoopifySequences {
             using _Frame = std::variant<_Enter, _Call1>;
             std::shared_ptr<List<T1>> _result{};
             std::vector<_Frame> _stack;
-            _stack.push_back(_Enter{l});
+            _stack.emplace_back(_Enter{l});
             while (!_stack.empty()) {
               _Frame _frame = std::move(_stack.back());
               _stack.pop_back();
@@ -349,14 +350,14 @@ struct LoopifySequences {
                                       Overloaded{
                                           [&](const typename List<T1>::Nil &)
                                               -> void {
-                                            _stack.push_back(
+                                            _stack.emplace_back(
                                                 _Enter{_args0.d_a1});
                                           },
                                           [&](const typename List<T1>::Cons
                                                   &_args1) -> void {
-                                            _stack.push_back(
+                                            _stack.emplace_back(
                                                 _Call1{_args1.d_a0});
-                                            _stack.push_back(
+                                            _stack.emplace_back(
                                                 _Enter{_args0.d_a1});
                                           }},
                                       _args0.d_a0->v());
@@ -385,7 +386,7 @@ struct LoopifySequences {
             using _Frame = std::variant<_Enter, _Call1>;
             std::shared_ptr<List<std::shared_ptr<List<T1>>>> _result{};
             std::vector<_Frame> _stack;
-            _stack.push_back(_Enter{l});
+            _stack.emplace_back(_Enter{l});
             while (!_stack.empty()) {
               _Frame _frame = std::move(_stack.back());
               _stack.pop_back();
@@ -408,14 +409,14 @@ struct LoopifySequences {
                                       Overloaded{
                                           [&](const typename List<T1>::Nil &)
                                               -> void {
-                                            _stack.push_back(
+                                            _stack.emplace_back(
                                                 _Enter{_args1.d_a1});
                                           },
                                           [&](const typename List<T1>::Cons
                                                   &_args2) -> void {
-                                            _stack.push_back(
+                                            _stack.emplace_back(
                                                 _Call1{_args2.d_a1});
-                                            _stack.push_back(
+                                            _stack.emplace_back(
                                                 _Enter{_args1.d_a1});
                                           }},
                                       _args1.d_a0->v());
@@ -708,7 +709,7 @@ struct LoopifySequences {
     using _Frame = std::variant<_Enter, _Call1>;
     bool _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -723,8 +724,8 @@ struct LoopifySequences {
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{p(_args.d_a0)});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{p(_args.d_a0)});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },

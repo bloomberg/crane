@@ -33,7 +33,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -87,7 +87,7 @@ struct NestedInd {
 
   public:
     // CREATORS
-    explicit custom_list(Cnil _v) : d_v_(std::move(_v)) {}
+    explicit custom_list(Cnil _v) : d_v_(_v) {}
 
     explicit custom_list(Ccons _v) : d_v_(std::move(_v)) {}
 
@@ -645,7 +645,8 @@ struct NestedInd {
   static inline const std::shared_ptr<List<unsigned int>> test_literals =
       test_nested->literals();
   static inline const unsigned int test_doubled =
-      test_nested->lit_map([](unsigned int n) { return (n * 2u); })->eval();
+      test_nested->lit_map([](const unsigned int n) { return (n * 2u); })
+          ->eval();
   static inline const std::pair<
       std::pair<
           std::pair<

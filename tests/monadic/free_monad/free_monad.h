@@ -49,7 +49,7 @@ struct FreeMonad {
 
     explicit IO(Bind _v) : d_v_(std::move(_v)) {}
 
-    explicit IO(Get_line _v) : d_v_(std::move(_v)) {}
+    explicit IO(Get_line _v) : d_v_(_v) {}
 
     explicit IO(Print _v) : d_v_(std::move(_v)) {}
 
@@ -92,7 +92,7 @@ struct FreeMonad {
             [&](const typename IO::Pure &_args) -> T1 { return f(_args.d_a); },
             [&](const typename IO::Bind &_args) -> T1 {
               return f0(_args.d_a, IO_rect<T1>(f, f0, f1, f2, _args.d_a),
-                        _args.d_b, [=](std::any a) mutable {
+                        _args.d_b, [=](const std::any a) mutable {
                           return IO_rect<T1>(f, f0, f1, f2, _args.d_b(a));
                         });
             },
@@ -111,7 +111,7 @@ struct FreeMonad {
             [&](const typename IO::Pure &_args) -> T1 { return f(_args.d_a); },
             [&](const typename IO::Bind &_args) -> T1 {
               return f0(_args.d_a, IO_rec<T1>(f, f0, f1, f2, _args.d_a),
-                        _args.d_b, [=](std::any a) mutable {
+                        _args.d_b, [=](const std::any a) mutable {
                           return IO_rec<T1>(f, f0, f1, f2, _args.d_b(a));
                         });
             },

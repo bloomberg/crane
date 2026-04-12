@@ -137,7 +137,7 @@ LoopifyCombinatorics::perms_choices_fuel(
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{orig, choices, fuel});
+  _stack.emplace_back(_Enter{orig, choices, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -165,21 +165,21 @@ LoopifyCombinatorics::perms_choices_fuel(
                               Overloaded{
                                   [&](const typename List<unsigned int>::Nil &)
                                       -> void {
-                                    _stack.push_back(_Call1{map_cons(
+                                    _stack.emplace_back(_Call1{map_cons(
                                         _args.d_a0,
                                         List<std::shared_ptr<
                                             List<unsigned int>>>::
                                             cons(List<unsigned int>::nil(),
                                                  List<std::shared_ptr<List<
                                                      unsigned int>>>::nil()))});
-                                    _stack.push_back(
+                                    _stack.emplace_back(
                                         _Enter{orig, _args.d_a1, f});
                                   },
                                   [&](const typename List<unsigned int>::Cons &)
                                       -> void {
-                                    _stack.push_back(_Call2{
+                                    _stack.emplace_back(_Call2{
                                         remaining, remaining, f, _args.d_a0});
-                                    _stack.push_back(
+                                    _stack.emplace_back(
                                         _Enter{orig, _args.d_a1, f});
                                   }},
                               remaining->v());
@@ -189,8 +189,8 @@ LoopifyCombinatorics::perms_choices_fuel(
             },
             [&](_Call1 _f) { _result = _f._s0->app(_result); },
             [&](_Call2 _f) {
-              _stack.push_back(_Call3{_result, _f._s3});
-              _stack.push_back(_Enter{_f._s0, _f._s1, _f._s2});
+              _stack.emplace_back(_Call3{_result, _f._s3});
+              _stack.emplace_back(_Enter{_f._s0, _f._s1, _f._s2});
             },
             [&](_Call3 _f) {
               _result = map_cons(_f._s1, _result)->app(_f._s0);
@@ -230,7 +230,7 @@ LoopifyCombinatorics::len_list(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -243,8 +243,8 @@ LoopifyCombinatorics::len_list(const std::shared_ptr<List<unsigned int>> &l) {
                                  -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
-                               _stack.push_back(_Call1{});
-                               _stack.push_back(_Enter{_args.d_a1});
+                               _stack.emplace_back(_Call1{});
+                               _stack.emplace_back(_Enter{_args.d_a1});
                              }},
                          l->v());
                    },
@@ -267,7 +267,7 @@ LoopifyCombinatorics::factorial_impl(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -277,8 +277,8 @@ LoopifyCombinatorics::factorial_impl(const unsigned int n) {
                               _result = 1u;
                             } else {
                               unsigned int m = n - 1;
-                              _stack.push_back(_Call1{n});
-                              _stack.push_back(_Enter{m});
+                              _stack.emplace_back(_Call1{n});
+                              _stack.emplace_back(_Enter{m});
                             }
                           },
                           [&](_Call1 _f) { _result = (_f._s0 * _result); }},
@@ -308,7 +308,7 @@ LoopifyCombinatorics::subsequences(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -327,8 +327,8 @@ LoopifyCombinatorics::subsequences(
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -360,7 +360,7 @@ LoopifyCombinatorics::subsequences(
                 std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
                     _result{};
                 std::vector<_Frame> _stack;
-                _stack.push_back(_Enter{lst});
+                _stack.emplace_back(_Enter{lst});
                 while (!_stack.empty()) {
                   _Frame _frame = std::move(_stack.back());
                   _stack.pop_back();
@@ -381,10 +381,10 @@ LoopifyCombinatorics::subsequences(
                                     [&](const typename List<std::shared_ptr<
                                             List<unsigned int>>>::Cons &_args0)
                                         -> void {
-                                      _stack.push_back(
+                                      _stack.emplace_back(
                                           _Call1{List<unsigned int>::cons(
                                               _args.d_a0, _args0.d_a0)});
-                                      _stack.push_back(_Enter{_args0.d_a1});
+                                      _stack.emplace_back(_Enter{_args0.d_a1});
                                     }},
                                 lst->v());
                           },
@@ -462,7 +462,7 @@ LoopifyCombinatorics::cartesian(const std::shared_ptr<List<unsigned int>> &l1,
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l2});
+  _stack.emplace_back(_Enter{l2});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -478,8 +478,8 @@ LoopifyCombinatorics::cartesian(const std::shared_ptr<List<unsigned int>> &l1,
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{map_pairs(_args.d_a0, l1)});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{map_pairs(_args.d_a0, l1)});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l2->v());
             },
@@ -503,7 +503,7 @@ LoopifyCombinatorics::power_set(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -522,8 +522,8 @@ LoopifyCombinatorics::power_set(const std::shared_ptr<List<unsigned int>> &l) {
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -555,7 +555,7 @@ LoopifyCombinatorics::power_set(const std::shared_ptr<List<unsigned int>> &l) {
                 std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
                     _result{};
                 std::vector<_Frame> _stack;
-                _stack.push_back(_Enter{lst});
+                _stack.emplace_back(_Enter{lst});
                 while (!_stack.empty()) {
                   _Frame _frame = std::move(_stack.back());
                   _stack.pop_back();
@@ -576,10 +576,10 @@ LoopifyCombinatorics::power_set(const std::shared_ptr<List<unsigned int>> &l) {
                                     [&](const typename List<std::shared_ptr<
                                             List<unsigned int>>>::Cons &_args0)
                                         -> void {
-                                      _stack.push_back(
+                                      _stack.emplace_back(
                                           _Call1{List<unsigned int>::cons(
                                               _args.d_a0, _args0.d_a0)});
-                                      _stack.push_back(_Enter{_args0.d_a1});
+                                      _stack.emplace_back(_Enter{_args0.d_a1});
                                     }},
                                 lst->v());
                           },
@@ -616,7 +616,7 @@ LoopifyCombinatorics::insert_everywhere(const unsigned int x,
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -636,8 +636,8 @@ LoopifyCombinatorics::insert_everywhere(const unsigned int x,
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args, l, x});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args, l, x});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -671,7 +671,7 @@ LoopifyCombinatorics::insert_everywhere(const unsigned int x,
                 std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
                     _result{};
                 std::vector<_Frame> _stack;
-                _stack.push_back(_Enter{lsts});
+                _stack.emplace_back(_Enter{lsts});
                 while (!_stack.empty()) {
                   _Frame _frame = std::move(_stack.back());
                   _stack.pop_back();
@@ -692,10 +692,10 @@ LoopifyCombinatorics::insert_everywhere(const unsigned int x,
                                     [&](const typename List<std::shared_ptr<
                                             List<unsigned int>>>::Cons &_args0)
                                         -> void {
-                                      _stack.push_back(
+                                      _stack.emplace_back(
                                           _Call1{List<unsigned int>::cons(
                                               _args.d_a0, _args0.d_a0)});
-                                      _stack.push_back(_Enter{_args0.d_a1});
+                                      _stack.emplace_back(_Enter{_args0.d_a1});
                                     }},
                                 lsts->v());
                           },
@@ -733,7 +733,7 @@ LoopifyCombinatorics::elem(const unsigned int x,
   using _Frame = std::variant<_Enter, _Call1>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -746,8 +746,8 @@ LoopifyCombinatorics::elem(const unsigned int x,
                                  -> void { _result = false; },
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
-                               _stack.push_back(_Call1{x == _args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a1});
+                               _stack.emplace_back(_Call1{x == _args.d_a0});
+                               _stack.emplace_back(_Enter{_args.d_a1});
                              }},
                          l->v());
                    },
@@ -769,7 +769,7 @@ LoopifyCombinatorics::len_impl(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -782,8 +782,8 @@ LoopifyCombinatorics::len_impl(const std::shared_ptr<List<unsigned int>> &l) {
                                  -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
-                               _stack.push_back(_Call1{});
-                               _stack.push_back(_Enter{_args.d_a1});
+                               _stack.emplace_back(_Call1{});
+                               _stack.emplace_back(_Enter{_args.d_a1});
                              }},
                          l->v());
                    },
@@ -809,7 +809,7 @@ LoopifyCombinatorics::dedup_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -829,8 +829,8 @@ LoopifyCombinatorics::dedup_fuel(const unsigned int fuel,
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{_args});
-                          _stack.push_back(_Enter{_args.d_a1, f});
+                          _stack.emplace_back(_Call1{_args});
+                          _stack.emplace_back(_Enter{_args.d_a1, f});
                         }},
                     l->v());
               }

@@ -8,7 +8,7 @@
 std::shared_ptr<TypeApp::list<unsigned int>>
 TypeApp::map_succ(const std::shared_ptr<TypeApp::list<unsigned int>> &_x0) {
   return map<unsigned int, unsigned int>(
-      [](unsigned int x) { return (x + 1u); }, _x0);
+      [](const unsigned int x) { return (x + 1u); }, _x0);
 }
 
 __attribute__((pure)) unsigned int

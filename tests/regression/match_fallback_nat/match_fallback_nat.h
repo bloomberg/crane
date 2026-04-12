@@ -33,7 +33,7 @@ struct MatchFallbackNat {
     // CREATORS
     explicit maybe_nat(SomeNat _v) : d_v_(std::move(_v)) {}
 
-    explicit maybe_nat(NoneNat _v) : d_v_(std::move(_v)) {}
+    explicit maybe_nat(NoneNat _v) : d_v_(_v) {}
 
     static std::shared_ptr<maybe_nat> somenat(unsigned int a0) {
       return std::make_shared<maybe_nat>(SomeNat{std::move(a0)});

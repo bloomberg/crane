@@ -33,7 +33,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -69,7 +69,7 @@ public:
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{_self});
+    _stack.emplace_back(_Enter{_self});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -83,8 +83,8 @@ public:
                           _result = 0u;
                         },
                         [&](const typename List<t_A>::Cons &_args) -> void {
-                          _stack.push_back(_Call1{});
-                          _stack.push_back(_Enter{_args.d_a1.get()});
+                          _stack.emplace_back(_Call1{});
+                          _stack.emplace_back(_Enter{_args.d_a1.get()});
                         }},
                     _self->v());
               },
@@ -301,7 +301,7 @@ struct LoopifyHofs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::shared_ptr<List<T2>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -315,8 +315,8 @@ struct LoopifyHofs {
                           _result = List<T2>::nil();
                         },
                         [&](const typename List<T1>::Cons &_args) -> void {
-                          _stack.push_back(_Call1{f(_args.d_a0)});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{f(_args.d_a0)});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -342,7 +342,7 @@ struct LoopifyHofs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::shared_ptr<List<std::pair<T1, T2>>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l1});
+    _stack.emplace_back(_Enter{l1});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -367,7 +367,7 @@ struct LoopifyHofs {
                   using _Frame = std::variant<_Enter, _Call1>;
                   std::shared_ptr<List<std::pair<T1, T2>>> _result{};
                   std::vector<_Frame> _stack;
-                  _stack.push_back(_Enter{l});
+                  _stack.emplace_back(_Enter{l});
                   while (!_stack.empty()) {
                     _Frame _frame = std::move(_stack.back());
                     _stack.pop_back();
@@ -384,9 +384,9 @@ struct LoopifyHofs {
                                       },
                                       [&](const typename List<T2>::Cons &_args)
                                           -> void {
-                                        _stack.push_back(_Call1{
+                                        _stack.emplace_back(_Call1{
                                             std::make_pair(x, _args.d_a0)});
-                                        _stack.push_back(_Enter{_args.d_a1});
+                                        _stack.emplace_back(_Enter{_args.d_a1});
                                       }},
                                   l->v());
                             },
@@ -404,8 +404,9 @@ struct LoopifyHofs {
                           _result = List<std::pair<T1, T2>>::nil();
                         },
                         [&](const typename List<T1>::Cons &_args0) -> void {
-                          _stack.push_back(_Call1{pair_with(_args0.d_a0, l2)});
-                          _stack.push_back(_Enter{_args0.d_a1});
+                          _stack.emplace_back(
+                              _Call1{pair_with(_args0.d_a0, l2)});
+                          _stack.emplace_back(_Enter{_args0.d_a1});
                         }},
                     l1->v());
               },
@@ -679,7 +680,7 @@ struct LoopifyHofs {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -700,8 +701,8 @@ struct LoopifyHofs {
                                       -> void { _result = _args.d_a0; },
                                   [&](const typename List<unsigned int>::Cons &)
                                       -> void {
-                                    _stack.push_back(_Call1{_args.d_a0});
-                                    _stack.push_back(_Enter{_args.d_a1});
+                                    _stack.emplace_back(_Call1{_args.d_a0});
+                                    _stack.emplace_back(_Enter{_args.d_a1});
                                   }},
                               _args.d_a1->v());
                         }},
@@ -736,7 +737,7 @@ struct LoopifyHofs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::shared_ptr<List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -752,8 +753,8 @@ struct LoopifyHofs {
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{_args, acc, f});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{_args, acc, f});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -786,7 +787,7 @@ struct LoopifyHofs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::shared_ptr<List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -810,8 +811,8 @@ struct LoopifyHofs {
                                   },
                                   [&](const typename List<unsigned int>::Cons &)
                                       -> void {
-                                    _stack.push_back(_Call1{_args, f});
-                                    _stack.push_back(_Enter{_args.d_a1});
+                                    _stack.emplace_back(_Call1{_args, f});
+                                    _stack.emplace_back(_Enter{_args.d_a1});
                                   }},
                               _args.d_a1->v());
                         }},
@@ -844,7 +845,7 @@ struct LoopifyHofs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::shared_ptr<List<T1>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -859,8 +860,8 @@ struct LoopifyHofs {
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{f(_args.d_a0)});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{f(_args.d_a0)});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -886,7 +887,7 @@ struct LoopifyHofs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::shared_ptr<List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -901,8 +902,8 @@ struct LoopifyHofs {
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{_args, f});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{_args, f});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -938,7 +939,7 @@ struct LoopifyHofs {
     using _Frame = std::variant<_Enter, _Call1>;
     bool _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -953,8 +954,8 @@ struct LoopifyHofs {
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{p(_args.d_a0)});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{p(_args.d_a0)});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -1079,7 +1080,7 @@ struct LoopifyHofs {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -1100,8 +1101,8 @@ struct LoopifyHofs {
                                       -> void { _result = f(_args.d_a0); },
                                   [&](const typename List<unsigned int>::Cons &)
                                       -> void {
-                                    _stack.push_back(_Call1{_args, f});
-                                    _stack.push_back(_Enter{_args.d_a1});
+                                    _stack.emplace_back(_Call1{_args, f});
+                                    _stack.emplace_back(_Enter{_args.d_a1});
                                   }},
                               _args.d_a1->v());
                         }},
@@ -1181,7 +1182,7 @@ struct LoopifyHofs {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -1202,8 +1203,8 @@ struct LoopifyHofs {
                                       -> void { _result = _args.d_a0; },
                                   [&](const typename List<unsigned int>::Cons &)
                                       -> void {
-                                    _stack.push_back(_Call1{_args, cmp});
-                                    _stack.push_back(_Enter{_args.d_a1});
+                                    _stack.emplace_back(_Call1{_args, cmp});
+                                    _stack.emplace_back(_Enter{_args.d_a1});
                                   }},
                               _args.d_a1->v());
                         }},
@@ -1241,7 +1242,7 @@ struct LoopifyHofs {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -1256,8 +1257,8 @@ struct LoopifyHofs {
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{_args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{_args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -1286,7 +1287,7 @@ struct LoopifyHofs {
               std::shared_ptr<List<unsigned int>>>
         _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -1302,8 +1303,8 @@ struct LoopifyHofs {
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{p, _args});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{p, _args});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -1456,7 +1457,7 @@ struct LoopifyHofs {
               std::shared_ptr<List<unsigned int>>>
         _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -1473,8 +1474,8 @@ struct LoopifyHofs {
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
                           if (p(_args.d_a0)) {
-                            _stack.push_back(_Call1{_args});
-                            _stack.push_back(_Enter{_args.d_a1});
+                            _stack.emplace_back(_Call1{_args});
+                            _stack.emplace_back(_Enter{_args.d_a1});
                           } else {
                             _result =
                                 std::make_pair(List<unsigned int>::nil(),
@@ -1521,7 +1522,7 @@ struct LoopifyHofs {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l, fuel});
+    _stack.emplace_back(_Enter{l, fuel});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -1558,14 +1559,16 @@ struct LoopifyHofs {
                                     [&](const typename List<unsigned int>::Cons
                                             &_args0) -> void {
                                       if (eq(_args.d_a0, _args0.d_a0)) {
-                                        _stack.push_back(_Call1{_args});
-                                        _stack.push_back(_Enter{_args.d_a1, f});
+                                        _stack.emplace_back(_Call1{_args});
+                                        _stack.emplace_back(
+                                            _Enter{_args.d_a1, f});
                                       } else {
-                                        _stack.push_back(
+                                        _stack.emplace_back(
                                             _Call2{List<unsigned int>::cons(
                                                 _args.d_a0,
                                                 List<unsigned int>::nil())});
-                                        _stack.push_back(_Enter{_args.d_a1, f});
+                                        _stack.emplace_back(
+                                            _Enter{_args.d_a1, f});
                                       }
                                     }},
                                 _args.d_a1->v());
@@ -1637,7 +1640,7 @@ struct LoopifyHofs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::pair<unsigned int, std::shared_ptr<List<unsigned int>>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l, acc});
+    _stack.emplace_back(_Enter{l, acc});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -1657,8 +1660,8 @@ struct LoopifyHofs {
                           auto _cs = f(acc, _args.d_a0);
                           const unsigned int &acc_ = _cs.first;
                           const unsigned int &y = _cs.second;
-                          _stack.push_back(_Call1{y});
-                          _stack.push_back(_Enter{_args.d_a1, acc_});
+                          _stack.emplace_back(_Call1{y});
+                          _stack.emplace_back(_Enter{_args.d_a1, acc_});
                         }},
                     l->v());
               },

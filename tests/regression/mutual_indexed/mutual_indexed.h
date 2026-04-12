@@ -36,7 +36,7 @@ struct MutualIndexed {
 
   public:
     // CREATORS
-    explicit EvenTree(ELeaf _v) : d_v_(std::move(_v)) {}
+    explicit EvenTree(ELeaf _v) : d_v_(_v) {}
 
     explicit EvenTree(ENode _v) : d_v_(std::move(_v)) {}
 

@@ -92,7 +92,7 @@ LoopifyListGeneration::cycle(const unsigned int n,
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -102,8 +102,8 @@ LoopifyListGeneration::cycle(const unsigned int n,
                               _result = List<unsigned int>::nil();
                             } else {
                               unsigned int n_ = n - 1;
-                              _stack.push_back(_Call1{l});
-                              _stack.push_back(_Enter{n_});
+                              _stack.emplace_back(_Call1{l});
+                              _stack.emplace_back(_Enter{n_});
                             }
                           },
                           [&](_Call1 _f) { _result = _f._s0->app(_result); }},
@@ -165,7 +165,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListGeneration::replicate_list(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -186,8 +186,8 @@ std::shared_ptr<List<unsigned int>> LoopifyListGeneration::replicate_list(
                         const unsigned int &x = _args.d_a0.second;
                         std::shared_ptr<List<unsigned int>> rep =
                             replicate(n, x);
-                        _stack.push_back(_Call1{std::move(rep)});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{std::move(rep)});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },

@@ -20,7 +20,7 @@ LoopifyDecltype::count_true(const std::shared_ptr<List<bool>> &xs) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{xs});
+  _stack.emplace_back(_Enter{xs});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -34,14 +34,14 @@ LoopifyDecltype::count_true(const std::shared_ptr<List<bool>> &xs) {
                         _result = 0u;
                       },
                       [&](const typename List<bool>::Cons &_args) -> void {
-                        _stack.push_back(_Call1{[&]() -> unsigned int {
+                        _stack.emplace_back(_Call1{[&]() -> unsigned int {
                           if (_args.d_a0) {
                             return 1u;
                           } else {
                             return 0u;
                           }
                         }()});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   xs->v());
             },
@@ -64,7 +64,7 @@ __attribute__((pure)) unsigned int LoopifyDecltype::sum_flagged(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{xs});
+  _stack.emplace_back(_Enter{xs});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -82,14 +82,14 @@ __attribute__((pure)) unsigned int LoopifyDecltype::sum_flagged(
                       [&](const typename List<
                           std::shared_ptr<LoopifyDecltype::item>>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{[&]() -> unsigned int {
+                        _stack.emplace_back(_Call1{[&]() -> unsigned int {
                           if (_args.d_a0->item_flag) {
                             return _args.d_a0->item_val;
                           } else {
                             return 0u;
                           }
                         }()});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   xs->v());
             },

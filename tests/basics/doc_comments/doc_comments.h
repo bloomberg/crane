@@ -47,7 +47,7 @@ struct DocComments {
 
   public:
     // CREATORS
-    explicit mylist(Mynil _v) : d_v_(std::move(_v)) {}
+    explicit mylist(Mynil _v) : d_v_(_v) {}
 
     explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
 

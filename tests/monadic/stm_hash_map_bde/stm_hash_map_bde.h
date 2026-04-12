@@ -48,7 +48,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(bsl::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
   explicit List(Cons _v) : d_v_(bsl::move(_v)) {}
   static bsl::shared_ptr<List<t_A>> nil() {
     return bsl::make_shared<List<t_A>>(Nil{});

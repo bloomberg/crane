@@ -44,7 +44,7 @@ struct Coercions {
 
   static inline const std::shared_ptr<Transform> double_transform =
       std::make_shared<Transform>(
-          Transform{[](unsigned int n) { return (n + n); }});
+          Transform{[](const unsigned int n) { return (n + n); }});
   static inline const unsigned int test_fun_coercion =
       double_transform->apply_transform(5u);
 };

@@ -31,7 +31,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -81,7 +81,7 @@ public:
 
   explicit Positive(XO _v) : d_v_(std::move(_v)) {}
 
-  explicit Positive(XH _v) : d_v_(std::move(_v)) {}
+  explicit Positive(XH _v) : d_v_(_v) {}
 
   static std::shared_ptr<Positive> xi(const std::shared_ptr<Positive> &a0) {
     return std::make_shared<Positive>(XI{a0});
@@ -130,7 +130,7 @@ private:
 
 public:
   // CREATORS
-  explicit Z(Z0 _v) : d_v_(std::move(_v)) {}
+  explicit Z(Z0 _v) : d_v_(_v) {}
 
   explicit Z(Zpos _v) : d_v_(std::move(_v)) {}
 

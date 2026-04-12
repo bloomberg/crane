@@ -31,7 +31,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -92,7 +92,7 @@ struct InstructionCycles {
     // CREATORS
     explicit instruction1(JCN1 _v) : d_v_(std::move(_v)) {}
 
-    explicit instruction1(NOP1 _v) : d_v_(std::move(_v)) {}
+    explicit instruction1(NOP1 _v) : d_v_(_v) {}
 
     static std::shared_ptr<instruction1> jcn1(unsigned int a0,
                                               unsigned int a1) {
@@ -186,7 +186,7 @@ struct InstructionCycles {
     // CREATORS
     explicit instruction2(JMS2 _v) : d_v_(std::move(_v)) {}
 
-    explicit instruction2(NOP2 _v) : d_v_(std::move(_v)) {}
+    explicit instruction2(NOP2 _v) : d_v_(_v) {}
 
     static std::shared_ptr<instruction2> jms2(unsigned int a0) {
       return std::make_shared<instruction2>(JMS2{std::move(a0)});
@@ -342,7 +342,7 @@ struct InstructionCycles {
                                           Instr3::e_ISZZERO3,
                                           List<Instr3>::nil())))))))));
   static inline const bool test_min_cycles_per_instruction =
-      all_instrs3->forallb([](Instr3 i) { return 8u <= cycles_min(i); });
+      all_instrs3->forallb([](const Instr3 i) { return 8u <= cycles_min(i); });
   enum class Instr4 {
     e_NOP4,
     e_ADD4,
@@ -451,7 +451,7 @@ struct InstructionCycles {
                                           Instr4::e_ISZZERO4,
                                           List<Instr4>::nil())))))))));
   static inline const bool test_max_cycles_per_instruction =
-      all_instrs4->forallb([](Instr4 i) { return cycles_max(i) <= 24u; });
+      all_instrs4->forallb([](const Instr4 i) { return cycles_max(i) <= 24u; });
 
   struct state5 {
     unsigned int acc5;
@@ -479,7 +479,7 @@ struct InstructionCycles {
 
   public:
     // CREATORS
-    explicit instruction5(NOP5 _v) : d_v_(std::move(_v)) {}
+    explicit instruction5(NOP5 _v) : d_v_(_v) {}
 
     explicit instruction5(JCN5 _v) : d_v_(std::move(_v)) {}
 

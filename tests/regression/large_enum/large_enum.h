@@ -170,27 +170,27 @@ struct LargeEnum {
     // CREATORS
     explicit tok(TNum _v) : d_v_(std::move(_v)) {}
 
-    explicit tok(TPlus _v) : d_v_(std::move(_v)) {}
+    explicit tok(TPlus _v) : d_v_(_v) {}
 
-    explicit tok(TMinus _v) : d_v_(std::move(_v)) {}
+    explicit tok(TMinus _v) : d_v_(_v) {}
 
-    explicit tok(TStar _v) : d_v_(std::move(_v)) {}
+    explicit tok(TStar _v) : d_v_(_v) {}
 
-    explicit tok(TSlash _v) : d_v_(std::move(_v)) {}
+    explicit tok(TSlash _v) : d_v_(_v) {}
 
-    explicit tok(TLParen _v) : d_v_(std::move(_v)) {}
+    explicit tok(TLParen _v) : d_v_(_v) {}
 
-    explicit tok(TRParen _v) : d_v_(std::move(_v)) {}
+    explicit tok(TRParen _v) : d_v_(_v) {}
 
-    explicit tok(TEq _v) : d_v_(std::move(_v)) {}
+    explicit tok(TEq _v) : d_v_(_v) {}
 
-    explicit tok(TBang _v) : d_v_(std::move(_v)) {}
+    explicit tok(TBang _v) : d_v_(_v) {}
 
-    explicit tok(TSemicolon _v) : d_v_(std::move(_v)) {}
+    explicit tok(TSemicolon _v) : d_v_(_v) {}
 
     explicit tok(TIdent _v) : d_v_(std::move(_v)) {}
 
-    explicit tok(TEOF _v) : d_v_(std::move(_v)) {}
+    explicit tok(TEOF _v) : d_v_(_v) {}
 
     static std::shared_ptr<tok> tnum(unsigned int a0) {
       return std::make_shared<tok>(TNum{std::move(a0)});

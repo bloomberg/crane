@@ -13,7 +13,7 @@ std::shared_ptr<List<unsigned int>> ClosuresInData::apply_all(
     const std::shared_ptr<List<std::function<unsigned int(unsigned int)>>> &fns,
     const unsigned int x) {
   return fns->template map<unsigned int>(
-      [=](std::function<unsigned int(unsigned int)> f) mutable {
+      [=](const std::function<unsigned int(unsigned int)> f) mutable {
         return f(x);
       });
 }
@@ -34,9 +34,8 @@ __attribute__((pure)) unsigned int ClosuresInData::compose_all(
     const std::shared_ptr<List<std::function<unsigned int(unsigned int)>>> &fns,
     const unsigned int x) {
   return fns->template fold_left<unsigned int>(
-      [](unsigned int acc, std::function<unsigned int(unsigned int)> f) {
-        return f(acc);
-      },
+      [](const unsigned int acc,
+         const std::function<unsigned int(unsigned int)> f) { return f(acc); },
       x);
 }
 

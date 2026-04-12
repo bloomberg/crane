@@ -375,7 +375,7 @@ ValidatedVirtualCrossmatchTraceCase::max_dsa_mfi(
       List<std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>>
       donor_epitopes = epitope_dedup(typing_epitopes(donor));
   return recipient->vxm_epitope_abs->template fold_left<unsigned int>(
-      [=](unsigned int acc,
+      [=](const unsigned int acc,
           std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody>
               ab) mutable {
         if (donor_epitopes->existsb(

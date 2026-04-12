@@ -32,7 +32,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -80,7 +80,7 @@ struct CPS {
     } else {
       unsigned int n_ = n - 1;
       return fact_cps(
-          n_, [=](unsigned int r) mutable { return k(((n_ + 1) * r)); });
+          n_, [=](const unsigned int r) mutable { return k(((n_ + 1) * r)); });
     }
   }
 
@@ -97,9 +97,9 @@ struct CPS {
         return k(1u);
       } else {
         unsigned int n_ = n1 - 1;
-        return fib_cps(n_, [=](unsigned int a) mutable {
-          return fib_cps(n1,
-                         [=](unsigned int b) mutable { return k((a + b)); });
+        return fib_cps(n_, [=](const unsigned int a) mutable {
+          return fib_cps(
+              n1, [=](const unsigned int b) mutable { return k((a + b)); });
         });
       }
     }
@@ -183,17 +183,18 @@ struct CPS {
   tree_sum_cps(const std::shared_ptr<tree> &t,
                const std::function<unsigned int(unsigned int)> k) {
     return std::visit(
-        Overloaded{
-            [&](const typename tree::Leaf &_args) -> unsigned int {
-              return k(_args.d_a0);
-            },
-            [&](const typename tree::Node &_args) -> unsigned int {
-              return tree_sum_cps(_args.d_a0, [=](unsigned int sl) mutable {
-                return tree_sum_cps(_args.d_a1, [=](unsigned int sr) mutable {
-                  return k((sl + sr));
-                });
-              });
-            }},
+        Overloaded{[&](const typename tree::Leaf &_args) -> unsigned int {
+                     return k(_args.d_a0);
+                   },
+                   [&](const typename tree::Node &_args) -> unsigned int {
+                     return tree_sum_cps(
+                         _args.d_a0, [=](const unsigned int sl) mutable {
+                           return tree_sum_cps(
+                               _args.d_a1, [=](const unsigned int sr) mutable {
+                                 return k((sl + sr));
+                               });
+                         });
+                   }},
         t->v());
   }
 
@@ -204,14 +205,16 @@ struct CPS {
   sum_cps(const std::shared_ptr<List<unsigned int>> &l,
           const std::function<unsigned int(unsigned int)> k) {
     return std::visit(
-        Overloaded{[&](const typename List<unsigned int>::Nil &)
-                       -> unsigned int { return k(0u); },
-                   [&](const typename List<unsigned int>::Cons &_args)
-                       -> unsigned int {
-                     return sum_cps(_args.d_a1, [=](unsigned int r) mutable {
-                       return k((_args.d_a0 + r));
-                     });
-                   }},
+        Overloaded{
+            [&](const typename List<unsigned int>::Nil &) -> unsigned int {
+              return k(0u);
+            },
+            [&](const typename List<unsigned int>::Cons &_args)
+                -> unsigned int {
+              return sum_cps(_args.d_a1, [=](const unsigned int r) mutable {
+                return k((_args.d_a0 + r));
+              });
+            }},
         l->v());
   }
 

@@ -32,7 +32,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -306,7 +306,7 @@ struct LoopifyGenerators {
       using _Frame = std::variant<_Enter, _Call1>;
       std::shared_ptr<List<unsigned int>> _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{i});
+      _stack.emplace_back(_Enter{i});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -316,9 +316,9 @@ struct LoopifyGenerators {
                                   _result = List<unsigned int>::nil();
                                 } else {
                                   unsigned int j = i - 1;
-                                  _stack.push_back(
+                                  _stack.emplace_back(
                                       _Call1{f((((n - i) > n ? 0 : (n - i))))});
-                                  _stack.push_back(_Enter{j});
+                                  _stack.emplace_back(_Enter{j});
                                 }
                               },
                               [&](_Call1 _f) {

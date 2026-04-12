@@ -17,7 +17,7 @@ LoopifyClassics::factorial(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -27,8 +27,8 @@ LoopifyClassics::factorial(const unsigned int n) {
                               _result = 1u;
                             } else {
                               unsigned int n_ = n - 1;
-                              _stack.push_back(_Call1{n});
-                              _stack.push_back(_Enter{n_});
+                              _stack.emplace_back(_Call1{n});
+                              _stack.emplace_back(_Enter{n_});
                             }
                           },
                           [&](_Call1 _f) { _result = (_f._s0 * _result); }},
@@ -53,7 +53,7 @@ __attribute__((pure)) unsigned int LoopifyClassics::fib(const unsigned int n) {
   using _Frame = std::variant<_Enter, _After, _Combine>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -67,14 +67,14 @@ __attribute__((pure)) unsigned int LoopifyClassics::fib(const unsigned int n) {
                                 _result = 1u;
                               } else {
                                 unsigned int n__ = n_ - 1;
-                                _stack.push_back(_After{n_});
-                                _stack.push_back(_Enter{n__});
+                                _stack.emplace_back(_After{n_});
+                                _stack.emplace_back(_Enter{n__});
                               }
                             }
                           },
                           [&](_After _f) {
-                            _stack.push_back(_Combine{_result});
-                            _stack.push_back(_Enter{_f._a0});
+                            _stack.emplace_back(_Combine{_result});
+                            _stack.emplace_back(_Enter{_f._a0});
                           },
                           [&](_Combine _f) { _result = (_result + _f._left); }},
                _frame);
@@ -99,7 +99,7 @@ LoopifyClassics::ack_fuel(const unsigned int fuel, const unsigned int m,
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n, m, fuel});
+  _stack.emplace_back(_Enter{n, m, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -116,11 +116,11 @@ LoopifyClassics::ack_fuel(const unsigned int fuel, const unsigned int m,
                          _result = (n + 1u);
                        } else {
                          if (n == 0u) {
-                           _stack.push_back(_Enter{
+                           _stack.emplace_back(_Enter{
                                1u, (((m - 1u) > m ? 0 : (m - 1u))), fuel_});
                          } else {
-                           _stack.push_back(_Call1{fuel_, m});
-                           _stack.push_back(_Enter{
+                           _stack.emplace_back(_Call1{fuel_, m});
+                           _stack.emplace_back(_Enter{
                                (((n - 1u) > n ? 0 : (n - 1u))), m, fuel_});
                          }
                        }
@@ -130,7 +130,7 @@ LoopifyClassics::ack_fuel(const unsigned int fuel, const unsigned int m,
                      unsigned int fuel_ = _f._s0;
                      const unsigned int m = _f._s1;
                      unsigned int inner = _result;
-                     _stack.push_back(
+                     _stack.emplace_back(
                          _Enter{inner, (((m - 1u) > m ? 0 : (m - 1u))), fuel_});
                    }},
         _frame);
@@ -165,7 +165,7 @@ LoopifyClassics::binomial_fuel(const unsigned int fuel, const unsigned int n,
   using _Frame = std::variant<_Enter, _After, _Combine>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{k, n, fuel});
+  _stack.emplace_back(_Enter{k, n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -180,17 +180,17 @@ LoopifyClassics::binomial_fuel(const unsigned int fuel, const unsigned int n,
                               if ((k == 0u || k == n)) {
                                 _result = 1u;
                               } else {
-                                _stack.push_back(_After{
+                                _stack.emplace_back(_After{
                                     (((k - 1u) > k ? 0 : (k - 1u))),
                                     (((n - 1u) > n ? 0 : (n - 1u))), fuel_});
-                                _stack.push_back(_Enter{
+                                _stack.emplace_back(_Enter{
                                     k, (((n - 1u) > n ? 0 : (n - 1u))), fuel_});
                               }
                             }
                           },
                           [&](_After _f) {
-                            _stack.push_back(_Combine{_result});
-                            _stack.push_back(_Enter{_f._a0, _f._a1, _f._a2});
+                            _stack.emplace_back(_Combine{_result});
+                            _stack.emplace_back(_Enter{_f._a0, _f._a1, _f._a2});
                           },
                           [&](_Combine _f) { _result = (_result + _f._left); }},
                _frame);
@@ -225,7 +225,7 @@ LoopifyClassics::pascal_fuel(const unsigned int fuel, const unsigned int row,
   using _Frame = std::variant<_Enter, _After, _Combine>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{col, row, fuel});
+  _stack.emplace_back(_Enter{col, row, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -241,18 +241,18 @@ LoopifyClassics::pascal_fuel(const unsigned int fuel, const unsigned int row,
                        if ((col == 0u || col == row)) {
                          _result = 1u;
                        } else {
-                         _stack.push_back(_After{
+                         _stack.emplace_back(_After{
                              (((col - 1u) > col ? 0 : (col - 1u))),
                              (((row - 1u) > row ? 0 : (row - 1u))), fuel_});
-                         _stack.push_back(
+                         _stack.emplace_back(
                              _Enter{col, (((row - 1u) > row ? 0 : (row - 1u))),
                                     fuel_});
                        }
                      }
                    },
                    [&](_After _f) {
-                     _stack.push_back(_Combine{_result});
-                     _stack.push_back(_Enter{_f._a0, _f._a1, _f._a2});
+                     _stack.emplace_back(_Combine{_result});
+                     _stack.emplace_back(_Enter{_f._a0, _f._a1, _f._a2});
                    },
                    [&](_Combine _f) { _result = (_result + _f._left); }},
         _frame);
@@ -319,7 +319,7 @@ LoopifyClassics::power(const unsigned int base, const unsigned int exp) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{exp});
+  _stack.emplace_back(_Enter{exp});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -329,8 +329,8 @@ LoopifyClassics::power(const unsigned int base, const unsigned int exp) {
                               _result = 1u;
                             } else {
                               unsigned int exp_ = exp - 1;
-                              _stack.push_back(_Call1{base});
-                              _stack.push_back(_Enter{exp_});
+                              _stack.emplace_back(_Call1{base});
+                              _stack.emplace_back(_Enter{exp_});
                             }
                           },
                           [&](_Call1 _f) { _result = (_f._s0 * _result); }},
@@ -352,7 +352,7 @@ LoopifyClassics::sum_to(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -362,8 +362,8 @@ LoopifyClassics::sum_to(const unsigned int n) {
                               _result = 0u;
                             } else {
                               unsigned int n_ = n - 1;
-                              _stack.push_back(_Call1{n});
-                              _stack.push_back(_Enter{n_});
+                              _stack.emplace_back(_Call1{n});
+                              _stack.emplace_back(_Enter{n_});
                             }
                           },
                           [&](_Call1 _f) { _result = (_f._s0 + _result); }},
@@ -386,7 +386,7 @@ LoopifyClassics::sum_squares(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -396,8 +396,8 @@ LoopifyClassics::sum_squares(const unsigned int n) {
                               _result = 0u;
                             } else {
                               unsigned int n_ = n - 1;
-                              _stack.push_back(_Call1{(n * n)});
-                              _stack.push_back(_Enter{n_});
+                              _stack.emplace_back(_Call1{(n * n)});
+                              _stack.emplace_back(_Enter{n_});
                             }
                           },
                           [&](_Call1 _f) { _result = (_f._s0 + _result); }},

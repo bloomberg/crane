@@ -80,7 +80,7 @@ LoopifyItreeSeq::countdown_list(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
+  _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -91,8 +91,8 @@ LoopifyItreeSeq::countdown_list(const unsigned int n) {
                                   0u, List<unsigned int>::nil());
                             } else {
                               unsigned int n_ = n - 1;
-                              _stack.push_back(_Call1{n});
-                              _stack.push_back(_Enter{n_});
+                              _stack.emplace_back(_Call1{n});
+                              _stack.emplace_back(_Enter{n_});
                             }
                           },
                           [&](_Call1 _f) {

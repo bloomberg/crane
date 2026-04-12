@@ -107,7 +107,8 @@ __attribute__((pure)) unsigned int RecordFieldPatterns::sum_px(
     const std::shared_ptr<List<std::shared_ptr<RecordFieldPatterns::Point>>>
         &points) {
   return points->template fold_left<unsigned int>(
-      [](unsigned int acc, std::shared_ptr<RecordFieldPatterns::Point> p) {
+      [](const unsigned int acc,
+         const std::shared_ptr<RecordFieldPatterns::Point> &p) {
         return (acc + p->px);
       },
       0u);
@@ -117,7 +118,9 @@ std::shared_ptr<List<unsigned int>> RecordFieldPatterns::map_py(
     const std::shared_ptr<List<std::shared_ptr<RecordFieldPatterns::Point>>>
         &points) {
   return points->template map<unsigned int>(
-      [](std::shared_ptr<RecordFieldPatterns::Point> p) { return p->py; });
+      [](const std::shared_ptr<RecordFieldPatterns::Point> &p) {
+        return p->py;
+      });
 }
 
 std::shared_ptr<RecordFieldPatterns::Point> RecordFieldPatterns::swap(

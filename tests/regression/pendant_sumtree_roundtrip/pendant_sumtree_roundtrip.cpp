@@ -111,8 +111,8 @@ PendantSumtreeRoundtripCase::decode_multi(
   return std::move(decoded)
       ->template fold_right<std::optional<std::shared_ptr<
           List<std::shared_ptr<T0<PendantSumtreeRoundtripCase::digit>>>>>>(
-          [](std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>> ov,
-             std::optional<
+          [](const std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>> ov,
+             const std::optional<
                  std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>>>
                  acc) {
             if (ov.has_value()) {
@@ -247,8 +247,8 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::group_sums_validb(
     std::optional<unsigned int> sum_opt =
         std::move(pendant_vals)
             ->template fold_right<std::optional<unsigned int>>(
-                [](std::optional<unsigned int> ov,
-                   std::optional<unsigned int> acc) {
+                [](const std::optional<unsigned int> ov,
+                   const std::optional<unsigned int> acc) {
                   if (ov.has_value()) {
                     const unsigned int &v = *ov;
                     if (acc.has_value()) {
@@ -409,7 +409,8 @@ PendantSumtreeRoundtripCase::sumtree_leaf_total(
               PendantSumtreeRoundtripCase::CertifiedPendant> &_x0) mutable
               -> std::optional<unsigned int> { return pendant_value(n, _x0); });
   return std::move(vals)->template fold_right<std::optional<unsigned int>>(
-      [](std::optional<unsigned int> ov, std::optional<unsigned int> acc) {
+      [](const std::optional<unsigned int> ov,
+         const std::optional<unsigned int> acc) {
         if (ov.has_value()) {
           const unsigned int &v = *ov;
           if (acc.has_value()) {

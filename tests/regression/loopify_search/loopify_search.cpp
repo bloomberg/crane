@@ -42,7 +42,7 @@ __attribute__((pure)) unsigned int LoopifySearch::knapsack_fuel(
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{items, capacity, fuel});
+  _stack.emplace_back(_Enter{items, capacity, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -68,11 +68,12 @@ __attribute__((pure)) unsigned int LoopifySearch::knapsack_fuel(
                           const unsigned int &weight = _args.d_a0.first;
                           const unsigned int &value = _args.d_a0.second;
                           if (capacity < weight) {
-                            _stack.push_back(_Enter{_args.d_a1, capacity, f});
+                            _stack.emplace_back(
+                                _Enter{_args.d_a1, capacity, f});
                           } else {
-                            _stack.push_back(
+                            _stack.emplace_back(
                                 _Call1{_args, capacity, f, value, weight});
-                            _stack.push_back(
+                            _stack.emplace_back(
                                 _Enter{_args.d_a1,
                                        (((capacity - weight) > capacity
                                              ? 0
@@ -91,9 +92,9 @@ __attribute__((pure)) unsigned int LoopifySearch::knapsack_fuel(
               unsigned int value = _f._s3;
               unsigned int weight = _f._s4;
               unsigned int _cond0 = _result;
-              _stack.push_back(
+              _stack.emplace_back(
                   _Call2{_args, _cond0, capacity, f, value, weight});
-              _stack.push_back(_Enter{_args.d_a1, capacity, f});
+              _stack.emplace_back(_Enter{_args.d_a1, capacity, f});
             },
             [&](_Call2 _f) {
               const typename List<std::pair<unsigned int, unsigned int>>::Cons
@@ -105,14 +106,14 @@ __attribute__((pure)) unsigned int LoopifySearch::knapsack_fuel(
               unsigned int weight = _f._s5;
               unsigned int _cond1 = _result;
               if (_cond1 <= (value + _cond0)) {
-                _stack.push_back(_Call3{value});
-                _stack.push_back(_Enter{
+                _stack.emplace_back(_Call3{value});
+                _stack.emplace_back(_Enter{
                     _args.d_a1,
                     (((capacity - weight) > capacity ? 0
                                                      : (capacity - weight))),
                     f});
               } else {
-                _stack.push_back(_Enter{_args.d_a1, capacity, f});
+                _stack.emplace_back(_Enter{_args.d_a1, capacity, f});
               }
             },
             [&](_Call3 _f) { _result = (_f._s0 + _result); }},
@@ -143,7 +144,7 @@ LoopifySearch::majority(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -156,8 +157,8 @@ LoopifySearch::majority(const std::shared_ptr<List<unsigned int>> &l) {
                                  -> void { _result = std::make_pair(0u, 0u); },
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
-                               _stack.push_back(_Call1{_args});
-                               _stack.push_back(_Enter{_args.d_a1});
+                               _stack.emplace_back(_Call1{_args});
+                               _stack.emplace_back(_Enter{_args.d_a1});
                              }},
                          l->v());
                    },
@@ -537,34 +538,34 @@ LoopifySearch::collatz_fuel(const unsigned int fuel, const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n, fuel});
+  _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(Overloaded{[&](_Enter _f) {
-                            const unsigned int n = _f.n;
-                            const unsigned int fuel = _f.fuel;
-                            if (fuel <= 0) {
-                              _result = 0u;
-                            } else {
-                              unsigned int f = fuel - 1;
-                              if (n == 1u) {
-                                _result = 0u;
-                              } else {
-                                if ((2u ? n % 2u : n) == 0u) {
-                                  _stack.push_back(_Call1{});
-                                  _stack.push_back(
-                                      _Enter{(2u ? n / 2u : 0), f});
-                                } else {
-                                  _stack.push_back(_Call2{});
-                                  _stack.push_back(_Enter{((3u * n) + 1u), f});
-                                }
-                              }
-                            }
-                          },
-                          [&](_Call1) { _result = (_result + 1); },
-                          [&](_Call2) { _result = (_result + 1); }},
-               _frame);
+    std::visit(
+        Overloaded{[&](_Enter _f) {
+                     const unsigned int n = _f.n;
+                     const unsigned int fuel = _f.fuel;
+                     if (fuel <= 0) {
+                       _result = 0u;
+                     } else {
+                       unsigned int f = fuel - 1;
+                       if (n == 1u) {
+                         _result = 0u;
+                       } else {
+                         if ((2u ? n % 2u : n) == 0u) {
+                           _stack.emplace_back(_Call1{});
+                           _stack.emplace_back(_Enter{(2u ? n / 2u : 0), f});
+                         } else {
+                           _stack.emplace_back(_Call2{});
+                           _stack.emplace_back(_Enter{((3u * n) + 1u), f});
+                         }
+                       }
+                     }
+                   },
+                   [&](_Call1) { _result = (_result + 1); },
+                   [&](_Call2) { _result = (_result + 1); }},
+        _frame);
   }
   return _result;
 }
@@ -652,7 +653,7 @@ LoopifySearch::subset_sum_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, target, fuel});
+  _stack.emplace_back(_Enter{l, target, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -673,8 +674,8 @@ LoopifySearch::subset_sum_fuel(const unsigned int fuel,
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{_args, f, target});
-                          _stack.push_back(_Enter{_args.d_a1, target, f});
+                          _stack.emplace_back(_Call1{_args, f, target});
+                          _stack.emplace_back(_Enter{_args.d_a1, target, f});
                         }},
                     l->v());
               }
@@ -688,11 +689,11 @@ LoopifySearch::subset_sum_fuel(const unsigned int fuel,
                 _result = true;
               } else {
                 if (_args.d_a0 <= target) {
-                  _stack.push_back(_Enter{_args.d_a1,
-                                          (((target - _args.d_a0) > target
-                                                ? 0
-                                                : (target - _args.d_a0))),
-                                          f});
+                  _stack.emplace_back(_Enter{_args.d_a1,
+                                             (((target - _args.d_a0) > target
+                                                   ? 0
+                                                   : (target - _args.d_a0))),
+                                             f});
                 } else {
                   _result = false;
                 }
@@ -763,7 +764,7 @@ LoopifySearch::sieve_fuel(const unsigned int fuel,
                   }
                   _last = _cell;
                   std::shared_ptr<List<unsigned int>> _next_l = filter_impl(
-                      [=](unsigned int y) mutable {
+                      [=](const unsigned int y) mutable {
                         return !((_args.d_a0 ? y % _args.d_a0 : y) == 0u);
                       },
                       _args.d_a1);
@@ -947,7 +948,7 @@ LoopifySearch::remove_duplicates_fuel(const unsigned int fuel,
                     }
                     _last = _cell;
                     std::shared_ptr<List<unsigned int>> _next_l = filter_impl(
-                        [=](unsigned int y) mutable {
+                        [=](const unsigned int y) mutable {
                           return !(_args.d_a0 == y);
                         },
                         _args.d_a1);
@@ -993,7 +994,7 @@ LoopifySearch::quicksort_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1017,27 +1018,27 @@ LoopifySearch::quicksort_fuel(const unsigned int fuel,
                               -> void {
                             std::shared_ptr<List<unsigned int>> smaller =
                                 filter_impl(
-                                    [=](unsigned int y) mutable {
+                                    [=](const unsigned int y) mutable {
                                       return y < _args.d_a0;
                                     },
                                     _args.d_a1);
                             std::shared_ptr<List<unsigned int>> greater =
                                 filter_impl(
-                                    [=](unsigned int y) mutable {
+                                    [=](const unsigned int y) mutable {
                                       return _args.d_a0 <= y;
                                     },
                                     _args.d_a1);
-                            _stack.push_back(
+                            _stack.emplace_back(
                                 _Call1{std::move(smaller), f, _args.d_a0});
-                            _stack.push_back(_Enter{greater, f});
+                            _stack.emplace_back(_Enter{greater, f});
                           }},
                       l->v());
                 }
               }
             },
             [&](_Call1 _f) {
-              _stack.push_back(_Call2{_result, _f._s2});
-              _stack.push_back(_Enter{_f._s0, _f._s1});
+              _stack.emplace_back(_Call2{_result, _f._s2});
+              _stack.emplace_back(_Enter{_f._s0, _f._s1});
             },
             [&](_Call2 _f) {
               _result = _result->app(List<unsigned int>::cons(_f._s1, _f._s0));
@@ -1070,7 +1071,7 @@ LoopifySearch::split_list(const std::shared_ptr<List<unsigned int>> &l) {
             std::shared_ptr<List<unsigned int>>>
       _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1098,8 +1099,8 @@ LoopifySearch::split_list(const std::shared_ptr<List<unsigned int>> &l) {
                                 },
                                 [&](const typename List<unsigned int>::Cons
                                         &_args0) -> void {
-                                  _stack.push_back(_Call1{_args0, _args});
-                                  _stack.push_back(_Enter{_args0.d_a1});
+                                  _stack.emplace_back(_Call1{_args0, _args});
+                                  _stack.emplace_back(_Enter{_args0.d_a1});
                                 }},
                             _args.d_a1->v());
                       }},
@@ -1238,7 +1239,7 @@ LoopifySearch::merge_sort_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1273,8 +1274,8 @@ LoopifySearch::merge_sort_fuel(const unsigned int fuel,
                                           &a = _cs.first;
                                       const std::shared_ptr<List<unsigned int>>
                                           &b = _cs.second;
-                                      _stack.push_back(_Call1{a, f});
-                                      _stack.push_back(_Enter{b, f});
+                                      _stack.emplace_back(_Call1{a, f});
+                                      _stack.emplace_back(_Enter{b, f});
                                     }},
                                 _args.d_a1->v());
                           }},
@@ -1283,8 +1284,8 @@ LoopifySearch::merge_sort_fuel(const unsigned int fuel,
               }
             },
             [&](_Call1 _f) {
-              _stack.push_back(_Call2{_result});
-              _stack.push_back(_Enter{_f._s0, _f._s1});
+              _stack.emplace_back(_Call2{_result});
+              _stack.emplace_back(_Enter{_f._s0, _f._s1});
             },
             [&](_Call2 _f) { _result = merge_sorted(_result, _f._s0); }},
         _frame);
@@ -1425,7 +1426,7 @@ LoopifySearch::perms_choices_fuel(
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{orig, choices, fuel});
+  _stack.emplace_back(_Enter{orig, choices, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1453,21 +1454,21 @@ LoopifySearch::perms_choices_fuel(
                               Overloaded{
                                   [&](const typename List<unsigned int>::Nil &)
                                       -> void {
-                                    _stack.push_back(_Call1{map_cons(
+                                    _stack.emplace_back(_Call1{map_cons(
                                         _args.d_a0,
                                         List<std::shared_ptr<
                                             List<unsigned int>>>::
                                             cons(List<unsigned int>::nil(),
                                                  List<std::shared_ptr<List<
                                                      unsigned int>>>::nil()))});
-                                    _stack.push_back(
+                                    _stack.emplace_back(
                                         _Enter{orig, _args.d_a1, f});
                                   },
                                   [&](const typename List<unsigned int>::Cons &)
                                       -> void {
-                                    _stack.push_back(_Call2{
+                                    _stack.emplace_back(_Call2{
                                         remaining, remaining, f, _args.d_a0});
-                                    _stack.push_back(
+                                    _stack.emplace_back(
                                         _Enter{orig, _args.d_a1, f});
                                   }},
                               remaining->v());
@@ -1477,8 +1478,8 @@ LoopifySearch::perms_choices_fuel(
             },
             [&](_Call1 _f) { _result = _f._s0->app(_result); },
             [&](_Call2 _f) {
-              _stack.push_back(_Call3{_result, _f._s3});
-              _stack.push_back(_Enter{_f._s0, _f._s1, _f._s2});
+              _stack.emplace_back(_Call3{_result, _f._s3});
+              _stack.emplace_back(_Enter{_f._s0, _f._s1, _f._s2});
             },
             [&](_Call3 _f) {
               _result = map_cons(_f._s1, _result)->app(_f._s0);
@@ -1618,7 +1619,7 @@ LoopifySearch::min_element(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1639,8 +1640,8 @@ LoopifySearch::min_element(const std::shared_ptr<List<unsigned int>> &l) {
                                     -> void { _result = _args.d_a0; },
                                 [&](const typename List<unsigned int>::Cons &)
                                     -> void {
-                                  _stack.push_back(_Call1{_args});
-                                  _stack.push_back(_Enter{_args.d_a1});
+                                  _stack.emplace_back(_Call1{_args});
+                                  _stack.emplace_back(_Enter{_args.d_a1});
                                 }},
                             _args.d_a1->v());
                       }},

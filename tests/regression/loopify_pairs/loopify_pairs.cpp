@@ -29,7 +29,7 @@ LoopifyPairs::unzip(
             std::shared_ptr<LoopifyPairs::list<unsigned int>>>
       _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -52,8 +52,8 @@ LoopifyPairs::unzip(
                           -> void {
                         const unsigned int &x = _args.d_a0.first;
                         const unsigned int &y = _args.d_a0.second;
-                        _stack.push_back(_Call1{y, x});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{y, x});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -95,7 +95,7 @@ LoopifyPairs::partition3(
                       std::shared_ptr<LoopifyPairs::list<unsigned int>>>>
       _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -114,8 +114,8 @@ LoopifyPairs::partition3(
                       },
                       [&](const typename LoopifyPairs::list<unsigned int>::Cons
                               &_args) -> void {
-                        _stack.push_back(_Call1{pivot, _args});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{pivot, _args});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -168,7 +168,7 @@ LoopifyPairs::min_max(
   using _Frame = std::variant<_Enter, _Call1>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -190,8 +190,9 @@ LoopifyPairs::min_max(
                                        },
                                        [&](const typename LoopifyPairs::list<
                                            unsigned int>::Cons &) -> void {
-                                         _stack.push_back(_Call1{_args});
-                                         _stack.push_back(_Enter{_args.d_a1});
+                                         _stack.emplace_back(_Call1{_args});
+                                         _stack.emplace_back(
+                                             _Enter{_args.d_a1});
                                        }},
                             _args.d_a1->v());
                       }},
@@ -238,7 +239,7 @@ LoopifyPairs::sum_and_count(
   using _Frame = std::variant<_Enter, _Call1>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -252,8 +253,8 @@ LoopifyPairs::sum_and_count(
                               &) -> void { _result = std::make_pair(0u, 0u); },
                       [&](const typename LoopifyPairs::list<unsigned int>::Cons
                               &_args) -> void {
-                        _stack.push_back(_Call1{_args});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -285,7 +286,7 @@ LoopifyPairs::sum_prod_count(
   using _Frame = std::variant<_Enter, _Call1>;
   std::pair<unsigned int, std::pair<unsigned int, unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -301,8 +302,8 @@ LoopifyPairs::sum_prod_count(
                       },
                       [&](const typename LoopifyPairs::list<unsigned int>::Cons
                               &_args) -> void {
-                        _stack.push_back(_Call1{_args});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },

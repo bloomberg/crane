@@ -44,7 +44,7 @@ struct ITreeReified {
                            std::cout << "[tau]"s << '\n';
                            return std::any{};
                          },
-                         [=](std::any) mutable {
+                         [=](const std::any) mutable {
                            return [&]() {
                              auto t = rec(t_);
                              return ITree<decltype(t->run())>::tau(t);
@@ -59,8 +59,8 @@ struct ITreeReified {
                            std::cout << "[vis]"s << '\n';
                            return std::any{};
                          },
-                         [=](std::any) mutable {
-                           return itree_vis(e, [=](std::any x) mutable {
+                         [=](const std::any) mutable {
+                           return itree_vis(e, [=](const std::any x) mutable {
                              return rec(k(x));
                            });
                          });

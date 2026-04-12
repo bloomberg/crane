@@ -32,7 +32,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -140,7 +140,7 @@ private:
 
 public:
   // CREATORS
-  explicit Uint(Nil _v) : d_v_(std::move(_v)) {}
+  explicit Uint(Nil _v) : d_v_(_v) {}
 
   explicit Uint(D0 _v) : d_v_(std::move(_v)) {}
 
@@ -328,7 +328,7 @@ private:
 
 public:
   // CREATORS
-  explicit Uint0(Nil0 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(Nil0 _v) : d_v_(_v) {}
 
   explicit Uint0(D10 _v) : d_v_(std::move(_v)) {}
 
@@ -694,15 +694,15 @@ struct ValidatedPumpDeliveryTraceCase {
 
   public:
     // CREATORS
-    explicit FaultStatus(Fault_None _v) : d_v_(std::move(_v)) {}
+    explicit FaultStatus(Fault_None _v) : d_v_(_v) {}
 
-    explicit FaultStatus(Fault_Occlusion _v) : d_v_(std::move(_v)) {}
+    explicit FaultStatus(Fault_Occlusion _v) : d_v_(_v) {}
 
     explicit FaultStatus(Fault_LowReservoir _v) : d_v_(std::move(_v)) {}
 
-    explicit FaultStatus(Fault_BatteryLow _v) : d_v_(std::move(_v)) {}
+    explicit FaultStatus(Fault_BatteryLow _v) : d_v_(_v) {}
 
-    explicit FaultStatus(Fault_Unknown _v) : d_v_(std::move(_v)) {}
+    explicit FaultStatus(Fault_Unknown _v) : d_v_(_v) {}
 
     static std::shared_ptr<FaultStatus> fault_none() {
       return std::make_shared<FaultStatus>(Fault_None{});
@@ -900,11 +900,11 @@ struct ValidatedPumpDeliveryTraceCase {
 
   public:
     // CREATORS
-    explicit SuspendDecision(Suspend_None _v) : d_v_(std::move(_v)) {}
+    explicit SuspendDecision(Suspend_None _v) : d_v_(_v) {}
 
     explicit SuspendDecision(Suspend_Reduce _v) : d_v_(std::move(_v)) {}
 
-    explicit SuspendDecision(Suspend_Withhold _v) : d_v_(std::move(_v)) {}
+    explicit SuspendDecision(Suspend_Withhold _v) : d_v_(_v) {}
 
     static std::shared_ptr<SuspendDecision> suspend_none() {
       return std::make_shared<SuspendDecision>(Suspend_None{});

@@ -12,7 +12,7 @@
 
 unsigned int EffectPoly::test_map_result() {
   return map_result<unsigned int, unsigned int>(
-      [](unsigned int x) { return (x + 1); }, 41u);
+      [](const unsigned int x) { return (x + 1); }, 41u);
 }
 
 unsigned int EffectPoly::test_lift_nat() {

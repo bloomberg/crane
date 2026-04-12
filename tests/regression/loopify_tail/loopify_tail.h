@@ -32,7 +32,7 @@ struct LoopifyTail {
 
   public:
     // CREATORS
-    explicit list(Nil _v) : d_v_(std::move(_v)) {}
+    explicit list(Nil _v) : d_v_(_v) {}
 
     explicit list(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -72,7 +72,7 @@ struct LoopifyTail {
     using _Frame = std::variant<_Enter, _Call1>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -86,8 +86,8 @@ struct LoopifyTail {
                           _result = f;
                         },
                         [&](const typename list<T1>::Cons &_args) -> void {
-                          _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -112,7 +112,7 @@ struct LoopifyTail {
     using _Frame = std::variant<_Enter, _Call1>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -126,8 +126,8 @@ struct LoopifyTail {
                           _result = f;
                         },
                         [&](const typename list<T1>::Cons &_args) -> void {
-                          _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },

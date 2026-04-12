@@ -71,7 +71,7 @@ void MonadicVoidEdge::deeply_nested_void() {
 
 void MonadicVoidEdge::test_apply_effect() {
   apply_effect(
-      [](unsigned int) {
+      [](const unsigned int) {
         std::cout << "applied"s << '\n';
         return;
       },

@@ -33,7 +33,7 @@ private:
 
 public:
   // CREATORS
-  explicit Nat(O _v) : d_v_(std::move(_v)) {}
+  explicit Nat(O _v) : d_v_(_v) {}
 
   explicit Nat(S _v) : d_v_(std::move(_v)) {}
 
@@ -252,7 +252,7 @@ private:
 
 public:
   // CREATORS
-  explicit String(EmptyString _v) : d_v_(std::move(_v)) {}
+  explicit String(EmptyString _v) : d_v_(_v) {}
 
   explicit String(String0 _v) : d_v_(std::move(_v)) {}
 
@@ -444,7 +444,7 @@ struct Levenshtein {
 
   public:
     // CREATORS
-    explicit chain(Empty _v) : d_v_(std::move(_v)) {}
+    explicit chain(Empty _v) : d_v_(_v) {}
 
     explicit chain(Skip _v) : d_v_(std::move(_v)) {}
 

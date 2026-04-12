@@ -34,7 +34,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -705,7 +705,7 @@ struct ComprehensivePatterns {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -714,20 +714,20 @@ struct ComprehensivePatterns {
                 [&](_Enter _f) {
                   const Tree *_self = _f._self;
                   std::visit(
-                      Overloaded{[&](const typename Tree::Leaf &_args) -> void {
-                                   _result = (_args.d_a0 + s->lb_value);
-                                 },
-                                 [&](const typename Tree::Node &_args) -> void {
-                                   _stack.push_back(
-                                       _Call1{_args.d_a0.get(),
-                                              (_args.d_a1 + s->lb_value)});
-                                   _stack.push_back(_Enter{_args.d_a2.get()});
-                                 }},
+                      Overloaded{
+                          [&](const typename Tree::Leaf &_args) -> void {
+                            _result = (_args.d_a0 + s->lb_value);
+                          },
+                          [&](const typename Tree::Node &_args) -> void {
+                            _stack.emplace_back(_Call1{
+                                _args.d_a0.get(), (_args.d_a1 + s->lb_value)});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
+                          }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s1});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result, _f._s1});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) { _result = ((_f._s1 + _result) + _f._s0); }},
             _frame);
@@ -755,7 +755,7 @@ struct ComprehensivePatterns {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -768,15 +768,16 @@ struct ComprehensivePatterns {
                                    _result = _args.d_a0;
                                  },
                                  [&](const typename Tree::Node &_args) -> void {
-                                   _stack.push_back(
+                                   _stack.emplace_back(
                                        _Call1{_args.d_a0.get(), _args.d_a1});
-                                   _stack.push_back(_Enter{_args.d_a2.get()});
+                                   _stack.emplace_back(
+                                       _Enter{_args.d_a2.get()});
                                  }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s1});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result, _f._s1});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) { _result = ((_f._s1 + _result) + _f._s0); }},
             _frame);
@@ -812,7 +813,7 @@ struct ComprehensivePatterns {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -825,16 +826,17 @@ struct ComprehensivePatterns {
                                    _result = f(_args.d_a0);
                                  },
                                  [&](const typename Tree::Node &_args) -> void {
-                                   _stack.push_back(
+                                   _stack.emplace_back(
                                        _Call1{_args.d_a0.get(), _args.d_a2,
                                               _args.d_a1, _args.d_a0});
-                                   _stack.push_back(_Enter{_args.d_a2.get()});
+                                   _stack.emplace_back(
+                                       _Enter{_args.d_a2.get()});
                                  }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
                   _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
@@ -872,7 +874,7 @@ struct ComprehensivePatterns {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -885,16 +887,17 @@ struct ComprehensivePatterns {
                                    _result = f(_args.d_a0);
                                  },
                                  [&](const typename Tree::Node &_args) -> void {
-                                   _stack.push_back(
+                                   _stack.emplace_back(
                                        _Call1{_args.d_a0.get(), _args.d_a2,
                                               _args.d_a1, _args.d_a0});
-                                   _stack.push_back(_Enter{_args.d_a2.get()});
+                                   _stack.emplace_back(
+                                       _Enter{_args.d_a2.get()});
                                  }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
                   _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
@@ -929,7 +932,7 @@ struct ComprehensivePatterns {
 
   public:
     // CREATORS
-    explicit Container(Empty _v) : d_v_(std::move(_v)) {}
+    explicit Container(Empty _v) : d_v_(_v) {}
 
     explicit Container(Full _v) : d_v_(std::move(_v)) {}
 

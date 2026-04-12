@@ -62,7 +62,7 @@ struct TypeApp {
 
   public:
     // CREATORS
-    explicit list(Nil _v) : d_v_(std::move(_v)) {}
+    explicit list(Nil _v) : d_v_(_v) {}
 
     explicit list(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -128,7 +128,7 @@ struct TypeApp {
 
   static inline const std::shared_ptr<list<unsigned int>> test_map =
       map<unsigned int, unsigned int>(
-          [](unsigned int x) { return (x + 1u); },
+          [](const unsigned int x) { return (x + 1u); },
           list<unsigned int>::cons(
               1u, list<unsigned int>::cons(
                       2u, list<unsigned int>::cons(
@@ -145,7 +145,7 @@ struct TypeApp {
   }
 
   static inline const unsigned int test_twice =
-      twice<unsigned int>([](unsigned int x) { return (x + 1u); }, 10u);
+      twice<unsigned int>([](const unsigned int x) { return (x + 1u); }, 10u);
 
   struct NatMonoid {
     using T = unsigned int;

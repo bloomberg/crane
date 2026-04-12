@@ -35,8 +35,8 @@ ClosureEscapeMatch::make_prepender_opt(
             return std::make_optional<std::function<std::shared_ptr<
                 ClosureEscapeMatch::mylist<unsigned int>>(
                 std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>)>>(
-                [=](std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>
-                        x) mutable {
+                [=](const std::shared_ptr<
+                    ClosureEscapeMatch::mylist<unsigned int>> &x) mutable {
                   return app<unsigned int>(_args.d_a0, x);
                 });
           }},
@@ -63,7 +63,7 @@ ClosureEscapeMatch::make_pair_fn_opt(
                   std::pair<unsigned int, unsigned int>(std::monostate)>> {
             return std::make_optional<std::function<
                 std::pair<unsigned int, unsigned int>(std::monostate)>>(
-                [=](std::monostate) mutable {
+                [=](const std::monostate) mutable {
                   return std::make_pair(_args.d_a0,
                                         length<unsigned int>(_args.d_a1));
                 });
@@ -94,7 +94,7 @@ ClosureEscapeMatch::nested_closure_opt(
                                    std::function<unsigned int(unsigned int)>> {
                              return std::make_optional<
                                  std::function<unsigned int(unsigned int)>>(
-                                 [=](unsigned int n) mutable {
+                                 [=](const unsigned int n) mutable {
                                    return (_args0.d_a0 + n);
                                  });
                            }},
@@ -110,7 +110,7 @@ ClosureEscapeMatch::nested_closure_opt(
                                    std::function<unsigned int(unsigned int)>> {
                              return std::make_optional<
                                  std::function<unsigned int(unsigned int)>>(
-                                 [=](unsigned int n) mutable {
+                                 [=](const unsigned int n) mutable {
                                    return (_args.d_a0 + n);
                                  });
                            },
@@ -120,7 +120,7 @@ ClosureEscapeMatch::nested_closure_opt(
                                    std::function<unsigned int(unsigned int)>> {
                              return std::make_optional<
                                  std::function<unsigned int(unsigned int)>>(
-                                 [=](unsigned int n) mutable {
+                                 [=](const unsigned int n) mutable {
                                    return ((_args.d_a0 + _args0.d_a0) + n);
                                  });
                            }},
@@ -160,8 +160,8 @@ ClosureEscapeMatch::closure_in_pair(
                               ClosureEscapeMatch::mylist<unsigned int>>)>> {
             return std::make_pair(
                 length<unsigned int>(_args.d_a0),
-                [=](std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>
-                        x) mutable {
+                [=](const std::shared_ptr<
+                    ClosureEscapeMatch::mylist<unsigned int>> &x) mutable {
                   return app<unsigned int>(_args.d_a0, x);
                 });
           }},

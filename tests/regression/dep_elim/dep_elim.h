@@ -31,7 +31,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -154,7 +154,7 @@ struct DepElim {
 
   public:
     // CREATORS
-    explicit vec(Vnil _v) : d_v_(std::move(_v)) {}
+    explicit vec(Vnil _v) : d_v_(_v) {}
 
     explicit vec(Vcons _v) : d_v_(std::move(_v)) {}
 
@@ -275,7 +275,7 @@ struct DepElim {
     // CREATORS
     explicit avail(Present _v) : d_v_(std::move(_v)) {}
 
-    explicit avail(Absent _v) : d_v_(std::move(_v)) {}
+    explicit avail(Absent _v) : d_v_(_v) {}
 
     static std::shared_ptr<avail> present(unsigned int a0) {
       return std::make_shared<avail>(Present{std::move(a0)});
@@ -340,7 +340,7 @@ struct DepElim {
   static inline const std::shared_ptr<List<unsigned int>> test_vec_map =
       my_vec
           ->template vec_map<unsigned int>(
-              3u, [](unsigned int n) { return (n + 1u); })
+              3u, [](const unsigned int n) { return (n + 1u); })
           ->vec_to_list(3u);
   static inline const unsigned int test_present =
       avail::present(42u)->get_present();

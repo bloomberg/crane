@@ -33,7 +33,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -144,7 +144,7 @@ struct LoopifyCoindColist {
     using _Frame = std::variant<_Enter>;
     std::shared_ptr<colist<T1>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l, n});
+    _stack.emplace_back(_Enter{l, n});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -252,7 +252,7 @@ struct LoopifyCoindColist {
   static inline const std::shared_ptr<List<unsigned int>> test_comap =
       to_list<unsigned int>(
           5u, comap<unsigned int, unsigned int>(
-                  [](unsigned int n) { return (n * 2u); },
+                  [](const unsigned int n) { return (n * 2u); },
                   from_list<unsigned int>(List<unsigned int>::cons(
                       1u, List<unsigned int>::cons(
                               2u, List<unsigned int>::cons(

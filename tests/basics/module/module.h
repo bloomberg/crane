@@ -77,7 +77,7 @@ template <OrderedType K, BaseType V> struct MakeMap {
 
   public:
     // CREATORS
-    explicit tree(Empty _v) : d_v_(std::move(_v)) {}
+    explicit tree(Empty _v) : d_v_(_v) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 

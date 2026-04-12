@@ -31,7 +31,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -94,7 +94,7 @@ struct StepFetchDecodeExec {
 
   public:
     // CREATORS
-    explicit instruction(NOP _v) : d_v_(std::move(_v)) {}
+    explicit instruction(NOP _v) : d_v_(_v) {}
 
     explicit instruction(ADD_ACC _v) : d_v_(std::move(_v)) {}
 

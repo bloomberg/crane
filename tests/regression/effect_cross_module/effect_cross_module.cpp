@@ -35,7 +35,7 @@ std::string EffectCrossModule::test_ask_name() { return Inner::ask_name(); }
 
 int64_t EffectCrossModule::test_with_greeting() {
   return Inner::template with_greeting<int64_t>(
-      [](std::string name) { return name.length(); });
+      [](const std::string name) { return name.length(); });
 }
 
 /// Use Inner's helper in a recursive function

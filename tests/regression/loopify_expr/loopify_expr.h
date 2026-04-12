@@ -32,7 +32,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -236,7 +236,7 @@ struct LoopifyExpr {
                        _Call5, _Call6, _Call7, _Call8, _Call9>;
       std::shared_ptr<expr> _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -245,26 +245,27 @@ struct LoopifyExpr {
                 [&](_Enter _f) {
                   const expr *_self = _f._self;
                   std::visit(
-                      Overloaded{[&](const typename expr::Val &_args) -> void {
-                                   _result = expr::val(_args.d_a0);
-                                 },
-                                 [&](const typename expr::Succ &_args) -> void {
-                                   _stack.push_back(_Call1{});
-                                   _stack.push_back(_Enter{_args.d_a0.get()});
-                                 },
-                                 [&](const typename expr::Add &_args) -> void {
-                                   _stack.push_back(_Call2{_args});
-                                   _stack.push_back(_Enter{_args.d_a0.get()});
-                                 },
-                                 [&](const typename expr::Mul &_args) -> void {
-                                   _stack.push_back(_Call8{_args});
-                                   _stack.push_back(_Enter{_args.d_a0.get()});
-                                 },
-                                 [&](const typename expr::Cond &_args) -> void {
-                                   _stack.push_back(_Call14{_args.d_a1.get(),
-                                                            _args.d_a0.get()});
-                                   _stack.push_back(_Enter{_args.d_a2.get()});
-                                 }},
+                      Overloaded{
+                          [&](const typename expr::Val &_args) -> void {
+                            _result = expr::val(_args.d_a0);
+                          },
+                          [&](const typename expr::Succ &_args) -> void {
+                            _stack.emplace_back(_Call1{});
+                            _stack.emplace_back(_Enter{_args.d_a0.get()});
+                          },
+                          [&](const typename expr::Add &_args) -> void {
+                            _stack.emplace_back(_Call2{_args});
+                            _stack.emplace_back(_Enter{_args.d_a0.get()});
+                          },
+                          [&](const typename expr::Mul &_args) -> void {
+                            _stack.emplace_back(_Call8{_args});
+                            _stack.emplace_back(_Enter{_args.d_a0.get()});
+                          },
+                          [&](const typename expr::Cond &_args) -> void {
+                            _stack.emplace_back(
+                                _Call14{_args.d_a1.get(), _args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
+                          }},
                       _self->v());
                 },
                 [&](_Call1) { _result = expr::succ(_result); },
@@ -405,12 +406,12 @@ struct LoopifyExpr {
                       _result->v());
                 },
                 [&](_Call14 _f) {
-                  _stack.push_back(_Call15{_result, _f._s1});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call15{_result, _f._s1});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call15 _f) {
-                  _stack.push_back(_Call16{_f._s0, _result});
-                  _stack.push_back(_Enter{_f._s1});
+                  _stack.emplace_back(_Call16{_f._s0, _result});
+                  _stack.emplace_back(_Enter{_f._s1});
                 },
                 [&](_Call16 _f) {
                   _result = expr::cond(_result, _f._s1, _f._s0);
@@ -421,36 +422,36 @@ struct LoopifyExpr {
                       Overloaded{
                           [&](const typename expr::Val &_args0) -> void {
                             if (_args0.d_a0 <= 0) {
-                              _stack.push_back(_Enter{_args.d_a1.get()});
+                              _stack.emplace_back(_Enter{_args.d_a1.get()});
                             } else {
                               unsigned int n0 = _args0.d_a0 - 1;
                               std::shared_ptr<expr> s1 = expr::val((n0 + 1));
-                              _stack.push_back(_Call3{s1});
-                              _stack.push_back(_Enter{_args.d_a1.get()});
+                              _stack.emplace_back(_Call3{s1});
+                              _stack.emplace_back(_Enter{_args.d_a1.get()});
                             }
                           },
                           [&](const typename expr::Succ &_args0) -> void {
                             std::shared_ptr<expr> s1 = expr::succ(_args0.d_a0);
-                            _stack.push_back(_Call4{s1});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call4{s1});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename expr::Add &_args0) -> void {
                             std::shared_ptr<expr> s1 =
                                 expr::add(_args0.d_a0, _args0.d_a1);
-                            _stack.push_back(_Call5{s1});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call5{s1});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename expr::Mul &_args0) -> void {
                             std::shared_ptr<expr> s1 =
                                 expr::mul(_args0.d_a0, _args0.d_a1);
-                            _stack.push_back(_Call6{s1});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call6{s1});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename expr::Cond &_args0) -> void {
                             std::shared_ptr<expr> s1 = expr::cond(
                                 _args0.d_a0, _args0.d_a1, _args0.d_a2);
-                            _stack.push_back(_Call7{s1});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call7{s1});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           }},
                       _result->v());
                 },
@@ -613,32 +614,32 @@ struct LoopifyExpr {
                               _result = expr::val(0u);
                             } else {
                               unsigned int _x = _args0.d_a0 - 1;
-                              _stack.push_back(_Call9{_args0});
-                              _stack.push_back(_Enter{_args.d_a1.get()});
+                              _stack.emplace_back(_Call9{_args0});
+                              _stack.emplace_back(_Enter{_args.d_a1.get()});
                             }
                           },
                           [&](const typename expr::Succ &_args0) -> void {
                             std::shared_ptr<expr> s1 = expr::succ(_args0.d_a0);
-                            _stack.push_back(_Call10{s1});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call10{s1});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename expr::Add &_args0) -> void {
                             std::shared_ptr<expr> s1 =
                                 expr::add(_args0.d_a0, _args0.d_a1);
-                            _stack.push_back(_Call11{s1});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call11{s1});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename expr::Mul &_args0) -> void {
                             std::shared_ptr<expr> s1 =
                                 expr::mul(_args0.d_a0, _args0.d_a1);
-                            _stack.push_back(_Call12{s1});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call12{s1});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename expr::Cond &_args0) -> void {
                             std::shared_ptr<expr> s1 = expr::cond(
                                 _args0.d_a0, _args0.d_a1, _args0.d_a2);
-                            _stack.push_back(_Call13{s1});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call13{s1});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           }},
                       _result->v());
                 },
@@ -746,59 +747,60 @@ struct LoopifyExpr {
                                   _Call5, _Call6, _Call7, _Call8>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
         std::visit(
-            Overloaded{[&](_Enter _f) {
-                         const expr *_self = _f._self;
-                         std::visit(
-                             Overloaded{
-                                 [&](const typename expr::Val &) -> void {
-                                   _result = 1u;
-                                 },
-                                 [&](const typename expr::Succ &_args) -> void {
-                                   _stack.push_back(_Call1{});
-                                   _stack.push_back(_Enter{_args.d_a0.get()});
-                                 },
-                                 [&](const typename expr::Add &_args) -> void {
-                                   _stack.push_back(_Call2{_args.d_a0.get()});
-                                   _stack.push_back(_Enter{_args.d_a1.get()});
-                                 },
-                                 [&](const typename expr::Mul &_args) -> void {
-                                   _stack.push_back(_Call4{_args.d_a0.get()});
-                                   _stack.push_back(_Enter{_args.d_a1.get()});
-                                 },
-                                 [&](const typename expr::Cond &_args) -> void {
-                                   _stack.push_back(_Call6{_args.d_a1.get(),
-                                                           _args.d_a0.get()});
-                                   _stack.push_back(_Enter{_args.d_a2.get()});
-                                 }},
-                             _self->v());
-                       },
-                       [&](_Call1) { _result = (_result + 1); },
-                       [&](_Call2 _f) {
-                         _stack.push_back(_Call3{_result});
-                         _stack.push_back(_Enter{_f._s0});
-                       },
-                       [&](_Call3 _f) { _result = ((_result + _f._s0) + 1); },
-                       [&](_Call4 _f) {
-                         _stack.push_back(_Call5{_result});
-                         _stack.push_back(_Enter{_f._s0});
-                       },
-                       [&](_Call5 _f) { _result = ((_result + _f._s0) + 1); },
-                       [&](_Call6 _f) {
-                         _stack.push_back(_Call7{_result, _f._s1});
-                         _stack.push_back(_Enter{_f._s0});
-                       },
-                       [&](_Call7 _f) {
-                         _stack.push_back(_Call8{_f._s0, _result});
-                         _stack.push_back(_Enter{_f._s1});
-                       },
-                       [&](_Call8 _f) {
-                         _result = ((_result + (_f._s1 + _f._s0)) + 1);
-                       }},
+            Overloaded{
+                [&](_Enter _f) {
+                  const expr *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename expr::Val &) -> void {
+                            _result = 1u;
+                          },
+                          [&](const typename expr::Succ &_args) -> void {
+                            _stack.emplace_back(_Call1{});
+                            _stack.emplace_back(_Enter{_args.d_a0.get()});
+                          },
+                          [&](const typename expr::Add &_args) -> void {
+                            _stack.emplace_back(_Call2{_args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename expr::Mul &_args) -> void {
+                            _stack.emplace_back(_Call4{_args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename expr::Cond &_args) -> void {
+                            _stack.emplace_back(
+                                _Call6{_args.d_a1.get(), _args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1) { _result = (_result + 1); },
+                [&](_Call2 _f) {
+                  _stack.emplace_back(_Call3{_result});
+                  _stack.emplace_back(_Enter{_f._s0});
+                },
+                [&](_Call3 _f) { _result = ((_result + _f._s0) + 1); },
+                [&](_Call4 _f) {
+                  _stack.emplace_back(_Call5{_result});
+                  _stack.emplace_back(_Enter{_f._s0});
+                },
+                [&](_Call5 _f) { _result = ((_result + _f._s0) + 1); },
+                [&](_Call6 _f) {
+                  _stack.emplace_back(_Call7{_result, _f._s1});
+                  _stack.emplace_back(_Enter{_f._s0});
+                },
+                [&](_Call7 _f) {
+                  _stack.emplace_back(_Call8{_f._s0, _result});
+                  _stack.emplace_back(_Enter{_f._s1});
+                },
+                [&](_Call8 _f) {
+                  _result = ((_result + (_f._s1 + _f._s0)) + 1);
+                }},
             _frame);
       }
       return _result;
@@ -847,7 +849,7 @@ struct LoopifyExpr {
                                   _Call5, _Call6, _Call7>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -856,44 +858,45 @@ struct LoopifyExpr {
                 [&](_Enter _f) {
                   const expr *_self = _f._self;
                   std::visit(
-                      Overloaded{[&](const typename expr::Val &) -> void {
-                                   _result = 1u;
-                                 },
-                                 [&](const typename expr::Succ &_args) -> void {
-                                   _stack.push_back(_Enter{_args.d_a0.get()});
-                                 },
-                                 [&](const typename expr::Add &_args) -> void {
-                                   _stack.push_back(_Call1{_args.d_a0.get()});
-                                   _stack.push_back(_Enter{_args.d_a1.get()});
-                                 },
-                                 [&](const typename expr::Mul &_args) -> void {
-                                   _stack.push_back(_Call3{_args.d_a0.get()});
-                                   _stack.push_back(_Enter{_args.d_a1.get()});
-                                 },
-                                 [&](const typename expr::Cond &_args) -> void {
-                                   _stack.push_back(_Call5{_args.d_a1.get(),
-                                                           _args.d_a0.get()});
-                                   _stack.push_back(_Enter{_args.d_a2.get()});
-                                 }},
+                      Overloaded{
+                          [&](const typename expr::Val &) -> void {
+                            _result = 1u;
+                          },
+                          [&](const typename expr::Succ &_args) -> void {
+                            _stack.emplace_back(_Enter{_args.d_a0.get()});
+                          },
+                          [&](const typename expr::Add &_args) -> void {
+                            _stack.emplace_back(_Call1{_args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename expr::Mul &_args) -> void {
+                            _stack.emplace_back(_Call3{_args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename expr::Cond &_args) -> void {
+                            _stack.emplace_back(
+                                _Call5{_args.d_a1.get(), _args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
+                          }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) { _result = (_result + _f._s0); },
                 [&](_Call3 _f) {
-                  _stack.push_back(_Call4{_result});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call4{_result});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call4 _f) { _result = (_result + _f._s0); },
                 [&](_Call5 _f) {
-                  _stack.push_back(_Call6{_result, _f._s1});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call6{_result, _f._s1});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call6 _f) {
-                  _stack.push_back(_Call7{_f._s0, _result});
-                  _stack.push_back(_Enter{_f._s1});
+                  _stack.emplace_back(_Call7{_f._s0, _result});
+                  _stack.emplace_back(_Enter{_f._s1});
                 },
                 [&](_Call7 _f) { _result = (_result + (_f._s1 + _f._s0)); }},
             _frame);
@@ -946,7 +949,7 @@ struct LoopifyExpr {
                                   _Call5, _Call6, _Call7, _Call8>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -955,46 +958,47 @@ struct LoopifyExpr {
                 [&](_Enter _f) {
                   const expr *_self = _f._self;
                   std::visit(
-                      Overloaded{[&](const typename expr::Val &) -> void {
-                                   _result = 0u;
-                                 },
-                                 [&](const typename expr::Succ &_args) -> void {
-                                   _stack.push_back(_Call1{});
-                                   _stack.push_back(_Enter{_args.d_a0.get()});
-                                 },
-                                 [&](const typename expr::Add &_args) -> void {
-                                   _stack.push_back(_Call2{_args.d_a0.get()});
-                                   _stack.push_back(_Enter{_args.d_a1.get()});
-                                 },
-                                 [&](const typename expr::Mul &_args) -> void {
-                                   _stack.push_back(_Call4{_args.d_a0.get()});
-                                   _stack.push_back(_Enter{_args.d_a1.get()});
-                                 },
-                                 [&](const typename expr::Cond &_args) -> void {
-                                   _stack.push_back(_Call6{_args.d_a1.get(),
-                                                           _args.d_a0.get()});
-                                   _stack.push_back(_Enter{_args.d_a2.get()});
-                                 }},
+                      Overloaded{
+                          [&](const typename expr::Val &) -> void {
+                            _result = 0u;
+                          },
+                          [&](const typename expr::Succ &_args) -> void {
+                            _stack.emplace_back(_Call1{});
+                            _stack.emplace_back(_Enter{_args.d_a0.get()});
+                          },
+                          [&](const typename expr::Add &_args) -> void {
+                            _stack.emplace_back(_Call2{_args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename expr::Mul &_args) -> void {
+                            _stack.emplace_back(_Call4{_args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename expr::Cond &_args) -> void {
+                            _stack.emplace_back(
+                                _Call6{_args.d_a1.get(), _args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
+                          }},
                       _self->v());
                 },
                 [&](_Call1) { _result = (_result + 1); },
                 [&](_Call2 _f) {
-                  _stack.push_back(_Call3{_result});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call3{_result});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call3 _f) { _result = (std::max(_result, _f._s0) + 1); },
                 [&](_Call4 _f) {
-                  _stack.push_back(_Call5{_result});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call5{_result});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call5 _f) { _result = (std::max(_result, _f._s0) + 1); },
                 [&](_Call6 _f) {
-                  _stack.push_back(_Call7{_result, _f._s1});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call7{_result, _f._s1});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call7 _f) {
-                  _stack.push_back(_Call8{_f._s0, _result});
-                  _stack.push_back(_Enter{_f._s1});
+                  _stack.emplace_back(_Call8{_f._s0, _result});
+                  _stack.emplace_back(_Enter{_f._s1});
                 },
                 [&](_Call8 _f) {
                   _result = (std::max(_result, std::max(_f._s1, _f._s0)) + 1);
@@ -1038,56 +1042,57 @@ struct LoopifyExpr {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5, _Call6>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
         std::visit(
-            Overloaded{[&](_Enter _f) {
-                         const expr *_self = _f._self;
-                         std::visit(
-                             Overloaded{
-                                 [&](const typename expr::Val &_args) -> void {
-                                   _result = _args.d_a0;
-                                 },
-                                 [&](const typename expr::Succ &_args) -> void {
-                                   _stack.push_back(_Call1{});
-                                   _stack.push_back(_Enter{_args.d_a0.get()});
-                                 },
-                                 [&](const typename expr::Add &_args) -> void {
-                                   _stack.push_back(_Call2{_args.d_a0.get()});
-                                   _stack.push_back(_Enter{_args.d_a1.get()});
-                                 },
-                                 [&](const typename expr::Mul &_args) -> void {
-                                   _stack.push_back(_Call4{_args.d_a0.get()});
-                                   _stack.push_back(_Enter{_args.d_a1.get()});
-                                 },
-                                 [&](const typename expr::Cond &_args) -> void {
-                                   _stack.push_back(_Call6{_args});
-                                   _stack.push_back(_Enter{_args.d_a0.get()});
-                                 }},
-                             _self->v());
-                       },
-                       [&](_Call1) { _result = (_result + 1); },
-                       [&](_Call2 _f) {
-                         _stack.push_back(_Call3{_result});
-                         _stack.push_back(_Enter{_f._s0});
-                       },
-                       [&](_Call3 _f) { _result = (_result + _f._s0); },
-                       [&](_Call4 _f) {
-                         _stack.push_back(_Call5{_result});
-                         _stack.push_back(_Enter{_f._s0});
-                       },
-                       [&](_Call5 _f) { _result = (_result * _f._s0); },
-                       [&](_Call6 _f) {
-                         const typename expr::Cond _args = _f._s0;
-                         unsigned int _cond0 = _result;
-                         if (0u < _cond0) {
-                           _stack.push_back(_Enter{_args.d_a1.get()});
-                         } else {
-                           _stack.push_back(_Enter{_args.d_a2.get()});
-                         }
-                       }},
+            Overloaded{
+                [&](_Enter _f) {
+                  const expr *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename expr::Val &_args) -> void {
+                            _result = _args.d_a0;
+                          },
+                          [&](const typename expr::Succ &_args) -> void {
+                            _stack.emplace_back(_Call1{});
+                            _stack.emplace_back(_Enter{_args.d_a0.get()});
+                          },
+                          [&](const typename expr::Add &_args) -> void {
+                            _stack.emplace_back(_Call2{_args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename expr::Mul &_args) -> void {
+                            _stack.emplace_back(_Call4{_args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename expr::Cond &_args) -> void {
+                            _stack.emplace_back(_Call6{_args});
+                            _stack.emplace_back(_Enter{_args.d_a0.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1) { _result = (_result + 1); },
+                [&](_Call2 _f) {
+                  _stack.emplace_back(_Call3{_result});
+                  _stack.emplace_back(_Enter{_f._s0});
+                },
+                [&](_Call3 _f) { _result = (_result + _f._s0); },
+                [&](_Call4 _f) {
+                  _stack.emplace_back(_Call5{_result});
+                  _stack.emplace_back(_Enter{_f._s0});
+                },
+                [&](_Call5 _f) { _result = (_result * _f._s0); },
+                [&](_Call6 _f) {
+                  const typename expr::Cond _args = _f._s0;
+                  unsigned int _cond0 = _result;
+                  if (0u < _cond0) {
+                    _stack.emplace_back(_Enter{_args.d_a1.get()});
+                  } else {
+                    _stack.emplace_back(_Enter{_args.d_a2.get()});
+                  }
+                }},
             _frame);
       }
       return _result;
@@ -1164,7 +1169,7 @@ struct LoopifyExpr {
                                   _Call5, _Call6, _Call7, _Call8>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1178,51 +1183,51 @@ struct LoopifyExpr {
                             _result = f(_args.d_a0);
                           },
                           [&](const typename expr::Succ &_args) -> void {
-                            _stack.push_back(_Call1{_args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a0.get()});
+                            _stack.emplace_back(_Call1{_args.d_a0});
+                            _stack.emplace_back(_Enter{_args.d_a0.get()});
                           },
                           [&](const typename expr::Add &_args) -> void {
-                            _stack.push_back(_Call2{_args.d_a0.get(),
-                                                    _args.d_a1, _args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call2{_args.d_a0.get(),
+                                                       _args.d_a1, _args.d_a0});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename expr::Mul &_args) -> void {
-                            _stack.push_back(_Call4{_args.d_a0.get(),
-                                                    _args.d_a1, _args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call4{_args.d_a0.get(),
+                                                       _args.d_a1, _args.d_a0});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename expr::Cond &_args) -> void {
-                            _stack.push_back(
+                            _stack.emplace_back(
                                 _Call6{_args.d_a1.get(), _args.d_a0.get(),
                                        _args.d_a2, _args.d_a1, _args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a2.get()});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) { _result = f0(_f._s0, _result); },
                 [&](_Call2 _f) {
-                  _stack.push_back(_Call3{_result, _f._s1, _f._s2});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call3{_result, _f._s1, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call3 _f) {
                   _result = f1(_f._s2, _result, _f._s1, _f._s0);
                 },
                 [&](_Call4 _f) {
-                  _stack.push_back(_Call5{_result, _f._s1, _f._s2});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call5{_result, _f._s1, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call5 _f) {
                   _result = f2(_f._s2, _result, _f._s1, _f._s0);
                 },
                 [&](_Call6 _f) {
-                  _stack.push_back(
+                  _stack.emplace_back(
                       _Call7{_result, _f._s1, _f._s2, _f._s3, _f._s4});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call7 _f) {
-                  _stack.push_back(
+                  _stack.emplace_back(
                       _Call8{_f._s0, _result, _f._s2, _f._s3, _f._s4});
-                  _stack.push_back(_Enter{_f._s1});
+                  _stack.emplace_back(_Enter{_f._s1});
                 },
                 [&](_Call8 _f) {
                   _result = f3(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
@@ -1303,7 +1308,7 @@ struct LoopifyExpr {
                                   _Call5, _Call6, _Call7, _Call8>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1317,51 +1322,51 @@ struct LoopifyExpr {
                             _result = f(_args.d_a0);
                           },
                           [&](const typename expr::Succ &_args) -> void {
-                            _stack.push_back(_Call1{_args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a0.get()});
+                            _stack.emplace_back(_Call1{_args.d_a0});
+                            _stack.emplace_back(_Enter{_args.d_a0.get()});
                           },
                           [&](const typename expr::Add &_args) -> void {
-                            _stack.push_back(_Call2{_args.d_a0.get(),
-                                                    _args.d_a1, _args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call2{_args.d_a0.get(),
+                                                       _args.d_a1, _args.d_a0});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename expr::Mul &_args) -> void {
-                            _stack.push_back(_Call4{_args.d_a0.get(),
-                                                    _args.d_a1, _args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call4{_args.d_a0.get(),
+                                                       _args.d_a1, _args.d_a0});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename expr::Cond &_args) -> void {
-                            _stack.push_back(
+                            _stack.emplace_back(
                                 _Call6{_args.d_a1.get(), _args.d_a0.get(),
                                        _args.d_a2, _args.d_a1, _args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a2.get()});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) { _result = f0(_f._s0, _result); },
                 [&](_Call2 _f) {
-                  _stack.push_back(_Call3{_result, _f._s1, _f._s2});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call3{_result, _f._s1, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call3 _f) {
                   _result = f1(_f._s2, _result, _f._s1, _f._s0);
                 },
                 [&](_Call4 _f) {
-                  _stack.push_back(_Call5{_result, _f._s1, _f._s2});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call5{_result, _f._s1, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call5 _f) {
                   _result = f2(_f._s2, _result, _f._s1, _f._s0);
                 },
                 [&](_Call6 _f) {
-                  _stack.push_back(
+                  _stack.emplace_back(
                       _Call7{_result, _f._s1, _f._s2, _f._s3, _f._s4});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call7 _f) {
-                  _stack.push_back(
+                  _stack.emplace_back(
                       _Call8{_f._s0, _result, _f._s2, _f._s3, _f._s4});
-                  _stack.push_back(_Enter{_f._s1});
+                  _stack.emplace_back(_Enter{_f._s1});
                 },
                 [&](_Call8 _f) {
                   _result = f3(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
@@ -1475,7 +1480,7 @@ struct LoopifyExpr {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1489,29 +1494,29 @@ struct LoopifyExpr {
                             _result = 0u;
                           },
                           [&](const typename simple_expr::Plus &_args) -> void {
-                            _stack.push_back(_Call1{_args.d_a0.get()});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call1{_args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename simple_expr::IfPos &_args)
                               -> void {
-                            _stack.push_back(
+                            _stack.emplace_back(
                                 _Call3{_args.d_a1.get(), _args.d_a0.get()});
-                            _stack.push_back(_Enter{_args.d_a2.get()});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) { _result = (std::max(_result, _f._s0) + 1); },
                 [&](_Call3 _f) {
-                  _stack.push_back(_Call4{_result, _f._s1});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call4{_result, _f._s1});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call4 _f) {
-                  _stack.push_back(_Call5{_f._s0, _result});
-                  _stack.push_back(_Enter{_f._s1});
+                  _stack.emplace_back(_Call5{_f._s0, _result});
+                  _stack.emplace_back(_Enter{_f._s1});
                 },
                 [&](_Call5 _f) {
                   _result = (std::max(_result, std::max(_f._s1, _f._s0)) + 1);
@@ -1545,7 +1550,7 @@ struct LoopifyExpr {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1559,28 +1564,28 @@ struct LoopifyExpr {
                             _result = _args.d_a0;
                           },
                           [&](const typename simple_expr::Plus &_args) -> void {
-                            _stack.push_back(_Call1{_args.d_a0.get()});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call1{_args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename simple_expr::IfPos &_args)
                               -> void {
-                            _stack.push_back(_Call3{_args});
-                            _stack.push_back(_Enter{_args.d_a0.get()});
+                            _stack.emplace_back(_Call3{_args});
+                            _stack.emplace_back(_Enter{_args.d_a0.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) { _result = (_result + _f._s0); },
                 [&](_Call3 _f) {
                   const typename simple_expr::IfPos _args = _f._s0;
                   unsigned int _cond0 = _result;
                   if (0u < _cond0) {
-                    _stack.push_back(_Enter{_args.d_a1.get()});
+                    _stack.emplace_back(_Enter{_args.d_a1.get()});
                   } else {
-                    _stack.push_back(_Enter{_args.d_a2.get()});
+                    _stack.emplace_back(_Enter{_args.d_a2.get()});
                   }
                 }},
             _frame);
@@ -1644,7 +1649,7 @@ struct LoopifyExpr {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1658,35 +1663,35 @@ struct LoopifyExpr {
                             _result = f(_args.d_a0);
                           },
                           [&](const typename simple_expr::Plus &_args) -> void {
-                            _stack.push_back(_Call1{_args.d_a0.get(),
-                                                    _args.d_a1, _args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call1{_args.d_a0.get(),
+                                                       _args.d_a1, _args.d_a0});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename simple_expr::IfPos &_args)
                               -> void {
-                            _stack.push_back(
+                            _stack.emplace_back(
                                 _Call3{_args.d_a1.get(), _args.d_a0.get(),
                                        _args.d_a2, _args.d_a1, _args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a2.get()});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
                   _result = f0(_f._s2, _result, _f._s1, _f._s0);
                 },
                 [&](_Call3 _f) {
-                  _stack.push_back(
+                  _stack.emplace_back(
                       _Call4{_result, _f._s1, _f._s2, _f._s3, _f._s4});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call4 _f) {
-                  _stack.push_back(
+                  _stack.emplace_back(
                       _Call5{_f._s0, _result, _f._s2, _f._s3, _f._s4});
-                  _stack.push_back(_Enter{_f._s1});
+                  _stack.emplace_back(_Enter{_f._s1});
                 },
                 [&](_Call5 _f) {
                   _result = f1(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
@@ -1752,7 +1757,7 @@ struct LoopifyExpr {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1766,35 +1771,35 @@ struct LoopifyExpr {
                             _result = f(_args.d_a0);
                           },
                           [&](const typename simple_expr::Plus &_args) -> void {
-                            _stack.push_back(_Call1{_args.d_a0.get(),
-                                                    _args.d_a1, _args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call1{_args.d_a0.get(),
+                                                       _args.d_a1, _args.d_a0});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename simple_expr::IfPos &_args)
                               -> void {
-                            _stack.push_back(
+                            _stack.emplace_back(
                                 _Call3{_args.d_a1.get(), _args.d_a0.get(),
                                        _args.d_a2, _args.d_a1, _args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a2.get()});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
                   _result = f0(_f._s2, _result, _f._s1, _f._s0);
                 },
                 [&](_Call3 _f) {
-                  _stack.push_back(
+                  _stack.emplace_back(
                       _Call4{_result, _f._s1, _f._s2, _f._s3, _f._s4});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call4 _f) {
-                  _stack.push_back(
+                  _stack.emplace_back(
                       _Call5{_f._s0, _result, _f._s2, _f._s3, _f._s4});
-                  _stack.push_back(_Enter{_f._s1});
+                  _stack.emplace_back(_Enter{_f._s1});
                 },
                 [&](_Call5 _f) {
                   _result = f1(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
@@ -1998,7 +2003,7 @@ struct LoopifyExpr {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -2012,28 +2017,28 @@ struct LoopifyExpr {
                             _result = 0u;
                           },
                           [&](const typename cond_expr::CPlus &_args) -> void {
-                            _stack.push_back(_Call1{_args.d_a0.get()});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call1{_args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename cond_expr::CCond &_args) -> void {
-                            _stack.push_back(
+                            _stack.emplace_back(
                                 _Call3{_args.d_a1.get(), _args.d_a0.get()});
-                            _stack.push_back(_Enter{_args.d_a2.get()});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) { _result = (std::max(_result, _f._s0) + 1); },
                 [&](_Call3 _f) {
-                  _stack.push_back(_Call4{_result, _f._s1});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call4{_result, _f._s1});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call4 _f) {
-                  _stack.push_back(_Call5{_f._s0, _result});
-                  _stack.push_back(_Enter{_f._s1});
+                  _stack.emplace_back(_Call5{_f._s0, _result});
+                  _stack.emplace_back(_Enter{_f._s1});
                 },
                 [&](_Call5 _f) {
                   _result = (std::max(_result, std::max(_f._s1, _f._s0)) + 1);
@@ -2067,7 +2072,7 @@ struct LoopifyExpr {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -2081,27 +2086,27 @@ struct LoopifyExpr {
                             _result = _args.d_a0;
                           },
                           [&](const typename cond_expr::CPlus &_args) -> void {
-                            _stack.push_back(_Call1{_args.d_a0.get()});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call1{_args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename cond_expr::CCond &_args) -> void {
-                            _stack.push_back(_Call3{_args});
-                            _stack.push_back(_Enter{_args.d_a0.get()});
+                            _stack.emplace_back(_Call3{_args});
+                            _stack.emplace_back(_Enter{_args.d_a0.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) { _result = (_result + _f._s0); },
                 [&](_Call3 _f) {
                   const typename cond_expr::CCond _args = _f._s0;
                   unsigned int _cond0 = _result;
                   if (0u < _cond0) {
-                    _stack.push_back(_Enter{_args.d_a1.get()});
+                    _stack.emplace_back(_Enter{_args.d_a1.get()});
                   } else {
-                    _stack.push_back(_Enter{_args.d_a2.get()});
+                    _stack.emplace_back(_Enter{_args.d_a2.get()});
                   }
                 }},
             _frame);
@@ -2165,7 +2170,7 @@ struct LoopifyExpr {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -2179,34 +2184,34 @@ struct LoopifyExpr {
                             _result = f(_args.d_a0);
                           },
                           [&](const typename cond_expr::CPlus &_args) -> void {
-                            _stack.push_back(_Call1{_args.d_a0.get(),
-                                                    _args.d_a1, _args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call1{_args.d_a0.get(),
+                                                       _args.d_a1, _args.d_a0});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename cond_expr::CCond &_args) -> void {
-                            _stack.push_back(
+                            _stack.emplace_back(
                                 _Call3{_args.d_a1.get(), _args.d_a0.get(),
                                        _args.d_a2, _args.d_a1, _args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a2.get()});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
                   _result = f0(_f._s2, _result, _f._s1, _f._s0);
                 },
                 [&](_Call3 _f) {
-                  _stack.push_back(
+                  _stack.emplace_back(
                       _Call4{_result, _f._s1, _f._s2, _f._s3, _f._s4});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call4 _f) {
-                  _stack.push_back(
+                  _stack.emplace_back(
                       _Call5{_f._s0, _result, _f._s2, _f._s3, _f._s4});
-                  _stack.push_back(_Enter{_f._s1});
+                  _stack.emplace_back(_Enter{_f._s1});
                 },
                 [&](_Call5 _f) {
                   _result = f1(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
@@ -2272,7 +2277,7 @@ struct LoopifyExpr {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -2286,34 +2291,34 @@ struct LoopifyExpr {
                             _result = f(_args.d_a0);
                           },
                           [&](const typename cond_expr::CPlus &_args) -> void {
-                            _stack.push_back(_Call1{_args.d_a0.get(),
-                                                    _args.d_a1, _args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a1.get()});
+                            _stack.emplace_back(_Call1{_args.d_a0.get(),
+                                                       _args.d_a1, _args.d_a0});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename cond_expr::CCond &_args) -> void {
-                            _stack.push_back(
+                            _stack.emplace_back(
                                 _Call3{_args.d_a1.get(), _args.d_a0.get(),
                                        _args.d_a2, _args.d_a1, _args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a2.get()});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
                   _result = f0(_f._s2, _result, _f._s1, _f._s0);
                 },
                 [&](_Call3 _f) {
-                  _stack.push_back(
+                  _stack.emplace_back(
                       _Call4{_result, _f._s1, _f._s2, _f._s3, _f._s4});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call4 _f) {
-                  _stack.push_back(
+                  _stack.emplace_back(
                       _Call5{_f._s0, _result, _f._s2, _f._s3, _f._s4});
-                  _stack.push_back(_Enter{_f._s1});
+                  _stack.emplace_back(_Enter{_f._s1});
                 },
                 [&](_Call5 _f) {
                   _result = f1(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);

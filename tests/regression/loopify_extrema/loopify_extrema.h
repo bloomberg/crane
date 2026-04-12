@@ -32,7 +32,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -80,7 +80,7 @@ struct LoopifyExtrema {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -101,8 +101,8 @@ struct LoopifyExtrema {
                                       -> void { _result = f(_args.d_a0); },
                                   [&](const typename List<unsigned int>::Cons &)
                                       -> void {
-                                    _stack.push_back(_Call1{_args, f});
-                                    _stack.push_back(_Enter{_args.d_a1});
+                                    _stack.emplace_back(_Call1{_args, f});
+                                    _stack.emplace_back(_Enter{_args.d_a1});
                                   }},
                               _args.d_a1->v());
                         }},
@@ -139,7 +139,7 @@ struct LoopifyExtrema {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -160,8 +160,8 @@ struct LoopifyExtrema {
                                       -> void { _result = f(_args.d_a0); },
                                   [&](const typename List<unsigned int>::Cons &)
                                       -> void {
-                                    _stack.push_back(_Call1{_args, f});
-                                    _stack.push_back(_Enter{_args.d_a1});
+                                    _stack.emplace_back(_Call1{_args, f});
+                                    _stack.emplace_back(_Enter{_args.d_a1});
                                   }},
                               _args.d_a1->v());
                         }},
@@ -198,7 +198,7 @@ struct LoopifyExtrema {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -219,8 +219,8 @@ struct LoopifyExtrema {
                                       -> void { _result = _args.d_a0; },
                                   [&](const typename List<unsigned int>::Cons &)
                                       -> void {
-                                    _stack.push_back(_Call1{_args, f});
-                                    _stack.push_back(_Enter{_args.d_a1});
+                                    _stack.emplace_back(_Call1{_args, f});
+                                    _stack.emplace_back(_Enter{_args.d_a1});
                                   }},
                               _args.d_a1->v());
                         }},
@@ -258,7 +258,7 @@ struct LoopifyExtrema {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -279,8 +279,8 @@ struct LoopifyExtrema {
                                       -> void { _result = _args.d_a0; },
                                   [&](const typename List<unsigned int>::Cons &)
                                       -> void {
-                                    _stack.push_back(_Call1{_args, f});
-                                    _stack.push_back(_Enter{_args.d_a1});
+                                    _stack.emplace_back(_Call1{_args, f});
+                                    _stack.emplace_back(_Enter{_args.d_a1});
                                   }},
                               _args.d_a1->v());
                         }},

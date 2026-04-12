@@ -34,7 +34,7 @@ struct LoopifyPatterns {
 
   public:
     // CREATORS
-    explicit list(Nil _v) : d_v_(std::move(_v)) {}
+    explicit list(Nil _v) : d_v_(_v) {}
 
     explicit list(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -74,7 +74,7 @@ struct LoopifyPatterns {
     using _Frame = std::variant<_Enter, _Call1>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -88,8 +88,8 @@ struct LoopifyPatterns {
                           _result = f;
                         },
                         [&](const typename list<T1>::Cons &_args) -> void {
-                          _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -114,7 +114,7 @@ struct LoopifyPatterns {
     using _Frame = std::variant<_Enter, _Call1>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -128,8 +128,8 @@ struct LoopifyPatterns {
                           _result = f;
                         },
                         [&](const typename list<T1>::Cons &_args) -> void {
-                          _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -206,7 +206,7 @@ struct LoopifyPatterns {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -227,8 +227,8 @@ struct LoopifyPatterns {
                                       -> void { _result = f(_args.d_a0); },
                                   [&](const typename list<unsigned int>::Cons &)
                                       -> void {
-                                    _stack.push_back(_Call1{_args, f});
-                                    _stack.push_back(_Enter{_args.d_a1});
+                                    _stack.emplace_back(_Call1{_args, f});
+                                    _stack.emplace_back(_Enter{_args.d_a1});
                                   }},
                               _args.d_a1->v());
                         }},
@@ -281,7 +281,7 @@ struct LoopifyPatterns {
     using _Frame = std::variant<_Enter, _Call1>;
     std::shared_ptr<list<std::shared_ptr<list<T1>>>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -321,7 +321,7 @@ struct LoopifyPatterns {
                             std::shared_ptr<list<std::shared_ptr<list<T1>>>>
                                 _result{};
                             std::vector<_Frame> _stack;
-                            _stack.push_back(_Enter{lsts});
+                            _stack.emplace_back(_Enter{lsts});
                             while (!_stack.empty()) {
                               _Frame _frame = std::move(_stack.back());
                               _stack.pop_back();
@@ -343,11 +343,11 @@ struct LoopifyPatterns {
                                                 [&](const typename list<
                                                     std::shared_ptr<list<T1>>>::
                                                         Cons &_args0) -> void {
-                                                  _stack.push_back(
+                                                  _stack.emplace_back(
                                                       _Call1{list<T1>::cons(
                                                           _args.d_a0,
                                                           _args0.d_a0)});
-                                                  _stack.push_back(
+                                                  _stack.emplace_back(
                                                       _Enter{_args0.d_a1});
                                                 }},
                                             lsts->v());
@@ -361,9 +361,9 @@ struct LoopifyPatterns {
                             }
                             return _result;
                           };
-                          _stack.push_back(_Call1{list<T1>::cons(
+                          _stack.emplace_back(_Call1{list<T1>::cons(
                               x, list<T1>::cons(_args.d_a0, _args.d_a1))});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -584,7 +584,7 @@ struct LoopifyPatterns {
               std::shared_ptr<list<unsigned int>>>
         _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -602,8 +602,8 @@ struct LoopifyPatterns {
                         },
                         [&](const typename list<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{p, _args, q});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{p, _args, q});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },

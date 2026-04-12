@@ -35,9 +35,11 @@ __attribute__((pure)) unsigned int FoldClosureAccum::compose_adders(
     const unsigned int _x0) {
   return trees->template fold_right<std::function<unsigned int(unsigned int)>>(
       [](std::shared_ptr<FoldClosureAccum::tree> t,
-         std::function<unsigned int(unsigned int)> acc)
+         const std::function<unsigned int(unsigned int)> acc)
           -> std::function<unsigned int(unsigned int)> {
-        return [=](unsigned int x) mutable { return (acc(x) + tree_sum(t)); };
+        return [=](const unsigned int x) mutable {
+          return (acc(x) + tree_sum(t));
+        };
       },
-      [](unsigned int x) { return x; })(_x0);
+      [](const unsigned int x) { return x; })(_x0);
 }

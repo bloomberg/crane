@@ -33,7 +33,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -170,13 +170,13 @@ struct CoindGuard {
   }
 
   static inline const std::shared_ptr<Stream<unsigned int>> nats =
-      iterate<unsigned int>([](unsigned int x) { return (x + 1); }, 0u);
+      iterate<unsigned int>([](const unsigned int x) { return (x + 1); }, 0u);
   static inline const std::shared_ptr<Stream<unsigned int>> evens =
-      smap<unsigned int, unsigned int>([](unsigned int n) { return (n * 2u); },
-                                       nats);
+      smap<unsigned int, unsigned int>(
+          [](const unsigned int n) { return (n * 2u); }, nats);
   static inline const std::shared_ptr<Stream<unsigned int>> fibs =
       unfold<unsigned int, std::pair<unsigned int, unsigned int>>(
-          [](std::pair<unsigned int, unsigned int> pat) {
+          [](const std::pair<unsigned int, unsigned int> pat) {
             const unsigned int &a = pat.first;
             const unsigned int &b = pat.second;
             return std::make_pair(a, std::make_pair(b, (a + b)));

@@ -19,7 +19,7 @@ LoopifyListTransforms::run_length_encode(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -48,8 +48,8 @@ LoopifyListTransforms::run_length_encode(
                                 },
                                 [&](const typename List<unsigned int>::Cons &)
                                     -> void {
-                                  _stack.push_back(_Call1{_args});
-                                  _stack.push_back(_Enter{_args.d_a1});
+                                  _stack.emplace_back(_Call1{_args});
+                                  _stack.emplace_back(_Enter{_args.d_a1});
                                 }},
                             _args.d_a1->v());
                       }},
@@ -635,7 +635,7 @@ LoopifyListTransforms::step_sum(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -654,8 +654,8 @@ LoopifyListTransforms::step_sum(const std::shared_ptr<List<unsigned int>> &l) {
                                } else {
                                  contribution = (_args.d_a0 * 2u);
                                }
-                               _stack.push_back(_Call1{contribution});
-                               _stack.push_back(_Enter{_args.d_a1});
+                               _stack.emplace_back(_Call1{contribution});
+                               _stack.emplace_back(_Enter{_args.d_a1});
                              }},
                          l->v());
                    },

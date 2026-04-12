@@ -32,7 +32,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -109,7 +109,7 @@ struct LoopifyTrees {
 
   public:
     // CREATORS
-    explicit tree(Leaf _v) : d_v_(std::move(_v)) {}
+    explicit tree(Leaf _v) : d_v_(_v) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
@@ -161,7 +161,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       std::shared_ptr<tree<T1>> _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -175,15 +175,15 @@ struct LoopifyTrees {
                             _result = tree<T1>::leaf();
                           },
                           [&](const typename tree<t_A>::Node &_args) -> void {
-                            _stack.push_back(
+                            _stack.emplace_back(
                                 _Call1{_args.d_a0.get(), f(_args.d_a1)});
-                            _stack.push_back(_Enter{_args.d_a2.get()});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s1});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result, _f._s1});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
                   _result = tree<T1>::node(_result, _f._s1, _f._s0);
@@ -218,7 +218,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       bool _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self, t2});
+      _stack.emplace_back(_Enter{_self, t2});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -244,18 +244,18 @@ struct LoopifyTrees {
                                         -> void { _result = false; },
                                     [&](const typename tree<t_A>::Node &_args0)
                                         -> void {
-                                      _stack.push_back(_Call1{
+                                      _stack.emplace_back(_Call1{
                                           _args.d_a0.get(), _args0.d_a2, true});
-                                      _stack.push_back(_Enter{_args.d_a2.get(),
-                                                              _args0.d_a0});
+                                      _stack.emplace_back(_Enter{
+                                          _args.d_a2.get(), _args0.d_a0});
                                     }},
                                 t2->v());
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s2});
-                  _stack.push_back(_Enter{_f._s0, _f._s1});
+                  _stack.emplace_back(_Call2{_result, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s0, _f._s1});
                 },
                 [&](_Call2 _f) { _result = ((_result && _f._s0) && _f._s1); }},
             _frame);
@@ -285,7 +285,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       std::shared_ptr<List<t_A>> _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -299,15 +299,15 @@ struct LoopifyTrees {
                             _result = List<t_A>::nil();
                           },
                           [&](const typename tree<t_A>::Node &_args) -> void {
-                            _stack.push_back(
+                            _stack.emplace_back(
                                 _Call1{_args.d_a0.get(), _args.d_a1});
-                            _stack.push_back(_Enter{_args.d_a2.get()});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s1});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result, _f._s1});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
                   _result = _result->app(List<t_A>::cons(_f._s1, _f._s0));
@@ -337,7 +337,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -351,14 +351,14 @@ struct LoopifyTrees {
                             _result = 1u;
                           },
                           [&](const typename tree<t_A>::Node &_args) -> void {
-                            _stack.push_back(_Call1{_args.d_a0.get()});
-                            _stack.push_back(_Enter{_args.d_a2.get()});
+                            _stack.emplace_back(_Call1{_args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) { _result = (_result + _f._s0); }},
             _frame);
@@ -385,7 +385,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1>;
       bool _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self, t2});
+      _stack.emplace_back(_Enter{_self, t2});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -411,9 +411,10 @@ struct LoopifyTrees {
                                         -> void { _result = false; },
                                     [&](const typename tree<T1>::Node &_args0)
                                         -> void {
-                                      _stack.push_back(_Call1{_args0, _args});
-                                      _stack.push_back(_Enter{_args.d_a0.get(),
-                                                              _args0.d_a0});
+                                      _stack.emplace_back(
+                                          _Call1{_args0, _args});
+                                      _stack.emplace_back(_Enter{
+                                          _args.d_a0.get(), _args0.d_a0});
                                     }},
                                 t2->v());
                           }},
@@ -423,7 +424,7 @@ struct LoopifyTrees {
                   const typename tree<T1>::Node _args0 = _f._s0;
                   const typename tree<t_A>::Node _args = _f._s1;
                   if (_result) {
-                    _stack.push_back(_Enter{_args.d_a2.get(), _args0.d_a2});
+                    _stack.emplace_back(_Enter{_args.d_a2.get(), _args0.d_a2});
                   } else {
                     _result = false;
                   }
@@ -454,7 +455,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       std::shared_ptr<tree<t_A>> _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -468,15 +469,15 @@ struct LoopifyTrees {
                             _result = tree<t_A>::leaf();
                           },
                           [&](const typename tree<t_A>::Node &_args) -> void {
-                            _stack.push_back(
+                            _stack.emplace_back(
                                 _Call1{_args.d_a2.get(), _args.d_a1});
-                            _stack.push_back(_Enter{_args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a0.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s1});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result, _f._s1});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
                   _result = tree<t_A>::node(_result, _f._s1, _f._s0);
@@ -505,7 +506,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -519,14 +520,14 @@ struct LoopifyTrees {
                             _result = 0u;
                           },
                           [&](const typename tree<t_A>::Node &_args) -> void {
-                            _stack.push_back(_Call1{_args.d_a0.get()});
-                            _stack.push_back(_Enter{_args.d_a2.get()});
+                            _stack.emplace_back(_Call1{_args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) { _result = ((_result + _f._s0) + 1); }},
             _frame);
@@ -552,7 +553,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -566,16 +567,16 @@ struct LoopifyTrees {
                             _result = 0u;
                           },
                           [&](const typename tree<t_A>::Node &_args) -> void {
-                            _stack.push_back(_Call1{_args});
-                            _stack.push_back(_Enter{_args.d_a0.get()});
+                            _stack.emplace_back(_Call1{_args});
+                            _stack.emplace_back(_Enter{_args.d_a0.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
                   const typename tree<t_A>::Node _args = _f._s0;
                   unsigned int lh = _result;
-                  _stack.push_back(_Call2{lh});
-                  _stack.push_back(_Enter{_args.d_a2.get()});
+                  _stack.emplace_back(_Call2{lh});
+                  _stack.emplace_back(_Enter{_args.d_a2.get()});
                 },
                 [&](_Call2 _f) {
                   unsigned int lh = _f._s0;
@@ -620,7 +621,7 @@ struct LoopifyTrees {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
+    _stack.emplace_back(_Enter{t});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -634,15 +635,15 @@ struct LoopifyTrees {
                           _result = f;
                         },
                         [&](const typename tree<T1>::Node &_args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
-                                                  _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
+                          _stack.emplace_back(_Call1{_args.d_a0, _args.d_a2,
+                                                     _args.d_a1, _args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a2});
                         }},
                     t->v());
               },
               [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.push_back(_Enter{_f._s0});
+                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+                _stack.emplace_back(_Enter{_f._s0});
               },
               [&](_Call2 _f) {
                 _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
@@ -678,7 +679,7 @@ struct LoopifyTrees {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
+    _stack.emplace_back(_Enter{t});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -692,15 +693,15 @@ struct LoopifyTrees {
                           _result = f;
                         },
                         [&](const typename tree<T1>::Node &_args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
-                                                  _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
+                          _stack.emplace_back(_Call1{_args.d_a0, _args.d_a2,
+                                                     _args.d_a1, _args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a2});
                         }},
                     t->v());
               },
               [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.push_back(_Enter{_f._s0});
+                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+                _stack.emplace_back(_Enter{_f._s0});
               },
               [&](_Call2 _f) {
                 _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
@@ -802,7 +803,7 @@ struct LoopifyTrees {
 
   public:
     // CREATORS
-    explicit ternary(TLeaf _v) : d_v_(std::move(_v)) {}
+    explicit ternary(TLeaf _v) : d_v_(_v) {}
 
     explicit ternary(TNode _v) : d_v_(std::move(_v)) {}
 
@@ -855,7 +856,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -869,23 +870,23 @@ struct LoopifyTrees {
                             _result = 0u;
                           },
                           [&](const typename ternary::TNode &_args) -> void {
-                            _stack.push_back(_Call1{_args});
-                            _stack.push_back(_Enter{_args.d_a0.get()});
+                            _stack.emplace_back(_Call1{_args});
+                            _stack.emplace_back(_Enter{_args.d_a0.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
                   const typename ternary::TNode _args = _f._s0;
                   unsigned int d1 = _result;
-                  _stack.push_back(_Call2{_args, d1});
-                  _stack.push_back(_Enter{_args.d_a1.get()});
+                  _stack.emplace_back(_Call2{_args, d1});
+                  _stack.emplace_back(_Enter{_args.d_a1.get()});
                 },
                 [&](_Call2 _f) {
                   const typename ternary::TNode _args = _f._s0;
                   unsigned int d1 = _f._s1;
                   unsigned int d2 = _result;
-                  _stack.push_back(_Call3{d1, d2});
-                  _stack.push_back(_Enter{_args.d_a2.get()});
+                  _stack.emplace_back(_Call3{d1, d2});
+                  _stack.emplace_back(_Enter{_args.d_a2.get()});
                 },
                 [&](_Call3 _f) {
                   unsigned int d1 = _f._s0;
@@ -942,7 +943,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -956,20 +957,20 @@ struct LoopifyTrees {
                             _result = 0u;
                           },
                           [&](const typename ternary::TNode &_args) -> void {
-                            _stack.push_back(_Call1{_args.d_a1.get(),
-                                                    _args.d_a0.get(),
-                                                    _args.d_a3});
-                            _stack.push_back(_Enter{_args.d_a2.get()});
+                            _stack.emplace_back(_Call1{_args.d_a1.get(),
+                                                       _args.d_a0.get(),
+                                                       _args.d_a3});
+                            _stack.emplace_back(_Enter{_args.d_a2.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
-                  _stack.push_back(_Call3{_f._s0, _result, _f._s2});
-                  _stack.push_back(_Enter{_f._s1});
+                  _stack.emplace_back(_Call3{_f._s0, _result, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s1});
                 },
                 [&](_Call3 _f) {
                   _result = (_f._s2 + (_result + (_f._s1 + _f._s0)));
@@ -1020,7 +1021,7 @@ struct LoopifyTrees {
     using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
     T1 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
+    _stack.emplace_back(_Enter{t});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -1034,22 +1035,22 @@ struct LoopifyTrees {
                           _result = f;
                         },
                         [&](const typename ternary::TNode &_args) -> void {
-                          _stack.push_back(_Call1{_args.d_a1, _args.d_a0,
-                                                  _args.d_a3, _args.d_a2,
-                                                  _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
+                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0,
+                                                     _args.d_a3, _args.d_a2,
+                                                     _args.d_a1, _args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a2});
                         }},
                     t->v());
               },
               [&](_Call1 _f) {
-                _stack.push_back(
+                _stack.emplace_back(
                     _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5});
-                _stack.push_back(_Enter{_f._s0});
+                _stack.emplace_back(_Enter{_f._s0});
               },
               [&](_Call2 _f) {
-                _stack.push_back(
+                _stack.emplace_back(
                     _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5});
-                _stack.push_back(_Enter{_f._s1});
+                _stack.emplace_back(_Enter{_f._s1});
               },
               [&](_Call3 _f) {
                 _result =
@@ -1100,7 +1101,7 @@ struct LoopifyTrees {
     using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
     T1 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
+    _stack.emplace_back(_Enter{t});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -1114,22 +1115,22 @@ struct LoopifyTrees {
                           _result = f;
                         },
                         [&](const typename ternary::TNode &_args) -> void {
-                          _stack.push_back(_Call1{_args.d_a1, _args.d_a0,
-                                                  _args.d_a3, _args.d_a2,
-                                                  _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
+                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0,
+                                                     _args.d_a3, _args.d_a2,
+                                                     _args.d_a1, _args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a2});
                         }},
                     t->v());
               },
               [&](_Call1 _f) {
-                _stack.push_back(
+                _stack.emplace_back(
                     _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5});
-                _stack.push_back(_Enter{_f._s0});
+                _stack.emplace_back(_Enter{_f._s0});
               },
               [&](_Call2 _f) {
-                _stack.push_back(
+                _stack.emplace_back(
                     _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5});
-                _stack.push_back(_Enter{_f._s1});
+                _stack.emplace_back(_Enter{_f._s1});
               },
               [&](_Call3 _f) {
                 _result =
@@ -1269,7 +1270,7 @@ struct LoopifyTrees {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     std::shared_ptr<List<std::shared_ptr<rose>>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{cs, fuel});
+    _stack.emplace_back(_Enter{cs, fuel});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -1291,21 +1292,20 @@ struct LoopifyTrees {
                           [&](const typename List<std::shared_ptr<rose>>::Cons
                                   &_args) -> void {
                             std::visit(
-                                Overloaded{
-                                    [&](const typename rose::RNode &_args0)
-                                        -> void {
-                                      _stack.push_back(_Call1{_args0.d_a1, g,
-                                                              f(_args0.d_a0)});
-                                      _stack.push_back(_Enter{_args.d_a1, g});
-                                    }},
+                                Overloaded{[&](const typename rose::RNode
+                                                   &_args0) -> void {
+                                  _stack.emplace_back(
+                                      _Call1{_args0.d_a1, g, f(_args0.d_a0)});
+                                  _stack.emplace_back(_Enter{_args.d_a1, g});
+                                }},
                                 _args.d_a0->v());
                           }},
                       cs->v());
                 }
               },
               [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s2});
-                _stack.push_back(_Enter{_f._s0, _f._s1});
+                _stack.emplace_back(_Call2{_result, _f._s2});
+                _stack.emplace_back(_Enter{_f._s0, _f._s1});
               },
               [&](_Call2 _f) {
                 _result = List<std::shared_ptr<rose>>::cons(
@@ -1390,7 +1390,7 @@ struct LoopifyTrees {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     bool _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
+    _stack.emplace_back(_Enter{t});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -1408,15 +1408,15 @@ struct LoopifyTrees {
                           if (p(_args.d_a1)) {
                             _result = true;
                           } else {
-                            _stack.push_back(_Call1{_args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a2});
+                            _stack.emplace_back(_Call1{_args.d_a0});
+                            _stack.emplace_back(_Enter{_args.d_a2});
                           }
                         }},
                     t->v());
               },
               [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result});
-                _stack.push_back(_Enter{_f._s0});
+                _stack.emplace_back(_Call2{_result});
+                _stack.emplace_back(_Enter{_f._s0});
               },
               [&](_Call2 _f) { _result = (_result || _f._s0); }},
           _frame);
@@ -1509,7 +1509,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1523,24 +1523,24 @@ struct LoopifyTrees {
                             _result = 0u;
                           },
                           [&](const typename quadtree::Quad &_args) -> void {
-                            _stack.push_back(_Call1{_args.d_a2.get(),
-                                                    _args.d_a1.get(),
-                                                    _args.d_a0.get()});
-                            _stack.push_back(_Enter{_args.d_a3.get()});
+                            _stack.emplace_back(_Call1{_args.d_a2.get(),
+                                                       _args.d_a1.get(),
+                                                       _args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a3.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
-                  _stack.push_back(_Call3{_f._s0, _result, _f._s2});
-                  _stack.push_back(_Enter{_f._s1});
+                  _stack.emplace_back(_Call3{_f._s0, _result, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s1});
                 },
                 [&](_Call3 _f) {
-                  _stack.push_back(_Call4{_f._s0, _f._s1, _result});
-                  _stack.push_back(_Enter{_f._s2});
+                  _stack.emplace_back(_Call4{_f._s0, _f._s1, _result});
+                  _stack.emplace_back(_Enter{_f._s2});
                 },
                 [&](_Call4 _f) {
                   _result = (max4_impl(_result, _f._s2, _f._s1, _f._s0) + 1);
@@ -1585,7 +1585,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1599,24 +1599,24 @@ struct LoopifyTrees {
                             _result = _args.d_a0;
                           },
                           [&](const typename quadtree::Quad &_args) -> void {
-                            _stack.push_back(_Call1{_args.d_a2.get(),
-                                                    _args.d_a1.get(),
-                                                    _args.d_a0.get()});
-                            _stack.push_back(_Enter{_args.d_a3.get()});
+                            _stack.emplace_back(_Call1{_args.d_a2.get(),
+                                                       _args.d_a1.get(),
+                                                       _args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a3.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
-                  _stack.push_back(_Call3{_f._s0, _result, _f._s2});
-                  _stack.push_back(_Enter{_f._s1});
+                  _stack.emplace_back(_Call3{_f._s0, _result, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s1});
                 },
                 [&](_Call3 _f) {
-                  _stack.push_back(_Call4{_f._s0, _f._s1, _result});
-                  _stack.push_back(_Enter{_f._s2});
+                  _stack.emplace_back(_Call4{_f._s0, _f._s1, _result});
+                  _stack.emplace_back(_Enter{_f._s2});
                 },
                 [&](_Call4 _f) {
                   _result = (_result + (_f._s2 + (_f._s1 + _f._s0)));
@@ -1681,7 +1681,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1695,28 +1695,28 @@ struct LoopifyTrees {
                             _result = f(_args.d_a0);
                           },
                           [&](const typename quadtree::Quad &_args) -> void {
-                            _stack.push_back(
+                            _stack.emplace_back(
                                 _Call1{_args.d_a2.get(), _args.d_a1.get(),
                                        _args.d_a0.get(), _args.d_a3, _args.d_a2,
                                        _args.d_a1, _args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a3.get()});
+                            _stack.emplace_back(_Enter{_args.d_a3.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
-                                          _f._s4, _f._s5, _f._s6});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
+                                             _f._s4, _f._s5, _f._s6});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
-                  _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
-                                          _f._s4, _f._s5, _f._s6});
-                  _stack.push_back(_Enter{_f._s1});
+                  _stack.emplace_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
+                                             _f._s4, _f._s5, _f._s6});
+                  _stack.emplace_back(_Enter{_f._s1});
                 },
                 [&](_Call3 _f) {
-                  _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
-                                          _f._s4, _f._s5, _f._s6});
-                  _stack.push_back(_Enter{_f._s2});
+                  _stack.emplace_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
+                                             _f._s4, _f._s5, _f._s6});
+                  _stack.emplace_back(_Enter{_f._s2});
                 },
                 [&](_Call4 _f) {
                   _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
@@ -1782,7 +1782,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1796,28 +1796,28 @@ struct LoopifyTrees {
                             _result = f(_args.d_a0);
                           },
                           [&](const typename quadtree::Quad &_args) -> void {
-                            _stack.push_back(
+                            _stack.emplace_back(
                                 _Call1{_args.d_a2.get(), _args.d_a1.get(),
                                        _args.d_a0.get(), _args.d_a3, _args.d_a2,
                                        _args.d_a1, _args.d_a0});
-                            _stack.push_back(_Enter{_args.d_a3.get()});
+                            _stack.emplace_back(_Enter{_args.d_a3.get()});
                           }},
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
-                                          _f._s4, _f._s5, _f._s6});
-                  _stack.push_back(_Enter{_f._s0});
+                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
+                                             _f._s4, _f._s5, _f._s6});
+                  _stack.emplace_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
-                  _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
-                                          _f._s4, _f._s5, _f._s6});
-                  _stack.push_back(_Enter{_f._s1});
+                  _stack.emplace_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
+                                             _f._s4, _f._s5, _f._s6});
+                  _stack.emplace_back(_Enter{_f._s1});
                 },
                 [&](_Call3 _f) {
-                  _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
-                                          _f._s4, _f._s5, _f._s6});
-                  _stack.push_back(_Enter{_f._s2});
+                  _stack.emplace_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
+                                             _f._s4, _f._s5, _f._s6});
+                  _stack.emplace_back(_Enter{_f._s2});
                 },
                 [&](_Call4 _f) {
                   _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
@@ -1907,7 +1907,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self, n});
+      _stack.emplace_back(_Enter{_self, n});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1930,10 +1930,10 @@ struct LoopifyTrees {
                                    if (n <= 0u) {
                                      _result = 0u;
                                    } else {
-                                     _stack.push_back(_Call1{
+                                     _stack.emplace_back(_Call1{
                                          _args.d_a0.get(),
                                          (((n - 1u) > n ? 0 : (n - 1u)))});
-                                     _stack.push_back(_Enter{
+                                     _stack.emplace_back(_Enter{
                                          _args.d_a1.get(),
                                          (((n - 1u) > n ? 0 : (n - 1u)))});
                                    }
@@ -1941,8 +1941,8 @@ struct LoopifyTrees {
                              _self->v());
                        },
                        [&](_Call1 _f) {
-                         _stack.push_back(_Call2{_result});
-                         _stack.push_back(_Enter{_f._s0, _f._s1});
+                         _stack.emplace_back(_Call2{_result});
+                         _stack.emplace_back(_Enter{_f._s0, _f._s1});
                        },
                        [&](_Call2 _f) { _result = (_result + _f._s0); }},
             _frame);
@@ -1970,29 +1970,30 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
         std::visit(
-            Overloaded{[&](_Enter _f) {
-                         const simple_tree *_self = _f._self;
-                         std::visit(
-                             Overloaded{
-                                 [&](const typename simple_tree::SLeaf &_args)
-                                     -> void { _result = _args.d_a0; },
-                                 [&](const typename simple_tree::SNode &_args)
-                                     -> void {
-                                   _stack.push_back(_Call1{_args.d_a0.get()});
-                                   _stack.push_back(_Enter{_args.d_a1.get()});
-                                 }},
-                             _self->v());
-                       },
-                       [&](_Call1 _f) {
-                         _stack.push_back(_Call2{_result});
-                         _stack.push_back(_Enter{_f._s0});
-                       },
-                       [&](_Call2 _f) { _result = (_result + _f._s0); }},
+            Overloaded{
+                [&](_Enter _f) {
+                  const simple_tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename simple_tree::SLeaf &_args)
+                              -> void { _result = _args.d_a0; },
+                          [&](const typename simple_tree::SNode &_args)
+                              -> void {
+                            _stack.emplace_back(_Call1{_args.d_a0.get()});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.emplace_back(_Call2{_result});
+                  _stack.emplace_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) { _result = (_result + _f._s0); }},
             _frame);
       }
       return _result;
@@ -2025,33 +2026,33 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
         std::visit(
-            Overloaded{[&](_Enter _f) {
-                         const simple_tree *_self = _f._self;
-                         std::visit(
-                             Overloaded{
-                                 [&](const typename simple_tree::SLeaf &_args)
-                                     -> void { _result = f(_args.d_a0); },
-                                 [&](const typename simple_tree::SNode &_args)
-                                     -> void {
-                                   _stack.push_back(_Call1{_args.d_a0.get(),
-                                                           _args.d_a1,
-                                                           _args.d_a0});
-                                   _stack.push_back(_Enter{_args.d_a1.get()});
-                                 }},
-                             _self->v());
-                       },
-                       [&](_Call1 _f) {
-                         _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                         _stack.push_back(_Enter{_f._s0});
-                       },
-                       [&](_Call2 _f) {
-                         _result = f0(_f._s2, _result, _f._s1, _f._s0);
-                       }},
+            Overloaded{
+                [&](_Enter _f) {
+                  const simple_tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename simple_tree::SLeaf &_args)
+                              -> void { _result = f(_args.d_a0); },
+                          [&](const typename simple_tree::SNode &_args)
+                              -> void {
+                            _stack.emplace_back(_Call1{_args.d_a0.get(),
+                                                       _args.d_a1, _args.d_a0});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _result = f0(_f._s2, _result, _f._s1, _f._s0);
+                }},
             _frame);
       }
       return _result;
@@ -2084,33 +2085,33 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.push_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
         std::visit(
-            Overloaded{[&](_Enter _f) {
-                         const simple_tree *_self = _f._self;
-                         std::visit(
-                             Overloaded{
-                                 [&](const typename simple_tree::SLeaf &_args)
-                                     -> void { _result = f(_args.d_a0); },
-                                 [&](const typename simple_tree::SNode &_args)
-                                     -> void {
-                                   _stack.push_back(_Call1{_args.d_a0.get(),
-                                                           _args.d_a1,
-                                                           _args.d_a0});
-                                   _stack.push_back(_Enter{_args.d_a1.get()});
-                                 }},
-                             _self->v());
-                       },
-                       [&](_Call1 _f) {
-                         _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                         _stack.push_back(_Enter{_f._s0});
-                       },
-                       [&](_Call2 _f) {
-                         _result = f0(_f._s2, _result, _f._s1, _f._s0);
-                       }},
+            Overloaded{
+                [&](_Enter _f) {
+                  const simple_tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename simple_tree::SLeaf &_args)
+                              -> void { _result = f(_args.d_a0); },
+                          [&](const typename simple_tree::SNode &_args)
+                              -> void {
+                            _stack.emplace_back(_Call1{_args.d_a0.get(),
+                                                       _args.d_a1, _args.d_a0});
+                            _stack.emplace_back(_Enter{_args.d_a1.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.emplace_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _result = f0(_f._s2, _result, _f._s1, _f._s0);
+                }},
             _frame);
       }
       return _result;

@@ -35,7 +35,7 @@ struct EvenOdd {
 
   public:
     // CREATORS
-    explicit even_list(ENil _v) : d_v_(std::move(_v)) {}
+    explicit even_list(ENil _v) : d_v_(_v) {}
 
     explicit even_list(ECons _v) : d_v_(std::move(_v)) {}
 

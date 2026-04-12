@@ -18,7 +18,7 @@ LoopifyComparators::maximum_by(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -39,8 +39,8 @@ LoopifyComparators::maximum_by(const std::shared_ptr<List<unsigned int>> &l) {
                                     -> void { _result = _args.d_a0; },
                                 [&](const typename List<unsigned int>::Cons &)
                                     -> void {
-                                  _stack.push_back(_Call1{_args});
-                                  _stack.push_back(_Enter{_args.d_a1});
+                                  _stack.emplace_back(_Call1{_args});
+                                  _stack.emplace_back(_Enter{_args.d_a1});
                                 }},
                             _args.d_a1->v());
                       }},
@@ -73,7 +73,7 @@ LoopifyComparators::minimum_by(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -94,8 +94,8 @@ LoopifyComparators::minimum_by(const std::shared_ptr<List<unsigned int>> &l) {
                                     -> void { _result = _args.d_a0; },
                                 [&](const typename List<unsigned int>::Cons &)
                                     -> void {
-                                  _stack.push_back(_Call1{_args});
-                                  _stack.push_back(_Enter{_args.d_a1});
+                                  _stack.emplace_back(_Call1{_args});
+                                  _stack.emplace_back(_Enter{_args.d_a1});
                                 }},
                             _args.d_a1->v());
                       }},
@@ -273,7 +273,7 @@ std::shared_ptr<List<unsigned int>> LoopifyComparators::insertion_sort(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -288,8 +288,8 @@ std::shared_ptr<List<unsigned int>> LoopifyComparators::insertion_sort(
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args.d_a0});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args.d_a0});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },

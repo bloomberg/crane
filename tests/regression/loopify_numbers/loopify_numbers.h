@@ -31,7 +31,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -67,7 +67,7 @@ public:
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{_self});
+    _stack.emplace_back(_Enter{_self});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -81,8 +81,8 @@ public:
                           _result = 0u;
                         },
                         [&](const typename List<t_A>::Cons &_args) -> void {
-                          _stack.push_back(_Call1{});
-                          _stack.push_back(_Enter{_args.d_a1.get()});
+                          _stack.emplace_back(_Call1{});
+                          _stack.emplace_back(_Enter{_args.d_a1.get()});
                         }},
                     _self->v());
               },
@@ -180,7 +180,7 @@ struct LoopifyNumbers {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{n});
+    _stack.emplace_back(_Enter{n});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -194,8 +194,8 @@ struct LoopifyNumbers {
                                   _result = f(x);
                                 } else {
                                   unsigned int _x = n_ - 1;
-                                  _stack.push_back(_Call1{});
-                                  _stack.push_back(_Enter{n_});
+                                  _stack.emplace_back(_Call1{});
+                                  _stack.emplace_back(_Enter{n_});
                                 }
                               }
                             },

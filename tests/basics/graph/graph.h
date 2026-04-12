@@ -31,7 +31,7 @@ private:
 
 public:
   // CREATORS
-  explicit Nat(O _v) : d_v_(std::move(_v)) {}
+  explicit Nat(O _v) : d_v_(_v) {}
 
   explicit Nat(S _v) : d_v_(std::move(_v)) {}
 
@@ -69,7 +69,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 

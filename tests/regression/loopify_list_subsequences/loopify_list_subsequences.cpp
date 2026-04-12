@@ -106,7 +106,7 @@ LoopifyListSubsequences::inits_fuel(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -132,8 +132,8 @@ LoopifyListSubsequences::inits_fuel(
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{_args});
-                          _stack.push_back(_Enter{_args.d_a1, fuel_});
+                          _stack.emplace_back(_Call1{_args});
+                          _stack.emplace_back(_Enter{_args.d_a1, fuel_});
                         }},
                     l->v());
               }
@@ -316,7 +316,7 @@ LoopifyListSubsequences::split_at(const unsigned int n,
             std::shared_ptr<List<unsigned int>>>
       _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, n});
+  _stack.emplace_back(_Enter{l, n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -338,8 +338,8 @@ LoopifyListSubsequences::split_at(const unsigned int n,
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{_args});
-                          _stack.push_back(_Enter{_args.d_a1, n_});
+                          _stack.emplace_back(_Call1{_args});
+                          _stack.emplace_back(_Enter{_args.d_a1, n_});
                         }},
                     l->v());
               }

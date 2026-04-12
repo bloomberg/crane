@@ -39,7 +39,7 @@ private:
 
 public:
   // CREATORS
-  explicit Nat(O _v) : d_v_(bsl::move(_v)) {}
+  explicit Nat(O _v) : d_v_(_v) {}
   explicit Nat(S _v) : d_v_(bsl::move(_v)) {}
   static bsl::shared_ptr<Nat> o() { return bsl::make_shared<Nat>(O{}); }
   static bsl::shared_ptr<Nat> s(const bsl::shared_ptr<Nat> &n) {

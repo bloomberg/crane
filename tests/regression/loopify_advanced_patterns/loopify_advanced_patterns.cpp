@@ -18,7 +18,7 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::len_impl(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -31,8 +31,8 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::len_impl(
                                  -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
-                               _stack.push_back(_Call1{1u});
-                               _stack.push_back(_Enter{_args.d_a1});
+                               _stack.emplace_back(_Call1{1u});
+                               _stack.emplace_back(_Enter{_args.d_a1});
                              }},
                          l->v());
                    },
@@ -98,7 +98,7 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::multi_guard(
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -112,14 +112,14 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::multi_guard(
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
                                if (10u < _args.d_a0) {
-                                 _stack.push_back(_Call1{_args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a1});
+                                 _stack.emplace_back(_Call1{_args.d_a0});
+                                 _stack.emplace_back(_Enter{_args.d_a1});
                                } else {
                                  if (0u < _args.d_a0) {
-                                   _stack.push_back(_Enter{_args.d_a1});
+                                   _stack.emplace_back(_Enter{_args.d_a1});
                                  } else {
-                                   _stack.push_back(_Call2{1u});
-                                   _stack.push_back(_Enter{_args.d_a1});
+                                   _stack.emplace_back(_Call2{1u});
+                                   _stack.emplace_back(_Enter{_args.d_a1});
                                  }
                                }
                              }},
@@ -149,7 +149,7 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::four_elem(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -189,12 +189,13 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::four_elem(
                                                     [&](const typename List<
                                                         unsigned int>::Cons
                                                             &_args2) -> void {
-                                                      _stack.push_back(_Call1{
-                                                          (((_args.d_a0 +
-                                                             _args0.d_a0) +
-                                                            _args1.d_a0) +
-                                                           _args2.d_a0)});
-                                                      _stack.push_back(
+                                                      _stack.emplace_back(
+                                                          _Call1{
+                                                              (((_args.d_a0 +
+                                                                 _args0.d_a0) +
+                                                                _args1.d_a0) +
+                                                               _args2.d_a0)});
+                                                      _stack.emplace_back(
                                                           _Enter{_args2.d_a1});
                                                     }},
                                                 _args1.d_a1->v());
@@ -230,7 +231,7 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::nested_pattern(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -255,8 +256,8 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::nested_pattern(
                         const unsigned int &c = _args.d_a0.second;
                         const unsigned int &a = p0.first;
                         const unsigned int &b = p0.second;
-                        _stack.push_back(_Call1{((a + b) + c)});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{((a + b) + c)});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -385,7 +386,7 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::sum_shapes(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -403,8 +404,8 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::sum_shapes(
                       [&](const typename List<
                           std::shared_ptr<LoopifyAdvancedPatterns::shape>>::Cons
                               &_args) -> void {
-                        _stack.push_back(_Call1{extract_value(_args.d_a0)});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{extract_value(_args.d_a0)});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -432,7 +433,7 @@ LoopifyAdvancedPatterns::count_by_shape(
   using _Frame = std::variant<_Enter, _Call1>;
   std::pair<std::pair<unsigned int, unsigned int>, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -451,8 +452,8 @@ LoopifyAdvancedPatterns::count_by_shape(
                       [&](const typename List<
                           std::shared_ptr<LoopifyAdvancedPatterns::shape>>::Cons
                               &_args) -> void {
-                        _stack.push_back(_Call1{_args});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },

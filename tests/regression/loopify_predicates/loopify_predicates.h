@@ -32,7 +32,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -152,7 +152,7 @@ struct LoopifyPredicates {
               std::shared_ptr<List<unsigned int>>>
         _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -169,8 +169,8 @@ struct LoopifyPredicates {
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
                           if (p(_args.d_a0)) {
-                            _stack.push_back(_Call1{_args});
-                            _stack.push_back(_Enter{_args.d_a1});
+                            _stack.emplace_back(_Call1{_args});
+                            _stack.emplace_back(_Enter{_args.d_a1});
                           } else {
                             _result = std::make_pair(List<unsigned int>::nil(),
                                                      std::move(l));
@@ -207,7 +207,7 @@ struct LoopifyPredicates {
               std::shared_ptr<List<unsigned int>>>
         _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -227,8 +227,8 @@ struct LoopifyPredicates {
                             _result = std::make_pair(List<unsigned int>::nil(),
                                                      std::move(l));
                           } else {
-                            _stack.push_back(_Call1{_args});
-                            _stack.push_back(_Enter{_args.d_a1});
+                            _stack.emplace_back(_Call1{_args});
+                            _stack.emplace_back(_Enter{_args.d_a1});
                           }
                         }},
                     l->v());
@@ -339,7 +339,7 @@ struct LoopifyPredicates {
     using _Frame = std::variant<_Enter, _Call1>;
     bool _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -354,8 +354,8 @@ struct LoopifyPredicates {
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{p(_args.d_a0)});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{p(_args.d_a0)});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -379,7 +379,7 @@ struct LoopifyPredicates {
     using _Frame = std::variant<_Enter, _Call1>;
     bool _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -394,8 +394,8 @@ struct LoopifyPredicates {
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{p(_args.d_a0)});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{p(_args.d_a0)});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },

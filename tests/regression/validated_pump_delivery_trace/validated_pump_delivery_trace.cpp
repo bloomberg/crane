@@ -524,9 +524,8 @@ ValidatedPumpDeliveryTraceCase::history_extraction_safe(
   return (
       events->length() <= 100u &&
       events->forallb(
-          [](std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent> e) {
-            return e->be_dose_twentieths <= 500u;
-          }));
+          [](const std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>
+                 &e) { return e->be_dose_twentieths <= 500u; }));
 }
 
 __attribute__((pure)) unsigned int
@@ -613,10 +612,10 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                     unsigned int tdd_current =
                         input->pi_bolus_history->template fold_left<
                             unsigned int>(
-                            [=](unsigned int acc,
-                                std::shared_ptr<
+                            [=](const unsigned int acc,
+                                const std::shared_ptr<
                                     ValidatedPumpDeliveryTraceCase::BolusEvent>
-                                    e) mutable {
+                                    &e) mutable {
                               if (((((input->pi_now - 1440u) > input->pi_now
                                          ? 0
                                          : (input->pi_now - 1440u))) <=

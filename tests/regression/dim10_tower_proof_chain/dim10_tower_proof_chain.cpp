@@ -117,12 +117,12 @@ Dim10TowerProofChainCase::make_graded_goodwillie_tower(
     const unsigned int base_dim) {
   return std::make_shared<Dim10TowerProofChainCase::GradedGoodwillieTower>(
       GradedGoodwillieTower{
-          [=](unsigned int n) mutable {
+          [=](const unsigned int n) mutable {
             return P_n_obj(
                 n, std::make_shared<Dim10TowerProofChainCase::GradedObj>(
                        GradedObj{base_dim}));
           },
-          [=](unsigned int n) mutable { return D_n_obj(base_dim, n); }});
+          [=](const unsigned int n) mutable { return D_n_obj(base_dim, n); }});
 }
 
 std::shared_ptr<SigT<unsigned int, std::any>>

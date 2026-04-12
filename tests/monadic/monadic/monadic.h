@@ -33,7 +33,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -98,13 +98,13 @@ struct Monadic {
 
   template <typename T1, typename T2>
   __attribute__((pure)) static State<T1, T2> state_return(const T2 x) {
-    return [=](T1 s) mutable { return std::make_pair(x, s); };
+    return [=](const T1 s) mutable { return std::make_pair(x, s); };
   }
 
   template <typename T1, typename T2, typename T3, MapsTo<State<T1, T3>, T2> F1>
   __attribute__((pure)) static State<T1, T3> state_bind(const State<T1, T2> ma,
                                                         F1 &&f) {
-    return [=](T1 s) mutable {
+    return [=](const T1 s) mutable {
       auto _cs = ma(s);
       const T2 &a = _cs.first;
       const T1 &s_ = _cs.second;
@@ -113,29 +113,33 @@ struct Monadic {
   }
 
   template <typename T1> static const State<T1, T1> &state_get() {
-    static const State<T1, T1> v = [](T1 s) { return std::make_pair(s, s); };
+    static const State<T1, T1> v = [](const T1 s) {
+      return std::make_pair(s, s);
+    };
     return v;
   }
 
   template <typename T1>
   __attribute__((pure)) static State<T1, std::monostate> state_put(const T1 s) {
-    return [=](T1) mutable { return std::make_pair(std::monostate{}, s); };
+    return
+        [=](const T1) mutable { return std::make_pair(std::monostate{}, s); };
   }
 
   template <typename T1>
   __attribute__((pure)) static State<unsigned int, unsigned int>
   count_elements(const std::shared_ptr<List<T1>> &l) {
     return l->template fold_left<State<unsigned int, unsigned int>>(
-        [](std::function<std::pair<unsigned int, unsigned int>(unsigned int)>
+        [](const std::function<std::pair<unsigned int, unsigned int>(
+               unsigned int)>
                acc,
-           T1) {
+           const T1) {
           return state_bind<unsigned int, unsigned int,
-                            unsigned int>(acc, [](unsigned int) {
+                            unsigned int>(acc, [](const unsigned int) {
             return state_bind<unsigned int, unsigned int, unsigned int>(
-                state_get<unsigned int>(), [](unsigned int n) {
+                state_get<unsigned int>(), [](const unsigned int n) {
                   return state_bind<unsigned int, std::monostate, unsigned int>(
                       state_put<unsigned int>((n + 1)),
-                      [=](std::monostate) mutable {
+                      [=](const std::monostate) mutable {
                         return state_return<unsigned int, unsigned int>(n);
                       });
                 });
@@ -148,12 +152,12 @@ struct Monadic {
       option_return<unsigned int>(42u);
   static inline const std::optional<unsigned int> test_bind_some =
       option_bind<unsigned int, unsigned int>(
-          std::make_optional<unsigned int>(10u), [](unsigned int x) {
+          std::make_optional<unsigned int>(10u), [](const unsigned int x) {
             return std::make_optional<unsigned int>((x + 1u));
           });
   static inline const std::optional<unsigned int> test_bind_none =
       option_bind<unsigned int, unsigned int>(
-          std::optional<unsigned int>(), [](unsigned int x) {
+          std::optional<unsigned int>(), [](const unsigned int x) {
             return std::make_optional<unsigned int>((x + 1u));
           });
   static inline const std::optional<unsigned int> test_safe_div_ok =

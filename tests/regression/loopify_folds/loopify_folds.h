@@ -31,7 +31,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -67,7 +67,7 @@ public:
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{_self});
+    _stack.emplace_back(_Enter{_self});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -81,8 +81,8 @@ public:
                           _result = 0u;
                         },
                         [&](const typename List<t_A>::Cons &_args) -> void {
-                          _stack.push_back(_Call1{});
-                          _stack.push_back(_Enter{_args.d_a1.get()});
+                          _stack.emplace_back(_Call1{});
+                          _stack.emplace_back(_Enter{_args.d_a1.get()});
                         }},
                     _self->v());
               },
@@ -135,7 +135,7 @@ struct LoopifyFolds {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -150,8 +150,8 @@ struct LoopifyFolds {
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{_args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{_args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -220,7 +220,7 @@ struct LoopifyFolds {
     using _Frame = std::variant<_Enter, _Call1>;
     std::shared_ptr<List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -236,8 +236,8 @@ struct LoopifyFolds {
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{acc, f, _args});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{acc, f, _args});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -329,7 +329,7 @@ struct LoopifyFolds {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -350,8 +350,8 @@ struct LoopifyFolds {
                                       -> void { _result = _args.d_a0; },
                                   [&](const typename List<unsigned int>::Cons &)
                                       -> void {
-                                    _stack.push_back(_Call1{_args.d_a0});
-                                    _stack.push_back(_Enter{_args.d_a1});
+                                    _stack.emplace_back(_Call1{_args.d_a0});
+                                    _stack.emplace_back(_Enter{_args.d_a1});
                                   }},
                               _args.d_a1->v());
                         }},
@@ -382,7 +382,7 @@ struct LoopifyFolds {
     using _Frame = std::variant<_Enter, _Call1>;
     std::pair<unsigned int, std::shared_ptr<List<unsigned int>>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l, acc});
+    _stack.emplace_back(_Enter{l, acc});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -402,8 +402,8 @@ struct LoopifyFolds {
                           auto _cs = f(acc, _args.d_a0);
                           const unsigned int &acc_ = _cs.first;
                           const unsigned int &y = _cs.second;
-                          _stack.push_back(_Call1{y});
-                          _stack.push_back(_Enter{_args.d_a1, acc_});
+                          _stack.emplace_back(_Call1{y});
+                          _stack.emplace_back(_Enter{_args.d_a1, acc_});
                         }},
                     l->v());
               },

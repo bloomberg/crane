@@ -32,7 +32,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -172,7 +172,7 @@ public:
 
   explicit Positive(XO _v) : d_v_(std::move(_v)) {}
 
-  explicit Positive(XH _v) : d_v_(std::move(_v)) {}
+  explicit Positive(XH _v) : d_v_(_v) {}
 
   static std::shared_ptr<Positive> xi(const std::shared_ptr<Positive> &a0) {
     return std::make_shared<Positive>(XI{a0});
@@ -221,7 +221,7 @@ private:
 
 public:
   // CREATORS
-  explicit Z(Z0 _v) : d_v_(std::move(_v)) {}
+  explicit Z(Z0 _v) : d_v_(_v) {}
 
   explicit Z(Zpos _v) : d_v_(std::move(_v)) {}
 
@@ -613,7 +613,7 @@ struct CoalitionBidHonorTraceCase {
 
   public:
     // CREATORS
-    explicit Prize(PrizeHonor _v) : d_v_(std::move(_v)) {}
+    explicit Prize(PrizeHonor _v) : d_v_(_v) {}
 
     explicit Prize(PrizeEnclave _v) : d_v_(std::move(_v)) {}
 
@@ -761,7 +761,7 @@ struct CoalitionBidHonorTraceCase {
 
   public:
     // CREATORS
-    explicit RefusalReason(RefusalInsufficientRank _v) : d_v_(std::move(_v)) {}
+    explicit RefusalReason(RefusalInsufficientRank _v) : d_v_(_v) {}
 
     explicit RefusalReason(RefusalOther _v) : d_v_(std::move(_v)) {}
 
@@ -866,7 +866,7 @@ struct CoalitionBidHonorTraceCase {
 
     explicit ProtocolAction(ActPass _v) : d_v_(std::move(_v)) {}
 
-    explicit ProtocolAction(ActClose _v) : d_v_(std::move(_v)) {}
+    explicit ProtocolAction(ActClose _v) : d_v_(_v) {}
 
     explicit ProtocolAction(ActWithdraw _v) : d_v_(std::move(_v)) {}
 
@@ -1134,7 +1134,7 @@ struct CoalitionBidHonorTraceCase {
 
   public:
     // CREATORS
-    explicit BatchallPhase(PhaseIdle _v) : d_v_(std::move(_v)) {}
+    explicit BatchallPhase(PhaseIdle _v) : d_v_(_v) {}
 
     explicit BatchallPhase(PhaseChallenged _v) : d_v_(std::move(_v)) {}
 

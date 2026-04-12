@@ -150,7 +150,7 @@ struct IndParam {
 
     public:
       // CREATORS
-      explicit t(Empty _v) : d_v_(std::move(_v)) {}
+      explicit t(Empty _v) : d_v_(_v) {}
 
       explicit t(Single _v) : d_v_(std::move(_v)) {}
 

@@ -2123,17 +2123,32 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     let args, env = push_vars' lam_params env in
     let saved_env_types = tctx.env_types in
     push_env_types args;
-    let filtered_args = List.filter (fun (_, ty) ->
-      not (isTdummy ty) && not (ml_type_is_void ty)
-      && not (tctx.itree_mode = Reified && ml_type_is_unit ty)) args in
+    (* Infer owned/borrowed for each lambda parameter using escape analysis.
+       Borrowed parameters (only read, not stored/returned) get const T& to
+       avoid unnecessary shared_ptr refcount bumps. *)
+    let n_all_params = List.length lam_params in
+    let owned_flags = Escape.infer_owned_params n_all_params a in
+    let args_with_owned =
+      List.map2 (fun (id, ty) owned -> (id, ty, owned)) args owned_flags
+    in
+    let filtered_args_with_owned =
+      List.filter (fun (_, ty, _) ->
+        not (isTdummy ty) && not (ml_type_is_void ty)
+        && not (tctx.itree_mode = Reified && ml_type_is_unit ty))
+        args_with_owned
+    in
+    let filtered_args =
+      List.map (fun (id, ty, _) -> (id, ty)) filtered_args_with_owned
+    in
     let f =
       with_escape_analysis a (fun () ->
         let tvars = get_current_type_vars () in
         let cpp_args =
           List.map
-            (fun (id, ty) ->
-              (convert_ml_type_to_cpp_type env Refset'.empty tvars ty, Some id) )
-            filtered_args
+            (fun (id, ty, owned) ->
+              let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars ty in
+              (wrap_param_by_ownership ~is_owned:owned cpp_ty, Some id) )
+            filtered_args_with_owned
         in
         (* Generate the body, then check if the body returns a lambda (this
            happens when extract_cons_app generates curried partial constructor
@@ -9557,9 +9572,21 @@ let gen_ind_header_v2
                  ( Fconstructor ([(param_name, param_ty)], init_list, true),
                    VPublic,
                    SCreators )
-               else (* For inductive: v_(std::move(_v)) *)
+               else
+                 (* For inductive: d_v_(std::move(_v)) when the constructor
+                    struct has non-trivial fields (shared_ptr etc.).  For
+                    trivially-copyable structs (e.g., empty nullary constructors
+                    like O, Nil, Leaf), skip std::move — it has no effect and
+                    triggers performance-move-const-arg. *)
+                 let has_nontrivial_fields =
+                   List.exists (fun ty -> not (isTdummy ty)) tys.(i)
+                 in
+                 let init_v =
+                   if has_nontrivial_fields then CPPmove (CPPvar param_name)
+                   else CPPvar param_name
+                 in
                  let init_list =
-                   [(Id.of_string "d_v_", CPPmove (CPPvar param_name))]
+                   [(Id.of_string "d_v_", init_v)]
                  in
                  ( Fconstructor ([(param_name, param_ty)], init_list, true),
                    VPublic,

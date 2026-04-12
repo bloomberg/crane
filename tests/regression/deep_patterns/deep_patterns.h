@@ -32,7 +32,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -278,7 +278,7 @@ struct DeepPatterns {
 
   public:
     // CREATORS
-    explicit mylist(Nil _v) : d_v_(std::move(_v)) {}
+    explicit mylist(Nil _v) : d_v_(_v) {}
 
     explicit mylist(Cons _v) : d_v_(std::move(_v)) {}
 

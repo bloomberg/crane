@@ -60,7 +60,7 @@ struct LargeMutual {
 
     explicit stmt(SWhile _v) : d_v_(std::move(_v)) {}
 
-    explicit stmt(SSkip _v) : d_v_(std::move(_v)) {}
+    explicit stmt(SSkip _v) : d_v_(_v) {}
 
     static std::shared_ptr<stmt> sassign(unsigned int a0,
                                          const std::shared_ptr<expr> &a1) {
@@ -246,9 +246,9 @@ struct LargeMutual {
 
   public:
     // CREATORS
-    explicit bexpr(BTrue _v) : d_v_(std::move(_v)) {}
+    explicit bexpr(BTrue _v) : d_v_(_v) {}
 
-    explicit bexpr(BFalse _v) : d_v_(std::move(_v)) {}
+    explicit bexpr(BFalse _v) : d_v_(_v) {}
 
     explicit bexpr(BEq _v) : d_v_(std::move(_v)) {}
 

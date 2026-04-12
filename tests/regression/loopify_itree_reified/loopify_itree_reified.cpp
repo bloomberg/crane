@@ -23,7 +23,7 @@ LoopifyItreeReified::count_taus(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{t, fuel});
+  _stack.emplace_back(_Enter{t, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -46,8 +46,8 @@ LoopifyItreeReified::count_taus(const unsigned int fuel,
                         [&](const typename ITree<unsigned int>::Tau &_itf)
                             -> decltype(auto) {
                           auto t_ = _itf.next;
-                          _stack.push_back(_Call1{});
-                          _stack.push_back(_Enter{t_, fuel_});
+                          _stack.emplace_back(_Call1{});
+                          _stack.emplace_back(_Enter{t_, fuel_});
                         },
                         [&](const typename ITree<unsigned int>::Vis &_itf)
                             -> decltype(auto) {

@@ -32,7 +32,7 @@ struct Lambda {
   }
 
   static inline const unsigned int use_apply =
-      apply_fn([](unsigned int x) { return (x + 1u); }, 5u);
+      apply_fn([](const unsigned int x) { return (x + 1u); }, 5u);
   static inline const unsigned int test_simple = simple_lambda(5u);
   static inline const unsigned int test_multi = multi_arg(3u, 4u);
   static inline const unsigned int test_nested = nested_lambda(1u, 2u, 3u);

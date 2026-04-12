@@ -22,7 +22,7 @@ unsigned int stmtest::io_basic_counter() {
 unsigned int stmtest::stm_inc(const unsigned int x) {
   stm::TVar<unsigned int> c = stm::newTVar(x);
   STMDefs::template modifyTVar<unsigned int>(
-      c, [](unsigned int n) { return (n + 1); });
+      c, [](const unsigned int n) { return (n + 1); });
   return stm::readTVar(c);
 }
 

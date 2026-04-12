@@ -46,8 +46,9 @@ struct LoopifyItreeReified {
                    [&](const typename ITree<T1>::Vis &_itf) -> decltype(auto) {
                      auto e = _itf.effect;
                      auto k = _itf.cont;
-                     return itree_vis(
-                         e, [=](std::any x) mutable { return rec(k(x)); });
+                     return itree_vis(e, [=](const std::any x) mutable {
+                       return rec(k(x));
+                     });
                    }},
         ot);
   }

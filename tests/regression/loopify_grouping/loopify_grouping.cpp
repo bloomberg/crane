@@ -60,7 +60,7 @@ LoopifyGrouping::group_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -95,8 +95,8 @@ LoopifyGrouping::group_fuel(const unsigned int fuel,
                                   },
                                   [&](const typename List<unsigned int>::Cons
                                           &_args0) -> void {
-                                    _stack.push_back(_Call1{_args, _args0});
-                                    _stack.push_back(
+                                    _stack.emplace_back(_Call1{_args, _args0});
+                                    _stack.emplace_back(
                                         _Enter{List<unsigned int>::cons(
                                                    _args0.d_a0, _args0.d_a1),
                                                fuel_});
@@ -161,7 +161,7 @@ LoopifyGrouping::nub(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -176,8 +176,8 @@ LoopifyGrouping::nub(const std::shared_ptr<List<unsigned int>> &l) {
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{_args});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{_args});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -254,7 +254,7 @@ LoopifyGrouping::partition3(const unsigned int pivot,
             std::shared_ptr<List<unsigned int>>>
       _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -272,8 +272,8 @@ LoopifyGrouping::partition3(const unsigned int pivot,
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(_Call1{pivot, _args});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{pivot, _args});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -324,7 +324,7 @@ LoopifyGrouping::count_elem(const unsigned int x,
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -338,10 +338,10 @@ LoopifyGrouping::count_elem(const unsigned int x,
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
                                if (x == _args.d_a0) {
-                                 _stack.push_back(_Call1{1u});
-                                 _stack.push_back(_Enter{_args.d_a1});
+                                 _stack.emplace_back(_Call1{1u});
+                                 _stack.emplace_back(_Enter{_args.d_a1});
                                } else {
-                                 _stack.push_back(_Enter{_args.d_a1});
+                                 _stack.emplace_back(_Enter{_args.d_a1});
                                }
                              }},
                          l->v());

@@ -21,7 +21,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListGenerators::cycle_fuel(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n, fuel});
+  _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -44,8 +44,8 @@ std::shared_ptr<List<unsigned int>> LoopifyListGenerators::cycle_fuel(
                               -> void { _result = List<unsigned int>::nil(); },
                           [&](const typename List<unsigned int>::Cons &)
                               -> void {
-                            _stack.push_back(_Call1{l});
-                            _stack.push_back(_Enter{n_, fuel_});
+                            _stack.emplace_back(_Call1{l});
+                            _stack.emplace_back(_Enter{n_, fuel_});
                           }},
                       l->v());
                 }
@@ -154,7 +154,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListGenerators::replicate_each(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -171,8 +171,8 @@ std::shared_ptr<List<unsigned int>> LoopifyListGenerators::replicate_each(
                           -> void {
                         std::shared_ptr<List<unsigned int>> reps =
                             replicate_elem(n, _args.d_a0);
-                        _stack.push_back(_Call1{std::move(reps)});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{std::move(reps)});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },

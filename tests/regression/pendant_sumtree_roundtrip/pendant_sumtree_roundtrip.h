@@ -35,7 +35,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil0 _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil0 _v) : d_v_(_v) {}
 
   explicit List(Cons0 _v) : d_v_(std::move(_v)) {}
 
@@ -204,7 +204,7 @@ private:
 
 public:
   // CREATORS
-  explicit T0(Nil _v) : d_v_(std::move(_v)) {}
+  explicit T0(Nil _v) : d_v_(_v) {}
 
   explicit T0(Cons _v) : d_v_(std::move(_v)) {}
 

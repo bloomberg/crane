@@ -14,7 +14,7 @@ void VoidCallback::print_nat(const unsigned int) { return; }
 
 void VoidCallback::test_for_each_m() {
   for_each_m(
-      [](unsigned int) {
+      [](const unsigned int) {
         std::cout << "item"s << '\n';
         return;
       },

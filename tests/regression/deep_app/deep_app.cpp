@@ -36,7 +36,8 @@ DeepApp::build(const unsigned int n,
 /// Identity map to force traversal.
 std::shared_ptr<DeepApp::mylist<unsigned int>>
 DeepApp::map_id(const std::shared_ptr<DeepApp::mylist<unsigned int>> &l) {
-  return map<unsigned int, unsigned int>([](unsigned int x) { return x; }, l);
+  return map<unsigned int, unsigned int>([](const unsigned int x) { return x; },
+                                         l);
 }
 
 /// Append two lists.

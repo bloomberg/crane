@@ -396,20 +396,20 @@ struct Equations {
                      const std::pair<unsigned int, unsigned int> p) {
     return gcd_graph_mut(
         f, f0,
-        [=](unsigned int, unsigned int, std::shared_ptr<gcd_clause_3_graph>,
-            T1 x) mutable {
+        [=](const unsigned int, const unsigned int,
+            const std::shared_ptr<gcd_clause_3_graph> &, const T1 x) mutable {
           const unsigned int &_x2 = p.first;
           const unsigned int &_x3 = p.second;
           return x;
         },
-        [=](unsigned int n1, unsigned int n2,
-            std::shared_ptr<gcd_graph>) mutable {
+        [=](const unsigned int n1, const unsigned int n2,
+            const std::shared_ptr<gcd_graph> &) mutable {
           const unsigned int &_x0 = p.first;
           const unsigned int &_x1 = p.second;
           return [=](T1 _pa0) mutable { return f2(n1, n2, _pa0); };
         },
-        [=](unsigned int n1, unsigned int n2,
-            std::shared_ptr<gcd_graph>) mutable {
+        [=](const unsigned int n1, const unsigned int n2,
+            const std::shared_ptr<gcd_graph> &) mutable {
           const unsigned int &_x0 = p.first;
           const unsigned int &_x1 = p.second;
           return [=](T1 _pa0) mutable { return f3(n1, n2, _pa0); };
@@ -497,10 +497,10 @@ struct Equations {
   public:
     // CREATORS
     explicit collatz_steps_graph(Collatz_steps_graph_equation_1 _v)
-        : d_v_(std::move(_v)) {}
+        : d_v_(_v) {}
 
     explicit collatz_steps_graph(Collatz_steps_graph_equation_2 _v)
-        : d_v_(std::move(_v)) {}
+        : d_v_(_v) {}
 
     explicit collatz_steps_graph(Collatz_steps_graph_refinement_3 _v)
         : d_v_(std::move(_v)) {}
@@ -750,13 +750,15 @@ struct Equations {
                                const unsigned int n) {
     return collatz_steps_graph_mut(
         f, f0,
-        [](unsigned int, std::shared_ptr<collatz_steps_clause_3_graph>, T1 x) {
-          return x;
-        },
-        [=](unsigned int n0, std::shared_ptr<collatz_steps_graph>) mutable {
+        [](const unsigned int,
+           const std::shared_ptr<collatz_steps_clause_3_graph> &,
+           const T1 x) { return x; },
+        [=](const unsigned int n0,
+            const std::shared_ptr<collatz_steps_graph> &) mutable {
           return [=](T1 _pa0) mutable { return f2(n0, _pa0); };
         },
-        [=](unsigned int n0, std::shared_ptr<collatz_steps_graph>) mutable {
+        [=](const unsigned int n0,
+            const std::shared_ptr<collatz_steps_graph> &) mutable {
           return [=](T1 _pa0) mutable { return f3(n0, _pa0); };
         },
         n, collatz_steps(n), collatz_steps_graph_correct(n));

@@ -31,7 +31,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -80,9 +80,9 @@ struct InstructionSequenceExec {
 
   public:
     // CREATORS
-    explicit instruction(NOP_ _v) : d_v_(std::move(_v)) {}
+    explicit instruction(NOP_ _v) : d_v_(_v) {}
 
-    explicit instruction(INC_PC _v) : d_v_(std::move(_v)) {}
+    explicit instruction(INC_PC _v) : d_v_(_v) {}
 
     explicit instruction(ADD_ACC _v) : d_v_(std::move(_v)) {}
 

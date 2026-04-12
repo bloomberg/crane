@@ -79,7 +79,7 @@ struct MutualRecursion {
 
   public:
     // CREATORS
-    explicit forest(Empty _v) : d_v_(std::move(_v)) {}
+    explicit forest(Empty _v) : d_v_(_v) {}
 
     explicit forest(Trees _v) : d_v_(std::move(_v)) {}
 

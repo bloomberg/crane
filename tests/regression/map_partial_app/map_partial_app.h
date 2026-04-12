@@ -32,7 +32,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -89,7 +89,7 @@ struct MapPartialApp {
 
   public:
     // CREATORS
-    explicit tree(Leaf _v) : d_v_(std::move(_v)) {}
+    explicit tree(Leaf _v) : d_v_(_v) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
@@ -179,7 +179,7 @@ struct MapPartialApp {
               List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())))
               ->template map<unsigned int>(
-                  [=](unsigned int v) mutable { return tree_sum(f(v)); });
+                  [=](const unsigned int v) mutable { return tree_sum(f(v)); });
       return sum_list(std::move(results));
     }();
   }();
@@ -200,8 +200,9 @@ struct MapPartialApp {
               1u,
               List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())))
-              ->template map<unsigned int>(
-                  [=](unsigned int v) mutable { return tree_sum(p.first(v)); });
+              ->template map<unsigned int>([=](const unsigned int v) mutable {
+                return tree_sum(p.first(v));
+              });
       return sum_list(std::move(results));
     }();
   }();
@@ -221,13 +222,15 @@ struct MapPartialApp {
       std::shared_ptr<List<unsigned int>> r1 =
           List<unsigned int>::cons(
               1u, List<unsigned int>::cons(2u, List<unsigned int>::nil()))
-              ->template map<unsigned int>(
-                  [=](unsigned int v) mutable { return tree_sum(f1(v)); });
+              ->template map<unsigned int>([=](const unsigned int v) mutable {
+                return tree_sum(f1(v));
+              });
       std::shared_ptr<List<unsigned int>> r2 =
           List<unsigned int>::cons(
               3u, List<unsigned int>::cons(4u, List<unsigned int>::nil()))
-              ->template map<unsigned int>(
-                  [=](unsigned int v) mutable { return tree_sum(f2(v)); });
+              ->template map<unsigned int>([=](const unsigned int v) mutable {
+                return tree_sum(f2(v));
+              });
       return (sum_list(std::move(r1)) + sum_list(std::move(r2)));
     }();
   }();

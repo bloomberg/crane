@@ -20,7 +20,7 @@ __attribute__((pure)) unsigned int LoopifyMatchArg::count_dots(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{xs});
+  _stack.emplace_back(_Enter{xs});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -36,11 +36,11 @@ __attribute__((pure)) unsigned int LoopifyMatchArg::count_dots(
                               &_args) -> void {
                         switch (_args.d_a0) {
                         case Cell::e_DOT: {
-                          _stack.push_back(_Call1{1u});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{1u});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }
                         default: {
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }
                         }
                       }},
@@ -67,7 +67,7 @@ __attribute__((pure)) unsigned int LoopifyMatchArg::my_length(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{xs});
+  _stack.emplace_back(_Enter{xs});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -81,8 +81,8 @@ __attribute__((pure)) unsigned int LoopifyMatchArg::my_length(
                           -> void { _result = 0u; },
                       [&](const typename List<LoopifyMatchArg::Cell>::Cons
                               &_args) -> void {
-                        _stack.push_back(_Call1{1u});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Call1{1u});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   xs->v());
             },

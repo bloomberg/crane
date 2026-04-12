@@ -181,9 +181,9 @@ struct WhereClause {
 
   public:
     // CREATORS
-    explicit BExpr(BTrue _v) : d_v_(std::move(_v)) {}
+    explicit BExpr(BTrue _v) : d_v_(_v) {}
 
-    explicit BExpr(BFalse _v) : d_v_(std::move(_v)) {}
+    explicit BExpr(BFalse _v) : d_v_(_v) {}
 
     explicit BExpr(BAnd _v) : d_v_(std::move(_v)) {}
 

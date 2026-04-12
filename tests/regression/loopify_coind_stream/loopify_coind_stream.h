@@ -33,7 +33,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -197,7 +197,7 @@ struct LoopifyCoindStream {
     using _Frame = std::variant<_Enter>;
     std::shared_ptr<stream<T1>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{seed});
+    _stack.emplace_back(_Enter{seed});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -217,10 +217,10 @@ struct LoopifyCoindStream {
   }
 
   static inline const std::shared_ptr<stream<unsigned int>> nats =
-      iterate<unsigned int>([](unsigned int x) { return (x + 1); }, 0u);
+      iterate<unsigned int>([](const unsigned int x) { return (x + 1); }, 0u);
   static inline const std::shared_ptr<stream<unsigned int>> doubled =
-      smap<unsigned int, unsigned int>([](unsigned int n) { return (n * 2u); },
-                                       nats);
+      smap<unsigned int, unsigned int>(
+          [](const unsigned int n) { return (n * 2u); }, nats);
   static inline const std::shared_ptr<stream<unsigned int>> sum_stream =
       zipWith<unsigned int, unsigned int, unsigned int>(
           [](unsigned int _x0, unsigned int _x1) -> unsigned int {
@@ -229,7 +229,7 @@ struct LoopifyCoindStream {
           nats, doubled);
   static inline const std::shared_ptr<stream<unsigned int>> fibs =
       unfold<unsigned int, std::pair<unsigned int, unsigned int>>(
-          [](std::pair<unsigned int, unsigned int> pat) {
+          [](const std::pair<unsigned int, unsigned int> pat) {
             const unsigned int &a = pat.first;
             const unsigned int &b = pat.second;
             return std::make_pair(a, std::make_pair(b, (a + b)));

@@ -31,7 +31,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -102,7 +102,7 @@ struct LoopifySorting {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -116,8 +116,8 @@ struct LoopifySorting {
                           _result = 0u;
                         },
                         [&](const typename List<T1>::Cons &_args) -> void {
-                          _stack.push_back(_Call1{});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -148,7 +148,7 @@ struct LoopifySorting {
     using _Frame = std::variant<_Enter, _Call1>;
     std::pair<std::shared_ptr<List<T1>>, std::shared_ptr<List<T1>>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -173,8 +173,8 @@ struct LoopifySorting {
                                   },
                                   [&](const typename List<T1>::Cons &_args0)
                                       -> void {
-                                    _stack.push_back(_Call1{_args0, _args});
-                                    _stack.push_back(_Enter{_args0.d_a1});
+                                    _stack.emplace_back(_Call1{_args0, _args});
+                                    _stack.emplace_back(_Enter{_args0.d_a1});
                                   }},
                               _args.d_a1->v());
                         }},

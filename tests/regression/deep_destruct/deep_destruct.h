@@ -32,7 +32,7 @@ struct DeepDestruct {
 
   public:
     // CREATORS
-    explicit mylist(Mynil _v) : d_v_(std::move(_v)) {}
+    explicit mylist(Mynil _v) : d_v_(_v) {}
 
     explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
 
@@ -74,7 +74,7 @@ struct DeepDestruct {
     using _Frame = std::variant<_Enter, _Call1>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{m});
+    _stack.emplace_back(_Enter{m});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -88,8 +88,8 @@ struct DeepDestruct {
                           _result = f;
                         },
                         [&](const typename mylist<T1>::Mycons &_args) -> void {
-                          _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     m->v());
               },
@@ -115,7 +115,7 @@ struct DeepDestruct {
     using _Frame = std::variant<_Enter, _Call1>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{m});
+    _stack.emplace_back(_Enter{m});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -129,8 +129,8 @@ struct DeepDestruct {
                           _result = f;
                         },
                         [&](const typename mylist<T1>::Mycons &_args) -> void {
-                          _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     m->v());
               },

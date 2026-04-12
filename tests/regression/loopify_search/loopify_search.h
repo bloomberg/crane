@@ -32,7 +32,7 @@ private:
 
 public:
   // CREATORS
-  explicit List(Nil _v) : d_v_(std::move(_v)) {}
+  explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
@@ -104,7 +104,7 @@ struct LoopifySearch {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -118,8 +118,8 @@ struct LoopifySearch {
                           _result = 0u;
                         },
                         [&](const typename List<T1>::Cons &_args) -> void {
-                          _stack.push_back(_Call1{});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -165,7 +165,7 @@ struct LoopifySearch {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -186,8 +186,8 @@ struct LoopifySearch {
                                       -> void { _result = _args.d_a0; },
                                   [&](const typename List<unsigned int>::Cons &)
                                       -> void {
-                                    _stack.push_back(_Call1{_args, cmp});
-                                    _stack.push_back(_Enter{_args.d_a1});
+                                    _stack.emplace_back(_Call1{_args, cmp});
+                                    _stack.emplace_back(_Enter{_args.d_a1});
                                   }},
                               _args.d_a1->v());
                         }},
@@ -352,7 +352,7 @@ struct LoopifySearch {
     using _Frame = std::variant<_Enter, _Call1>;
     std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
+    _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -368,8 +368,8 @@ struct LoopifySearch {
                         },
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
-                          _stack.push_back(_Call1{f(_args.d_a0)});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{f(_args.d_a0)});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },
@@ -484,7 +484,7 @@ struct LoopifySearch {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     T1 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{b});
+    _stack.emplace_back(_Enter{b});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -497,15 +497,15 @@ struct LoopifySearch {
                                  _result = f(_args.d_a0);
                                },
                                [&](const typename btree::BNode &_args) -> void {
-                                 _stack.push_back(_Call1{_args.d_a0, _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a1});
+                                 _stack.emplace_back(_Call1{
+                                     _args.d_a0, _args.d_a1, _args.d_a0});
+                                 _stack.emplace_back(_Enter{_args.d_a1});
                                }},
                            b->v());
                      },
                      [&](_Call1 _f) {
-                       _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                       _stack.push_back(_Enter{_f._s0});
+                       _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+                       _stack.emplace_back(_Enter{_f._s0});
                      },
                      [&](_Call2 _f) {
                        _result = f0(_f._s2, _result, _f._s1, _f._s0);
@@ -538,7 +538,7 @@ struct LoopifySearch {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     T1 _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{b});
+    _stack.emplace_back(_Enter{b});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -551,15 +551,15 @@ struct LoopifySearch {
                                  _result = f(_args.d_a0);
                                },
                                [&](const typename btree::BNode &_args) -> void {
-                                 _stack.push_back(_Call1{_args.d_a0, _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a1});
+                                 _stack.emplace_back(_Call1{
+                                     _args.d_a0, _args.d_a1, _args.d_a0});
+                                 _stack.emplace_back(_Enter{_args.d_a1});
                                }},
                            b->v());
                      },
                      [&](_Call1 _f) {
-                       _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                       _stack.push_back(_Enter{_f._s0});
+                       _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+                       _stack.emplace_back(_Enter{_f._s0});
                      },
                      [&](_Call2 _f) {
                        _result = f0(_f._s2, _result, _f._s1, _f._s0);
@@ -588,7 +588,7 @@ struct LoopifySearch {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     bool _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
+    _stack.emplace_back(_Enter{t});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -601,14 +601,14 @@ struct LoopifySearch {
                                  _result = p(_args.d_a0);
                                },
                                [&](const typename btree::BNode &_args) -> void {
-                                 _stack.push_back(_Call1{_args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a1});
+                                 _stack.emplace_back(_Call1{_args.d_a0});
+                                 _stack.emplace_back(_Enter{_args.d_a1});
                                }},
                            t->v());
                      },
                      [&](_Call1 _f) {
-                       _stack.push_back(_Call2{_result});
-                       _stack.push_back(_Enter{_f._s0});
+                       _stack.emplace_back(_Call2{_result});
+                       _stack.emplace_back(_Enter{_f._s0});
                      },
                      [&](_Call2 _f) { _result = (_result || _f._s0); }},
           _frame);

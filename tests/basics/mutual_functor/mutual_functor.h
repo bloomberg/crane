@@ -91,7 +91,7 @@ template <Elem E> struct MutualTree {
 
   public:
     // CREATORS
-    explicit forest(FNil _v) : d_v_(std::move(_v)) {}
+    explicit forest(FNil _v) : d_v_(_v) {}
 
     explicit forest(FCons _v) : d_v_(std::move(_v)) {}
 

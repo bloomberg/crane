@@ -34,7 +34,7 @@ struct CountLoopTestTarget {
     // CREATORS
     explicit instruction(ISZ _v) : d_v_(std::move(_v)) {}
 
-    explicit instruction(NOP _v) : d_v_(std::move(_v)) {}
+    explicit instruction(NOP _v) : d_v_(_v) {}
 
     static std::shared_ptr<instruction> isz(unsigned int a0, unsigned int a1) {
       return std::make_shared<instruction>(ISZ{std::move(a0), std::move(a1)});

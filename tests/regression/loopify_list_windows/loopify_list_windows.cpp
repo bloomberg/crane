@@ -18,7 +18,7 @@ LoopifyListWindows::len(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -31,8 +31,8 @@ LoopifyListWindows::len(const std::shared_ptr<List<unsigned int>> &l) {
                                  -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
-                               _stack.push_back(_Call1{1u});
-                               _stack.push_back(_Enter{_args.d_a1});
+                               _stack.emplace_back(_Call1{1u});
+                               _stack.emplace_back(_Enter{_args.d_a1});
                              }},
                          l->v());
                    },
@@ -142,7 +142,7 @@ LoopifyListWindows::span_eq(const unsigned int first,
             std::shared_ptr<List<unsigned int>>>
       _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{lst});
+  _stack.emplace_back(_Enter{lst});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -159,8 +159,8 @@ LoopifyListWindows::span_eq(const unsigned int first,
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
                         if (first == _args.d_a0) {
-                          _stack.push_back(_Call1{_args});
-                          _stack.push_back(_Enter{_args.d_a1});
+                          _stack.emplace_back(_Call1{_args});
+                          _stack.emplace_back(_Enter{_args.d_a1});
                         } else {
                           _result = std::make_pair(List<unsigned int>::nil(),
                                                    std::move(lst));
@@ -347,7 +347,7 @@ LoopifyListWindows::inits(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l});
+  _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -366,9 +366,9 @@ LoopifyListWindows::inits(const std::shared_ptr<List<unsigned int>> &l) {
                       },
                       [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
-                        _stack.push_back(
+                        _stack.emplace_back(
                             _Call1{List<unsigned int>::nil(), _args.d_a0});
-                        _stack.push_back(_Enter{_args.d_a1});
+                        _stack.emplace_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
