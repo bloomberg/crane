@@ -339,6 +339,13 @@ let struct_qualifier_for r name_str =
         struct_name ++ str "::"
       else
         mt ()
+    (* Type aliases (ConstRef from Dtype) that were rendered at global C++ scope
+       as [using T = ...] declarations are never members of the struct.  When a
+       module is imported from another file, its type aliases end up at global
+       scope in the header (not inside [struct StructName]), so they must not
+       be qualified with [StructName::] in the .cpp out-of-line definitions. *)
+    else if Cpp_state.is_global_scope_type_alias r then
+      mt ()
     (* Default: qualify when the type's Rocq path nests under the struct,
        or when the type already carries a qualified C++ name whose Rocq path
        nests under the struct's parent module. *)

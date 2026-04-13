@@ -1333,8 +1333,24 @@ let do_struct_with_decl_tracking ~is_header f s =
             ++ fnl ()
             ++ str "};"
           | None -> mt ()
-        else
+        else begin
+          (* Type aliases (Dtype) in type_sels are being rendered at global
+             C++ scope (as [using T = ...] declarations, not inside any struct).
+             Register them so [struct_qualifier_for] skips qualification in
+             the .cpp file.  This fixes imported-module aliases like [cell]
+             from [AliasSource.v] that appear at global scope in the header
+             but would otherwise be incorrectly qualified as [AliasSource::cell]
+             in the .cpp out-of-line function definitions. *)
+          if is_header && not (Pp.ismt type_pp) then
+            List.iter
+              (fun (_, se) ->
+                match se with
+                | SEdecl (Dtype (r, _, _)) ->
+                  Cpp_state.register_global_scope_type_alias r
+                | _ -> () )
+              type_sels;
           type_pp
+        end
       | None ->
         let child_has_eponymous_ind child_name se =
           match se with

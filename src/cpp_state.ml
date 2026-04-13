@@ -467,6 +467,21 @@ let collision_wrapper_table : (ModPath.t, unit) Hashtbl.t = Hashtbl.create 16
     in .cpp files. *)
 let global_scope_enum_table : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 16
 
+(** Global-scope type alias table: tracks type aliases (ConstRef from Dtype)
+    that were rendered at global scope as [using T = ...] declarations, not
+    inside any struct.  When an imported module's type alias (e.g., [cell] from
+    [AliasSource.v]) is rendered at global scope in the header but the struct
+    qualifier logic would incorrectly add [StructName::] in the .cpp, checking
+    this table prevents the spurious qualification. *)
+let global_scope_type_alias_table : (GlobRef.t, unit) Hashtbl.t =
+  Hashtbl.create 8
+
+let register_global_scope_type_alias r =
+  Hashtbl.replace global_scope_type_alias_table r ()
+
+let is_global_scope_type_alias r =
+  Hashtbl.mem global_scope_type_alias_table r
+
 (** Pending wrapper declarations: maps a Dnspace struct name (e.g., "Nat") to
     pre-rendered forward declarations (specs) that should be injected into that
     struct. Full definitions are rendered separately in PASS 3 after all types
@@ -648,6 +663,7 @@ let reset_cpp_state () =
   Hashtbl.clear wrapper_module_table;
   Hashtbl.clear collision_wrapper_table;
   Hashtbl.clear global_scope_enum_table;
+  Hashtbl.clear global_scope_type_alias_table;
   Hashtbl.clear pending_wrapper_decls;
   Hashtbl.clear unmerged_wrappers;
   Hashtbl.clear global_inductive_names;
