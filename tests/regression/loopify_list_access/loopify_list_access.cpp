@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 __attribute__((pure)) unsigned int
 LoopifyListAccess::nth(const unsigned int n,

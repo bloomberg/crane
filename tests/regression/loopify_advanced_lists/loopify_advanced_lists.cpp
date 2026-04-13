@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 __attribute__((pure)) unsigned int
 LoopifyAdvancedLists::product(const std::shared_ptr<List<unsigned int>> &l) {

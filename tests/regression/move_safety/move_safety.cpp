@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// TEST 2: Store partial application in a Box.
 /// If the eta-expanded lambda uses & capture,

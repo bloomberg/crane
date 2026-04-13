@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// Consolidated UNIQUE numeric algorithms - no basic arithmetic.
 /// Tests loopification on number theory and recursive sequences.

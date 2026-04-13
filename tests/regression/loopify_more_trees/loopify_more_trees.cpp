@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 std::shared_ptr<LoopifyMoreTrees::tree>
 LoopifyMoreTrees::mirror(const std::shared_ptr<LoopifyMoreTrees::tree> &t) {

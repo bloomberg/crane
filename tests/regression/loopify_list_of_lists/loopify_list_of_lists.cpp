@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 std::shared_ptr<List<unsigned int>> LoopifyListOfLists::intercalate(
     const std::shared_ptr<List<unsigned int>> &sep,

@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 std::shared_ptr<List<unsigned int>>
 LoopifySearchOpt::lis(const std::shared_ptr<List<unsigned int>> &l) {

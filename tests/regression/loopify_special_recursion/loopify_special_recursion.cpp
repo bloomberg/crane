@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::process_twice_fuel(
     const unsigned int fuel, const std::shared_ptr<List<unsigned int>> &l) {

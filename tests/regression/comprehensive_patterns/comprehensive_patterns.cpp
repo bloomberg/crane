@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 __attribute__((pure))
 std::pair<std::pair<std::shared_ptr<ComprehensivePatterns::S>, unsigned int>,

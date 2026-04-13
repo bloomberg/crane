@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// alternate_sum sign acc l alternating sum with sign flip.
 __attribute__((pure)) unsigned int

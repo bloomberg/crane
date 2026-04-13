@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 std::shared_ptr<ClosureCaptureMatch::fn_box>
 ClosureCaptureMatch::box_from_match(

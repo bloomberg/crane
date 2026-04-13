@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// Tail-recursive list builder — should compile to a loop.
 std::shared_ptr<DeepDestruct::mylist<unsigned int>> DeepDestruct::build_aux(

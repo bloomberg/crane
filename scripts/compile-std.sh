@@ -91,17 +91,29 @@ else
     LINK_FLAGS=()
 fi
 
+# Sanitizer support: CRANE_CPP_SANITIZE=1 enables ASan + UBSan
+SANITIZE_FLAGS=()
+if [ "${CRANE_CPP_SANITIZE:-}" = "1" ]; then
+    SANITIZE_FLAGS=(
+        -fsanitize=address,undefined
+        -fno-sanitize-recover=all
+        -fno-omit-frame-pointer
+    )
+    # Use a separate PCH for sanitizer builds (different flags = different PCH)
+    PCH_FILE="$PCH_DIR/crane_pch_${OPT_LEVEL}_san.h.pch"
+fi
+
 # Build PCH if it doesn't exist or is older than the source
 if [ -f "$PCH_SRC" ] && { [ ! -f "$PCH_FILE" ] || [ "$PCH_SRC" -nt "$PCH_FILE" ]; }; then
     if mkdir -p "$PCH_DIR" 2>/dev/null; then
-        "$CXX" -x c++-header "${CXX_FLAGS[@]}" "$PCH_SRC" -o "$PCH_FILE" 2>/dev/null || true
+        "$CXX" -x c++-header "${CXX_FLAGS[@]}" "${SANITIZE_FLAGS[@]}" "$PCH_SRC" -o "$PCH_FILE" 2>/dev/null || true
     fi
 fi
 
 # Use PCH if available
 PCH_FLAGS=()
-if [ -f "$PCH_FILE" ]; then
+if [ -n "$PCH_FILE" ] && [ -f "$PCH_FILE" ]; then
     PCH_FLAGS=(-include-pch "$PCH_FILE")
 fi
 
-exec "$CXX" "${CXX_FLAGS[@]}" "${PCH_FLAGS[@]}" $SOURCES "${LINK_FLAGS[@]}" -o "$OUTPUT"
+exec "$CXX" "${CXX_FLAGS[@]}" "${PCH_FLAGS[@]}" "${SANITIZE_FLAGS[@]}" $SOURCES "${LINK_FLAGS[@]}" "${SANITIZE_FLAGS[@]}" -o "$OUTPUT"

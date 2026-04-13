@@ -125,4 +125,14 @@ else
     )
 fi
 
-exec "$CXX" "${CXX_FLAGS[@]}" $SOURCES "${LINK_FLAGS[@]}" -o "$OUTPUT"
+# Sanitizer support
+SANITIZE_FLAGS=()
+if [ "${CRANE_CPP_SANITIZE:-}" = "1" ]; then
+    SANITIZE_FLAGS=(
+        -fsanitize=address,undefined
+        -fno-sanitize-recover=all
+        -fno-omit-frame-pointer
+    )
+fi
+
+exec "$CXX" "${CXX_FLAGS[@]}" "${SANITIZE_FLAGS[@]}" $SOURCES "${LINK_FLAGS[@]}" "${SANITIZE_FLAGS[@]}" -o "$OUTPUT"

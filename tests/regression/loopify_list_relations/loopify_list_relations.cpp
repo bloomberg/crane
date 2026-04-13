@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 __attribute__((pure)) bool LoopifyListRelations::is_prefix_of(
     const std::shared_ptr<List<unsigned int>> &l1,

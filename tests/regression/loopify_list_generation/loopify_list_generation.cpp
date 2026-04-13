@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 std::shared_ptr<List<unsigned int>>
 LoopifyListGeneration::replicate(const unsigned int n, const unsigned int x) {

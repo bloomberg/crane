@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// Consumer fixpoint: traverses an ITree with fuel. This is a regular
 /// fixpoint with recursion on fuel that processes reified ITrees. Should

@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 std::shared_ptr<HofTreeLoopify::tree<unsigned int>>
 HofTreeLoopify::depth_tree(const unsigned int n) {

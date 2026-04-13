@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// Build a maximally-unbalanced tree (right spine = linked list).
 /// Tail-recursive via accumulator, should be loopified.

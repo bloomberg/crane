@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 std::shared_ptr<List<std::pair<unsigned int, unsigned int>>>
 LoopifyListTransforms::run_length_encode(

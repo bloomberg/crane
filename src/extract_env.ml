@@ -618,6 +618,7 @@ let header_imports =
     "type_traits";
     "utility";
     "variant";
+    "vector";   (* needed by loopify's explicit stack: std::vector<_Frame> *)
   ]
 
 (** Return only the standard headers that were actually referenced during

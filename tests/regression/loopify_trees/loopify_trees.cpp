@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// Consolidated UNIQUE tree algorithms - domain-specific tree operations.
 __attribute__((pure)) unsigned int LoopifyTrees::tree_sum(

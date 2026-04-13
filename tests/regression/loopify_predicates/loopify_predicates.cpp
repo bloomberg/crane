@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 std::shared_ptr<List<unsigned int>>
 LoopifyPredicates::remove_all(const unsigned int x,

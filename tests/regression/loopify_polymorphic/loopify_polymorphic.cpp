@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 __attribute__((pure)) unsigned int
 LoopifyPolymorphic::nat_length(const std::shared_ptr<List<unsigned int>> &_x0) {

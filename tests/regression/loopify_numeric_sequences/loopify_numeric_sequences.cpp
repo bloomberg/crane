@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 __attribute__((pure)) unsigned int
 LoopifyNumericSequences::collatz_length_fuel(const unsigned int fuel,

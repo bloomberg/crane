@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// Consolidated UNIQUE list/sequence algorithms.
 __attribute__((pure)) unsigned int

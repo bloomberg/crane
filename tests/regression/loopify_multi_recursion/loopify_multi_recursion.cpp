@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 __attribute__((pure)) unsigned int
 LoopifyMultiRecursion::mixed_arith_fuel(const unsigned int fuel,

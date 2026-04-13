@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// A function taking two args: tree -> nat -> nat.
 /// Partial application of this to a tree creates a

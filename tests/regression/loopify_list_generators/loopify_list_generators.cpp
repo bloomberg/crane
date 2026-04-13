@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 std::shared_ptr<List<unsigned int>> LoopifyListGenerators::cycle_fuel(
     const unsigned int fuel, const unsigned int n,

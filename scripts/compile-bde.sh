@@ -79,6 +79,12 @@ if [ "$(uname)" = "Darwin" ]; then
     fi
 fi
 
+# Sanitizer support
+SANITIZE_FLAGS=""
+if [ "${CRANE_CPP_SANITIZE:-}" = "1" ]; then
+    SANITIZE_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer"
+fi
+
 # Compile with C++20, BDE ABI compatibility, and suppress deprecation warnings
 exec clang++ \
     -std=c++20 \
@@ -96,7 +102,9 @@ exec clang++ \
     -Wno-unused-variable -Wno-unused-value \
     -Wno-constant-conversion -Wno-sign-conversion \
     -Wno-c11-extensions -Wno-dtor-name -Werror \
+    $SANITIZE_FLAGS \
     $BDE_CFLAGS \
     $SOURCES \
     $BDE_LIBS \
+    $SANITIZE_FLAGS \
     -o "$OUTPUT"

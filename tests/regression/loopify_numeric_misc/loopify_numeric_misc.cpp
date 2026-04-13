@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 __attribute__((pure)) unsigned int
 LoopifyNumericMisc::sum_abs(const std::shared_ptr<List<unsigned int>> &l) {

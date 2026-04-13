@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// Nested and complex data structures.
 /// Helper: sum all elements in a list of nested structures.

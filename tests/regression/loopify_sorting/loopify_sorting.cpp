@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// Consolidated UNIQUE sorting algorithms and related operations.
 std::shared_ptr<List<unsigned int>>

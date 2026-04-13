@@ -3,6 +3,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 __attribute__((pure)) unsigned int
 LoopifyClassics::factorial(const unsigned int n) {

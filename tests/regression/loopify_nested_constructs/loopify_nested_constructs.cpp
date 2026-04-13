@@ -3,6 +3,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 __attribute__((pure)) unsigned int
 LoopifyNestedConstructs::multi_let(const unsigned int n) {

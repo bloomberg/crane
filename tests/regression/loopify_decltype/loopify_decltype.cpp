@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// Minimal trigger: fold over a list with a conditional per-element
 /// contribution.

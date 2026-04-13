@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// is_prefix_of l1 l2 checks if l1 is a prefix of l2.
 __attribute__((pure)) bool

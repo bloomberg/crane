@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// Tail-recursive countdown using erased ITree. In sequential mode, itree is
 /// erased so this becomes a plain tail-recursive C++ function. Loopify should

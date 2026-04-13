@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// Tail-recursive: membership test
 __attribute__((pure)) bool

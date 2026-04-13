@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// lookup_opt key l looks up key in an association list.
 __attribute__((pure)) std::optional<unsigned int> LoopifyOption::lookup_opt(

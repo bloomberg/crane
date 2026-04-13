@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// Tail-recursive builder — loopified.
 std::shared_ptr<DeepApp::mylist<unsigned int>>
