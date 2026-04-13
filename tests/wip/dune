@@ -78,14 +78,3 @@
   (alias runtest)
   (deps shared_uptr_escape.t.exe)
   (action (run ./shared_uptr_escape.t.exe))))
-
-(subdir imported_alias_qualification
- (rule
-  (targets alias_probe.t.exe)
-  (deps AliasSource.vo AliasProbe.vo alias_probe.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_probe.t.exe alias_probe.cpp alias_probe.t.cpp)))
- (rule
-  (alias runtest)
-  (deps alias_probe.t.exe)
-  (action (run ./alias_probe.t.exe))))

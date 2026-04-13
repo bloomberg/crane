@@ -3580,3 +3580,14 @@
   (alias runtest)
   (deps option_let_none_bug.t.exe)
   (action (run ./option_let_none_bug.t.exe))))
+
+(subdir ping_pong
+ (rule
+  (targets ping_pong.t.exe)
+  (deps PingPong.vo ping_pong.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ping_pong.t.exe ping_pong.cpp ping_pong.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ping_pong.t.exe)
+  (action (run ./ping_pong.t.exe))))
