@@ -112,10 +112,8 @@ struct LoopifyPredicates {
     bool _continue = true;
     while (_continue) {
       if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-        {
-          _result = _loop_l;
-          _continue = false;
-        }
+        _result = _loop_l;
+        _continue = false;
       } else {
         std::visit(
             Overloaded{[&](const typename List<unsigned int>::Nil &) {

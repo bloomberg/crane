@@ -31,9 +31,7 @@ void PingPong::run_game(const unsigned int round) {
     if (string_eq(response, "pong")) {
       std::cout << "  (round "s + std::to_string(_loop_round) + " complete)"s
                 << '\n';
-      {
-        _loop_round = (_loop_round + 1);
-      }
+      _loop_round = (_loop_round + 1);
     } else {
       std::cout << "You said '"s + response + "' — game over!"s << '\n';
       return;

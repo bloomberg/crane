@@ -276,17 +276,13 @@ LoopifyClassics::gcd_fuel(const unsigned int fuel, const unsigned int a,
   bool _continue = true;
   while (_continue) {
     if (_loop_fuel <= 0) {
-      {
-        _result = _loop_a;
-        _continue = false;
-      }
+      _result = _loop_a;
+      _continue = false;
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       if (_loop_b == 0u) {
-        {
-          _result = _loop_a;
-          _continue = false;
-        }
+        _result = _loop_a;
+        _continue = false;
       } else {
         {
           unsigned int _next_b = (_loop_b ? _loop_a % _loop_b : _loop_a);

@@ -781,10 +781,8 @@ struct LoopifyLists {
           bool _continue = true;
           while (_continue) {
             if (_loop_k <= 0) {
-              {
-                _result = std::move(_loop_lst);
-                _continue = false;
-              }
+              _result = std::move(_loop_lst);
+              _continue = false;
             } else {
               unsigned int m = _loop_k - 1;
               std::visit(Overloaded{[&](const typename list<T1>::Nil &) {

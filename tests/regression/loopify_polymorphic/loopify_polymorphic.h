@@ -298,17 +298,13 @@ struct LoopifyPolymorphic {
     bool _continue = true;
     while (_continue) {
       if (_loop_n <= 0) {
-        {
-          _result = std::move(_loop_l);
-          _continue = false;
-        }
+        _result = std::move(_loop_l);
+        _continue = false;
       } else {
         unsigned int n_ = _loop_n - 1;
         if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-          {
-            _result = _loop_l;
-            _continue = false;
-          }
+          _result = _loop_l;
+          _continue = false;
         } else {
           std::visit(Overloaded{[&](const typename List<T1>::Nil &) {
                                   _result = List<T1>::nil();

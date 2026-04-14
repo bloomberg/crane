@@ -53,24 +53,18 @@ LoopifyPatterns::nested_if_fuel(const unsigned int fuel, const unsigned int n) {
   bool _continue = true;
   while (_continue) {
     if (_loop_fuel <= 0) {
-      {
-        _result = 0u;
-        _continue = false;
-      }
+      _result = 0u;
+      _continue = false;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_n <= 0) {
-        {
-          _result = 0u;
-          _continue = false;
-        }
+        _result = 0u;
+        _continue = false;
       } else {
         unsigned int n_ = _loop_n - 1;
         if (n_ <= 0) {
-          {
-            _result = 1u;
-            _continue = false;
-          }
+          _result = 1u;
+          _continue = false;
         } else {
           unsigned int m = n_ - 1;
           if ((2u ? n_ % 2u : n_) == 0u) {

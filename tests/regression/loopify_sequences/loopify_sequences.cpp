@@ -152,23 +152,17 @@ LoopifySequences::rotate_left_fuel(const unsigned int fuel,
   bool _continue = true;
   while (_continue) {
     if (_loop_fuel <= 0) {
-      {
-        _result = std::move(_loop_l);
-        _continue = false;
-      }
+      _result = std::move(_loop_l);
+      _continue = false;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_n == 0u) {
-        {
-          _result = std::move(_loop_l);
-          _continue = false;
-        }
+        _result = std::move(_loop_l);
+        _continue = false;
       } else {
         if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-          {
-            _result = _loop_l;
-            _continue = false;
-          }
+          _result = _loop_l;
+          _continue = false;
         } else {
           std::visit(
               Overloaded{[&](const typename List<unsigned int>::Nil &) {
@@ -673,25 +667,19 @@ __attribute__((pure)) bool LoopifySequences::is_palindrome_fuel(
   bool _continue = true;
   while (_continue) {
     if (_loop_fuel <= 0) {
-      {
-        _result = true;
-        _continue = false;
-      }
+      _result = true;
+      _continue = false;
     } else {
       unsigned int f = _loop_fuel - 1;
       unsigned int n = _loop_s->length();
       if (n <= 0) {
-        {
-          _result = true;
-          _continue = false;
-        }
+        _result = true;
+        _continue = false;
       } else {
         unsigned int n0 = n - 1;
         if (n0 <= 0) {
-          {
-            _result = true;
-            _continue = false;
-          }
+          _result = true;
+          _continue = false;
         } else {
           unsigned int _x = n0 - 1;
           if (first_elem(_loop_s) == last_elem(_loop_s)) {
@@ -703,10 +691,8 @@ __attribute__((pure)) bool LoopifySequences::is_palindrome_fuel(
               _loop_fuel = std::move(_next_fuel);
             }
           } else {
-            {
-              _result = false;
-              _continue = false;
-            }
+            _result = false;
+            _continue = false;
           }
         }
       }

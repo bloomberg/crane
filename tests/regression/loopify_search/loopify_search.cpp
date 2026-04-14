@@ -344,17 +344,13 @@ LoopifySearch::drop_impl(const unsigned int k,
   bool _continue = true;
   while (_continue) {
     if (_loop_k <= 0) {
-      {
-        _result = std::move(_loop_l);
-        _continue = false;
-      }
+      _result = std::move(_loop_l);
+      _continue = false;
     } else {
       unsigned int m = _loop_k - 1;
       if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-        {
-          _result = _loop_l;
-          _continue = false;
-        }
+        _result = _loop_l;
+        _continue = false;
       } else {
         std::visit(
             Overloaded{[&](const typename List<unsigned int>::Nil &) {
@@ -386,27 +382,21 @@ __attribute__((pure)) bool LoopifySearch::binary_search_fuel(
   bool _continue = true;
   while (_continue) {
     if (_loop_fuel <= 0) {
-      {
-        _result = false;
-        _continue = false;
-      }
+      _result = false;
+      _continue = false;
     } else {
       unsigned int f = _loop_fuel - 1;
       unsigned int n = len_impl<unsigned int>(_loop_l);
       if (n <= 0) {
-        {
-          _result = false;
-          _continue = false;
-        }
+        _result = false;
+        _continue = false;
       } else {
         unsigned int _x = n - 1;
         unsigned int mid = (2u ? n / 2u : 0);
         unsigned int mid_val = nth_impl(mid, _loop_l);
         if (target == mid_val) {
-          {
-            _result = true;
-            _continue = false;
-          }
+          _result = true;
+          _continue = false;
         } else {
           if (target < mid_val) {
             {

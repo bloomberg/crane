@@ -3591,3 +3591,14 @@
   (alias runtest)
   (deps ping_pong.t.exe)
   (action (run ./ping_pong.t.exe))))
+
+(subdir count_down
+ (rule
+  (targets count_down.t.exe)
+  (deps CountDown.vo count_down.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} count_down.t.exe count_down.cpp count_down.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps count_down.t.exe)
+  (action (run ./count_down.t.exe))))

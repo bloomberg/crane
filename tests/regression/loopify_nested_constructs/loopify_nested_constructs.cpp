@@ -49,23 +49,17 @@ LoopifyNestedConstructs::nested_if_fuel(const unsigned int fuel,
   bool _continue = true;
   while (_continue) {
     if (_loop_fuel <= 0) {
-      {
-        _result = 0u;
-        _continue = false;
-      }
+      _result = 0u;
+      _continue = false;
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       if (_loop_n <= 0u) {
-        {
-          _result = 0u;
-          _continue = false;
-        }
+        _result = 0u;
+        _continue = false;
       } else {
         if (_loop_n == 1u) {
-          {
-            _result = 1u;
-            _continue = false;
-          }
+          _result = 1u;
+          _continue = false;
         } else {
           if ((2u ? _loop_n % 2u : _loop_n) == 0u) {
             if (10u < _loop_n) {

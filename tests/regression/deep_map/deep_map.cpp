@@ -17,10 +17,8 @@ DeepMap::build_right(const unsigned int n,
   bool _continue = true;
   while (_continue) {
     if (_loop_n <= 0) {
-      {
-        _result = std::move(_loop_acc);
-        _continue = false;
-      }
+      _result = std::move(_loop_acc);
+      _continue = false;
     } else {
       unsigned int n_ = _loop_n - 1;
       {

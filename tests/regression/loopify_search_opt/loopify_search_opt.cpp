@@ -77,10 +77,8 @@ std::shared_ptr<List<unsigned int>> LoopifySearchOpt::longest_run_fuel(
   bool _continue = true;
   while (_continue) {
     if (_loop_fuel <= 0) {
-      {
-        _result = std::move(_loop_best);
-        _continue = false;
-      }
+      _result = std::move(_loop_best);
+      _continue = false;
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       std::visit(
@@ -385,10 +383,8 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
   bool _continue = true;
   while (_continue) {
     if (_loop_fuel <= 0) {
-      {
-        _result = false;
-        _continue = false;
-      }
+      _result = false;
+      _continue = false;
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       std::visit(
@@ -539,18 +535,14 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
                     bool _continue = true;
                     while (_continue) {
                       if (_loop_n <= 0) {
-                        {
-                          _result = _loop_xs;
-                          _continue = false;
-                        }
+                        _result = _loop_xs;
+                        _continue = false;
                       } else {
                         unsigned int n_ = _loop_n - 1;
                         if (_loop_xs.use_count() == 1 &&
                             _loop_xs->v().index() == 0) {
-                          {
-                            _result = _loop_xs;
-                            _continue = false;
-                          }
+                          _result = _loop_xs;
+                          _continue = false;
                         } else {
                           std::visit(
                               Overloaded{

@@ -274,10 +274,8 @@ struct LoopifyFolds {
     bool _continue = true;
     while (_continue) {
       if (_loop_fuel <= 0) {
-        {
-          _result = 0u;
-          _continue = false;
-        }
+        _result = 0u;
+        _continue = false;
       } else {
         unsigned int fuel_ = _loop_fuel - 1;
         std::visit(

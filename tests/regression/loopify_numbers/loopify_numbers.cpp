@@ -175,17 +175,13 @@ LoopifyNumbers::gcd_fuel(const unsigned int fuel, const unsigned int a,
   bool _continue = true;
   while (_continue) {
     if (_loop_fuel <= 0) {
-      {
-        _result = _loop_a;
-        _continue = false;
-      }
+      _result = _loop_a;
+      _continue = false;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_b <= 0) {
-        {
-          _result = _loop_a;
-          _continue = false;
-        }
+        _result = _loop_a;
+        _continue = false;
       } else {
         unsigned int _x = _loop_b - 1;
         {
@@ -594,10 +590,8 @@ LoopifyNumbers::alternating_sum(const bool sign, const unsigned int acc,
   bool _continue = true;
   while (_continue) {
     if (_loop_n <= 0) {
-      {
-        _result = _loop_acc;
-        _continue = false;
-      }
+      _result = _loop_acc;
+      _continue = false;
     } else {
       unsigned int m = _loop_n - 1;
       unsigned int new_acc;
@@ -899,33 +893,25 @@ __attribute__((pure)) bool LoopifyNumbers::is_even_fuel(const unsigned int fuel,
   bool _continue = true;
   while (_continue) {
     if (_loop_fuel <= 0) {
-      {
-        _result = true;
-        _continue = false;
-      }
+      _result = true;
+      _continue = false;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_n == 0u) {
-        {
-          _result = true;
-          _continue = false;
-        }
+        _result = true;
+        _continue = false;
       } else {
         const unsigned int _inl_n =
             (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
         const unsigned int _inl_fuel = f;
         if (_inl_fuel <= 0) {
-          {
-            _result = false;
-            _continue = false;
-          }
+          _result = false;
+          _continue = false;
         } else {
           unsigned int f = _inl_fuel - 1;
           if (_inl_n == 0u) {
-            {
-              _result = false;
-              _continue = false;
-            }
+            _result = false;
+            _continue = false;
           } else {
             {
               unsigned int _next_n =
@@ -950,33 +936,25 @@ __attribute__((pure)) bool LoopifyNumbers::is_odd_fuel(const unsigned int fuel,
   bool _continue = true;
   while (_continue) {
     if (_loop_fuel <= 0) {
-      {
-        _result = false;
-        _continue = false;
-      }
+      _result = false;
+      _continue = false;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_n == 0u) {
-        {
-          _result = false;
-          _continue = false;
-        }
+        _result = false;
+        _continue = false;
       } else {
         const unsigned int _inl_n =
             (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
         const unsigned int _inl_fuel = f;
         if (_inl_fuel <= 0) {
-          {
-            _result = true;
-            _continue = false;
-          }
+          _result = true;
+          _continue = false;
         } else {
           unsigned int f = _inl_fuel - 1;
           if (_inl_n == 0u) {
-            {
-              _result = true;
-              _continue = false;
-            }
+            _result = true;
+            _continue = false;
           } else {
             {
               unsigned int _next_n =

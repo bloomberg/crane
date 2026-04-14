@@ -19,10 +19,8 @@ unsigned int LoopifyItreeSeq::count_down(const unsigned int n) {
     bool _continue = true;
     while (_continue) {
       if (_loop_k <= 0) {
-        {
-          _result = _loop_acc;
-          _continue = false;
-        }
+        _result = _loop_acc;
+        _continue = false;
       } else {
         unsigned int k_ = _loop_k - 1;
         {
@@ -48,10 +46,8 @@ unsigned int LoopifyItreeSeq::sum_to(const unsigned int n) {
     bool _continue = true;
     while (_continue) {
       if (_loop_k <= 0) {
-        {
-          _result = _loop_acc;
-          _continue = false;
-        }
+        _result = _loop_acc;
+        _continue = false;
       } else {
         unsigned int k_ = _loop_k - 1;
         {
@@ -113,15 +109,11 @@ unsigned int LoopifyItreeSeq::delay_ret(const unsigned int n,
   bool _continue = true;
   while (_continue) {
     if (_loop_n <= 0) {
-      {
-        _result = v;
-        _continue = false;
-      }
+      _result = v;
+      _continue = false;
     } else {
       unsigned int n_ = _loop_n - 1;
-      {
-        _loop_n = n_;
-      }
+      _loop_n = n_;
     }
   }
   return _result;
@@ -136,9 +128,7 @@ void LoopifyItreeSeq::spin() {
 void LoopifyItreeSeq::forever(const unsigned int n) {
   unsigned int _loop_n = n;
   while (true) {
-    {
-      _loop_n = (_loop_n + 1);
-    }
+    _loop_n = (_loop_n + 1);
   }
   return;
 }

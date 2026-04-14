@@ -51,10 +51,8 @@ __attribute__((pure)) unsigned int Nat::tail_add(const unsigned int n,
   bool _continue = true;
   while (_continue) {
     if (_loop_n <= 0) {
-      {
-        _result = _loop_m;
-        _continue = false;
-      }
+      _result = _loop_m;
+      _continue = false;
     } else {
       unsigned int n0 = _loop_n - 1;
       {
@@ -77,10 +75,8 @@ __attribute__((pure)) unsigned int Nat::tail_addmul(const unsigned int r,
   bool _continue = true;
   while (_continue) {
     if (_loop_n <= 0) {
-      {
-        _result = _loop_r;
-        _continue = false;
-      }
+      _result = _loop_r;
+      _continue = false;
     } else {
       unsigned int n0 = _loop_n - 1;
       {
