@@ -1148,6 +1148,9 @@ let stmts_reference_var_directly (target : Id.t) (stmts : cpp_stmt list) : bool 
       List.iter (fun br ->
         ve br.smb_scrutinee;
         List.iter ve br.smb_extra_conds;
+        ( match br.smb_reuse with
+        | Some (cond, _, stmts) -> ve cond; List.iter vs stmts
+        | None -> () );
         List.iter vs br.smb_body) branches;
       Option.iter (List.iter vs) default
   in
@@ -3961,7 +3964,8 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
         let cpp_ty =
           convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty
         in
-        (binding_name, cpp_ty))
+        let used = List.nth dummies i in
+        (binding_name, cpp_ty, used))
       rev_ids
   in
   (* Substitute pattern variable references with the structured-binding
@@ -3973,7 +3977,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     List.fold_left
       (fun stmts (i, (var_name, _ty)) ->
         if List.nth dummies i then
-          let binding_name = fst (List.nth field_bindings i) in
+          let binding_name = let (n, _, _) = List.nth field_bindings i in n in
           let field_expr = CPPvar binding_name in
           List.map (local_var_subst_stmt var_name field_expr) stmts
         else
@@ -3989,6 +3993,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     smb_var = (if has_used_fields then Some sname else None);
     smb_field_bindings = (if has_used_fields then field_bindings else []);
     smb_extra_conds = [];
+    smb_reuse = None;
     smb_body = body_stmts }
 
 (** Generate std::visit-based pattern matching with expression reuse
@@ -4195,7 +4200,6 @@ and gen_cpp_case (typ : ml_type) t env pv =
           List.hd reuse_candidates
         in
         let reuse_ctor_struct_name = ctor_struct_name_of_ref matched_ctor in
-        let reuse_ctor_type = ctor_type_of_match env typ matched_ctor in
         let ids, _rty, _pat, body = pv.(pv_idx) in
         (* use_count() == 1 guard *)
         let use_count_cond =
@@ -4283,28 +4287,30 @@ and gen_cpp_case (typ : ml_type) t env pv =
             (List.mapi (fun i a -> (i, a)) tail_args)
         in
         tctx.env_types <- saved_env_types;
-        (* Build reuse body: get mutable ref, extract fields, prefix lets,
-           assign new values, return original pointer. *)
-        let get_field_ref =
-          Sasgn (rf_var, Some (Tref Ttodo),
-            CPPfun_call
-              ( CPPraw ("std::get<" ^ string_of_int variant_idx ^ ">"),
-                [CPPmethod_call (scrut_expr, Id.of_string "v_mut", [])] ))
-        in
-        let rf_stmts = if assign_stmts = [] then [] else [get_field_ref] in
-        let reuse_body =
-          rf_stmts @ extract_stmts @ prefix_stmts @ assign_stmts
-          @ [Sreturn (Some scrut_expr)]
-        in
-        let reuse_branch =
-          { smb_scrutinee = scrut_v;
-            smb_ctor_type = reuse_ctor_type;
-            smb_var = None;
-            smb_field_bindings = [];
-            smb_extra_conds = [use_count_cond];
-            smb_body = reuse_body }
-        in
-        reuse_branch :: branches
+        (* Build reuse body: extract fields, prefix lets,
+           assign new values, return original pointer.
+           The [auto& _rf = std::get<Type>(scrut->v_mut())] binding is
+           emitted at print time using [smb_ctor_type], not baked into
+           the stmt list. *)
+        (* Skip reuse when there are no field assignments — the tail
+           constructor has the same fields as the matched one (typically a
+           zero-field constructor like Nil→Nil).  The use_count check would
+           be pure overhead since we're not actually mutating anything. *)
+        if assign_stmts = [] && extract_stmts = [] && prefix_stmts = [] then
+          branches
+        else
+          let needs_rf = assign_stmts <> [] in
+          let reuse_body =
+            extract_stmts @ prefix_stmts @ assign_stmts
+            @ [Sreturn (Some scrut_expr)]
+          in
+          List.mapi (fun i br ->
+            if i = pv_idx then
+              { br with smb_reuse = Some (use_count_cond,
+                  (if needs_rf then Some rf_var else None),
+                  reuse_body) }
+            else br
+          ) branches
       else
         branches
     in

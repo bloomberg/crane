@@ -255,19 +255,8 @@ LoopifyMoreTrees::tree_max(std::shared_ptr<LoopifyMoreTrees::tree> t1,
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename LoopifyMoreTrees::tree::Node>(t1->v());
-        if (std::holds_alternative<typename LoopifyMoreTrees::tree::Node>(
-                t2->v()) &&
-            t2.use_count() == 1) {
-          auto &_rf = std::get<1>(t2->v_mut());
-          std::shared_ptr<LoopifyMoreTrees::tree> l2 = std::move(_rf.d_a0);
-          unsigned int x2 = std::move(_rf.d_a1);
-          std::shared_ptr<LoopifyMoreTrees::tree> r2 = std::move(_rf.d_a2);
-          _rf.d_a0 = tree_max(d_a0, l2);
-          _rf.d_a1 = std::max(std::move(d_a1), x2);
-          _rf.d_a2 = tree_max(std::move(d_a2), r2);
-          _result = t2;
-        } else if (std::holds_alternative<
-                       typename LoopifyMoreTrees::tree::Leaf>(t2->v())) {
+        if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
+                t2->v())) {
           _result = std::move(t1);
         } else {
           const auto &[d_a00, d_a10, d_a20] =

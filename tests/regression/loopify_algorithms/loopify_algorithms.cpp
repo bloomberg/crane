@@ -63,17 +63,7 @@ LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
     } else {
       unsigned int f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v()) &&
-          _loop_l.use_count() == 1) {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              _loop_l;
-        } else {
-          _head = _loop_l;
-        }
-        _continue = false;
-      } else if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                     _loop_l->v())) {
+              _loop_l->v())) {
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
               List<unsigned int>::nil();
@@ -311,12 +301,7 @@ LoopifyAlgorithms::rotate_left_fuel(const unsigned int fuel,
         _continue = false;
       } else {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _loop_l->v()) &&
-            _loop_l.use_count() == 1) {
-          _result = _loop_l;
-          _continue = false;
-        } else if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                       _loop_l->v())) {
+                _loop_l->v())) {
           _result = List<unsigned int>::nil();
           _continue = false;
         } else {

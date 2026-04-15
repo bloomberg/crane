@@ -101,6 +101,9 @@ let stmts_reference_id target_id body =
       List.iter (fun br ->
         check_expr br.smb_scrutinee;
         List.iter check_expr br.smb_extra_conds;
+        ( match br.smb_reuse with
+        | Some (cond, _, stmts) -> check_expr cond; List.iter check_stmt stmts
+        | None -> () );
         List.iter check_stmt br.smb_body) branches;
       Option.iter (List.iter check_stmt) default
   in
@@ -265,12 +268,19 @@ let[@warning "-39"] rec lambda_needs_capture
           (fun acc br ->
             let acc = collect_from_expr acc br.smb_scrutinee in
             let acc = List.fold_left collect_from_expr acc br.smb_extra_conds in
+            let acc =
+              match br.smb_reuse with
+              | Some (cond, _, stmts) ->
+                let acc = collect_from_expr acc cond in
+                List.fold_left collect_from_stmt acc stmts
+              | None -> acc
+            in
             let refs', decls' = acc in
             let branch_decls =
               (* Add structured-binding field names as declared. *)
               let d =
                 List.fold_left
-                  (fun d (bname, _) -> IdSet.add bname d)
+                  (fun d (bname, _, _) -> IdSet.add bname d)
                   decls' br.smb_field_bindings
               in
               match br.smb_var with
@@ -372,6 +382,9 @@ and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
     List.exists (fun br ->
       expr br.smb_scrutinee
       || List.exists expr br.smb_extra_conds
+      || ( match br.smb_reuse with
+         | Some (cond, _, stmts) -> expr cond || any stmts
+         | None -> false )
       || any br.smb_body) branches
     || (match default with Some stmts -> any stmts | None -> false)
   | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _
@@ -1684,7 +1697,7 @@ and pp_cpp_stmt env args = function
       | _ :: _ ->
         str "const auto& ["
         ++ prlist_with_sep (fun () -> str ", ")
-             (fun (bname, _ty) -> Id.print bname)
+             (fun (bname, _ty, _used) -> Id.print bname)
              br.smb_field_bindings
         ++ str "] = " ++ str (sn ()).get ++ str "<"
         ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("
@@ -1709,26 +1722,26 @@ and pp_cpp_stmt env args = function
         Some obj
       | _ -> None
     in
-    let scrut_binding_pp, scrut_var_pp =
+    let scrut_binding_pp, scrut_var_pp, scrut_obj_pp =
       match scrut_obj_opt with
       | Some (CPPvar id) ->
         let name = Id.to_string id in
-        (mt (), str (name ^ "->v()"))
+        (mt (), str (name ^ "->v()"), str name)
       | Some CPPthis ->
-        (mt (), str "this->v()")
+        (mt (), str "this->v()", str "(*this)")
       | Some obj_expr ->
         let obj_pp = pp_scrut obj_expr in
         ( str ("auto&& " ^ sv_name ^ " = ") ++ obj_pp ++ str ";" ++ fnl (),
-          str (sv_name ^ "->v()") )
+          str (sv_name ^ "->v()"), str sv_name )
       | None ->
         ( match first_scrut with
         | CPPvar id ->
           let name = Id.to_string id in
-          (mt (), str name)
+          (mt (), str name, str name)
         | _ ->
           let raw_pp = pp_scrut first_scrut in
           ( str ("const auto& " ^ sv_name ^ " = ") ++ raw_pp ++ str ";" ++ fnl (),
-            str sv_name ) )
+            str sv_name, str sv_name ) )
     in
     if n_branches = 1 && default = None then
       (* Single-constructor exhaustive match: emit binding + body inline.
@@ -1744,13 +1757,40 @@ and pp_cpp_stmt env args = function
       let is_last_no_wild =
         i = n_branches - 1 && default = None && n_branches > 1
       in
-      let body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
+      let normal_body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
       let binding = pp_block_binding scrut_var_pp br in
+      (* When the branch has a reuse fast-path, nest the use_count check
+         inside the holds_alternative block:
+           if (holds_alternative<Ctor>(scrut)) {
+             if (use_count_cond) { reuse_body }
+             else { bindings; normal_body }
+           } *)
+      let body_pp =
+        match br.smb_reuse with
+        | Some (cond, rf_var, reuse_body) ->
+          let rf_binding = match rf_var with
+            | Some id ->
+              str "auto& " ++ Id.print id ++ str " = "
+              ++ str (sn ()).get ++ str "<"
+              ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("
+              ++ scrut_obj_pp ++ str "->v_mut());" ++ fnl ()
+            | None -> mt ()
+          in
+          let reuse_pp = pp_list_stmt (pp_cpp_stmt env args) reuse_body in
+          str "if (" ++ pp_cpp_expr env args cond ++ str ") {"
+          ++ fnl () ++ rf_binding ++ reuse_pp
+          ++ str "} else {" ++ fnl ()
+          ++ ( if binding = mt () then mt ()
+               else binding ++ fnl () )
+          ++ normal_body_pp
+          ++ str "}" ++ fnl ()
+        | None ->
+          ( if binding = mt () then mt ()
+            else binding ++ fnl () )
+          ++ normal_body_pp
+      in
       if is_last_no_wild then
-        if binding = mt () then
-          str "} else {" ++ fnl () ++ body_pp
-        else
-          str "} else {" ++ fnl () ++ binding ++ fnl () ++ body_pp
+        str "} else {" ++ fnl () ++ body_pp
       else
         let holds_pp = pp_holds scrut_var_pp br in
         let cond_pp =
@@ -1765,12 +1805,8 @@ and pp_cpp_stmt env args = function
             in
             holds_pp ++ str " && " ++ conds_pp
         in
-        if binding = mt () then
-          str keyword ++ str " (" ++ cond_pp ++ str ") {"
-          ++ fnl () ++ body_pp
-        else
-          str keyword ++ str " (" ++ cond_pp ++ str ") {"
-          ++ fnl () ++ binding ++ fnl () ++ body_pp
+        str keyword ++ str " (" ++ cond_pp ++ str ") {"
+        ++ fnl () ++ body_pp
     in
     let branches_pp =
       scrut_binding_pp

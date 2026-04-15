@@ -9,38 +9,38 @@ std::shared_ptr<List<unsigned int>>
 LoadProgramHeadWrite::update_nth(const unsigned int n, const unsigned int x,
                                  std::shared_ptr<List<unsigned int>> l) {
   if (n <= 0) {
-    if (std::holds_alternative<typename List<unsigned int>::Cons>(l->v()) &&
-        l.use_count() == 1) {
-      auto &_rf = std::get<1>(l->v_mut());
-      std::shared_ptr<List<unsigned int>> xs = std::move(_rf.d_a1);
-      _rf.d_a0 = x;
-      _rf.d_a1 = xs;
-      return l;
-    } else if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                   l->v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
       return l;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l->v());
-      return List<unsigned int>::cons(x, d_a1);
+      if (l.use_count() == 1) {
+        auto &_rf = std::get<typename List<unsigned int>::Cons>(l->v_mut());
+        std::shared_ptr<List<unsigned int>> xs = std::move(_rf.d_a1);
+        _rf.d_a0 = x;
+        _rf.d_a1 = xs;
+        return l;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
+        return List<unsigned int>::cons(x, d_a1);
+      }
     }
   } else {
     unsigned int n_ = n - 1;
-    if (std::holds_alternative<typename List<unsigned int>::Cons>(l->v()) &&
-        l.use_count() == 1) {
-      auto &_rf = std::get<1>(l->v_mut());
-      unsigned int y = std::move(_rf.d_a0);
-      std::shared_ptr<List<unsigned int>> ys = std::move(_rf.d_a1);
-      _rf.d_a0 = y;
-      _rf.d_a1 = update_nth(n_, x, ys);
-      return l;
-    } else if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                   l->v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
       return l;
     } else {
-      const auto &[d_a00, d_a10] =
-          std::get<typename List<unsigned int>::Cons>(l->v());
-      return List<unsigned int>::cons(d_a00, update_nth(n_, x, d_a10));
+      if (l.use_count() == 1) {
+        auto &_rf = std::get<typename List<unsigned int>::Cons>(l->v_mut());
+        unsigned int y = std::move(_rf.d_a0);
+        std::shared_ptr<List<unsigned int>> ys = std::move(_rf.d_a1);
+        _rf.d_a0 = y;
+        _rf.d_a1 = update_nth(n_, x, ys);
+        return l;
+      } else {
+        const auto &[d_a00, d_a10] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
+        return List<unsigned int>::cons(d_a00, update_nth(n_, x, d_a10));
+      }
     }
   }
 }

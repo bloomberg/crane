@@ -187,15 +187,22 @@ and smatch_branch = {
     (** Binding variable for [std::get], or [None] when no fields
         are accessed in the branch body.  Kept for scrutinee-name
         derivation even when {!smb_field_bindings} is non-empty. *)
-  smb_field_bindings : (Id.t * cpp_type) list;
-    (** Ordered list of [(binding_name, field_cpp_type)] for C++
+  smb_field_bindings : (Id.t * cpp_type * bool) list;
+    (** Ordered list of [(binding_name, field_cpp_type, used)] for C++
         structured bindings ([const auto& [f1, f2] = std::get<T>(…)]).
         Covers ALL constructor fields in struct-declaration order.
+        [used] is [true] when the binding is referenced in the branch
+        body; unused bindings are annotated [[[maybe_unused]]].
         Empty when no fields are used or for frame-dispatch branches. *)
   smb_extra_conds : cpp_expr list;
-    (** Additional [&&]-joined conditions after the primary check.
-        Used for reuse optimization ([use_count() == 1]) and multi-match
-        ([holds_alternative] on a second scrutinee). *)
+    (** Additional [&&]-joined conditions after the primary check. *)
+  smb_reuse : (cpp_expr * Id.t option * cpp_stmt list) option;
+    (** When [Some (cond, rf_var, body)], the branch has a reuse fast-path:
+        the printer emits [if (cond) { get_ref; body } else { bindings; normal }]
+        inside the [holds_alternative] block.  When [rf_var = Some id], the
+        printer emits [auto& id = std::get<smb_ctor_type>(scrut->v_mut())]
+        before the body.  The condition is typically [use_count() == 1].
+        [None] for branches without reuse. *)
   smb_body : cpp_stmt list;
     (** Branch body statements.  When {!smb_field_bindings} is non-empty,
         field accesses use direct [CPPvar binding_name] references. *)
@@ -461,8 +468,11 @@ let map_stmt
               smb_ctor_type = ft br.smb_ctor_type;
               smb_var = br.smb_var;
               smb_field_bindings =
-                List.map (fun (id, ty) -> (id, ft ty)) br.smb_field_bindings;
+                List.map (fun (id, ty, u) -> (id, ft ty, u)) br.smb_field_bindings;
               smb_extra_conds = List.map fe br.smb_extra_conds;
+              smb_reuse =
+                Option.map (fun (cond, rf, stmts) ->
+                  (fe cond, rf, List.map fs stmts)) br.smb_reuse;
               smb_body = List.map fs br.smb_body })
           branches,
         Option.map (List.map fs) default )

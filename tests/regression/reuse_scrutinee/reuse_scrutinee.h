@@ -120,10 +120,7 @@ struct ReuseScrutinee {
     std::shared_ptr<tree> t =
         tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                    tree::node(tree::leaf(), 30u, tree::leaf()));
-    if (std::holds_alternative<typename tree::Leaf>(t->v()) &&
-        t.use_count() == 1) {
-      return t;
-    } else if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
       return tree::leaf();
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());

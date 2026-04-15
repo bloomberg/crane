@@ -549,12 +549,7 @@ LoopifyTrees::tree_max(std::shared_ptr<LoopifyTrees::tree<unsigned int>> t1,
       if (std::holds_alternative<
               typename LoopifyTrees::tree<unsigned int>::Leaf>(t1->v())) {
         if (std::holds_alternative<
-                typename LoopifyTrees::tree<unsigned int>::Leaf>(t2->v()) &&
-            t2.use_count() == 1) {
-          _result = t2;
-        } else if (std::holds_alternative<
-                       typename LoopifyTrees::tree<unsigned int>::Leaf>(
-                       t2->v())) {
+                typename LoopifyTrees::tree<unsigned int>::Leaf>(t2->v())) {
           _result = tree<unsigned int>::leaf();
         } else {
           _result = std::move(t2);
@@ -563,27 +558,7 @@ LoopifyTrees::tree_max(std::shared_ptr<LoopifyTrees::tree<unsigned int>> t1,
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t1->v());
         if (std::holds_alternative<
-                typename LoopifyTrees::tree<unsigned int>::Node>(t2->v()) &&
-            t2.use_count() == 1) {
-          auto &_rf = std::get<1>(t2->v_mut());
-          std::shared_ptr<LoopifyTrees::tree<unsigned int>> l2 =
-              std::move(_rf.d_a0);
-          unsigned int y = std::move(_rf.d_a1);
-          std::shared_ptr<LoopifyTrees::tree<unsigned int>> r2 =
-              std::move(_rf.d_a2);
-          unsigned int max_val;
-          if (std::move(d_a1) <= y) {
-            max_val = y;
-          } else {
-            max_val = std::move(d_a1);
-          }
-          _rf.d_a0 = tree_max(d_a0, std::move(l2));
-          _rf.d_a1 = max_val;
-          _rf.d_a2 = tree_max(std::move(d_a2), r2);
-          _result = t2;
-        } else if (std::holds_alternative<
-                       typename LoopifyTrees::tree<unsigned int>::Leaf>(
-                       t2->v())) {
+                typename LoopifyTrees::tree<unsigned int>::Leaf>(t2->v())) {
           _result = std::move(t1);
         } else {
           const auto &[d_a00, d_a10, d_a20] =

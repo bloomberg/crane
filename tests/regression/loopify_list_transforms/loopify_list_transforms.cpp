@@ -317,12 +317,7 @@ LoopifyListTransforms::drop(const unsigned int n,
     } else {
       unsigned int n_ = _loop_n - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v()) &&
-          _loop_l.use_count() == 1) {
-        _result = _loop_l;
-        _continue = false;
-      } else if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                     _loop_l->v())) {
+              _loop_l->v())) {
         _result = List<unsigned int>::nil();
         _continue = false;
       } else {
@@ -429,12 +424,7 @@ LoopifyListTransforms::rotate_left_fuel(const unsigned int fuel,
         _continue = false;
       } else {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _loop_l->v()) &&
-            _loop_l.use_count() == 1) {
-          _result = _loop_l;
-          _continue = false;
-        } else if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                       _loop_l->v())) {
+                _loop_l->v())) {
           _result = List<unsigned int>::nil();
           _continue = false;
         } else {

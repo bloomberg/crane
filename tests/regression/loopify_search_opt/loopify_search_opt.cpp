@@ -485,13 +485,7 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
               } else {
                 unsigned int n_ = _loop_n - 1;
                 if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                        _loop_xs->v()) &&
-                    _loop_xs.use_count() == 1) {
-                  _result = _loop_xs;
-                  _continue = false;
-                } else if (std::holds_alternative<
-                               typename List<unsigned int>::Nil>(
-                               _loop_xs->v())) {
+                        _loop_xs->v())) {
                   _result = List<unsigned int>::nil();
                   _continue = false;
                 } else {

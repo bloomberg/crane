@@ -189,13 +189,21 @@ and smatch_branch = {
       (** Binding variable for [std::get], or [None] when the
           branch body doesn't use fields.  Kept for scrutinee-name
           derivation even when {!smb_field_bindings} is non-empty. *)
-  smb_field_bindings : (Id.t * cpp_type) list;
-      (** Ordered list of [(binding_name, field_cpp_type)] for C++
+  smb_field_bindings : (Id.t * cpp_type * bool) list;
+      (** Ordered list of [(binding_name, field_cpp_type, used)] for C++
           structured bindings ([const auto& [f1, f2] = std::get<T>(…)]).
           Covers ALL constructor fields in struct-declaration order.
+          [used] is [true] when the binding is referenced in the branch
+          body; unused bindings are annotated [[[maybe_unused]]].
           Empty when no fields are used or for frame-dispatch branches. *)
   smb_extra_conds : cpp_expr list;
-      (** Additional [&&]-joined conditions (reuse, multi-match). *)
+      (** Additional [&&]-joined conditions. *)
+  smb_reuse : (cpp_expr * Id.t option * cpp_stmt list) option;
+      (** When [Some (cond, rf_var, body)], the branch has a reuse fast-path.
+          When [rf_var = Some id], the printer emits
+          [auto& id = std::get<smb_ctor_type>(scrut->v_mut())] before the body.
+          Typically [cond = use_count() == 1].  [None] for branches without
+          reuse. *)
   smb_body : cpp_stmt list;
       (** Branch body statements. *)
 }

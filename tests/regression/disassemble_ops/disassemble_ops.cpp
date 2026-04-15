@@ -22,11 +22,7 @@ DisassembleOps::drop_(const unsigned int n,
     return l;
   } else {
     unsigned int n_ = n - 1;
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v()) &&
-        l.use_count() == 1) {
-      return l;
-    } else if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                   l->v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
       return List<unsigned int>::nil();
     } else {
       const auto &[d_a0, d_a1] =

@@ -101,18 +101,12 @@ Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
 std::shared_ptr<Matcher::regexp>
 Matcher::OptCat(std::shared_ptr<Matcher::regexp> r2,
                 std::shared_ptr<Matcher::regexp> r3) {
-  if (std::holds_alternative<typename Matcher::regexp::Zero>(r2->v()) &&
-      r2.use_count() == 1) {
-    return r2;
-  } else if (std::holds_alternative<typename Matcher::regexp::Eps>(r2->v())) {
+  if (std::holds_alternative<typename Matcher::regexp::Eps>(r2->v())) {
     return r3;
   } else if (std::holds_alternative<typename Matcher::regexp::Zero>(r2->v())) {
     return regexp::zero();
   } else {
-    if (std::holds_alternative<typename Matcher::regexp::Zero>(r3->v()) &&
-        r3.use_count() == 1) {
-      return r3;
-    } else if (std::holds_alternative<typename Matcher::regexp::Eps>(r3->v())) {
+    if (std::holds_alternative<typename Matcher::regexp::Eps>(r3->v())) {
       return r2;
     } else if (std::holds_alternative<typename Matcher::regexp::Zero>(
                    r3->v())) {

@@ -426,6 +426,11 @@ and collect_stmt check ~in_visitor = function
       (fun br ->
         collect_expr check br.smb_scrutinee
         @ List.concat_map (collect_expr check) br.smb_extra_conds
+        @ ( match br.smb_reuse with
+          | Some (cond, _, stmts) ->
+            collect_expr check cond
+            @ collect_stmts check ~in_visitor:true stmts
+          | None -> [] )
         @ collect_stmts check ~in_visitor:true br.smb_body)
       branches
     @ ( match default with
@@ -498,6 +503,10 @@ let rec count_calls_stmts (check : call_checker) stmts =
           (fun acc br ->
             acc + count_calls_expr check br.smb_scrutinee
             + List.fold_left (fun a c -> a + count_calls_expr check c) 0 br.smb_extra_conds
+            + ( match br.smb_reuse with
+              | Some (cond, _, stmts) ->
+                count_calls_expr check cond + count_calls_stmts check stmts
+              | None -> 0 )
             + count_calls_stmts check br.smb_body )
           0 branches
         + (match default with Some ss -> count_calls_stmts check ss | None -> 0)
@@ -1766,7 +1775,11 @@ let try_tmc_classify check body =
     | Sswitch (_, _, branches, _) ->
       List.iter (fun (_, body) -> scan_lambda_body body) branches
     | Smatch (branches, default) ->
-      List.iter (fun br -> scan_lambda_body br.smb_body) branches;
+      List.iter (fun br ->
+        ( match br.smb_reuse with
+        | Some (_, _, stmts) -> scan_lambda_body stmts
+        | None -> () );
+        scan_lambda_body br.smb_body) branches;
       (match default with Some ss -> scan_lambda_body ss | None -> ())
     | Sblock stmts -> scan_lambda_body stmts
     | _ -> ()
@@ -1790,7 +1803,11 @@ let try_tmc_classify check body =
     | Sswitch (_, _, branches, _) ->
       List.iter (fun (_, body) -> List.iter scan_stmt body) branches
     | Smatch (branches, default) ->
-      List.iter (fun br -> List.iter scan_stmt br.smb_body) branches;
+      List.iter (fun br ->
+        ( match br.smb_reuse with
+        | Some (_, _, stmts) -> List.iter scan_stmt stmts
+        | None -> () );
+        List.iter scan_stmt br.smb_body) branches;
       (match default with Some ss -> List.iter scan_stmt ss | None -> ())
     | Sblock stmts -> List.iter scan_stmt stmts
     | _ -> ()
@@ -2033,7 +2050,13 @@ let rec rewrite_tmc_lambda_return check pp_expr ti varying shadow_params =
     [
       Smatch
         ( List.map
-            (fun br -> { br with smb_body = List.concat_map rw br.smb_body })
+            (fun br ->
+              let reuse =
+                if count_calls_stmts check br.smb_body > 0 then None
+                else br.smb_reuse
+              in
+              { br with smb_body = List.concat_map rw br.smb_body;
+                        smb_reuse = reuse })
             branches,
           Option.map (List.concat_map rw) default );
     ]
@@ -2101,7 +2124,17 @@ let rec rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params = function
     let rw = rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params in
     Smatch
       ( List.map
-          (fun br -> { br with smb_body = List.map rw br.smb_body })
+          (fun br ->
+            (* Strip reuse from TMC branches: the reuse path would bypass
+               the TMC loop with a plain recursive call, defeating stack
+               safety.  TMC's O(1) stack guarantee trumps reuse's single
+               allocation saving. *)
+            let reuse =
+              if count_calls_stmts check br.smb_body > 0 then None
+              else br.smb_reuse
+            in
+            { br with smb_body = List.map rw br.smb_body;
+                      smb_reuse = reuse })
           branches,
         Option.map (List.map rw) default )
   | Sblock stmts ->
@@ -2215,7 +2248,7 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
                [infer_saved_type] can resolve them for frame structs. *)
             let field_type_bindings =
               List.map
-                (fun (bname, ty) -> (bname, ty))
+                (fun (bname, ty, _) -> (bname, ty))
                 br.smb_field_bindings
             in
             (* Also register the aggregate binding for frame-dispatch
@@ -2226,8 +2259,13 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
                 [(id, Tmod (TMconst, br.smb_ctor_type))]
               | _ -> []
             in
+            let reuse_env =
+              match br.smb_reuse with
+              | Some (_, _, stmts) -> collect_type_env stmts
+              | None -> []
+            in
             field_type_bindings @ var_binding
-            @ collect_type_env br.smb_body )
+            @ reuse_env @ collect_type_env br.smb_body )
           branches
         @ (match default with Some ss -> collect_type_env ss | None -> [])
       | Sblock ss -> collect_type_env ss
@@ -2376,11 +2414,15 @@ and free_vars_stmt = function
       (fun br ->
         let fv = free_vars_expr br.smb_scrutinee
           @ List.concat_map free_vars_expr br.smb_extra_conds
+          @ ( match br.smb_reuse with
+            | Some (cond, _, stmts) ->
+              free_vars_expr cond @ free_vars_body stmts
+            | None -> [] )
           @ free_vars_body br.smb_body in
         (* Filter out variables bound by this branch: structured-binding
            field names and/or the aggregate binding variable. *)
         let bound_ids =
-          List.map fst br.smb_field_bindings
+          List.map (fun (id, _, _) -> id) br.smb_field_bindings
           @ (match br.smb_var with Some id -> [id] | None -> [])
         in
         List.filter
@@ -3704,7 +3746,7 @@ let rec rewrite_enter_lambda_return
       let branch_env =
         (* Register structured-binding field types. *)
         let fb_env =
-          List.map (fun (bname, ty) -> (bname, ty)) br.smb_field_bindings
+          List.map (fun (bname, ty, _) -> (bname, ty)) br.smb_field_bindings
         in
         (* Also register aggregate binding for frame-dispatch branches. *)
         let var_env =
@@ -3715,11 +3757,16 @@ let rec rewrite_enter_lambda_return
         in
         fb_env @ var_env @ env
       in
-      { br with
-        smb_body =
-          rewrite_enter_stmts check varying tparams branch_env ret_ty
-            pp_type call_counter frames_ref varying_param_types
-            br.smb_body }
+      let rw = rewrite_enter_stmts check varying tparams branch_env ret_ty
+            pp_type call_counter frames_ref varying_param_types in
+      (* Strip reuse from branches with recursive calls: the reuse path
+         would bypass the loopification with plain recursive calls,
+         defeating the stack-safety guarantee. *)
+      let reuse =
+        if count_calls_stmts check br.smb_body > 0 then None
+        else br.smb_reuse
+      in
+      { br with smb_reuse = reuse; smb_body = rw br.smb_body }
     in
     let rw_default =
       rewrite_enter_stmts check varying tparams env ret_ty pp_type
@@ -4442,7 +4489,13 @@ and find_combine_op_stmt check = function
   | Sswitch (_, _, branches, _) ->
     List.find_map (fun (_, body) -> find_combine_op check body) branches
   | Smatch (branches, default) ->
-    ( match List.find_map (fun br -> find_combine_op check br.smb_body) branches with
+    ( match List.find_map (fun br ->
+        match br.smb_reuse with
+        | Some (_, _, stmts) ->
+          ( match find_combine_op check stmts with
+          | Some _ as r -> r
+          | None -> find_combine_op check br.smb_body )
+        | None -> find_combine_op check br.smb_body) branches with
     | Some _ as r -> r
     | None -> match default with Some ss -> find_combine_op check ss | None -> None )
   | _ -> None
@@ -4494,6 +4547,7 @@ let make_frame_branch frame_name body =
     smb_var = Some (Id.of_string "_f");
     smb_field_bindings = [];
     smb_extra_conds = [];
+    smb_reuse = None;
     smb_body = body }
 
 (** Generate the while-loop body and surrounding boilerplate for the
@@ -4821,6 +4875,9 @@ and stmt_has_expr pred = function
     List.exists (fun br ->
       expr_has pred br.smb_scrutinee
       || List.exists (expr_has pred) br.smb_extra_conds
+      || ( match br.smb_reuse with
+         | Some (cond, _, stmts) -> expr_has pred cond || body_has_expr pred stmts
+         | None -> false )
       || body_has_expr pred br.smb_body) branches
     || (match default with Some s -> body_has_expr pred s | None -> false)
   | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _ | Sdecl_init _
@@ -4986,7 +5043,13 @@ let try_inline_mutual_into names body =
       | None -> List.find_map (fun (_, _, b) -> find_callee_in_stmts b) branches
       )
     | Smatch (branches, default) ->
-      ( match List.find_map (fun br -> find_callee_in_stmts br.smb_body) branches with
+      ( match List.find_map (fun br ->
+          match br.smb_reuse with
+          | Some (_, _, stmts) ->
+            ( match find_callee_in_stmts stmts with
+            | Some _ as r -> r
+            | None -> find_callee_in_stmts br.smb_body )
+          | None -> find_callee_in_stmts br.smb_body) branches with
       | Some _ as r -> r
       | None -> match default with Some ss -> find_callee_in_stmts ss | None -> None )
     | Sblock ss -> find_callee_in_stmts ss
@@ -5238,6 +5301,9 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
               { br with
                 smb_scrutinee = process_expr br.smb_scrutinee;
                 smb_extra_conds = List.map process_expr br.smb_extra_conds;
+                smb_reuse =
+                  Option.map (fun (cond, rf, stmts) ->
+                    (process_expr cond, rf, process_stmts stmts)) br.smb_reuse;
                 smb_body = process_stmts br.smb_body })
             branches,
           Option.map process_stmts default )

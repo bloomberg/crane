@@ -237,23 +237,8 @@ LoopifyListCombining::interleave_two(std::shared_ptr<List<unsigned int>> l1,
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
-      if (std::holds_alternative<typename List<unsigned int>::Cons>(
-              _loop_l2->v()) &&
-          _loop_l2.use_count() == 1) {
-        auto &_rf = std::get<1>(_loop_l2->v_mut());
-        unsigned int y = std::move(_rf.d_a0);
-        std::shared_ptr<List<unsigned int>> ys = std::move(_rf.d_a1);
-        _rf.d_a0 = std::move(d_a0);
-        _rf.d_a1 = List<unsigned int>::cons(y, interleave_two(d_a1, ys));
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              _loop_l2;
-        } else {
-          _head = _loop_l2;
-        }
-        _continue = false;
-      } else if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                     _loop_l2->v())) {
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(
+              _loop_l2->v())) {
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
               std::move(_loop_l1);

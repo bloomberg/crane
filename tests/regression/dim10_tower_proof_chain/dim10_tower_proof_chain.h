@@ -105,37 +105,23 @@ struct Dim10TowerProofChainCase {
       make_graded_goodwillie_tower(10u);
   static inline const std::shared_ptr<SigT<unsigned int, std::any>>
       dim10_layers_stabilize = []() {
-        std::shared_ptr<SigT<unsigned int, std::any>> s =
-            graded_goodwillie_layers_stabilize(10u);
-        if (std::holds_alternative<
-                typename SigT<unsigned int, std::any>::ExistT>(s->v()) &&
-            s.use_count() == 1) {
-          auto &_rf = std::get<0>(s->v_mut());
-          unsigned int x = std::move(_rf.d_x);
-          _rf.d_x = x;
-          return s;
-        } else {
+        return [&]() {
+          std::shared_ptr<SigT<unsigned int, std::any>> s =
+              graded_goodwillie_layers_stabilize(10u);
           const auto &[d_x, d_a1] =
               std::get<typename SigT<unsigned int, std::any>::ExistT>(s->v());
           return SigT<unsigned int, std::any>::existt(d_x, std::any{});
-        }
+        }();
       }();
   static inline const std::shared_ptr<SigT<unsigned int, std::any>>
       dim10_P_stabilizes = []() {
-        std::shared_ptr<SigT<unsigned int, std::any>> s =
-            graded_goodwillie_P_stabilizes(10u);
-        if (std::holds_alternative<
-                typename SigT<unsigned int, std::any>::ExistT>(s->v()) &&
-            s.use_count() == 1) {
-          auto &_rf = std::get<0>(s->v_mut());
-          unsigned int x = std::move(_rf.d_x);
-          _rf.d_x = x;
-          return s;
-        } else {
+        return [&]() {
+          std::shared_ptr<SigT<unsigned int, std::any>> s =
+              graded_goodwillie_P_stabilizes(10u);
           const auto &[d_x, d_a1] =
               std::get<typename SigT<unsigned int, std::any>::ExistT>(s->v());
           return SigT<unsigned int, std::any>::existt(d_x, std::any{});
-        }
+        }();
       }();
   __attribute__((pure)) static std::pair<
       std::pair<std::pair<IsIntegerValued, EventuallyZero>,

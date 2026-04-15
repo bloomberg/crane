@@ -209,37 +209,40 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
     return y;
   } else if (std::holds_alternative<typename Z::Zpos>(x->v())) {
     const auto &[d_a0] = std::get<typename Z::Zpos>(x->v());
-    if (std::holds_alternative<typename Z::Zpos>(y->v()) &&
-        y.use_count() == 1) {
-      auto &_rf = std::get<1>(y->v_mut());
-      std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
-      _rf.d_a0 = Pos::add(std::move(d_a0), y_);
-      return y;
-    } else if (std::holds_alternative<typename Z::Z0>(y->v())) {
+    if (std::holds_alternative<typename Z::Z0>(y->v())) {
       return x;
     } else if (std::holds_alternative<typename Z::Zpos>(y->v())) {
-      const auto &[d_a00] = std::get<typename Z::Zpos>(y->v());
-      return Z::zpos(Pos::add(d_a0, d_a00));
+      if (y.use_count() == 1) {
+        auto &_rf = std::get<typename Z::Zpos>(y->v_mut());
+        std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
+        _rf.d_a0 = Pos::add(std::move(d_a0), y_);
+        return y;
+      } else {
+        const auto &[d_a00] = std::get<typename Z::Zpos>(y->v());
+        return Z::zpos(Pos::add(d_a0, d_a00));
+      }
+
     } else {
       const auto &[d_a00] = std::get<typename Z::Zneg>(y->v());
       return BinInt::pos_sub(d_a0, d_a00);
     }
   } else {
     const auto &[d_a0] = std::get<typename Z::Zneg>(x->v());
-    if (std::holds_alternative<typename Z::Zneg>(y->v()) &&
-        y.use_count() == 1) {
-      auto &_rf = std::get<2>(y->v_mut());
-      std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
-      _rf.d_a0 = Pos::add(std::move(d_a0), y_);
-      return y;
-    } else if (std::holds_alternative<typename Z::Z0>(y->v())) {
+    if (std::holds_alternative<typename Z::Z0>(y->v())) {
       return x;
     } else if (std::holds_alternative<typename Z::Zpos>(y->v())) {
       const auto &[d_a00] = std::get<typename Z::Zpos>(y->v());
       return BinInt::pos_sub(d_a00, d_a0);
     } else {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(y->v());
-      return Z::zneg(Pos::add(d_a0, d_a00));
+      if (y.use_count() == 1) {
+        auto &_rf = std::get<typename Z::Zneg>(y->v_mut());
+        std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
+        _rf.d_a0 = Pos::add(std::move(d_a0), y_);
+        return y;
+      } else {
+        const auto &[d_a00] = std::get<typename Z::Zneg>(y->v());
+        return Z::zneg(Pos::add(d_a0, d_a00));
+      }
     }
   }
 }

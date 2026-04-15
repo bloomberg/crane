@@ -112,12 +112,7 @@ struct LoopifyPredicates {
     bool _continue = true;
     while (_continue) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v()) &&
-          _loop_l.use_count() == 1) {
-        _result = _loop_l;
-        _continue = false;
-      } else if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                     _loop_l->v())) {
+              _loop_l->v())) {
         _result = List<unsigned int>::nil();
         _continue = false;
       } else {

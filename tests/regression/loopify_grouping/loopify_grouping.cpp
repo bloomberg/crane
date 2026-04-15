@@ -12,28 +12,29 @@ LoopifyGrouping::prepend_to_groups(
     std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> groups) {
   if (same) {
     if (std::holds_alternative<
-            typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-            groups->v()) &&
-        groups.use_count() == 1) {
-      auto &_rf = std::get<1>(groups->v_mut());
-      std::shared_ptr<List<unsigned int>> g = std::move(_rf.d_a0);
-      std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> gs =
-          std::move(_rf.d_a1);
-      _rf.d_a0 = List<unsigned int>::cons(x, g);
-      _rf.d_a1 = std::move(gs);
-      return groups;
-    } else if (std::holds_alternative<
-                   typename List<std::shared_ptr<List<unsigned int>>>::Nil>(
-                   groups->v())) {
+            typename List<std::shared_ptr<List<unsigned int>>>::Nil>(
+            groups->v())) {
       return List<std::shared_ptr<List<unsigned int>>>::cons(
           List<unsigned int>::cons(x, List<unsigned int>::nil()),
           List<std::shared_ptr<List<unsigned int>>>::nil());
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-              groups->v());
-      return List<std::shared_ptr<List<unsigned int>>>::cons(
-          List<unsigned int>::cons(x, d_a0), d_a1);
+      if (groups.use_count() == 1) {
+        auto &_rf =
+            std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+                groups->v_mut());
+        std::shared_ptr<List<unsigned int>> g = std::move(_rf.d_a0);
+        std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> gs =
+            std::move(_rf.d_a1);
+        _rf.d_a0 = List<unsigned int>::cons(x, g);
+        _rf.d_a1 = std::move(gs);
+        return groups;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+                groups->v());
+        return List<std::shared_ptr<List<unsigned int>>>::cons(
+            List<unsigned int>::cons(x, d_a0), d_a1);
+      }
     }
   } else {
     return List<std::shared_ptr<List<unsigned int>>>::cons(

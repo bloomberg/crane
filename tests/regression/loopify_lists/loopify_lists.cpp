@@ -1267,24 +1267,7 @@ LoopifyLists::interleave(std::shared_ptr<LoopifyLists::list<unsigned int>> l1,
           std::get<typename LoopifyLists::list<unsigned int>::Cons>(
               _loop_l1->v());
       if (std::holds_alternative<
-              typename LoopifyLists::list<unsigned int>::Cons>(_loop_l2->v()) &&
-          _loop_l2.use_count() == 1) {
-        auto &_rf = std::get<1>(_loop_l2->v_mut());
-        unsigned int y = std::move(_rf.d_a0);
-        std::shared_ptr<LoopifyLists::list<unsigned int>> ys =
-            std::move(_rf.d_a1);
-        _rf.d_a0 = std::move(d_a0);
-        _rf.d_a1 = list<unsigned int>::cons(y, interleave(d_a1, ys));
-        if (_last) {
-          std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              _loop_l2;
-        } else {
-          _head = _loop_l2;
-        }
-        _continue = false;
-      } else if (std::holds_alternative<
-                     typename LoopifyLists::list<unsigned int>::Nil>(
-                     _loop_l2->v())) {
+              typename LoopifyLists::list<unsigned int>::Nil>(_loop_l2->v())) {
         if (_last) {
           std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
               std::move(_loop_l1);
@@ -1881,13 +1864,7 @@ LoopifyLists::drop(const unsigned int n,
   bool _continue = true;
   while (_continue) {
     if (std::holds_alternative<typename LoopifyLists::list<unsigned int>::Nil>(
-            _loop_l->v()) &&
-        _loop_l.use_count() == 1) {
-      _result = _loop_l;
-      _continue = false;
-    } else if (std::holds_alternative<
-                   typename LoopifyLists::list<unsigned int>::Nil>(
-                   _loop_l->v())) {
+            _loop_l->v())) {
       _result = list<unsigned int>::nil();
       _continue = false;
     } else {
@@ -2128,13 +2105,7 @@ LoopifyLists::rotate_left_fuel(
         _continue = false;
       } else {
         if (std::holds_alternative<
-                typename LoopifyLists::list<unsigned int>::Nil>(_loop_l->v()) &&
-            _loop_l.use_count() == 1) {
-          _result = _loop_l;
-          _continue = false;
-        } else if (std::holds_alternative<
-                       typename LoopifyLists::list<unsigned int>::Nil>(
-                       _loop_l->v())) {
+                typename LoopifyLists::list<unsigned int>::Nil>(_loop_l->v())) {
           _result = list<unsigned int>::nil();
           _continue = false;
         } else {

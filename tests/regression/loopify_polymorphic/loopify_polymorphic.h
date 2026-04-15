@@ -280,12 +280,7 @@ struct LoopifyPolymorphic {
         _continue = false;
       } else {
         unsigned int n_ = _loop_n - 1;
-        if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v()) &&
-            _loop_l.use_count() == 1) {
-          _result = _loop_l;
-          _continue = false;
-        } else if (std::holds_alternative<typename List<T1>::Nil>(
-                       _loop_l->v())) {
+        if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
           _result = List<T1>::nil();
           _continue = false;
         } else {

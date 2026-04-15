@@ -388,9 +388,7 @@ Coq_Pos::to_nat(const std::shared_ptr<Positive> &x) {
 
 std::shared_ptr<N> BinNat::sub(std::shared_ptr<N> n,
                                const std::shared_ptr<N> &m) {
-  if (std::holds_alternative<typename N::N0>(n->v()) && n.use_count() == 1) {
-    return n;
-  } else if (std::holds_alternative<typename N::N0>(n->v())) {
+  if (std::holds_alternative<typename N::N0>(n->v())) {
     return N::n0();
   } else {
     const auto &[d_a0] = std::get<typename N::Npos>(n->v());
@@ -442,17 +440,18 @@ std::shared_ptr<N> BinNat::add(std::shared_ptr<N> n, std::shared_ptr<N> m) {
     return m;
   } else {
     const auto &[d_a0] = std::get<typename N::Npos>(n->v());
-    if (std::holds_alternative<typename N::Npos>(m->v()) &&
-        m.use_count() == 1) {
-      auto &_rf = std::get<1>(m->v_mut());
-      std::shared_ptr<Positive> q = std::move(_rf.d_a0);
-      _rf.d_a0 = Coq_Pos::add(std::move(d_a0), q);
-      return m;
-    } else if (std::holds_alternative<typename N::N0>(m->v())) {
+    if (std::holds_alternative<typename N::N0>(m->v())) {
       return n;
     } else {
-      const auto &[d_a00] = std::get<typename N::Npos>(m->v());
-      return N::npos(Coq_Pos::add(d_a0, d_a00));
+      if (m.use_count() == 1) {
+        auto &_rf = std::get<typename N::Npos>(m->v_mut());
+        std::shared_ptr<Positive> q = std::move(_rf.d_a0);
+        _rf.d_a0 = Coq_Pos::add(std::move(d_a0), q);
+        return m;
+      } else {
+        const auto &[d_a00] = std::get<typename N::Npos>(m->v());
+        return N::npos(Coq_Pos::add(d_a0, d_a00));
+      }
     }
   }
 }
@@ -559,37 +558,40 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
     return y;
   } else if (std::holds_alternative<typename Z::Zpos>(x->v())) {
     const auto &[d_a0] = std::get<typename Z::Zpos>(x->v());
-    if (std::holds_alternative<typename Z::Zpos>(y->v()) &&
-        y.use_count() == 1) {
-      auto &_rf = std::get<1>(y->v_mut());
-      std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
-      _rf.d_a0 = Pos::add(std::move(d_a0), y_);
-      return y;
-    } else if (std::holds_alternative<typename Z::Z0>(y->v())) {
+    if (std::holds_alternative<typename Z::Z0>(y->v())) {
       return x;
     } else if (std::holds_alternative<typename Z::Zpos>(y->v())) {
-      const auto &[d_a00] = std::get<typename Z::Zpos>(y->v());
-      return Z::zpos(Pos::add(d_a0, d_a00));
+      if (y.use_count() == 1) {
+        auto &_rf = std::get<typename Z::Zpos>(y->v_mut());
+        std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
+        _rf.d_a0 = Pos::add(std::move(d_a0), y_);
+        return y;
+      } else {
+        const auto &[d_a00] = std::get<typename Z::Zpos>(y->v());
+        return Z::zpos(Pos::add(d_a0, d_a00));
+      }
+
     } else {
       const auto &[d_a00] = std::get<typename Z::Zneg>(y->v());
       return BinInt::pos_sub(d_a0, d_a00);
     }
   } else {
     const auto &[d_a0] = std::get<typename Z::Zneg>(x->v());
-    if (std::holds_alternative<typename Z::Zneg>(y->v()) &&
-        y.use_count() == 1) {
-      auto &_rf = std::get<2>(y->v_mut());
-      std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
-      _rf.d_a0 = Pos::add(std::move(d_a0), y_);
-      return y;
-    } else if (std::holds_alternative<typename Z::Z0>(y->v())) {
+    if (std::holds_alternative<typename Z::Z0>(y->v())) {
       return x;
     } else if (std::holds_alternative<typename Z::Zpos>(y->v())) {
       const auto &[d_a00] = std::get<typename Z::Zpos>(y->v());
       return BinInt::pos_sub(d_a00, d_a0);
     } else {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(y->v());
-      return Z::zneg(Pos::add(d_a0, d_a00));
+      if (y.use_count() == 1) {
+        auto &_rf = std::get<typename Z::Zneg>(y->v_mut());
+        std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
+        _rf.d_a0 = Pos::add(std::move(d_a0), y_);
+        return y;
+      } else {
+        const auto &[d_a00] = std::get<typename Z::Zneg>(y->v());
+        return Z::zneg(Pos::add(d_a0, d_a00));
+      }
     }
   }
 }

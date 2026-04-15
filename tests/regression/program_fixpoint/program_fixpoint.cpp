@@ -31,21 +31,21 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
           return d_x;
         }());
       };
-  if (std::holds_alternative<typename List<unsigned int>::Cons>(l1->v()) &&
-      l1.use_count() == 1) {
-    auto &_rf = std::get<1>(l1->v_mut());
-    unsigned int x0 = std::move(_rf.d_a0);
-    std::shared_ptr<List<unsigned int>> xs = std::move(_rf.d_a1);
-    _rf.d_a0 = std::move(x0);
-    _rf.d_a1 = std::move(interleave0)(l2, xs);
-    return l1;
-  } else if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                 l1->v())) {
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(l1->v())) {
     return l2;
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l1->v());
-    return List<unsigned int>::cons(d_a0, interleave0(l2, d_a1));
+    if (l1.use_count() == 1) {
+      auto &_rf = std::get<typename List<unsigned int>::Cons>(l1->v_mut());
+      unsigned int x0 = std::move(_rf.d_a0);
+      std::shared_ptr<List<unsigned int>> xs = std::move(_rf.d_a1);
+      _rf.d_a0 = std::move(x0);
+      _rf.d_a1 = std::move(interleave0)(l2, xs);
+      return l1;
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l1->v());
+      return List<unsigned int>::cons(d_a0, interleave0(l2, d_a1));
+    }
   }
 }
 

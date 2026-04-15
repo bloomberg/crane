@@ -97,12 +97,7 @@ LoopifyListWindows::drop(const unsigned int m,
     } else {
       unsigned int m_ = _loop_m - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_xs->v()) &&
-          _loop_xs.use_count() == 1) {
-        _result = _loop_xs;
-        _continue = false;
-      } else if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                     _loop_xs->v())) {
+              _loop_xs->v())) {
         _result = List<unsigned int>::nil();
         _continue = false;
       } else {
