@@ -8,7 +8,7 @@
 __attribute__((pure)) unsigned int
 FinOperatesOnPairs::get_reg(const std::shared_ptr<FinOperatesOnPairs::state> &s,
                             const unsigned int r) {
-  return s->regs->nth(r, 0u);
+  return ListDef::template nth<unsigned int>(r, s->regs, 0u);
 }
 
 std::shared_ptr<FinOperatesOnPairs::state>
@@ -38,5 +38,7 @@ std::shared_ptr<FinOperatesOnPairs::state> FinOperatesOnPairs::set_reg_pair(
 
 std::shared_ptr<FinOperatesOnPairs::state> FinOperatesOnPairs::execute_fin(
     const std::shared_ptr<FinOperatesOnPairs::state> &s, const unsigned int r) {
-  return set_reg_pair(s, r, s->rom->nth(get_reg_pair(s, 0u), 0u));
+  return set_reg_pair(
+      s, r,
+      ListDef::template nth<unsigned int>(get_reg_pair(s, 0u), s->rom, 0u));
 }

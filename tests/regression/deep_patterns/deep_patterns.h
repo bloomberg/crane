@@ -292,31 +292,29 @@ struct DeepPatterns {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, t_A, std::shared_ptr<mylist<t_A>>, T1> F1>
+    T1 mylist_rec(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename mylist<t_A>::Nil>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename mylist<t_A>::Cons>(this->v());
+        return f0(d_a0, d_a1, d_a1->template mylist_rec<T1>(f, f0));
+      }
+    }
+
+    template <typename T1, MapsTo<T1, t_A, std::shared_ptr<mylist<t_A>>, T1> F1>
+    T1 mylist_rect(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename mylist<t_A>::Nil>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename mylist<t_A>::Cons>(this->v());
+        return f0(d_a0, d_a1, d_a1->template mylist_rect<T1>(f, f0));
+      }
+    }
   };
-
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
-  static T2 mylist_rect(const T2 f, F1 &&f0,
-                        const std::shared_ptr<mylist<T1>> &m) {
-    if (std::holds_alternative<typename mylist<T1>::Nil>(m->v())) {
-      return f;
-    } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Cons>(m->v());
-      return f0(d_a0, d_a1, mylist_rect<T1, T2>(f, f0, d_a1));
-    }
-  }
-
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
-  static T2 mylist_rec(const T2 f, F1 &&f0,
-                       const std::shared_ptr<mylist<T1>> &m) {
-    if (std::holds_alternative<typename mylist<T1>::Nil>(m->v())) {
-      return f;
-    } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Cons>(m->v());
-      return f0(d_a0, d_a1, mylist_rec<T1, T2>(f, f0, d_a1));
-    }
-  }
 
   __attribute__((pure)) static unsigned int match_pair_list(
       const std::shared_ptr<

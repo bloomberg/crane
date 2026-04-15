@@ -172,7 +172,7 @@ val register_method_returns_any : t -> GlobRef.t -> unit
       [std::visit] on [this->v()].
     - Wrapping the argument in a constructor: [MLcons(C, [arg])] produces a new
       value. *)
-val body_safe_for_method : Miniml.ml_ast -> bool
+val body_safe_for_method : ?this_pos:int -> Miniml.ml_ast -> bool
 
 (** {2 Eponymous-type helpers}
 

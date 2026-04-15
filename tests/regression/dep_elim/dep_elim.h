@@ -216,31 +216,31 @@ struct DepElim {
         return List<t_A>::cons(d_a1, d_a2->vec_to_list(d_n));
       }
     }
+
+    template <typename T1,
+              MapsTo<T1, unsigned int, t_A, std::shared_ptr<vec<t_A>>, T1> F1>
+    T1 vec_rec(const T1 f, F1 &&f0, const unsigned int) const {
+      if (std::holds_alternative<typename vec<t_A>::Vnil>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_n, d_a1, d_a2] =
+            std::get<typename vec<t_A>::Vcons>(this->v());
+        return f0(d_n, d_a1, d_a2, d_a2->template vec_rec<T1>(f, f0, d_n));
+      }
+    }
+
+    template <typename T1,
+              MapsTo<T1, unsigned int, t_A, std::shared_ptr<vec<t_A>>, T1> F1>
+    T1 vec_rect(const T1 f, F1 &&f0, const unsigned int) const {
+      if (std::holds_alternative<typename vec<t_A>::Vnil>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_n, d_a1, d_a2] =
+            std::get<typename vec<t_A>::Vcons>(this->v());
+        return f0(d_n, d_a1, d_a2, d_a2->template vec_rect<T1>(f, f0, d_n));
+      }
+    }
   };
-
-  template <typename T1, typename T2,
-            MapsTo<T2, unsigned int, T1, std::shared_ptr<vec<T1>>, T2> F1>
-  static T2 vec_rect(const T2 f, F1 &&f0, const unsigned int,
-                     const std::shared_ptr<vec<T1>> &v) {
-    if (std::holds_alternative<typename vec<T1>::Vnil>(v->v())) {
-      return f;
-    } else {
-      const auto &[d_n, d_a1, d_a2] = std::get<typename vec<T1>::Vcons>(v->v());
-      return f0(d_n, d_a1, d_a2, vec_rect<T1, T2>(f, f0, d_n, d_a2));
-    }
-  }
-
-  template <typename T1, typename T2,
-            MapsTo<T2, unsigned int, T1, std::shared_ptr<vec<T1>>, T2> F1>
-  static T2 vec_rec(const T2 f, F1 &&f0, const unsigned int,
-                    const std::shared_ptr<vec<T1>> &v) {
-    if (std::holds_alternative<typename vec<T1>::Vnil>(v->v())) {
-      return f;
-    } else {
-      const auto &[d_n, d_a1, d_a2] = std::get<typename vec<T1>::Vcons>(v->v());
-      return f0(d_n, d_a1, d_a2, vec_rec<T1, T2>(f, f0, d_n, d_a2));
-    }
-  }
 
   struct avail {
     // TYPES

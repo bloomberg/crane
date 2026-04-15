@@ -9,5 +9,6 @@ std::shared_ptr<RdrReadsFromSelectedPort::state>
 RdrReadsFromSelectedPort::execute_rdr(
     const std::shared_ptr<RdrReadsFromSelectedPort::state> &s) {
   return std::make_shared<RdrReadsFromSelectedPort::state>(
-      state{s->rom_ports->nth(s->sel_rom, 0u), s->rom_ports, s->sel_rom});
+      state{ListDef::template nth<unsigned int>(s->sel_rom, s->rom_ports, 0u),
+            s->rom_ports, s->sel_rom});
 }

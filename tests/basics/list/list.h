@@ -55,21 +55,13 @@ public:
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  t_A last(const t_A x) const {
+  template <typename T1, MapsTo<T1, t_A, std::shared_ptr<List<t_A>>, T1> F1>
+  T1 list_rect(const T1 f, F1 &&f0) const {
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-      return x;
+      return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return d_a1->last(d_a0);
-    }
-  }
-
-  t_A hd(const t_A x) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-      return x;
-    } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return d_a0;
+      return f0(d_a0, d_a1, d_a1->template list_rect<T1>(f, f0));
     }
   }
 
@@ -83,22 +75,30 @@ public:
     }
   }
 
-  template <typename T1, MapsTo<T1, t_A, std::shared_ptr<List<t_A>>, T1> F1>
-  T1 list_rect(const T1 f, F1 &&f0) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-      return f;
-    } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return f0(d_a0, d_a1, d_a1->template list_rect<T1>(f, f0));
-    }
-  }
-
   std::shared_ptr<List<t_A>> tl() const {
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<t_A>::nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
       return d_a1;
+    }
+  }
+
+  t_A hd(const t_A x) const {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return x;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return d_a0;
+    }
+  }
+
+  t_A last(const t_A x) const {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return x;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return d_a1->last(d_a0);
     }
   }
 

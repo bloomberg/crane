@@ -58,18 +58,6 @@ InstructionCycles::cycles_max(const InstructionCycles::Instr4 i) {
   }
 }
 
-std::shared_ptr<InstructionCycles::state5> InstructionCycles::execute5(
-    std::shared_ptr<InstructionCycles::state5> s,
-    const std::shared_ptr<InstructionCycles::instruction5> &i) {
-  if (std::holds_alternative<typename InstructionCycles::instruction5::INC5>(
-          i->v())) {
-    return std::make_shared<InstructionCycles::state5>(state5{
-        (16u ? (s->acc5 + 1u) % 16u : (s->acc5 + 1u)), s->carry5, s->test5});
-  } else {
-    return s;
-  }
-}
-
 __attribute__((pure)) unsigned int InstructionCycles::program_cycles5(
     const std::shared_ptr<InstructionCycles::state5> &s,
     const std::shared_ptr<
@@ -82,7 +70,7 @@ __attribute__((pure)) unsigned int InstructionCycles::program_cycles5(
     const auto &[d_a0, d_a1] = std::get<
         typename List<std::shared_ptr<InstructionCycles::instruction5>>::Cons>(
         prog->v());
-    return (d_a0->cycles_sum(s) + program_cycles5(execute5(s, d_a0), d_a1));
+    return (d_a0->cycles_sum(s) + program_cycles5(d_a0->execute5(s), d_a1));
   }
 }
 

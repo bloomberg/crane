@@ -499,6 +499,16 @@ struct InstructionCycles {
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
+    std::shared_ptr<state5> execute5(std::shared_ptr<state5> s) const {
+      if (std::holds_alternative<typename instruction5::INC5>(this->v())) {
+        return std::make_shared<state5>(
+            state5{(16u ? (s->acc5 + 1u) % 16u : (s->acc5 + 1u)), s->carry5,
+                   s->test5});
+      } else {
+        return s;
+      }
+    }
+
     __attribute__((pure)) unsigned int
     cycles_sum(const std::shared_ptr<state5> &s) const {
       if (std::holds_alternative<typename instruction5::JCN5>(this->v())) {
@@ -517,40 +527,38 @@ struct InstructionCycles {
         return 8u;
       }
     }
+
+    template <typename T1, MapsTo<T1, unsigned int> F1,
+              MapsTo<T1, unsigned int> F2>
+    T1 instruction5_rec(const T1 f, F1 &&f0, F2 &&f1) const {
+      if (std::holds_alternative<typename instruction5::NOP5>(this->v())) {
+        return f;
+      } else if (std::holds_alternative<typename instruction5::JCN5>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instruction5::JCN5>(this->v());
+        return f0(d_a0);
+      } else {
+        const auto &[d_a0] = std::get<typename instruction5::INC5>(this->v());
+        return f1(d_a0);
+      }
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F1,
+              MapsTo<T1, unsigned int> F2>
+    T1 instruction5_rect(const T1 f, F1 &&f0, F2 &&f1) const {
+      if (std::holds_alternative<typename instruction5::NOP5>(this->v())) {
+        return f;
+      } else if (std::holds_alternative<typename instruction5::JCN5>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instruction5::JCN5>(this->v());
+        return f0(d_a0);
+      } else {
+        const auto &[d_a0] = std::get<typename instruction5::INC5>(this->v());
+        return f1(d_a0);
+      }
+    }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F1,
-            MapsTo<T1, unsigned int> F2>
-  static T1 instruction5_rect(const T1 f, F1 &&f0, F2 &&f1,
-                              const std::shared_ptr<instruction5> &i) {
-    if (std::holds_alternative<typename instruction5::NOP5>(i->v())) {
-      return f;
-    } else if (std::holds_alternative<typename instruction5::JCN5>(i->v())) {
-      const auto &[d_a0] = std::get<typename instruction5::JCN5>(i->v());
-      return f0(d_a0);
-    } else {
-      const auto &[d_a0] = std::get<typename instruction5::INC5>(i->v());
-      return f1(d_a0);
-    }
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F1,
-            MapsTo<T1, unsigned int> F2>
-  static T1 instruction5_rec(const T1 f, F1 &&f0, F2 &&f1,
-                             const std::shared_ptr<instruction5> &i) {
-    if (std::holds_alternative<typename instruction5::NOP5>(i->v())) {
-      return f;
-    } else if (std::holds_alternative<typename instruction5::JCN5>(i->v())) {
-      const auto &[d_a0] = std::get<typename instruction5::JCN5>(i->v());
-      return f0(d_a0);
-    } else {
-      const auto &[d_a0] = std::get<typename instruction5::INC5>(i->v());
-      return f1(d_a0);
-    }
-  }
-
-  static std::shared_ptr<state5>
-  execute5(std::shared_ptr<state5> s, const std::shared_ptr<instruction5> &i);
   __attribute__((pure)) static unsigned int program_cycles5(
       const std::shared_ptr<state5> &s,
       const std::shared_ptr<List<std::shared_ptr<instruction5>>> &prog);

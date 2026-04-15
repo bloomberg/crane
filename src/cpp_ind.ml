@@ -311,43 +311,35 @@ let pp_cpp_ind_header kn ind =
           | SEdecl (Dterm (r, body, ty)) ->
             (* Skip if function signature references an excluded type (alias or
                forward inductive) *)
-            if
-              same_module r
-              && (not (refs_excluded ty))
-              && Method_registry.body_safe_for_method body
-            then (
-              match
-                Method_registry.find_epon_arg_pos ind_ref ty
-              with
-              | Some (pos, ind_tvar_positions) ->
+            if same_module r && not (refs_excluded ty) then (
+              match Method_registry.find_epon_arg_pos ind_ref ty with
+              | Some (pos, ind_tvar_positions)
+                when Method_registry.body_safe_for_method ~this_pos:pos body ->
                 methods := (r, body, ty, pos) :: !methods;
                 register_method r ind_ref pos ~ind_tvar_positions ();
                 Method_registry.add_candidate
                   (get_method_registry ())
                   ind_ref
                   (r, body, ty, pos)
-              | None -> () )
+              | _ -> () )
           | SEdecl (Dfix (rv, defs, typs)) ->
             Array.iteri
               (fun i r ->
                 let ty = typs.(i) in
                 (* Skip if function signature references an excluded type (alias
                    or forward inductive) *)
-                if
-                  same_module r
-                  && (not (refs_excluded ty))
-                  && Method_registry.body_safe_for_method defs.(i)
-                then
+                if same_module r && not (refs_excluded ty) then
                   let body = defs.(i) in
                   match Method_registry.find_epon_arg_pos ind_ref ty with
-                  | Some (pos, ind_tvar_positions) ->
+                  | Some (pos, ind_tvar_positions)
+                    when Method_registry.body_safe_for_method ~this_pos:pos body ->
                     methods := (r, body, ty, pos) :: !methods;
                     register_method r ind_ref pos ~ind_tvar_positions ();
                     Method_registry.add_candidate
                       (get_method_registry ())
                       ind_ref
                       (r, body, ty, pos)
-                  | None -> () )
+                  | _ -> () )
               rv
           | _ -> () )
         !current_structure_decls;

@@ -944,29 +944,27 @@ struct ComprehensivePatterns {
         return (d_a0->ro_value + d_a0->ro_data);
       }
     }
+
+    template <typename T1, MapsTo<T1, std::shared_ptr<StateRO>> F1>
+    T1 Container_rec(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename Container::Empty>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0] = std::get<typename Container::Full>(this->v());
+        return f0(d_a0);
+      }
+    }
+
+    template <typename T1, MapsTo<T1, std::shared_ptr<StateRO>> F1>
+    T1 Container_rect(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename Container::Empty>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0] = std::get<typename Container::Full>(this->v());
+        return f0(d_a0);
+      }
+    }
   };
-
-  template <typename T1, MapsTo<T1, std::shared_ptr<StateRO>> F1>
-  static T1 Container_rect(const T1 f, F1 &&f0,
-                           const std::shared_ptr<Container> &c) {
-    if (std::holds_alternative<typename Container::Empty>(c->v())) {
-      return f;
-    } else {
-      const auto &[d_a0] = std::get<typename Container::Full>(c->v());
-      return f0(d_a0);
-    }
-  }
-
-  template <typename T1, MapsTo<T1, std::shared_ptr<StateRO>> F1>
-  static T1 Container_rec(const T1 f, F1 &&f0,
-                          const std::shared_ptr<Container> &c) {
-    if (std::holds_alternative<typename Container::Empty>(c->v())) {
-      return f;
-    } else {
-      const auto &[d_a0] = std::get<typename Container::Full>(c->v());
-      return f0(d_a0);
-    }
-  }
 
   struct StateOP {
     unsigned int op_value;

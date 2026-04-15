@@ -119,33 +119,31 @@ struct NestedInd {
         return (1u + d_a1->custom_list_length());
       }
     }
+
+    template <typename T1,
+              MapsTo<T1, t_A, std::shared_ptr<custom_list<t_A>>, T1> F1>
+    T1 custom_list_rec(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename custom_list<t_A>::Cnil>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename custom_list<t_A>::Ccons>(this->v());
+        return f0(d_a0, d_a1, d_a1->template custom_list_rec<T1>(f, f0));
+      }
+    }
+
+    template <typename T1,
+              MapsTo<T1, t_A, std::shared_ptr<custom_list<t_A>>, T1> F1>
+    T1 custom_list_rect(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename custom_list<t_A>::Cnil>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename custom_list<t_A>::Ccons>(this->v());
+        return f0(d_a0, d_a1, d_a1->template custom_list_rect<T1>(f, f0));
+      }
+    }
   };
-
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<custom_list<T1>>, T2> F1>
-  static T2 custom_list_rect(const T2 f, F1 &&f0,
-                             const std::shared_ptr<custom_list<T1>> &c) {
-    if (std::holds_alternative<typename custom_list<T1>::Cnil>(c->v())) {
-      return f;
-    } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename custom_list<T1>::Ccons>(c->v());
-      return f0(d_a0, d_a1, custom_list_rect<T1, T2>(f, f0, d_a1));
-    }
-  }
-
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<custom_list<T1>>, T2> F1>
-  static T2 custom_list_rec(const T2 f, F1 &&f0,
-                            const std::shared_ptr<custom_list<T1>> &c) {
-    if (std::holds_alternative<typename custom_list<T1>::Cnil>(c->v())) {
-      return f;
-    } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename custom_list<T1>::Ccons>(c->v());
-      return f0(d_a0, d_a1, custom_list_rec<T1, T2>(f, f0, d_a1));
-    }
-  }
 
   template <typename t_A> struct rose {
     // TYPES

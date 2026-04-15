@@ -145,6 +145,15 @@ struct PolyInductive {
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
+    t_A pmaybe_default(const t_A d) const {
+      if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(this->v())) {
+        return d;
+      } else {
+        const auto &[d_a0] = std::get<typename pmaybe<t_A>::PJust>(this->v());
+        return d_a0;
+      }
+    }
+
     template <typename T1, MapsTo<T1, t_A> F0>
     std::shared_ptr<pmaybe<T1>> pmaybe_map(F0 &&f) const {
       if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(this->v())) {
@@ -154,39 +163,27 @@ struct PolyInductive {
         return pmaybe<T1>::pjust(f(d_a0));
       }
     }
+
+    template <typename T1, MapsTo<T1, t_A> F1>
+    T1 pmaybe_rec(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0] = std::get<typename pmaybe<t_A>::PJust>(this->v());
+        return f0(d_a0);
+      }
+    }
+
+    template <typename T1, MapsTo<T1, t_A> F1>
+    T1 pmaybe_rect(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0] = std::get<typename pmaybe<t_A>::PJust>(this->v());
+        return f0(d_a0);
+      }
+    }
   };
-
-  template <typename T1, typename T2, MapsTo<T2, T1> F1>
-  static T2 pmaybe_rect(const T2 f, F1 &&f0,
-                        const std::shared_ptr<pmaybe<T1>> &p) {
-    if (std::holds_alternative<typename pmaybe<T1>::PNothing>(p->v())) {
-      return f;
-    } else {
-      const auto &[d_a0] = std::get<typename pmaybe<T1>::PJust>(p->v());
-      return f0(d_a0);
-    }
-  }
-
-  template <typename T1, typename T2, MapsTo<T2, T1> F1>
-  static T2 pmaybe_rec(const T2 f, F1 &&f0,
-                       const std::shared_ptr<pmaybe<T1>> &p) {
-    if (std::holds_alternative<typename pmaybe<T1>::PNothing>(p->v())) {
-      return f;
-    } else {
-      const auto &[d_a0] = std::get<typename pmaybe<T1>::PJust>(p->v());
-      return f0(d_a0);
-    }
-  }
-
-  template <typename T1>
-  static T1 pmaybe_default(const T1 d, const std::shared_ptr<pmaybe<T1>> &m) {
-    if (std::holds_alternative<typename pmaybe<T1>::PNothing>(m->v())) {
-      return d;
-    } else {
-      const auto &[d_a0] = std::get<typename pmaybe<T1>::PJust>(m->v());
-      return d_a0;
-    }
-  }
 
   template <typename t_A> struct ptree {
     // TYPES
@@ -282,12 +279,14 @@ struct PolyInductive {
   static inline const bool test_ppair_snd =
       ppair<unsigned int, bool>::PPair_(7u, true)->psnd();
   static inline const unsigned int test_pjust =
-      pmaybe_default<unsigned int>(0u, pmaybe<unsigned int>::pjust(99u));
+      pmaybe<unsigned int>::pjust(99u)->pmaybe_default(0u);
   static inline const unsigned int test_pnothing =
-      pmaybe_default<unsigned int>(0u, pmaybe<unsigned int>::pnothing());
-  static inline const unsigned int test_pmap = pmaybe_default<unsigned int>(
-      0u, pmaybe<unsigned int>::pjust(5u)->template pmaybe_map<unsigned int>(
-              [](const unsigned int x) { return (x + 1); }));
+      pmaybe<unsigned int>::pnothing()->pmaybe_default(0u);
+  static inline const unsigned int test_pmap =
+      pmaybe<unsigned int>::pjust(5u)
+          ->template pmaybe_map<unsigned int>(
+              [](const unsigned int x) { return (x + 1); })
+          ->pmaybe_default(0u);
   static inline const unsigned int test_ptree =
       ptree<unsigned int>::pnode(
           ptree<unsigned int>::pleaf(1u),

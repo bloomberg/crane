@@ -356,29 +356,29 @@ struct DeepPattern {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, t_A, std::shared_ptr<list<t_A>>, T1> F1>
+    T1 list_rec(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename list<t_A>::Nil>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<t_A>::Cons>(this->v());
+        return f0(d_a0, d_a1, d_a1->template list_rec<T1>(f, f0));
+      }
+    }
+
+    template <typename T1, MapsTo<T1, t_A, std::shared_ptr<list<t_A>>, T1> F1>
+    T1 list_rect(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename list<t_A>::Nil>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<t_A>::Cons>(this->v());
+        return f0(d_a0, d_a1, d_a1->template list_rect<T1>(f, f0));
+      }
+    }
   };
-
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<list<T1>>, T2> F1>
-  static T2 list_rect(const T2 f, F1 &&f0, const std::shared_ptr<list<T1>> &l) {
-    if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
-      return f;
-    } else {
-      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
-      return f0(d_a0, d_a1, list_rect<T1, T2>(f, f0, d_a1));
-    }
-  }
-
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<list<T1>>, T2> F1>
-  static T2 list_rec(const T2 f, F1 &&f0, const std::shared_ptr<list<T1>> &l) {
-    if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
-      return f;
-    } else {
-      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
-      return f0(d_a0, d_a1, list_rec<T1, T2>(f, f0, d_a1));
-    }
-  }
 
   __attribute__((pure)) static unsigned int
   list_deep_match(const std::shared_ptr<list<std::shared_ptr<tree>>> &l);

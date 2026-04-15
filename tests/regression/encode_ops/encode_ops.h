@@ -222,75 +222,93 @@ struct EncodeOps {
         return std::make_pair(228u, 0u);
       }
     }
+
+    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F3,
+              MapsTo<T1, unsigned int> F4, MapsTo<T1, unsigned int> F5>
+    T1 instruction1_rec(const T1 f, const T1 f0, const T1 f1, F3 &&f2, F4 &&f3,
+                        F5 &&f4, const T1 f5, const T1 f6, const T1 f7,
+                        const T1 f8, const T1 f9) const {
+      if (std::holds_alternative<typename instruction1::CLB>(this->v())) {
+        return f;
+      } else if (std::holds_alternative<typename instruction1::CMC>(
+                     this->v())) {
+        return f0;
+      } else if (std::holds_alternative<typename instruction1::DAA>(
+                     this->v())) {
+        return f1;
+      } else if (std::holds_alternative<typename instruction1::FIM>(
+                     this->v())) {
+        const auto &[d_a0, d_a1] =
+            std::get<typename instruction1::FIM>(this->v());
+        return f2(d_a0, d_a1);
+      } else if (std::holds_alternative<typename instruction1::JUN>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instruction1::JUN>(this->v());
+        return f3(d_a0);
+      } else if (std::holds_alternative<typename instruction1::LDM1>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instruction1::LDM1>(this->v());
+        return f4(d_a0);
+      } else if (std::holds_alternative<typename instruction1::NOP1>(
+                     this->v())) {
+        return f5;
+      } else if (std::holds_alternative<typename instruction1::RDM>(
+                     this->v())) {
+        return f6;
+      } else if (std::holds_alternative<typename instruction1::TCS>(
+                     this->v())) {
+        return f7;
+      } else if (std::holds_alternative<typename instruction1::WPM>(
+                     this->v())) {
+        return f8;
+      } else {
+        return f9;
+      }
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F3,
+              MapsTo<T1, unsigned int> F4, MapsTo<T1, unsigned int> F5>
+    T1 instruction1_rect(const T1 f, const T1 f0, const T1 f1, F3 &&f2, F4 &&f3,
+                         F5 &&f4, const T1 f5, const T1 f6, const T1 f7,
+                         const T1 f8, const T1 f9) const {
+      if (std::holds_alternative<typename instruction1::CLB>(this->v())) {
+        return f;
+      } else if (std::holds_alternative<typename instruction1::CMC>(
+                     this->v())) {
+        return f0;
+      } else if (std::holds_alternative<typename instruction1::DAA>(
+                     this->v())) {
+        return f1;
+      } else if (std::holds_alternative<typename instruction1::FIM>(
+                     this->v())) {
+        const auto &[d_a0, d_a1] =
+            std::get<typename instruction1::FIM>(this->v());
+        return f2(d_a0, d_a1);
+      } else if (std::holds_alternative<typename instruction1::JUN>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instruction1::JUN>(this->v());
+        return f3(d_a0);
+      } else if (std::holds_alternative<typename instruction1::LDM1>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instruction1::LDM1>(this->v());
+        return f4(d_a0);
+      } else if (std::holds_alternative<typename instruction1::NOP1>(
+                     this->v())) {
+        return f5;
+      } else if (std::holds_alternative<typename instruction1::RDM>(
+                     this->v())) {
+        return f6;
+      } else if (std::holds_alternative<typename instruction1::TCS>(
+                     this->v())) {
+        return f7;
+      } else if (std::holds_alternative<typename instruction1::WPM>(
+                     this->v())) {
+        return f8;
+      } else {
+        return f9;
+      }
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int> F3,
-            MapsTo<T1, unsigned int> F4, MapsTo<T1, unsigned int> F5>
-  static T1 instruction1_rect(const T1 f, const T1 f0, const T1 f1, F3 &&f2,
-                              F4 &&f3, F5 &&f4, const T1 f5, const T1 f6,
-                              const T1 f7, const T1 f8, const T1 f9,
-                              const std::shared_ptr<instruction1> &i) {
-    if (std::holds_alternative<typename instruction1::CLB>(i->v())) {
-      return f;
-    } else if (std::holds_alternative<typename instruction1::CMC>(i->v())) {
-      return f0;
-    } else if (std::holds_alternative<typename instruction1::DAA>(i->v())) {
-      return f1;
-    } else if (std::holds_alternative<typename instruction1::FIM>(i->v())) {
-      const auto &[d_a0, d_a1] = std::get<typename instruction1::FIM>(i->v());
-      return f2(d_a0, d_a1);
-    } else if (std::holds_alternative<typename instruction1::JUN>(i->v())) {
-      const auto &[d_a0] = std::get<typename instruction1::JUN>(i->v());
-      return f3(d_a0);
-    } else if (std::holds_alternative<typename instruction1::LDM1>(i->v())) {
-      const auto &[d_a0] = std::get<typename instruction1::LDM1>(i->v());
-      return f4(d_a0);
-    } else if (std::holds_alternative<typename instruction1::NOP1>(i->v())) {
-      return f5;
-    } else if (std::holds_alternative<typename instruction1::RDM>(i->v())) {
-      return f6;
-    } else if (std::holds_alternative<typename instruction1::TCS>(i->v())) {
-      return f7;
-    } else if (std::holds_alternative<typename instruction1::WPM>(i->v())) {
-      return f8;
-    } else {
-      return f9;
-    }
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int> F3,
-            MapsTo<T1, unsigned int> F4, MapsTo<T1, unsigned int> F5>
-  static T1 instruction1_rec(const T1 f, const T1 f0, const T1 f1, F3 &&f2,
-                             F4 &&f3, F5 &&f4, const T1 f5, const T1 f6,
-                             const T1 f7, const T1 f8, const T1 f9,
-                             const std::shared_ptr<instruction1> &i) {
-    if (std::holds_alternative<typename instruction1::CLB>(i->v())) {
-      return f;
-    } else if (std::holds_alternative<typename instruction1::CMC>(i->v())) {
-      return f0;
-    } else if (std::holds_alternative<typename instruction1::DAA>(i->v())) {
-      return f1;
-    } else if (std::holds_alternative<typename instruction1::FIM>(i->v())) {
-      const auto &[d_a0, d_a1] = std::get<typename instruction1::FIM>(i->v());
-      return f2(d_a0, d_a1);
-    } else if (std::holds_alternative<typename instruction1::JUN>(i->v())) {
-      const auto &[d_a0] = std::get<typename instruction1::JUN>(i->v());
-      return f3(d_a0);
-    } else if (std::holds_alternative<typename instruction1::LDM1>(i->v())) {
-      const auto &[d_a0] = std::get<typename instruction1::LDM1>(i->v());
-      return f4(d_a0);
-    } else if (std::holds_alternative<typename instruction1::NOP1>(i->v())) {
-      return f5;
-    } else if (std::holds_alternative<typename instruction1::RDM>(i->v())) {
-      return f6;
-    } else if (std::holds_alternative<typename instruction1::TCS>(i->v())) {
-      return f7;
-    } else if (std::holds_alternative<typename instruction1::WPM>(i->v())) {
-      return f8;
-    } else {
-      return f9;
-    }
-  }
 
   __attribute__((pure)) static bool
   pair_in_range(const std::pair<unsigned int, unsigned int> p);
@@ -350,29 +368,27 @@ struct EncodeOps {
         return std::make_pair(13u, (16u ? d_a0 % 16u : d_a0));
       }
     }
+
+    template <typename T1, MapsTo<T1, unsigned int> F1>
+    T1 instruction2_rec(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0] = std::get<typename instruction2::LDM2>(this->v());
+        return f0(d_a0);
+      }
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F1>
+    T1 instruction2_rect(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0] = std::get<typename instruction2::LDM2>(this->v());
+        return f0(d_a0);
+      }
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int> F1>
-  static T1 instruction2_rect(const T1 f, F1 &&f0,
-                              const std::shared_ptr<instruction2> &i) {
-    if (std::holds_alternative<typename instruction2::NOP2>(i->v())) {
-      return f;
-    } else {
-      const auto &[d_a0] = std::get<typename instruction2::LDM2>(i->v());
-      return f0(d_a0);
-    }
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F1>
-  static T1 instruction2_rec(const T1 f, F1 &&f0,
-                             const std::shared_ptr<instruction2> &i) {
-    if (std::holds_alternative<typename instruction2::NOP2>(i->v())) {
-      return f;
-    } else {
-      const auto &[d_a0] = std::get<typename instruction2::LDM2>(i->v());
-      return f0(d_a0);
-    }
-  }
 
   static std::shared_ptr<List<unsigned int>> encode_list2(
       const std::shared_ptr<List<std::shared_ptr<instruction2>>> &prog);
@@ -429,29 +445,27 @@ struct EncodeOps {
         return std::make_pair(((13u * 16u) + (16u ? d_a0 % 16u : d_a0)), 0u);
       }
     }
+
+    template <typename T1, MapsTo<T1, unsigned int> F1>
+    T1 instruction3_rec(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0] = std::get<typename instruction3::LDM3>(this->v());
+        return f0(d_a0);
+      }
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F1>
+    T1 instruction3_rect(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0] = std::get<typename instruction3::LDM3>(this->v());
+        return f0(d_a0);
+      }
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int> F1>
-  static T1 instruction3_rect(const T1 f, F1 &&f0,
-                              const std::shared_ptr<instruction3> &i) {
-    if (std::holds_alternative<typename instruction3::NOP3>(i->v())) {
-      return f;
-    } else {
-      const auto &[d_a0] = std::get<typename instruction3::LDM3>(i->v());
-      return f0(d_a0);
-    }
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F1>
-  static T1 instruction3_rec(const T1 f, F1 &&f0,
-                             const std::shared_ptr<instruction3> &i) {
-    if (std::holds_alternative<typename instruction3::NOP3>(i->v())) {
-      return f;
-    } else {
-      const auto &[d_a0] = std::get<typename instruction3::LDM3>(i->v());
-      return f0(d_a0);
-    }
-  }
 
   static std::shared_ptr<List<unsigned int>> encode_list3(
       const std::shared_ptr<List<std::shared_ptr<instruction3>>> &prog);

@@ -1431,187 +1431,204 @@ struct LoopifyExprVariants {
       }
       return _result;
     }
+
+    template <typename T1,
+              MapsTo<T1, std::shared_ptr<bool_expr>, T1,
+                     std::shared_ptr<bool_expr>, T1>
+                  F2,
+              MapsTo<T1, std::shared_ptr<bool_expr>, T1,
+                     std::shared_ptr<bool_expr>, T1>
+                  F3,
+              MapsTo<T1, std::shared_ptr<bool_expr>, T1> F4>
+    T1 bool_expr_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
+      const bool_expr *_self = this;
+
+      struct _Enter {
+        const bool_expr *_self;
+      };
+
+      struct _Call1 {
+        bool_expr *_s0;
+        std::shared_ptr<bool_expr> _s1;
+        std::shared_ptr<bool_expr> _s2;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        std::shared_ptr<bool_expr> _s1;
+        std::shared_ptr<bool_expr> _s2;
+      };
+
+      struct _Call3 {
+        bool_expr *_s0;
+        std::shared_ptr<bool_expr> _s1;
+        std::shared_ptr<bool_expr> _s2;
+      };
+
+      struct _Call4 {
+        T1 _s0;
+        std::shared_ptr<bool_expr> _s1;
+        std::shared_ptr<bool_expr> _s2;
+      };
+
+      struct _Call5 {
+        std::shared_ptr<bool_expr> _s0;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const bool_expr *_self = _f._self;
+          if (std::holds_alternative<typename bool_expr::BTrue>(_self->v())) {
+            _result = f;
+          } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                         _self->v())) {
+            _result = f0;
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(
+                         _self->v())) {
+            const auto &[d_a0, d_a1] =
+                std::get<typename bool_expr::BAnd>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
+          } else if (std::holds_alternative<typename bool_expr::BOr>(
+                         _self->v())) {
+            const auto &[d_a0, d_a1] =
+                std::get<typename bool_expr::BOr>(_self->v());
+            _stack.emplace_back(_Call3{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
+          } else {
+            const auto &[d_a0] = std::get<typename bool_expr::BNot>(_self->v());
+            _stack.emplace_back(_Call5{d_a0});
+            _stack.emplace_back(_Enter{d_a0.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else if (std::holds_alternative<_Call2>(_frame)) {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = f1(_f._s2, _result, _f._s1, _f._s0);
+        } else if (std::holds_alternative<_Call3>(_frame)) {
+          const auto &_f = std::get<_Call3>(_frame);
+          _stack.emplace_back(_Call4{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else if (std::holds_alternative<_Call4>(_frame)) {
+          const auto &_f = std::get<_Call4>(_frame);
+          _result = f2(_f._s2, _result, _f._s1, _f._s0);
+        } else {
+          const auto &_f = std::get<_Call5>(_frame);
+          _result = f3(_f._s0, _result);
+        }
+      }
+      return _result;
+    }
+
+    template <typename T1,
+              MapsTo<T1, std::shared_ptr<bool_expr>, T1,
+                     std::shared_ptr<bool_expr>, T1>
+                  F2,
+              MapsTo<T1, std::shared_ptr<bool_expr>, T1,
+                     std::shared_ptr<bool_expr>, T1>
+                  F3,
+              MapsTo<T1, std::shared_ptr<bool_expr>, T1> F4>
+    T1 bool_expr_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2,
+                      F4 &&f3) const {
+      const bool_expr *_self = this;
+
+      struct _Enter {
+        const bool_expr *_self;
+      };
+
+      struct _Call1 {
+        bool_expr *_s0;
+        std::shared_ptr<bool_expr> _s1;
+        std::shared_ptr<bool_expr> _s2;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        std::shared_ptr<bool_expr> _s1;
+        std::shared_ptr<bool_expr> _s2;
+      };
+
+      struct _Call3 {
+        bool_expr *_s0;
+        std::shared_ptr<bool_expr> _s1;
+        std::shared_ptr<bool_expr> _s2;
+      };
+
+      struct _Call4 {
+        T1 _s0;
+        std::shared_ptr<bool_expr> _s1;
+        std::shared_ptr<bool_expr> _s2;
+      };
+
+      struct _Call5 {
+        std::shared_ptr<bool_expr> _s0;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const bool_expr *_self = _f._self;
+          if (std::holds_alternative<typename bool_expr::BTrue>(_self->v())) {
+            _result = f;
+          } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                         _self->v())) {
+            _result = f0;
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(
+                         _self->v())) {
+            const auto &[d_a0, d_a1] =
+                std::get<typename bool_expr::BAnd>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
+          } else if (std::holds_alternative<typename bool_expr::BOr>(
+                         _self->v())) {
+            const auto &[d_a0, d_a1] =
+                std::get<typename bool_expr::BOr>(_self->v());
+            _stack.emplace_back(_Call3{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
+          } else {
+            const auto &[d_a0] = std::get<typename bool_expr::BNot>(_self->v());
+            _stack.emplace_back(_Call5{d_a0});
+            _stack.emplace_back(_Enter{d_a0.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else if (std::holds_alternative<_Call2>(_frame)) {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = f1(_f._s2, _result, _f._s1, _f._s0);
+        } else if (std::holds_alternative<_Call3>(_frame)) {
+          const auto &_f = std::get<_Call3>(_frame);
+          _stack.emplace_back(_Call4{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else if (std::holds_alternative<_Call4>(_frame)) {
+          const auto &_f = std::get<_Call4>(_frame);
+          _result = f2(_f._s2, _result, _f._s1, _f._s0);
+        } else {
+          const auto &_f = std::get<_Call5>(_frame);
+          _result = f3(_f._s0, _result);
+        }
+      }
+      return _result;
+    }
   };
-
-  template <
-      typename T1,
-      MapsTo<T1, std::shared_ptr<bool_expr>, T1, std::shared_ptr<bool_expr>, T1>
-          F2,
-      MapsTo<T1, std::shared_ptr<bool_expr>, T1, std::shared_ptr<bool_expr>, T1>
-          F3,
-      MapsTo<T1, std::shared_ptr<bool_expr>, T1> F4>
-  static T1 bool_expr_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                           const std::shared_ptr<bool_expr> &b) {
-    struct _Enter {
-      const std::shared_ptr<bool_expr> b;
-    };
-
-    struct _Call1 {
-      std::shared_ptr<bool_expr> _s0;
-      std::shared_ptr<bool_expr> _s1;
-      std::shared_ptr<bool_expr> _s2;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      std::shared_ptr<bool_expr> _s1;
-      std::shared_ptr<bool_expr> _s2;
-    };
-
-    struct _Call3 {
-      std::shared_ptr<bool_expr> _s0;
-      std::shared_ptr<bool_expr> _s1;
-      std::shared_ptr<bool_expr> _s2;
-    };
-
-    struct _Call4 {
-      T1 _s0;
-      std::shared_ptr<bool_expr> _s1;
-      std::shared_ptr<bool_expr> _s2;
-    };
-
-    struct _Call5 {
-      std::shared_ptr<bool_expr> _s0;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{b});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        const std::shared_ptr<bool_expr> b = _f.b;
-        if (std::holds_alternative<typename bool_expr::BTrue>(b->v())) {
-          _result = f;
-        } else if (std::holds_alternative<typename bool_expr::BFalse>(b->v())) {
-          _result = f0;
-        } else if (std::holds_alternative<typename bool_expr::BAnd>(b->v())) {
-          const auto &[d_a0, d_a1] = std::get<typename bool_expr::BAnd>(b->v());
-          _stack.emplace_back(_Call1{d_a0, d_a1, d_a0});
-          _stack.emplace_back(_Enter{d_a1});
-        } else if (std::holds_alternative<typename bool_expr::BOr>(b->v())) {
-          const auto &[d_a0, d_a1] = std::get<typename bool_expr::BOr>(b->v());
-          _stack.emplace_back(_Call3{d_a0, d_a1, d_a0});
-          _stack.emplace_back(_Enter{d_a1});
-        } else {
-          const auto &[d_a0] = std::get<typename bool_expr::BNot>(b->v());
-          _stack.emplace_back(_Call5{d_a0});
-          _stack.emplace_back(_Enter{d_a0});
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        const auto &_f = std::get<_Call1>(_frame);
-        _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
-        _stack.emplace_back(_Enter{_f._s0});
-      } else if (std::holds_alternative<_Call2>(_frame)) {
-        const auto &_f = std::get<_Call2>(_frame);
-        _result = f1(_f._s2, _result, _f._s1, _f._s0);
-      } else if (std::holds_alternative<_Call3>(_frame)) {
-        const auto &_f = std::get<_Call3>(_frame);
-        _stack.emplace_back(_Call4{_result, _f._s1, _f._s2});
-        _stack.emplace_back(_Enter{_f._s0});
-      } else if (std::holds_alternative<_Call4>(_frame)) {
-        const auto &_f = std::get<_Call4>(_frame);
-        _result = f2(_f._s2, _result, _f._s1, _f._s0);
-      } else {
-        const auto &_f = std::get<_Call5>(_frame);
-        _result = f3(_f._s0, _result);
-      }
-    }
-    return _result;
-  }
-
-  template <
-      typename T1,
-      MapsTo<T1, std::shared_ptr<bool_expr>, T1, std::shared_ptr<bool_expr>, T1>
-          F2,
-      MapsTo<T1, std::shared_ptr<bool_expr>, T1, std::shared_ptr<bool_expr>, T1>
-          F3,
-      MapsTo<T1, std::shared_ptr<bool_expr>, T1> F4>
-  static T1 bool_expr_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                          const std::shared_ptr<bool_expr> &b) {
-    struct _Enter {
-      const std::shared_ptr<bool_expr> b;
-    };
-
-    struct _Call1 {
-      std::shared_ptr<bool_expr> _s0;
-      std::shared_ptr<bool_expr> _s1;
-      std::shared_ptr<bool_expr> _s2;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      std::shared_ptr<bool_expr> _s1;
-      std::shared_ptr<bool_expr> _s2;
-    };
-
-    struct _Call3 {
-      std::shared_ptr<bool_expr> _s0;
-      std::shared_ptr<bool_expr> _s1;
-      std::shared_ptr<bool_expr> _s2;
-    };
-
-    struct _Call4 {
-      T1 _s0;
-      std::shared_ptr<bool_expr> _s1;
-      std::shared_ptr<bool_expr> _s2;
-    };
-
-    struct _Call5 {
-      std::shared_ptr<bool_expr> _s0;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{b});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        const std::shared_ptr<bool_expr> b = _f.b;
-        if (std::holds_alternative<typename bool_expr::BTrue>(b->v())) {
-          _result = f;
-        } else if (std::holds_alternative<typename bool_expr::BFalse>(b->v())) {
-          _result = f0;
-        } else if (std::holds_alternative<typename bool_expr::BAnd>(b->v())) {
-          const auto &[d_a0, d_a1] = std::get<typename bool_expr::BAnd>(b->v());
-          _stack.emplace_back(_Call1{d_a0, d_a1, d_a0});
-          _stack.emplace_back(_Enter{d_a1});
-        } else if (std::holds_alternative<typename bool_expr::BOr>(b->v())) {
-          const auto &[d_a0, d_a1] = std::get<typename bool_expr::BOr>(b->v());
-          _stack.emplace_back(_Call3{d_a0, d_a1, d_a0});
-          _stack.emplace_back(_Enter{d_a1});
-        } else {
-          const auto &[d_a0] = std::get<typename bool_expr::BNot>(b->v());
-          _stack.emplace_back(_Call5{d_a0});
-          _stack.emplace_back(_Enter{d_a0});
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        const auto &_f = std::get<_Call1>(_frame);
-        _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
-        _stack.emplace_back(_Enter{_f._s0});
-      } else if (std::holds_alternative<_Call2>(_frame)) {
-        const auto &_f = std::get<_Call2>(_frame);
-        _result = f1(_f._s2, _result, _f._s1, _f._s0);
-      } else if (std::holds_alternative<_Call3>(_frame)) {
-        const auto &_f = std::get<_Call3>(_frame);
-        _stack.emplace_back(_Call4{_result, _f._s1, _f._s2});
-        _stack.emplace_back(_Enter{_f._s0});
-      } else if (std::holds_alternative<_Call4>(_frame)) {
-        const auto &_f = std::get<_Call4>(_frame);
-        _result = f2(_f._s2, _result, _f._s1, _f._s0);
-      } else {
-        const auto &_f = std::get<_Call5>(_frame);
-        _result = f3(_f._s0, _result);
-      }
-    }
-    return _result;
-  }
 
   struct list_expr {
     // TYPES
@@ -1807,149 +1824,155 @@ struct LoopifyExprVariants {
       }
       return _result;
     }
+
+    template <typename T1,
+              MapsTo<T1, unsigned int, std::shared_ptr<list_expr>, T1> F1,
+              MapsTo<T1, std::shared_ptr<list_expr>, T1,
+                     std::shared_ptr<list_expr>, T1>
+                  F2,
+              MapsTo<T1, unsigned int, unsigned int> F3>
+    T1 list_expr_rec(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
+      const list_expr *_self = this;
+
+      struct _Enter {
+        const list_expr *_self;
+      };
+
+      struct _Call1 {
+        std::shared_ptr<list_expr> _s0;
+        unsigned int _s1;
+      };
+
+      struct _Call2 {
+        list_expr *_s0;
+        std::shared_ptr<list_expr> _s1;
+        std::shared_ptr<list_expr> _s2;
+      };
+
+      struct _Call3 {
+        T1 _s0;
+        std::shared_ptr<list_expr> _s1;
+        std::shared_ptr<list_expr> _s2;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const list_expr *_self = _f._self;
+          if (std::holds_alternative<typename list_expr::LNil>(_self->v())) {
+            _result = f;
+          } else if (std::holds_alternative<typename list_expr::LCons>(
+                         _self->v())) {
+            const auto &[d_a0, d_a1] =
+                std::get<typename list_expr::LCons>(_self->v());
+            _stack.emplace_back(_Call1{d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
+          } else if (std::holds_alternative<typename list_expr::LAppend>(
+                         _self->v())) {
+            const auto &[d_a0, d_a1] =
+                std::get<typename list_expr::LAppend>(_self->v());
+            _stack.emplace_back(_Call2{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
+          } else {
+            const auto &[d_a0, d_a1] =
+                std::get<typename list_expr::LReplicate>(_self->v());
+            _result = f2(d_a0, d_a1);
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _result = f0(_f._s1, _f._s0, _result);
+        } else if (std::holds_alternative<_Call2>(_frame)) {
+          const auto &_f = std::get<_Call2>(_frame);
+          _stack.emplace_back(_Call3{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call3>(_frame);
+          _result = f1(_f._s2, _result, _f._s1, _f._s0);
+        }
+      }
+      return _result;
+    }
+
+    template <typename T1,
+              MapsTo<T1, unsigned int, std::shared_ptr<list_expr>, T1> F1,
+              MapsTo<T1, std::shared_ptr<list_expr>, T1,
+                     std::shared_ptr<list_expr>, T1>
+                  F2,
+              MapsTo<T1, unsigned int, unsigned int> F3>
+    T1 list_expr_rect(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
+      const list_expr *_self = this;
+
+      struct _Enter {
+        const list_expr *_self;
+      };
+
+      struct _Call1 {
+        std::shared_ptr<list_expr> _s0;
+        unsigned int _s1;
+      };
+
+      struct _Call2 {
+        list_expr *_s0;
+        std::shared_ptr<list_expr> _s1;
+        std::shared_ptr<list_expr> _s2;
+      };
+
+      struct _Call3 {
+        T1 _s0;
+        std::shared_ptr<list_expr> _s1;
+        std::shared_ptr<list_expr> _s2;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const list_expr *_self = _f._self;
+          if (std::holds_alternative<typename list_expr::LNil>(_self->v())) {
+            _result = f;
+          } else if (std::holds_alternative<typename list_expr::LCons>(
+                         _self->v())) {
+            const auto &[d_a0, d_a1] =
+                std::get<typename list_expr::LCons>(_self->v());
+            _stack.emplace_back(_Call1{d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
+          } else if (std::holds_alternative<typename list_expr::LAppend>(
+                         _self->v())) {
+            const auto &[d_a0, d_a1] =
+                std::get<typename list_expr::LAppend>(_self->v());
+            _stack.emplace_back(_Call2{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
+          } else {
+            const auto &[d_a0, d_a1] =
+                std::get<typename list_expr::LReplicate>(_self->v());
+            _result = f2(d_a0, d_a1);
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _result = f0(_f._s1, _f._s0, _result);
+        } else if (std::holds_alternative<_Call2>(_frame)) {
+          const auto &_f = std::get<_Call2>(_frame);
+          _stack.emplace_back(_Call3{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call3>(_frame);
+          _result = f1(_f._s2, _result, _f._s1, _f._s0);
+        }
+      }
+      return _result;
+    }
   };
-
-  template <
-      typename T1, MapsTo<T1, unsigned int, std::shared_ptr<list_expr>, T1> F1,
-      MapsTo<T1, std::shared_ptr<list_expr>, T1, std::shared_ptr<list_expr>, T1>
-          F2,
-      MapsTo<T1, unsigned int, unsigned int> F3>
-  static T1 list_expr_rect(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2,
-                           const std::shared_ptr<list_expr> &l) {
-    struct _Enter {
-      const std::shared_ptr<list_expr> l;
-    };
-
-    struct _Call1 {
-      std::shared_ptr<list_expr> _s0;
-      unsigned int _s1;
-    };
-
-    struct _Call2 {
-      std::shared_ptr<list_expr> _s0;
-      std::shared_ptr<list_expr> _s1;
-      std::shared_ptr<list_expr> _s2;
-    };
-
-    struct _Call3 {
-      T1 _s0;
-      std::shared_ptr<list_expr> _s1;
-      std::shared_ptr<list_expr> _s2;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{l});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        const std::shared_ptr<list_expr> l = _f.l;
-        if (std::holds_alternative<typename list_expr::LNil>(l->v())) {
-          _result = f;
-        } else if (std::holds_alternative<typename list_expr::LCons>(l->v())) {
-          const auto &[d_a0, d_a1] =
-              std::get<typename list_expr::LCons>(l->v());
-          _stack.emplace_back(_Call1{d_a1, d_a0});
-          _stack.emplace_back(_Enter{d_a1});
-        } else if (std::holds_alternative<typename list_expr::LAppend>(
-                       l->v())) {
-          const auto &[d_a0, d_a1] =
-              std::get<typename list_expr::LAppend>(l->v());
-          _stack.emplace_back(_Call2{d_a0, d_a1, d_a0});
-          _stack.emplace_back(_Enter{d_a1});
-        } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename list_expr::LReplicate>(l->v());
-          _result = f2(d_a0, d_a1);
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        const auto &_f = std::get<_Call1>(_frame);
-        _result = f0(_f._s1, _f._s0, _result);
-      } else if (std::holds_alternative<_Call2>(_frame)) {
-        const auto &_f = std::get<_Call2>(_frame);
-        _stack.emplace_back(_Call3{_result, _f._s1, _f._s2});
-        _stack.emplace_back(_Enter{_f._s0});
-      } else {
-        const auto &_f = std::get<_Call3>(_frame);
-        _result = f1(_f._s2, _result, _f._s1, _f._s0);
-      }
-    }
-    return _result;
-  }
-
-  template <
-      typename T1, MapsTo<T1, unsigned int, std::shared_ptr<list_expr>, T1> F1,
-      MapsTo<T1, std::shared_ptr<list_expr>, T1, std::shared_ptr<list_expr>, T1>
-          F2,
-      MapsTo<T1, unsigned int, unsigned int> F3>
-  static T1 list_expr_rec(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2,
-                          const std::shared_ptr<list_expr> &l) {
-    struct _Enter {
-      const std::shared_ptr<list_expr> l;
-    };
-
-    struct _Call1 {
-      std::shared_ptr<list_expr> _s0;
-      unsigned int _s1;
-    };
-
-    struct _Call2 {
-      std::shared_ptr<list_expr> _s0;
-      std::shared_ptr<list_expr> _s1;
-      std::shared_ptr<list_expr> _s2;
-    };
-
-    struct _Call3 {
-      T1 _s0;
-      std::shared_ptr<list_expr> _s1;
-      std::shared_ptr<list_expr> _s2;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{l});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        const std::shared_ptr<list_expr> l = _f.l;
-        if (std::holds_alternative<typename list_expr::LNil>(l->v())) {
-          _result = f;
-        } else if (std::holds_alternative<typename list_expr::LCons>(l->v())) {
-          const auto &[d_a0, d_a1] =
-              std::get<typename list_expr::LCons>(l->v());
-          _stack.emplace_back(_Call1{d_a1, d_a0});
-          _stack.emplace_back(_Enter{d_a1});
-        } else if (std::holds_alternative<typename list_expr::LAppend>(
-                       l->v())) {
-          const auto &[d_a0, d_a1] =
-              std::get<typename list_expr::LAppend>(l->v());
-          _stack.emplace_back(_Call2{d_a0, d_a1, d_a0});
-          _stack.emplace_back(_Enter{d_a1});
-        } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename list_expr::LReplicate>(l->v());
-          _result = f2(d_a0, d_a1);
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        const auto &_f = std::get<_Call1>(_frame);
-        _result = f0(_f._s1, _f._s0, _result);
-      } else if (std::holds_alternative<_Call2>(_frame)) {
-        const auto &_f = std::get<_Call2>(_frame);
-        _stack.emplace_back(_Call3{_result, _f._s1, _f._s2});
-        _stack.emplace_back(_Enter{_f._s0});
-      } else {
-        const auto &_f = std::get<_Call3>(_frame);
-        _result = f1(_f._s2, _result, _f._s1, _f._s0);
-      }
-    }
-    return _result;
-  }
 };
 
 template <typename T1>

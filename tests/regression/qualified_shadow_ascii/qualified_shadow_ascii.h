@@ -14,14 +14,6 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 struct QualifiedShadowAscii {
   struct Shadow {
     enum class shadow { e_MK };
-
-    template <typename T1> static T1 shadow_rect(const T1 f, const shadow) {
-      return f;
-    }
-
-    template <typename T1> static T1 shadow_rec(const T1 f, const shadow) {
-      return f;
-    }
   };
 
   __attribute__((pure)) static Shadow::shadow id_shadow(const Shadow::shadow x);

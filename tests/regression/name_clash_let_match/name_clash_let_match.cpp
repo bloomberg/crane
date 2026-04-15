@@ -5,6 +5,22 @@
 #include <utility>
 #include <variant>
 
+/// Variable name 'a' used in both let and match binding.
+__attribute__((pure)) unsigned int NameClashLetMatch::let_shadows_match(
+    const std::shared_ptr<NameClashLetMatch::either> &e) {
+  unsigned int a = 100u;
+  if (std::holds_alternative<typename NameClashLetMatch::either::Left>(
+          e->v())) {
+    const auto &[d_a0] =
+        std::get<typename NameClashLetMatch::either::Left>(e->v());
+    return d_a0;
+  } else {
+    const auto &[d_a0] =
+        std::get<typename NameClashLetMatch::either::Right>(e->v());
+    return (d_a0 + a);
+  }
+}
+
 /// Match where the same variable name is used in multiple branches
 __attribute__((pure)) unsigned int NameClashLetMatch::same_name_branches(
     const std::shared_ptr<NameClashLetMatch::either> &e,

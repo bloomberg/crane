@@ -86,27 +86,6 @@ public:
     }
   }
 
-  t_A nth(const unsigned int n, const t_A default0) const {
-    if (n <= 0) {
-      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-        return default0;
-      } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<t_A>::Cons>(this->v());
-        return d_a0;
-      }
-    } else {
-      unsigned int m = n - 1;
-      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-        return default0;
-      } else {
-        const auto &[d_a00, d_a10] =
-            std::get<typename List<t_A>::Cons>(this->v());
-        return d_a10->nth(m, default0);
-      }
-    }
-  }
-
   template <typename T1, MapsTo<T1, t_A> F0>
   std::shared_ptr<List<T1>> map(F0 &&f) const {
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
@@ -262,6 +241,12 @@ struct BinInt {
   static std::shared_ptr<Z> add(std::shared_ptr<Z> x, std::shared_ptr<Z> y);
   __attribute__((pure)) static bool eqb(const std::shared_ptr<Z> &x,
                                         const std::shared_ptr<Z> &y);
+};
+
+struct ListDef {
+  template <typename T1>
+  static T1 nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
+                const T1 default0);
 };
 
 struct CoalitionBidHonorTraceCase {
@@ -618,29 +603,29 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, unsigned int> F1>
+    T1 Prize_rec(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename Prize::PrizeHonor>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_enclave_id] =
+            std::get<typename Prize::PrizeEnclave>(this->v());
+        return f0(d_enclave_id);
+      }
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F1>
+    T1 Prize_rect(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename Prize::PrizeHonor>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_enclave_id] =
+            std::get<typename Prize::PrizeEnclave>(this->v());
+        return f0(d_enclave_id);
+      }
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int> F1>
-  static T1 Prize_rect(const T1 f, F1 &&f0, const std::shared_ptr<Prize> &p) {
-    if (std::holds_alternative<typename Prize::PrizeHonor>(p->v())) {
-      return f;
-    } else {
-      const auto &[d_enclave_id] =
-          std::get<typename Prize::PrizeEnclave>(p->v());
-      return f0(d_enclave_id);
-    }
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F1>
-  static T1 Prize_rec(const T1 f, F1 &&f0, const std::shared_ptr<Prize> &p) {
-    if (std::holds_alternative<typename Prize::PrizeHonor>(p->v())) {
-      return f;
-    } else {
-      const auto &[d_enclave_id] =
-          std::get<typename Prize::PrizeEnclave>(p->v());
-      return f0(d_enclave_id);
-    }
-  }
 
   struct Location {
     // TYPES
@@ -770,33 +755,31 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, unsigned int> F1>
+    T1 RefusalReason_rec(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<
+              typename RefusalReason::RefusalInsufficientRank>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_note] =
+            std::get<typename RefusalReason::RefusalOther>(this->v());
+        return f0(d_note);
+      }
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F1>
+    T1 RefusalReason_rect(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<
+              typename RefusalReason::RefusalInsufficientRank>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_note] =
+            std::get<typename RefusalReason::RefusalOther>(this->v());
+        return f0(d_note);
+      }
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int> F1>
-  static T1 RefusalReason_rect(const T1 f, F1 &&f0,
-                               const std::shared_ptr<RefusalReason> &r) {
-    if (std::holds_alternative<typename RefusalReason::RefusalInsufficientRank>(
-            r->v())) {
-      return f;
-    } else {
-      const auto &[d_note] =
-          std::get<typename RefusalReason::RefusalOther>(r->v());
-      return f0(d_note);
-    }
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F1>
-  static T1 RefusalReason_rec(const T1 f, F1 &&f0,
-                              const std::shared_ptr<RefusalReason> &r) {
-    if (std::holds_alternative<typename RefusalReason::RefusalInsufficientRank>(
-            r->v())) {
-      return f;
-    } else {
-      const auto &[d_note] =
-          std::get<typename RefusalReason::RefusalOther>(r->v());
-      return f0(d_note);
-    }
-  }
 
   struct ProtocolAction {
     // TYPES
@@ -1767,5 +1750,26 @@ struct CoalitionBidHonorTraceCase {
           List<std::shared_ptr<Unit>>::nil())
           ->length();
 };
+
+template <typename T1>
+T1 ListDef::nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
+                const T1 default0) {
+  if (n <= 0) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      return d_a0;
+    }
+  } else {
+    unsigned int m = n - 1;
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
+      return ListDef::template nth<T1>(m, d_a10, default0);
+    }
+  }
+}
 
 #endif // INCLUDED_COALITION_BID_HONOR_TRACE

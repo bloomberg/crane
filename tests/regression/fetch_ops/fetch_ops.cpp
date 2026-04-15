@@ -9,13 +9,13 @@
 __attribute__((pure)) unsigned int
 FetchOps::fetch_byte(const std::shared_ptr<FetchOps::state> &s,
                      const unsigned int addr) {
-  return s->rom->nth(addr, 0u);
+  return ListDef::template nth<unsigned int>(addr, s->rom, 0u);
 }
 
 __attribute__((pure)) unsigned int
 FetchOps::fetch_byte_direct(const std::shared_ptr<List<unsigned int>> &rom_data,
                             const unsigned int addr) {
-  return rom_data->nth(addr, 0u);
+  return ListDef::template nth<unsigned int>(addr, rom_data, 0u);
 }
 
 __attribute__((pure)) std::pair<unsigned int, unsigned int>

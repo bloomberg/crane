@@ -562,55 +562,55 @@ struct InstructionClassifiers {
         return true;
       }
     }
+
+    template <typename T1, MapsTo<T1, unsigned int> F7>
+    T1 instr_ram_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
+                     const T1 f3, const T1 f4, const T1 f5, F7 &&f6) const {
+      if (std::holds_alternative<typename instr_ram::WRM>(this->v())) {
+        return f;
+      } else if (std::holds_alternative<typename instr_ram::WMP>(this->v())) {
+        return f0;
+      } else if (std::holds_alternative<typename instr_ram::WR0>(this->v())) {
+        return f1;
+      } else if (std::holds_alternative<typename instr_ram::WR1>(this->v())) {
+        return f2;
+      } else if (std::holds_alternative<typename instr_ram::WR2>(this->v())) {
+        return f3;
+      } else if (std::holds_alternative<typename instr_ram::WR3>(this->v())) {
+        return f4;
+      } else if (std::holds_alternative<typename instr_ram::NOP_ram>(
+                     this->v())) {
+        return f5;
+      } else {
+        const auto &[d_a0] = std::get<typename instr_ram::ADD_ram>(this->v());
+        return f6(d_a0);
+      }
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F7>
+    T1 instr_ram_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
+                      const T1 f3, const T1 f4, const T1 f5, F7 &&f6) const {
+      if (std::holds_alternative<typename instr_ram::WRM>(this->v())) {
+        return f;
+      } else if (std::holds_alternative<typename instr_ram::WMP>(this->v())) {
+        return f0;
+      } else if (std::holds_alternative<typename instr_ram::WR0>(this->v())) {
+        return f1;
+      } else if (std::holds_alternative<typename instr_ram::WR1>(this->v())) {
+        return f2;
+      } else if (std::holds_alternative<typename instr_ram::WR2>(this->v())) {
+        return f3;
+      } else if (std::holds_alternative<typename instr_ram::WR3>(this->v())) {
+        return f4;
+      } else if (std::holds_alternative<typename instr_ram::NOP_ram>(
+                     this->v())) {
+        return f5;
+      } else {
+        const auto &[d_a0] = std::get<typename instr_ram::ADD_ram>(this->v());
+        return f6(d_a0);
+      }
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int> F7>
-  static T1 instr_ram_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                           const T1 f3, const T1 f4, const T1 f5, F7 &&f6,
-                           const std::shared_ptr<instr_ram> &i) {
-    if (std::holds_alternative<typename instr_ram::WRM>(i->v())) {
-      return f;
-    } else if (std::holds_alternative<typename instr_ram::WMP>(i->v())) {
-      return f0;
-    } else if (std::holds_alternative<typename instr_ram::WR0>(i->v())) {
-      return f1;
-    } else if (std::holds_alternative<typename instr_ram::WR1>(i->v())) {
-      return f2;
-    } else if (std::holds_alternative<typename instr_ram::WR2>(i->v())) {
-      return f3;
-    } else if (std::holds_alternative<typename instr_ram::WR3>(i->v())) {
-      return f4;
-    } else if (std::holds_alternative<typename instr_ram::NOP_ram>(i->v())) {
-      return f5;
-    } else {
-      const auto &[d_a0] = std::get<typename instr_ram::ADD_ram>(i->v());
-      return f6(d_a0);
-    }
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F7>
-  static T1 instr_ram_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                          const T1 f3, const T1 f4, const T1 f5, F7 &&f6,
-                          const std::shared_ptr<instr_ram> &i) {
-    if (std::holds_alternative<typename instr_ram::WRM>(i->v())) {
-      return f;
-    } else if (std::holds_alternative<typename instr_ram::WMP>(i->v())) {
-      return f0;
-    } else if (std::holds_alternative<typename instr_ram::WR0>(i->v())) {
-      return f1;
-    } else if (std::holds_alternative<typename instr_ram::WR1>(i->v())) {
-      return f2;
-    } else if (std::holds_alternative<typename instr_ram::WR2>(i->v())) {
-      return f3;
-    } else if (std::holds_alternative<typename instr_ram::WR3>(i->v())) {
-      return f4;
-    } else if (std::holds_alternative<typename instr_ram::NOP_ram>(i->v())) {
-      return f5;
-    } else {
-      const auto &[d_a0] = std::get<typename instr_ram::ADD_ram>(i->v());
-      return f6(d_a0);
-    }
-  }
 
   __attribute__((pure)) static unsigned int count_writes_ram(
       const std::shared_ptr<List<std::shared_ptr<instr_ram>>> &prog);

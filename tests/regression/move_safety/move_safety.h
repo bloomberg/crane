@@ -90,111 +90,115 @@ struct MoveSafety {
         }
       }
     }
+
+    template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
+                                  std::shared_ptr<tree>, T1>
+                               F1>
+    T1 tree_rec(const T1 f, F1 &&f0) const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+      };
+
+      struct _Call1 {
+        tree *_s0;
+        std::shared_ptr<tree> _s1;
+        unsigned int _s2;
+        std::shared_ptr<tree> _s3;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        std::shared_ptr<tree> _s1;
+        unsigned int _s2;
+        std::shared_ptr<tree> _s3;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const tree *_self = _f._self;
+          if (std::holds_alternative<typename tree::Leaf>(_self->v())) {
+            _result = f;
+          } else {
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename tree::Node>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), d_a2, d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a2.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+        }
+      }
+      return _result;
+    }
+
+    template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
+                                  std::shared_ptr<tree>, T1>
+                               F1>
+    T1 tree_rect(const T1 f, F1 &&f0) const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+      };
+
+      struct _Call1 {
+        tree *_s0;
+        std::shared_ptr<tree> _s1;
+        unsigned int _s2;
+        std::shared_ptr<tree> _s3;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        std::shared_ptr<tree> _s1;
+        unsigned int _s2;
+        std::shared_ptr<tree> _s3;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const tree *_self = _f._self;
+          if (std::holds_alternative<typename tree::Leaf>(_self->v())) {
+            _result = f;
+          } else {
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename tree::Node>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), d_a2, d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a2.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+        }
+      }
+      return _result;
+    }
   };
-
-  template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                std::shared_ptr<tree>, T1>
-                             F1>
-  static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    struct _Enter {
-      const std::shared_ptr<tree> t;
-    };
-
-    struct _Call1 {
-      std::shared_ptr<tree> _s0;
-      std::shared_ptr<tree> _s1;
-      unsigned int _s2;
-      std::shared_ptr<tree> _s3;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      std::shared_ptr<tree> _s1;
-      unsigned int _s2;
-      std::shared_ptr<tree> _s3;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        const std::shared_ptr<tree> t = _f.t;
-        if (std::holds_alternative<typename tree::Leaf>(t->v())) {
-          _result = f;
-        } else {
-          const auto &[d_a0, d_a1, d_a2] =
-              std::get<typename tree::Node>(t->v());
-          _stack.emplace_back(_Call1{d_a0, d_a2, d_a1, d_a0});
-          _stack.emplace_back(_Enter{d_a2});
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        const auto &_f = std::get<_Call1>(_frame);
-        _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-        _stack.emplace_back(_Enter{_f._s0});
-      } else {
-        const auto &_f = std::get<_Call2>(_frame);
-        _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-      }
-    }
-    return _result;
-  }
-
-  template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                std::shared_ptr<tree>, T1>
-                             F1>
-  static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    struct _Enter {
-      const std::shared_ptr<tree> t;
-    };
-
-    struct _Call1 {
-      std::shared_ptr<tree> _s0;
-      std::shared_ptr<tree> _s1;
-      unsigned int _s2;
-      std::shared_ptr<tree> _s3;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      std::shared_ptr<tree> _s1;
-      unsigned int _s2;
-      std::shared_ptr<tree> _s3;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        const std::shared_ptr<tree> t = _f.t;
-        if (std::holds_alternative<typename tree::Leaf>(t->v())) {
-          _result = f;
-        } else {
-          const auto &[d_a0, d_a1, d_a2] =
-              std::get<typename tree::Node>(t->v());
-          _stack.emplace_back(_Call1{d_a0, d_a2, d_a1, d_a0});
-          _stack.emplace_back(_Enter{d_a2});
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        const auto &_f = std::get<_Call1>(_frame);
-        _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-        _stack.emplace_back(_Enter{_f._s0});
-      } else {
-        const auto &_f = std::get<_Call2>(_frame);
-        _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-      }
-    }
-    return _result;
-  }
 
   /// A wrapper for closures.
   struct fn_box {

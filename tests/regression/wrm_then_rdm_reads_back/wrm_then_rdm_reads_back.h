@@ -54,27 +54,12 @@ public:
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
+};
 
-  t_A nth(const unsigned int n, const t_A default0) const {
-    if (n <= 0) {
-      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-        return default0;
-      } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<t_A>::Cons>(this->v());
-        return d_a0;
-      }
-    } else {
-      unsigned int m = n - 1;
-      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-        return default0;
-      } else {
-        const auto &[d_a00, d_a10] =
-            std::get<typename List<t_A>::Cons>(this->v());
-        return d_a10->nth(m, default0);
-      }
-    }
-  }
+struct ListDef {
+  template <typename T1>
+  static T1 nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
+                const T1 default0);
 };
 
 struct WrmThenRdmReadsBack {
@@ -139,5 +124,26 @@ struct WrmThenRdmReadsBack {
       execute_rdm(execute_wrm(execute_src(sample, 3u)));
   static inline const bool t = roundtrip->acc == 12u;
 };
+
+template <typename T1>
+T1 ListDef::nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
+                const T1 default0) {
+  if (n <= 0) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      return d_a0;
+    }
+  } else {
+    unsigned int m = n - 1;
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
+      return ListDef::template nth<T1>(m, d_a10, default0);
+    }
+  }
+}
 
 #endif // INCLUDED_WRM_THEN_RDM_READS_BACK

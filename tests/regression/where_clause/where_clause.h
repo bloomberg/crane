@@ -235,57 +235,55 @@ struct WhereClause {
         return !(d_a0->beval());
       }
     }
+
+    template <
+        typename T1,
+        MapsTo<T1, std::shared_ptr<BExpr>, T1, std::shared_ptr<BExpr>, T1> F2,
+        MapsTo<T1, std::shared_ptr<BExpr>, T1, std::shared_ptr<BExpr>, T1> F3,
+        MapsTo<T1, std::shared_ptr<BExpr>, T1> F4>
+    T1 BExpr_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
+      if (std::holds_alternative<typename BExpr::BTrue>(this->v())) {
+        return f;
+      } else if (std::holds_alternative<typename BExpr::BFalse>(this->v())) {
+        return f0;
+      } else if (std::holds_alternative<typename BExpr::BAnd>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename BExpr::BAnd>(this->v());
+        return f1(d_a0, d_a0->template BExpr_rec<T1>(f, f0, f1, f2, f3), d_a1,
+                  d_a1->template BExpr_rec<T1>(f, f0, f1, f2, f3));
+      } else if (std::holds_alternative<typename BExpr::BOr>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename BExpr::BOr>(this->v());
+        return f2(d_a0, d_a0->template BExpr_rec<T1>(f, f0, f1, f2, f3), d_a1,
+                  d_a1->template BExpr_rec<T1>(f, f0, f1, f2, f3));
+      } else {
+        const auto &[d_a0] = std::get<typename BExpr::BNot>(this->v());
+        return f3(d_a0, d_a0->template BExpr_rec<T1>(f, f0, f1, f2, f3));
+      }
+    }
+
+    template <
+        typename T1,
+        MapsTo<T1, std::shared_ptr<BExpr>, T1, std::shared_ptr<BExpr>, T1> F2,
+        MapsTo<T1, std::shared_ptr<BExpr>, T1, std::shared_ptr<BExpr>, T1> F3,
+        MapsTo<T1, std::shared_ptr<BExpr>, T1> F4>
+    T1 BExpr_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
+      if (std::holds_alternative<typename BExpr::BTrue>(this->v())) {
+        return f;
+      } else if (std::holds_alternative<typename BExpr::BFalse>(this->v())) {
+        return f0;
+      } else if (std::holds_alternative<typename BExpr::BAnd>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename BExpr::BAnd>(this->v());
+        return f1(d_a0, d_a0->template BExpr_rect<T1>(f, f0, f1, f2, f3), d_a1,
+                  d_a1->template BExpr_rect<T1>(f, f0, f1, f2, f3));
+      } else if (std::holds_alternative<typename BExpr::BOr>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename BExpr::BOr>(this->v());
+        return f2(d_a0, d_a0->template BExpr_rect<T1>(f, f0, f1, f2, f3), d_a1,
+                  d_a1->template BExpr_rect<T1>(f, f0, f1, f2, f3));
+      } else {
+        const auto &[d_a0] = std::get<typename BExpr::BNot>(this->v());
+        return f3(d_a0, d_a0->template BExpr_rect<T1>(f, f0, f1, f2, f3));
+      }
+    }
   };
-
-  template <
-      typename T1,
-      MapsTo<T1, std::shared_ptr<BExpr>, T1, std::shared_ptr<BExpr>, T1> F2,
-      MapsTo<T1, std::shared_ptr<BExpr>, T1, std::shared_ptr<BExpr>, T1> F3,
-      MapsTo<T1, std::shared_ptr<BExpr>, T1> F4>
-  static T1 BExpr_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                       const std::shared_ptr<BExpr> &b) {
-    if (std::holds_alternative<typename BExpr::BTrue>(b->v())) {
-      return f;
-    } else if (std::holds_alternative<typename BExpr::BFalse>(b->v())) {
-      return f0;
-    } else if (std::holds_alternative<typename BExpr::BAnd>(b->v())) {
-      const auto &[d_a0, d_a1] = std::get<typename BExpr::BAnd>(b->v());
-      return f1(d_a0, BExpr_rect<T1>(f, f0, f1, f2, f3, d_a0), d_a1,
-                BExpr_rect<T1>(f, f0, f1, f2, f3, d_a1));
-    } else if (std::holds_alternative<typename BExpr::BOr>(b->v())) {
-      const auto &[d_a0, d_a1] = std::get<typename BExpr::BOr>(b->v());
-      return f2(d_a0, BExpr_rect<T1>(f, f0, f1, f2, f3, d_a0), d_a1,
-                BExpr_rect<T1>(f, f0, f1, f2, f3, d_a1));
-    } else {
-      const auto &[d_a0] = std::get<typename BExpr::BNot>(b->v());
-      return f3(d_a0, BExpr_rect<T1>(f, f0, f1, f2, f3, d_a0));
-    }
-  }
-
-  template <
-      typename T1,
-      MapsTo<T1, std::shared_ptr<BExpr>, T1, std::shared_ptr<BExpr>, T1> F2,
-      MapsTo<T1, std::shared_ptr<BExpr>, T1, std::shared_ptr<BExpr>, T1> F3,
-      MapsTo<T1, std::shared_ptr<BExpr>, T1> F4>
-  static T1 BExpr_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                      const std::shared_ptr<BExpr> &b) {
-    if (std::holds_alternative<typename BExpr::BTrue>(b->v())) {
-      return f;
-    } else if (std::holds_alternative<typename BExpr::BFalse>(b->v())) {
-      return f0;
-    } else if (std::holds_alternative<typename BExpr::BAnd>(b->v())) {
-      const auto &[d_a0, d_a1] = std::get<typename BExpr::BAnd>(b->v());
-      return f1(d_a0, BExpr_rec<T1>(f, f0, f1, f2, f3, d_a0), d_a1,
-                BExpr_rec<T1>(f, f0, f1, f2, f3, d_a1));
-    } else if (std::holds_alternative<typename BExpr::BOr>(b->v())) {
-      const auto &[d_a0, d_a1] = std::get<typename BExpr::BOr>(b->v());
-      return f2(d_a0, BExpr_rec<T1>(f, f0, f1, f2, f3, d_a0), d_a1,
-                BExpr_rec<T1>(f, f0, f1, f2, f3, d_a1));
-    } else {
-      const auto &[d_a0] = std::get<typename BExpr::BNot>(b->v());
-      return f3(d_a0, BExpr_rec<T1>(f, f0, f1, f2, f3, d_a0));
-    }
-  }
 
   struct AExpr {
     // TYPES

@@ -619,18 +619,20 @@ CoalitionBidHonorTraceCase::valid_coalition_member_bid_b(
         List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>> &c,
     const std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMemberBid>
         &cbid) {
-  return (cbid->cmb_member_index < c->length() &&
-          metrics_total_lt(
-              force_metrics(cbid->cmb_new_force),
-              force_metrics(
+  return (
+      cbid->cmb_member_index < c->length() &&
+      metrics_total_lt(
+          force_metrics(cbid->cmb_new_force),
+          force_metrics(
+              ListDef::template nth<CoalitionBidHonorTraceCase::Force>(
+                  cbid->cmb_member_index,
                   c->template map<CoalitionBidHonorTraceCase::Force>(
-                       [](const std::shared_ptr<
-                           CoalitionBidHonorTraceCase::CoalitionMember> &c0) {
-                         return c0->cm_force;
-                       })
-                      ->nth(cbid->cmb_member_index,
-                            List<std::shared_ptr<
-                                CoalitionBidHonorTraceCase::Unit>>::nil()))));
+                      [](const std::shared_ptr<
+                          CoalitionBidHonorTraceCase::CoalitionMember> &c0) {
+                        return c0->cm_force;
+                      }),
+                  List<std::shared_ptr<CoalitionBidHonorTraceCase::Unit>>::
+                      nil()))));
 }
 
 __attribute__((pure)) bool CoalitionBidHonorTraceCase::is_ready(

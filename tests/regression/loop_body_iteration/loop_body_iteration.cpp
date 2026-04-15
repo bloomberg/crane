@@ -7,7 +7,7 @@
 
 __attribute__((pure)) unsigned int LoopBodyIteration::get_reg0(
     const std::shared_ptr<LoopBodyIteration::state> &s) {
-  return s->regs_->nth(0u, 0u);
+  return ListDef::template nth<unsigned int>(0u, s->regs_, 0u);
 }
 
 std::shared_ptr<LoopBodyIteration::state> LoopBodyIteration::count_loop_body(

@@ -554,63 +554,61 @@ struct Levenshtein {
                                        std::const_pointer_cast<chain>(
                                            this->shared_from_this())));
     }
+
+    template <typename T1,
+              MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<String>,
+                     std::shared_ptr<String>, std::shared_ptr<Nat>,
+                     std::shared_ptr<chain>, T1>
+                  F1,
+              MapsTo<T1, std::shared_ptr<String>, std::shared_ptr<String>,
+                     std::shared_ptr<String>, std::shared_ptr<Nat>,
+                     std::shared_ptr<edit>, std::shared_ptr<chain>, T1>
+                  F2>
+    T1 chain_rec(const T1 f, F1 &&f0, F2 &&f1, const std::shared_ptr<String> &,
+                 const std::shared_ptr<String> &,
+                 const std::shared_ptr<Nat> &) const {
+      if (std::holds_alternative<typename chain::Empty>(this->v())) {
+        return f;
+      } else if (std::holds_alternative<typename chain::Skip>(this->v())) {
+        const auto &[d_a, d_s, d_t, d_n, d_a4] =
+            std::get<typename chain::Skip>(this->v());
+        return f0(d_a, d_s, d_t, d_n, d_a4,
+                  d_a4->template chain_rec<T1>(f, f0, f1, d_s, d_t, d_n));
+      } else {
+        const auto &[d_s, d_t, d_u, d_n, d_a4, d_a5] =
+            std::get<typename chain::Change>(this->v());
+        return f1(d_s, d_t, d_u, d_n, d_a4, d_a5,
+                  d_a5->template chain_rec<T1>(f, f0, f1, d_t, d_u, d_n));
+      }
+    }
+
+    template <typename T1,
+              MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<String>,
+                     std::shared_ptr<String>, std::shared_ptr<Nat>,
+                     std::shared_ptr<chain>, T1>
+                  F1,
+              MapsTo<T1, std::shared_ptr<String>, std::shared_ptr<String>,
+                     std::shared_ptr<String>, std::shared_ptr<Nat>,
+                     std::shared_ptr<edit>, std::shared_ptr<chain>, T1>
+                  F2>
+    T1 chain_rect(const T1 f, F1 &&f0, F2 &&f1, const std::shared_ptr<String> &,
+                  const std::shared_ptr<String> &,
+                  const std::shared_ptr<Nat> &) const {
+      if (std::holds_alternative<typename chain::Empty>(this->v())) {
+        return f;
+      } else if (std::holds_alternative<typename chain::Skip>(this->v())) {
+        const auto &[d_a, d_s, d_t, d_n, d_a4] =
+            std::get<typename chain::Skip>(this->v());
+        return f0(d_a, d_s, d_t, d_n, d_a4,
+                  d_a4->template chain_rect<T1>(f, f0, f1, d_s, d_t, d_n));
+      } else {
+        const auto &[d_s, d_t, d_u, d_n, d_a4, d_a5] =
+            std::get<typename chain::Change>(this->v());
+        return f1(d_s, d_t, d_u, d_n, d_a4, d_a5,
+                  d_a5->template chain_rect<T1>(f, f0, f1, d_t, d_u, d_n));
+      }
+    }
   };
-
-  template <typename T1,
-            MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<String>,
-                   std::shared_ptr<String>, std::shared_ptr<Nat>,
-                   std::shared_ptr<chain>, T1>
-                F1,
-            MapsTo<T1, std::shared_ptr<String>, std::shared_ptr<String>,
-                   std::shared_ptr<String>, std::shared_ptr<Nat>,
-                   std::shared_ptr<edit>, std::shared_ptr<chain>, T1>
-                F2>
-  static T1
-  chain_rect(const T1 f, F1 &&f0, F2 &&f1, const std::shared_ptr<String> &,
-             const std::shared_ptr<String> &, const std::shared_ptr<Nat> &,
-             const std::shared_ptr<chain> &c) {
-    if (std::holds_alternative<typename chain::Empty>(c->v())) {
-      return f;
-    } else if (std::holds_alternative<typename chain::Skip>(c->v())) {
-      const auto &[d_a, d_s, d_t, d_n, d_a4] =
-          std::get<typename chain::Skip>(c->v());
-      return f0(d_a, d_s, d_t, d_n, d_a4,
-                chain_rect<T1>(f, f0, f1, d_s, d_t, d_n, d_a4));
-    } else {
-      const auto &[d_s, d_t, d_u, d_n, d_a4, d_a5] =
-          std::get<typename chain::Change>(c->v());
-      return f1(d_s, d_t, d_u, d_n, d_a4, d_a5,
-                chain_rect<T1>(f, f0, f1, d_t, d_u, d_n, d_a5));
-    }
-  }
-
-  template <typename T1,
-            MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<String>,
-                   std::shared_ptr<String>, std::shared_ptr<Nat>,
-                   std::shared_ptr<chain>, T1>
-                F1,
-            MapsTo<T1, std::shared_ptr<String>, std::shared_ptr<String>,
-                   std::shared_ptr<String>, std::shared_ptr<Nat>,
-                   std::shared_ptr<edit>, std::shared_ptr<chain>, T1>
-                F2>
-  static T1
-  chain_rec(const T1 f, F1 &&f0, F2 &&f1, const std::shared_ptr<String> &,
-            const std::shared_ptr<String> &, const std::shared_ptr<Nat> &,
-            const std::shared_ptr<chain> &c) {
-    if (std::holds_alternative<typename chain::Empty>(c->v())) {
-      return f;
-    } else if (std::holds_alternative<typename chain::Skip>(c->v())) {
-      const auto &[d_a, d_s, d_t, d_n, d_a4] =
-          std::get<typename chain::Skip>(c->v());
-      return f0(d_a, d_s, d_t, d_n, d_a4,
-                chain_rec<T1>(f, f0, f1, d_s, d_t, d_n, d_a4));
-    } else {
-      const auto &[d_s, d_t, d_u, d_n, d_a4, d_a5] =
-          std::get<typename chain::Change>(c->v());
-      return f1(d_s, d_t, d_u, d_n, d_a4, d_a5,
-                chain_rec<T1>(f, f0, f1, d_t, d_u, d_n, d_a5));
-    }
-  }
 
   static std::shared_ptr<chain> same_chain(const std::shared_ptr<String> &s);
 

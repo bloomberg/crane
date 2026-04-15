@@ -8,7 +8,7 @@
 __attribute__((pure)) unsigned int
 FimOperatesOnPairs::get_reg(const std::shared_ptr<FimOperatesOnPairs::state> &s,
                             const unsigned int r) {
-  return s->regs->nth(r, 0u);
+  return ListDef::template nth<unsigned int>(r, s->regs, 0u);
 }
 
 std::shared_ptr<FimOperatesOnPairs::state>

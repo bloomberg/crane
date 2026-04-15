@@ -147,22 +147,6 @@ public:
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_lazyV_.force(); }
 
-  std::shared_ptr<List<t_A>>
-  list_of_colist(const std::shared_ptr<Nat> &fuel) const {
-    if (std::holds_alternative<typename Nat::O>(fuel->v())) {
-      return List<t_A>::nil();
-    } else {
-      const auto &[d_a0] = std::get<typename Nat::S>(fuel->v());
-      if (std::holds_alternative<typename Colist<t_A>::Conil>(this->v())) {
-        return List<t_A>::nil();
-      } else {
-        const auto &[d_a00, d_a10] =
-            std::get<typename Colist<t_A>::Cocons>(this->v());
-        return List<t_A>::cons(d_a00, d_a10->list_of_colist(d_a0));
-      }
-    }
-  }
-
   template <typename T1, MapsTo<T1, t_A> F0>
   std::shared_ptr<Colist<T1>> comap(F0 &&f) const {
     if (std::holds_alternative<typename Colist<t_A>::Conil>(this->v())) {
@@ -177,6 +161,24 @@ public:
     }
   }
 
+  template <typename T1>
+  static std::shared_ptr<List<T1>>
+  list_of_colist(const std::shared_ptr<Nat> &fuel,
+                 const std::shared_ptr<Colist<T1>> &l) {
+    if (std::holds_alternative<typename Nat::O>(fuel->v())) {
+      return List<T1>::nil();
+    } else {
+      const auto &[d_a0] = std::get<typename Nat::S>(fuel->v());
+      if (std::holds_alternative<typename Colist<T1>::Conil>(l->v())) {
+        return List<T1>::nil();
+      } else {
+        const auto &[d_a00, d_a10] =
+            std::get<typename Colist<T1>::Cocons>(l->v());
+        return List<T1>::cons(d_a00, list_of_colist<T1>(d_a0, d_a10));
+      }
+    }
+  }
+
   static std::shared_ptr<Colist<std::shared_ptr<Nat>>>
   nats(std::shared_ptr<Nat> n) {
     return Colist<std::shared_ptr<Nat>>::lazy_(
@@ -187,7 +189,8 @@ public:
 
   static const std::shared_ptr<List<std::shared_ptr<Nat>>> &first_three() {
     static const std::shared_ptr<List<std::shared_ptr<Nat>>> v =
-        nats(Nat::o())->list_of_colist(Nat::s(Nat::s(Nat::s(Nat::o()))));
+        list_of_colist<std::shared_ptr<Nat>>(Nat::s(Nat::s(Nat::s(Nat::o()))),
+                                             nats(Nat::o()));
     return v;
   }
 };

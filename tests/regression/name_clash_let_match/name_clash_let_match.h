@@ -121,18 +121,6 @@ struct NameClashLetMatch {
       }
     }
 
-    /// Variable name 'a' used in both let and match binding.
-    __attribute__((pure)) unsigned int let_shadows_match() const {
-      unsigned int a = 100u;
-      if (std::holds_alternative<typename either::Left>(this->v())) {
-        const auto &[d_a0] = std::get<typename either::Left>(this->v());
-        return d_a0;
-      } else {
-        const auto &[d_a0] = std::get<typename either::Right>(this->v());
-        return (d_a0 + a);
-      }
-    }
-
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int> F1>
     T1 either_rec(F0 &&f, F1 &&f0) const {
@@ -222,6 +210,9 @@ struct NameClashLetMatch {
     }
   };
 
+  /// Variable name 'a' used in both let and match binding.
+  __attribute__((pure)) static unsigned int
+  let_shadows_match(const std::shared_ptr<either> &e);
   /// Match where the same variable name is used in multiple branches
   __attribute__((pure)) static unsigned int
   same_name_branches(const std::shared_ptr<either> &e,

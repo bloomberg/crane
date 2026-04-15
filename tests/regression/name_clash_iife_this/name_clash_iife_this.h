@@ -88,31 +88,6 @@ struct NameClashIifeThis {
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int match_of_match(const Color c) const {
-      auto &&_sv = [&]() {
-        switch (c) {
-        case Color::e_RED: {
-          return shape::circle(5u);
-        }
-        case Color::e_GREEN: {
-          return shape::square(3u, 4u);
-        }
-        case Color::e_BLUE: {
-          return this;
-        }
-        default:
-          std::unreachable();
-        }
-      }();
-      if (std::holds_alternative<typename shape::Circle>(_sv->v())) {
-        const auto &[d_a0] = std::get<typename shape::Circle>(_sv->v());
-        return (d_a0 * 2u);
-      } else {
-        const auto &[d_a0, d_a1] = std::get<typename shape::Square>(_sv->v());
-        return (d_a0 + d_a1);
-      }
-    }
-
     __attribute__((pure)) unsigned int nested_match(const Color c) const {
       if (std::holds_alternative<typename shape::Circle>(this->v())) {
         const auto &[d_a0] = std::get<typename shape::Circle>(this->v());
@@ -200,6 +175,9 @@ struct NameClashIifeThis {
       }
     }
   };
+
+  __attribute__((pure)) static unsigned int
+  match_of_match(const Color c, const std::shared_ptr<shape> &s);
 
   struct wrapper {
     // TYPES

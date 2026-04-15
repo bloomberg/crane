@@ -8,7 +8,7 @@
 __attribute__((pure)) unsigned int
 IncXchNibble::get_reg(const std::shared_ptr<IncXchNibble::state> &s,
                       const unsigned int r) {
-  return s->regs->nth(r, 0u);
+  return ListDef::template nth<unsigned int>(r, s->regs, 0u);
 }
 
 __attribute__((pure)) unsigned int

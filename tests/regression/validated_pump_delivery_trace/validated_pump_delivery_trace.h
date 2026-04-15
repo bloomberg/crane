@@ -743,51 +743,49 @@ struct ValidatedPumpDeliveryTraceCase {
         return true;
       }
     }
+
+    template <typename T1, MapsTo<T1, unsigned int> F2>
+    T1 FaultStatus_rec(const T1 f, const T1 f0, F2 &&f1, const T1 f2,
+                       const T1 f3) const {
+      if (std::holds_alternative<typename FaultStatus::Fault_None>(this->v())) {
+        return f;
+      } else if (std::holds_alternative<typename FaultStatus::Fault_Occlusion>(
+                     this->v())) {
+        return f0;
+      } else if (std::holds_alternative<
+                     typename FaultStatus::Fault_LowReservoir>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename FaultStatus::Fault_LowReservoir>(this->v());
+        return f1(d_a0);
+      } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
+                     this->v())) {
+        return f2;
+      } else {
+        return f3;
+      }
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F2>
+    T1 FaultStatus_rect(const T1 f, const T1 f0, F2 &&f1, const T1 f2,
+                        const T1 f3) const {
+      if (std::holds_alternative<typename FaultStatus::Fault_None>(this->v())) {
+        return f;
+      } else if (std::holds_alternative<typename FaultStatus::Fault_Occlusion>(
+                     this->v())) {
+        return f0;
+      } else if (std::holds_alternative<
+                     typename FaultStatus::Fault_LowReservoir>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename FaultStatus::Fault_LowReservoir>(this->v());
+        return f1(d_a0);
+      } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
+                     this->v())) {
+        return f2;
+      } else {
+        return f3;
+      }
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int> F2>
-  static T1 FaultStatus_rect(const T1 f, const T1 f0, F2 &&f1, const T1 f2,
-                             const T1 f3,
-                             const std::shared_ptr<FaultStatus> &f4) {
-    if (std::holds_alternative<typename FaultStatus::Fault_None>(f4->v())) {
-      return f;
-    } else if (std::holds_alternative<typename FaultStatus::Fault_Occlusion>(
-                   f4->v())) {
-      return f0;
-    } else if (std::holds_alternative<typename FaultStatus::Fault_LowReservoir>(
-                   f4->v())) {
-      const auto &[d_a0] =
-          std::get<typename FaultStatus::Fault_LowReservoir>(f4->v());
-      return f1(d_a0);
-    } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
-                   f4->v())) {
-      return f2;
-    } else {
-      return f3;
-    }
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F2>
-  static T1 FaultStatus_rec(const T1 f, const T1 f0, F2 &&f1, const T1 f2,
-                            const T1 f3,
-                            const std::shared_ptr<FaultStatus> &f4) {
-    if (std::holds_alternative<typename FaultStatus::Fault_None>(f4->v())) {
-      return f;
-    } else if (std::holds_alternative<typename FaultStatus::Fault_Occlusion>(
-                   f4->v())) {
-      return f0;
-    } else if (std::holds_alternative<typename FaultStatus::Fault_LowReservoir>(
-                   f4->v())) {
-      const auto &[d_a0] =
-          std::get<typename FaultStatus::Fault_LowReservoir>(f4->v());
-      return f1(d_a0);
-    } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
-                   f4->v())) {
-      return f2;
-    } else {
-      return f3;
-    }
-  }
   enum class InsulinType {
     e_INSULIN_HUMALOG,
     e_INSULIN_ASPART,

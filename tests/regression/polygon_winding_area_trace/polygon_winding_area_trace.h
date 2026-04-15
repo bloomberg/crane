@@ -57,27 +57,6 @@ public:
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  t_A nth(const unsigned int n, const t_A default0) const {
-    if (n <= 0) {
-      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-        return default0;
-      } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<t_A>::Cons>(this->v());
-        return d_a0;
-      }
-    } else {
-      unsigned int m = n - 1;
-      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-        return default0;
-      } else {
-        const auto &[d_a00, d_a10] =
-            std::get<typename List<t_A>::Cons>(this->v());
-        return d_a10->nth(m, default0);
-      }
-    }
-  }
-
   __attribute__((pure)) unsigned int length() const {
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
@@ -106,6 +85,12 @@ struct Pos {
 struct BinInt {
   __attribute__((pure)) static int64_t pow_pos(const int64_t z,
                                                const unsigned int _x0);
+};
+
+struct ListDef {
+  template <typename T1>
+  static T1 nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
+                const T1 default0);
 };
 
 struct Q {
@@ -140,7 +125,8 @@ struct PolygonWindingAreaTraceCase {
   template <typename T1>
   static T1 nth_cyclic(const T1 default0, const std::shared_ptr<List<T1>> &l,
                        const unsigned int i) {
-    return l->nth((l->length() ? i % l->length() : i), default0);
+    return ListDef::template nth<T1>((l->length() ? i % l->length() : i), l,
+                                     default0);
   }
 
   __attribute__((pure)) static Real lon_diff(const Real lon1, const Real lon2);
@@ -225,5 +211,26 @@ struct PolygonWindingAreaTraceCase {
   static inline const bool sample_centroid_winding_gt_half =
       winding_number_gt_half(test_centroid, test_triangle);
 };
+
+template <typename T1>
+T1 ListDef::nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
+                const T1 default0) {
+  if (n <= 0) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      return d_a0;
+    }
+  } else {
+    unsigned int m = n - 1;
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
+      return ListDef::template nth<T1>(m, d_a10, default0);
+    }
+  }
+}
 
 #endif // INCLUDED_POLYGON_WINDING_AREA_TRACE

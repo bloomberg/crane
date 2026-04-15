@@ -8,7 +8,7 @@
 __attribute__((pure)) unsigned int StepFetchDecodeExec::fetch_byte(
     const std::shared_ptr<StepFetchDecodeExec::state> &s,
     const unsigned int addr) {
-  return s->rom->nth(addr, 0u);
+  return ListDef::template nth<unsigned int>(addr, s->rom, 0u);
 }
 
 std::shared_ptr<StepFetchDecodeExec::instruction>

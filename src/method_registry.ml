@@ -72,7 +72,7 @@ type t = {
     (common pattern for destructors) — only the branches are checked, not the
     scrutinee itself (which is obviously the first argument but is used for
     dispatch, not returned). *)
-let body_safe_for_method body =
+let body_safe_for_method ?(this_pos = 0) body =
   (* Strip outer lambdas, counting them. The number of lambdas tells us the de
      Bruijn index of the outermost (first) argument: in [fun a b c -> body],
      argument [a] has index 3 inside [body]. *)
@@ -81,9 +81,12 @@ let body_safe_for_method body =
     | b -> (n, b)
   in
   let num_lams, inner = strip_lams 0 body in
-  (* The first argument (position 0) has de Bruijn index = num_lams because de
-     Bruijn indices count from the innermost binder outward. *)
-  let target_db = num_lams in
+  (* Argument at position [this_pos] (0-indexed, outermost first) has de Bruijn
+     index [num_lams - this_pos].  When [this_pos = 0] this is [num_lams]
+     (the outermost lambda), matching the previous behaviour.  For later
+     positions (e.g. enum first arg skipped by [find_epon_arg_pos]) we check
+     the correct inductive argument. *)
+  let target_db = num_lams - this_pos in
   (* Check if [MLrel target_db] appears as a direct return value in the AST. A
      "direct return" means the expression IS just [MLrel] (not wrapped in
      [MLapp], [MLcons], etc.). We recurse through match branches, let bodies,
@@ -94,12 +97,18 @@ let body_safe_for_method body =
      argument. *)
   let rec returns_target depth = function
     | MLrel i -> i = target_db + depth
-    | MLcase (_, _scrut, branches) ->
-      Array.exists
-        (fun (ids, _, _, branch_body) ->
-          let n_bindings = List.length ids in
-          returns_target (depth + n_bindings) branch_body )
-        branches
+    | MLcase (_, scrut, branches) ->
+      (* Also check the scrutinee when it is itself a match expression.
+         If the target argument can flow out of the scrutinee (e.g.
+         [match (match c with Blue => s) with ...]), then [s] becomes [this]
+         inside the IIFE that wraps the inner match, causing a type error
+         when the IIFE deduces [shared_ptr<T>] from other branches. *)
+      returns_target depth scrut
+      || Array.exists
+           (fun (ids, _, _, branch_body) ->
+             let n_bindings = List.length ids in
+             returns_target (depth + n_bindings) branch_body )
+           branches
     | MLletin (_, _, _, b) -> returns_target (depth + 1) b
     | MLmagic a -> returns_target depth a
     (* All other forms (MLapp, MLcons, MLlam, etc.) produce a NEW value, not a
@@ -419,23 +428,21 @@ let register_methods_for_epon
         match se with
         | SEdecl (Dterm (r, body, ty)) ->
           if same_module r && not (refs_forward ty) then (
-            match
-              find_epon_arg_pos epon_ref ty
-            with
-            | Some (pos, ind_tvar_positions) ->
+            match find_epon_arg_pos epon_ref ty with
+            | Some (pos, ind_tvar_positions)
+              when body_safe_for_method ~this_pos:pos body ->
               add_candidate r body ty pos ind_tvar_positions
-            | None -> () )
+            | _ -> () )
         | SEdecl (Dfix (rv, defs, typs)) ->
           (* Mutual fixpoints: check each function in the fixpoint block. *)
           Array.iteri
             (fun i r ->
               if same_module r && not (refs_forward typs.(i)) then
-                match
-                  find_epon_arg_pos epon_ref typs.(i)
-                with
-                | Some (pos, ind_tvar_positions) ->
+                match find_epon_arg_pos epon_ref typs.(i) with
+                | Some (pos, ind_tvar_positions)
+                  when body_safe_for_method ~this_pos:pos defs.(i) ->
                   add_candidate r defs.(i) typs.(i) pos ind_tvar_positions
-                | None -> () )
+                | _ -> () )
             rv
         | _ -> () )
       decls
@@ -531,10 +538,10 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
       else if has_concrete_type_args best_ref ty then ()
       else
         match find_epon_arg_pos best_ref ty with
-        | Some (pos, ind_tvar_positions) ->
-          if body_safe_for_method body then
-            add_candidate best_ref r body ty pos ind_tvar_positions
-        | None -> ()
+        | Some (pos, ind_tvar_positions)
+          when body_safe_for_method ~this_pos:pos body ->
+          add_candidate best_ref r body ty pos ind_tvar_positions
+        | _ -> ()
   in
   List.iter (fun (_l, se) ->
     match se with
