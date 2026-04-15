@@ -72,27 +72,25 @@ struct IndParam {
     template <typename T1, MapsTo<T1, std::shared_ptr<typename C::t>> F0,
               MapsTo<T1, unsigned int> F1>
     static T1 result_rect(F0 &&f, F1 &&f0, const std::shared_ptr<result> &r) {
-      return std::visit(
-          Overloaded{[&](const typename result::Ok &_args) -> T1 {
-                       return f(_args.d_a0);
-                     },
-                     [&](const typename result::Err &_args) -> T1 {
-                       return f0(_args.d_a0);
-                     }},
-          r->v());
+      if (std::holds_alternative<typename result::Ok>(r->v())) {
+        const auto &_m = *std::get_if<typename result::Ok>(&r->v());
+        return f(_m.d_a0);
+      } else {
+        const auto &_m = *std::get_if<typename result::Err>(&r->v());
+        return f0(_m.d_a0);
+      }
     }
 
     template <typename T1, MapsTo<T1, std::shared_ptr<typename C::t>> F0,
               MapsTo<T1, unsigned int> F1>
     static T1 result_rec(F0 &&f, F1 &&f0, const std::shared_ptr<result> &r) {
-      return std::visit(
-          Overloaded{[&](const typename result::Ok &_args) -> T1 {
-                       return f(_args.d_a0);
-                     },
-                     [&](const typename result::Err &_args) -> T1 {
-                       return f0(_args.d_a0);
-                     }},
-          r->v());
+      if (std::holds_alternative<typename result::Ok>(r->v())) {
+        const auto &_m = *std::get_if<typename result::Ok>(&r->v());
+        return f(_m.d_a0);
+      } else {
+        const auto &_m = *std::get_if<typename result::Err>(&r->v());
+        return f0(_m.d_a0);
+      }
     }
 
     static std::shared_ptr<result> make_single(const typename C::elem e) {
@@ -106,13 +104,12 @@ struct IndParam {
 
     __attribute__((pure)) static unsigned int
     get_size(const std::shared_ptr<result> &r) {
-      return std::visit(
-          Overloaded{
-              [](const typename result::Ok &_args) -> unsigned int {
-                return C::size(_args.d_a0);
-              },
-              [](const typename result::Err &) -> unsigned int { return 0u; }},
-          r->v());
+      if (std::holds_alternative<typename result::Ok>(r->v())) {
+        const auto &_m = *std::get_if<typename result::Ok>(&r->v());
+        return C::size(_m.d_a0);
+      } else {
+        return 0u;
+      }
     }
 
     static const std::shared_ptr<result> &empty_result() {
@@ -177,30 +174,30 @@ struct IndParam {
               MapsTo<T1, unsigned int, unsigned int> F2>
     static T1 t_rect(const T1 f, F1 &&f0, F2 &&f1,
                      const std::shared_ptr<t> &t0) {
-      return std::visit(
-          Overloaded{[&](const typename t::Empty &) -> T1 { return f; },
-                     [&](const typename t::Single &_args) -> T1 {
-                       return f0(_args.d_a0);
-                     },
-                     [&](const typename t::Pair &_args) -> T1 {
-                       return f1(_args.d_a0, _args.d_a1);
-                     }},
-          t0->v());
+      if (std::holds_alternative<typename t::Empty>(t0->v())) {
+        return f;
+      } else if (std::holds_alternative<typename t::Single>(t0->v())) {
+        const auto &_m = *std::get_if<typename t::Single>(&t0->v());
+        return f0(_m.d_a0);
+      } else {
+        const auto &_m = *std::get_if<typename t::Pair>(&t0->v());
+        return f1(_m.d_a0, _m.d_a1);
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F1,
               MapsTo<T1, unsigned int, unsigned int> F2>
     static T1 t_rec(const T1 f, F1 &&f0, F2 &&f1,
                     const std::shared_ptr<t> &t0) {
-      return std::visit(
-          Overloaded{[&](const typename t::Empty &) -> T1 { return f; },
-                     [&](const typename t::Single &_args) -> T1 {
-                       return f0(_args.d_a0);
-                     },
-                     [&](const typename t::Pair &_args) -> T1 {
-                       return f1(_args.d_a0, _args.d_a1);
-                     }},
-          t0->v());
+      if (std::holds_alternative<typename t::Empty>(t0->v())) {
+        return f;
+      } else if (std::holds_alternative<typename t::Single>(t0->v())) {
+        const auto &_m = *std::get_if<typename t::Single>(&t0->v());
+        return f0(_m.d_a0);
+      } else {
+        const auto &_m = *std::get_if<typename t::Pair>(&t0->v());
+        return f1(_m.d_a0, _m.d_a1);
+      }
     }
 
     __attribute__((pure)) static unsigned int size(const std::shared_ptr<t> &c);

@@ -110,32 +110,28 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   std::any eval(const Ty) const {
-    return std::visit(
-        Overloaded{
-            [](const typename Expr::ENat &_args) -> std::any {
-              return _args.d_a0;
-            },
-            [](const typename Expr::EBool &_args) -> std::any {
-              return _args.d_a0;
-            },
-            [](const typename Expr::EAdd &_args) -> std::any {
-              return (
-                  std::any_cast<unsigned int>(_args.d_a0->eval(Ty::e_TNAT)) +
-                  std::any_cast<unsigned int>(_args.d_a1->eval(Ty::e_TNAT)));
-            },
-            [](const typename Expr::EEq &_args) -> std::any {
-              return std::any_cast<unsigned int>(
-                         _args.d_a0->eval(Ty::e_TNAT)) ==
-                     std::any_cast<unsigned int>(_args.d_a1->eval(Ty::e_TNAT));
-            },
-            [](const typename Expr::EIf &_args) -> std::any {
-              if (std::any_cast<bool>(_args.d_a1->eval(Ty::e_TBOOL))) {
-                return _args.d_a2->eval(_args.d_t);
-              } else {
-                return _args.d_a3->eval(_args.d_t);
-              }
-            }},
-        this->v());
+    if (std::holds_alternative<typename Expr::ENat>(this->v())) {
+      const auto &_m = *std::get_if<typename Expr::ENat>(&this->v());
+      return _m.d_a0;
+    } else if (std::holds_alternative<typename Expr::EBool>(this->v())) {
+      const auto &_m = *std::get_if<typename Expr::EBool>(&this->v());
+      return _m.d_a0;
+    } else if (std::holds_alternative<typename Expr::EAdd>(this->v())) {
+      const auto &_m = *std::get_if<typename Expr::EAdd>(&this->v());
+      return (std::any_cast<unsigned int>(_m.d_a0->eval(Ty::e_TNAT)) +
+              std::any_cast<unsigned int>(_m.d_a1->eval(Ty::e_TNAT)));
+    } else if (std::holds_alternative<typename Expr::EEq>(this->v())) {
+      const auto &_m = *std::get_if<typename Expr::EEq>(&this->v());
+      return std::any_cast<unsigned int>(_m.d_a0->eval(Ty::e_TNAT)) ==
+             std::any_cast<unsigned int>(_m.d_a1->eval(Ty::e_TNAT));
+    } else {
+      const auto &_m = *std::get_if<typename Expr::EIf>(&this->v());
+      if (std::any_cast<bool>(_m.d_a1->eval(Ty::e_TBOOL))) {
+        return _m.d_a2->eval(_m.d_t);
+      } else {
+        return _m.d_a3->eval(_m.d_t);
+      }
+    }
   }
 };
 

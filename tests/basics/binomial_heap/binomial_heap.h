@@ -109,28 +109,26 @@ struct BinomialHeap {
                                 std::shared_ptr<tree>, T1>
                              F0>
   static T1 tree_rect(F0 &&f, const T1 f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Node &_args) -> T1 {
-                     return f(_args.d_a0, _args.d_a1,
-                              tree_rect<T1>(f, f0, _args.d_a1), _args.d_a2,
-                              tree_rect<T1>(f, f0, _args.d_a2));
-                   },
-                   [&](const typename tree::Leaf &) -> T1 { return f0; }},
-        t->v());
+    if (std::holds_alternative<typename tree::Node>(t->v())) {
+      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+      return f(_m.d_a0, _m.d_a1, tree_rect<T1>(f, f0, _m.d_a1), _m.d_a2,
+               tree_rect<T1>(f, f0, _m.d_a2));
+    } else {
+      return f0;
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int, std::shared_ptr<tree>, T1,
                                 std::shared_ptr<tree>, T1>
                              F0>
   static T1 tree_rec(F0 &&f, const T1 f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Node &_args) -> T1 {
-                     return f(_args.d_a0, _args.d_a1,
-                              tree_rec<T1>(f, f0, _args.d_a1), _args.d_a2,
-                              tree_rec<T1>(f, f0, _args.d_a2));
-                   },
-                   [&](const typename tree::Leaf &) -> T1 { return f0; }},
-        t->v());
+    if (std::holds_alternative<typename tree::Node>(t->v())) {
+      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+      return f(_m.d_a0, _m.d_a1, tree_rec<T1>(f, f0, _m.d_a1), _m.d_a2,
+               tree_rec<T1>(f, f0, _m.d_a2));
+    } else {
+      return f0;
+    }
   }
 
   using priqueue = std::shared_ptr<List<std::shared_ptr<tree>>>;
@@ -153,25 +151,19 @@ struct BinomialHeap {
                 F1>
   __attribute__((pure)) static priqueue unzip(const std::shared_ptr<tree> &t,
                                               F1 &&cont) {
-    return std::visit(
-        Overloaded{
-            [&](const typename tree::Node &_args)
-                -> std::shared_ptr<List<std::shared_ptr<tree>>> {
-              std::function<std::shared_ptr<List<std::shared_ptr<tree>>>(
-                  std::shared_ptr<List<std::shared_ptr<tree>>>)>
-                  f = [=](const std::shared_ptr<List<std::shared_ptr<tree>>>
-                              &q) mutable {
-                    return List<std::shared_ptr<tree>>::cons(
-                        tree::node(_args.d_a0, _args.d_a1, tree::leaf()),
-                        cont(q));
-                  };
-              return unzip(_args.d_a2, f);
-            },
-            [&](const typename tree::Leaf &)
-                -> std::shared_ptr<List<std::shared_ptr<tree>>> {
-              return cont(List<std::shared_ptr<tree>>::nil());
-            }},
-        t->v());
+    if (std::holds_alternative<typename tree::Node>(t->v())) {
+      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+      std::function<std::shared_ptr<List<std::shared_ptr<tree>>>(
+          std::shared_ptr<List<std::shared_ptr<tree>>>)>
+          f = [=](const std::shared_ptr<List<std::shared_ptr<tree>>>
+                      &q) mutable {
+            return List<std::shared_ptr<tree>>::cons(
+                tree::node(_m.d_a0, _m.d_a1, tree::leaf()), cont(q));
+          };
+      return unzip(_m.d_a2, f);
+    } else {
+      return cont(List<std::shared_ptr<tree>>::nil());
+    }
   }
 
   __attribute__((pure)) static priqueue

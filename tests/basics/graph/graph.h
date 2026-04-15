@@ -95,20 +95,16 @@ public:
 
   template <MapsTo<bool, t_A> F0>
   std::shared_ptr<List<t_A>> filter(F0 &&f) const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> std::shared_ptr<List<t_A>> {
-              return List<t_A>::nil();
-            },
-            [&](const typename List<t_A>::Cons &_args)
-                -> std::shared_ptr<List<t_A>> {
-              if (f(_args.d_a0)) {
-                return List<t_A>::cons(_args.d_a0, _args.d_a1->filter(f));
-              } else {
-                return _args.d_a1->filter(f);
-              }
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return List<t_A>::nil();
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      if (f(_m.d_a0)) {
+        return List<t_A>::cons(_m.d_a0, _m.d_a1->filter(f));
+      } else {
+        return _m.d_a1->filter(f);
+      }
+    }
   }
 };
 

@@ -89,30 +89,21 @@ struct Tuple {
 
   template <typename T1, typename T2>
   static T1 fst(const std::shared_ptr<Prod<T1, T2>> &p) {
-    return std::visit(
-        Overloaded{[](const typename Prod<T1, T2>::Pair &_args) -> T1 {
-          return _args.d_a0;
-        }},
-        p->v());
+    const auto &_m = *std::get_if<typename Prod<T1, T2>::Pair>(&p->v());
+    return _m.d_a0;
   }
 
   template <typename T1, typename T2>
   static T2 snd(const std::shared_ptr<Prod<T1, T2>> &p) {
-    return std::visit(
-        Overloaded{[](const typename Prod<T1, T2>::Pair &_args) -> T2 {
-          return _args.d_a1;
-        }},
-        p->v());
+    const auto &_m = *std::get_if<typename Prod<T1, T2>::Pair>(&p->v());
+    return _m.d_a1;
   }
 
   template <typename T1, typename T2>
   static std::shared_ptr<Prod<T2, T1>>
   swap(const std::shared_ptr<Prod<T1, T2>> &p) {
-    return std::visit(Overloaded{[](const typename Prod<T1, T2>::Pair &_args)
-                                     -> std::shared_ptr<Prod<T2, T1>> {
-                        return Prod<T2, T1>::pair(_args.d_a1, _args.d_a0);
-                      }},
-                      p->v());
+    const auto &_m = *std::get_if<typename Prod<T1, T2>::Pair>(&p->v());
+    return Prod<T2, T1>::pair(_m.d_a1, _m.d_a0);
   }
 
   static inline const std::shared_ptr<

@@ -64,18 +64,14 @@ struct DropHeadDefault {
       return l;
     } else {
       unsigned int n_ = n - 1;
-      if (l.use_count() == 1 && l->v().index() == 0) {
+      if (std::holds_alternative<typename List<T1>::Nil>(l->v()) &&
+          l.use_count() == 1) {
         return l;
+      } else if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+        return List<T1>::nil();
       } else {
-        return std::visit(Overloaded{[](const typename List<T1>::Nil &)
-                                         -> std::shared_ptr<List<T1>> {
-                                       return List<T1>::nil();
-                                     },
-                                     [&](const typename List<T1>::Cons &_args)
-                                         -> std::shared_ptr<List<T1>> {
-                                       return drop<T1>(n_, _args.d_a1);
-                                     }},
-                          l->v());
+        const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+        return drop<T1>(n_, _m.d_a1);
       }
     }
   }

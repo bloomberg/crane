@@ -57,22 +57,20 @@ public:
 
   t_A nth(const unsigned int n, const t_A default0) const {
     if (n <= 0) {
-      return std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
-              [](const typename List<t_A>::Cons &_args) -> t_A {
-                return _args.d_a0;
-              }},
-          this->v());
+      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+        return default0;
+      } else {
+        const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+        return _m.d_a0;
+      }
     } else {
       unsigned int m = n - 1;
-      return std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
-              [&](const typename List<t_A>::Cons &_args0) -> t_A {
-                return _args0.d_a1->nth(m, default0);
-              }},
-          this->v());
+      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+        return default0;
+      } else {
+        const auto &_m0 = *std::get_if<typename List<t_A>::Cons>(&this->v());
+        return _m0.d_a1->nth(m, default0);
+      }
     }
   }
 };

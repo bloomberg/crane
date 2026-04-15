@@ -16,20 +16,19 @@ DoubleInvokeMove::wrap_with(std::shared_ptr<DoubleInvokeMove::tree> t,
 
 __attribute__((pure)) unsigned int
 DoubleInvokeMove::left_value(const std::shared_ptr<DoubleInvokeMove::tree> &t) {
-  return std::visit(
-      Overloaded{
-          [](const typename DoubleInvokeMove::tree::Leaf &) -> unsigned int {
-            return 0u;
-          },
-          [](const typename DoubleInvokeMove::tree::Node &_args)
-              -> unsigned int {
-            return std::visit(
-                Overloaded{
-                    [](const typename DoubleInvokeMove::tree::Leaf &)
-                        -> unsigned int { return 0u; },
-                    [](const typename DoubleInvokeMove::tree::Node &_args0)
-                        -> unsigned int { return _args0.d_a1; }},
-                _args.d_a0->v());
-          }},
-      t->v());
+  if (std::holds_alternative<typename DoubleInvokeMove::tree::Leaf>(t->v())) {
+    return 0u;
+  } else {
+    const auto &_m =
+        *std::get_if<typename DoubleInvokeMove::tree::Node>(&t->v());
+    auto &&_sv0 = _m.d_a0;
+    if (std::holds_alternative<typename DoubleInvokeMove::tree::Leaf>(
+            _sv0->v())) {
+      return 0u;
+    } else {
+      const auto &_m0 =
+          *std::get_if<typename DoubleInvokeMove::tree::Node>(&_sv0->v());
+      return _m0.d_a1;
+    }
+  }
 }

@@ -41,16 +41,13 @@ int64_t EffectCrossModule::test_with_greeting() {
 /// Use Inner's helper in a recursive function
 void EffectCrossModule::greet_all(
     const std::shared_ptr<List<std::string>> &names) {
-  {
-    std::visit(Overloaded{[](const typename List<std::string>::Nil &)
-                              -> std::monostate { return std::monostate{}; },
-                          [](const typename List<std::string>::Cons &_args)
-                              -> std::monostate {
-                            Inner::greet(_args.d_a0);
-                            greet_all(_args.d_a1);
-                            return std::monostate{};
-                          }},
-               names->v());
+  if (std::holds_alternative<typename List<std::string>::Nil>(names->v())) {
+    return;
+  } else {
+    const auto &_m =
+        *std::get_if<typename List<std::string>::Cons>(&names->v());
+    Inner::greet(_m.d_a0);
+    greet_all(_m.d_a1);
     return;
   }
 }

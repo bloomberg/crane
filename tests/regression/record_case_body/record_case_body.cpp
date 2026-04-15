@@ -141,13 +141,15 @@ std::shared_ptr<RecordCaseBody::Rec> RecordCaseBody::constructor_body(
 
 __attribute__((pure)) unsigned int RecordCaseBody::sum_list(
     const std::shared_ptr<RecordCaseBody::list<unsigned int>> &l) {
-  return std::visit(
-      Overloaded{
-          [](const typename RecordCaseBody::list<unsigned int>::Nil &)
-              -> unsigned int { return 0u; },
-          [](const typename RecordCaseBody::list<unsigned int>::Cons &_args)
-              -> unsigned int { return (_args.d_a0 + sum_list(_args.d_a1)); }},
-      l->v());
+  if (std::holds_alternative<typename RecordCaseBody::list<unsigned int>::Nil>(
+          l->v())) {
+    return 0u;
+  } else {
+    const auto &_m =
+        *std::get_if<typename RecordCaseBody::list<unsigned int>::Cons>(
+            &l->v());
+    return (_m.d_a0 + sum_list(_m.d_a1));
+  }
 }
 
 __attribute__((pure)) unsigned int

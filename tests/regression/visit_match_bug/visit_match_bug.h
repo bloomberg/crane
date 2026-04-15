@@ -68,16 +68,14 @@ struct VisitMatchBug {
                    std::shared_ptr<Tree>, T1>
                 F1>
   static T1 Tree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<Tree> &t) {
-    return std::visit(Overloaded{[&](const typename Tree::Leaf &_args) -> T1 {
-                                   return f(_args.d_a0);
-                                 },
-                                 [&](const typename Tree::Node &_args) -> T1 {
-                                   return f0(_args.d_a0,
-                                             Tree_rect<T1>(f, f0, _args.d_a0),
-                                             _args.d_a1, _args.d_a2,
-                                             Tree_rect<T1>(f, f0, _args.d_a2));
-                                 }},
-                      t->v());
+    if (std::holds_alternative<typename Tree::Leaf>(t->v())) {
+      const auto &_m = *std::get_if<typename Tree::Leaf>(&t->v());
+      return f(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename Tree::Node>(&t->v());
+      return f0(_m.d_a0, Tree_rect<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
+                Tree_rect<T1>(f, f0, _m.d_a2));
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -85,16 +83,14 @@ struct VisitMatchBug {
                    std::shared_ptr<Tree>, T1>
                 F1>
   static T1 Tree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<Tree> &t) {
-    return std::visit(Overloaded{[&](const typename Tree::Leaf &_args) -> T1 {
-                                   return f(_args.d_a0);
-                                 },
-                                 [&](const typename Tree::Node &_args) -> T1 {
-                                   return f0(_args.d_a0,
-                                             Tree_rec<T1>(f, f0, _args.d_a0),
-                                             _args.d_a1, _args.d_a2,
-                                             Tree_rec<T1>(f, f0, _args.d_a2));
-                                 }},
-                      t->v());
+    if (std::holds_alternative<typename Tree::Leaf>(t->v())) {
+      const auto &_m = *std::get_if<typename Tree::Leaf>(&t->v());
+      return f(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename Tree::Node>(&t->v());
+      return f0(_m.d_a0, Tree_rec<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
+                Tree_rec<T1>(f, f0, _m.d_a2));
+    }
   }
 
   static std::shared_ptr<Tree> consume(std::shared_ptr<Tree> t);

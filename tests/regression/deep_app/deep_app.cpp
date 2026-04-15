@@ -20,13 +20,11 @@ DeepApp::build(const unsigned int n,
       _continue = false;
     } else {
       unsigned int n_ = _loop_n - 1;
-      {
-        std::shared_ptr<DeepApp::mylist<unsigned int>> _next_acc =
-            mylist<unsigned int>::mycons(_loop_n, _loop_acc);
-        unsigned int _next_n = n_;
-        _loop_acc = std::move(_next_acc);
-        _loop_n = std::move(_next_n);
-      }
+      std::shared_ptr<DeepApp::mylist<unsigned int>> _next_acc =
+          mylist<unsigned int>::mycons(_loop_n, _loop_acc);
+      unsigned int _next_n = n_;
+      _loop_acc = std::move(_next_acc);
+      _loop_n = std::move(_next_n);
     }
   }
   return _result;
@@ -48,10 +46,12 @@ std::shared_ptr<DeepApp::mylist<unsigned int>> DeepApp::append_lists(
 
 __attribute__((pure)) unsigned int
 DeepApp::head_or_zero(const std::shared_ptr<DeepApp::mylist<unsigned int>> &l) {
-  return std::visit(
-      Overloaded{[](const typename DeepApp::mylist<unsigned int>::Mynil &)
-                     -> unsigned int { return 0u; },
-                 [](const typename DeepApp::mylist<unsigned int>::Mycons &_args)
-                     -> unsigned int { return _args.d_a0; }},
-      l->v());
+  if (std::holds_alternative<typename DeepApp::mylist<unsigned int>::Mynil>(
+          l->v())) {
+    return 0u;
+  } else {
+    const auto &_m =
+        *std::get_if<typename DeepApp::mylist<unsigned int>::Mycons>(&l->v());
+    return _m.d_a0;
+  }
 }

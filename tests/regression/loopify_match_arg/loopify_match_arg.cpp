@@ -25,30 +25,29 @@ __attribute__((pure)) unsigned int LoopifyMatchArg::count_dots(
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(
-        Overloaded{
-            [&](_Enter _f) {
-              const std::shared_ptr<List<LoopifyMatchArg::Cell>> xs = _f.xs;
-              std::visit(
-                  Overloaded{
-                      [&](const typename List<LoopifyMatchArg::Cell>::Nil &)
-                          -> void { _result = 0u; },
-                      [&](const typename List<LoopifyMatchArg::Cell>::Cons
-                              &_args) -> void {
-                        switch (_args.d_a0) {
-                        case Cell::e_DOT: {
-                          _stack.emplace_back(_Call1{1u});
-                          _stack.emplace_back(_Enter{_args.d_a1});
-                        }
-                        default: {
-                          _stack.emplace_back(_Enter{_args.d_a1});
-                        }
-                        }
-                      }},
-                  xs->v());
-            },
-            [&](_Call1 _f) { _result = (_f._s0 + _result); }},
-        _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const std::shared_ptr<List<LoopifyMatchArg::Cell>> xs = _f.xs;
+      if (std::holds_alternative<typename List<LoopifyMatchArg::Cell>::Nil>(
+              xs->v())) {
+        _result = 0u;
+      } else {
+        const auto &_m =
+            *std::get_if<typename List<LoopifyMatchArg::Cell>::Cons>(&xs->v());
+        switch (_m.d_a0) {
+        case Cell::e_DOT: {
+          _stack.emplace_back(_Call1{1u});
+          _stack.emplace_back(_Enter{_m.d_a1});
+        }
+        default: {
+          _stack.emplace_back(_Enter{_m.d_a1});
+        }
+        }
+      }
+    } else {
+      const auto &_f = std::get<_Call1>(_frame);
+      _result = (_f._s0 + _result);
+    }
   }
   return _result;
 }
@@ -72,23 +71,22 @@ __attribute__((pure)) unsigned int LoopifyMatchArg::my_length(
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(
-        Overloaded{
-            [&](_Enter _f) {
-              const std::shared_ptr<List<LoopifyMatchArg::Cell>> xs = _f.xs;
-              std::visit(
-                  Overloaded{
-                      [&](const typename List<LoopifyMatchArg::Cell>::Nil &)
-                          -> void { _result = 0u; },
-                      [&](const typename List<LoopifyMatchArg::Cell>::Cons
-                              &_args) -> void {
-                        _stack.emplace_back(_Call1{1u});
-                        _stack.emplace_back(_Enter{_args.d_a1});
-                      }},
-                  xs->v());
-            },
-            [&](_Call1 _f) { _result = (_f._s0 + _result); }},
-        _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const std::shared_ptr<List<LoopifyMatchArg::Cell>> xs = _f.xs;
+      if (std::holds_alternative<typename List<LoopifyMatchArg::Cell>::Nil>(
+              xs->v())) {
+        _result = 0u;
+      } else {
+        const auto &_m =
+            *std::get_if<typename List<LoopifyMatchArg::Cell>::Cons>(&xs->v());
+        _stack.emplace_back(_Call1{1u});
+        _stack.emplace_back(_Enter{_m.d_a1});
+      }
+    } else {
+      const auto &_f = std::get<_Call1>(_frame);
+      _result = (_f._s0 + _result);
+    }
   }
   return _result;
 }

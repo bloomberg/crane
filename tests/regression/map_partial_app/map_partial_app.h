@@ -58,15 +58,12 @@ public:
 
   template <typename T1, MapsTo<T1, t_A> F0>
   std::shared_ptr<List<T1>> map(F0 &&f) const {
-    return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil &)
-                       -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
-                   [&](const typename List<t_A>::Cons &_args)
-                       -> std::shared_ptr<List<T1>> {
-                     return List<T1>::cons(f(_args.d_a0),
-                                           _args.d_a1->template map<T1>(f));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return List<T1>::nil();
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return List<T1>::cons(f(_m.d_a0), _m.d_a1->template map<T1>(f));
+    }
   }
 };
 
@@ -121,28 +118,26 @@ struct MapPartialApp {
                                 std::shared_ptr<tree>, T1>
                              F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, _args.d_a2,
-                               tree_rect<T1>(f, f0, _args.d_a2));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+      return f0(_m.d_a0, tree_rect<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
+                tree_rect<T1>(f, f0, _m.d_a2));
+    }
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
                                 std::shared_ptr<tree>, T1>
                              F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, _args.d_a2,
-                               tree_rec<T1>(f, f0, _args.d_a2));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+      return f0(_m.d_a0, tree_rec<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
+                tree_rec<T1>(f, f0, _m.d_a2));
+    }
   }
 
   __attribute__((pure)) static unsigned int

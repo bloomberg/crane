@@ -18,7 +18,27 @@ LoopifyTmc::range(const unsigned int lo, const unsigned int hi) {
   bool _continue = true;
   while (_continue) {
     if (_loop_hi <= 0) {
-      {
+      if (_last) {
+        std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+            list<unsigned int>::nil();
+      } else {
+        _head = list<unsigned int>::nil();
+      }
+      _continue = false;
+    } else {
+      unsigned int hi_ = _loop_hi - 1;
+      if (lo <= hi_) {
+        auto _cell = list<unsigned int>::cons(hi_, nullptr);
+        if (_last) {
+          std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+              _cell;
+        } else {
+          _head = _cell;
+        }
+        _last = _cell;
+        _loop_hi = hi_;
+        continue;
+      } else {
         if (_last) {
           std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
               list<unsigned int>::nil();
@@ -26,32 +46,6 @@ LoopifyTmc::range(const unsigned int lo, const unsigned int hi) {
           _head = list<unsigned int>::nil();
         }
         _continue = false;
-      }
-    } else {
-      unsigned int hi_ = _loop_hi - 1;
-      if (lo <= hi_) {
-        {
-          auto _cell = list<unsigned int>::cons(hi_, nullptr);
-          if (_last) {
-            std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                _cell;
-          } else {
-            _head = _cell;
-          }
-          _last = _cell;
-          _loop_hi = hi_;
-          continue;
-        }
-      } else {
-        {
-          if (_last) {
-            std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                list<unsigned int>::nil();
-          } else {
-            _head = list<unsigned int>::nil();
-          }
-          _continue = false;
-        }
       }
     }
   }
@@ -68,34 +62,34 @@ std::shared_ptr<LoopifyTmc::list<unsigned int>> LoopifyTmc::prefix_sums(
   unsigned int _loop_acc = acc;
   bool _continue = true;
   while (_continue) {
-    std::visit(
-        Overloaded{
-            [&](const typename LoopifyTmc::list<unsigned int>::Nil &) {
-              if (_last) {
-                std::get<typename list<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = list<unsigned int>::nil();
-              } else {
-                _head = list<unsigned int>::nil();
-              }
-              _continue = false;
-            },
-            [&](const typename LoopifyTmc::list<unsigned int>::Cons &_args) {
-              unsigned int s = (_loop_acc + _args.d_a0);
-              auto _cell = list<unsigned int>::cons(s, nullptr);
-              if (_last) {
-                std::get<typename list<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = _cell;
-              } else {
-                _head = _cell;
-              }
-              _last = _cell;
-              std::shared_ptr<LoopifyTmc::list<unsigned int>> _next_l =
-                  _args.d_a1;
-              unsigned int _next_acc = s;
-              _loop_l = std::move(_next_l);
-              _loop_acc = std::move(_next_acc);
-            }},
-        _loop_l->v());
+    if (std::holds_alternative<typename LoopifyTmc::list<unsigned int>::Nil>(
+            _loop_l->v())) {
+      if (_last) {
+        std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+            list<unsigned int>::nil();
+      } else {
+        _head = list<unsigned int>::nil();
+      }
+      _continue = false;
+    } else {
+      const auto &_m =
+          *std::get_if<typename LoopifyTmc::list<unsigned int>::Cons>(
+              &_loop_l->v());
+      unsigned int s = (_loop_acc + _m.d_a0);
+      auto _cell = list<unsigned int>::cons(s, nullptr);
+      if (_last) {
+        std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+            _cell;
+      } else {
+        _head = _cell;
+      }
+      _last = _cell;
+      std::shared_ptr<LoopifyTmc::list<unsigned int>> _next_l = _m.d_a1;
+      unsigned int _next_acc = s;
+      _loop_l = std::move(_next_l);
+      _loop_acc = std::move(_next_acc);
+      continue;
+    }
   }
   return _head;
 }

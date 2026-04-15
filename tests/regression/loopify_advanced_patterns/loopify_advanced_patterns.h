@@ -128,34 +128,32 @@ struct LoopifyAdvancedPatterns {
             MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2>
   static T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1,
                        const std::shared_ptr<shape> &s) {
-    return std::visit(
-        Overloaded{[&](const typename shape::Circle &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename shape::Square &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename shape::Triangle &_args) -> T1 {
-                     return f1(_args.d_a0);
-                   }},
-        s->v());
+    if (std::holds_alternative<typename shape::Circle>(s->v())) {
+      const auto &_m = *std::get_if<typename shape::Circle>(&s->v());
+      return f(_m.d_a0);
+    } else if (std::holds_alternative<typename shape::Square>(s->v())) {
+      const auto &_m = *std::get_if<typename shape::Square>(&s->v());
+      return f0(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename shape::Triangle>(&s->v());
+      return f1(_m.d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2>
   static T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1,
                       const std::shared_ptr<shape> &s) {
-    return std::visit(
-        Overloaded{[&](const typename shape::Circle &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename shape::Square &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename shape::Triangle &_args) -> T1 {
-                     return f1(_args.d_a0);
-                   }},
-        s->v());
+    if (std::holds_alternative<typename shape::Circle>(s->v())) {
+      const auto &_m = *std::get_if<typename shape::Circle>(&s->v());
+      return f(_m.d_a0);
+    } else if (std::holds_alternative<typename shape::Square>(s->v())) {
+      const auto &_m = *std::get_if<typename shape::Square>(&s->v());
+      return f0(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename shape::Triangle>(&s->v());
+      return f1(_m.d_a0);
+    }
   }
 
   __attribute__((pure)) static unsigned int

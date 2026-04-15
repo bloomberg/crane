@@ -76,32 +76,28 @@ struct WhereClause {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int expr_size() const {
-      return std::visit(
-          Overloaded{
-              [](const typename Expr::Num &) -> unsigned int { return 1u; },
-              [](const typename Expr::Plus &_args) -> unsigned int {
-                return ((1u + _args.d_a0->expr_size()) +
-                        _args.d_a1->expr_size());
-              },
-              [](const typename Expr::Times &_args) -> unsigned int {
-                return ((1u + _args.d_a0->expr_size()) +
-                        _args.d_a1->expr_size());
-              }},
-          this->v());
+      if (std::holds_alternative<typename Expr::Num>(this->v())) {
+        return 1u;
+      } else if (std::holds_alternative<typename Expr::Plus>(this->v())) {
+        const auto &_m = *std::get_if<typename Expr::Plus>(&this->v());
+        return ((1u + _m.d_a0->expr_size()) + _m.d_a1->expr_size());
+      } else {
+        const auto &_m = *std::get_if<typename Expr::Times>(&this->v());
+        return ((1u + _m.d_a0->expr_size()) + _m.d_a1->expr_size());
+      }
     }
 
     __attribute__((pure)) unsigned int eval() const {
-      return std::visit(
-          Overloaded{[](const typename Expr::Num &_args) -> unsigned int {
-                       return _args.d_a0;
-                     },
-                     [](const typename Expr::Plus &_args) -> unsigned int {
-                       return (_args.d_a0->eval() + _args.d_a1->eval());
-                     },
-                     [](const typename Expr::Times &_args) -> unsigned int {
-                       return (_args.d_a0->eval() * _args.d_a1->eval());
-                     }},
-          this->v());
+      if (std::holds_alternative<typename Expr::Num>(this->v())) {
+        const auto &_m = *std::get_if<typename Expr::Num>(&this->v());
+        return _m.d_a0;
+      } else if (std::holds_alternative<typename Expr::Plus>(this->v())) {
+        const auto &_m = *std::get_if<typename Expr::Plus>(&this->v());
+        return (_m.d_a0->eval() + _m.d_a1->eval());
+      } else {
+        const auto &_m = *std::get_if<typename Expr::Times>(&this->v());
+        return (_m.d_a0->eval() * _m.d_a1->eval());
+      }
     }
 
     template <
@@ -109,23 +105,18 @@ struct WhereClause {
         MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F1,
         MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F2>
     T1 Expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
-      return std::visit(
-          Overloaded{[&](const typename Expr::Num &_args) -> T1 {
-                       return f(_args.d_a0);
-                     },
-                     [&](const typename Expr::Plus &_args) -> T1 {
-                       return f0(_args.d_a0,
-                                 _args.d_a0->template Expr_rec<T1>(f, f0, f1),
-                                 _args.d_a1,
-                                 _args.d_a1->template Expr_rec<T1>(f, f0, f1));
-                     },
-                     [&](const typename Expr::Times &_args) -> T1 {
-                       return f1(_args.d_a0,
-                                 _args.d_a0->template Expr_rec<T1>(f, f0, f1),
-                                 _args.d_a1,
-                                 _args.d_a1->template Expr_rec<T1>(f, f0, f1));
-                     }},
-          this->v());
+      if (std::holds_alternative<typename Expr::Num>(this->v())) {
+        const auto &_m = *std::get_if<typename Expr::Num>(&this->v());
+        return f(_m.d_a0);
+      } else if (std::holds_alternative<typename Expr::Plus>(this->v())) {
+        const auto &_m = *std::get_if<typename Expr::Plus>(&this->v());
+        return f0(_m.d_a0, _m.d_a0->template Expr_rec<T1>(f, f0, f1), _m.d_a1,
+                  _m.d_a1->template Expr_rec<T1>(f, f0, f1));
+      } else {
+        const auto &_m = *std::get_if<typename Expr::Times>(&this->v());
+        return f1(_m.d_a0, _m.d_a0->template Expr_rec<T1>(f, f0, f1), _m.d_a1,
+                  _m.d_a1->template Expr_rec<T1>(f, f0, f1));
+      }
     }
 
     template <
@@ -133,23 +124,18 @@ struct WhereClause {
         MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F1,
         MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F2>
     T1 Expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
-      return std::visit(
-          Overloaded{[&](const typename Expr::Num &_args) -> T1 {
-                       return f(_args.d_a0);
-                     },
-                     [&](const typename Expr::Plus &_args) -> T1 {
-                       return f0(_args.d_a0,
-                                 _args.d_a0->template Expr_rect<T1>(f, f0, f1),
-                                 _args.d_a1,
-                                 _args.d_a1->template Expr_rect<T1>(f, f0, f1));
-                     },
-                     [&](const typename Expr::Times &_args) -> T1 {
-                       return f1(_args.d_a0,
-                                 _args.d_a0->template Expr_rect<T1>(f, f0, f1),
-                                 _args.d_a1,
-                                 _args.d_a1->template Expr_rect<T1>(f, f0, f1));
-                     }},
-          this->v());
+      if (std::holds_alternative<typename Expr::Num>(this->v())) {
+        const auto &_m = *std::get_if<typename Expr::Num>(&this->v());
+        return f(_m.d_a0);
+      } else if (std::holds_alternative<typename Expr::Plus>(this->v())) {
+        const auto &_m = *std::get_if<typename Expr::Plus>(&this->v());
+        return f0(_m.d_a0, _m.d_a0->template Expr_rect<T1>(f, f0, f1), _m.d_a1,
+                  _m.d_a1->template Expr_rect<T1>(f, f0, f1));
+      } else {
+        const auto &_m = *std::get_if<typename Expr::Times>(&this->v());
+        return f1(_m.d_a0, _m.d_a0->template Expr_rect<T1>(f, f0, f1), _m.d_a1,
+                  _m.d_a1->template Expr_rect<T1>(f, f0, f1));
+      }
     }
   };
 
@@ -234,20 +220,20 @@ struct WhereClause {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) bool beval() const {
-      return std::visit(
-          Overloaded{
-              [](const typename BExpr::BTrue &) -> bool { return true; },
-              [](const typename BExpr::BFalse &) -> bool { return false; },
-              [](const typename BExpr::BAnd &_args) -> bool {
-                return (_args.d_a0->beval() && _args.d_a1->beval());
-              },
-              [](const typename BExpr::BOr &_args) -> bool {
-                return (_args.d_a0->beval() || _args.d_a1->beval());
-              },
-              [](const typename BExpr::BNot &_args) -> bool {
-                return !(_args.d_a0->beval());
-              }},
-          this->v());
+      if (std::holds_alternative<typename BExpr::BTrue>(this->v())) {
+        return true;
+      } else if (std::holds_alternative<typename BExpr::BFalse>(this->v())) {
+        return false;
+      } else if (std::holds_alternative<typename BExpr::BAnd>(this->v())) {
+        const auto &_m = *std::get_if<typename BExpr::BAnd>(&this->v());
+        return (_m.d_a0->beval() && _m.d_a1->beval());
+      } else if (std::holds_alternative<typename BExpr::BOr>(this->v())) {
+        const auto &_m = *std::get_if<typename BExpr::BOr>(&this->v());
+        return (_m.d_a0->beval() || _m.d_a1->beval());
+      } else {
+        const auto &_m = *std::get_if<typename BExpr::BNot>(&this->v());
+        return !(_m.d_a0->beval());
+      }
     }
   };
 
@@ -258,26 +244,22 @@ struct WhereClause {
       MapsTo<T1, std::shared_ptr<BExpr>, T1> F4>
   static T1 BExpr_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
                        const std::shared_ptr<BExpr> &b) {
-    return std::visit(
-        Overloaded{[&](const typename BExpr::BTrue &) -> T1 { return f; },
-                   [&](const typename BExpr::BFalse &) -> T1 { return f0; },
-                   [&](const typename BExpr::BAnd &_args) -> T1 {
-                     return f1(_args.d_a0,
-                               BExpr_rect<T1>(f, f0, f1, f2, f3, _args.d_a0),
-                               _args.d_a1,
-                               BExpr_rect<T1>(f, f0, f1, f2, f3, _args.d_a1));
-                   },
-                   [&](const typename BExpr::BOr &_args) -> T1 {
-                     return f2(_args.d_a0,
-                               BExpr_rect<T1>(f, f0, f1, f2, f3, _args.d_a0),
-                               _args.d_a1,
-                               BExpr_rect<T1>(f, f0, f1, f2, f3, _args.d_a1));
-                   },
-                   [&](const typename BExpr::BNot &_args) -> T1 {
-                     return f3(_args.d_a0,
-                               BExpr_rect<T1>(f, f0, f1, f2, f3, _args.d_a0));
-                   }},
-        b->v());
+    if (std::holds_alternative<typename BExpr::BTrue>(b->v())) {
+      return f;
+    } else if (std::holds_alternative<typename BExpr::BFalse>(b->v())) {
+      return f0;
+    } else if (std::holds_alternative<typename BExpr::BAnd>(b->v())) {
+      const auto &_m = *std::get_if<typename BExpr::BAnd>(&b->v());
+      return f1(_m.d_a0, BExpr_rect<T1>(f, f0, f1, f2, f3, _m.d_a0), _m.d_a1,
+                BExpr_rect<T1>(f, f0, f1, f2, f3, _m.d_a1));
+    } else if (std::holds_alternative<typename BExpr::BOr>(b->v())) {
+      const auto &_m = *std::get_if<typename BExpr::BOr>(&b->v());
+      return f2(_m.d_a0, BExpr_rect<T1>(f, f0, f1, f2, f3, _m.d_a0), _m.d_a1,
+                BExpr_rect<T1>(f, f0, f1, f2, f3, _m.d_a1));
+    } else {
+      const auto &_m = *std::get_if<typename BExpr::BNot>(&b->v());
+      return f3(_m.d_a0, BExpr_rect<T1>(f, f0, f1, f2, f3, _m.d_a0));
+    }
   }
 
   template <
@@ -287,26 +269,22 @@ struct WhereClause {
       MapsTo<T1, std::shared_ptr<BExpr>, T1> F4>
   static T1 BExpr_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
                       const std::shared_ptr<BExpr> &b) {
-    return std::visit(
-        Overloaded{[&](const typename BExpr::BTrue &) -> T1 { return f; },
-                   [&](const typename BExpr::BFalse &) -> T1 { return f0; },
-                   [&](const typename BExpr::BAnd &_args) -> T1 {
-                     return f1(_args.d_a0,
-                               BExpr_rec<T1>(f, f0, f1, f2, f3, _args.d_a0),
-                               _args.d_a1,
-                               BExpr_rec<T1>(f, f0, f1, f2, f3, _args.d_a1));
-                   },
-                   [&](const typename BExpr::BOr &_args) -> T1 {
-                     return f2(_args.d_a0,
-                               BExpr_rec<T1>(f, f0, f1, f2, f3, _args.d_a0),
-                               _args.d_a1,
-                               BExpr_rec<T1>(f, f0, f1, f2, f3, _args.d_a1));
-                   },
-                   [&](const typename BExpr::BNot &_args) -> T1 {
-                     return f3(_args.d_a0,
-                               BExpr_rec<T1>(f, f0, f1, f2, f3, _args.d_a0));
-                   }},
-        b->v());
+    if (std::holds_alternative<typename BExpr::BTrue>(b->v())) {
+      return f;
+    } else if (std::holds_alternative<typename BExpr::BFalse>(b->v())) {
+      return f0;
+    } else if (std::holds_alternative<typename BExpr::BAnd>(b->v())) {
+      const auto &_m = *std::get_if<typename BExpr::BAnd>(&b->v());
+      return f1(_m.d_a0, BExpr_rec<T1>(f, f0, f1, f2, f3, _m.d_a0), _m.d_a1,
+                BExpr_rec<T1>(f, f0, f1, f2, f3, _m.d_a1));
+    } else if (std::holds_alternative<typename BExpr::BOr>(b->v())) {
+      const auto &_m = *std::get_if<typename BExpr::BOr>(&b->v());
+      return f2(_m.d_a0, BExpr_rec<T1>(f, f0, f1, f2, f3, _m.d_a0), _m.d_a1,
+                BExpr_rec<T1>(f, f0, f1, f2, f3, _m.d_a1));
+    } else {
+      const auto &_m = *std::get_if<typename BExpr::BNot>(&b->v());
+      return f3(_m.d_a0, BExpr_rec<T1>(f, f0, f1, f2, f3, _m.d_a0));
+    }
   }
 
   struct AExpr {
@@ -374,21 +352,20 @@ struct WhereClause {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int aeval() const {
-      return std::visit(
-          Overloaded{[](const typename AExpr::ANum &_args) -> unsigned int {
-                       return _args.d_a0;
-                     },
-                     [](const typename AExpr::APlus &_args) -> unsigned int {
-                       return (_args.d_a0->aeval() + _args.d_a1->aeval());
-                     },
-                     [](const typename AExpr::AIf &_args) -> unsigned int {
-                       if (_args.d_a0->beval()) {
-                         return _args.d_a1->aeval();
-                       } else {
-                         return _args.d_a2->aeval();
-                       }
-                     }},
-          this->v());
+      if (std::holds_alternative<typename AExpr::ANum>(this->v())) {
+        const auto &_m = *std::get_if<typename AExpr::ANum>(&this->v());
+        return _m.d_a0;
+      } else if (std::holds_alternative<typename AExpr::APlus>(this->v())) {
+        const auto &_m = *std::get_if<typename AExpr::APlus>(&this->v());
+        return (_m.d_a0->aeval() + _m.d_a1->aeval());
+      } else {
+        const auto &_m = *std::get_if<typename AExpr::AIf>(&this->v());
+        if (_m.d_a0->beval()) {
+          return _m.d_a1->aeval();
+        } else {
+          return _m.d_a2->aeval();
+        }
+      }
     }
 
     template <
@@ -398,23 +375,18 @@ struct WhereClause {
                std::shared_ptr<AExpr>, T1>
             F2>
     T1 AExpr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
-      return std::visit(
-          Overloaded{[&](const typename AExpr::ANum &_args) -> T1 {
-                       return f(_args.d_a0);
-                     },
-                     [&](const typename AExpr::APlus &_args) -> T1 {
-                       return f0(_args.d_a0,
-                                 _args.d_a0->template AExpr_rec<T1>(f, f0, f1),
-                                 _args.d_a1,
-                                 _args.d_a1->template AExpr_rec<T1>(f, f0, f1));
-                     },
-                     [&](const typename AExpr::AIf &_args) -> T1 {
-                       return f1(_args.d_a0, _args.d_a1,
-                                 _args.d_a1->template AExpr_rec<T1>(f, f0, f1),
-                                 _args.d_a2,
-                                 _args.d_a2->template AExpr_rec<T1>(f, f0, f1));
-                     }},
-          this->v());
+      if (std::holds_alternative<typename AExpr::ANum>(this->v())) {
+        const auto &_m = *std::get_if<typename AExpr::ANum>(&this->v());
+        return f(_m.d_a0);
+      } else if (std::holds_alternative<typename AExpr::APlus>(this->v())) {
+        const auto &_m = *std::get_if<typename AExpr::APlus>(&this->v());
+        return f0(_m.d_a0, _m.d_a0->template AExpr_rec<T1>(f, f0, f1), _m.d_a1,
+                  _m.d_a1->template AExpr_rec<T1>(f, f0, f1));
+      } else {
+        const auto &_m = *std::get_if<typename AExpr::AIf>(&this->v());
+        return f1(_m.d_a0, _m.d_a1, _m.d_a1->template AExpr_rec<T1>(f, f0, f1),
+                  _m.d_a2, _m.d_a2->template AExpr_rec<T1>(f, f0, f1));
+      }
     }
 
     template <
@@ -424,23 +396,18 @@ struct WhereClause {
                std::shared_ptr<AExpr>, T1>
             F2>
     T1 AExpr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename AExpr::ANum &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename AExpr::APlus &_args) -> T1 {
-                return f0(
-                    _args.d_a0, _args.d_a0->template AExpr_rect<T1>(f, f0, f1),
-                    _args.d_a1, _args.d_a1->template AExpr_rect<T1>(f, f0, f1));
-              },
-              [&](const typename AExpr::AIf &_args) -> T1 {
-                return f1(_args.d_a0, _args.d_a1,
-                          _args.d_a1->template AExpr_rect<T1>(f, f0, f1),
-                          _args.d_a2,
-                          _args.d_a2->template AExpr_rect<T1>(f, f0, f1));
-              }},
-          this->v());
+      if (std::holds_alternative<typename AExpr::ANum>(this->v())) {
+        const auto &_m = *std::get_if<typename AExpr::ANum>(&this->v());
+        return f(_m.d_a0);
+      } else if (std::holds_alternative<typename AExpr::APlus>(this->v())) {
+        const auto &_m = *std::get_if<typename AExpr::APlus>(&this->v());
+        return f0(_m.d_a0, _m.d_a0->template AExpr_rect<T1>(f, f0, f1), _m.d_a1,
+                  _m.d_a1->template AExpr_rect<T1>(f, f0, f1));
+      } else {
+        const auto &_m = *std::get_if<typename AExpr::AIf>(&this->v());
+        return f1(_m.d_a0, _m.d_a1, _m.d_a1->template AExpr_rect<T1>(f, f0, f1),
+                  _m.d_a2, _m.d_a2->template AExpr_rect<T1>(f, f0, f1));
+      }
     }
   };
 

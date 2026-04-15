@@ -14,21 +14,21 @@ LoopifyTail::member(const unsigned int x,
   std::shared_ptr<LoopifyTail::list<unsigned int>> _loop_l = l;
   bool _continue = true;
   while (_continue) {
-    std::visit(
-        Overloaded{
-            [&](const typename LoopifyTail::list<unsigned int>::Nil &) {
-              _result = false;
-              _continue = false;
-            },
-            [&](const typename LoopifyTail::list<unsigned int>::Cons &_args) {
-              if (x == _args.d_a0) {
-                _result = true;
-                _continue = false;
-              } else {
-                _loop_l = _args.d_a1;
-              }
-            }},
-        _loop_l->v());
+    if (std::holds_alternative<typename LoopifyTail::list<unsigned int>::Nil>(
+            _loop_l->v())) {
+      _result = false;
+      _continue = false;
+    } else {
+      const auto &_m =
+          *std::get_if<typename LoopifyTail::list<unsigned int>::Cons>(
+              &_loop_l->v());
+      if (x == _m.d_a0) {
+        _result = true;
+        _continue = false;
+      } else {
+        _loop_l = _m.d_a1;
+      }
+    }
   }
   return _result;
 }
@@ -43,26 +43,25 @@ LoopifyTail::nth(const unsigned int n,
   unsigned int _loop_n = n;
   bool _continue = true;
   while (_continue) {
-    std::visit(
-        Overloaded{
-            [&](const typename LoopifyTail::list<unsigned int>::Nil &) {
-              _result = default0;
-              _continue = false;
-            },
-            [&](const typename LoopifyTail::list<unsigned int>::Cons &_args) {
-              if (_loop_n == 0u) {
-                _result = _args.d_a0;
-                _continue = false;
-              } else {
-                std::shared_ptr<LoopifyTail::list<unsigned int>> _next_l =
-                    _args.d_a1;
-                unsigned int _next_n =
-                    (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-                _loop_l = std::move(_next_l);
-                _loop_n = std::move(_next_n);
-              }
-            }},
-        _loop_l->v());
+    if (std::holds_alternative<typename LoopifyTail::list<unsigned int>::Nil>(
+            _loop_l->v())) {
+      _result = default0;
+      _continue = false;
+    } else {
+      const auto &_m =
+          *std::get_if<typename LoopifyTail::list<unsigned int>::Cons>(
+              &_loop_l->v());
+      if (_loop_n == 0u) {
+        _result = _m.d_a0;
+        _continue = false;
+      } else {
+        std::shared_ptr<LoopifyTail::list<unsigned int>> _next_l = _m.d_a1;
+        unsigned int _next_n =
+            (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
+        _loop_l = std::move(_next_l);
+        _loop_n = std::move(_next_n);
+      }
+    }
   }
   return _result;
 }
@@ -77,22 +76,20 @@ __attribute__((pure)) unsigned int LoopifyTail::lookup(
       _loop_l = l;
   bool _continue = true;
   while (_continue) {
-    std::visit(
-        Overloaded{[&](const typename LoopifyTail::list<
-                       std::pair<unsigned int, unsigned int>>::Nil &) {
-                     _result = 0u;
-                     _continue = false;
-                   },
-                   [&](const typename LoopifyTail::list<
-                       std::pair<unsigned int, unsigned int>>::Cons &_args) {
-                     if (_args.d_a0.first == key) {
-                       _result = _args.d_a0.second;
-                       _continue = false;
-                     } else {
-                       _loop_l = _args.d_a1;
-                     }
-                   }},
-        _loop_l->v());
+    if (std::holds_alternative<typename LoopifyTail::list<
+            std::pair<unsigned int, unsigned int>>::Nil>(_loop_l->v())) {
+      _result = 0u;
+      _continue = false;
+    } else {
+      const auto &_m = *std::get_if<typename LoopifyTail::list<
+          std::pair<unsigned int, unsigned int>>::Cons>(&_loop_l->v());
+      if (_m.d_a0.first == key) {
+        _result = _m.d_a0.second;
+        _continue = false;
+      } else {
+        _loop_l = _m.d_a1;
+      }
+    }
   }
   return _result;
 }

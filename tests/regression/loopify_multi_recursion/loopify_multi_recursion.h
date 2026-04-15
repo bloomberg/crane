@@ -96,40 +96,40 @@ struct LoopifyMultiRecursion {
       const std::shared_ptr<quadtree> _s0;
       const std::shared_ptr<quadtree> _s1;
       const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a0) _s6;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a3) _s3;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a2) _s4;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a1) _s5;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a0) _s6;
     };
 
     struct _Call2 {
       T1 _s0;
       const std::shared_ptr<quadtree> _s1;
       const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a0) _s6;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a3) _s3;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a2) _s4;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a1) _s5;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a0) _s6;
     };
 
     struct _Call3 {
       T1 _s0;
       T1 _s1;
       const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a0) _s6;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a3) _s3;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a2) _s4;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a1) _s5;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a0) _s6;
     };
 
     struct _Call4 {
       T1 _s0;
       T1 _s1;
       T1 _s2;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a0) _s6;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a3) _s3;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a2) _s4;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a1) _s5;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a0) _s6;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
@@ -139,43 +139,38 @@ struct LoopifyMultiRecursion {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<quadtree> q = _f.q;
-                std::visit(
-                    Overloaded{
-                        [&](const typename quadtree::QLeaf &_args) -> void {
-                          _result = f(_args.d_a0);
-                        },
-                        [&](const typename quadtree::QQuad &_args) -> void {
-                          _stack.emplace_back(_Call1{
-                              _args.d_a2, _args.d_a1, _args.d_a0, _args.d_a3,
-                              _args.d_a2, _args.d_a1, _args.d_a0});
-                          _stack.emplace_back(_Enter{_args.d_a3});
-                        }},
-                    q->v());
-              },
-              [&](_Call1 _f) {
-                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
-                                           _f._s4, _f._s5, _f._s6});
-                _stack.emplace_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _stack.emplace_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
-                                           _f._s4, _f._s5, _f._s6});
-                _stack.emplace_back(_Enter{_f._s1});
-              },
-              [&](_Call3 _f) {
-                _stack.emplace_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
-                                           _f._s4, _f._s5, _f._s6});
-                _stack.emplace_back(_Enter{_f._s2});
-              },
-              [&](_Call4 _f) {
-                _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
-                             _f._s3, _f._s0);
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<quadtree> q = _f.q;
+        if (std::holds_alternative<typename quadtree::QLeaf>(q->v())) {
+          const auto &_m = *std::get_if<typename quadtree::QLeaf>(&q->v());
+          _result = f(_m.d_a0);
+        } else {
+          const auto &_m = *std::get_if<typename quadtree::QQuad>(&q->v());
+          _stack.emplace_back(_Call1{_m.d_a2, _m.d_a1, _m.d_a0, _m.d_a3,
+                                     _m.d_a2, _m.d_a1, _m.d_a0});
+          _stack.emplace_back(_Enter{_m.d_a3});
+        }
+      } else if (std::holds_alternative<_Call1>(_frame)) {
+        const auto &_f = std::get<_Call1>(_frame);
+        _stack.emplace_back(
+            _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
+        _stack.emplace_back(_Enter{_f._s0});
+      } else if (std::holds_alternative<_Call2>(_frame)) {
+        const auto &_f = std::get<_Call2>(_frame);
+        _stack.emplace_back(
+            _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
+        _stack.emplace_back(_Enter{_f._s1});
+      } else if (std::holds_alternative<_Call3>(_frame)) {
+        const auto &_f = std::get<_Call3>(_frame);
+        _stack.emplace_back(
+            _Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4, _f._s5, _f._s6});
+        _stack.emplace_back(_Enter{_f._s2});
+      } else {
+        const auto &_f = std::get<_Call4>(_frame);
+        _result =
+            f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1, _f._s3, _f._s0);
+      }
     }
     return _result;
   }
@@ -194,40 +189,40 @@ struct LoopifyMultiRecursion {
       const std::shared_ptr<quadtree> _s0;
       const std::shared_ptr<quadtree> _s1;
       const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a0) _s6;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a3) _s3;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a2) _s4;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a1) _s5;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a0) _s6;
     };
 
     struct _Call2 {
       T1 _s0;
       const std::shared_ptr<quadtree> _s1;
       const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a0) _s6;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a3) _s3;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a2) _s4;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a1) _s5;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a0) _s6;
     };
 
     struct _Call3 {
       T1 _s0;
       T1 _s1;
       const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a0) _s6;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a3) _s3;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a2) _s4;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a1) _s5;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a0) _s6;
     };
 
     struct _Call4 {
       T1 _s0;
       T1 _s1;
       T1 _s2;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::QQuad &>().d_a0) _s6;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a3) _s3;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a2) _s4;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a1) _s5;
+      decltype(std::declval<typename quadtree::QQuad &>().d_a0) _s6;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
@@ -237,43 +232,38 @@ struct LoopifyMultiRecursion {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<quadtree> q = _f.q;
-                std::visit(
-                    Overloaded{
-                        [&](const typename quadtree::QLeaf &_args) -> void {
-                          _result = f(_args.d_a0);
-                        },
-                        [&](const typename quadtree::QQuad &_args) -> void {
-                          _stack.emplace_back(_Call1{
-                              _args.d_a2, _args.d_a1, _args.d_a0, _args.d_a3,
-                              _args.d_a2, _args.d_a1, _args.d_a0});
-                          _stack.emplace_back(_Enter{_args.d_a3});
-                        }},
-                    q->v());
-              },
-              [&](_Call1 _f) {
-                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
-                                           _f._s4, _f._s5, _f._s6});
-                _stack.emplace_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _stack.emplace_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
-                                           _f._s4, _f._s5, _f._s6});
-                _stack.emplace_back(_Enter{_f._s1});
-              },
-              [&](_Call3 _f) {
-                _stack.emplace_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
-                                           _f._s4, _f._s5, _f._s6});
-                _stack.emplace_back(_Enter{_f._s2});
-              },
-              [&](_Call4 _f) {
-                _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
-                             _f._s3, _f._s0);
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<quadtree> q = _f.q;
+        if (std::holds_alternative<typename quadtree::QLeaf>(q->v())) {
+          const auto &_m = *std::get_if<typename quadtree::QLeaf>(&q->v());
+          _result = f(_m.d_a0);
+        } else {
+          const auto &_m = *std::get_if<typename quadtree::QQuad>(&q->v());
+          _stack.emplace_back(_Call1{_m.d_a2, _m.d_a1, _m.d_a0, _m.d_a3,
+                                     _m.d_a2, _m.d_a1, _m.d_a0});
+          _stack.emplace_back(_Enter{_m.d_a3});
+        }
+      } else if (std::holds_alternative<_Call1>(_frame)) {
+        const auto &_f = std::get<_Call1>(_frame);
+        _stack.emplace_back(
+            _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
+        _stack.emplace_back(_Enter{_f._s0});
+      } else if (std::holds_alternative<_Call2>(_frame)) {
+        const auto &_f = std::get<_Call2>(_frame);
+        _stack.emplace_back(
+            _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
+        _stack.emplace_back(_Enter{_f._s1});
+      } else if (std::holds_alternative<_Call3>(_frame)) {
+        const auto &_f = std::get<_Call3>(_frame);
+        _stack.emplace_back(
+            _Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4, _f._s5, _f._s6});
+        _stack.emplace_back(_Enter{_f._s2});
+      } else {
+        const auto &_f = std::get<_Call4>(_frame);
+        _result =
+            f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1, _f._s3, _f._s0);
+      }
     }
     return _result;
   }

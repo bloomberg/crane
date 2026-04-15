@@ -58,14 +58,12 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
-    return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil &)
-                       -> std::shared_ptr<List<t_A>> { return m; },
-                   [&](const typename List<t_A>::Cons &_args)
-                       -> std::shared_ptr<List<t_A>> {
-                     return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return m;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return List<t_A>::cons(_m.d_a0, _m.d_a1->app(m));
+    }
   }
 };
 
@@ -113,14 +111,13 @@ struct NestedInd {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int custom_list_length() const {
-      return std::visit(
-          Overloaded{[](const typename custom_list<t_A>::Cnil &)
-                         -> unsigned int { return 0u; },
-                     [](const typename custom_list<t_A>::Ccons &_args)
-                         -> unsigned int {
-                       return (1u + _args.d_a1->custom_list_length());
-                     }},
-          this->v());
+      if (std::holds_alternative<typename custom_list<t_A>::Cnil>(this->v())) {
+        return 0u;
+      } else {
+        const auto &_m =
+            *std::get_if<typename custom_list<t_A>::Ccons>(&this->v());
+        return (1u + _m.d_a1->custom_list_length());
+      }
     }
   };
 
@@ -128,28 +125,24 @@ struct NestedInd {
             MapsTo<T2, T1, std::shared_ptr<custom_list<T1>>, T2> F1>
   static T2 custom_list_rect(const T2 f, F1 &&f0,
                              const std::shared_ptr<custom_list<T1>> &c) {
-    return std::visit(
-        Overloaded{
-            [&](const typename custom_list<T1>::Cnil &) -> T2 { return f; },
-            [&](const typename custom_list<T1>::Ccons &_args) -> T2 {
-              return f0(_args.d_a0, _args.d_a1,
-                        custom_list_rect<T1, T2>(f, f0, _args.d_a1));
-            }},
-        c->v());
+    if (std::holds_alternative<typename custom_list<T1>::Cnil>(c->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename custom_list<T1>::Ccons>(&c->v());
+      return f0(_m.d_a0, _m.d_a1, custom_list_rect<T1, T2>(f, f0, _m.d_a1));
+    }
   }
 
   template <typename T1, typename T2,
             MapsTo<T2, T1, std::shared_ptr<custom_list<T1>>, T2> F1>
   static T2 custom_list_rec(const T2 f, F1 &&f0,
                             const std::shared_ptr<custom_list<T1>> &c) {
-    return std::visit(
-        Overloaded{
-            [&](const typename custom_list<T1>::Cnil &) -> T2 { return f; },
-            [&](const typename custom_list<T1>::Ccons &_args) -> T2 {
-              return f0(_args.d_a0, _args.d_a1,
-                        custom_list_rec<T1, T2>(f, f0, _args.d_a1));
-            }},
-        c->v());
+    if (std::holds_alternative<typename custom_list<T1>::Cnil>(c->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename custom_list<T1>::Ccons>(&c->v());
+      return f0(_m.d_a0, _m.d_a1, custom_list_rec<T1, T2>(f, f0, _m.d_a1));
+    }
   }
 
   template <typename t_A> struct rose {
@@ -188,19 +181,13 @@ struct NestedInd {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int children_count() const {
-      return std::visit(
-          Overloaded{[](const typename rose<t_A>::Node &_args) -> unsigned int {
-            return _args.d_a1->custom_list_length();
-          }},
-          this->v());
+      const auto &_m = *std::get_if<typename rose<t_A>::Node>(&this->v());
+      return _m.d_a1->custom_list_length();
     }
 
     t_A root() const {
-      return std::visit(
-          Overloaded{[](const typename rose<t_A>::Node &_args) -> t_A {
-            return _args.d_a0;
-          }},
-          this->v());
+      const auto &_m = *std::get_if<typename rose<t_A>::Node>(&this->v());
+      return _m.d_a0;
     }
 
     template <typename T1,
@@ -208,11 +195,8 @@ struct NestedInd {
                      std::shared_ptr<custom_list<std::shared_ptr<rose<t_A>>>>>
                   F0>
     T1 rose_rec(F0 &&f) const {
-      return std::visit(
-          Overloaded{[&](const typename rose<t_A>::Node &_args) -> T1 {
-            return f(_args.d_a0, _args.d_a1);
-          }},
-          this->v());
+      const auto &_m = *std::get_if<typename rose<t_A>::Node>(&this->v());
+      return f(_m.d_a0, _m.d_a1);
     }
 
     template <typename T1,
@@ -220,11 +204,8 @@ struct NestedInd {
                      std::shared_ptr<custom_list<std::shared_ptr<rose<t_A>>>>>
                   F0>
     T1 rose_rect(F0 &&f) const {
-      return std::visit(
-          Overloaded{[&](const typename rose<t_A>::Node &_args) -> T1 {
-            return f(_args.d_a0, _args.d_a1);
-          }},
-          this->v());
+      const auto &_m = *std::get_if<typename rose<t_A>::Node>(&this->v());
+      return f(_m.d_a0, _m.d_a1);
     }
   };
 
@@ -314,299 +295,262 @@ struct NestedInd {
 
     template <MapsTo<unsigned int, unsigned int> F0>
     std::shared_ptr<expr> lit_map(F0 &&f) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename expr::Lit &_args) -> std::shared_ptr<expr> {
-                return expr::lit(f(_args.d_a0));
-              },
-              [&](const typename expr::Add &_args) -> std::shared_ptr<expr> {
-                return expr::add([&]() {
-                  std::function<std::shared_ptr<List<std::shared_ptr<expr>>>(
-                      std::shared_ptr<List<std::shared_ptr<expr>>>)>
-                      aux;
-                  aux = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
-                      -> std::shared_ptr<List<std::shared_ptr<expr>>> {
-                    return std::visit(
-                        Overloaded{
-                            [](const typename List<std::shared_ptr<expr>>::Nil
-                                   &)
-                                -> std::shared_ptr<
-                                    List<std::shared_ptr<expr>>> {
-                              return List<std::shared_ptr<expr>>::nil();
-                            },
-                            [&](const typename List<std::shared_ptr<expr>>::Cons
-                                    &_args)
-                                -> std::shared_ptr<
-                                    List<std::shared_ptr<expr>>> {
-                              return List<std::shared_ptr<expr>>::cons(
-                                  _args.d_a0->lit_map(f), aux(_args.d_a1));
-                            }},
-                        l->v());
-                  };
-                  return aux(_args.d_a0);
-                }());
-              },
-              [&](const typename expr::Mul &_args) -> std::shared_ptr<expr> {
-                return expr::mul([&]() {
-                  std::function<std::shared_ptr<List<std::shared_ptr<expr>>>(
-                      std::shared_ptr<List<std::shared_ptr<expr>>>)>
-                      aux;
-                  aux = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
-                      -> std::shared_ptr<List<std::shared_ptr<expr>>> {
-                    return std::visit(
-                        Overloaded{
-                            [](const typename List<std::shared_ptr<expr>>::Nil
-                                   &)
-                                -> std::shared_ptr<
-                                    List<std::shared_ptr<expr>>> {
-                              return List<std::shared_ptr<expr>>::nil();
-                            },
-                            [&](const typename List<std::shared_ptr<expr>>::Cons
-                                    &_args)
-                                -> std::shared_ptr<
-                                    List<std::shared_ptr<expr>>> {
-                              return List<std::shared_ptr<expr>>::cons(
-                                  _args.d_a0->lit_map(f), aux(_args.d_a1));
-                            }},
-                        l->v());
-                  };
-                  return aux(_args.d_a0);
-                }());
-              }},
-          this->v());
+      if (std::holds_alternative<typename expr::Lit>(this->v())) {
+        const auto &_m = *std::get_if<typename expr::Lit>(&this->v());
+        return expr::lit(f(_m.d_a0));
+      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
+        const auto &_m = *std::get_if<typename expr::Add>(&this->v());
+        return expr::add([&]() {
+          std::function<std::shared_ptr<List<std::shared_ptr<expr>>>(
+              std::shared_ptr<List<std::shared_ptr<expr>>>)>
+              aux;
+          aux = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
+              -> std::shared_ptr<List<std::shared_ptr<expr>>> {
+            if (std::holds_alternative<
+                    typename List<std::shared_ptr<expr>>::Nil>(l->v())) {
+              return List<std::shared_ptr<expr>>::nil();
+            } else {
+              const auto &_m =
+                  *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
+                      &l->v());
+              return List<std::shared_ptr<expr>>::cons(_m.d_a0->lit_map(f),
+                                                       aux(_m.d_a1));
+            }
+          };
+          return aux(_m.d_a0);
+        }());
+      } else {
+        const auto &_m = *std::get_if<typename expr::Mul>(&this->v());
+        return expr::mul([&]() {
+          std::function<std::shared_ptr<List<std::shared_ptr<expr>>>(
+              std::shared_ptr<List<std::shared_ptr<expr>>>)>
+              aux;
+          aux = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
+              -> std::shared_ptr<List<std::shared_ptr<expr>>> {
+            if (std::holds_alternative<
+                    typename List<std::shared_ptr<expr>>::Nil>(l->v())) {
+              return List<std::shared_ptr<expr>>::nil();
+            } else {
+              const auto &_m =
+                  *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
+                      &l->v());
+              return List<std::shared_ptr<expr>>::cons(_m.d_a0->lit_map(f),
+                                                       aux(_m.d_a1));
+            }
+          };
+          return aux(_m.d_a0);
+        }());
+      }
     }
 
     std::shared_ptr<List<unsigned int>> literals() const {
-      return std::visit(
-          Overloaded{
-              [](const typename expr::Lit &_args)
-                  -> std::shared_ptr<List<unsigned int>> {
-                return List<unsigned int>::cons(_args.d_a0,
-                                                List<unsigned int>::nil());
-              },
-              [](const typename expr::Add &_args)
-                  -> std::shared_ptr<List<unsigned int>> {
-                std::function<std::shared_ptr<List<unsigned int>>(
-                    std::shared_ptr<List<std::shared_ptr<expr>>>)>
-                    aux;
-                aux = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
-                    -> std::shared_ptr<List<unsigned int>> {
-                  return std::visit(
-                      Overloaded{
-                          [](const typename List<std::shared_ptr<expr>>::Nil &)
-                              -> std::shared_ptr<List<unsigned int>> {
-                            return List<unsigned int>::nil();
-                          },
-                          [&](const typename List<std::shared_ptr<expr>>::Cons
-                                  &_args0)
-                              -> std::shared_ptr<List<unsigned int>> {
-                            return _args0.d_a0->literals()->app(
-                                aux(_args0.d_a1));
-                          }},
-                      l->v());
-                };
-                return aux(_args.d_a0);
-              },
-              [](const typename expr::Mul &_args)
-                  -> std::shared_ptr<List<unsigned int>> {
-                std::function<std::shared_ptr<List<unsigned int>>(
-                    std::shared_ptr<List<std::shared_ptr<expr>>>)>
-                    aux;
-                aux = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
-                    -> std::shared_ptr<List<unsigned int>> {
-                  return std::visit(
-                      Overloaded{
-                          [](const typename List<std::shared_ptr<expr>>::Nil &)
-                              -> std::shared_ptr<List<unsigned int>> {
-                            return List<unsigned int>::nil();
-                          },
-                          [&](const typename List<std::shared_ptr<expr>>::Cons
-                                  &_args0)
-                              -> std::shared_ptr<List<unsigned int>> {
-                            return _args0.d_a0->literals()->app(
-                                aux(_args0.d_a1));
-                          }},
-                      l->v());
-                };
-                return aux(_args.d_a0);
-              }},
-          this->v());
+      if (std::holds_alternative<typename expr::Lit>(this->v())) {
+        const auto &_m = *std::get_if<typename expr::Lit>(&this->v());
+        return List<unsigned int>::cons(_m.d_a0, List<unsigned int>::nil());
+      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
+        const auto &_m = *std::get_if<typename expr::Add>(&this->v());
+        std::function<std::shared_ptr<List<unsigned int>>(
+            std::shared_ptr<List<std::shared_ptr<expr>>>)>
+            aux;
+        aux = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
+            -> std::shared_ptr<List<unsigned int>> {
+          if (std::holds_alternative<typename List<std::shared_ptr<expr>>::Nil>(
+                  l->v())) {
+            return List<unsigned int>::nil();
+          } else {
+            const auto &_m0 =
+                *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
+                    &l->v());
+            return _m0.d_a0->literals()->app(aux(_m0.d_a1));
+          }
+        };
+        return aux(_m.d_a0);
+      } else {
+        const auto &_m = *std::get_if<typename expr::Mul>(&this->v());
+        std::function<std::shared_ptr<List<unsigned int>>(
+            std::shared_ptr<List<std::shared_ptr<expr>>>)>
+            aux;
+        aux = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
+            -> std::shared_ptr<List<unsigned int>> {
+          if (std::holds_alternative<typename List<std::shared_ptr<expr>>::Nil>(
+                  l->v())) {
+            return List<unsigned int>::nil();
+          } else {
+            const auto &_m0 =
+                *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
+                    &l->v());
+            return _m0.d_a0->literals()->app(aux(_m0.d_a1));
+          }
+        };
+        return aux(_m.d_a0);
+      }
     }
 
     __attribute__((pure)) unsigned int expr_depth() const {
-      return std::visit(
-          Overloaded{
-              [](const typename expr::Lit &) -> unsigned int { return 0u; },
-              [](const typename expr::Add &_args) -> unsigned int {
-                return ([&]() {
-                  std::function<unsigned int(
-                      std::shared_ptr<List<std::shared_ptr<expr>>>)>
-                      aux;
-                  aux = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
-                      -> unsigned int {
-                    return std::visit(
-                        Overloaded{
-                            [](const typename List<std::shared_ptr<expr>>::Nil
-                                   &) -> unsigned int { return 0u; },
-                            [&](const typename List<std::shared_ptr<expr>>::Cons
-                                    &_args) -> unsigned int {
-                              return std::max(_args.d_a0->expr_depth(),
-                                              aux(_args.d_a1));
-                            }},
-                        l->v());
-                  };
-                  return aux(_args.d_a0);
-                }() + 1);
-              },
-              [](const typename expr::Mul &_args) -> unsigned int {
-                return ([&]() {
-                  std::function<unsigned int(
-                      std::shared_ptr<List<std::shared_ptr<expr>>>)>
-                      aux;
-                  aux = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
-                      -> unsigned int {
-                    return std::visit(
-                        Overloaded{
-                            [](const typename List<std::shared_ptr<expr>>::Nil
-                                   &) -> unsigned int { return 0u; },
-                            [&](const typename List<std::shared_ptr<expr>>::Cons
-                                    &_args) -> unsigned int {
-                              return std::max(_args.d_a0->expr_depth(),
-                                              aux(_args.d_a1));
-                            }},
-                        l->v());
-                  };
-                  return aux(_args.d_a0);
-                }() + 1);
-              }},
-          this->v());
+      if (std::holds_alternative<typename expr::Lit>(this->v())) {
+        return 0u;
+      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
+        const auto &_m = *std::get_if<typename expr::Add>(&this->v());
+        return ([&]() {
+          std::function<unsigned int(
+              std::shared_ptr<List<std::shared_ptr<expr>>>)>
+              aux;
+          aux = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
+              -> unsigned int {
+            if (std::holds_alternative<
+                    typename List<std::shared_ptr<expr>>::Nil>(l->v())) {
+              return 0u;
+            } else {
+              const auto &_m =
+                  *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
+                      &l->v());
+              return std::max(_m.d_a0->expr_depth(), aux(_m.d_a1));
+            }
+          };
+          return aux(_m.d_a0);
+        }() + 1);
+      } else {
+        const auto &_m = *std::get_if<typename expr::Mul>(&this->v());
+        return ([&]() {
+          std::function<unsigned int(
+              std::shared_ptr<List<std::shared_ptr<expr>>>)>
+              aux;
+          aux = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
+              -> unsigned int {
+            if (std::holds_alternative<
+                    typename List<std::shared_ptr<expr>>::Nil>(l->v())) {
+              return 0u;
+            } else {
+              const auto &_m =
+                  *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
+                      &l->v());
+              return std::max(_m.d_a0->expr_depth(), aux(_m.d_a1));
+            }
+          };
+          return aux(_m.d_a0);
+        }() + 1);
+      }
     }
 
     __attribute__((pure)) unsigned int expr_size() const {
-      return std::visit(
-          Overloaded{
-              [](const typename expr::Lit &) -> unsigned int { return 1u; },
-              [](const typename expr::Add &_args) -> unsigned int {
-                return ([&]() {
-                  std::function<unsigned int(
-                      std::shared_ptr<List<std::shared_ptr<expr>>>)>
-                      aux;
-                  aux = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
-                      -> unsigned int {
-                    return std::visit(
-                        Overloaded{
-                            [](const typename List<std::shared_ptr<expr>>::Nil
-                                   &) -> unsigned int { return 0u; },
-                            [&](const typename List<std::shared_ptr<expr>>::Cons
-                                    &_args) -> unsigned int {
-                              return (_args.d_a0->expr_size() +
-                                      aux(_args.d_a1));
-                            }},
-                        l->v());
-                  };
-                  return aux(_args.d_a0);
-                }() + 1);
-              },
-              [](const typename expr::Mul &_args) -> unsigned int {
-                return ([&]() {
-                  std::function<unsigned int(
-                      std::shared_ptr<List<std::shared_ptr<expr>>>)>
-                      aux;
-                  aux = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
-                      -> unsigned int {
-                    return std::visit(
-                        Overloaded{
-                            [](const typename List<std::shared_ptr<expr>>::Nil
-                                   &) -> unsigned int { return 0u; },
-                            [&](const typename List<std::shared_ptr<expr>>::Cons
-                                    &_args) -> unsigned int {
-                              return (_args.d_a0->expr_size() +
-                                      aux(_args.d_a1));
-                            }},
-                        l->v());
-                  };
-                  return aux(_args.d_a0);
-                }() + 1);
-              }},
-          this->v());
+      if (std::holds_alternative<typename expr::Lit>(this->v())) {
+        return 1u;
+      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
+        const auto &_m = *std::get_if<typename expr::Add>(&this->v());
+        return ([&]() {
+          std::function<unsigned int(
+              std::shared_ptr<List<std::shared_ptr<expr>>>)>
+              aux;
+          aux = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
+              -> unsigned int {
+            if (std::holds_alternative<
+                    typename List<std::shared_ptr<expr>>::Nil>(l->v())) {
+              return 0u;
+            } else {
+              const auto &_m =
+                  *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
+                      &l->v());
+              return (_m.d_a0->expr_size() + aux(_m.d_a1));
+            }
+          };
+          return aux(_m.d_a0);
+        }() + 1);
+      } else {
+        const auto &_m = *std::get_if<typename expr::Mul>(&this->v());
+        return ([&]() {
+          std::function<unsigned int(
+              std::shared_ptr<List<std::shared_ptr<expr>>>)>
+              aux;
+          aux = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
+              -> unsigned int {
+            if (std::holds_alternative<
+                    typename List<std::shared_ptr<expr>>::Nil>(l->v())) {
+              return 0u;
+            } else {
+              const auto &_m =
+                  *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
+                      &l->v());
+              return (_m.d_a0->expr_size() + aux(_m.d_a1));
+            }
+          };
+          return aux(_m.d_a0);
+        }() + 1);
+      }
     }
 
     __attribute__((pure)) unsigned int eval() const {
-      return std::visit(
-          Overloaded{
-              [](const typename expr::Lit &_args) -> unsigned int {
-                return _args.d_a0;
-              },
-              [](const typename expr::Add &_args) -> unsigned int {
-                std::function<unsigned int(
-                    std::shared_ptr<List<std::shared_ptr<expr>>>)>
-                    sum_all;
-                sum_all = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
-                    -> unsigned int {
-                  return std::visit(
-                      Overloaded{
-                          [](const typename List<std::shared_ptr<expr>>::Nil &)
-                              -> unsigned int { return 0u; },
-                          [&](const typename List<std::shared_ptr<expr>>::Cons
-                                  &_args0) -> unsigned int {
-                            return (_args0.d_a0->eval() + sum_all(_args0.d_a1));
-                          }},
-                      l->v());
-                };
-                return sum_all(_args.d_a0);
-              },
-              [](const typename expr::Mul &_args) -> unsigned int {
-                std::function<unsigned int(
-                    std::shared_ptr<List<std::shared_ptr<expr>>>)>
-                    prod_all;
-                prod_all = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
-                    -> unsigned int {
-                  return std::visit(
-                      Overloaded{
-                          [](const typename List<std::shared_ptr<expr>>::Nil &)
-                              -> unsigned int { return 1u; },
-                          [&](const typename List<std::shared_ptr<expr>>::Cons
-                                  &_args0) -> unsigned int {
-                            return (_args0.d_a0->eval() *
-                                    prod_all(_args0.d_a1));
-                          }},
-                      l->v());
-                };
-                return prod_all(_args.d_a0);
-              }},
-          this->v());
+      if (std::holds_alternative<typename expr::Lit>(this->v())) {
+        const auto &_m = *std::get_if<typename expr::Lit>(&this->v());
+        return _m.d_a0;
+      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
+        const auto &_m = *std::get_if<typename expr::Add>(&this->v());
+        std::function<unsigned int(
+            std::shared_ptr<List<std::shared_ptr<expr>>>)>
+            sum_all;
+        sum_all = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
+            -> unsigned int {
+          if (std::holds_alternative<typename List<std::shared_ptr<expr>>::Nil>(
+                  l->v())) {
+            return 0u;
+          } else {
+            const auto &_m0 =
+                *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
+                    &l->v());
+            return (_m0.d_a0->eval() + sum_all(_m0.d_a1));
+          }
+        };
+        return sum_all(_m.d_a0);
+      } else {
+        const auto &_m = *std::get_if<typename expr::Mul>(&this->v());
+        std::function<unsigned int(
+            std::shared_ptr<List<std::shared_ptr<expr>>>)>
+            prod_all;
+        prod_all = [&](std::shared_ptr<List<std::shared_ptr<expr>>> l)
+            -> unsigned int {
+          if (std::holds_alternative<typename List<std::shared_ptr<expr>>::Nil>(
+                  l->v())) {
+            return 1u;
+          } else {
+            const auto &_m0 =
+                *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
+                    &l->v());
+            return (_m0.d_a0->eval() * prod_all(_m0.d_a1));
+          }
+        };
+        return prod_all(_m.d_a0);
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, std::shared_ptr<List<std::shared_ptr<expr>>>> F1,
               MapsTo<T1, std::shared_ptr<List<std::shared_ptr<expr>>>> F2>
     T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
-      return std::visit(Overloaded{[&](const typename expr::Lit &_args) -> T1 {
-                                     return f(_args.d_a0);
-                                   },
-                                   [&](const typename expr::Add &_args) -> T1 {
-                                     return f0(_args.d_a0);
-                                   },
-                                   [&](const typename expr::Mul &_args) -> T1 {
-                                     return f1(_args.d_a0);
-                                   }},
-                        this->v());
+      if (std::holds_alternative<typename expr::Lit>(this->v())) {
+        const auto &_m = *std::get_if<typename expr::Lit>(&this->v());
+        return f(_m.d_a0);
+      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
+        const auto &_m = *std::get_if<typename expr::Add>(&this->v());
+        return f0(_m.d_a0);
+      } else {
+        const auto &_m = *std::get_if<typename expr::Mul>(&this->v());
+        return f1(_m.d_a0);
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, std::shared_ptr<List<std::shared_ptr<expr>>>> F1,
               MapsTo<T1, std::shared_ptr<List<std::shared_ptr<expr>>>> F2>
     T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
-      return std::visit(Overloaded{[&](const typename expr::Lit &_args) -> T1 {
-                                     return f(_args.d_a0);
-                                   },
-                                   [&](const typename expr::Add &_args) -> T1 {
-                                     return f0(_args.d_a0);
-                                   },
-                                   [&](const typename expr::Mul &_args) -> T1 {
-                                     return f1(_args.d_a0);
-                                   }},
-                        this->v());
+      if (std::holds_alternative<typename expr::Lit>(this->v())) {
+        const auto &_m = *std::get_if<typename expr::Lit>(&this->v());
+        return f(_m.d_a0);
+      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
+        const auto &_m = *std::get_if<typename expr::Add>(&this->v());
+        return f0(_m.d_a0);
+      } else {
+        const auto &_m = *std::get_if<typename expr::Mul>(&this->v());
+        return f1(_m.d_a0);
+      }
     }
   };
 

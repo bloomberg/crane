@@ -153,80 +153,66 @@ template <typename K, typename V> struct CHT {
   __attribute__((pure)) static bsl::optional<T2>
   assoc_lookup(F0 &&eqb, const T1 k,
                const bsl::shared_ptr<List<bsl::pair<T1, T2>>> &xs) {
-    return bsl::visit(
-        bdlf::Overloaded{
-            [](const typename List<bsl::pair<T1, T2>>::Nil &)
-                -> bsl::optional<T2> { return bsl::optional<T2>(); },
-            [&](const typename List<bsl::pair<T1, T2>>::Cons &_args)
-                -> bsl::optional<T2> {
-              T1 k_ = _args.d_a0.first;
-              T2 v = _args.d_a0.second;
-              if (eqb(k, k_)) {
-                return bsl::make_optional<T2>(v);
-              } else {
-                return CHT<int, int>::template assoc_lookup<T1, T2>(eqb, k,
-                                                                    _args.d_a1);
-              }
-            }},
-        xs->v());
+    if (bsl::holds_alternative<typename List<bsl::pair<T1, T2>>::Nil>(
+            xs->v())) {
+      return bsl::optional<T2>();
+    } else {
+      const auto &_m =
+          *bsl::get_if<typename List<bsl::pair<T1, T2>>::Cons>(&xs->v());
+      T1 k_ = _m.d_a0.first;
+      T2 v = _m.d_a0.second;
+      if (eqb(k, k_)) {
+        return bsl::make_optional<T2>(v);
+      } else {
+        return CHT<int, int>::template assoc_lookup<T1, T2>(eqb, k, _m.d_a1);
+      }
+    }
   }
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
   static bsl::shared_ptr<List<bsl::pair<T1, T2>>>
   assoc_insert_or_replace(F0 &&eqb, const T1 k, const T2 v,
                           const bsl::shared_ptr<List<bsl::pair<T1, T2>>> &xs) {
-    return bsl::visit(
-        bdlf::Overloaded{
-            [&](const typename List<bsl::pair<T1, T2>>::Nil &)
-                -> bsl::shared_ptr<List<bsl::pair<T1, T2>>> {
-              return List<bsl::pair<T1, T2>>::cons(
-                  bsl::make_pair(k, v), List<bsl::pair<T1, T2>>::nil());
-            },
-            [&](const typename List<bsl::pair<T1, T2>>::Cons &_args)
-                -> bsl::shared_ptr<List<bsl::pair<T1, T2>>> {
-              T1 k_ = _args.d_a0.first;
-              T2 v_ = _args.d_a0.second;
-              if (eqb(k, k_)) {
-                return List<bsl::pair<T1, T2>>::cons(bsl::make_pair(k, v),
-                                                     _args.d_a1);
-              } else {
-                return List<bsl::pair<T1, T2>>::cons(
-                    bsl::make_pair(k_, v_),
-                    CHT<int, int>::template assoc_insert_or_replace<T1, T2>(
-                        eqb, k, v, _args.d_a1));
-              }
-            }},
-        xs->v());
+    if (bsl::holds_alternative<typename List<bsl::pair<T1, T2>>::Nil>(
+            xs->v())) {
+      return List<bsl::pair<T1, T2>>::cons(bsl::make_pair(k, v),
+                                           List<bsl::pair<T1, T2>>::nil());
+    } else {
+      const auto &_m =
+          *bsl::get_if<typename List<bsl::pair<T1, T2>>::Cons>(&xs->v());
+      T1 k_ = _m.d_a0.first;
+      T2 v_ = _m.d_a0.second;
+      if (eqb(k, k_)) {
+        return List<bsl::pair<T1, T2>>::cons(bsl::make_pair(k, v), _m.d_a1);
+      } else {
+        return List<bsl::pair<T1, T2>>::cons(
+            bsl::make_pair(k_, v_),
+            CHT<int, int>::template assoc_insert_or_replace<T1, T2>(eqb, k, v,
+                                                                    _m.d_a1));
+      }
+    }
   }
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
   __attribute__((pure)) static bsl::pair<
       bsl::optional<T2>, bsl::shared_ptr<List<bsl::pair<T1, T2>>>>
   assoc_remove(F0 &&eqb, const T1 k,
                bsl::shared_ptr<List<bsl::pair<T1, T2>>> xs) {
-    return bsl::visit(
-        bdlf::Overloaded{
-            [&](const typename List<bsl::pair<T1, T2>>::Nil &)
-                -> bsl::pair<bsl::optional<T2>,
-                             bsl::shared_ptr<List<bsl::pair<T1, T2>>>> {
-              return bsl::make_pair(bsl::optional<T2>(), bsl::move(xs));
-            },
-            [&](const typename List<bsl::pair<T1, T2>>::Cons &_args)
-                -> bsl::pair<bsl::optional<T2>,
-                             bsl::shared_ptr<List<bsl::pair<T1, T2>>>> {
-              T1 k_ = _args.d_a0.first;
-              T2 v_ = _args.d_a0.second;
-              if (eqb(k, k_)) {
-                return bsl::make_pair(bsl::make_optional<T2>(v_), _args.d_a1);
-              } else {
-                bsl::pair<bsl::optional<T2>,
-                          bsl::shared_ptr<List<bsl::pair<T1, T2>>>>
-                    q = CHT<int, int>::template assoc_remove<T1, T2>(
-                        eqb, k, _args.d_a1);
-                return bsl::make_pair(q.first,
-                                      List<bsl::pair<T1, T2>>::cons(
-                                          bsl::make_pair(k_, v_), q.second));
-              }
-            }},
-        xs->v());
+    if (bsl::holds_alternative<typename List<bsl::pair<T1, T2>>::Nil>(
+            xs->v())) {
+      return bsl::make_pair(bsl::optional<T2>(), bsl::move(xs));
+    } else {
+      const auto &_m =
+          *bsl::get_if<typename List<bsl::pair<T1, T2>>::Cons>(&xs->v());
+      T1 k_ = _m.d_a0.first;
+      T2 v_ = _m.d_a0.second;
+      if (eqb(k, k_)) {
+        return bsl::make_pair(bsl::make_optional<T2>(v_), _m.d_a1);
+      } else {
+        bsl::pair<bsl::optional<T2>, bsl::shared_ptr<List<bsl::pair<T1, T2>>>>
+            q = CHT<int, int>::template assoc_remove<T1, T2>(eqb, k, _m.d_a1);
+        return bsl::make_pair(q.first, List<bsl::pair<T1, T2>>::cons(
+                                           bsl::make_pair(k_, v_), q.second));
+      }
+    }
   }
   template <typename T1, typename T2>
   static bsl::vector<stm::TVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>>

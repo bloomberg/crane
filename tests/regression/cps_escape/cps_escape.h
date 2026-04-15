@@ -69,14 +69,12 @@ struct CpsEscape {
 
     /// Sum all values in a tree.
     __attribute__((pure)) unsigned int tree_sum() const {
-      return std::visit(
-          Overloaded{
-              [](const typename tree::Leaf &) -> unsigned int { return 0u; },
-              [](const typename tree::Node &_args) -> unsigned int {
-                return ((_args.d_a0->tree_sum() + _args.d_a1) +
-                        _args.d_a2->tree_sum());
-              }},
-          this->v());
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        return 0u;
+      } else {
+        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
+        return ((_m.d_a0->tree_sum() + _m.d_a1) + _m.d_a2->tree_sum());
+      }
     }
   };
 
@@ -84,28 +82,26 @@ struct CpsEscape {
                                 std::shared_ptr<tree>, T1>
                              F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, _args.d_a2,
-                               tree_rect<T1>(f, f0, _args.d_a2));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+      return f0(_m.d_a0, tree_rect<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
+                tree_rect<T1>(f, f0, _m.d_a2));
+    }
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
                                 std::shared_ptr<tree>, T1>
                              F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, _args.d_a2,
-                               tree_rec<T1>(f, f0, _args.d_a2));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+      return f0(_m.d_a0, tree_rec<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
+                tree_rec<T1>(f, f0, _m.d_a2));
+    }
   }
 
   struct box {
@@ -138,19 +134,15 @@ struct CpsEscape {
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 box_rec(F0 &&f) const {
-      return std::visit(Overloaded{[&](const typename box::Box0 &_args) -> T1 {
-                          return f(_args.d_a0);
-                        }},
-                        this->v());
+      const auto &_m = *std::get_if<typename box::Box0>(&this->v());
+      return f(_m.d_a0);
     }
 
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 box_rect(F0 &&f) const {
-      return std::visit(Overloaded{[&](const typename box::Box0 &_args) -> T1 {
-                          return f(_args.d_a0);
-                        }},
-                        this->v());
+      const auto &_m = *std::get_if<typename box::Box0>(&this->v());
+      return f(_m.d_a0);
     }
   };
 
@@ -178,11 +170,8 @@ struct CpsEscape {
         return t->make_adder(_x0);
       };
       std::shared_ptr<box> b = store_in_box(adder);
-      return std::visit(
-          Overloaded{[](const typename box::Box0 &_args) -> unsigned int {
-            return _args.d_a0(5u);
-          }},
-          b->v());
+      const auto &_m = *std::get_if<typename box::Box0>(&b->v());
+      return _m.d_a0(5u);
     }();
   }();
   /// Same but inline: no intermediate let for adder.
@@ -196,11 +185,8 @@ struct CpsEscape {
           store_in_box([=](unsigned int _x0) mutable -> unsigned int {
             return t->make_adder(_x0);
           });
-      return std::visit(
-          Overloaded{[](const typename box::Box0 &_args) -> unsigned int {
-            return _args.d_a0(5u);
-          }},
-          b->v());
+      const auto &_m = *std::get_if<typename box::Box0>(&b->v());
+      return _m.d_a0(5u);
     }();
   }();
   /// CPS with two stored continuations.
@@ -219,16 +205,9 @@ struct CpsEscape {
           store_in_box([=](unsigned int _x0) mutable -> unsigned int {
             return t2->make_adder(_x0);
           });
-      return std::visit(
-          Overloaded{[&](const typename box::Box0 &_args) -> unsigned int {
-            return std::visit(
-                Overloaded{
-                    [&](const typename box::Box0 &_args0) -> unsigned int {
-                      return (_args.d_a0(0u) + _args0.d_a0(0u));
-                    }},
-                b2->v());
-          }},
-          b1->v());
+      const auto &_m = *std::get_if<typename box::Box0>(&b1->v());
+      const auto &_m0 = *std::get_if<typename box::Box0>(&b2->v());
+      return (_m.d_a0(0u) + _m0.d_a0(0u));
     }();
   }();
 };

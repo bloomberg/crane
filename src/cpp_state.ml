@@ -363,6 +363,9 @@ type std_names = {
   same_as : string; (* "std::same_as" or "same_as" *)
   declval : string; (* "std::declval" or "bsl::declval" *)
   convertible_to : string; (* "std::convertible_to" or "convertible_to" *)
+  holds_alternative : string; (* "std::holds_alternative" or "bsl::holds_alternative" *)
+  get_if : string; (* "std::get_if" or "bsl::get_if" *)
+  get : string; (* "std::get" or "bsl::get" *)
 }
 
 (** Global reference to standard library names, initialized by init_std_names.
@@ -385,6 +388,9 @@ let std_names : std_names ref =
       same_as = "std::same_as";
       declval = "std::declval";
       convertible_to = "std::convertible_to";
+      holds_alternative = "std::holds_alternative";
+      get_if = "std::get_if";
+      get = "std::get";
     }
 
 (** Create a std_names record with the given prefix. *)
@@ -407,6 +413,9 @@ let mk_std_names prefix =
       same_as = "same_as";
       declval = prefix ^ "declval";
       convertible_to = "convertible_to";
+      holds_alternative = prefix ^ "holds_alternative";
+      get_if = prefix ^ "get_if";
+      get = prefix ^ "get";
     }
   | _ ->
     (* Default to "std::" *)
@@ -426,6 +435,9 @@ let mk_std_names prefix =
       same_as = "std::same_as";
       declval = "std::declval";
       convertible_to = "std::convertible_to";
+      holds_alternative = "std::holds_alternative";
+      get_if = "std::get_if";
+      get = "std::get";
     }
 
 (** Initialize standard library names based on Table.std_lib() setting. *)

@@ -8,17 +8,25 @@
 __attribute__((pure)) unsigned int
 IifeNameClash::double_get(const std::shared_ptr<IifeNameClash::wrapper> &w1,
                           const std::shared_ptr<IifeNameClash::wrapper> &w2) {
-  unsigned int x = std::visit(
-      Overloaded{[](const typename IifeNameClash::wrapper::Wrap &_args)
-                     -> unsigned int { return _args.d_n; },
-                 [](const typename IifeNameClash::wrapper::Empty &)
-                     -> unsigned int { return 0u; }},
-      w1->v());
-  unsigned int y = std::visit(
-      Overloaded{[](const typename IifeNameClash::wrapper::Wrap &_args0)
-                     -> unsigned int { return _args0.d_n; },
-                 [](const typename IifeNameClash::wrapper::Empty &)
-                     -> unsigned int { return 0u; }},
-      w2->v());
+  unsigned int x = [&]() {
+    if (std::holds_alternative<typename IifeNameClash::wrapper::Wrap>(
+            w1->v())) {
+      const auto &_m =
+          *std::get_if<typename IifeNameClash::wrapper::Wrap>(&w1->v());
+      return _m.d_n;
+    } else {
+      return 0u;
+    }
+  }();
+  unsigned int y = [&]() {
+    if (std::holds_alternative<typename IifeNameClash::wrapper::Wrap>(
+            w2->v())) {
+      const auto &_m0 =
+          *std::get_if<typename IifeNameClash::wrapper::Wrap>(&w2->v());
+      return _m0.d_n;
+    } else {
+      return 0u;
+    }
+  }();
   return (x + y);
 }

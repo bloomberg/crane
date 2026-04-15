@@ -8,18 +8,19 @@
 
 __attribute__((pure)) std::string
 PString::nat_to_string(const std::shared_ptr<Nat> &n) {
-  return std::visit(
-      Overloaded{[](const typename Nat::O &) -> std::string { return "O"; },
-                 [](const typename Nat::S &_args) -> std::string {
-                   return "S"s + nat_to_string(_args.d_a0);
-                 }},
-      n->v());
+  if (std::holds_alternative<typename Nat::O>(n->v())) {
+    return "O";
+  } else {
+    const auto &_m = *std::get_if<typename Nat::S>(&n->v());
+    return "S"s + nat_to_string(_m.d_a0);
+  }
 }
 
 __attribute__((pure)) int PString::nat_to_int(const std::shared_ptr<Nat> &n) {
-  return std::visit(Overloaded{[](const typename Nat::O &) -> int { return 0; },
-                               [](const typename Nat::S &_args) -> int {
-                                 return 1 + nat_to_int(_args.d_a0);
-                               }},
-                    n->v());
+  if (std::holds_alternative<typename Nat::O>(n->v())) {
+    return 0;
+  } else {
+    const auto &_m = *std::get_if<typename Nat::S>(&n->v());
+    return 1 + nat_to_int(_m.d_a0);
+  }
 }

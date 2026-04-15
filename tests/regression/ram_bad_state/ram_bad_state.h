@@ -67,29 +67,20 @@ struct RamBadState {
   update_nth(const unsigned int n, const T1 x,
              const std::shared_ptr<List<T1>> &l) {
     if (n <= 0) {
-      return std::visit(
-          Overloaded{
-              [](const typename List<T1>::Nil &) -> std::shared_ptr<List<T1>> {
-                return List<T1>::nil();
-              },
-              [&](const typename List<T1>::Cons &_args)
-                  -> std::shared_ptr<List<T1>> {
-                return List<T1>::cons(x, _args.d_a1);
-              }},
-          l->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+        return List<T1>::nil();
+      } else {
+        const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+        return List<T1>::cons(x, _m.d_a1);
+      }
     } else {
       unsigned int n_ = n - 1;
-      return std::visit(
-          Overloaded{
-              [](const typename List<T1>::Nil &) -> std::shared_ptr<List<T1>> {
-                return List<T1>::nil();
-              },
-              [&](const typename List<T1>::Cons &_args0)
-                  -> std::shared_ptr<List<T1>> {
-                return List<T1>::cons(_args0.d_a0,
-                                      update_nth<T1>(n_, x, _args0.d_a1));
-              }},
-          l->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+        return List<T1>::nil();
+      } else {
+        const auto &_m0 = *std::get_if<typename List<T1>::Cons>(&l->v());
+        return List<T1>::cons(_m0.d_a0, update_nth<T1>(n_, x, _m0.d_a1));
+      }
     }
   }
 

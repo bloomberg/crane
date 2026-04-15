@@ -57,13 +57,12 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons &_args) -> unsigned int {
-              return (_args.d_a1->length() + 1);
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return 0u;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return (_m.d_a1->length() + 1);
+    }
   }
 };
 
@@ -117,12 +116,12 @@ struct Sort {
       return x1(ls, div_conq<T1, T2>(splitF, x, x0, x1, splitF(ls).first),
                 div_conq<T1, T2>(splitF, x, x0, x1, splitF(ls).second));
     } else {
-      return std::visit(
-          Overloaded{[&](const typename List<T1>::Nil &) -> auto { return x; },
-                     [&](const typename List<T1>::Cons &_args) -> auto {
-                       return x0(_args.d_a0);
-                     }},
-          ls->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(ls->v())) {
+        return x;
+      } else {
+        const auto &_m = *std::get_if<typename List<T1>::Cons>(&ls->v());
+        return x0(_m.d_a0);
+      }
     }
   }
 
@@ -130,37 +129,23 @@ struct Sort {
   __attribute__((pure)) static std::pair<std::shared_ptr<List<T1>>,
                                          std::shared_ptr<List<T1>>>
   split(const std::shared_ptr<List<T1>> &ls) {
-    return std::visit(
-        Overloaded{
-            [](const typename List<T1>::Nil &)
-                -> std::pair<std::shared_ptr<List<T1>>,
-                             std::shared_ptr<List<T1>>> {
-              return std::make_pair(List<T1>::nil(), List<T1>::nil());
-            },
-            [](const typename List<T1>::Cons &_args)
-                -> std::pair<std::shared_ptr<List<T1>>,
-                             std::shared_ptr<List<T1>>> {
-              return std::visit(
-                  Overloaded{
-                      [&](const typename List<T1>::Nil &)
-                          -> std::pair<std::shared_ptr<List<T1>>,
-                                       std::shared_ptr<List<T1>>> {
-                        return std::make_pair(
-                            List<T1>::cons(_args.d_a0, List<T1>::nil()),
-                            List<T1>::nil());
-                      },
-                      [&](const typename List<T1>::Cons &_args0)
-                          -> std::pair<std::shared_ptr<List<T1>>,
-                                       std::shared_ptr<List<T1>>> {
-                        auto _cs = split<T1>(_args0.d_a1);
-                        const std::shared_ptr<List<T1>> &ls1 = _cs.first;
-                        const std::shared_ptr<List<T1>> &ls2 = _cs.second;
-                        return std::make_pair(List<T1>::cons(_args.d_a0, ls1),
-                                              List<T1>::cons(_args0.d_a0, ls2));
-                      }},
-                  _args.d_a1->v());
-            }},
-        ls->v());
+    if (std::holds_alternative<typename List<T1>::Nil>(ls->v())) {
+      return std::make_pair(List<T1>::nil(), List<T1>::nil());
+    } else {
+      const auto &_m = *std::get_if<typename List<T1>::Cons>(&ls->v());
+      auto &&_sv0 = _m.d_a1;
+      if (std::holds_alternative<typename List<T1>::Nil>(_sv0->v())) {
+        return std::make_pair(List<T1>::cons(_m.d_a0, List<T1>::nil()),
+                              List<T1>::nil());
+      } else {
+        const auto &_m0 = *std::get_if<typename List<T1>::Cons>(&_sv0->v());
+        auto _cs = split<T1>(_m0.d_a1);
+        const std::shared_ptr<List<T1>> &ls1 = _cs.first;
+        const std::shared_ptr<List<T1>> &ls2 = _cs.second;
+        return std::make_pair(List<T1>::cons(_m.d_a0, ls1),
+                              List<T1>::cons(_m0.d_a0, ls2));
+      }
+    }
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F1,
@@ -174,24 +159,19 @@ struct Sort {
             MapsTo<T2, T1, T1, std::shared_ptr<List<T1>>, T2, T2> F3>
   static T2 div_conq_pair(const T2 x, F1 &&x0, F2 &&x1, F3 &&x2,
                           const std::shared_ptr<List<T1>> &l) {
-    return std::visit(
-        Overloaded{
-            [&](const typename List<T1>::Nil &) -> auto { return x; },
-            [&](const typename List<T1>::Cons &_args) -> auto {
-              return std::visit(
-                  Overloaded{
-                      [&](const typename List<T1>::Nil &) -> auto {
-                        return x0(_args.d_a0);
-                      },
-                      [&](const typename List<T1>::Cons &_args0) -> auto {
-                        return x2(
-                            _args.d_a0, _args0.d_a0, _args0.d_a1,
-                            x1(_args.d_a0, _args0.d_a0),
-                            div_conq_pair<T1, T2>(x, x0, x1, x2, _args0.d_a1));
-                      }},
-                  _args.d_a1->v());
-            }},
-        l->v());
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return x;
+    } else {
+      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+      auto &&_sv0 = _m.d_a1;
+      if (std::holds_alternative<typename List<T1>::Nil>(_sv0->v())) {
+        return x0(_m.d_a0);
+      } else {
+        const auto &_m0 = *std::get_if<typename List<T1>::Cons>(&_sv0->v());
+        return x2(_m.d_a0, _m0.d_a0, _m0.d_a1, x1(_m.d_a0, _m0.d_a0),
+                  div_conq_pair<T1, T2>(x, x0, x1, x2, _m0.d_a1));
+      }
+    }
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
@@ -199,46 +179,36 @@ struct Sort {
                                          std::shared_ptr<List<T1>>>
   split_pivot(F0 &&le_dec0, const T1 pivot,
               const std::shared_ptr<List<T1>> &l) {
-    return std::visit(
-        Overloaded{
-            [](const typename List<T1>::Nil &)
-                -> std::pair<std::shared_ptr<List<T1>>,
-                             std::shared_ptr<List<T1>>> {
-              return std::make_pair(List<T1>::nil(), List<T1>::nil());
-            },
-            [&](const typename List<T1>::Cons &_args)
-                -> std::pair<std::shared_ptr<List<T1>>,
-                             std::shared_ptr<List<T1>>> {
-              auto _cs = split_pivot<T1>(le_dec0, pivot, _args.d_a1);
-              const std::shared_ptr<List<T1>> &l1 = _cs.first;
-              const std::shared_ptr<List<T1>> &l2 = _cs.second;
-              if (le_dec0(_args.d_a0, pivot)) {
-                return std::make_pair(List<T1>::cons(_args.d_a0, l1), l2);
-              } else {
-                return std::make_pair(l1, List<T1>::cons(_args.d_a0, l2));
-              }
-            }},
-        l->v());
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return std::make_pair(List<T1>::nil(), List<T1>::nil());
+    } else {
+      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+      auto _cs = split_pivot<T1>(le_dec0, pivot, _m.d_a1);
+      const std::shared_ptr<List<T1>> &l1 = _cs.first;
+      const std::shared_ptr<List<T1>> &l2 = _cs.second;
+      if (le_dec0(_m.d_a0, pivot)) {
+        return std::make_pair(List<T1>::cons(_m.d_a0, l1), l2);
+      } else {
+        return std::make_pair(l1, List<T1>::cons(_m.d_a0, l2));
+      }
+    }
   }
 
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0,
             MapsTo<T2, T1, std::shared_ptr<List<T1>>, T2, T2> F2>
   static T2 div_conq_pivot(F0 &&le_dec0, const T2 x, F2 &&x0,
                            const std::shared_ptr<List<T1>> &l) {
-    return std::visit(
-        Overloaded{
-            [&](const typename List<T1>::Nil &) -> auto { return x; },
-            [&](const typename List<T1>::Cons &_args) -> auto {
-              return x0(
-                  _args.d_a0, _args.d_a1,
-                  div_conq_pivot<T1, T2>(
-                      le_dec0, x, x0,
-                      split_pivot(le_dec0, _args.d_a0, _args.d_a1).first),
-                  div_conq_pivot<T1, T2>(
-                      le_dec0, x, x0,
-                      split_pivot(le_dec0, _args.d_a0, _args.d_a1).second));
-            }},
-        l->v());
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return x;
+    } else {
+      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+      return x0(
+          _m.d_a0, _m.d_a1,
+          div_conq_pivot<T1, T2>(le_dec0, x, x0,
+                                 split_pivot(le_dec0, _m.d_a0, _m.d_a1).first),
+          div_conq_pivot<T1, T2>(
+              le_dec0, x, x0, split_pivot(le_dec0, _m.d_a0, _m.d_a1).second));
+    }
   }
 
   static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>

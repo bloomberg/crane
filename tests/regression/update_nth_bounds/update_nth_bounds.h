@@ -61,15 +61,12 @@ public:
       return std::const_pointer_cast<List<t_A>>(this->shared_from_this());
     } else {
       unsigned int n0 = n - 1;
-      return std::visit(Overloaded{[](const typename List<t_A>::Nil &)
-                                       -> std::shared_ptr<List<t_A>> {
-                                     return List<t_A>::nil();
-                                   },
-                                   [&](const typename List<t_A>::Cons &_args)
-                                       -> std::shared_ptr<List<t_A>> {
-                                     return _args.d_a1->skipn(n0);
-                                   }},
-                        this->v());
+      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+        return List<t_A>::nil();
+      } else {
+        const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+        return _m.d_a1->skipn(n0);
+      }
     }
   }
 
@@ -78,37 +75,31 @@ public:
       return List<t_A>::nil();
     } else {
       unsigned int n0 = n - 1;
-      return std::visit(
-          Overloaded{
-              [](const typename List<t_A>::Nil &)
-                  -> std::shared_ptr<List<t_A>> { return List<t_A>::nil(); },
-              [&](const typename List<t_A>::Cons &_args)
-                  -> std::shared_ptr<List<t_A>> {
-                return List<t_A>::cons(_args.d_a0, _args.d_a1->firstn(n0));
-              }},
-          this->v());
+      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+        return List<t_A>::nil();
+      } else {
+        const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+        return List<t_A>::cons(_m.d_a0, _m.d_a1->firstn(n0));
+      }
     }
   }
 
   __attribute__((pure)) unsigned int length() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons &_args) -> unsigned int {
-              return (_args.d_a1->length() + 1);
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return 0u;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return (_m.d_a1->length() + 1);
+    }
   }
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
-    return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil &)
-                       -> std::shared_ptr<List<t_A>> { return m; },
-                   [&](const typename List<t_A>::Cons &_args)
-                       -> std::shared_ptr<List<t_A>> {
-                     return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return m;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return List<t_A>::cons(_m.d_a0, _m.d_a1->app(m));
+    }
   }
 };
 

@@ -147,38 +147,34 @@ ComprehensivePatterns::make_list(const unsigned int n,
   bool _continue = true;
   while (_continue) {
     if (_loop_n <= 0) {
-      {
-        if (_last) {
-          std::get<typename List<std::pair<
-              std::shared_ptr<ComprehensivePatterns::S>, unsigned int>>::Cons>(
-              _last->v_mut())
-              .d_a1 = List<std::pair<std::shared_ptr<ComprehensivePatterns::S>,
-                                     unsigned int>>::nil();
-        } else {
-          _head = List<std::pair<std::shared_ptr<ComprehensivePatterns::S>,
-                                 unsigned int>>::nil();
-        }
-        _continue = false;
+      if (_last) {
+        std::get<typename List<std::pair<
+            std::shared_ptr<ComprehensivePatterns::S>, unsigned int>>::Cons>(
+            _last->v_mut())
+            .d_a1 = List<std::pair<std::shared_ptr<ComprehensivePatterns::S>,
+                                   unsigned int>>::nil();
+      } else {
+        _head = List<std::pair<std::shared_ptr<ComprehensivePatterns::S>,
+                               unsigned int>>::nil();
       }
+      _continue = false;
     } else {
       unsigned int m = _loop_n - 1;
-      {
-        auto _cell =
-            List<std::pair<std::shared_ptr<ComprehensivePatterns::S>,
-                           unsigned int>>::cons(std::make_pair(s, s->s_a),
-                                                nullptr);
-        if (_last) {
-          std::get<typename List<std::pair<
-              std::shared_ptr<ComprehensivePatterns::S>, unsigned int>>::Cons>(
-              _last->v_mut())
-              .d_a1 = _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
-        _loop_n = m;
-        continue;
+      auto _cell =
+          List<std::pair<std::shared_ptr<ComprehensivePatterns::S>,
+                         unsigned int>>::cons(std::make_pair(s, s->s_a),
+                                              nullptr);
+      if (_last) {
+        std::get<typename List<std::pair<
+            std::shared_ptr<ComprehensivePatterns::S>, unsigned int>>::Cons>(
+            _last->v_mut())
+            .d_a1 = _cell;
+      } else {
+        _head = _cell;
       }
+      _last = _cell;
+      _loop_n = m;
+      continue;
     }
   }
   return _head;
@@ -421,42 +417,37 @@ ComprehensivePatterns::repeat_r2(
   bool _continue = true;
   while (_continue) {
     if (_loop_n <= 0) {
-      {
-        if (_last) {
-          std::get<typename List<
-              std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
-                        std::shared_ptr<ComprehensivePatterns::R1>>>::Cons>(
-              _last->v_mut())
-              .d_a1 = List<
-              std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
-                        std::shared_ptr<ComprehensivePatterns::R1>>>::nil();
-        } else {
-          _head = List<
-              std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
-                        std::shared_ptr<ComprehensivePatterns::R1>>>::nil();
-        }
-        _continue = false;
+      if (_last) {
+        std::get<typename List<
+            std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
+                      std::shared_ptr<ComprehensivePatterns::R1>>>::Cons>(
+            _last->v_mut())
+            .d_a1 =
+            List<std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
+                           std::shared_ptr<ComprehensivePatterns::R1>>>::nil();
+      } else {
+        _head =
+            List<std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
+                           std::shared_ptr<ComprehensivePatterns::R1>>>::nil();
       }
+      _continue = false;
     } else {
       unsigned int m = _loop_n - 1;
-      {
-        auto _cell =
-            List<std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
-                           std::shared_ptr<ComprehensivePatterns::R1>>>::
-                cons(std::make_pair(r2, r2->r2_inner), nullptr);
-        if (_last) {
-          std::get<typename List<
-              std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
-                        std::shared_ptr<ComprehensivePatterns::R1>>>::Cons>(
-              _last->v_mut())
-              .d_a1 = _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
-        _loop_n = m;
-        continue;
+      auto _cell = List<std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
+                                  std::shared_ptr<ComprehensivePatterns::R1>>>::
+          cons(std::make_pair(r2, r2->r2_inner), nullptr);
+      if (_last) {
+        std::get<typename List<
+            std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
+                      std::shared_ptr<ComprehensivePatterns::R1>>>::Cons>(
+            _last->v_mut())
+            .d_a1 = _cell;
+      } else {
+        _head = _cell;
       }
+      _last = _cell;
+      _loop_n = m;
+      continue;
     }
   }
   return _head;
@@ -641,38 +632,34 @@ ComprehensivePatterns::repeat_pair(
   bool _continue = true;
   while (_continue) {
     if (_loop_n <= 0) {
-      {
-        if (_last) {
-          std::get<typename List<std::pair<
-              std::shared_ptr<ComprehensivePatterns::R>, unsigned int>>::Cons>(
-              _last->v_mut())
-              .d_a1 = List<std::pair<std::shared_ptr<ComprehensivePatterns::R>,
-                                     unsigned int>>::nil();
-        } else {
-          _head = List<std::pair<std::shared_ptr<ComprehensivePatterns::R>,
-                                 unsigned int>>::nil();
-        }
-        _continue = false;
+      if (_last) {
+        std::get<typename List<std::pair<
+            std::shared_ptr<ComprehensivePatterns::R>, unsigned int>>::Cons>(
+            _last->v_mut())
+            .d_a1 = List<std::pair<std::shared_ptr<ComprehensivePatterns::R>,
+                                   unsigned int>>::nil();
+      } else {
+        _head = List<std::pair<std::shared_ptr<ComprehensivePatterns::R>,
+                               unsigned int>>::nil();
       }
+      _continue = false;
     } else {
       unsigned int m = _loop_n - 1;
-      {
-        auto _cell =
-            List<std::pair<std::shared_ptr<ComprehensivePatterns::R>,
-                           unsigned int>>::cons(std::make_pair(r, r->val),
-                                                nullptr);
-        if (_last) {
-          std::get<typename List<std::pair<
-              std::shared_ptr<ComprehensivePatterns::R>, unsigned int>>::Cons>(
-              _last->v_mut())
-              .d_a1 = _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
-        _loop_n = m;
-        continue;
+      auto _cell =
+          List<std::pair<std::shared_ptr<ComprehensivePatterns::R>,
+                         unsigned int>>::cons(std::make_pair(r, r->val),
+                                              nullptr);
+      if (_last) {
+        std::get<typename List<std::pair<
+            std::shared_ptr<ComprehensivePatterns::R>, unsigned int>>::Cons>(
+            _last->v_mut())
+            .d_a1 = _cell;
+      } else {
+        _head = _cell;
       }
+      _last = _cell;
+      _loop_n = m;
+      continue;
     }
   }
   return _head;
@@ -815,18 +802,20 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::count_down(
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(Overloaded{[&](_Enter _f) {
-                            const unsigned int n = _f.n;
-                            if (n <= 0) {
-                              _result = r->nc_a;
-                            } else {
-                              unsigned int m = n - 1;
-                              _stack.emplace_back(_Call1{r->nc_b});
-                              _stack.emplace_back(_Enter{m});
-                            }
-                          },
-                          [&](_Call1 _f) { _result = (_result + _f._s0); }},
-               _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const unsigned int n = _f.n;
+      if (n <= 0) {
+        _result = r->nc_a;
+      } else {
+        unsigned int m = n - 1;
+        _stack.emplace_back(_Call1{r->nc_b});
+        _stack.emplace_back(_Enter{m});
+      }
+    } else {
+      const auto &_f = std::get<_Call1>(_frame);
+      _result = (_result + _f._s0);
+    }
   }
   return _result;
 }
@@ -909,18 +898,20 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::sum_proj(
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(Overloaded{[&](_Enter _f) {
-                            const unsigned int n = _f.n;
-                            if (n <= 0) {
-                              _result = 0u;
-                            } else {
-                              unsigned int m = n - 1;
-                              _stack.emplace_back(_Call1{r->nc_a});
-                              _stack.emplace_back(_Enter{m});
-                            }
-                          },
-                          [&](_Call1 _f) { _result = (_f._s0 + _result); }},
-               _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const unsigned int n = _f.n;
+      if (n <= 0) {
+        _result = 0u;
+      } else {
+        unsigned int m = n - 1;
+        _stack.emplace_back(_Call1{r->nc_a});
+        _stack.emplace_back(_Enter{m});
+      }
+    } else {
+      const auto &_f = std::get<_Call1>(_frame);
+      _result = (_f._s0 + _result);
+    }
   }
   return _result;
 }
@@ -1174,18 +1165,20 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::sum_values(
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(Overloaded{[&](_Enter _f) {
-                            const unsigned int n = _f.n;
-                            if (n <= 0) {
-                              _result = 0u;
-                            } else {
-                              unsigned int m = n - 1;
-                              _stack.emplace_back(_Call1{s->stmt_value});
-                              _stack.emplace_back(_Enter{m});
-                            }
-                          },
-                          [&](_Call1 _f) { _result = (_f._s0 + _result); }},
-               _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const unsigned int n = _f.n;
+      if (n <= 0) {
+        _result = 0u;
+      } else {
+        unsigned int m = n - 1;
+        _stack.emplace_back(_Call1{s->stmt_value});
+        _stack.emplace_back(_Enter{m});
+      }
+    } else {
+      const auto &_f = std::get<_Call1>(_frame);
+      _result = (_f._s0 + _result);
+    }
   }
   return _result;
 }
@@ -1239,18 +1232,20 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::sum_with_state(
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(Overloaded{[&](_Enter _f) {
-                            const unsigned int n = _f.n;
-                            if (n <= 0) {
-                              _result = r->cf_val;
-                            } else {
-                              unsigned int m = n - 1;
-                              _stack.emplace_back(_Call1{r->cf_val});
-                              _stack.emplace_back(_Enter{m});
-                            }
-                          },
-                          [&](_Call1 _f) { _result = (_f._s0 + _result); }},
-               _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const unsigned int n = _f.n;
+      if (n <= 0) {
+        _result = r->cf_val;
+      } else {
+        unsigned int m = n - 1;
+        _stack.emplace_back(_Call1{r->cf_val});
+        _stack.emplace_back(_Enter{m});
+      }
+    } else {
+      const auto &_f = std::get<_Call1>(_frame);
+      _result = (_f._s0 + _result);
+    }
   }
   return _result;
 }
@@ -1297,18 +1292,20 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::accum_with_state(
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(Overloaded{[&](_Enter _f) {
-                            const unsigned int n = _f.n;
-                            if (n <= 0) {
-                              _result = s->lb_value;
-                            } else {
-                              unsigned int m = n - 1;
-                              _stack.emplace_back(_Call1{s->lb_value});
-                              _stack.emplace_back(_Enter{m});
-                            }
-                          },
-                          [&](_Call1 _f) { _result = (_f._s0 + _result); }},
-               _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const unsigned int n = _f.n;
+      if (n <= 0) {
+        _result = s->lb_value;
+      } else {
+        unsigned int m = n - 1;
+        _stack.emplace_back(_Call1{s->lb_value});
+        _stack.emplace_back(_Enter{m});
+      }
+    } else {
+      const auto &_f = std::get<_Call1>(_frame);
+      _result = (_f._s0 + _result);
+    }
   }
   return _result;
 }

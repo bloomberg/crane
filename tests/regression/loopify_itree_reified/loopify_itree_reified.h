@@ -32,26 +32,23 @@ struct LoopifyItreeReified {
   /// that recursive calls are under Tau/Vis constructors.
   template <typename T1, typename F0>
   static std::shared_ptr<ITree<T1>> pass_body(F0 &&rec, const itreeF_t<T1> ot) {
-    return std::visit(
-        Overloaded{[&](const typename ITree<T1>::Ret &_itf) -> decltype(auto) {
-                     auto r = _itf.value;
-                     return ITree<T1>::ret(r);
-                   },
-                   [&](const typename ITree<T1>::Tau &_itf) -> decltype(auto) {
-                     auto t_ = _itf.next;
-                     return [&]() {
-                       auto t = rec(t_);
-                       return ITree<decltype(t->run())>::tau(t);
-                     }();
-                   },
-                   [&](const typename ITree<T1>::Vis &_itf) -> decltype(auto) {
-                     auto e = _itf.effect;
-                     auto k = _itf.cont;
-                     return itree_vis(e, [=](const std::any x) mutable {
-                       return rec(k(x));
-                     });
-                   }},
-        ot);
+    if (std::holds_alternative<typename ITree<T1>::Ret>(ot)) {
+      const auto &_itf = *std::get_if<typename ITree<T1>::Ret>(&ot);
+      auto r = _itf.value;
+      return ITree<T1>::ret(r);
+    } else if (std::holds_alternative<typename ITree<T1>::Tau>(ot)) {
+      const auto &_itf = *std::get_if<typename ITree<T1>::Tau>(&ot);
+      auto t_ = _itf.next;
+      return [&]() {
+        auto t = rec(t_);
+        return ITree<decltype(t->run())>::tau(t);
+      }();
+    } else {
+      const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&ot);
+      auto e = _itf.effect;
+      auto k = _itf.cont;
+      return itree_vis(e, [=](const std::any x) mutable { return rec(k(x)); });
+    }
   }
 
   /// HOF-pattern cofixpoint: identity traversal that passes through all

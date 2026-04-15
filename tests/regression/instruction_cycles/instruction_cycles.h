@@ -57,12 +57,12 @@ public:
 
   template <MapsTo<bool, t_A> F0>
   __attribute__((pure)) bool forallb(F0 &&f) const {
-    return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil &) -> bool { return true; },
-                   [&](const typename List<t_A>::Cons &_args) -> bool {
-                     return (f(_args.d_a0) && _args.d_a1->forallb(f));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return true;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return (f(_m.d_a0) && _m.d_a1->forallb(f));
+    }
   }
 };
 
@@ -111,56 +111,51 @@ struct InstructionCycles {
 
     __attribute__((pure)) unsigned int
     cycles_jcn(const std::shared_ptr<state1> &s) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instruction1::JCN1 &_args) -> unsigned int {
-                unsigned int c1 = (8u ? _args.d_a0 / 8u : 0);
-                unsigned int c2 = (2u ? (4u ? _args.d_a0 / 4u : 0) % 2u
-                                      : (4u ? _args.d_a0 / 4u : 0));
-                unsigned int c3 = (2u ? (2u ? _args.d_a0 / 2u : 0) % 2u
-                                      : (2u ? _args.d_a0 / 2u : 0));
-                unsigned int c4 = (2u ? _args.d_a0 % 2u : _args.d_a0);
-                bool base_cond = ((s->acc1 == 0u && c2 == 1u) ||
-                                  ((s->carry1 && c3 == 1u) ||
-                                   (!(s->test_pin1) && c4 == 1u)));
-                bool jump;
-                if (c1 == 1u) {
-                  jump = !(base_cond);
-                } else {
-                  jump = base_cond;
-                }
-                if (jump) {
-                  return 16u;
-                } else {
-                  return 8u;
-                }
-              },
-              [](const typename instruction1::NOP1 &) -> unsigned int {
-                return 8u;
-              }},
-          this->v());
+      if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
+        const auto &_m = *std::get_if<typename instruction1::JCN1>(&this->v());
+        unsigned int c1 = (8u ? _m.d_a0 / 8u : 0);
+        unsigned int c2 =
+            (2u ? (4u ? _m.d_a0 / 4u : 0) % 2u : (4u ? _m.d_a0 / 4u : 0));
+        unsigned int c3 =
+            (2u ? (2u ? _m.d_a0 / 2u : 0) % 2u : (2u ? _m.d_a0 / 2u : 0));
+        unsigned int c4 = (2u ? _m.d_a0 % 2u : _m.d_a0);
+        bool base_cond =
+            ((s->acc1 == 0u && c2 == 1u) ||
+             ((s->carry1 && c3 == 1u) || (!(s->test_pin1) && c4 == 1u)));
+        bool jump;
+        if (c1 == 1u) {
+          jump = !(base_cond);
+        } else {
+          jump = base_cond;
+        }
+        if (jump) {
+          return 16u;
+        } else {
+          return 8u;
+        }
+      } else {
+        return 8u;
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
     T1 instruction1_rec(F0 &&f, const T1 f0) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instruction1::JCN1 &_args) -> T1 {
-                return f(_args.d_a0, _args.d_a1);
-              },
-              [&](const typename instruction1::NOP1 &) -> T1 { return f0; }},
-          this->v());
+      if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
+        const auto &_m = *std::get_if<typename instruction1::JCN1>(&this->v());
+        return f(_m.d_a0, _m.d_a1);
+      } else {
+        return f0;
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
     T1 instruction1_rect(F0 &&f, const T1 f0) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instruction1::JCN1 &_args) -> T1 {
-                return f(_args.d_a0, _args.d_a1);
-              },
-              [&](const typename instruction1::NOP1 &) -> T1 { return f0; }},
-          this->v());
+      if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
+        const auto &_m = *std::get_if<typename instruction1::JCN1>(&this->v());
+        return f(_m.d_a0, _m.d_a1);
+      } else {
+        return f0;
+      }
     }
   };
 
@@ -204,24 +199,22 @@ struct InstructionCycles {
 
     template <typename T1, MapsTo<T1, unsigned int> F0>
     T1 instruction2_rec(F0 &&f, const T1 f0) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instruction2::JMS2 &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename instruction2::NOP2 &) -> T1 { return f0; }},
-          this->v());
+      if (std::holds_alternative<typename instruction2::JMS2>(this->v())) {
+        const auto &_m = *std::get_if<typename instruction2::JMS2>(&this->v());
+        return f(_m.d_a0);
+      } else {
+        return f0;
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0>
     T1 instruction2_rect(F0 &&f, const T1 f0) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instruction2::JMS2 &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename instruction2::NOP2 &) -> T1 { return f0; }},
-          this->v());
+      if (std::holds_alternative<typename instruction2::JMS2>(this->v())) {
+        const auto &_m = *std::get_if<typename instruction2::JMS2>(&this->v());
+        return f(_m.d_a0);
+      } else {
+        return f0;
+      }
     }
   };
 
@@ -505,23 +498,21 @@ struct InstructionCycles {
 
     __attribute__((pure)) unsigned int
     cycles_sum(const std::shared_ptr<state5> &s) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instruction5::JCN5 &_args) -> unsigned int {
-                if ((8u ? _args.d_a0 / 8u : 0) == 1u) {
-                  return 16u;
-                } else {
-                  if ((s->acc5 == 0u &&
-                       (2u ? (4u ? _args.d_a0 / 4u : 0) % 2u
-                           : (4u ? _args.d_a0 / 4u : 0)) == 1u)) {
-                    return 16u;
-                  } else {
-                    return 8u;
-                  }
-                }
-              },
-              [](const auto &) -> unsigned int { return 8u; }},
-          this->v());
+      if (std::holds_alternative<typename instruction5::JCN5>(this->v())) {
+        const auto &_m = *std::get_if<typename instruction5::JCN5>(&this->v());
+        if ((8u ? _m.d_a0 / 8u : 0) == 1u) {
+          return 16u;
+        } else {
+          if ((s->acc5 == 0u && (2u ? (4u ? _m.d_a0 / 4u : 0) % 2u
+                                    : (4u ? _m.d_a0 / 4u : 0)) == 1u)) {
+            return 16u;
+          } else {
+            return 8u;
+          }
+        }
+      } else {
+        return 8u;
+      }
     }
   };
 
@@ -529,30 +520,30 @@ struct InstructionCycles {
             MapsTo<T1, unsigned int> F2>
   static T1 instruction5_rect(const T1 f, F1 &&f0, F2 &&f1,
                               const std::shared_ptr<instruction5> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instruction5::NOP5 &) -> T1 { return f; },
-                   [&](const typename instruction5::JCN5 &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename instruction5::INC5 &_args) -> T1 {
-                     return f1(_args.d_a0);
-                   }},
-        i->v());
+    if (std::holds_alternative<typename instruction5::NOP5>(i->v())) {
+      return f;
+    } else if (std::holds_alternative<typename instruction5::JCN5>(i->v())) {
+      const auto &_m = *std::get_if<typename instruction5::JCN5>(&i->v());
+      return f0(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename instruction5::INC5>(&i->v());
+      return f1(_m.d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F1,
             MapsTo<T1, unsigned int> F2>
   static T1 instruction5_rec(const T1 f, F1 &&f0, F2 &&f1,
                              const std::shared_ptr<instruction5> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instruction5::NOP5 &) -> T1 { return f; },
-                   [&](const typename instruction5::JCN5 &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename instruction5::INC5 &_args) -> T1 {
-                     return f1(_args.d_a0);
-                   }},
-        i->v());
+    if (std::holds_alternative<typename instruction5::NOP5>(i->v())) {
+      return f;
+    } else if (std::holds_alternative<typename instruction5::JCN5>(i->v())) {
+      const auto &_m = *std::get_if<typename instruction5::JCN5>(&i->v());
+      return f0(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename instruction5::INC5>(&i->v());
+      return f1(_m.d_a0);
+    }
   }
 
   static std::shared_ptr<state5>

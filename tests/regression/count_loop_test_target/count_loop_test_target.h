@@ -54,23 +54,23 @@ struct CountLoopTestTarget {
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
   static T1 instruction_rect(F0 &&f, const T1 f0,
                              const std::shared_ptr<instruction> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instruction::ISZ &_args) -> T1 {
-                     return f(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename instruction::NOP &) -> T1 { return f0; }},
-        i->v());
+    if (std::holds_alternative<typename instruction::ISZ>(i->v())) {
+      const auto &_m = *std::get_if<typename instruction::ISZ>(&i->v());
+      return f(_m.d_a0, _m.d_a1);
+    } else {
+      return f0;
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
   static T1 instruction_rec(F0 &&f, const T1 f0,
                             const std::shared_ptr<instruction> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instruction::ISZ &_args) -> T1 {
-                     return f(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename instruction::NOP &) -> T1 { return f0; }},
-        i->v());
+    if (std::holds_alternative<typename instruction::ISZ>(i->v())) {
+      const auto &_m = *std::get_if<typename instruction::ISZ>(&i->v());
+      return f(_m.d_a0, _m.d_a1);
+    } else {
+      return f0;
+    }
   }
 
   static std::shared_ptr<instruction>

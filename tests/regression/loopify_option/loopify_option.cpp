@@ -17,23 +17,20 @@ __attribute__((pure)) std::optional<unsigned int> LoopifyOption::lookup_opt(
       _loop_l = l;
   bool _continue = true;
   while (_continue) {
-    std::visit(
-        Overloaded{[&](const typename LoopifyOption::list<
-                       std::pair<unsigned int, unsigned int>>::Nil &) {
-                     _result = std::optional<unsigned int>();
-                     _continue = false;
-                   },
-                   [&](const typename LoopifyOption::list<
-                       std::pair<unsigned int, unsigned int>>::Cons &_args) {
-                     if (_args.d_a0.first == key) {
-                       _result =
-                           std::make_optional<unsigned int>(_args.d_a0.second);
-                       _continue = false;
-                     } else {
-                       _loop_l = _args.d_a1;
-                     }
-                   }},
-        _loop_l->v());
+    if (std::holds_alternative<typename LoopifyOption::list<
+            std::pair<unsigned int, unsigned int>>::Nil>(_loop_l->v())) {
+      _result = std::optional<unsigned int>();
+      _continue = false;
+    } else {
+      const auto &_m = *std::get_if<typename LoopifyOption::list<
+          std::pair<unsigned int, unsigned int>>::Cons>(&_loop_l->v());
+      if (_m.d_a0.first == key) {
+        _result = std::make_optional<unsigned int>(_m.d_a0.second);
+        _continue = false;
+      } else {
+        _loop_l = _m.d_a1;
+      }
+    }
   }
   return _result;
 }

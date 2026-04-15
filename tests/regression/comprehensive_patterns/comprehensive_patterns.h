@@ -258,27 +258,25 @@ struct ComprehensivePatterns {
     template <typename T1, MapsTo<T1, std::shared_ptr<S>> F0,
               MapsTo<T1, unsigned int> F1>
     T1 Either_rec(F0 &&f, F1 &&f0) const {
-      return std::visit(
-          Overloaded{[&](const typename Either::Left_S &_args) -> T1 {
-                       return f(_args.d_s);
-                     },
-                     [&](const typename Either::Right_N &_args) -> T1 {
-                       return f0(_args.d_n);
-                     }},
-          this->v());
+      if (std::holds_alternative<typename Either::Left_S>(this->v())) {
+        const auto &_m = *std::get_if<typename Either::Left_S>(&this->v());
+        return f(_m.d_s);
+      } else {
+        const auto &_m = *std::get_if<typename Either::Right_N>(&this->v());
+        return f0(_m.d_n);
+      }
     }
 
     template <typename T1, MapsTo<T1, std::shared_ptr<S>> F0,
               MapsTo<T1, unsigned int> F1>
     T1 Either_rect(F0 &&f, F1 &&f0) const {
-      return std::visit(
-          Overloaded{[&](const typename Either::Left_S &_args) -> T1 {
-                       return f(_args.d_s);
-                     },
-                     [&](const typename Either::Right_N &_args) -> T1 {
-                       return f0(_args.d_n);
-                     }},
-          this->v());
+      if (std::holds_alternative<typename Either::Left_S>(this->v())) {
+        const auto &_m = *std::get_if<typename Either::Left_S>(&this->v());
+        return f(_m.d_s);
+      } else {
+        const auto &_m = *std::get_if<typename Either::Right_N>(&this->v());
+        return f0(_m.d_n);
+      }
     }
   };
 
@@ -655,30 +653,25 @@ struct ComprehensivePatterns {
     }
 
     std::shared_ptr<Tree> flip_tree() const {
-      return std::visit(
-          Overloaded{
-              [&](const typename Tree::Leaf &_args) -> std::shared_ptr<Tree> {
-                return Tree::node(
-                    std::const_pointer_cast<Tree>(this->shared_from_this()),
-                    _args.d_a0,
-                    std::const_pointer_cast<Tree>(this->shared_from_this()));
-              },
-              [](const typename Tree::Node &_args) -> std::shared_ptr<Tree> {
-                return Tree::leaf(_args.d_a1);
-              }},
-          this->v());
+      if (std::holds_alternative<typename Tree::Leaf>(this->v())) {
+        const auto &_m = *std::get_if<typename Tree::Leaf>(&this->v());
+        return Tree::node(
+            std::const_pointer_cast<Tree>(this->shared_from_this()), _m.d_a0,
+            std::const_pointer_cast<Tree>(this->shared_from_this()));
+      } else {
+        const auto &_m = *std::get_if<typename Tree::Node>(&this->v());
+        return Tree::leaf(_m.d_a1);
+      }
     }
 
     std::shared_ptr<Tree> transform_tree() const {
-      return std::visit(
-          Overloaded{
-              [](const typename Tree::Leaf &_args) -> std::shared_ptr<Tree> {
-                return Tree::leaf((_args.d_a0 + 1u));
-              },
-              [](const typename Tree::Node &_args) -> std::shared_ptr<Tree> {
-                return Tree::node(_args.d_a0, (_args.d_a1 + 1u), _args.d_a2);
-              }},
-          this->v());
+      if (std::holds_alternative<typename Tree::Leaf>(this->v())) {
+        const auto &_m = *std::get_if<typename Tree::Leaf>(&this->v());
+        return Tree::leaf((_m.d_a0 + 1u));
+      } else {
+        const auto &_m = *std::get_if<typename Tree::Node>(&this->v());
+        return Tree::node(_m.d_a0, (_m.d_a1 + 1u), _m.d_a2);
+      }
     }
 
     __attribute__((pure)) unsigned int
@@ -690,16 +683,16 @@ struct ComprehensivePatterns {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename Tree::Node &>().d_a0.get()) _s0;
+        decltype(std::declval<typename Tree::Node &>().d_a0.get()) _s0;
         decltype((
-            std::declval<const typename Tree::Node &>().d_a1 +
+            std::declval<typename Tree::Node &>().d_a1 +
             std::declval<const std::shared_ptr<StateLB> &>()->lb_value)) _s1;
       };
 
       struct _Call2 {
         unsigned int _s0;
         decltype((
-            std::declval<const typename Tree::Node &>().d_a1 +
+            std::declval<typename Tree::Node &>().d_a1 +
             std::declval<const std::shared_ptr<StateLB> &>()->lb_value)) _s1;
       };
 
@@ -710,28 +703,25 @@ struct ComprehensivePatterns {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const Tree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename Tree::Leaf &_args) -> void {
-                            _result = (_args.d_a0 + s->lb_value);
-                          },
-                          [&](const typename Tree::Node &_args) -> void {
-                            _stack.emplace_back(_Call1{
-                                _args.d_a0.get(), (_args.d_a1 + s->lb_value)});
-                            _stack.emplace_back(_Enter{_args.d_a2.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) { _result = ((_f._s1 + _result) + _f._s0); }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const Tree *_self = _f._self;
+          if (std::holds_alternative<typename Tree::Leaf>(_self->v())) {
+            const auto &_m = *std::get_if<typename Tree::Leaf>(&_self->v());
+            _result = (_m.d_a0 + s->lb_value);
+          } else {
+            const auto &_m = *std::get_if<typename Tree::Node>(&_self->v());
+            _stack.emplace_back(_Call1{_m.d_a0.get(), (_m.d_a1 + s->lb_value)});
+            _stack.emplace_back(_Enter{_m.d_a2.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = ((_f._s1 + _result) + _f._s0);
+        }
       }
       return _result;
     }
@@ -744,13 +734,13 @@ struct ComprehensivePatterns {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename Tree::Node &>().d_a0.get()) _s0;
-        decltype(std::declval<const typename Tree::Node &>().d_a1) _s1;
+        decltype(std::declval<typename Tree::Node &>().d_a0.get()) _s0;
+        decltype(std::declval<typename Tree::Node &>().d_a1) _s1;
       };
 
       struct _Call2 {
         unsigned int _s0;
-        decltype(std::declval<const typename Tree::Node &>().d_a1) _s1;
+        decltype(std::declval<typename Tree::Node &>().d_a1) _s1;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -760,28 +750,25 @@ struct ComprehensivePatterns {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const Tree *_self = _f._self;
-                  std::visit(
-                      Overloaded{[&](const typename Tree::Leaf &_args) -> void {
-                                   _result = _args.d_a0;
-                                 },
-                                 [&](const typename Tree::Node &_args) -> void {
-                                   _stack.emplace_back(
-                                       _Call1{_args.d_a0.get(), _args.d_a1});
-                                   _stack.emplace_back(
-                                       _Enter{_args.d_a2.get()});
-                                 }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) { _result = ((_f._s1 + _result) + _f._s0); }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const Tree *_self = _f._self;
+          if (std::holds_alternative<typename Tree::Leaf>(_self->v())) {
+            const auto &_m = *std::get_if<typename Tree::Leaf>(&_self->v());
+            _result = _m.d_a0;
+          } else {
+            const auto &_m = *std::get_if<typename Tree::Node>(&_self->v());
+            _stack.emplace_back(_Call1{_m.d_a0.get(), _m.d_a1});
+            _stack.emplace_back(_Enter{_m.d_a2.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = ((_f._s1 + _result) + _f._s0);
+        }
       }
       return _result;
     }
@@ -798,17 +785,17 @@ struct ComprehensivePatterns {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename Tree::Node &>().d_a0.get()) _s0;
-        decltype(std::declval<const typename Tree::Node &>().d_a2) _s1;
-        decltype(std::declval<const typename Tree::Node &>().d_a1) _s2;
-        decltype(std::declval<const typename Tree::Node &>().d_a0) _s3;
+        decltype(std::declval<typename Tree::Node &>().d_a0.get()) _s0;
+        decltype(std::declval<typename Tree::Node &>().d_a2) _s1;
+        decltype(std::declval<typename Tree::Node &>().d_a1) _s2;
+        decltype(std::declval<typename Tree::Node &>().d_a0) _s3;
       };
 
       struct _Call2 {
         T1 _s0;
-        decltype(std::declval<const typename Tree::Node &>().d_a2) _s1;
-        decltype(std::declval<const typename Tree::Node &>().d_a1) _s2;
-        decltype(std::declval<const typename Tree::Node &>().d_a0) _s3;
+        decltype(std::declval<typename Tree::Node &>().d_a2) _s1;
+        decltype(std::declval<typename Tree::Node &>().d_a1) _s2;
+        decltype(std::declval<typename Tree::Node &>().d_a0) _s3;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -818,31 +805,26 @@ struct ComprehensivePatterns {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const Tree *_self = _f._self;
-                  std::visit(
-                      Overloaded{[&](const typename Tree::Leaf &_args) -> void {
-                                   _result = f(_args.d_a0);
-                                 },
-                                 [&](const typename Tree::Node &_args) -> void {
-                                   _stack.emplace_back(
-                                       _Call1{_args.d_a0.get(), _args.d_a2,
-                                              _args.d_a1, _args.d_a0});
-                                   _stack.emplace_back(
-                                       _Enter{_args.d_a2.get()});
-                                 }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const Tree *_self = _f._self;
+          if (std::holds_alternative<typename Tree::Leaf>(_self->v())) {
+            const auto &_m = *std::get_if<typename Tree::Leaf>(&_self->v());
+            _result = f(_m.d_a0);
+          } else {
+            const auto &_m = *std::get_if<typename Tree::Node>(&_self->v());
+            _stack.emplace_back(
+                _Call1{_m.d_a0.get(), _m.d_a2, _m.d_a1, _m.d_a0});
+            _stack.emplace_back(_Enter{_m.d_a2.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+        }
       }
       return _result;
     }
@@ -859,17 +841,17 @@ struct ComprehensivePatterns {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename Tree::Node &>().d_a0.get()) _s0;
-        decltype(std::declval<const typename Tree::Node &>().d_a2) _s1;
-        decltype(std::declval<const typename Tree::Node &>().d_a1) _s2;
-        decltype(std::declval<const typename Tree::Node &>().d_a0) _s3;
+        decltype(std::declval<typename Tree::Node &>().d_a0.get()) _s0;
+        decltype(std::declval<typename Tree::Node &>().d_a2) _s1;
+        decltype(std::declval<typename Tree::Node &>().d_a1) _s2;
+        decltype(std::declval<typename Tree::Node &>().d_a0) _s3;
       };
 
       struct _Call2 {
         T1 _s0;
-        decltype(std::declval<const typename Tree::Node &>().d_a2) _s1;
-        decltype(std::declval<const typename Tree::Node &>().d_a1) _s2;
-        decltype(std::declval<const typename Tree::Node &>().d_a0) _s3;
+        decltype(std::declval<typename Tree::Node &>().d_a2) _s1;
+        decltype(std::declval<typename Tree::Node &>().d_a1) _s2;
+        decltype(std::declval<typename Tree::Node &>().d_a0) _s3;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -879,31 +861,26 @@ struct ComprehensivePatterns {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const Tree *_self = _f._self;
-                  std::visit(
-                      Overloaded{[&](const typename Tree::Leaf &_args) -> void {
-                                   _result = f(_args.d_a0);
-                                 },
-                                 [&](const typename Tree::Node &_args) -> void {
-                                   _stack.emplace_back(
-                                       _Call1{_args.d_a0.get(), _args.d_a2,
-                                              _args.d_a1, _args.d_a0});
-                                   _stack.emplace_back(
-                                       _Enter{_args.d_a2.get()});
-                                 }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const Tree *_self = _f._self;
+          if (std::holds_alternative<typename Tree::Leaf>(_self->v())) {
+            const auto &_m = *std::get_if<typename Tree::Leaf>(&_self->v());
+            _result = f(_m.d_a0);
+          } else {
+            const auto &_m = *std::get_if<typename Tree::Node>(&_self->v());
+            _stack.emplace_back(
+                _Call1{_m.d_a0.get(), _m.d_a2, _m.d_a1, _m.d_a0});
+            _stack.emplace_back(_Enter{_m.d_a2.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+        }
       }
       return _result;
     }
@@ -956,37 +933,35 @@ struct ComprehensivePatterns {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int extract_from_container() const {
-      return std::visit(
-          Overloaded{[](const typename Container::Empty &) -> unsigned int {
-                       return 0u;
-                     },
-                     [](const typename Container::Full &_args) -> unsigned int {
-                       return (_args.d_a0->ro_value + _args.d_a0->ro_data);
-                     }},
-          this->v());
+      if (std::holds_alternative<typename Container::Empty>(this->v())) {
+        return 0u;
+      } else {
+        const auto &_m = *std::get_if<typename Container::Full>(&this->v());
+        return (_m.d_a0->ro_value + _m.d_a0->ro_data);
+      }
     }
   };
 
   template <typename T1, MapsTo<T1, std::shared_ptr<StateRO>> F1>
   static T1 Container_rect(const T1 f, F1 &&f0,
                            const std::shared_ptr<Container> &c) {
-    return std::visit(
-        Overloaded{[&](const typename Container::Empty &) -> T1 { return f; },
-                   [&](const typename Container::Full &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        c->v());
+    if (std::holds_alternative<typename Container::Empty>(c->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename Container::Full>(&c->v());
+      return f0(_m.d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<StateRO>> F1>
   static T1 Container_rec(const T1 f, F1 &&f0,
                           const std::shared_ptr<Container> &c) {
-    return std::visit(
-        Overloaded{[&](const typename Container::Empty &) -> T1 { return f; },
-                   [&](const typename Container::Full &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        c->v());
+    if (std::holds_alternative<typename Container::Empty>(c->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename Container::Full>(&c->v());
+      return f0(_m.d_a0);
+    }
   }
 
   struct StateOP {

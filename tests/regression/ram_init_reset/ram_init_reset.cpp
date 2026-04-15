@@ -16,21 +16,15 @@ RamInitReset::reset_state(const std::shared_ptr<RamInitReset::state> &s) {
 __attribute__((pure))
 std::pair<std::optional<unsigned int>, std::shared_ptr<RamInitReset::state>>
 RamInitReset::pop_stack(std::shared_ptr<RamInitReset::state> s) {
-  return std::visit(
-      Overloaded{
-          [&](const typename List<unsigned int>::Nil &)
-              -> std::pair<std::optional<unsigned int>,
-                           std::shared_ptr<RamInitReset::state>> {
-            return std::make_pair(std::optional<unsigned int>(), std::move(s));
-          },
-          [&](const typename List<unsigned int>::Cons &_args)
-              -> std::pair<std::optional<unsigned int>,
-                           std::shared_ptr<RamInitReset::state>> {
-            return std::make_pair(
-                std::make_optional<unsigned int>(_args.d_a0),
-                std::make_shared<RamInitReset::state>(state{
-                    s->state_regs, s->state_acc, s->state_carry, s->state_pc,
-                    _args.d_a1, s->state_ram, s->state_sel, s->state_rom}));
-          }},
-      s->state_stack->v());
+  auto &&_sv = s->state_stack;
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv->v())) {
+    return std::make_pair(std::optional<unsigned int>(), std::move(s));
+  } else {
+    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&_sv->v());
+    return std::make_pair(
+        std::make_optional<unsigned int>(_m.d_a0),
+        std::make_shared<RamInitReset::state>(
+            state{s->state_regs, s->state_acc, s->state_carry, s->state_pc,
+                  _m.d_a1, s->state_ram, s->state_sel, s->state_rom}));
+  }
 }

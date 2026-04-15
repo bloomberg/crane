@@ -100,20 +100,17 @@ struct UnitVoidStress {
   template <typename T1, MapsTo<void, T1> F0>
   static std::shared_ptr<List<std::monostate>>
   map_void(F0 &&f, const std::shared_ptr<List<T1>> &l) {
-    return std::visit(Overloaded{[](const typename List<T1>::Nil &)
-                                     -> std::shared_ptr<List<std::monostate>> {
-                                   return List<std::monostate>::nil();
-                                 },
-                                 [&](const typename List<T1>::Cons &_args)
-                                     -> std::shared_ptr<List<std::monostate>> {
-                                   return List<std::monostate>::cons(
-                                       [&]() {
-                                         f(_args.d_a0);
-                                         return std::monostate{};
-                                       }(),
-                                       map_void<T1>(f, _args.d_a1));
-                                 }},
-                      l->v());
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return List<std::monostate>::nil();
+    } else {
+      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+      return List<std::monostate>::cons(
+          [&]() {
+            f(_m.d_a0);
+            return std::monostate{};
+          }(),
+          map_void<T1>(f, _m.d_a1));
+    }
   }
 
   static inline const std::shared_ptr<List<std::monostate>> test_map_void =

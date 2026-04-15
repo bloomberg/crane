@@ -53,16 +53,13 @@ void stmtest::stm_enqueue(
 unsigned int
 stmtest::stm_dequeue(const stm::TVar<std::shared_ptr<List<unsigned int>>> q) {
   std::shared_ptr<List<unsigned int>> xs = stm::readTVar(q);
-  return std::visit(
-      Overloaded{
-          [](const typename List<unsigned int>::Nil &) -> unsigned int {
-            return stm::retry<unsigned int>();
-          },
-          [&](const typename List<unsigned int>::Cons &_args) -> unsigned int {
-            stm::writeTVar(q, _args.d_a1);
-            return _args.d_a0;
-          }},
-      xs->v());
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(xs->v())) {
+    return stm::retry<unsigned int>();
+  } else {
+    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&xs->v());
+    stm::writeTVar(q, _m.d_a1);
+    return _m.d_a0;
+  }
 }
 
 unsigned int

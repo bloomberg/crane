@@ -173,6 +173,26 @@ and cpp_stmt =
       * cpp_type list
       (** Block template expansion: multi-statement inline custom that
           substitutes [%result] with the bind target variable name. *)
+  | Smatch of smatch_branch list * cpp_stmt list option
+      (** If/else-if pattern match chain using [std::holds_alternative] and
+          [std::get].  Branches are checked in order.  The optional else
+          body is [Some stmts] for a wildcard/default case, or [None] to
+          emit [std::unreachable()]. *)
+
+(** A branch in an {!Smatch} if/else-if pattern match chain. *)
+and smatch_branch = {
+  smb_scrutinee : cpp_expr;
+      (** Variant accessor expression, e.g. [scrut->v()] or [scrut.v()]. *)
+  smb_ctor_type : cpp_type;
+      (** Constructor struct type for the template argument. *)
+  smb_var : Id.t option;
+      (** Binding variable for [std::get], or [None] when the
+          branch body doesn't use fields. *)
+  smb_extra_conds : cpp_expr list;
+      (** Additional [&&]-joined conditions (reuse, multi-match). *)
+  smb_body : cpp_stmt list;
+      (** Branch body statements. *)
+}
 
 (** {2 C++ expressions} *)
 

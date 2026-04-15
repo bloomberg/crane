@@ -123,15 +123,14 @@ struct DepRecord {
   template <Monoid _tcI0>
   __attribute__((pure)) static typename _tcI0::m_carrier
   mfold(const std::shared_ptr<List<typename _tcI0::m_carrier>> &l) {
-    return std::visit(
-        Overloaded{
-            [&](const typename List<typename _tcI0::m_carrier>::Nil &) ->
-            typename _tcI0::m_carrier { return _tcI0::m_id(); },
-            [&](const typename List<typename _tcI0::m_carrier>::Cons &_args) ->
-            typename _tcI0::m_carrier {
-              return _tcI0::m_op(_args.d_a0, mfold<_tcI0>(_args.d_a1));
-            }},
-        l->v());
+    if (std::holds_alternative<typename List<typename _tcI0::m_carrier>::Nil>(
+            l->v())) {
+      return _tcI0::m_id();
+    } else {
+      const auto &_m =
+          *std::get_if<typename List<typename _tcI0::m_carrier>::Cons>(&l->v());
+      return _tcI0::m_op(_m.d_a0, mfold<_tcI0>(_m.d_a1));
+    }
   }
 
   static inline const unsigned int test_fold_add =

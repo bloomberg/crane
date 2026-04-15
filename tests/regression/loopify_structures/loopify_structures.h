@@ -63,28 +63,26 @@ public:
     const List *_loop_self = this;
     bool _continue = true;
     while (_continue) {
-      std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) {
-                if (_last) {
-                  std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
-                } else {
-                  _head = m;
-                }
-                _continue = false;
-              },
-              [&](const typename List<t_A>::Cons &_args) {
-                auto _cell = List<t_A>::cons(_args.d_a0, nullptr);
-                if (_last) {
-                  std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
-                      _cell;
-                } else {
-                  _head = _cell;
-                }
-                _last = _cell;
-                _loop_self = _args.d_a1.get();
-              }},
-          _loop_self->v());
+      if (std::holds_alternative<typename List<t_A>::Nil>(_loop_self->v())) {
+        if (_last) {
+          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
+        } else {
+          _head = m;
+        }
+        _continue = false;
+      } else {
+        const auto &_m =
+            *std::get_if<typename List<t_A>::Cons>(&_loop_self->v());
+        auto _cell = List<t_A>::cons(_m.d_a0, nullptr);
+        if (_last) {
+          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = _cell;
+        } else {
+          _head = _cell;
+        }
+        _last = _cell;
+        _loop_self = _m.d_a1.get();
+        continue;
+      }
     }
     return _head;
   }
@@ -137,66 +135,58 @@ struct LoopifyStructures {
 
     /// nested_flatten n flattens to a regular list.
     std::shared_ptr<List<unsigned int>> nested_flatten() const {
-      return std::visit(Overloaded{[](const typename nested::Elem &_args)
-                                       -> std::shared_ptr<List<unsigned int>> {
-                                     return List<unsigned int>::cons(
-                                         _args.d_a0, List<unsigned int>::nil());
-                                   },
-                                   [](const typename nested::NList &_args)
-                                       -> std::shared_ptr<List<unsigned int>> {
-                                     return flatten_nested_list_fuel(
-                                         1000u, _args.d_a0);
-                                   }},
-                        this->v());
+      if (std::holds_alternative<typename nested::Elem>(this->v())) {
+        const auto &_m = *std::get_if<typename nested::Elem>(&this->v());
+        return List<unsigned int>::cons(_m.d_a0, List<unsigned int>::nil());
+      } else {
+        const auto &_m = *std::get_if<typename nested::NList>(&this->v());
+        return flatten_nested_list_fuel(1000u, _m.d_a0);
+      }
     }
 
     /// nested_depth n computes maximum nesting depth.
     __attribute__((pure)) unsigned int nested_depth() const {
-      return std::visit(
-          Overloaded{
-              [](const typename nested::Elem &) -> unsigned int { return 0u; },
-              [](const typename nested::NList &_args) -> unsigned int {
-                return (depth_nested_list_fuel(1000u, _args.d_a0) + 1);
-              }},
-          this->v());
+      if (std::holds_alternative<typename nested::Elem>(this->v())) {
+        return 0u;
+      } else {
+        const auto &_m = *std::get_if<typename nested::NList>(&this->v());
+        return (depth_nested_list_fuel(1000u, _m.d_a0) + 1);
+      }
     }
 
     /// nested_sum n sums all elements in a nested structure.
     __attribute__((pure)) unsigned int nested_sum() const {
-      return std::visit(
-          Overloaded{[](const typename nested::Elem &_args) -> unsigned int {
-                       return _args.d_a0;
-                     },
-                     [](const typename nested::NList &_args) -> unsigned int {
-                       return sum_nested_list_fuel(1000u, _args.d_a0);
-                     }},
-          this->v());
+      if (std::holds_alternative<typename nested::Elem>(this->v())) {
+        const auto &_m = *std::get_if<typename nested::Elem>(&this->v());
+        return _m.d_a0;
+      } else {
+        const auto &_m = *std::get_if<typename nested::NList>(&this->v());
+        return sum_nested_list_fuel(1000u, _m.d_a0);
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, std::shared_ptr<List<std::shared_ptr<nested>>>> F1>
     T1 nested_rec(F0 &&f, F1 &&f0) const {
-      return std::visit(
-          Overloaded{[&](const typename nested::Elem &_args) -> T1 {
-                       return f(_args.d_a0);
-                     },
-                     [&](const typename nested::NList &_args) -> T1 {
-                       return f0(_args.d_a0);
-                     }},
-          this->v());
+      if (std::holds_alternative<typename nested::Elem>(this->v())) {
+        const auto &_m = *std::get_if<typename nested::Elem>(&this->v());
+        return f(_m.d_a0);
+      } else {
+        const auto &_m = *std::get_if<typename nested::NList>(&this->v());
+        return f0(_m.d_a0);
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, std::shared_ptr<List<std::shared_ptr<nested>>>> F1>
     T1 nested_rect(F0 &&f, F1 &&f0) const {
-      return std::visit(
-          Overloaded{[&](const typename nested::Elem &_args) -> T1 {
-                       return f(_args.d_a0);
-                     },
-                     [&](const typename nested::NList &_args) -> T1 {
-                       return f0(_args.d_a0);
-                     }},
-          this->v());
+      if (std::holds_alternative<typename nested::Elem>(this->v())) {
+        const auto &_m = *std::get_if<typename nested::Elem>(&this->v());
+        return f(_m.d_a0);
+      } else {
+        const auto &_m = *std::get_if<typename nested::NList>(&this->v());
+        return f0(_m.d_a0);
+      }
     }
   };
 
@@ -305,39 +295,35 @@ struct LoopifyStructures {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const quadtree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename quadtree::QLeaf &_args) -> void {
-                            _result = quadtree::qleaf(f(_args.d_a0));
-                          },
-                          [&](const typename quadtree::Quad &_args) -> void {
-                            _stack.emplace_back(_Call1{_args.d_a2.get(),
-                                                       _args.d_a1.get(),
-                                                       _args.d_a0.get()});
-                            _stack.emplace_back(_Enter{_args.d_a3.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _stack.emplace_back(_Call3{_f._s0, _result, _f._s2});
-                  _stack.emplace_back(_Enter{_f._s1});
-                },
-                [&](_Call3 _f) {
-                  _stack.emplace_back(_Call4{_f._s0, _f._s1, _result});
-                  _stack.emplace_back(_Enter{_f._s2});
-                },
-                [&](_Call4 _f) {
-                  _result = quadtree::quad(_result, _f._s2, _f._s1, _f._s0);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const quadtree *_self = _f._self;
+          if (std::holds_alternative<typename quadtree::QLeaf>(_self->v())) {
+            const auto &_m =
+                *std::get_if<typename quadtree::QLeaf>(&_self->v());
+            _result = quadtree::qleaf(f(_m.d_a0));
+          } else {
+            const auto &_m = *std::get_if<typename quadtree::Quad>(&_self->v());
+            _stack.emplace_back(
+                _Call1{_m.d_a2.get(), _m.d_a1.get(), _m.d_a0.get()});
+            _stack.emplace_back(_Enter{_m.d_a3.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else if (std::holds_alternative<_Call2>(_frame)) {
+          const auto &_f = std::get<_Call2>(_frame);
+          _stack.emplace_back(_Call3{_f._s0, _result, _f._s2});
+          _stack.emplace_back(_Enter{_f._s1});
+        } else if (std::holds_alternative<_Call3>(_frame)) {
+          const auto &_f = std::get<_Call3>(_frame);
+          _stack.emplace_back(_Call4{_f._s0, _f._s1, _result});
+          _stack.emplace_back(_Enter{_f._s2});
+        } else {
+          const auto &_f = std::get<_Call4>(_frame);
+          _result = quadtree::quad(_result, _f._s2, _f._s1, _f._s0);
+        }
       }
       return _result;
     }
@@ -378,76 +364,71 @@ struct LoopifyStructures {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const quadtree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename quadtree::QLeaf &) -> void {
-                            _result = 0u;
-                          },
-                          [&](const typename quadtree::Quad &_args) -> void {
-                            _stack.emplace_back(_Call1{_args});
-                            _stack.emplace_back(_Enter{_args.d_a0.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  const typename quadtree::Quad _args = _f._s0;
-                  unsigned int d1 = _result;
-                  _stack.emplace_back(_Call2{_args, d1});
-                  _stack.emplace_back(_Enter{_args.d_a1.get()});
-                },
-                [&](_Call2 _f) {
-                  const typename quadtree::Quad _args = _f._s0;
-                  unsigned int d1 = _f._s1;
-                  unsigned int d2 = _result;
-                  _stack.emplace_back(_Call3{_args, d1, d2});
-                  _stack.emplace_back(_Enter{_args.d_a2.get()});
-                },
-                [&](_Call3 _f) {
-                  const typename quadtree::Quad _args = _f._s0;
-                  unsigned int d1 = _f._s1;
-                  unsigned int d2 = _f._s2;
-                  unsigned int d3 = _result;
-                  _stack.emplace_back(_Call4{d1, d2, d3});
-                  _stack.emplace_back(_Enter{_args.d_a3.get()});
-                },
-                [&](_Call4 _f) {
-                  unsigned int d1 = _f._s0;
-                  unsigned int d2 = _f._s1;
-                  unsigned int d3 = _f._s2;
-                  unsigned int d4 = _result;
-                  _result = ([&]() -> unsigned int {
-                    if ([&]() -> unsigned int {
-                          if (d1 <= d2) {
-                            return d2;
-                          } else {
-                            return d1;
-                          }
-                        }() <= [&]() -> unsigned int {
-                          if (d3 <= d4) {
-                            return d4;
-                          } else {
-                            return d3;
-                          }
-                        }()) {
-                      if (d3 <= d4) {
-                        return d4;
-                      } else {
-                        return d3;
-                      }
-                    } else {
-                      if (d1 <= d2) {
-                        return d2;
-                      } else {
-                        return d1;
-                      }
-                    }
-                  }() + 1);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const quadtree *_self = _f._self;
+          if (std::holds_alternative<typename quadtree::QLeaf>(_self->v())) {
+            _result = 0u;
+          } else {
+            const auto &_m = *std::get_if<typename quadtree::Quad>(&_self->v());
+            _stack.emplace_back(_Call1{_m});
+            _stack.emplace_back(_Enter{_m.d_a0.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          const typename quadtree::Quad _m = _f._s0;
+          unsigned int d1 = _result;
+          _stack.emplace_back(_Call2{_m, d1});
+          _stack.emplace_back(_Enter{_m.d_a1.get()});
+        } else if (std::holds_alternative<_Call2>(_frame)) {
+          const auto &_f = std::get<_Call2>(_frame);
+          const typename quadtree::Quad _m = _f._s0;
+          unsigned int d1 = _f._s1;
+          unsigned int d2 = _result;
+          _stack.emplace_back(_Call3{_m, d1, d2});
+          _stack.emplace_back(_Enter{_m.d_a2.get()});
+        } else if (std::holds_alternative<_Call3>(_frame)) {
+          const auto &_f = std::get<_Call3>(_frame);
+          const typename quadtree::Quad _m = _f._s0;
+          unsigned int d1 = _f._s1;
+          unsigned int d2 = _f._s2;
+          unsigned int d3 = _result;
+          _stack.emplace_back(_Call4{d1, d2, d3});
+          _stack.emplace_back(_Enter{_m.d_a3.get()});
+        } else {
+          const auto &_f = std::get<_Call4>(_frame);
+          unsigned int d1 = _f._s0;
+          unsigned int d2 = _f._s1;
+          unsigned int d3 = _f._s2;
+          unsigned int d4 = _result;
+          _result = ([&]() -> unsigned int {
+            if ([&]() -> unsigned int {
+                  if (d1 <= d2) {
+                    return d2;
+                  } else {
+                    return d1;
+                  }
+                }() <= [&]() -> unsigned int {
+                  if (d3 <= d4) {
+                    return d4;
+                  } else {
+                    return d3;
+                  }
+                }()) {
+              if (d3 <= d4) {
+                return d4;
+              } else {
+                return d3;
+              }
+            } else {
+              if (d1 <= d2) {
+                return d2;
+              } else {
+                return d1;
+              }
+            }
+          }() + 1);
+        }
       }
       return _result;
     }
@@ -491,39 +472,35 @@ struct LoopifyStructures {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const quadtree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename quadtree::QLeaf &_args) -> void {
-                            _result = _args.d_a0;
-                          },
-                          [&](const typename quadtree::Quad &_args) -> void {
-                            _stack.emplace_back(_Call1{_args.d_a2.get(),
-                                                       _args.d_a1.get(),
-                                                       _args.d_a0.get()});
-                            _stack.emplace_back(_Enter{_args.d_a3.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _stack.emplace_back(_Call3{_f._s0, _result, _f._s2});
-                  _stack.emplace_back(_Enter{_f._s1});
-                },
-                [&](_Call3 _f) {
-                  _stack.emplace_back(_Call4{_f._s0, _f._s1, _result});
-                  _stack.emplace_back(_Enter{_f._s2});
-                },
-                [&](_Call4 _f) {
-                  _result = (_result + (_f._s2 + (_f._s1 + _f._s0)));
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const quadtree *_self = _f._self;
+          if (std::holds_alternative<typename quadtree::QLeaf>(_self->v())) {
+            const auto &_m =
+                *std::get_if<typename quadtree::QLeaf>(&_self->v());
+            _result = _m.d_a0;
+          } else {
+            const auto &_m = *std::get_if<typename quadtree::Quad>(&_self->v());
+            _stack.emplace_back(
+                _Call1{_m.d_a2.get(), _m.d_a1.get(), _m.d_a0.get()});
+            _stack.emplace_back(_Enter{_m.d_a3.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else if (std::holds_alternative<_Call2>(_frame)) {
+          const auto &_f = std::get<_Call2>(_frame);
+          _stack.emplace_back(_Call3{_f._s0, _result, _f._s2});
+          _stack.emplace_back(_Enter{_f._s1});
+        } else if (std::holds_alternative<_Call3>(_frame)) {
+          const auto &_f = std::get<_Call3>(_frame);
+          _stack.emplace_back(_Call4{_f._s0, _f._s1, _result});
+          _stack.emplace_back(_Enter{_f._s2});
+        } else {
+          const auto &_f = std::get<_Call4>(_frame);
+          _result = (_result + (_f._s2 + (_f._s1 + _f._s0)));
+        }
       }
       return _result;
     }
@@ -544,40 +521,40 @@ struct LoopifyStructures {
         const quadtree *_s0;
         const quadtree *_s1;
         const quadtree *_s2;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+        decltype(std::declval<typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<typename quadtree::Quad &>().d_a0) _s6;
       };
 
       struct _Call2 {
         T1 _s0;
         const quadtree *_s1;
         const quadtree *_s2;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+        decltype(std::declval<typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<typename quadtree::Quad &>().d_a0) _s6;
       };
 
       struct _Call3 {
         T1 _s0;
         T1 _s1;
         const quadtree *_s2;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+        decltype(std::declval<typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<typename quadtree::Quad &>().d_a0) _s6;
       };
 
       struct _Call4 {
         T1 _s0;
         T1 _s1;
         T1 _s2;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+        decltype(std::declval<typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<typename quadtree::Quad &>().d_a0) _s6;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
@@ -587,44 +564,40 @@ struct LoopifyStructures {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const quadtree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename quadtree::QLeaf &_args) -> void {
-                            _result = f(_args.d_a0);
-                          },
-                          [&](const typename quadtree::Quad &_args) -> void {
-                            _stack.emplace_back(
-                                _Call1{_args.d_a2.get(), _args.d_a1.get(),
-                                       _args.d_a0.get(), _args.d_a3, _args.d_a2,
-                                       _args.d_a1, _args.d_a0});
-                            _stack.emplace_back(_Enter{_args.d_a3.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
-                                             _f._s4, _f._s5, _f._s6});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _stack.emplace_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
-                                             _f._s4, _f._s5, _f._s6});
-                  _stack.emplace_back(_Enter{_f._s1});
-                },
-                [&](_Call3 _f) {
-                  _stack.emplace_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
-                                             _f._s4, _f._s5, _f._s6});
-                  _stack.emplace_back(_Enter{_f._s2});
-                },
-                [&](_Call4 _f) {
-                  _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
-                               _f._s3, _f._s0);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const quadtree *_self = _f._self;
+          if (std::holds_alternative<typename quadtree::QLeaf>(_self->v())) {
+            const auto &_m =
+                *std::get_if<typename quadtree::QLeaf>(&_self->v());
+            _result = f(_m.d_a0);
+          } else {
+            const auto &_m = *std::get_if<typename quadtree::Quad>(&_self->v());
+            _stack.emplace_back(_Call1{_m.d_a2.get(), _m.d_a1.get(),
+                                       _m.d_a0.get(), _m.d_a3, _m.d_a2, _m.d_a1,
+                                       _m.d_a0});
+            _stack.emplace_back(_Enter{_m.d_a3.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(
+              _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else if (std::holds_alternative<_Call2>(_frame)) {
+          const auto &_f = std::get<_Call2>(_frame);
+          _stack.emplace_back(
+              _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Enter{_f._s1});
+        } else if (std::holds_alternative<_Call3>(_frame)) {
+          const auto &_f = std::get<_Call3>(_frame);
+          _stack.emplace_back(
+              _Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Enter{_f._s2});
+        } else {
+          const auto &_f = std::get<_Call4>(_frame);
+          _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1, _f._s3,
+                       _f._s0);
+        }
       }
       return _result;
     }
@@ -645,40 +618,40 @@ struct LoopifyStructures {
         const quadtree *_s0;
         const quadtree *_s1;
         const quadtree *_s2;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+        decltype(std::declval<typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<typename quadtree::Quad &>().d_a0) _s6;
       };
 
       struct _Call2 {
         T1 _s0;
         const quadtree *_s1;
         const quadtree *_s2;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+        decltype(std::declval<typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<typename quadtree::Quad &>().d_a0) _s6;
       };
 
       struct _Call3 {
         T1 _s0;
         T1 _s1;
         const quadtree *_s2;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+        decltype(std::declval<typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<typename quadtree::Quad &>().d_a0) _s6;
       };
 
       struct _Call4 {
         T1 _s0;
         T1 _s1;
         T1 _s2;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+        decltype(std::declval<typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<typename quadtree::Quad &>().d_a0) _s6;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
@@ -688,44 +661,40 @@ struct LoopifyStructures {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const quadtree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename quadtree::QLeaf &_args) -> void {
-                            _result = f(_args.d_a0);
-                          },
-                          [&](const typename quadtree::Quad &_args) -> void {
-                            _stack.emplace_back(
-                                _Call1{_args.d_a2.get(), _args.d_a1.get(),
-                                       _args.d_a0.get(), _args.d_a3, _args.d_a2,
-                                       _args.d_a1, _args.d_a0});
-                            _stack.emplace_back(_Enter{_args.d_a3.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
-                                             _f._s4, _f._s5, _f._s6});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _stack.emplace_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
-                                             _f._s4, _f._s5, _f._s6});
-                  _stack.emplace_back(_Enter{_f._s1});
-                },
-                [&](_Call3 _f) {
-                  _stack.emplace_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
-                                             _f._s4, _f._s5, _f._s6});
-                  _stack.emplace_back(_Enter{_f._s2});
-                },
-                [&](_Call4 _f) {
-                  _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
-                               _f._s3, _f._s0);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const quadtree *_self = _f._self;
+          if (std::holds_alternative<typename quadtree::QLeaf>(_self->v())) {
+            const auto &_m =
+                *std::get_if<typename quadtree::QLeaf>(&_self->v());
+            _result = f(_m.d_a0);
+          } else {
+            const auto &_m = *std::get_if<typename quadtree::Quad>(&_self->v());
+            _stack.emplace_back(_Call1{_m.d_a2.get(), _m.d_a1.get(),
+                                       _m.d_a0.get(), _m.d_a3, _m.d_a2, _m.d_a1,
+                                       _m.d_a0});
+            _stack.emplace_back(_Enter{_m.d_a3.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(
+              _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else if (std::holds_alternative<_Call2>(_frame)) {
+          const auto &_f = std::get<_Call2>(_frame);
+          _stack.emplace_back(
+              _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Enter{_f._s1});
+        } else if (std::holds_alternative<_Call3>(_frame)) {
+          const auto &_f = std::get<_Call3>(_frame);
+          _stack.emplace_back(
+              _Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Enter{_f._s2});
+        } else {
+          const auto &_f = std::get<_Call4>(_frame);
+          _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1, _f._s3,
+                       _f._s0);
+        }
       }
       return _result;
     }
@@ -739,20 +708,20 @@ struct LoopifyStructures {
     std::shared_ptr<List<unsigned int>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(
-          Overloaded{[&](const typename List<unsigned int>::Nil &) {
-                       _result = std::optional<unsigned int>();
-                       _continue = false;
-                     },
-                     [&](const typename List<unsigned int>::Cons &_args) {
-                       if (p(_args.d_a0)) {
-                         _result = std::make_optional<unsigned int>(_args.d_a0);
-                         _continue = false;
-                       } else {
-                         _loop_l = _args.d_a1;
-                       }
-                     }},
-          _loop_l->v());
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(
+              _loop_l->v())) {
+        _result = std::optional<unsigned int>();
+        _continue = false;
+      } else {
+        const auto &_m =
+            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
+        if (p(_m.d_a0)) {
+          _result = std::make_optional<unsigned int>(_m.d_a0);
+          _continue = false;
+        } else {
+          _loop_l = _m.d_a1;
+        }
+      }
     }
     return _result;
   }
@@ -766,35 +735,36 @@ struct LoopifyStructures {
     std::shared_ptr<List<unsigned int>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(
-          Overloaded{
-              [&](const typename List<unsigned int>::Nil &) {
-                if (_last) {
-                  std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                      .d_a1 = List<unsigned int>::nil();
-                } else {
-                  _head = List<unsigned int>::nil();
-                }
-                _continue = false;
-              },
-              [&](const typename List<unsigned int>::Cons &_args) {
-                auto _cs = f(_args.d_a0);
-                if (_cs.has_value()) {
-                  const unsigned int &y = *_cs;
-                  auto _cell = List<unsigned int>::cons(y, nullptr);
-                  if (_last) {
-                    std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                        .d_a1 = _cell;
-                  } else {
-                    _head = _cell;
-                  }
-                  _last = _cell;
-                  _loop_l = _args.d_a1;
-                } else {
-                  _loop_l = _args.d_a1;
-                }
-              }},
-          _loop_l->v());
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(
+              _loop_l->v())) {
+        if (_last) {
+          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+              List<unsigned int>::nil();
+        } else {
+          _head = List<unsigned int>::nil();
+        }
+        _continue = false;
+      } else {
+        const auto &_m =
+            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
+        auto _cs = f(_m.d_a0);
+        if (_cs.has_value()) {
+          const unsigned int &y = *_cs;
+          auto _cell = List<unsigned int>::cons(y, nullptr);
+          if (_last) {
+            std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+                _cell;
+          } else {
+            _head = _cell;
+          }
+          _last = _cell;
+          _loop_l = _m.d_a1;
+          continue;
+        } else {
+          _loop_l = _m.d_a1;
+          continue;
+        }
+      }
     }
     return _head;
   }
@@ -809,33 +779,34 @@ struct LoopifyStructures {
     std::shared_ptr<List<unsigned int>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(
-          Overloaded{
-              [&](const typename List<unsigned int>::Nil &) {
-                if (_last) {
-                  std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                      .d_a1 = List<unsigned int>::nil();
-                } else {
-                  _head = List<unsigned int>::nil();
-                }
-                _continue = false;
-              },
-              [&](const typename List<unsigned int>::Cons &_args) {
-                if (p(_args.d_a0)) {
-                  auto _cell = List<unsigned int>::cons(f(_args.d_a0), nullptr);
-                  if (_last) {
-                    std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                        .d_a1 = _cell;
-                  } else {
-                    _head = _cell;
-                  }
-                  _last = _cell;
-                  _loop_l = _args.d_a1;
-                } else {
-                  _loop_l = _args.d_a1;
-                }
-              }},
-          _loop_l->v());
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(
+              _loop_l->v())) {
+        if (_last) {
+          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+              List<unsigned int>::nil();
+        } else {
+          _head = List<unsigned int>::nil();
+        }
+        _continue = false;
+      } else {
+        const auto &_m =
+            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
+        if (p(_m.d_a0)) {
+          auto _cell = List<unsigned int>::cons(f(_m.d_a0), nullptr);
+          if (_last) {
+            std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+                _cell;
+          } else {
+            _head = _cell;
+          }
+          _last = _cell;
+          _loop_l = _m.d_a1;
+          continue;
+        } else {
+          _loop_l = _m.d_a1;
+          continue;
+        }
+      }
     }
     return _head;
   }
@@ -904,17 +875,17 @@ struct LoopifyStructures {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename ltree::LNode &>().d_a1.get()) _s0;
-        decltype(std::declval<const typename ltree::LNode &>().d_a2) _s1;
-        decltype(std::declval<const typename ltree::LNode &>().d_a1) _s2;
-        decltype(std::declval<const typename ltree::LNode &>().d_a0) _s3;
+        decltype(std::declval<typename ltree::LNode &>().d_a1.get()) _s0;
+        decltype(std::declval<typename ltree::LNode &>().d_a2) _s1;
+        decltype(std::declval<typename ltree::LNode &>().d_a1) _s2;
+        decltype(std::declval<typename ltree::LNode &>().d_a0) _s3;
       };
 
       struct _Call2 {
         T1 _s0;
-        decltype(std::declval<const typename ltree::LNode &>().d_a2) _s1;
-        decltype(std::declval<const typename ltree::LNode &>().d_a1) _s2;
-        decltype(std::declval<const typename ltree::LNode &>().d_a0) _s3;
+        decltype(std::declval<typename ltree::LNode &>().d_a2) _s1;
+        decltype(std::declval<typename ltree::LNode &>().d_a1) _s2;
+        decltype(std::declval<typename ltree::LNode &>().d_a0) _s3;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -924,31 +895,26 @@ struct LoopifyStructures {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const ltree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename ltree::LLeaf &_args) -> void {
-                            _result = f(_args.d_a0);
-                          },
-                          [&](const typename ltree::LNode &_args) -> void {
-                            _stack.emplace_back(_Call1{_args.d_a1.get(),
-                                                       _args.d_a2, _args.d_a1,
-                                                       _args.d_a0});
-                            _stack.emplace_back(_Enter{_args.d_a2.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _result = f0(_f._s3, _f._s2, _result, _f._s1, _f._s0);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const ltree *_self = _f._self;
+          if (std::holds_alternative<typename ltree::LLeaf>(_self->v())) {
+            const auto &_m = *std::get_if<typename ltree::LLeaf>(&_self->v());
+            _result = f(_m.d_a0);
+          } else {
+            const auto &_m = *std::get_if<typename ltree::LNode>(&_self->v());
+            _stack.emplace_back(
+                _Call1{_m.d_a1.get(), _m.d_a2, _m.d_a1, _m.d_a0});
+            _stack.emplace_back(_Enter{_m.d_a2.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = f0(_f._s3, _f._s2, _result, _f._s1, _f._s0);
+        }
       }
       return _result;
     }
@@ -965,17 +931,17 @@ struct LoopifyStructures {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename ltree::LNode &>().d_a1.get()) _s0;
-        decltype(std::declval<const typename ltree::LNode &>().d_a2) _s1;
-        decltype(std::declval<const typename ltree::LNode &>().d_a1) _s2;
-        decltype(std::declval<const typename ltree::LNode &>().d_a0) _s3;
+        decltype(std::declval<typename ltree::LNode &>().d_a1.get()) _s0;
+        decltype(std::declval<typename ltree::LNode &>().d_a2) _s1;
+        decltype(std::declval<typename ltree::LNode &>().d_a1) _s2;
+        decltype(std::declval<typename ltree::LNode &>().d_a0) _s3;
       };
 
       struct _Call2 {
         T1 _s0;
-        decltype(std::declval<const typename ltree::LNode &>().d_a2) _s1;
-        decltype(std::declval<const typename ltree::LNode &>().d_a1) _s2;
-        decltype(std::declval<const typename ltree::LNode &>().d_a0) _s3;
+        decltype(std::declval<typename ltree::LNode &>().d_a2) _s1;
+        decltype(std::declval<typename ltree::LNode &>().d_a1) _s2;
+        decltype(std::declval<typename ltree::LNode &>().d_a0) _s3;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -985,31 +951,26 @@ struct LoopifyStructures {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const ltree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename ltree::LLeaf &_args) -> void {
-                            _result = f(_args.d_a0);
-                          },
-                          [&](const typename ltree::LNode &_args) -> void {
-                            _stack.emplace_back(_Call1{_args.d_a1.get(),
-                                                       _args.d_a2, _args.d_a1,
-                                                       _args.d_a0});
-                            _stack.emplace_back(_Enter{_args.d_a2.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _result = f0(_f._s3, _f._s2, _result, _f._s1, _f._s0);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const ltree *_self = _f._self;
+          if (std::holds_alternative<typename ltree::LLeaf>(_self->v())) {
+            const auto &_m = *std::get_if<typename ltree::LLeaf>(&_self->v());
+            _result = f(_m.d_a0);
+          } else {
+            const auto &_m = *std::get_if<typename ltree::LNode>(&_self->v());
+            _stack.emplace_back(
+                _Call1{_m.d_a1.get(), _m.d_a2, _m.d_a1, _m.d_a0});
+            _stack.emplace_back(_Enter{_m.d_a2.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = f0(_f._s3, _f._s2, _result, _f._s1, _f._s0);
+        }
       }
       return _result;
     }

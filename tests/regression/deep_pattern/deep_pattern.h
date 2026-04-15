@@ -59,458 +59,279 @@ struct DeepPattern {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int nested_let_match() const {
-      return std::visit(
-          Overloaded{
-              [](const typename tree::Leaf &_args) -> unsigned int {
-                return _args.d_a0;
-              },
-              [](const typename tree::Node &_args) -> unsigned int {
-                unsigned int a = std::visit(
-                    Overloaded{[](const typename tree::Leaf &_args0)
-                                   -> unsigned int { return _args0.d_a0; },
-                               [](const typename tree::Node &) -> unsigned int {
-                                 return 0u;
-                               }},
-                    _args.d_a0->v());
-                unsigned int b = std::visit(
-                    Overloaded{[](const typename tree::Leaf &_args1)
-                                   -> unsigned int { return _args1.d_a0; },
-                               [](const typename tree::Node &) -> unsigned int {
-                                 return 0u;
-                               }},
-                    _args.d_a1->v());
-                unsigned int c = (a + b);
-                unsigned int d = (c * 2u);
-                return (d + 1u);
-              }},
-          this->v());
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        const auto &_m = *std::get_if<typename tree::Leaf>(&this->v());
+        return _m.d_a0;
+      } else {
+        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
+        unsigned int a = [&]() {
+          auto &&_sv0 = _m.d_a0;
+          if (std::holds_alternative<typename tree::Leaf>(_sv0->v())) {
+            const auto &_m0 = *std::get_if<typename tree::Leaf>(&_sv0->v());
+            return _m0.d_a0;
+          } else {
+            return 0u;
+          }
+        }();
+        unsigned int b = [&]() {
+          auto &&_sv1 = _m.d_a1;
+          if (std::holds_alternative<typename tree::Leaf>(_sv1->v())) {
+            const auto &_m1 = *std::get_if<typename tree::Leaf>(&_sv1->v());
+            return _m1.d_a0;
+          } else {
+            return 0u;
+          }
+        }();
+        unsigned int c = (a + b);
+        unsigned int d = (c * 2u);
+        return (d + 1u);
+      }
     }
 
     __attribute__((pure)) unsigned int
     conditional_match(const unsigned int target) const {
-      return std::visit(
-          Overloaded{[&](const typename tree::Leaf &_args) -> unsigned int {
-                       if (_args.d_a0 == target) {
-                         return 100u;
-                       } else {
-                         return _args.d_a0;
-                       }
-                     },
-                     [&](const typename tree::Node &_args) -> unsigned int {
-                       if (this->has_value(target)) {
-                         return 200u;
-                       } else {
-                         return std::visit(
-                             Overloaded{
-                                 [](const typename tree::Leaf &_args0)
-                                     -> unsigned int { return _args0.d_a0; },
-                                 [](const typename tree::Node &)
-                                     -> unsigned int { return 0u; }},
-                             _args.d_a0->v());
-                       }
-                     }},
-          this->v());
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        const auto &_m = *std::get_if<typename tree::Leaf>(&this->v());
+        if (_m.d_a0 == target) {
+          return 100u;
+        } else {
+          return _m.d_a0;
+        }
+      } else {
+        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
+        if (this->has_value(target)) {
+          return 200u;
+        } else {
+          auto &&_sv0 = _m.d_a0;
+          if (std::holds_alternative<typename tree::Leaf>(_sv0->v())) {
+            const auto &_m0 = *std::get_if<typename tree::Leaf>(&_sv0->v());
+            return _m0.d_a0;
+          } else {
+            return 0u;
+          }
+        }
+      }
     }
 
     __attribute__((pure)) bool has_value(const unsigned int target) const {
-      return std::visit(
-          Overloaded{[&](const typename tree::Leaf &_args) -> bool {
-                       return _args.d_a0 == target;
-                     },
-                     [&](const typename tree::Node &_args) -> bool {
-                       return (_args.d_a0->has_value(target) ||
-                               _args.d_a1->has_value(target));
-                     }},
-          this->v());
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        const auto &_m = *std::get_if<typename tree::Leaf>(&this->v());
+        return _m.d_a0 == target;
+      } else {
+        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
+        return (_m.d_a0->has_value(target) || _m.d_a1->has_value(target));
+      }
     }
 
     __attribute__((pure)) unsigned int wildcard_with_bindings() const {
-      return std::visit(
-          Overloaded{
-              [](const typename tree::Leaf &_args) -> unsigned int {
-                return _args.d_a0;
-              },
-              [](const typename tree::Node &_args) -> unsigned int {
-                unsigned int x = std::visit(
-                    Overloaded{[](const typename tree::Leaf &_args0)
-                                   -> unsigned int { return _args0.d_a0; },
-                               [](const typename tree::Node &) -> unsigned int {
-                                 return 0u;
-                               }},
-                    _args.d_a0->v());
-                unsigned int y = std::visit(
-                    Overloaded{[](const typename tree::Leaf &_args1)
-                                   -> unsigned int { return _args1.d_a0; },
-                               [](const typename tree::Node &) -> unsigned int {
-                                 return 0u;
-                               }},
-                    _args.d_a1->v());
-                return (x + y);
-              }},
-          this->v());
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        const auto &_m = *std::get_if<typename tree::Leaf>(&this->v());
+        return _m.d_a0;
+      } else {
+        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
+        unsigned int x = [&]() {
+          auto &&_sv0 = _m.d_a0;
+          if (std::holds_alternative<typename tree::Leaf>(_sv0->v())) {
+            const auto &_m0 = *std::get_if<typename tree::Leaf>(&_sv0->v());
+            return _m0.d_a0;
+          } else {
+            return 0u;
+          }
+        }();
+        unsigned int y = [&]() {
+          auto &&_sv1 = _m.d_a1;
+          if (std::holds_alternative<typename tree::Leaf>(_sv1->v())) {
+            const auto &_m1 = *std::get_if<typename tree::Leaf>(&_sv1->v());
+            return _m1.d_a0;
+          } else {
+            return 0u;
+          }
+        }();
+        return (x + y);
+      }
     }
 
     __attribute__((pure)) unsigned int
     multi_constructor(const std::shared_ptr<tree> &t2) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename tree::Leaf &_args) -> unsigned int {
-                return std::visit(
-                    Overloaded{
-                        [&](const typename tree::Leaf &_args0) -> unsigned int {
-                          return (_args.d_a0 + _args0.d_a0);
-                        },
-                        [&](const typename tree::Node &_args0) -> unsigned int {
-                          return std::visit(
-                              Overloaded{[&](const typename tree::Leaf &_args1)
-                                             -> unsigned int {
-                                           return (_args.d_a0 + _args1.d_a0);
-                                         },
-                                         [](const typename tree::Node &)
-                                             -> unsigned int { return 0u; }},
-                              _args0.d_a0->v());
-                        }},
-                    t2->v());
-              },
-              [&](const typename tree::Node &_args) -> unsigned int {
-                return std::visit(
-                    Overloaded{
-                        [&](const typename tree::Leaf &_args0) -> unsigned int {
-                          return std::visit(
-                              Overloaded{
-                                  [&](const typename tree::Leaf &_args1)
-                                      -> unsigned int {
-                                    return std::visit(
-                                        Overloaded{
-                                            [&](const typename tree::Leaf
-                                                    &_args2) -> unsigned int {
-                                              return (_args0.d_a0 +
-                                                      _args2.d_a0);
-                                            },
-                                            [&](const typename tree::Node
-                                                    &_args2) -> unsigned int {
-                                              return std::visit(
-                                                  Overloaded{
-                                                      [&](const typename tree::
-                                                              Leaf &_args3)
-                                                          -> unsigned int {
-                                                        return std::visit(
-                                                            Overloaded{
-                                                                [&](const typename tree::
-                                                                        Leaf &
-                                                                            _args4)
-                                                                    -> unsigned int {
-                                                                  return (
-                                                                      ((_args0
-                                                                            .d_a0 +
-                                                                        _args1
-                                                                            .d_a0) +
-                                                                       _args3
-                                                                           .d_a0) +
-                                                                      _args4
-                                                                          .d_a0);
-                                                                },
-                                                                [](const typename tree::
-                                                                       Node &)
-                                                                    -> unsigned int {
-                                                                  return 0u;
-                                                                }},
-                                                            _args2.d_a1->v());
-                                                      },
-                                                      [](const typename tree::
-                                                             Node &)
-                                                          -> unsigned int {
-                                                        return 0u;
-                                                      }},
-                                                  _args2.d_a0->v());
-                                            }},
-                                        t2->v());
-                                  },
-                                  [&](const typename tree::Node &)
-                                      -> unsigned int {
-                                    return std::visit(
-                                        Overloaded{
-                                            [&](const typename tree::Leaf
-                                                    &_args2) -> unsigned int {
-                                              return (_args0.d_a0 +
-                                                      _args2.d_a0);
-                                            },
-                                            [](const typename tree::Node &)
-                                                -> unsigned int { return 0u; }},
-                                        t2->v());
-                                  }},
-                              _args.d_a1->v());
-                        },
-                        [](const typename tree::Node &) -> unsigned int {
-                          return 0u;
-                        }},
-                    _args.d_a0->v());
-              }},
-          this->v());
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        const auto &_m = *std::get_if<typename tree::Leaf>(&this->v());
+        if (std::holds_alternative<typename tree::Leaf>(t2->v())) {
+          const auto &_m0 = *std::get_if<typename tree::Leaf>(&t2->v());
+          return (_m.d_a0 + _m0.d_a0);
+        } else {
+          const auto &_m0 = *std::get_if<typename tree::Node>(&t2->v());
+          auto &&_sv1 = _m0.d_a0;
+          if (std::holds_alternative<typename tree::Leaf>(_sv1->v())) {
+            const auto &_m1 = *std::get_if<typename tree::Leaf>(&_sv1->v());
+            return (_m.d_a0 + _m1.d_a0);
+          } else {
+            return 0u;
+          }
+        }
+      } else {
+        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
+        auto &&_sv0 = _m.d_a0;
+        if (std::holds_alternative<typename tree::Leaf>(_sv0->v())) {
+          const auto &_m0 = *std::get_if<typename tree::Leaf>(&_sv0->v());
+          auto &&_sv1 = _m.d_a1;
+          if (std::holds_alternative<typename tree::Leaf>(_sv1->v())) {
+            const auto &_m1 = *std::get_if<typename tree::Leaf>(&_sv1->v());
+            if (std::holds_alternative<typename tree::Leaf>(t2->v())) {
+              const auto &_m2 = *std::get_if<typename tree::Leaf>(&t2->v());
+              return (_m0.d_a0 + _m2.d_a0);
+            } else {
+              const auto &_m2 = *std::get_if<typename tree::Node>(&t2->v());
+              auto &&_sv3 = _m2.d_a0;
+              if (std::holds_alternative<typename tree::Leaf>(_sv3->v())) {
+                const auto &_m3 = *std::get_if<typename tree::Leaf>(&_sv3->v());
+                auto &&_sv4 = _m2.d_a1;
+                if (std::holds_alternative<typename tree::Leaf>(_sv4->v())) {
+                  const auto &_m4 =
+                      *std::get_if<typename tree::Leaf>(&_sv4->v());
+                  return (((_m0.d_a0 + _m1.d_a0) + _m3.d_a0) + _m4.d_a0);
+                } else {
+                  return 0u;
+                }
+              } else {
+                return 0u;
+              }
+            }
+          } else {
+            if (std::holds_alternative<typename tree::Leaf>(t2->v())) {
+              const auto &_m2 = *std::get_if<typename tree::Leaf>(&t2->v());
+              return (_m0.d_a0 + _m2.d_a0);
+            } else {
+              return 0u;
+            }
+          }
+        } else {
+          return 0u;
+        }
+      }
     }
 
     __attribute__((pure)) unsigned int deep_match() const {
-      return std::visit(Overloaded{[](const typename tree::Leaf &_args)
-                                       -> unsigned int { return _args.d_a0; },
-                                   [](const typename tree::Node &_args)
-                                       -> unsigned int {
-                                     return std::visit(Overloaded{[&](const typename tree::
-                                                                          Leaf &
-                                                                              _args0)
-                                                                      -> unsigned int {
-                                                                    return std::
-                                                                        visit(
-                                                                            Overloaded{
-                                                                                [&](const typename tree::
-                                                                                        Leaf &
-                                                                                            _args1)
-                                                                                    -> unsigned int {
-                                                                                  return (
-                                                                                      _args0
-                                                                                          .d_a0 +
-                                                                                      _args1
-                                                                                          .d_a0);
-                                                                                },
-                                                                                [&](const typename tree::
-                                                                                        Node &
-                                                                                            _args1)
-                                                                                    -> unsigned int {
-                                                                                  return std::visit(Overloaded{[&](const typename tree::
-                                                                                                                       Leaf &
-                                                                                                                           _args2)
-                                                                                                                   -> unsigned int {
-                                                                                                                 return std::visit(
-                                                                                                                     Overloaded{
-                                                                                                                         [&](const typename tree::
-                                                                                                                                 Leaf &
-                                                                                                                                     _args3)
-                                                                                                                             -> unsigned int {
-                                                                                                                           return (
-                                                                                                                               (_args0
-                                                                                                                                    .d_a0 +
-                                                                                                                                _args2
-                                                                                                                                    .d_a0) +
-                                                                                                                               _args3
-                                                                                                                                   .d_a0);
-                                                                                                                         },
-                                                                                                                         [](const typename tree::
-                                                                                                                                Node
-                                                                                                                                    &)
-                                                                                                                             -> unsigned int {
-                                                                                                                           return 0u;
-                                                                                                                         }},
-                                                                                                                     _args1
-                                                                                                                         .d_a1
-                                                                                                                         ->v());
-                                                                                                               },
-                                                                                                               [](const typename tree::
-                                                                                                                      Node
-                                                                                                                          &)
-                                                                                                                   -> unsigned int {
-                                                                                                                 return 0u;
-                                                                                                               }},
-                                                                                                    _args1
-                                                                                                        .d_a0
-                                                                                                        ->v());
-                                                                                }},
-                                                                            _args
-                                                                                .d_a1
-                                                                                ->v());
-                                                                  },
-                                                                  [&](const typename tree::
-                                                                          Node &
-                                                                              _args0)
-                                                                      -> unsigned int {
-                                                                    return std::
-                                                                        visit(
-                                                                            Overloaded{
-                                                                                [&](const typename tree::
-                                                                                        Leaf &
-                                                                                            _args1)
-                                                                                    -> unsigned int {
-                                                                                  return std::
-                                                                                      visit(
-                                                                                          Overloaded{
-                                                                                              [&](const typename tree::
-                                                                                                      Leaf &
-                                                                                                          _args2)
-                                                                                                  -> unsigned int {
-                                                                                                return std::
-                                                                                                    visit(Overloaded{
-                                                                                                              [&](const typename tree::
-                                                                                                                      Leaf &
-                                                                                                                          _args3)
-                                                                                                                  -> unsigned int {
-                                                                                                                return (
-                                                                                                                    (_args1
-                                                                                                                         .d_a0 +
-                                                                                                                     _args2
-                                                                                                                         .d_a0) +
-                                                                                                                    _args3
-                                                                                                                        .d_a0);
-                                                                                                              },
-                                                                                                              [&](const typename tree::
-                                                                                                                      Node
-                                                                                                                          &
-                                                                                                                              _args3) -> unsigned int {
-                                                                                                                return std::visit(Overloaded{
-                                                                                                                                      [&](const typename tree::Leaf &_args4) -> unsigned int {
-                                                                                                                                        return std::visit(Overloaded{[&](const typename tree::Leaf
-                                                                                                                                                                             &_args5) -> unsigned int {
-                                                                                                                                                                       return (
-                                                                                                                                                                           ((_args1
-                                                                                                                                                                                 .d_a0 +
-                                                                                                                                                                             _args2
-                                                                                                                                                                                 .d_a0) +
-                                                                                                                                                                            _args4
-                                                                                                                                                                                .d_a0) +
-                                                                                                                                                                           _args5
-                                                                                                                                                                               .d_a0);
-                                                                                                                                                                     },
-                                                                                                                                                                     [](const typename tree::
-                                                                                                                                                                            Node
-                                                                                                                                                                                &)
-                                                                                                                                                                         -> unsigned int {
-                                                                                                                                                                       return 0u;
-                                                                                                                                                                     }},
-                                                                                                                                                          _args3
-                                                                                                                                                              .d_a1
-                                                                                                                                                              ->v());
-                                                                                                                                      },
-                                                                                                                                      [](const typename tree::
-                                                                                                                                             Node
-                                                                                                                                                 &)
-                                                                                                                                          -> unsigned int {
-                                                                                                                                        return 0u;
-                                                                                                                                      }},
-                                                                                                                                  _args3
-                                                                                                                                      .d_a0
-                                                                                                                                      ->v());
-                                                                                                              }},
-                                                                                                          _args
-                                                                                                              .d_a1
-                                                                                                              ->v());
-                                                                                              },
-                                                                                              [](const typename tree::
-                                                                                                     Node
-                                                                                                         &)
-                                                                                                  -> unsigned int {
-                                                                                                return 0u;
-                                                                                              }},
-                                                                                          _args0
-                                                                                              .d_a1
-                                                                                              ->v());
-                                                                                },
-                                                                                [&](const typename tree::
-                                                                                        Node &
-                                                                                            _args1)
-                                                                                    -> unsigned int {
-                                                                                  return std::
-                                                                                      visit(
-                                                                                          Overloaded{
-                                                                                              [&](const typename tree::Leaf &_args2) -> unsigned int {
-                                                                                                return std::visit(
-                                                                                                    Overloaded{
-                                                                                                        [&](const typename tree::
-                                                                                                                Leaf &
-                                                                                                                    _args3)
-                                                                                                            -> unsigned int {
-                                                                                                          return std::visit(Overloaded{[&](const typename tree::Leaf &_args4) -> unsigned int {
-                                                                                                                                         return std::visit(Overloaded{[&](const typename tree::
-                                                                                                                                                                              Leaf &
-                                                                                                                                                                                  _args5)
-                                                                                                                                                                          -> unsigned int {
-                                                                                                                                                                        return (
-                                                                                                                                                                            ((_args2
-                                                                                                                                                                                  .d_a0 +
-                                                                                                                                                                              _args3
-                                                                                                                                                                                  .d_a0) +
-                                                                                                                                                                             _args4
-                                                                                                                                                                                 .d_a0) +
-                                                                                                                                                                            _args5
-                                                                                                                                                                                .d_a0);
-                                                                                                                                                                      },
-                                                                                                                                                                      [](const typename tree::
-                                                                                                                                                                             Node
-                                                                                                                                                                                 &)
-                                                                                                                                                                          -> unsigned int {
-                                                                                                                                                                        return 0u;
-                                                                                                                                                                      }},
-                                                                                                                                                           _args
-                                                                                                                                                               .d_a1
-                                                                                                                                                               ->v());
-                                                                                                                                       },
-                                                                                                                                       [](const typename tree::
-                                                                                                                                              Node
-                                                                                                                                                  &)
-                                                                                                                                           -> unsigned int {
-                                                                                                                                         return 0u;
-                                                                                                                                       }},
-                                                                                                                            _args0
-                                                                                                                                .d_a1
-                                                                                                                                ->v());
-                                                                                                        },
-                                                                                                        [](const typename tree::
-                                                                                                               Node
-                                                                                                                   &)
-                                                                                                            -> unsigned int {
-                                                                                                          return 0u;
-                                                                                                        }},
-                                                                                                    _args1
-                                                                                                        .d_a1
-                                                                                                        ->v());
-                                                                                              },
-                                                                                              [](const typename tree::
-                                                                                                     Node
-                                                                                                         &)
-                                                                                                  -> unsigned int {
-                                                                                                return 0u;
-                                                                                              }},
-                                                                                          _args1
-                                                                                              .d_a0
-                                                                                              ->v());
-                                                                                }},
-                                                                            _args0
-                                                                                .d_a0
-                                                                                ->v());
-                                                                  }},
-                                                       _args.d_a0->v());
-                                   }},
-                        this->v());
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        const auto &_m = *std::get_if<typename tree::Leaf>(&this->v());
+        return _m.d_a0;
+      } else {
+        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
+        auto &&_sv0 = _m.d_a0;
+        if (std::holds_alternative<typename tree::Leaf>(_sv0->v())) {
+          const auto &_m0 = *std::get_if<typename tree::Leaf>(&_sv0->v());
+          auto &&_sv1 = _m.d_a1;
+          if (std::holds_alternative<typename tree::Leaf>(_sv1->v())) {
+            const auto &_m1 = *std::get_if<typename tree::Leaf>(&_sv1->v());
+            return (_m0.d_a0 + _m1.d_a0);
+          } else {
+            const auto &_m1 = *std::get_if<typename tree::Node>(&_sv1->v());
+            auto &&_sv2 = _m1.d_a0;
+            if (std::holds_alternative<typename tree::Leaf>(_sv2->v())) {
+              const auto &_m2 = *std::get_if<typename tree::Leaf>(&_sv2->v());
+              auto &&_sv3 = _m1.d_a1;
+              if (std::holds_alternative<typename tree::Leaf>(_sv3->v())) {
+                const auto &_m3 = *std::get_if<typename tree::Leaf>(&_sv3->v());
+                return ((_m0.d_a0 + _m2.d_a0) + _m3.d_a0);
+              } else {
+                return 0u;
+              }
+            } else {
+              return 0u;
+            }
+          }
+        } else {
+          const auto &_m0 = *std::get_if<typename tree::Node>(&_sv0->v());
+          auto &&_sv1 = _m0.d_a0;
+          if (std::holds_alternative<typename tree::Leaf>(_sv1->v())) {
+            const auto &_m1 = *std::get_if<typename tree::Leaf>(&_sv1->v());
+            auto &&_sv2 = _m0.d_a1;
+            if (std::holds_alternative<typename tree::Leaf>(_sv2->v())) {
+              const auto &_m2 = *std::get_if<typename tree::Leaf>(&_sv2->v());
+              auto &&_sv3 = _m.d_a1;
+              if (std::holds_alternative<typename tree::Leaf>(_sv3->v())) {
+                const auto &_m3 = *std::get_if<typename tree::Leaf>(&_sv3->v());
+                return ((_m1.d_a0 + _m2.d_a0) + _m3.d_a0);
+              } else {
+                const auto &_m3 = *std::get_if<typename tree::Node>(&_sv3->v());
+                auto &&_sv4 = _m3.d_a0;
+                if (std::holds_alternative<typename tree::Leaf>(_sv4->v())) {
+                  const auto &_m4 =
+                      *std::get_if<typename tree::Leaf>(&_sv4->v());
+                  auto &&_sv5 = _m3.d_a1;
+                  if (std::holds_alternative<typename tree::Leaf>(_sv5->v())) {
+                    const auto &_m5 =
+                        *std::get_if<typename tree::Leaf>(&_sv5->v());
+                    return (((_m1.d_a0 + _m2.d_a0) + _m4.d_a0) + _m5.d_a0);
+                  } else {
+                    return 0u;
+                  }
+                } else {
+                  return 0u;
+                }
+              }
+            } else {
+              return 0u;
+            }
+          } else {
+            const auto &_m1 = *std::get_if<typename tree::Node>(&_sv1->v());
+            auto &&_sv2 = _m1.d_a0;
+            if (std::holds_alternative<typename tree::Leaf>(_sv2->v())) {
+              const auto &_m2 = *std::get_if<typename tree::Leaf>(&_sv2->v());
+              auto &&_sv3 = _m1.d_a1;
+              if (std::holds_alternative<typename tree::Leaf>(_sv3->v())) {
+                const auto &_m3 = *std::get_if<typename tree::Leaf>(&_sv3->v());
+                auto &&_sv4 = _m0.d_a1;
+                if (std::holds_alternative<typename tree::Leaf>(_sv4->v())) {
+                  const auto &_m4 =
+                      *std::get_if<typename tree::Leaf>(&_sv4->v());
+                  auto &&_sv5 = _m.d_a1;
+                  if (std::holds_alternative<typename tree::Leaf>(_sv5->v())) {
+                    const auto &_m5 =
+                        *std::get_if<typename tree::Leaf>(&_sv5->v());
+                    return (((_m2.d_a0 + _m3.d_a0) + _m4.d_a0) + _m5.d_a0);
+                  } else {
+                    return 0u;
+                  }
+                } else {
+                  return 0u;
+                }
+              } else {
+                return 0u;
+              }
+            } else {
+              return 0u;
+            }
+          }
+        }
+      }
     }
 
     template <
         typename T1, MapsTo<T1, unsigned int> F0,
         MapsTo<T1, std::shared_ptr<tree>, T1, std::shared_ptr<tree>, T1> F1>
     T1 tree_rec(F0 &&f, F1 &&f0) const {
-      return std::visit(
-          Overloaded{[&](const typename tree::Leaf &_args) -> T1 {
-                       return f(_args.d_a0);
-                     },
-                     [&](const typename tree::Node &_args) -> T1 {
-                       return f0(_args.d_a0,
-                                 _args.d_a0->template tree_rec<T1>(f, f0),
-                                 _args.d_a1,
-                                 _args.d_a1->template tree_rec<T1>(f, f0));
-                     }},
-          this->v());
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        const auto &_m = *std::get_if<typename tree::Leaf>(&this->v());
+        return f(_m.d_a0);
+      } else {
+        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
+        return f0(_m.d_a0, _m.d_a0->template tree_rec<T1>(f, f0), _m.d_a1,
+                  _m.d_a1->template tree_rec<T1>(f, f0));
+      }
     }
 
     template <
         typename T1, MapsTo<T1, unsigned int> F0,
         MapsTo<T1, std::shared_ptr<tree>, T1, std::shared_ptr<tree>, T1> F1>
     T1 tree_rect(F0 &&f, F1 &&f0) const {
-      return std::visit(
-          Overloaded{[&](const typename tree::Leaf &_args) -> T1 {
-                       return f(_args.d_a0);
-                     },
-                     [&](const typename tree::Node &_args) -> T1 {
-                       return f0(_args.d_a0,
-                                 _args.d_a0->template tree_rect<T1>(f, f0),
-                                 _args.d_a1,
-                                 _args.d_a1->template tree_rect<T1>(f, f0));
-                     }},
-          this->v());
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        const auto &_m = *std::get_if<typename tree::Leaf>(&this->v());
+        return f(_m.d_a0);
+      } else {
+        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
+        return f0(_m.d_a0, _m.d_a0->template tree_rect<T1>(f, f0), _m.d_a1,
+                  _m.d_a1->template tree_rect<T1>(f, f0));
+      }
     }
   };
 
@@ -559,25 +380,23 @@ struct DeepPattern {
   template <typename T1, typename T2,
             MapsTo<T2, T1, std::shared_ptr<list<T1>>, T2> F1>
   static T2 list_rect(const T2 f, F1 &&f0, const std::shared_ptr<list<T1>> &l) {
-    return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil &) -> T2 { return f; },
-                   [&](const typename list<T1>::Cons &_args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               list_rect<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        l->v());
+    if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
+      return f0(_m.d_a0, _m.d_a1, list_rect<T1, T2>(f, f0, _m.d_a1));
+    }
   }
 
   template <typename T1, typename T2,
             MapsTo<T2, T1, std::shared_ptr<list<T1>>, T2> F1>
   static T2 list_rec(const T2 f, F1 &&f0, const std::shared_ptr<list<T1>> &l) {
-    return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil &) -> T2 { return f; },
-                   [&](const typename list<T1>::Cons &_args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               list_rec<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        l->v());
+    if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
+      return f0(_m.d_a0, _m.d_a1, list_rec<T1, T2>(f, f0, _m.d_a1));
+    }
   }
 
   __attribute__((pure)) static unsigned int

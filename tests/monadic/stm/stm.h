@@ -60,14 +60,12 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
-    return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil &)
-                       -> std::shared_ptr<List<t_A>> { return m; },
-                   [&](const typename List<t_A>::Cons &_args)
-                       -> std::shared_ptr<List<t_A>> {
-                     return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return m;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return List<t_A>::cons(_m.d_a0, _m.d_a1->app(m));
+    }
   }
 };
 

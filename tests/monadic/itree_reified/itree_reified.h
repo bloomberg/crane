@@ -32,40 +32,38 @@ struct ITreeReified {
   template <typename T1 = void, typename T2, typename F0>
   static std::shared_ptr<ITree<T2>> with_logging_body(F0 &&rec,
                                                       const itreeF_t<T2> ot) {
-    return std::visit(
-        Overloaded{[&](const typename ITree<T2>::Ret &_itf) -> decltype(auto) {
-                     auto r = _itf.value;
-                     return ITree<T2>::ret(r);
-                   },
-                   [&](const typename ITree<T2>::Tau &_itf) -> decltype(auto) {
-                     auto t_ = _itf.next;
-                     return itree_vis(
-                         [&]() -> std::any {
-                           std::cout << "[tau]"s << '\n';
-                           return std::any{};
-                         },
-                         [=](const std::any) mutable {
-                           return [&]() {
-                             auto t = rec(t_);
-                             return ITree<decltype(t->run())>::tau(t);
-                           }();
-                         });
-                   },
-                   [&](const typename ITree<T2>::Vis &_itf) -> decltype(auto) {
-                     auto e = _itf.effect;
-                     auto k = _itf.cont;
-                     return itree_vis(
-                         [&]() -> std::any {
-                           std::cout << "[vis]"s << '\n';
-                           return std::any{};
-                         },
-                         [=](const std::any) mutable {
-                           return itree_vis(e, [=](const std::any x) mutable {
-                             return rec(k(x));
-                           });
-                         });
-                   }},
-        ot);
+    if (std::holds_alternative<typename ITree<T2>::Ret>(ot)) {
+      const auto &_itf = *std::get_if<typename ITree<T2>::Ret>(&ot);
+      auto r = _itf.value;
+      return ITree<T2>::ret(r);
+    } else if (std::holds_alternative<typename ITree<T2>::Tau>(ot)) {
+      const auto &_itf = *std::get_if<typename ITree<T2>::Tau>(&ot);
+      auto t_ = _itf.next;
+      return itree_vis(
+          [&]() -> std::any {
+            std::cout << "[tau]"s << '\n';
+            return std::any{};
+          },
+          [=](const std::any) mutable {
+            return [&]() {
+              auto t = rec(t_);
+              return ITree<decltype(t->run())>::tau(t);
+            }();
+          });
+    } else {
+      const auto &_itf = *std::get_if<typename ITree<T2>::Vis>(&ot);
+      auto e = _itf.effect;
+      auto k = _itf.cont;
+      return itree_vis(
+          [&]() -> std::any {
+            std::cout << "[vis]"s << '\n';
+            return std::any{};
+          },
+          [=](const std::any) mutable {
+            return itree_vis(
+                e, [=](const std::any x) mutable { return rec(k(x)); });
+          });
+    }
   }
 
   template <typename T1 = void, typename T2>

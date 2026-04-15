@@ -18,127 +18,106 @@ __attribute__((pure)) bool Matcher::char_eq(const int64_t x, const int64_t y) {
 __attribute__((pure)) bool
 Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
                    const std::shared_ptr<Matcher::regexp> &x) {
-  return std::visit(
-      Overloaded{
-          [&](const typename Matcher::regexp::Any &) -> auto {
-            return std::visit(
-                Overloaded{[](const typename Matcher::regexp::Any &) -> bool {
-                             return true;
-                           },
-                           [](const auto &) -> bool { return false; }},
-                x->v());
-          },
-          [&](const typename Matcher::regexp::Char &_args) -> auto {
-            return std::visit(
-                Overloaded{
-                    [&](const typename Matcher::regexp::Char &_args0) -> bool {
-                      if (char_eq(_args.d_c, _args0.d_c)) {
-                        return true;
-                      } else {
-                        return false;
-                      }
-                    },
-                    [](const auto &) -> bool { return false; }},
-                x->v());
-          },
-          [&](const typename Matcher::regexp::Eps &) -> auto {
-            return std::visit(
-                Overloaded{[](const typename Matcher::regexp::Eps &) -> bool {
-                             return true;
-                           },
-                           [](const auto &) -> bool { return false; }},
-                x->v());
-          },
-          [&](const typename Matcher::regexp::Cat &_args) -> auto {
-            return std::visit(
-                Overloaded{
-                    [&](const typename Matcher::regexp::Cat &_args0) -> bool {
-                      if (regexp_eq(_args.d_r1, _args0.d_r1)) {
-                        if (regexp_eq(_args.d_r2, _args0.d_r2)) {
-                          return true;
-                        } else {
-                          return false;
-                        }
-                      } else {
-                        return false;
-                      }
-                    },
-                    [](const auto &) -> bool { return false; }},
-                x->v());
-          },
-          [&](const typename Matcher::regexp::Alt &_args) -> auto {
-            return std::visit(
-                Overloaded{
-                    [&](const typename Matcher::regexp::Alt &_args0) -> bool {
-                      if (regexp_eq(_args.d_r1, _args0.d_r1)) {
-                        if (regexp_eq(_args.d_r2, _args0.d_r2)) {
-                          return true;
-                        } else {
-                          return false;
-                        }
-                      } else {
-                        return false;
-                      }
-                    },
-                    [](const auto &) -> bool { return false; }},
-                x->v());
-          },
-          [&](const typename Matcher::regexp::Zero &) -> auto {
-            return std::visit(
-                Overloaded{[](const typename Matcher::regexp::Zero &) -> bool {
-                             return true;
-                           },
-                           [](const auto &) -> bool { return false; }},
-                x->v());
-          },
-          [&](const typename Matcher::regexp::Star &_args) -> auto {
-            return std::visit(
-                Overloaded{
-                    [&](const typename Matcher::regexp::Star &_args0) -> bool {
-                      if (regexp_eq(_args.d_r, _args0.d_r)) {
-                        return true;
-                      } else {
-                        return false;
-                      }
-                    },
-                    [](const auto &) -> bool { return false; }},
-                x->v());
-          }},
-      r->v());
+  if (std::holds_alternative<typename Matcher::regexp::Any>(r->v())) {
+    if (std::holds_alternative<typename Matcher::regexp::Any>(x->v())) {
+      return true;
+    } else {
+      return false;
+    }
+  } else if (std::holds_alternative<typename Matcher::regexp::Char>(r->v())) {
+    const auto &_m = *std::get_if<typename Matcher::regexp::Char>(&r->v());
+    if (std::holds_alternative<typename Matcher::regexp::Char>(x->v())) {
+      const auto &_m0 = *std::get_if<typename Matcher::regexp::Char>(&x->v());
+      if (char_eq(_m.d_c, _m0.d_c)) {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  } else if (std::holds_alternative<typename Matcher::regexp::Eps>(r->v())) {
+    if (std::holds_alternative<typename Matcher::regexp::Eps>(x->v())) {
+      return true;
+    } else {
+      return false;
+    }
+  } else if (std::holds_alternative<typename Matcher::regexp::Cat>(r->v())) {
+    const auto &_m = *std::get_if<typename Matcher::regexp::Cat>(&r->v());
+    if (std::holds_alternative<typename Matcher::regexp::Cat>(x->v())) {
+      const auto &_m0 = *std::get_if<typename Matcher::regexp::Cat>(&x->v());
+      if (regexp_eq(_m.d_r1, _m0.d_r1)) {
+        if (regexp_eq(_m.d_r2, _m0.d_r2)) {
+          return true;
+        } else {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  } else if (std::holds_alternative<typename Matcher::regexp::Alt>(r->v())) {
+    const auto &_m = *std::get_if<typename Matcher::regexp::Alt>(&r->v());
+    if (std::holds_alternative<typename Matcher::regexp::Alt>(x->v())) {
+      const auto &_m0 = *std::get_if<typename Matcher::regexp::Alt>(&x->v());
+      if (regexp_eq(_m.d_r1, _m0.d_r1)) {
+        if (regexp_eq(_m.d_r2, _m0.d_r2)) {
+          return true;
+        } else {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  } else if (std::holds_alternative<typename Matcher::regexp::Zero>(r->v())) {
+    if (std::holds_alternative<typename Matcher::regexp::Zero>(x->v())) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    const auto &_m = *std::get_if<typename Matcher::regexp::Star>(&r->v());
+    if (std::holds_alternative<typename Matcher::regexp::Star>(x->v())) {
+      const auto &_m0 = *std::get_if<typename Matcher::regexp::Star>(&x->v());
+      if (regexp_eq(_m.d_r, _m0.d_r)) {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
 }
 
 /// An optimized constructor for Cat.
 std::shared_ptr<Matcher::regexp>
 Matcher::OptCat(std::shared_ptr<Matcher::regexp> r2,
                 std::shared_ptr<Matcher::regexp> r3) {
-  if (r2.use_count() == 1 && r2->v().index() == 5) {
+  if (std::holds_alternative<typename Matcher::regexp::Zero>(r2->v()) &&
+      r2.use_count() == 1) {
     return r2;
+  } else if (std::holds_alternative<typename Matcher::regexp::Eps>(r2->v())) {
+    return r3;
+  } else if (std::holds_alternative<typename Matcher::regexp::Zero>(r2->v())) {
+    return regexp::zero();
   } else {
-    return std::visit(
-        Overloaded{
-            [&](const typename Matcher::regexp::Eps &)
-                -> std::shared_ptr<Matcher::regexp> { return r3; },
-            [](const typename Matcher::regexp::Zero &)
-                -> std::shared_ptr<Matcher::regexp> { return regexp::zero(); },
-            [&](const auto &) -> std::shared_ptr<Matcher::regexp> {
-              if (r3.use_count() == 1 && r3->v().index() == 5) {
-                return r3;
-              } else {
-                return std::visit(
-                    Overloaded{
-                        [&](const typename Matcher::regexp::Eps &)
-                            -> std::shared_ptr<Matcher::regexp> { return r2; },
-                        [](const typename Matcher::regexp::Zero &)
-                            -> std::shared_ptr<Matcher::regexp> {
-                          return regexp::zero();
-                        },
-                        [&](const auto &) -> std::shared_ptr<Matcher::regexp> {
-                          return regexp::cat(r2, r3);
-                        }},
-                    r3->v());
-              }
-            }},
-        r2->v());
+    if (std::holds_alternative<typename Matcher::regexp::Zero>(r3->v()) &&
+        r3.use_count() == 1) {
+      return r3;
+    } else if (std::holds_alternative<typename Matcher::regexp::Eps>(r3->v())) {
+      return r2;
+    } else if (std::holds_alternative<typename Matcher::regexp::Zero>(
+                   r3->v())) {
+      return regexp::zero();
+    } else {
+      return regexp::cat(r2, r3);
+    }
   }
 }
 
@@ -146,48 +125,37 @@ Matcher::OptCat(std::shared_ptr<Matcher::regexp> r2,
 std::shared_ptr<Matcher::regexp>
 Matcher::OptAlt(std::shared_ptr<Matcher::regexp> r2,
                 std::shared_ptr<Matcher::regexp> r3) {
-  return std::visit(
-      Overloaded{
-          [&](const typename Matcher::regexp::Zero &)
-              -> std::shared_ptr<Matcher::regexp> { return r3; },
-          [&](const auto &) -> std::shared_ptr<Matcher::regexp> {
-            return std::visit(
-                Overloaded{
-                    [&](const typename Matcher::regexp::Zero &)
-                        -> std::shared_ptr<Matcher::regexp> { return r2; },
-                    [&](const auto &) -> std::shared_ptr<Matcher::regexp> {
-                      if (regexp_eq(r2, r3)) {
-                        return r2;
-                      } else {
-                        return regexp::alt(r2, r3);
-                      }
-                    }},
-                r3->v());
-          }},
-      r2->v());
+  if (std::holds_alternative<typename Matcher::regexp::Zero>(r2->v())) {
+    return r3;
+  } else {
+    if (std::holds_alternative<typename Matcher::regexp::Zero>(r3->v())) {
+      return r2;
+    } else {
+      if (regexp_eq(r2, r3)) {
+        return r2;
+      } else {
+        return regexp::alt(r2, r3);
+      }
+    }
+  }
 }
 
 /// If r accepts the empty string, return Eps, else return Zero.
 std::shared_ptr<Matcher::regexp>
 Matcher::null(const std::shared_ptr<Matcher::regexp> &r) {
-  return std::visit(
-      Overloaded{
-          [](const typename Matcher::regexp::Eps &)
-              -> std::shared_ptr<Matcher::regexp> { return regexp::eps(); },
-          [](const typename Matcher::regexp::Cat &_args)
-              -> std::shared_ptr<Matcher::regexp> {
-            return OptCat(null(_args.d_r1), null(_args.d_r2));
-          },
-          [](const typename Matcher::regexp::Alt &_args)
-              -> std::shared_ptr<Matcher::regexp> {
-            return OptAlt(null(_args.d_r1), null(_args.d_r2));
-          },
-          [](const typename Matcher::regexp::Star &)
-              -> std::shared_ptr<Matcher::regexp> { return regexp::eps(); },
-          [](const auto &) -> std::shared_ptr<Matcher::regexp> {
-            return regexp::zero();
-          }},
-      r->v());
+  if (std::holds_alternative<typename Matcher::regexp::Eps>(r->v())) {
+    return regexp::eps();
+  } else if (std::holds_alternative<typename Matcher::regexp::Cat>(r->v())) {
+    const auto &_m = *std::get_if<typename Matcher::regexp::Cat>(&r->v());
+    return OptCat(null(_m.d_r1), null(_m.d_r2));
+  } else if (std::holds_alternative<typename Matcher::regexp::Alt>(r->v())) {
+    const auto &_m = *std::get_if<typename Matcher::regexp::Alt>(&r->v());
+    return OptAlt(null(_m.d_r1), null(_m.d_r2));
+  } else if (std::holds_alternative<typename Matcher::regexp::Star>(r->v())) {
+    return regexp::eps();
+  } else {
+    return regexp::zero();
+  }
 }
 
 __attribute__((pure)) bool
@@ -199,35 +167,28 @@ Matcher::accepts_null(const std::shared_ptr<Matcher::regexp> &r) {
 /// { cs | (c::cs) in r }.
 std::shared_ptr<Matcher::regexp>
 Matcher::deriv(const std::shared_ptr<Matcher::regexp> &r, const int64_t c) {
-  return std::visit(
-      Overloaded{
-          [](const typename Matcher::regexp::Any &)
-              -> std::shared_ptr<Matcher::regexp> { return regexp::eps(); },
-          [&](const typename Matcher::regexp::Char &_args)
-              -> std::shared_ptr<Matcher::regexp> {
-            if (char_eq(c, _args.d_c)) {
-              return regexp::eps();
-            } else {
-              return regexp::zero();
-            }
-          },
-          [&](const typename Matcher::regexp::Cat &_args)
-              -> std::shared_ptr<Matcher::regexp> {
-            return OptAlt(OptCat(deriv(_args.d_r1, c), _args.d_r2),
-                          OptCat(null(_args.d_r1), deriv(_args.d_r2, c)));
-          },
-          [&](const typename Matcher::regexp::Alt &_args)
-              -> std::shared_ptr<Matcher::regexp> {
-            return OptAlt(deriv(_args.d_r1, c), deriv(_args.d_r2, c));
-          },
-          [&](const typename Matcher::regexp::Star &_args)
-              -> std::shared_ptr<Matcher::regexp> {
-            return OptCat(deriv(_args.d_r, c), regexp::star(_args.d_r));
-          },
-          [](const auto &) -> std::shared_ptr<Matcher::regexp> {
-            return regexp::zero();
-          }},
-      r->v());
+  if (std::holds_alternative<typename Matcher::regexp::Any>(r->v())) {
+    return regexp::eps();
+  } else if (std::holds_alternative<typename Matcher::regexp::Char>(r->v())) {
+    const auto &_m = *std::get_if<typename Matcher::regexp::Char>(&r->v());
+    if (char_eq(c, _m.d_c)) {
+      return regexp::eps();
+    } else {
+      return regexp::zero();
+    }
+  } else if (std::holds_alternative<typename Matcher::regexp::Cat>(r->v())) {
+    const auto &_m = *std::get_if<typename Matcher::regexp::Cat>(&r->v());
+    return OptAlt(OptCat(deriv(_m.d_r1, c), _m.d_r2),
+                  OptCat(null(_m.d_r1), deriv(_m.d_r2, c)));
+  } else if (std::holds_alternative<typename Matcher::regexp::Alt>(r->v())) {
+    const auto &_m = *std::get_if<typename Matcher::regexp::Alt>(&r->v());
+    return OptAlt(deriv(_m.d_r1, c), deriv(_m.d_r2, c));
+  } else if (std::holds_alternative<typename Matcher::regexp::Star>(r->v())) {
+    const auto &_m = *std::get_if<typename Matcher::regexp::Star>(&r->v());
+    return OptCat(deriv(_m.d_r, c), regexp::star(_m.d_r));
+  } else {
+    return regexp::zero();
+  }
 }
 
 /// This calculates the derivative of a regular expression with respect to a
@@ -235,14 +196,12 @@ Matcher::deriv(const std::shared_ptr<Matcher::regexp> &r, const int64_t c) {
 std::shared_ptr<Matcher::regexp>
 Matcher::derivs(std::shared_ptr<Matcher::regexp> r,
                 const std::shared_ptr<List<int64_t>> &cs) {
-  return std::visit(
-      Overloaded{[&](const typename List<int64_t>::Nil &)
-                     -> std::shared_ptr<Matcher::regexp> { return r; },
-                 [&](const typename List<int64_t>::Cons &_args)
-                     -> std::shared_ptr<Matcher::regexp> {
-                   return derivs(deriv(std::move(r), _args.d_a0), _args.d_a1);
-                 }},
-      cs->v());
+  if (std::holds_alternative<typename List<int64_t>::Nil>(cs->v())) {
+    return r;
+  } else {
+    const auto &_m = *std::get_if<typename List<int64_t>::Cons>(&cs->v());
+    return derivs(deriv(std::move(r), _m.d_a0), _m.d_a1);
+  }
 }
 
 /// To see if cs matches r, calculate the derivative of r with respect
@@ -260,42 +219,43 @@ Matcher::deriv_parse(const std::shared_ptr<Matcher::regexp> &r,
 /// null r returns Eps or Zero
 __attribute__((pure)) bool
 Matcher::NullEpsOrZero(const std::shared_ptr<Matcher::regexp> &r) {
-  return std::visit(
-      Overloaded{
-          [](const typename Matcher::regexp::Eps &) -> auto { return true; },
-          [](const typename Matcher::regexp::Cat &_args) -> auto {
-            if (NullEpsOrZero(_args.d_r1)) {
-              if (NullEpsOrZero(_args.d_r2)) {
-                return true;
-              } else {
-                return false;
-              }
-            } else {
-              if (NullEpsOrZero(_args.d_r2)) {
-                return false;
-              } else {
-                return false;
-              }
-            }
-          },
-          [](const typename Matcher::regexp::Alt &_args) -> auto {
-            if (NullEpsOrZero(_args.d_r1)) {
-              if (NullEpsOrZero(_args.d_r2)) {
-                return true;
-              } else {
-                return true;
-              }
-            } else {
-              if (NullEpsOrZero(_args.d_r2)) {
-                return true;
-              } else {
-                return false;
-              }
-            }
-          },
-          [](const typename Matcher::regexp::Star &) -> auto { return true; },
-          [](const auto &) -> auto { return false; }},
-      r->v());
+  if (std::holds_alternative<typename Matcher::regexp::Eps>(r->v())) {
+    return true;
+  } else if (std::holds_alternative<typename Matcher::regexp::Cat>(r->v())) {
+    const auto &_m = *std::get_if<typename Matcher::regexp::Cat>(&r->v());
+    if (NullEpsOrZero(_m.d_r1)) {
+      if (NullEpsOrZero(_m.d_r2)) {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      if (NullEpsOrZero(_m.d_r2)) {
+        return false;
+      } else {
+        return false;
+      }
+    }
+  } else if (std::holds_alternative<typename Matcher::regexp::Alt>(r->v())) {
+    const auto &_m = *std::get_if<typename Matcher::regexp::Alt>(&r->v());
+    if (NullEpsOrZero(_m.d_r1)) {
+      if (NullEpsOrZero(_m.d_r2)) {
+        return true;
+      } else {
+        return true;
+      }
+    } else {
+      if (NullEpsOrZero(_m.d_r2)) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  } else if (std::holds_alternative<typename Matcher::regexp::Star>(r->v())) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 /// From this, we can build a decidable regexp matcher by running

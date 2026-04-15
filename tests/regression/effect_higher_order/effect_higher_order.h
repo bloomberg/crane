@@ -74,16 +74,12 @@ struct EffectHigherOrder {
   template <MapsTo<void, std::string> F0>
   static void for_each_str(F0 &&f,
                            const std::shared_ptr<List<std::string>> &xs) {
-    {
-      std::visit(Overloaded{[](const typename List<std::string>::Nil &)
-                                -> std::monostate { return std::monostate{}; },
-                            [&](const typename List<std::string>::Cons &_args)
-                                -> std::monostate {
-                              f(_args.d_a0);
-                              for_each_str(f, _args.d_a1);
-                              return std::monostate{};
-                            }},
-                 xs->v());
+    if (std::holds_alternative<typename List<std::string>::Nil>(xs->v())) {
+      return;
+    } else {
+      const auto &_m = *std::get_if<typename List<std::string>::Cons>(&xs->v());
+      f(_m.d_a0);
+      for_each_str(f, _m.d_a1);
       return;
     }
   } /// 3. Callback that returns a value

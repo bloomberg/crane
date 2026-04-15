@@ -100,39 +100,38 @@ struct DepElim {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int fin_to_nat(const unsigned int) const {
-      return std::visit(
-          Overloaded{
-              [](const typename fin::FZ &) -> unsigned int { return 0u; },
-              [](const typename fin::FS &_args) -> unsigned int {
-                return (_args.d_a1->fin_to_nat(_args.d_n) + 1);
-              }},
-          this->v());
+      if (std::holds_alternative<typename fin::FZ>(this->v())) {
+        return 0u;
+      } else {
+        const auto &_m = *std::get_if<typename fin::FS>(&this->v());
+        return (_m.d_a1->fin_to_nat(_m.d_n) + 1);
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int, std::shared_ptr<fin>, T1> F1>
     T1 fin_rec(F0 &&f, F1 &&f0, const unsigned int) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename fin::FZ &_args) -> T1 { return f(_args.d_n); },
-              [&](const typename fin::FS &_args) -> T1 {
-                return f0(_args.d_n, _args.d_a1,
-                          _args.d_a1->template fin_rec<T1>(f, f0, _args.d_n));
-              }},
-          this->v());
+      if (std::holds_alternative<typename fin::FZ>(this->v())) {
+        const auto &_m = *std::get_if<typename fin::FZ>(&this->v());
+        return f(_m.d_n);
+      } else {
+        const auto &_m = *std::get_if<typename fin::FS>(&this->v());
+        return f0(_m.d_n, _m.d_a1,
+                  _m.d_a1->template fin_rec<T1>(f, f0, _m.d_n));
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int, std::shared_ptr<fin>, T1> F1>
     T1 fin_rect(F0 &&f, F1 &&f0, const unsigned int) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename fin::FZ &_args) -> T1 { return f(_args.d_n); },
-              [&](const typename fin::FS &_args) -> T1 {
-                return f0(_args.d_n, _args.d_a1,
-                          _args.d_a1->template fin_rect<T1>(f, f0, _args.d_n));
-              }},
-          this->v());
+      if (std::holds_alternative<typename fin::FZ>(this->v())) {
+        const auto &_m = *std::get_if<typename fin::FZ>(&this->v());
+        return f(_m.d_n);
+      } else {
+        const auto &_m = *std::get_if<typename fin::FS>(&this->v());
+        return f0(_m.d_n, _m.d_a1,
+                  _m.d_a1->template fin_rect<T1>(f, f0, _m.d_n));
+      }
     }
   };
 
@@ -180,54 +179,41 @@ struct DepElim {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     std::shared_ptr<vec<t_A>> vec_tail(const unsigned int) const {
-      return std::visit(
-          Overloaded{
-              [](const typename vec<t_A>::Vnil &) -> std::shared_ptr<vec<t_A>> {
-                throw std::logic_error("unreachable");
-              },
-              [](const typename vec<t_A>::Vcons &_args)
-                  -> std::shared_ptr<vec<t_A>> { return _args.d_a2; }},
-          this->v());
+      if (std::holds_alternative<typename vec<t_A>::Vnil>(this->v())) {
+        throw std::logic_error("unreachable");
+      } else {
+        const auto &_m = *std::get_if<typename vec<t_A>::Vcons>(&this->v());
+        return _m.d_a2;
+      }
     }
 
     t_A vec_head(const unsigned int) const {
-      return std::visit(
-          Overloaded{[](const typename vec<t_A>::Vnil &) -> t_A {
-                       throw std::logic_error("unreachable");
-                     },
-                     [](const typename vec<t_A>::Vcons &_args) -> t_A {
-                       return _args.d_a1;
-                     }},
-          this->v());
+      if (std::holds_alternative<typename vec<t_A>::Vnil>(this->v())) {
+        throw std::logic_error("unreachable");
+      } else {
+        const auto &_m = *std::get_if<typename vec<t_A>::Vcons>(&this->v());
+        return _m.d_a1;
+      }
     }
 
     template <typename T1, MapsTo<T1, t_A> F1>
     std::shared_ptr<vec<T1>> vec_map(const unsigned int, F1 &&f) const {
-      return std::visit(
-          Overloaded{
-              [](const typename vec<t_A>::Vnil &) -> std::shared_ptr<vec<T1>> {
-                return vec<T1>::vnil();
-              },
-              [&](const typename vec<t_A>::Vcons &_args)
-                  -> std::shared_ptr<vec<T1>> {
-                return vec<T1>::vcons(
-                    _args.d_n, f(_args.d_a1),
-                    _args.d_a2->template vec_map<T1>(_args.d_n, f));
-              }},
-          this->v());
+      if (std::holds_alternative<typename vec<t_A>::Vnil>(this->v())) {
+        return vec<T1>::vnil();
+      } else {
+        const auto &_m = *std::get_if<typename vec<t_A>::Vcons>(&this->v());
+        return vec<T1>::vcons(_m.d_n, f(_m.d_a1),
+                              _m.d_a2->template vec_map<T1>(_m.d_n, f));
+      }
     }
 
     std::shared_ptr<List<t_A>> vec_to_list(const unsigned int) const {
-      return std::visit(
-          Overloaded{
-              [](const typename vec<t_A>::Vnil &)
-                  -> std::shared_ptr<List<t_A>> { return List<t_A>::nil(); },
-              [](const typename vec<t_A>::Vcons &_args)
-                  -> std::shared_ptr<List<t_A>> {
-                return List<t_A>::cons(_args.d_a1,
-                                       _args.d_a2->vec_to_list(_args.d_n));
-              }},
-          this->v());
+      if (std::holds_alternative<typename vec<t_A>::Vnil>(this->v())) {
+        return List<t_A>::nil();
+      } else {
+        const auto &_m = *std::get_if<typename vec<t_A>::Vcons>(&this->v());
+        return List<t_A>::cons(_m.d_a1, _m.d_a2->vec_to_list(_m.d_n));
+      }
     }
   };
 
@@ -235,26 +221,26 @@ struct DepElim {
             MapsTo<T2, unsigned int, T1, std::shared_ptr<vec<T1>>, T2> F1>
   static T2 vec_rect(const T2 f, F1 &&f0, const unsigned int,
                      const std::shared_ptr<vec<T1>> &v) {
-    return std::visit(
-        Overloaded{[&](const typename vec<T1>::Vnil &) -> T2 { return f; },
-                   [&](const typename vec<T1>::Vcons &_args) -> T2 {
-                     return f0(_args.d_n, _args.d_a1, _args.d_a2,
-                               vec_rect<T1, T2>(f, f0, _args.d_n, _args.d_a2));
-                   }},
-        v->v());
+    if (std::holds_alternative<typename vec<T1>::Vnil>(v->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename vec<T1>::Vcons>(&v->v());
+      return f0(_m.d_n, _m.d_a1, _m.d_a2,
+                vec_rect<T1, T2>(f, f0, _m.d_n, _m.d_a2));
+    }
   }
 
   template <typename T1, typename T2,
             MapsTo<T2, unsigned int, T1, std::shared_ptr<vec<T1>>, T2> F1>
   static T2 vec_rec(const T2 f, F1 &&f0, const unsigned int,
                     const std::shared_ptr<vec<T1>> &v) {
-    return std::visit(
-        Overloaded{[&](const typename vec<T1>::Vnil &) -> T2 { return f; },
-                   [&](const typename vec<T1>::Vcons &_args) -> T2 {
-                     return f0(_args.d_n, _args.d_a1, _args.d_a2,
-                               vec_rec<T1, T2>(f, f0, _args.d_n, _args.d_a2));
-                   }},
-        v->v());
+    if (std::holds_alternative<typename vec<T1>::Vnil>(v->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename vec<T1>::Vcons>(&v->v());
+      return f0(_m.d_n, _m.d_a1, _m.d_a2,
+                vec_rec<T1, T2>(f, f0, _m.d_n, _m.d_a2));
+    }
   }
 
   struct avail {
@@ -292,34 +278,32 @@ struct DepElim {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int get_present() const {
-      return std::visit(
-          Overloaded{[](const typename avail::Present &_args) -> unsigned int {
-                       return _args.d_a0;
-                     },
-                     [](const typename avail::Absent &) -> unsigned int {
-                       throw std::logic_error("unreachable");
-                     }},
-          this->v());
+      if (std::holds_alternative<typename avail::Present>(this->v())) {
+        const auto &_m = *std::get_if<typename avail::Present>(&this->v());
+        return _m.d_a0;
+      } else {
+        throw std::logic_error("unreachable");
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0>
     T1 avail_rec(F0 &&f, const T1 f0, const bool) const {
-      return std::visit(
-          Overloaded{[&](const typename avail::Present &_args) -> T1 {
-                       return f(_args.d_a0);
-                     },
-                     [&](const typename avail::Absent &) -> T1 { return f0; }},
-          this->v());
+      if (std::holds_alternative<typename avail::Present>(this->v())) {
+        const auto &_m = *std::get_if<typename avail::Present>(&this->v());
+        return f(_m.d_a0);
+      } else {
+        return f0;
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0>
     T1 avail_rect(F0 &&f, const T1 f0, const bool) const {
-      return std::visit(
-          Overloaded{[&](const typename avail::Present &_args) -> T1 {
-                       return f(_args.d_a0);
-                     },
-                     [&](const typename avail::Absent &) -> T1 { return f0; }},
-          this->v());
+      if (std::holds_alternative<typename avail::Present>(this->v())) {
+        const auto &_m = *std::get_if<typename avail::Present>(&this->v());
+        return f(_m.d_a0);
+      } else {
+        return f0;
+      }
     }
   };
 

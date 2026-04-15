@@ -10,34 +10,29 @@
 __attribute__((pure)) unsigned int
 HofClosureEscape::sum_values(const std::shared_ptr<HofClosureEscape::tree> &t,
                              const unsigned int x) {
-  return std::visit(
-      Overloaded{
-          [&](const typename HofClosureEscape::tree::Leaf &) -> unsigned int {
-            return x;
-          },
-          [&](const typename HofClosureEscape::tree::Node &_args)
-              -> unsigned int {
-            return std::visit(
-                Overloaded{
-                    [&](const typename HofClosureEscape::tree::Leaf &)
-                        -> unsigned int { return (_args.d_a1 + x); },
-                    [&](const typename HofClosureEscape::tree::Node &_args0)
-                        -> unsigned int {
-                      return std::visit(
-                          Overloaded{
-                              [&](const typename HofClosureEscape::tree::Leaf &)
-                                  -> unsigned int { return (_args0.d_a1 + x); },
-                              [&](const typename HofClosureEscape::tree::Node
-                                      &_args1) -> unsigned int {
-                                return (
-                                    ((_args0.d_a1 + _args1.d_a1) + _args.d_a1) +
-                                    x);
-                              }},
-                          _args.d_a2->v());
-                    }},
-                _args.d_a0->v());
-          }},
-      t->v());
+  if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(t->v())) {
+    return x;
+  } else {
+    const auto &_m =
+        *std::get_if<typename HofClosureEscape::tree::Node>(&t->v());
+    auto &&_sv0 = _m.d_a0;
+    if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(
+            _sv0->v())) {
+      return (_m.d_a1 + x);
+    } else {
+      const auto &_m0 =
+          *std::get_if<typename HofClosureEscape::tree::Node>(&_sv0->v());
+      auto &&_sv1 = _m.d_a2;
+      if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(
+              _sv1->v())) {
+        return (_m0.d_a1 + x);
+      } else {
+        const auto &_m1 =
+            *std::get_if<typename HofClosureEscape::tree::Node>(&_sv1->v());
+        return (((_m0.d_a1 + _m1.d_a1) + _m.d_a1) + x);
+      }
+    }
+  }
 }
 
 /// BUG: The partial application sum_values t creates a & lambda.

@@ -58,12 +58,12 @@ public:
 
   template <MapsTo<bool, t_A> F0>
   __attribute__((pure)) bool forallb(F0 &&f) const {
-    return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil &) -> bool { return true; },
-                   [&](const typename List<t_A>::Cons &_args) -> bool {
-                     return (f(_args.d_a0) && _args.d_a1->forallb(f));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return true;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return (f(_m.d_a0) && _m.d_a1->forallb(f));
+    }
   }
 };
 
@@ -117,30 +117,30 @@ struct ProgramTargetsRegionScan {
             MapsTo<T1, unsigned int> F1>
   static T1 instruction_rect(F0 &&f, F1 &&f0, const T1 f1,
                              const std::shared_ptr<instruction> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instruction::JUN &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename instruction::JMS &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename instruction::NOP &) -> T1 { return f1; }},
-        i->v());
+    if (std::holds_alternative<typename instruction::JUN>(i->v())) {
+      const auto &_m = *std::get_if<typename instruction::JUN>(&i->v());
+      return f(_m.d_a0);
+    } else if (std::holds_alternative<typename instruction::JMS>(i->v())) {
+      const auto &_m = *std::get_if<typename instruction::JMS>(&i->v());
+      return f0(_m.d_a0);
+    } else {
+      return f1;
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int> F1>
   static T1 instruction_rec(F0 &&f, F1 &&f0, const T1 f1,
                             const std::shared_ptr<instruction> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instruction::JUN &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename instruction::JMS &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename instruction::NOP &) -> T1 { return f1; }},
-        i->v());
+    if (std::holds_alternative<typename instruction::JUN>(i->v())) {
+      const auto &_m = *std::get_if<typename instruction::JUN>(&i->v());
+      return f(_m.d_a0);
+    } else if (std::holds_alternative<typename instruction::JMS>(i->v())) {
+      const auto &_m = *std::get_if<typename instruction::JMS>(&i->v());
+      return f0(_m.d_a0);
+    } else {
+      return f1;
+    }
   }
 
   struct layout {

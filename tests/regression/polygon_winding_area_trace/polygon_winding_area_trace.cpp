@@ -47,30 +47,26 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::spherical_shoelace_aux(
     const std::shared_ptr<
         List<std::shared_ptr<PolygonWindingAreaTraceCase::Point>>> &all_pts,
     const unsigned int idx) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<
-              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil &)
-              -> Real { return Real::from_z(INT64_C(0)); },
-          [&](const typename List<
-              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons &_args)
-              -> Real {
-            unsigned int n = all_pts->length();
-            Real lambda_prev =
-                nth_cyclic<std::shared_ptr<PolygonWindingAreaTraceCase::Point>>(
-                    _args.d_a0, all_pts,
-                    ((((idx + n) - 1u) > (idx + n) ? 0 : ((idx + n) - 1u))))
-                    ->lambda;
-            Real lambda_next =
-                nth_cyclic<std::shared_ptr<PolygonWindingAreaTraceCase::Point>>(
-                    _args.d_a0, all_pts, (idx + 1u))
-                    ->lambda;
-            Real term =
-                (lon_diff(lambda_prev, lambda_next) * r_sin(_args.d_a0->phi));
-            return (term +
-                    spherical_shoelace_aux(_args.d_a1, all_pts, (idx + 1u)));
-          }},
-      pts->v());
+  if (std::holds_alternative<typename List<
+          std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil>(
+          pts->v())) {
+    return Real::from_z(INT64_C(0));
+  } else {
+    const auto &_m = *std::get_if<typename List<
+        std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons>(&pts->v());
+    unsigned int n = all_pts->length();
+    Real lambda_prev =
+        nth_cyclic<std::shared_ptr<PolygonWindingAreaTraceCase::Point>>(
+            _m.d_a0, all_pts,
+            ((((idx + n) - 1u) > (idx + n) ? 0 : ((idx + n) - 1u))))
+            ->lambda;
+    Real lambda_next =
+        nth_cyclic<std::shared_ptr<PolygonWindingAreaTraceCase::Point>>(
+            _m.d_a0, all_pts, (idx + 1u))
+            ->lambda;
+    Real term = (lon_diff(lambda_prev, lambda_next) * r_sin(_m.d_a0->phi));
+    return (term + spherical_shoelace_aux(_m.d_a1, all_pts, (idx + 1u)));
+  }
 }
 
 __attribute__((pure)) Real PolygonWindingAreaTraceCase::spherical_shoelace(
@@ -127,43 +123,41 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::winding_sum_aux(
     const std::shared_ptr<
         List<std::shared_ptr<PolygonWindingAreaTraceCase::Point>>> &pts,
     const std::shared_ptr<PolygonWindingAreaTraceCase::Point> &first) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<
-              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil &)
-              -> Real { return Real::from_z(INT64_C(0)); },
-          [&](const typename List<
-              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons &_args)
-              -> Real {
-            return std::visit(
-                Overloaded{
-                    [&](const typename List<std::shared_ptr<
-                            PolygonWindingAreaTraceCase::Point>>::Nil &)
-                        -> Real { return segment_angle(p, _args.d_a0, first); },
-                    [&](const typename List<std::shared_ptr<
-                            PolygonWindingAreaTraceCase::Point>>::Cons &_args0)
-                        -> Real {
-                      return (segment_angle(p, _args.d_a0, _args0.d_a0) +
-                              winding_sum_aux(p, _args.d_a1, first));
-                    }},
-                _args.d_a1->v());
-          }},
-      pts->v());
+  if (std::holds_alternative<typename List<
+          std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil>(
+          pts->v())) {
+    return Real::from_z(INT64_C(0));
+  } else {
+    const auto &_m = *std::get_if<typename List<
+        std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons>(&pts->v());
+    auto &&_sv0 = _m.d_a1;
+    if (std::holds_alternative<typename List<
+            std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil>(
+            _sv0->v())) {
+      return segment_angle(p, _m.d_a0, first);
+    } else {
+      const auto &_m0 = *std::get_if<typename List<
+          std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons>(
+          &_sv0->v());
+      return (segment_angle(p, _m.d_a0, _m0.d_a0) +
+              winding_sum_aux(p, _m.d_a1, first));
+    }
+  }
 }
 
 __attribute__((pure)) Real PolygonWindingAreaTraceCase::winding_sum(
     const std::shared_ptr<PolygonWindingAreaTraceCase::Point> &p,
     const std::shared_ptr<
         List<std::shared_ptr<PolygonWindingAreaTraceCase::Point>>> &poly) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<
-              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil &)
-              -> Real { return Real::from_z(INT64_C(0)); },
-          [&](const typename List<
-              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons &_args)
-              -> Real { return winding_sum_aux(p, poly, _args.d_a0); }},
-      poly->v());
+  if (std::holds_alternative<typename List<
+          std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil>(
+          poly->v())) {
+    return Real::from_z(INT64_C(0));
+  } else {
+    const auto &_m = *std::get_if<typename List<
+        std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons>(&poly->v());
+    return winding_sum_aux(p, poly, _m.d_a0);
+  }
 }
 
 __attribute__((pure)) Real PolygonWindingAreaTraceCase::winding_number(

@@ -90,40 +90,34 @@ struct TypeApp {
   template <typename T1, typename T2,
             MapsTo<T2, T1, std::shared_ptr<list<T1>>, T2> F1>
   static T2 list_rect(const T2 f, F1 &&f0, const std::shared_ptr<list<T1>> &l) {
-    return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil &) -> T2 { return f; },
-                   [&](const typename list<T1>::Cons &_args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               list_rect<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        l->v());
+    if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
+      return f0(_m.d_a0, _m.d_a1, list_rect<T1, T2>(f, f0, _m.d_a1));
+    }
   }
 
   template <typename T1, typename T2,
             MapsTo<T2, T1, std::shared_ptr<list<T1>>, T2> F1>
   static T2 list_rec(const T2 f, F1 &&f0, const std::shared_ptr<list<T1>> &l) {
-    return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil &) -> T2 { return f; },
-                   [&](const typename list<T1>::Cons &_args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               list_rec<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        l->v());
+    if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
+      return f0(_m.d_a0, _m.d_a1, list_rec<T1, T2>(f, f0, _m.d_a1));
+    }
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
   static std::shared_ptr<list<T2>> map(F0 &&f,
                                        const std::shared_ptr<list<T1>> &l) {
-    return std::visit(
-        Overloaded{
-            [](const typename list<T1>::Nil &) -> std::shared_ptr<list<T2>> {
-              return list<T2>::nil();
-            },
-            [&](const typename list<T1>::Cons &_args)
-                -> std::shared_ptr<list<T2>> {
-              return list<T2>::cons(f(_args.d_a0), map<T1, T2>(f, _args.d_a1));
-            }},
-        l->v());
+    if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+      return list<T2>::nil();
+    } else {
+      const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
+      return list<T2>::cons(f(_m.d_a0), map<T1, T2>(f, _m.d_a1));
+    }
   }
 
   static inline const std::shared_ptr<list<unsigned int>> test_map =

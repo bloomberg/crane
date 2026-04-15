@@ -64,54 +64,46 @@ struct ClosureEscapeMatch {
             MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
   static T2 mylist_rect(const T2 f, F1 &&f0,
                         const std::shared_ptr<mylist<T1>> &m) {
-    return std::visit(
-        Overloaded{[&](const typename mylist<T1>::Mynil &) -> T2 { return f; },
-                   [&](const typename mylist<T1>::Mycons &_args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               mylist_rect<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        m->v());
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename mylist<T1>::Mycons>(&m->v());
+      return f0(_m.d_a0, _m.d_a1, mylist_rect<T1, T2>(f, f0, _m.d_a1));
+    }
   }
 
   template <typename T1, typename T2,
             MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
   static T2 mylist_rec(const T2 f, F1 &&f0,
                        const std::shared_ptr<mylist<T1>> &m) {
-    return std::visit(
-        Overloaded{[&](const typename mylist<T1>::Mynil &) -> T2 { return f; },
-                   [&](const typename mylist<T1>::Mycons &_args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               mylist_rec<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        m->v());
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename mylist<T1>::Mycons>(&m->v());
+      return f0(_m.d_a0, _m.d_a1, mylist_rec<T1, T2>(f, f0, _m.d_a1));
+    }
   }
 
   template <typename T1>
   __attribute__((pure)) static unsigned int
   length(const std::shared_ptr<mylist<T1>> &l) {
-    return std::visit(
-        Overloaded{
-            [](const typename mylist<T1>::Mynil &) -> unsigned int {
-              return 0u;
-            },
-            [](const typename mylist<T1>::Mycons &_args) -> unsigned int {
-              return (length<T1>(_args.d_a1) + 1);
-            }},
-        l->v());
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(l->v())) {
+      return 0u;
+    } else {
+      const auto &_m = *std::get_if<typename mylist<T1>::Mycons>(&l->v());
+      return (length<T1>(_m.d_a1) + 1);
+    }
   }
 
   template <typename T1>
   static std::shared_ptr<mylist<T1>> app(const std::shared_ptr<mylist<T1>> &l1,
                                          std::shared_ptr<mylist<T1>> l2) {
-    return std::visit(
-        Overloaded{[&](const typename mylist<T1>::Mynil &)
-                       -> std::shared_ptr<mylist<T1>> { return l2; },
-                   [&](const typename mylist<T1>::Mycons &_args)
-                       -> std::shared_ptr<mylist<T1>> {
-                     return mylist<T1>::mycons(_args.d_a0,
-                                               app<T1>(_args.d_a1, l2));
-                   }},
-        l1->v());
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(l1->v())) {
+      return l2;
+    } else {
+      const auto &_m = *std::get_if<typename mylist<T1>::Mycons>(&l1->v());
+      return mylist<T1>::mycons(_m.d_a0, app<T1>(_m.d_a1, l2));
+    }
   }
 
   /// Return a closure wrapped in option — prevents uncurrying.

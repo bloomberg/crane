@@ -21,16 +21,13 @@ std::optional<std::string> EffectDirPath::first_file(const std::string path) {
     }
     return result;
   }();
-  return std::visit(Overloaded{[](const typename List<std::string>::Nil &)
-                                   -> std::optional<std::string> {
-                                 return std::optional<std::string>();
-                               },
-                               [](const typename List<std::string>::Cons &_args)
-                                   -> std::optional<std::string> {
-                                 return std::make_optional<std::string>(
-                                     _args.d_a0);
-                               }},
-                    files->v());
+  if (std::holds_alternative<typename List<std::string>::Nil>(files->v())) {
+    return std::optional<std::string>();
+  } else {
+    const auto &_m =
+        *std::get_if<typename List<std::string>::Cons>(&files->v());
+    return std::make_optional<std::string>(_m.d_a0);
+  }
 }
 
 /// 2. current_path (zero args) chained to env
@@ -90,26 +87,22 @@ std::string EffectDirPath::create_and_report(const std::string path) {
 unsigned int
 EffectDirPath::count_entries(const std::shared_ptr<List<std::string>> &dirs,
                              const unsigned int acc) {
-  return std::visit(
-      Overloaded{
-          [&](const typename List<std::string>::Nil &) -> unsigned int {
-            return acc;
-          },
-          [&](const typename List<std::string>::Cons &_args) -> unsigned int {
-            std::shared_ptr<List<std::string>> files =
-                [&]() -> std::shared_ptr<List<std::string>> {
-              auto result = List<std::string>::nil();
-              for (const auto &entry :
-                   std::filesystem::directory_iterator(_args.d_a0)) {
-                result = List<std::string>::cons(
-                    entry.path().filename().string(), std::move(result));
-              }
-              return result;
-            }();
-            unsigned int n = std::move(files)->length();
-            return count_entries(_args.d_a1, (acc + n));
-          }},
-      dirs->v());
+  if (std::holds_alternative<typename List<std::string>::Nil>(dirs->v())) {
+    return acc;
+  } else {
+    const auto &_m = *std::get_if<typename List<std::string>::Cons>(&dirs->v());
+    std::shared_ptr<List<std::string>> files =
+        [&]() -> std::shared_ptr<List<std::string>> {
+      auto result = List<std::string>::nil();
+      for (const auto &entry : std::filesystem::directory_iterator(_m.d_a0)) {
+        result = List<std::string>::cons(entry.path().filename().string(),
+                                         std::move(result));
+      }
+      return result;
+    }();
+    unsigned int n = std::move(files)->length();
+    return count_entries(_m.d_a1, (acc + n));
+  }
 }
 
 /// 8. remove_directory (returns bool but treated as unit in bind)

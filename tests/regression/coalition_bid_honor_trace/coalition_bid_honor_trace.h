@@ -58,93 +58,79 @@ public:
 
   template <MapsTo<bool, t_A> F0>
   __attribute__((pure)) bool existsb(F0 &&f) const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> bool { return false; },
-            [&](const typename List<t_A>::Cons &_args) -> bool {
-              return (f(_args.d_a0) || _args.d_a1->existsb(f));
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return false;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return (f(_m.d_a0) || _m.d_a1->existsb(f));
+    }
   }
 
   template <typename T1, MapsTo<T1, t_A, T1> F0>
   T1 fold_right(F0 &&f, const T1 a0) const {
-    return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil &) -> T1 { return a0; },
-                   [&](const typename List<t_A>::Cons &_args) -> T1 {
-                     return f(_args.d_a0,
-                              _args.d_a1->template fold_right<T1>(f, a0));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return a0;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return f(_m.d_a0, _m.d_a1->template fold_right<T1>(f, a0));
+    }
   }
 
   template <typename T1, MapsTo<std::shared_ptr<List<T1>>, t_A> F0>
   std::shared_ptr<List<T1>> flat_map(F0 &&f) const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> std::shared_ptr<List<T1>> {
-              return List<T1>::nil();
-            },
-            [&](const typename List<t_A>::Cons &_args)
-                -> std::shared_ptr<List<T1>> {
-              return f(_args.d_a0)->app(_args.d_a1->template flat_map<T1>(f));
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return List<T1>::nil();
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return f(_m.d_a0)->app(_m.d_a1->template flat_map<T1>(f));
+    }
   }
 
   t_A nth(const unsigned int n, const t_A default0) const {
     if (n <= 0) {
-      return std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
-              [](const typename List<t_A>::Cons &_args) -> t_A {
-                return _args.d_a0;
-              }},
-          this->v());
+      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+        return default0;
+      } else {
+        const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+        return _m.d_a0;
+      }
     } else {
       unsigned int m = n - 1;
-      return std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
-              [&](const typename List<t_A>::Cons &_args0) -> t_A {
-                return _args0.d_a1->nth(m, default0);
-              }},
-          this->v());
+      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+        return default0;
+      } else {
+        const auto &_m0 = *std::get_if<typename List<t_A>::Cons>(&this->v());
+        return _m0.d_a1->nth(m, default0);
+      }
     }
   }
 
   template <typename T1, MapsTo<T1, t_A> F0>
   std::shared_ptr<List<T1>> map(F0 &&f) const {
-    return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil &)
-                       -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
-                   [&](const typename List<t_A>::Cons &_args)
-                       -> std::shared_ptr<List<T1>> {
-                     return List<T1>::cons(f(_args.d_a0),
-                                           _args.d_a1->template map<T1>(f));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return List<T1>::nil();
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return List<T1>::cons(f(_m.d_a0), _m.d_a1->template map<T1>(f));
+    }
   }
 
   __attribute__((pure)) unsigned int length() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons &_args) -> unsigned int {
-              return (_args.d_a1->length() + 1);
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return 0u;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return (_m.d_a1->length() + 1);
+    }
   }
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
-    return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil &)
-                       -> std::shared_ptr<List<t_A>> { return m; },
-                   [&](const typename List<t_A>::Cons &_args)
-                       -> std::shared_ptr<List<t_A>> {
-                     return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return m;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return List<t_A>::cons(_m.d_a0, _m.d_a1->app(m));
+    }
   }
 };
 
@@ -634,22 +620,22 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 Prize_rect(const T1 f, F1 &&f0, const std::shared_ptr<Prize> &p) {
-    return std::visit(
-        Overloaded{[&](const typename Prize::PrizeHonor &) -> T1 { return f; },
-                   [&](const typename Prize::PrizeEnclave &_args) -> T1 {
-                     return f0(_args.d_enclave_id);
-                   }},
-        p->v());
+    if (std::holds_alternative<typename Prize::PrizeHonor>(p->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename Prize::PrizeEnclave>(&p->v());
+      return f0(_m.d_enclave_id);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 Prize_rec(const T1 f, F1 &&f0, const std::shared_ptr<Prize> &p) {
-    return std::visit(
-        Overloaded{[&](const typename Prize::PrizeHonor &) -> T1 { return f; },
-                   [&](const typename Prize::PrizeEnclave &_args) -> T1 {
-                     return f0(_args.d_enclave_id);
-                   }},
-        p->v());
+    if (std::holds_alternative<typename Prize::PrizeHonor>(p->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename Prize::PrizeEnclave>(&p->v());
+      return f0(_m.d_enclave_id);
+    }
   }
 
   struct Location {
@@ -694,29 +680,31 @@ struct CoalitionBidHonorTraceCase {
     template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
               MapsTo<T1, unsigned int> F1>
     T1 Location_rec(F0 &&f, F1 &&f0) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename Location::LocPlanetSurface &_args) -> T1 {
-                return f(_args.d_world_id, _args.d_region_id);
-              },
-              [&](const typename Location::LocEnclave &_args) -> T1 {
-                return f0(_args.d_enclave_id);
-              }},
-          this->v());
+      if (std::holds_alternative<typename Location::LocPlanetSurface>(
+              this->v())) {
+        const auto &_m =
+            *std::get_if<typename Location::LocPlanetSurface>(&this->v());
+        return f(_m.d_world_id, _m.d_region_id);
+      } else {
+        const auto &_m =
+            *std::get_if<typename Location::LocEnclave>(&this->v());
+        return f0(_m.d_enclave_id);
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
               MapsTo<T1, unsigned int> F1>
     T1 Location_rect(F0 &&f, F1 &&f0) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename Location::LocPlanetSurface &_args) -> T1 {
-                return f(_args.d_world_id, _args.d_region_id);
-              },
-              [&](const typename Location::LocEnclave &_args) -> T1 {
-                return f0(_args.d_enclave_id);
-              }},
-          this->v());
+      if (std::holds_alternative<typename Location::LocPlanetSurface>(
+              this->v())) {
+        const auto &_m =
+            *std::get_if<typename Location::LocPlanetSurface>(&this->v());
+        return f(_m.d_world_id, _m.d_region_id);
+      } else {
+        const auto &_m =
+            *std::get_if<typename Location::LocEnclave>(&this->v());
+        return f0(_m.d_enclave_id);
+      }
     }
   };
 
@@ -783,29 +771,27 @@ struct CoalitionBidHonorTraceCase {
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 RefusalReason_rect(const T1 f, F1 &&f0,
                                const std::shared_ptr<RefusalReason> &r) {
-    return std::visit(
-        Overloaded{
-            [&](const typename RefusalReason::RefusalInsufficientRank &) -> T1 {
-              return f;
-            },
-            [&](const typename RefusalReason::RefusalOther &_args) -> T1 {
-              return f0(_args.d_note);
-            }},
-        r->v());
+    if (std::holds_alternative<typename RefusalReason::RefusalInsufficientRank>(
+            r->v())) {
+      return f;
+    } else {
+      const auto &_m =
+          *std::get_if<typename RefusalReason::RefusalOther>(&r->v());
+      return f0(_m.d_note);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 RefusalReason_rec(const T1 f, F1 &&f0,
                               const std::shared_ptr<RefusalReason> &r) {
-    return std::visit(
-        Overloaded{
-            [&](const typename RefusalReason::RefusalInsufficientRank &) -> T1 {
-              return f;
-            },
-            [&](const typename RefusalReason::RefusalOther &_args) -> T1 {
-              return f0(_args.d_note);
-            }},
-        r->v());
+    if (std::holds_alternative<typename RefusalReason::RefusalInsufficientRank>(
+            r->v())) {
+      return f;
+    } else {
+      const auto &_m =
+          *std::get_if<typename RefusalReason::RefusalOther>(&r->v());
+      return f0(_m.d_note);
+    }
   }
 
   struct ProtocolAction {
@@ -954,34 +940,46 @@ struct CoalitionBidHonorTraceCase {
   static T1 ProtocolAction_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                                 F5 &&f4, const T1 f5, F7 &&f6, F8 &&f7,
                                 const std::shared_ptr<ProtocolAction> &p) {
-    return std::visit(
-        Overloaded{
-            [&](const typename ProtocolAction::ActChallenge &_args) -> T1 {
-              return f(_args.d_chal);
-            },
-            [&](const typename ProtocolAction::ActRespond &_args) -> T1 {
-              return f0(_args.d_resp);
-            },
-            [&](const typename ProtocolAction::ActRefuse &_args) -> T1 {
-              return f1(_args.d_reason);
-            },
-            [&](const typename ProtocolAction::ActBid &_args) -> T1 {
-              return f2(_args.d_bid);
-            },
-            [&](const typename ProtocolAction::ActCoalitionBid &_args) -> T1 {
-              return f3(_args.d_cbid);
-            },
-            [&](const typename ProtocolAction::ActPass &_args) -> T1 {
-              return f4(_args.d_side);
-            },
-            [&](const typename ProtocolAction::ActClose &) -> T1 { return f5; },
-            [&](const typename ProtocolAction::ActWithdraw &_args) -> T1 {
-              return f6(_args.d_side);
-            },
-            [&](const typename ProtocolAction::ActBreakBid &_args) -> T1 {
-              return f7(_args.d_side);
-            }},
-        p->v());
+    if (std::holds_alternative<typename ProtocolAction::ActChallenge>(p->v())) {
+      const auto &_m =
+          *std::get_if<typename ProtocolAction::ActChallenge>(&p->v());
+      return f(_m.d_chal);
+    } else if (std::holds_alternative<typename ProtocolAction::ActRespond>(
+                   p->v())) {
+      const auto &_m =
+          *std::get_if<typename ProtocolAction::ActRespond>(&p->v());
+      return f0(_m.d_resp);
+    } else if (std::holds_alternative<typename ProtocolAction::ActRefuse>(
+                   p->v())) {
+      const auto &_m =
+          *std::get_if<typename ProtocolAction::ActRefuse>(&p->v());
+      return f1(_m.d_reason);
+    } else if (std::holds_alternative<typename ProtocolAction::ActBid>(
+                   p->v())) {
+      const auto &_m = *std::get_if<typename ProtocolAction::ActBid>(&p->v());
+      return f2(_m.d_bid);
+    } else if (std::holds_alternative<typename ProtocolAction::ActCoalitionBid>(
+                   p->v())) {
+      const auto &_m =
+          *std::get_if<typename ProtocolAction::ActCoalitionBid>(&p->v());
+      return f3(_m.d_cbid);
+    } else if (std::holds_alternative<typename ProtocolAction::ActPass>(
+                   p->v())) {
+      const auto &_m = *std::get_if<typename ProtocolAction::ActPass>(&p->v());
+      return f4(_m.d_side);
+    } else if (std::holds_alternative<typename ProtocolAction::ActClose>(
+                   p->v())) {
+      return f5;
+    } else if (std::holds_alternative<typename ProtocolAction::ActWithdraw>(
+                   p->v())) {
+      const auto &_m =
+          *std::get_if<typename ProtocolAction::ActWithdraw>(&p->v());
+      return f6(_m.d_side);
+    } else {
+      const auto &_m =
+          *std::get_if<typename ProtocolAction::ActBreakBid>(&p->v());
+      return f7(_m.d_side);
+    }
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<BatchallChallenge>> F0,
@@ -993,34 +991,46 @@ struct CoalitionBidHonorTraceCase {
   static T1 ProtocolAction_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                                F5 &&f4, const T1 f5, F7 &&f6, F8 &&f7,
                                const std::shared_ptr<ProtocolAction> &p) {
-    return std::visit(
-        Overloaded{
-            [&](const typename ProtocolAction::ActChallenge &_args) -> T1 {
-              return f(_args.d_chal);
-            },
-            [&](const typename ProtocolAction::ActRespond &_args) -> T1 {
-              return f0(_args.d_resp);
-            },
-            [&](const typename ProtocolAction::ActRefuse &_args) -> T1 {
-              return f1(_args.d_reason);
-            },
-            [&](const typename ProtocolAction::ActBid &_args) -> T1 {
-              return f2(_args.d_bid);
-            },
-            [&](const typename ProtocolAction::ActCoalitionBid &_args) -> T1 {
-              return f3(_args.d_cbid);
-            },
-            [&](const typename ProtocolAction::ActPass &_args) -> T1 {
-              return f4(_args.d_side);
-            },
-            [&](const typename ProtocolAction::ActClose &) -> T1 { return f5; },
-            [&](const typename ProtocolAction::ActWithdraw &_args) -> T1 {
-              return f6(_args.d_side);
-            },
-            [&](const typename ProtocolAction::ActBreakBid &_args) -> T1 {
-              return f7(_args.d_side);
-            }},
-        p->v());
+    if (std::holds_alternative<typename ProtocolAction::ActChallenge>(p->v())) {
+      const auto &_m =
+          *std::get_if<typename ProtocolAction::ActChallenge>(&p->v());
+      return f(_m.d_chal);
+    } else if (std::holds_alternative<typename ProtocolAction::ActRespond>(
+                   p->v())) {
+      const auto &_m =
+          *std::get_if<typename ProtocolAction::ActRespond>(&p->v());
+      return f0(_m.d_resp);
+    } else if (std::holds_alternative<typename ProtocolAction::ActRefuse>(
+                   p->v())) {
+      const auto &_m =
+          *std::get_if<typename ProtocolAction::ActRefuse>(&p->v());
+      return f1(_m.d_reason);
+    } else if (std::holds_alternative<typename ProtocolAction::ActBid>(
+                   p->v())) {
+      const auto &_m = *std::get_if<typename ProtocolAction::ActBid>(&p->v());
+      return f2(_m.d_bid);
+    } else if (std::holds_alternative<typename ProtocolAction::ActCoalitionBid>(
+                   p->v())) {
+      const auto &_m =
+          *std::get_if<typename ProtocolAction::ActCoalitionBid>(&p->v());
+      return f3(_m.d_cbid);
+    } else if (std::holds_alternative<typename ProtocolAction::ActPass>(
+                   p->v())) {
+      const auto &_m = *std::get_if<typename ProtocolAction::ActPass>(&p->v());
+      return f4(_m.d_side);
+    } else if (std::holds_alternative<typename ProtocolAction::ActClose>(
+                   p->v())) {
+      return f5;
+    } else if (std::holds_alternative<typename ProtocolAction::ActWithdraw>(
+                   p->v())) {
+      const auto &_m =
+          *std::get_if<typename ProtocolAction::ActWithdraw>(&p->v());
+      return f6(_m.d_side);
+    } else {
+      const auto &_m =
+          *std::get_if<typename ProtocolAction::ActBreakBid>(&p->v());
+      return f7(_m.d_side);
+    }
   }
   enum class ReadyStatus {
     e_NEITHERREADY,
@@ -1257,130 +1267,129 @@ struct CoalitionBidHonorTraceCase {
 
     __attribute__((pure)) std::optional<std::shared_ptr<Commander>>
     action_actor_in_phase(const std::shared_ptr<ProtocolAction> &action) const {
-      return std::visit(
-          Overloaded{
-              [](const typename ProtocolAction::ActChallenge &_args)
-                  -> std::optional<std::shared_ptr<Commander>> {
-                return std::make_optional<std::shared_ptr<Commander>>(
-                    _args.d_chal->chal_challenger);
-              },
-              [](const typename ProtocolAction::ActRespond &_args)
-                  -> std::optional<std::shared_ptr<Commander>> {
-                return std::make_optional<std::shared_ptr<Commander>>(
-                    _args.d_resp->resp_defender);
-              },
-              [](const typename ProtocolAction::ActBid &_args)
-                  -> std::optional<std::shared_ptr<Commander>> {
-                return std::make_optional<std::shared_ptr<Commander>>(
-                    _args.d_bid->bid_commander);
-              },
-              [&](const typename ProtocolAction::ActWithdraw &_args)
-                  -> std::optional<std::shared_ptr<Commander>> {
-                return std::const_pointer_cast<BatchallPhase>(
-                           this->shared_from_this())
-                    ->get_side_commander(_args.d_side);
-              },
-              [&](const typename ProtocolAction::ActBreakBid &_args)
-                  -> std::optional<std::shared_ptr<Commander>> {
-                return std::const_pointer_cast<BatchallPhase>(
-                           this->shared_from_this())
-                    ->get_side_commander(_args.d_side);
-              },
-              [](const auto &) -> std::optional<std::shared_ptr<Commander>> {
-                return std::optional<std::shared_ptr<Commander>>();
-              }},
-          action->v());
+      if (std::holds_alternative<typename ProtocolAction::ActChallenge>(
+              action->v())) {
+        const auto &_m =
+            *std::get_if<typename ProtocolAction::ActChallenge>(&action->v());
+        return std::make_optional<std::shared_ptr<Commander>>(
+            _m.d_chal->chal_challenger);
+      } else if (std::holds_alternative<typename ProtocolAction::ActRespond>(
+                     action->v())) {
+        const auto &_m =
+            *std::get_if<typename ProtocolAction::ActRespond>(&action->v());
+        return std::make_optional<std::shared_ptr<Commander>>(
+            _m.d_resp->resp_defender);
+      } else if (std::holds_alternative<typename ProtocolAction::ActBid>(
+                     action->v())) {
+        const auto &_m =
+            *std::get_if<typename ProtocolAction::ActBid>(&action->v());
+        return std::make_optional<std::shared_ptr<Commander>>(
+            _m.d_bid->bid_commander);
+      } else if (std::holds_alternative<typename ProtocolAction::ActWithdraw>(
+                     action->v())) {
+        const auto &_m =
+            *std::get_if<typename ProtocolAction::ActWithdraw>(&action->v());
+        return std::const_pointer_cast<BatchallPhase>(this->shared_from_this())
+            ->get_side_commander(_m.d_side);
+      } else if (std::holds_alternative<typename ProtocolAction::ActBreakBid>(
+                     action->v())) {
+        const auto &_m =
+            *std::get_if<typename ProtocolAction::ActBreakBid>(&action->v());
+        return std::const_pointer_cast<BatchallPhase>(this->shared_from_this())
+            ->get_side_commander(_m.d_side);
+      } else {
+        return std::optional<std::shared_ptr<Commander>>();
+      }
     }
 
     __attribute__((pure)) std::optional<std::shared_ptr<Commander>>
     get_side_commander(const Side side) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename BatchallPhase::PhaseBidding &_args)
-                  -> std::optional<std::shared_ptr<Commander>> {
-                switch (side) {
-                case Side::e_ATTACKER: {
-                  return std::make_optional<std::shared_ptr<Commander>>(
-                      _args.d_attacker_bid->bid_commander);
-                }
-                case Side::e_DEFENDER: {
-                  return std::make_optional<std::shared_ptr<Commander>>(
-                      _args.d_defender_bid->bid_commander);
-                }
-                default:
-                  std::unreachable();
-                }
-              },
-              [](const auto &) -> std::optional<std::shared_ptr<Commander>> {
-                return std::optional<std::shared_ptr<Commander>>();
-              }},
-          this->v());
+      if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
+              this->v())) {
+        const auto &_m =
+            *std::get_if<typename BatchallPhase::PhaseBidding>(&this->v());
+        switch (side) {
+        case Side::e_ATTACKER: {
+          return std::make_optional<std::shared_ptr<Commander>>(
+              _m.d_attacker_bid->bid_commander);
+        }
+        case Side::e_DEFENDER: {
+          return std::make_optional<std::shared_ptr<Commander>>(
+              _m.d_defender_bid->bid_commander);
+        }
+        default:
+          std::unreachable();
+        }
+      } else {
+        return std::optional<std::shared_ptr<Commander>>();
+      }
     }
 
     __attribute__((pure)) unsigned int get_bidding_measure() const {
-      return std::visit(
-          Overloaded{[](const typename BatchallPhase::PhaseBidding &_args)
-                         -> unsigned int {
-                       return (
-                           (bid_metrics(_args.d_attacker_bid)->fm_total_ecr +
-                            bid_metrics(_args.d_defender_bid)->fm_total_ecr) +
-                               [&]() -> unsigned int {
-                             switch (_args.d_ready) {
-                             case ReadyStatus::e_NEITHERREADY: {
-                               return 2u;
-                             }
-                             case ReadyStatus::e_BOTHREADY: {
-                               return 0u;
-                             }
-                             default: {
-                               return 1u;
-                             }
-                             }
-                           }());
-                     },
-                     [](const auto &) -> unsigned int { return 0u; }},
-          this->v());
+      if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
+              this->v())) {
+        const auto &_m =
+            *std::get_if<typename BatchallPhase::PhaseBidding>(&this->v());
+        return ((bid_metrics(_m.d_attacker_bid)->fm_total_ecr +
+                 bid_metrics(_m.d_defender_bid)->fm_total_ecr) +
+                [&]() {
+                  switch (_m.d_ready) {
+                  case ReadyStatus::e_NEITHERREADY: {
+                    return 2u;
+                  }
+                  case ReadyStatus::e_BOTHREADY: {
+                    return 0u;
+                  }
+                  default: {
+                    return 1u;
+                  }
+                  }
+                }());
+      } else {
+        return 0u;
+      }
     }
 
     __attribute__((pure)) unsigned int phase_depth() const {
-      return std::visit(
-          Overloaded{
-              [](const typename BatchallPhase::PhaseIdle &) -> unsigned int {
-                return 4u;
-              },
-              [](const typename BatchallPhase::PhaseChallenged &)
-                  -> unsigned int { return 3u; },
-              [](const typename BatchallPhase::PhaseResponded &)
-                  -> unsigned int { return 2u; },
-              [](const typename BatchallPhase::PhaseBidding &) -> unsigned int {
-                return 1u;
-              },
-              [](const auto &) -> unsigned int { return 0u; }},
-          this->v());
+      if (std::holds_alternative<typename BatchallPhase::PhaseIdle>(
+              this->v())) {
+        return 4u;
+      } else if (std::holds_alternative<
+                     typename BatchallPhase::PhaseChallenged>(this->v())) {
+        return 3u;
+      } else if (std::holds_alternative<typename BatchallPhase::PhaseResponded>(
+                     this->v())) {
+        return 2u;
+      } else if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
+                     this->v())) {
+        return 1u;
+      } else {
+        return 0u;
+      }
     }
 
     __attribute__((pure)) bool is_bidding() const {
-      return std::visit(
-          Overloaded{[](const typename BatchallPhase::PhaseBidding &) -> bool {
-                       return true;
-                     },
-                     [](const auto &) -> bool { return false; }},
-          this->v());
+      if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
+              this->v())) {
+        return true;
+      } else {
+        return false;
+      }
     }
 
     __attribute__((pure)) bool is_terminal() const {
-      return std::visit(
-          Overloaded{[](const typename BatchallPhase::PhaseAgreed &) -> bool {
-                       return true;
-                     },
-                     [](const typename BatchallPhase::PhaseRefused &) -> bool {
-                       return true;
-                     },
-                     [](const typename BatchallPhase::PhaseAborted &) -> bool {
-                       return true;
-                     },
-                     [](const auto &) -> bool { return false; }},
-          this->v());
+      if (std::holds_alternative<typename BatchallPhase::PhaseAgreed>(
+              this->v())) {
+        return true;
+      } else if (std::holds_alternative<typename BatchallPhase::PhaseRefused>(
+                     this->v())) {
+        return true;
+      } else if (std::holds_alternative<typename BatchallPhase::PhaseAborted>(
+                     this->v())) {
+        return true;
+      } else {
+        return false;
+      }
     }
   };
 
@@ -1409,32 +1418,41 @@ struct CoalitionBidHonorTraceCase {
   static T1 BatchallPhase_rect(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                                F5 &&f4, F6 &&f5,
                                const std::shared_ptr<BatchallPhase> &b) {
-    return std::visit(
-        Overloaded{
-            [&](const typename BatchallPhase::PhaseIdle &) -> T1 { return f; },
-            [&](const typename BatchallPhase::PhaseChallenged &_args) -> T1 {
-              return f0(_args.d_challenge);
-            },
-            [&](const typename BatchallPhase::PhaseResponded &_args) -> T1 {
-              return f1(_args.d_challenge, _args.d_response);
-            },
-            [&](const typename BatchallPhase::PhaseBidding &_args) -> T1 {
-              return f2(_args.d_challenge, _args.d_response,
-                        _args.d_attacker_bid, _args.d_defender_bid,
-                        _args.d_attacker_coalition, _args.d_defender_coalition,
-                        _args.d_bid_history, _args.d_ready);
-            },
-            [&](const typename BatchallPhase::PhaseAgreed &_args) -> T1 {
-              return f3(_args.d_challenge, _args.d_response,
-                        _args.d_final_attacker, _args.d_final_defender);
-            },
-            [&](const typename BatchallPhase::PhaseRefused &_args) -> T1 {
-              return f4(_args.d_challenge, _args.d_reason);
-            },
-            [&](const typename BatchallPhase::PhaseAborted &_args) -> T1 {
-              return f5(_args.d_reason);
-            }},
-        b->v());
+    if (std::holds_alternative<typename BatchallPhase::PhaseIdle>(b->v())) {
+      return f;
+    } else if (std::holds_alternative<typename BatchallPhase::PhaseChallenged>(
+                   b->v())) {
+      const auto &_m =
+          *std::get_if<typename BatchallPhase::PhaseChallenged>(&b->v());
+      return f0(_m.d_challenge);
+    } else if (std::holds_alternative<typename BatchallPhase::PhaseResponded>(
+                   b->v())) {
+      const auto &_m =
+          *std::get_if<typename BatchallPhase::PhaseResponded>(&b->v());
+      return f1(_m.d_challenge, _m.d_response);
+    } else if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
+                   b->v())) {
+      const auto &_m =
+          *std::get_if<typename BatchallPhase::PhaseBidding>(&b->v());
+      return f2(_m.d_challenge, _m.d_response, _m.d_attacker_bid,
+                _m.d_defender_bid, _m.d_attacker_coalition,
+                _m.d_defender_coalition, _m.d_bid_history, _m.d_ready);
+    } else if (std::holds_alternative<typename BatchallPhase::PhaseAgreed>(
+                   b->v())) {
+      const auto &_m =
+          *std::get_if<typename BatchallPhase::PhaseAgreed>(&b->v());
+      return f3(_m.d_challenge, _m.d_response, _m.d_final_attacker,
+                _m.d_final_defender);
+    } else if (std::holds_alternative<typename BatchallPhase::PhaseRefused>(
+                   b->v())) {
+      const auto &_m =
+          *std::get_if<typename BatchallPhase::PhaseRefused>(&b->v());
+      return f4(_m.d_challenge, _m.d_reason);
+    } else {
+      const auto &_m =
+          *std::get_if<typename BatchallPhase::PhaseAborted>(&b->v());
+      return f5(_m.d_reason);
+    }
   }
 
   template <
@@ -1462,32 +1480,41 @@ struct CoalitionBidHonorTraceCase {
   static T1 BatchallPhase_rec(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                               F5 &&f4, F6 &&f5,
                               const std::shared_ptr<BatchallPhase> &b) {
-    return std::visit(
-        Overloaded{
-            [&](const typename BatchallPhase::PhaseIdle &) -> T1 { return f; },
-            [&](const typename BatchallPhase::PhaseChallenged &_args) -> T1 {
-              return f0(_args.d_challenge);
-            },
-            [&](const typename BatchallPhase::PhaseResponded &_args) -> T1 {
-              return f1(_args.d_challenge, _args.d_response);
-            },
-            [&](const typename BatchallPhase::PhaseBidding &_args) -> T1 {
-              return f2(_args.d_challenge, _args.d_response,
-                        _args.d_attacker_bid, _args.d_defender_bid,
-                        _args.d_attacker_coalition, _args.d_defender_coalition,
-                        _args.d_bid_history, _args.d_ready);
-            },
-            [&](const typename BatchallPhase::PhaseAgreed &_args) -> T1 {
-              return f3(_args.d_challenge, _args.d_response,
-                        _args.d_final_attacker, _args.d_final_defender);
-            },
-            [&](const typename BatchallPhase::PhaseRefused &_args) -> T1 {
-              return f4(_args.d_challenge, _args.d_reason);
-            },
-            [&](const typename BatchallPhase::PhaseAborted &_args) -> T1 {
-              return f5(_args.d_reason);
-            }},
-        b->v());
+    if (std::holds_alternative<typename BatchallPhase::PhaseIdle>(b->v())) {
+      return f;
+    } else if (std::holds_alternative<typename BatchallPhase::PhaseChallenged>(
+                   b->v())) {
+      const auto &_m =
+          *std::get_if<typename BatchallPhase::PhaseChallenged>(&b->v());
+      return f0(_m.d_challenge);
+    } else if (std::holds_alternative<typename BatchallPhase::PhaseResponded>(
+                   b->v())) {
+      const auto &_m =
+          *std::get_if<typename BatchallPhase::PhaseResponded>(&b->v());
+      return f1(_m.d_challenge, _m.d_response);
+    } else if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
+                   b->v())) {
+      const auto &_m =
+          *std::get_if<typename BatchallPhase::PhaseBidding>(&b->v());
+      return f2(_m.d_challenge, _m.d_response, _m.d_attacker_bid,
+                _m.d_defender_bid, _m.d_attacker_coalition,
+                _m.d_defender_coalition, _m.d_bid_history, _m.d_ready);
+    } else if (std::holds_alternative<typename BatchallPhase::PhaseAgreed>(
+                   b->v())) {
+      const auto &_m =
+          *std::get_if<typename BatchallPhase::PhaseAgreed>(&b->v());
+      return f3(_m.d_challenge, _m.d_response, _m.d_final_attacker,
+                _m.d_final_defender);
+    } else if (std::holds_alternative<typename BatchallPhase::PhaseRefused>(
+                   b->v())) {
+      const auto &_m =
+          *std::get_if<typename BatchallPhase::PhaseRefused>(&b->v());
+      return f4(_m.d_challenge, _m.d_reason);
+    } else {
+      const auto &_m =
+          *std::get_if<typename BatchallPhase::PhaseAborted>(&b->v());
+      return f5(_m.d_reason);
+    }
   }
 
   using Honor = std::shared_ptr<Z>;

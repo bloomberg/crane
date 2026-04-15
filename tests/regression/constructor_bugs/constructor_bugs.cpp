@@ -276,21 +276,16 @@ ConstructorBugs::match_option_record(
 __attribute__((pure))
 std::pair<std::shared_ptr<ConstructorBugs::Inner>, unsigned int>
 ConstructorBugs::match_sum(const std::shared_ptr<ConstructorBugs::MySum> &s) {
-  return std::visit(
-      Overloaded{[](const typename ConstructorBugs::MySum::Left &_args)
-                     -> std::pair<std::shared_ptr<ConstructorBugs::Inner>,
-                                  unsigned int> {
-                   return std::make_pair(_args.d_a0, _args.d_a0->inner_val);
-                 },
-                 [](const typename ConstructorBugs::MySum::Right &_args)
-                     -> std::pair<std::shared_ptr<ConstructorBugs::Inner>,
-                                  unsigned int> {
-                   return std::make_pair(
-                       std::make_shared<ConstructorBugs::Inner>(
-                           Inner{_args.d_a0}),
-                       _args.d_a0);
-                 }},
-      s->v());
+  if (std::holds_alternative<typename ConstructorBugs::MySum::Left>(s->v())) {
+    const auto &_m =
+        *std::get_if<typename ConstructorBugs::MySum::Left>(&s->v());
+    return std::make_pair(_m.d_a0, _m.d_a0->inner_val);
+  } else {
+    const auto &_m =
+        *std::get_if<typename ConstructorBugs::MySum::Right>(&s->v());
+    return std::make_pair(
+        std::make_shared<ConstructorBugs::Inner>(Inner{_m.d_a0}), _m.d_a0);
+  }
 }
 
 __attribute__((pure))

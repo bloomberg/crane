@@ -68,16 +68,12 @@ struct EffectRecursiveList {
   /// 2. Map a function over a list with effects
   template <MapsTo<void, std::string> F0>
   static void map_effect(F0 &&f, const std::shared_ptr<List<std::string>> &xs) {
-    {
-      std::visit(Overloaded{[](const typename List<std::string>::Nil &)
-                                -> std::monostate { return std::monostate{}; },
-                            [&](const typename List<std::string>::Cons &_args)
-                                -> std::monostate {
-                              f(_args.d_a0);
-                              map_effect(f, _args.d_a1);
-                              return std::monostate{};
-                            }},
-                 xs->v());
+    if (std::holds_alternative<typename List<std::string>::Nil>(xs->v())) {
+      return;
+    } else {
+      const auto &_m = *std::get_if<typename List<std::string>::Cons>(&xs->v());
+      f(_m.d_a0);
+      map_effect(f, _m.d_a1);
       return;
     }
   }

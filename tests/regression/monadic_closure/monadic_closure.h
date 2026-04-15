@@ -98,20 +98,17 @@ struct MonadicClosure {
   template <MapsTo<bool, std::string> F0>
   static unsigned int
   count_matching(F0 &&pred, const std::shared_ptr<List<std::string>> &xs) {
-    return std::visit(
-        Overloaded{
-            [](const typename List<std::string>::Nil &) -> unsigned int {
-              return 0u;
-            },
-            [&](const typename List<std::string>::Cons &_args) -> unsigned int {
-              unsigned int n = count_matching(pred, _args.d_a1);
-              if (pred(_args.d_a0)) {
-                return (n + 1);
-              } else {
-                return n;
-              }
-            }},
-        xs->v());
+    if (std::holds_alternative<typename List<std::string>::Nil>(xs->v())) {
+      return 0u;
+    } else {
+      const auto &_m = *std::get_if<typename List<std::string>::Cons>(&xs->v());
+      unsigned int n = count_matching(pred, _m.d_a1);
+      if (pred(_m.d_a0)) {
+        return (n + 1);
+      } else {
+        return n;
+      }
+    }
   }
 
   static unsigned int test_count();

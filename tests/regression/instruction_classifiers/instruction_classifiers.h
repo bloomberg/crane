@@ -298,11 +298,11 @@ struct InstructionClassifiers {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) bool writes_acc() const {
-      return std::visit(
-          Overloaded{
-              [](const typename instr_acc::NOP_acc &) -> bool { return false; },
-              [](const auto &) -> bool { return true; }},
-          this->v());
+      if (std::holds_alternative<typename instr_acc::NOP_acc>(this->v())) {
+        return false;
+      } else {
+        return true;
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -316,49 +316,66 @@ struct InstructionClassifiers {
                      const T1 f17, const T1 f18, const T1 f19, const T1 f20,
                      const T1 f21, const T1 f22, const T1 f23,
                      const T1 f24) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instr_acc::LDM &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename instr_acc::LD &_args) -> T1 {
-                return f0(_args.d_a0);
-              },
-              [&](const typename instr_acc::ADD &_args) -> T1 {
-                return f1(_args.d_a0);
-              },
-              [&](const typename instr_acc::SUB &_args) -> T1 {
-                return f2(_args.d_a0);
-              },
-              [&](const typename instr_acc::INC &_args) -> T1 {
-                return f3(_args.d_a0);
-              },
-              [&](const typename instr_acc::XCH &_args) -> T1 {
-                return f4(_args.d_a0);
-              },
-              [&](const typename instr_acc::BBL &_args) -> T1 {
-                return f5(_args.d_a0);
-              },
-              [&](const typename instr_acc::SBM &) -> T1 { return f6; },
-              [&](const typename instr_acc::RDM &) -> T1 { return f7; },
-              [&](const typename instr_acc::RDR &) -> T1 { return f8; },
-              [&](const typename instr_acc::ADM &) -> T1 { return f9; },
-              [&](const typename instr_acc::RD0 &) -> T1 { return f10; },
-              [&](const typename instr_acc::RD1 &) -> T1 { return f11; },
-              [&](const typename instr_acc::RD2 &) -> T1 { return f12; },
-              [&](const typename instr_acc::RD3 &) -> T1 { return f13; },
-              [&](const typename instr_acc::CLB &) -> T1 { return f14; },
-              [&](const typename instr_acc::CMA &) -> T1 { return f15; },
-              [&](const typename instr_acc::IAC &) -> T1 { return f16; },
-              [&](const typename instr_acc::DAC &) -> T1 { return f17; },
-              [&](const typename instr_acc::RAL &) -> T1 { return f18; },
-              [&](const typename instr_acc::RAR &) -> T1 { return f19; },
-              [&](const typename instr_acc::TCC &) -> T1 { return f20; },
-              [&](const typename instr_acc::TCS &) -> T1 { return f21; },
-              [&](const typename instr_acc::DAA &) -> T1 { return f22; },
-              [&](const typename instr_acc::KBP &) -> T1 { return f23; },
-              [&](const typename instr_acc::NOP_acc &) -> T1 { return f24; }},
-          this->v());
+      if (std::holds_alternative<typename instr_acc::LDM>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_acc::LDM>(&this->v());
+        return f(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_acc::LD>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_acc::LD>(&this->v());
+        return f0(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_acc::ADD>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_acc::ADD>(&this->v());
+        return f1(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_acc::SUB>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_acc::SUB>(&this->v());
+        return f2(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_acc::INC>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_acc::INC>(&this->v());
+        return f3(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_acc::XCH>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_acc::XCH>(&this->v());
+        return f4(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_acc::BBL>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_acc::BBL>(&this->v());
+        return f5(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_acc::SBM>(this->v())) {
+        return f6;
+      } else if (std::holds_alternative<typename instr_acc::RDM>(this->v())) {
+        return f7;
+      } else if (std::holds_alternative<typename instr_acc::RDR>(this->v())) {
+        return f8;
+      } else if (std::holds_alternative<typename instr_acc::ADM>(this->v())) {
+        return f9;
+      } else if (std::holds_alternative<typename instr_acc::RD0>(this->v())) {
+        return f10;
+      } else if (std::holds_alternative<typename instr_acc::RD1>(this->v())) {
+        return f11;
+      } else if (std::holds_alternative<typename instr_acc::RD2>(this->v())) {
+        return f12;
+      } else if (std::holds_alternative<typename instr_acc::RD3>(this->v())) {
+        return f13;
+      } else if (std::holds_alternative<typename instr_acc::CLB>(this->v())) {
+        return f14;
+      } else if (std::holds_alternative<typename instr_acc::CMA>(this->v())) {
+        return f15;
+      } else if (std::holds_alternative<typename instr_acc::IAC>(this->v())) {
+        return f16;
+      } else if (std::holds_alternative<typename instr_acc::DAC>(this->v())) {
+        return f17;
+      } else if (std::holds_alternative<typename instr_acc::RAL>(this->v())) {
+        return f18;
+      } else if (std::holds_alternative<typename instr_acc::RAR>(this->v())) {
+        return f19;
+      } else if (std::holds_alternative<typename instr_acc::TCC>(this->v())) {
+        return f20;
+      } else if (std::holds_alternative<typename instr_acc::TCS>(this->v())) {
+        return f21;
+      } else if (std::holds_alternative<typename instr_acc::DAA>(this->v())) {
+        return f22;
+      } else if (std::holds_alternative<typename instr_acc::KBP>(this->v())) {
+        return f23;
+      } else {
+        return f24;
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -372,49 +389,66 @@ struct InstructionClassifiers {
                       const T1 f17, const T1 f18, const T1 f19, const T1 f20,
                       const T1 f21, const T1 f22, const T1 f23,
                       const T1 f24) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instr_acc::LDM &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename instr_acc::LD &_args) -> T1 {
-                return f0(_args.d_a0);
-              },
-              [&](const typename instr_acc::ADD &_args) -> T1 {
-                return f1(_args.d_a0);
-              },
-              [&](const typename instr_acc::SUB &_args) -> T1 {
-                return f2(_args.d_a0);
-              },
-              [&](const typename instr_acc::INC &_args) -> T1 {
-                return f3(_args.d_a0);
-              },
-              [&](const typename instr_acc::XCH &_args) -> T1 {
-                return f4(_args.d_a0);
-              },
-              [&](const typename instr_acc::BBL &_args) -> T1 {
-                return f5(_args.d_a0);
-              },
-              [&](const typename instr_acc::SBM &) -> T1 { return f6; },
-              [&](const typename instr_acc::RDM &) -> T1 { return f7; },
-              [&](const typename instr_acc::RDR &) -> T1 { return f8; },
-              [&](const typename instr_acc::ADM &) -> T1 { return f9; },
-              [&](const typename instr_acc::RD0 &) -> T1 { return f10; },
-              [&](const typename instr_acc::RD1 &) -> T1 { return f11; },
-              [&](const typename instr_acc::RD2 &) -> T1 { return f12; },
-              [&](const typename instr_acc::RD3 &) -> T1 { return f13; },
-              [&](const typename instr_acc::CLB &) -> T1 { return f14; },
-              [&](const typename instr_acc::CMA &) -> T1 { return f15; },
-              [&](const typename instr_acc::IAC &) -> T1 { return f16; },
-              [&](const typename instr_acc::DAC &) -> T1 { return f17; },
-              [&](const typename instr_acc::RAL &) -> T1 { return f18; },
-              [&](const typename instr_acc::RAR &) -> T1 { return f19; },
-              [&](const typename instr_acc::TCC &) -> T1 { return f20; },
-              [&](const typename instr_acc::TCS &) -> T1 { return f21; },
-              [&](const typename instr_acc::DAA &) -> T1 { return f22; },
-              [&](const typename instr_acc::KBP &) -> T1 { return f23; },
-              [&](const typename instr_acc::NOP_acc &) -> T1 { return f24; }},
-          this->v());
+      if (std::holds_alternative<typename instr_acc::LDM>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_acc::LDM>(&this->v());
+        return f(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_acc::LD>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_acc::LD>(&this->v());
+        return f0(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_acc::ADD>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_acc::ADD>(&this->v());
+        return f1(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_acc::SUB>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_acc::SUB>(&this->v());
+        return f2(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_acc::INC>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_acc::INC>(&this->v());
+        return f3(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_acc::XCH>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_acc::XCH>(&this->v());
+        return f4(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_acc::BBL>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_acc::BBL>(&this->v());
+        return f5(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_acc::SBM>(this->v())) {
+        return f6;
+      } else if (std::holds_alternative<typename instr_acc::RDM>(this->v())) {
+        return f7;
+      } else if (std::holds_alternative<typename instr_acc::RDR>(this->v())) {
+        return f8;
+      } else if (std::holds_alternative<typename instr_acc::ADM>(this->v())) {
+        return f9;
+      } else if (std::holds_alternative<typename instr_acc::RD0>(this->v())) {
+        return f10;
+      } else if (std::holds_alternative<typename instr_acc::RD1>(this->v())) {
+        return f11;
+      } else if (std::holds_alternative<typename instr_acc::RD2>(this->v())) {
+        return f12;
+      } else if (std::holds_alternative<typename instr_acc::RD3>(this->v())) {
+        return f13;
+      } else if (std::holds_alternative<typename instr_acc::CLB>(this->v())) {
+        return f14;
+      } else if (std::holds_alternative<typename instr_acc::CMA>(this->v())) {
+        return f15;
+      } else if (std::holds_alternative<typename instr_acc::IAC>(this->v())) {
+        return f16;
+      } else if (std::holds_alternative<typename instr_acc::DAC>(this->v())) {
+        return f17;
+      } else if (std::holds_alternative<typename instr_acc::RAL>(this->v())) {
+        return f18;
+      } else if (std::holds_alternative<typename instr_acc::RAR>(this->v())) {
+        return f19;
+      } else if (std::holds_alternative<typename instr_acc::TCC>(this->v())) {
+        return f20;
+      } else if (std::holds_alternative<typename instr_acc::TCS>(this->v())) {
+        return f21;
+      } else if (std::holds_alternative<typename instr_acc::DAA>(this->v())) {
+        return f22;
+      } else if (std::holds_alternative<typename instr_acc::KBP>(this->v())) {
+        return f23;
+      } else {
+        return f24;
+      }
     }
   };
 
@@ -519,12 +553,14 @@ struct InstructionClassifiers {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) bool writes_ram() const {
-      return std::visit(
-          Overloaded{
-              [](const typename instr_ram::NOP_ram &) -> bool { return false; },
-              [](const typename instr_ram::ADD_ram &) -> bool { return false; },
-              [](const auto &) -> bool { return true; }},
-          this->v());
+      if (std::holds_alternative<typename instr_ram::NOP_ram>(this->v())) {
+        return false;
+      } else if (std::holds_alternative<typename instr_ram::ADD_ram>(
+                     this->v())) {
+        return false;
+      } else {
+        return true;
+      }
     }
   };
 
@@ -532,38 +568,48 @@ struct InstructionClassifiers {
   static T1 instr_ram_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                            const T1 f3, const T1 f4, const T1 f5, F7 &&f6,
                            const std::shared_ptr<instr_ram> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename instr_ram::WRM &) -> T1 { return f; },
-            [&](const typename instr_ram::WMP &) -> T1 { return f0; },
-            [&](const typename instr_ram::WR0 &) -> T1 { return f1; },
-            [&](const typename instr_ram::WR1 &) -> T1 { return f2; },
-            [&](const typename instr_ram::WR2 &) -> T1 { return f3; },
-            [&](const typename instr_ram::WR3 &) -> T1 { return f4; },
-            [&](const typename instr_ram::NOP_ram &) -> T1 { return f5; },
-            [&](const typename instr_ram::ADD_ram &_args) -> T1 {
-              return f6(_args.d_a0);
-            }},
-        i->v());
+    if (std::holds_alternative<typename instr_ram::WRM>(i->v())) {
+      return f;
+    } else if (std::holds_alternative<typename instr_ram::WMP>(i->v())) {
+      return f0;
+    } else if (std::holds_alternative<typename instr_ram::WR0>(i->v())) {
+      return f1;
+    } else if (std::holds_alternative<typename instr_ram::WR1>(i->v())) {
+      return f2;
+    } else if (std::holds_alternative<typename instr_ram::WR2>(i->v())) {
+      return f3;
+    } else if (std::holds_alternative<typename instr_ram::WR3>(i->v())) {
+      return f4;
+    } else if (std::holds_alternative<typename instr_ram::NOP_ram>(i->v())) {
+      return f5;
+    } else {
+      const auto &_m = *std::get_if<typename instr_ram::ADD_ram>(&i->v());
+      return f6(_m.d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F7>
   static T1 instr_ram_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                           const T1 f3, const T1 f4, const T1 f5, F7 &&f6,
                           const std::shared_ptr<instr_ram> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename instr_ram::WRM &) -> T1 { return f; },
-            [&](const typename instr_ram::WMP &) -> T1 { return f0; },
-            [&](const typename instr_ram::WR0 &) -> T1 { return f1; },
-            [&](const typename instr_ram::WR1 &) -> T1 { return f2; },
-            [&](const typename instr_ram::WR2 &) -> T1 { return f3; },
-            [&](const typename instr_ram::WR3 &) -> T1 { return f4; },
-            [&](const typename instr_ram::NOP_ram &) -> T1 { return f5; },
-            [&](const typename instr_ram::ADD_ram &_args) -> T1 {
-              return f6(_args.d_a0);
-            }},
-        i->v());
+    if (std::holds_alternative<typename instr_ram::WRM>(i->v())) {
+      return f;
+    } else if (std::holds_alternative<typename instr_ram::WMP>(i->v())) {
+      return f0;
+    } else if (std::holds_alternative<typename instr_ram::WR0>(i->v())) {
+      return f1;
+    } else if (std::holds_alternative<typename instr_ram::WR1>(i->v())) {
+      return f2;
+    } else if (std::holds_alternative<typename instr_ram::WR2>(i->v())) {
+      return f3;
+    } else if (std::holds_alternative<typename instr_ram::WR3>(i->v())) {
+      return f4;
+    } else if (std::holds_alternative<typename instr_ram::NOP_ram>(i->v())) {
+      return f5;
+    } else {
+      const auto &_m = *std::get_if<typename instr_ram::ADD_ram>(&i->v());
+      return f6(_m.d_a0);
+    }
   }
 
   __attribute__((pure)) static unsigned int count_writes_ram(
@@ -671,15 +717,14 @@ struct InstructionClassifiers {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) bool writes_regs() const {
-      return std::visit(
-          Overloaded{[](const typename instr_regs::NOP_regs &) -> bool {
-                       return false;
-                     },
-                     [](const typename instr_regs::ADD_regs &) -> bool {
-                       return false;
-                     },
-                     [](const auto &) -> bool { return true; }},
-          this->v());
+      if (std::holds_alternative<typename instr_regs::NOP_regs>(this->v())) {
+        return false;
+      } else if (std::holds_alternative<typename instr_regs::ADD_regs>(
+                     this->v())) {
+        return false;
+      } else {
+        return true;
+      }
     }
 
     template <
@@ -688,28 +733,32 @@ struct InstructionClassifiers {
         MapsTo<T1, unsigned int, unsigned int> F4, MapsTo<T1, unsigned int> F6>
     T1 instr_regs_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, const T1 f4,
                       F6 &&f5) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instr_regs::XCH_regs &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename instr_regs::INC_regs &_args) -> T1 {
-                return f0(_args.d_a0);
-              },
-              [&](const typename instr_regs::FIM &_args) -> T1 {
-                return f1(_args.d_a0, _args.d_a1);
-              },
-              [&](const typename instr_regs::FIN &_args) -> T1 {
-                return f2(_args.d_a0);
-              },
-              [&](const typename instr_regs::ISZ &_args) -> T1 {
-                return f3(_args.d_a0, _args.d_a1);
-              },
-              [&](const typename instr_regs::NOP_regs &) -> T1 { return f4; },
-              [&](const typename instr_regs::ADD_regs &_args) -> T1 {
-                return f5(_args.d_a0);
-              }},
-          this->v());
+      if (std::holds_alternative<typename instr_regs::XCH_regs>(this->v())) {
+        const auto &_m =
+            *std::get_if<typename instr_regs::XCH_regs>(&this->v());
+        return f(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_regs::INC_regs>(
+                     this->v())) {
+        const auto &_m =
+            *std::get_if<typename instr_regs::INC_regs>(&this->v());
+        return f0(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_regs::FIM>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_regs::FIM>(&this->v());
+        return f1(_m.d_a0, _m.d_a1);
+      } else if (std::holds_alternative<typename instr_regs::FIN>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_regs::FIN>(&this->v());
+        return f2(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_regs::ISZ>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_regs::ISZ>(&this->v());
+        return f3(_m.d_a0, _m.d_a1);
+      } else if (std::holds_alternative<typename instr_regs::NOP_regs>(
+                     this->v())) {
+        return f4;
+      } else {
+        const auto &_m =
+            *std::get_if<typename instr_regs::ADD_regs>(&this->v());
+        return f5(_m.d_a0);
+      }
     }
 
     template <
@@ -718,28 +767,32 @@ struct InstructionClassifiers {
         MapsTo<T1, unsigned int, unsigned int> F4, MapsTo<T1, unsigned int> F6>
     T1 instr_regs_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, const T1 f4,
                        F6 &&f5) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instr_regs::XCH_regs &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename instr_regs::INC_regs &_args) -> T1 {
-                return f0(_args.d_a0);
-              },
-              [&](const typename instr_regs::FIM &_args) -> T1 {
-                return f1(_args.d_a0, _args.d_a1);
-              },
-              [&](const typename instr_regs::FIN &_args) -> T1 {
-                return f2(_args.d_a0);
-              },
-              [&](const typename instr_regs::ISZ &_args) -> T1 {
-                return f3(_args.d_a0, _args.d_a1);
-              },
-              [&](const typename instr_regs::NOP_regs &) -> T1 { return f4; },
-              [&](const typename instr_regs::ADD_regs &_args) -> T1 {
-                return f5(_args.d_a0);
-              }},
-          this->v());
+      if (std::holds_alternative<typename instr_regs::XCH_regs>(this->v())) {
+        const auto &_m =
+            *std::get_if<typename instr_regs::XCH_regs>(&this->v());
+        return f(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_regs::INC_regs>(
+                     this->v())) {
+        const auto &_m =
+            *std::get_if<typename instr_regs::INC_regs>(&this->v());
+        return f0(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_regs::FIM>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_regs::FIM>(&this->v());
+        return f1(_m.d_a0, _m.d_a1);
+      } else if (std::holds_alternative<typename instr_regs::FIN>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_regs::FIN>(&this->v());
+        return f2(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_regs::ISZ>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_regs::ISZ>(&this->v());
+        return f3(_m.d_a0, _m.d_a1);
+      } else if (std::holds_alternative<typename instr_regs::NOP_regs>(
+                     this->v())) {
+        return f4;
+      } else {
+        const auto &_m =
+            *std::get_if<typename instr_regs::ADD_regs>(&this->v());
+        return f5(_m.d_a0);
+      }
     }
   };
 
@@ -858,15 +911,14 @@ struct InstructionClassifiers {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) bool is_jump() const {
-      return std::visit(
-          Overloaded{[](const typename instr_jump::ADD_jump &) -> bool {
-                       return false;
-                     },
-                     [](const typename instr_jump::NOP_jump &) -> bool {
-                       return false;
-                     },
-                     [](const auto &) -> bool { return true; }},
-          this->v());
+      if (std::holds_alternative<typename instr_jump::ADD_jump>(this->v())) {
+        return false;
+      } else if (std::holds_alternative<typename instr_jump::NOP_jump>(
+                     this->v())) {
+        return false;
+      } else {
+        return true;
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
@@ -876,31 +928,36 @@ struct InstructionClassifiers {
               MapsTo<T1, unsigned int> F6>
     T1 instr_jump_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                       F6 &&f5, const T1 f6) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instr_jump::JCN &_args) -> T1 {
-                return f(_args.d_a0, _args.d_a1);
-              },
-              [&](const typename instr_jump::JUN &_args) -> T1 {
-                return f0(_args.d_a0);
-              },
-              [&](const typename instr_jump::JMS &_args) -> T1 {
-                return f1(_args.d_a0);
-              },
-              [&](const typename instr_jump::JIN &_args) -> T1 {
-                return f2(_args.d_a0);
-              },
-              [&](const typename instr_jump::BBL_jump &_args) -> T1 {
-                return f3(_args.d_a0);
-              },
-              [&](const typename instr_jump::ISZ_jump &_args) -> T1 {
-                return f4(_args.d_a0, _args.d_a1);
-              },
-              [&](const typename instr_jump::ADD_jump &_args) -> T1 {
-                return f5(_args.d_a0);
-              },
-              [&](const typename instr_jump::NOP_jump &) -> T1 { return f6; }},
-          this->v());
+      if (std::holds_alternative<typename instr_jump::JCN>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_jump::JCN>(&this->v());
+        return f(_m.d_a0, _m.d_a1);
+      } else if (std::holds_alternative<typename instr_jump::JUN>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_jump::JUN>(&this->v());
+        return f0(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_jump::JMS>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_jump::JMS>(&this->v());
+        return f1(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_jump::JIN>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_jump::JIN>(&this->v());
+        return f2(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_jump::BBL_jump>(
+                     this->v())) {
+        const auto &_m =
+            *std::get_if<typename instr_jump::BBL_jump>(&this->v());
+        return f3(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_jump::ISZ_jump>(
+                     this->v())) {
+        const auto &_m =
+            *std::get_if<typename instr_jump::ISZ_jump>(&this->v());
+        return f4(_m.d_a0, _m.d_a1);
+      } else if (std::holds_alternative<typename instr_jump::ADD_jump>(
+                     this->v())) {
+        const auto &_m =
+            *std::get_if<typename instr_jump::ADD_jump>(&this->v());
+        return f5(_m.d_a0);
+      } else {
+        return f6;
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
@@ -910,31 +967,36 @@ struct InstructionClassifiers {
               MapsTo<T1, unsigned int> F6>
     T1 instr_jump_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                        F6 &&f5, const T1 f6) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instr_jump::JCN &_args) -> T1 {
-                return f(_args.d_a0, _args.d_a1);
-              },
-              [&](const typename instr_jump::JUN &_args) -> T1 {
-                return f0(_args.d_a0);
-              },
-              [&](const typename instr_jump::JMS &_args) -> T1 {
-                return f1(_args.d_a0);
-              },
-              [&](const typename instr_jump::JIN &_args) -> T1 {
-                return f2(_args.d_a0);
-              },
-              [&](const typename instr_jump::BBL_jump &_args) -> T1 {
-                return f3(_args.d_a0);
-              },
-              [&](const typename instr_jump::ISZ_jump &_args) -> T1 {
-                return f4(_args.d_a0, _args.d_a1);
-              },
-              [&](const typename instr_jump::ADD_jump &_args) -> T1 {
-                return f5(_args.d_a0);
-              },
-              [&](const typename instr_jump::NOP_jump &) -> T1 { return f6; }},
-          this->v());
+      if (std::holds_alternative<typename instr_jump::JCN>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_jump::JCN>(&this->v());
+        return f(_m.d_a0, _m.d_a1);
+      } else if (std::holds_alternative<typename instr_jump::JUN>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_jump::JUN>(&this->v());
+        return f0(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_jump::JMS>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_jump::JMS>(&this->v());
+        return f1(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_jump::JIN>(this->v())) {
+        const auto &_m = *std::get_if<typename instr_jump::JIN>(&this->v());
+        return f2(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_jump::BBL_jump>(
+                     this->v())) {
+        const auto &_m =
+            *std::get_if<typename instr_jump::BBL_jump>(&this->v());
+        return f3(_m.d_a0);
+      } else if (std::holds_alternative<typename instr_jump::ISZ_jump>(
+                     this->v())) {
+        const auto &_m =
+            *std::get_if<typename instr_jump::ISZ_jump>(&this->v());
+        return f4(_m.d_a0, _m.d_a1);
+      } else if (std::holds_alternative<typename instr_jump::ADD_jump>(
+                     this->v())) {
+        const auto &_m =
+            *std::get_if<typename instr_jump::ADD_jump>(&this->v());
+        return f5(_m.d_a0);
+      } else {
+        return f6;
+      }
     }
   };
 

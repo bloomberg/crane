@@ -46,44 +46,39 @@ std::string EffectOptionMatch::show_or_ask(const std::string name) {
 /// 3. Multiple option matches in sequence
 std::string EffectOptionMatch::get_first_set(
     const std::shared_ptr<List<std::string>> &names) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<std::string>::Nil &) -> std::string {
-            return "none";
-          },
-          [](const typename List<std::string>::Cons &_args) -> std::string {
-            std::optional<std::string> mv =
-                [&]() -> std::optional<std::string> {
-              auto *v = std::getenv(_args.d_a0.c_str());
-              return v ? std::optional<std::string>(v)
-                       : std::optional<std::string>();
-            }();
-            if (mv.has_value()) {
-              const std::string &v = *mv;
-              return v;
-            } else {
-              return std::visit(
-                  Overloaded{[](const typename List<std::string>::Nil &)
-                                 -> std::string { return "none"; },
-                             [](const typename List<std::string>::Cons &_args0)
-                                 -> std::string {
-                               std::optional<std::string> mv2 =
-                                   [&]() -> std::optional<std::string> {
-                                 auto *v = std::getenv(_args0.d_a0.c_str());
-                                 return v ? std::optional<std::string>(v)
-                                          : std::optional<std::string>();
-                               }();
-                               if (mv2.has_value()) {
-                                 const std::string &v2 = *mv2;
-                                 return v2;
-                               } else {
-                                 return "none";
-                               }
-                             }},
-                  _args.d_a1->v());
-            }
-          }},
-      names->v());
+  if (std::holds_alternative<typename List<std::string>::Nil>(names->v())) {
+    return "none";
+  } else {
+    const auto &_m =
+        *std::get_if<typename List<std::string>::Cons>(&names->v());
+    std::optional<std::string> mv = [&]() -> std::optional<std::string> {
+      auto *v = std::getenv(_m.d_a0.c_str());
+      return v ? std::optional<std::string>(v) : std::optional<std::string>();
+    }();
+    if (mv.has_value()) {
+      const std::string &v = *mv;
+      return v;
+    } else {
+      auto &&_sv0 = _m.d_a1;
+      if (std::holds_alternative<typename List<std::string>::Nil>(_sv0->v())) {
+        return "none";
+      } else {
+        const auto &_m0 =
+            *std::get_if<typename List<std::string>::Cons>(&_sv0->v());
+        std::optional<std::string> mv2 = [&]() -> std::optional<std::string> {
+          auto *v = std::getenv(_m0.d_a0.c_str());
+          return v ? std::optional<std::string>(v)
+                   : std::optional<std::string>();
+        }();
+        if (mv2.has_value()) {
+          const std::string &v2 = *mv2;
+          return v2;
+        } else {
+          return "none";
+        }
+      }
+    }
+  }
 }
 
 /// 4. set then get, match on result
@@ -105,24 +100,20 @@ bool EffectOptionMatch::set_and_verify(const std::string name,
 /// 5. Recursive function with option matching
 std::optional<std::string> EffectOptionMatch::find_env_value(
     const std::shared_ptr<List<std::string>> &names) {
-  return std::visit(Overloaded{[](const typename List<std::string>::Nil &)
-                                   -> std::optional<std::string> {
-                                 return std::optional<std::string>();
-                               },
-                               [](const typename List<std::string>::Cons &_args)
-                                   -> std::optional<std::string> {
-                                 std::optional<std::string> mv =
-                                     [&]() -> std::optional<std::string> {
-                                   auto *v = std::getenv(_args.d_a0.c_str());
-                                   return v ? std::optional<std::string>(v)
-                                            : std::optional<std::string>();
-                                 }();
-                                 if (mv.has_value()) {
-                                   const std::string &v = *mv;
-                                   return std::make_optional<std::string>(v);
-                                 } else {
-                                   return find_env_value(_args.d_a1);
-                                 }
-                               }},
-                    names->v());
+  if (std::holds_alternative<typename List<std::string>::Nil>(names->v())) {
+    return std::optional<std::string>();
+  } else {
+    const auto &_m =
+        *std::get_if<typename List<std::string>::Cons>(&names->v());
+    std::optional<std::string> mv = [&]() -> std::optional<std::string> {
+      auto *v = std::getenv(_m.d_a0.c_str());
+      return v ? std::optional<std::string>(v) : std::optional<std::string>();
+    }();
+    if (mv.has_value()) {
+      const std::string &v = *mv;
+      return std::make_optional<std::string>(v);
+    } else {
+      return find_env_value(_m.d_a1);
+    }
+  }
 }

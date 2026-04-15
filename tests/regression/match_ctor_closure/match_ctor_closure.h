@@ -62,33 +62,24 @@ struct MatchCtorClosure {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int sum_values(const unsigned int x) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename tree::Leaf &) -> unsigned int { return x; },
-              [&](const typename tree::Node &_args) -> unsigned int {
-                return std::visit(
-                    Overloaded{
-                        [&](const typename tree::Leaf &) -> unsigned int {
-                          return (_args.d_a1 + x);
-                        },
-                        [&](const typename tree::Node &_args0) -> unsigned int {
-                          return std::visit(
-                              Overloaded{[&](const typename tree::Leaf &)
-                                             -> unsigned int {
-                                           return (_args0.d_a1 + x);
-                                         },
-                                         [&](const typename tree::Node &_args1)
-                                             -> unsigned int {
-                                           return (
-                                               ((_args0.d_a1 + _args1.d_a1) +
-                                                _args.d_a1) +
-                                               x);
-                                         }},
-                              _args.d_a2->v());
-                        }},
-                    _args.d_a0->v());
-              }},
-          this->v());
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        return x;
+      } else {
+        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
+        auto &&_sv0 = _m.d_a0;
+        if (std::holds_alternative<typename tree::Leaf>(_sv0->v())) {
+          return (_m.d_a1 + x);
+        } else {
+          const auto &_m0 = *std::get_if<typename tree::Node>(&_sv0->v());
+          auto &&_sv1 = _m.d_a2;
+          if (std::holds_alternative<typename tree::Leaf>(_sv1->v())) {
+            return (_m0.d_a1 + x);
+          } else {
+            const auto &_m1 = *std::get_if<typename tree::Node>(&_sv1->v());
+            return (((_m0.d_a1 + _m1.d_a1) + _m.d_a1) + x);
+          }
+        }
+      }
     }
   };
 
@@ -96,28 +87,26 @@ struct MatchCtorClosure {
                                 std::shared_ptr<tree>, T1>
                              F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, _args.d_a2,
-                               tree_rect<T1>(f, f0, _args.d_a2));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+      return f0(_m.d_a0, tree_rect<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
+                tree_rect<T1>(f, f0, _m.d_a2));
+    }
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
                                 std::shared_ptr<tree>, T1>
                              F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, _args.d_a2,
-                               tree_rec<T1>(f, f0, _args.d_a2));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+      return f0(_m.d_a0, tree_rec<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
+                tree_rec<T1>(f, f0, _m.d_a2));
+    }
   }
 
   struct fn_box {
@@ -148,31 +137,22 @@ struct MatchCtorClosure {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int apply_box(const unsigned int x) const {
-      return std::visit(
-          Overloaded{[&](const typename fn_box::Box &_args) -> unsigned int {
-            return _args.d_a0(x);
-          }},
-          this->v());
+      const auto &_m = *std::get_if<typename fn_box::Box>(&this->v());
+      return _m.d_a0(x);
     }
 
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 fn_box_rec(F0 &&f) const {
-      return std::visit(
-          Overloaded{[&](const typename fn_box::Box &_args) -> T1 {
-            return f(_args.d_a0);
-          }},
-          this->v());
+      const auto &_m = *std::get_if<typename fn_box::Box>(&this->v());
+      return f(_m.d_a0);
     }
 
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 fn_box_rect(F0 &&f) const {
-      return std::visit(
-          Overloaded{[&](const typename fn_box::Box &_args) -> T1 {
-            return f(_args.d_a0);
-          }},
-          this->v());
+      const auto &_m = *std::get_if<typename fn_box::Box>(&this->v());
+      return f(_m.d_a0);
     }
   };
 

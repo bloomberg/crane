@@ -113,11 +113,8 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A projT1() const {
-    return std::visit(
-        Overloaded{[](const typename SigT<t_A, t_P>::ExistT &_args) -> t_A {
-          return _args.d_x;
-        }},
-        this->v());
+    const auto &_m = *std::get_if<typename SigT<t_A, t_P>::ExistT>(&this->v());
+    return _m.d_x;
   }
 };
 
@@ -134,11 +131,12 @@ struct SigmaTypes {
   positives_up_to(const unsigned int k);
   static inline const unsigned int test_double_5 = use_nat_double(5u);
   static inline const unsigned int test_positive_3 = get_positive(3u);
-  static inline const unsigned int test_double_pos = std::visit(
-      Overloaded{[](const typename Sig<unsigned int>::Exist &_args0) -> auto {
-        return _args0.d_x;
-      }},
-      double_positive(3u)->v());
+  static inline const unsigned int test_double_pos = []() {
+    auto &&_sv0 = double_positive(3u);
+    const auto &_m0 =
+        *std::get_if<typename Sig<unsigned int>::Exist>(&_sv0->v());
+    return _m0.d_x;
+  }();
   static inline const std::shared_ptr<List<unsigned int>> test_positives =
       positives_up_to(5u);
 };

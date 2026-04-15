@@ -72,16 +72,14 @@ struct HigherKinded {
       MapsTo<T2, std::shared_ptr<Tree<T1>>, T2, std::shared_ptr<Tree<T1>>, T2>
           F1>
   static T2 Tree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<Tree<T1>> &t) {
-    return std::visit(
-        Overloaded{[&](const typename Tree<T1>::Leaf &_args) -> T2 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename Tree<T1>::Branch &_args) -> T2 {
-                     return f0(_args.d_a0, Tree_rect<T1, T2>(f, f0, _args.d_a0),
-                               _args.d_a1,
-                               Tree_rect<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename Tree<T1>::Leaf>(t->v())) {
+      const auto &_m = *std::get_if<typename Tree<T1>::Leaf>(&t->v());
+      return f(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename Tree<T1>::Branch>(&t->v());
+      return f0(_m.d_a0, Tree_rect<T1, T2>(f, f0, _m.d_a0), _m.d_a1,
+                Tree_rect<T1, T2>(f, f0, _m.d_a1));
+    }
   }
 
   template <
@@ -89,46 +87,40 @@ struct HigherKinded {
       MapsTo<T2, std::shared_ptr<Tree<T1>>, T2, std::shared_ptr<Tree<T1>>, T2>
           F1>
   static T2 Tree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<Tree<T1>> &t) {
-    return std::visit(
-        Overloaded{[&](const typename Tree<T1>::Leaf &_args) -> T2 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename Tree<T1>::Branch &_args) -> T2 {
-                     return f0(_args.d_a0, Tree_rec<T1, T2>(f, f0, _args.d_a0),
-                               _args.d_a1, Tree_rec<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename Tree<T1>::Leaf>(t->v())) {
+      const auto &_m = *std::get_if<typename Tree<T1>::Leaf>(&t->v());
+      return f(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename Tree<T1>::Branch>(&t->v());
+      return f0(_m.d_a0, Tree_rec<T1, T2>(f, f0, _m.d_a0), _m.d_a1,
+                Tree_rec<T1, T2>(f, f0, _m.d_a1));
+    }
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
   static std::shared_ptr<Tree<T2>>
   tree_map(F0 &&f, const std::shared_ptr<Tree<T1>> &t) {
-    return std::visit(Overloaded{[&](const typename Tree<T1>::Leaf &_args)
-                                     -> std::shared_ptr<Tree<T2>> {
-                                   return Tree<T2>::leaf(f(_args.d_a0));
-                                 },
-                                 [&](const typename Tree<T1>::Branch &_args)
-                                     -> std::shared_ptr<Tree<T2>> {
-                                   return Tree<T2>::branch(
-                                       tree_map<T1, T2>(f, _args.d_a0),
-                                       tree_map<T1, T2>(f, _args.d_a1));
-                                 }},
-                      t->v());
+    if (std::holds_alternative<typename Tree<T1>::Leaf>(t->v())) {
+      const auto &_m = *std::get_if<typename Tree<T1>::Leaf>(&t->v());
+      return Tree<T2>::leaf(f(_m.d_a0));
+    } else {
+      const auto &_m = *std::get_if<typename Tree<T1>::Branch>(&t->v());
+      return Tree<T2>::branch(tree_map<T1, T2>(f, _m.d_a0),
+                              tree_map<T1, T2>(f, _m.d_a1));
+    }
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0, MapsTo<T2, T2, T2> F1>
   static T2 tree_fold(F0 &&leaf_f, F1 &&branch_f,
                       const std::shared_ptr<Tree<T1>> &t) {
-    return std::visit(
-        Overloaded{[&](const typename Tree<T1>::Leaf &_args) -> T2 {
-                     return leaf_f(_args.d_a0);
-                   },
-                   [&](const typename Tree<T1>::Branch &_args) -> T2 {
-                     return branch_f(
-                         tree_fold<T1, T2>(leaf_f, branch_f, _args.d_a0),
-                         tree_fold<T1, T2>(leaf_f, branch_f, _args.d_a1));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename Tree<T1>::Leaf>(t->v())) {
+      const auto &_m = *std::get_if<typename Tree<T1>::Leaf>(&t->v());
+      return leaf_f(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename Tree<T1>::Branch>(&t->v());
+      return branch_f(tree_fold<T1, T2>(leaf_f, branch_f, _m.d_a0),
+                      tree_fold<T1, T2>(leaf_f, branch_f, _m.d_a1));
+    }
   }
 
   __attribute__((pure)) static unsigned int

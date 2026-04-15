@@ -77,26 +77,24 @@ struct DocComments {
             MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
   static T2 mylist_rect(const T2 f, F1 &&f0,
                         const std::shared_ptr<mylist<T1>> &m) {
-    return std::visit(
-        Overloaded{[&](const typename mylist<T1>::Mynil &) -> T2 { return f; },
-                   [&](const typename mylist<T1>::Mycons &_args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               mylist_rect<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        m->v());
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename mylist<T1>::Mycons>(&m->v());
+      return f0(_m.d_a0, _m.d_a1, mylist_rect<T1, T2>(f, f0, _m.d_a1));
+    }
   }
 
   template <typename T1, typename T2,
             MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
   static T2 mylist_rec(const T2 f, F1 &&f0,
                        const std::shared_ptr<mylist<T1>> &m) {
-    return std::visit(
-        Overloaded{[&](const typename mylist<T1>::Mynil &) -> T2 { return f; },
-                   [&](const typename mylist<T1>::Mycons &_args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               mylist_rec<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        m->v());
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename mylist<T1>::Mycons>(&m->v());
+      return f0(_m.d_a0, _m.d_a1, mylist_rec<T1, T2>(f, f0, _m.d_a1));
+    }
   }
 
   __attribute__((pure)) static unsigned int

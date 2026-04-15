@@ -99,30 +99,28 @@ struct PatternImpossible {
       typename T1, MapsTo<T1, unsigned int> F0,
       MapsTo<T1, std::shared_ptr<nested>, T1, std::shared_ptr<nested>, T1> F1>
   static T1 nested_rect(F0 &&f, F1 &&f0, const std::shared_ptr<nested> &n) {
-    return std::visit(
-        Overloaded{[&](const typename nested::Leaf &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename nested::Node &_args) -> T1 {
-                     return f0(_args.d_a0, nested_rect<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, nested_rect<T1>(f, f0, _args.d_a1));
-                   }},
-        n->v());
+    if (std::holds_alternative<typename nested::Leaf>(n->v())) {
+      const auto &_m = *std::get_if<typename nested::Leaf>(&n->v());
+      return f(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename nested::Node>(&n->v());
+      return f0(_m.d_a0, nested_rect<T1>(f, f0, _m.d_a0), _m.d_a1,
+                nested_rect<T1>(f, f0, _m.d_a1));
+    }
   }
 
   template <
       typename T1, MapsTo<T1, unsigned int> F0,
       MapsTo<T1, std::shared_ptr<nested>, T1, std::shared_ptr<nested>, T1> F1>
   static T1 nested_rec(F0 &&f, F1 &&f0, const std::shared_ptr<nested> &n) {
-    return std::visit(
-        Overloaded{[&](const typename nested::Leaf &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename nested::Node &_args) -> T1 {
-                     return f0(_args.d_a0, nested_rec<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, nested_rec<T1>(f, f0, _args.d_a1));
-                   }},
-        n->v());
+    if (std::holds_alternative<typename nested::Leaf>(n->v())) {
+      const auto &_m = *std::get_if<typename nested::Leaf>(&n->v());
+      return f(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename nested::Node>(&n->v());
+      return f0(_m.d_a0, nested_rec<T1>(f, f0, _m.d_a0), _m.d_a1,
+                nested_rec<T1>(f, f0, _m.d_a1));
+    }
   }
 
   __attribute__((pure)) static unsigned int complex_match(const Three x);

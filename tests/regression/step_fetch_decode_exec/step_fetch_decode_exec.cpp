@@ -23,20 +23,18 @@ StepFetchDecodeExec::decode(const unsigned int b1, const unsigned int b2) {
 std::shared_ptr<StepFetchDecodeExec::state> StepFetchDecodeExec::execute(
     const std::shared_ptr<StepFetchDecodeExec::state> &s,
     const std::shared_ptr<StepFetchDecodeExec::instruction> &i) {
-  return std::visit(
-      Overloaded{
-          [&](const typename StepFetchDecodeExec::instruction::NOP &)
-              -> std::shared_ptr<StepFetchDecodeExec::state> {
-            return std::make_shared<StepFetchDecodeExec::state>(
-                state{s->acc, (s->pc + 1u), s->rom});
-          },
-          [&](const typename StepFetchDecodeExec::instruction::ADD_ACC &_args)
-              -> std::shared_ptr<StepFetchDecodeExec::state> {
-            return std::make_shared<StepFetchDecodeExec::state>(state{
-                (16u ? (s->acc + _args.d_a0) % 16u : (s->acc + _args.d_a0)),
-                (s->pc + 2u), s->rom});
-          }},
-      i->v());
+  if (std::holds_alternative<typename StepFetchDecodeExec::instruction::NOP>(
+          i->v())) {
+    return std::make_shared<StepFetchDecodeExec::state>(
+        state{s->acc, (s->pc + 1u), s->rom});
+  } else {
+    const auto &_m =
+        *std::get_if<typename StepFetchDecodeExec::instruction::ADD_ACC>(
+            &i->v());
+    return std::make_shared<StepFetchDecodeExec::state>(
+        state{(16u ? (s->acc + _m.d_a0) % 16u : (s->acc + _m.d_a0)),
+              (s->pc + 2u), s->rom});
+  }
 }
 
 std::shared_ptr<StepFetchDecodeExec::state> StepFetchDecodeExec::step(

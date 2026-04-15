@@ -68,8 +68,8 @@ struct LoopifyPatterns {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename list<T1>::Cons &>().d_a1) _s0;
-      decltype(std::declval<const typename list<T1>::Cons &>().d_a0) _s1;
+      decltype(std::declval<typename list<T1>::Cons &>().d_a1) _s0;
+      decltype(std::declval<typename list<T1>::Cons &>().d_a0) _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -79,23 +79,20 @@ struct LoopifyPatterns {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<list<T1>> l = _f.l;
-                std::visit(
-                    Overloaded{
-                        [&](const typename list<T1>::Nil &) -> void {
-                          _result = f;
-                        },
-                        [&](const typename list<T1>::Cons &_args) -> void {
-                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0});
-                          _stack.emplace_back(_Enter{_args.d_a1});
-                        }},
-                    l->v());
-              },
-              [&](_Call1 _f) { _result = f0(_f._s1, _f._s0, _result); }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<list<T1>> l = _f.l;
+        if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+          _result = f;
+        } else {
+          const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
+          _stack.emplace_back(_Call1{_m.d_a1, _m.d_a0});
+          _stack.emplace_back(_Enter{_m.d_a1});
+        }
+      } else {
+        const auto &_f = std::get<_Call1>(_frame);
+        _result = f0(_f._s1, _f._s0, _result);
+      }
     }
     return _result;
   }
@@ -108,8 +105,8 @@ struct LoopifyPatterns {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename list<T1>::Cons &>().d_a1) _s0;
-      decltype(std::declval<const typename list<T1>::Cons &>().d_a0) _s1;
+      decltype(std::declval<typename list<T1>::Cons &>().d_a1) _s0;
+      decltype(std::declval<typename list<T1>::Cons &>().d_a0) _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -119,23 +116,20 @@ struct LoopifyPatterns {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<list<T1>> l = _f.l;
-                std::visit(
-                    Overloaded{
-                        [&](const typename list<T1>::Nil &) -> void {
-                          _result = f;
-                        },
-                        [&](const typename list<T1>::Cons &_args) -> void {
-                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0});
-                          _stack.emplace_back(_Enter{_args.d_a1});
-                        }},
-                    l->v());
-              },
-              [&](_Call1 _f) { _result = f0(_f._s1, _f._s0, _result); }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<list<T1>> l = _f.l;
+        if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+          _result = f;
+        } else {
+          const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
+          _stack.emplace_back(_Call1{_m.d_a1, _m.d_a0});
+          _stack.emplace_back(_Enter{_m.d_a1});
+        }
+      } else {
+        const auto &_f = std::get<_Call1>(_frame);
+        _result = f0(_f._s1, _f._s0, _result);
+      }
     }
     return _result;
   }
@@ -211,42 +205,35 @@ struct LoopifyPatterns {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<list<unsigned int>> l = _f.l;
-                std::visit(
-                    Overloaded{
-                        [&](const typename list<unsigned int>::Nil &) -> void {
-                          _result = 0u;
-                        },
-                        [&](const typename list<unsigned int>::Cons &_args)
-                            -> void {
-                          std::visit(
-                              Overloaded{
-                                  [&](const typename list<unsigned int>::Nil &)
-                                      -> void { _result = f(_args.d_a0); },
-                                  [&](const typename list<unsigned int>::Cons &)
-                                      -> void {
-                                    _stack.emplace_back(_Call1{_args, f});
-                                    _stack.emplace_back(_Enter{_args.d_a1});
-                                  }},
-                              _args.d_a1->v());
-                        }},
-                    l->v());
-              },
-              [&](_Call1 _f) {
-                const typename list<unsigned int>::Cons _args = _f._s0;
-                F0 f = _f._s1;
-                unsigned int rest_max = _result;
-                unsigned int fx = f(_args.d_a0);
-                if (fx < rest_max) {
-                  _result = rest_max;
-                } else {
-                  _result = fx;
-                }
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<list<unsigned int>> l = _f.l;
+        if (std::holds_alternative<typename list<unsigned int>::Nil>(l->v())) {
+          _result = 0u;
+        } else {
+          const auto &_m =
+              *std::get_if<typename list<unsigned int>::Cons>(&l->v());
+          auto &&_sv = _m.d_a1;
+          if (std::holds_alternative<typename list<unsigned int>::Nil>(
+                  _sv->v())) {
+            _result = f(_m.d_a0);
+          } else {
+            _stack.emplace_back(_Call1{_m, f});
+            _stack.emplace_back(_Enter{_m.d_a1});
+          }
+        }
+      } else {
+        const auto &_f = std::get<_Call1>(_frame);
+        const typename list<unsigned int>::Cons _m = _f._s0;
+        F0 f = _f._s1;
+        unsigned int rest_max = _result;
+        unsigned int fx = f(_m.d_a0);
+        if (fx < rest_max) {
+          _result = rest_max;
+        } else {
+          _result = fx;
+        }
+      }
     }
     return _result;
   }
@@ -274,9 +261,8 @@ struct LoopifyPatterns {
     struct _Call1 {
       decltype(list<T1>::cons(
           std::declval<const T1 &>(),
-          list<T1>::cons(
-              std::declval<const typename list<T1>::Cons &>().d_a0,
-              std::declval<const typename list<T1>::Cons &>().d_a1))) _s0;
+          list<T1>::cons(std::declval<typename list<T1>::Cons &>().d_a0,
+                         std::declval<typename list<T1>::Cons &>().d_a1))) _s0;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -286,93 +272,70 @@ struct LoopifyPatterns {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<list<T1>> l = _f.l;
-                std::visit(
-                    Overloaded{
-                        [&](const typename list<T1>::Nil &) -> void {
-                          _result = list<std::shared_ptr<list<T1>>>::cons(
-                              list<T1>::cons(x, list<T1>::nil()),
-                              list<std::shared_ptr<list<T1>>>::nil());
-                        },
-                        [&](const typename list<T1>::Cons &_args) -> void {
-                          std::function<std::shared_ptr<
-                              list<std::shared_ptr<list<T1>>>>(
-                              std::shared_ptr<list<std::shared_ptr<list<T1>>>>)>
-                              map_cons_h;
-                          map_cons_h = [&](std::shared_ptr<
-                                           list<std::shared_ptr<list<T1>>>>
-                                               lsts)
-                              -> std::shared_ptr<
-                                  list<std::shared_ptr<list<T1>>>> {
-                            struct _Enter {
-                              std::shared_ptr<list<std::shared_ptr<list<T1>>>>
-                                  lsts;
-                            };
-                            struct _Call1 {
-                              decltype(list<T1>::cons(
-                                  _args.d_a0,
-                                  std::declval<const typename list<
-                                      std::shared_ptr<list<T1>>>::Cons &>()
-                                      .d_a0)) _s0;
-                            };
-                            using _Frame = std::variant<_Enter, _Call1>;
-                            std::shared_ptr<list<std::shared_ptr<list<T1>>>>
-                                _result{};
-                            std::vector<_Frame> _stack;
-                            _stack.emplace_back(_Enter{lsts});
-                            while (!_stack.empty()) {
-                              _Frame _frame = std::move(_stack.back());
-                              _stack.pop_back();
-                              std::visit(
-                                  Overloaded{
-                                      [&](_Enter _f) {
-                                        std::shared_ptr<
-                                            list<std::shared_ptr<list<T1>>>>
-                                            lsts = _f.lsts;
-                                        std::visit(
-                                            Overloaded{
-                                                [&](const typename list<
-                                                    std::shared_ptr<list<T1>>>::
-                                                        Nil &) -> void {
-                                                  _result =
-                                                      list<std::shared_ptr<
-                                                          list<T1>>>::nil();
-                                                },
-                                                [&](const typename list<
-                                                    std::shared_ptr<list<T1>>>::
-                                                        Cons &_args0) -> void {
-                                                  _stack.emplace_back(
-                                                      _Call1{list<T1>::cons(
-                                                          _args.d_a0,
-                                                          _args0.d_a0)});
-                                                  _stack.emplace_back(
-                                                      _Enter{_args0.d_a1});
-                                                }},
-                                            lsts->v());
-                                      },
-                                      [&](_Call1 _f) {
-                                        _result =
-                                            list<std::shared_ptr<list<T1>>>::
-                                                cons(_f._s0, _result);
-                                      }},
-                                  _frame);
-                            }
-                            return _result;
-                          };
-                          _stack.emplace_back(_Call1{list<T1>::cons(
-                              x, list<T1>::cons(_args.d_a0, _args.d_a1))});
-                          _stack.emplace_back(_Enter{_args.d_a1});
-                        }},
-                    l->v());
-              },
-              [&](_Call1 _f) {
-                _result = list<std::shared_ptr<list<T1>>>::cons(
-                    _f._s0, map_cons_h(_result));
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<list<T1>> l = _f.l;
+        if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+          _result = list<std::shared_ptr<list<T1>>>::cons(
+              list<T1>::cons(x, list<T1>::nil()),
+              list<std::shared_ptr<list<T1>>>::nil());
+        } else {
+          const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
+          std::function<std::shared_ptr<list<std::shared_ptr<list<T1>>>>(
+              std::shared_ptr<list<std::shared_ptr<list<T1>>>>)>
+              map_cons_h;
+          map_cons_h =
+              [&](std::shared_ptr<list<std::shared_ptr<list<T1>>>> lsts)
+              -> std::shared_ptr<list<std::shared_ptr<list<T1>>>> {
+            struct _Enter {
+              std::shared_ptr<list<std::shared_ptr<list<T1>>>> lsts;
+            };
+            struct _Call1 {
+              decltype(list<T1>::cons(
+                  _m.d_a0,
+                  std::declval<
+                      typename list<std::shared_ptr<list<T1>>>::Cons &>()
+                      .d_a0)) _s0;
+            };
+            using _Frame = std::variant<_Enter, _Call1>;
+            std::shared_ptr<list<std::shared_ptr<list<T1>>>> _result{};
+            std::vector<_Frame> _stack;
+            _stack.emplace_back(_Enter{lsts});
+            while (!_stack.empty()) {
+              _Frame _frame = std::move(_stack.back());
+              _stack.pop_back();
+              if (std::holds_alternative<_Enter>(_frame)) {
+                const auto &_f = std::get<_Enter>(_frame);
+                std::shared_ptr<list<std::shared_ptr<list<T1>>>> lsts = _f.lsts;
+                if (std::holds_alternative<
+                        typename list<std::shared_ptr<list<T1>>>::Nil>(
+                        lsts->v())) {
+                  _result = list<std::shared_ptr<list<T1>>>::nil();
+                } else {
+                  const auto &_m0 = *std::get_if<
+                      typename list<std::shared_ptr<list<T1>>>::Cons>(
+                      &lsts->v());
+                  _stack.emplace_back(
+                      _Call1{list<T1>::cons(_m.d_a0, _m0.d_a0)});
+                  _stack.emplace_back(_Enter{_m0.d_a1});
+                }
+              } else {
+                const auto &_f = std::get<_Call1>(_frame);
+                _result =
+                    list<std::shared_ptr<list<T1>>>::cons(_f._s0, _result);
+              }
+            }
+            return _result;
+          };
+          _stack.emplace_back(
+              _Call1{list<T1>::cons(x, list<T1>::cons(_m.d_a0, _m.d_a1))});
+          _stack.emplace_back(_Enter{_m.d_a1});
+        }
+      } else {
+        const auto &_f = std::get<_Call1>(_frame);
+        _result =
+            list<std::shared_ptr<list<T1>>>::cons(_f._s0, map_cons_h(_result));
+      }
     }
     return _result;
   }
@@ -395,79 +358,70 @@ struct LoopifyPatterns {
     bool _continue = true;
     while (_continue) {
       if (_loop_fuel <= 0) {
-        {
-          if (_last) {
-            std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                std::move(_loop_l1);
-          } else {
-            _head = std::move(_loop_l1);
-          }
-          _continue = false;
+        if (_last) {
+          std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+              std::move(_loop_l1);
+        } else {
+          _head = std::move(_loop_l1);
         }
+        _continue = false;
       } else {
         unsigned int f = _loop_fuel - 1;
-        std::visit(
-            Overloaded{
-                [&](const typename list<unsigned int>::Nil &) {
-                  if (_last) {
-                    std::get<typename list<unsigned int>::Cons>(_last->v_mut())
-                        .d_a1 = std::move(_loop_l2);
-                  } else {
-                    _head = std::move(_loop_l2);
-                  }
-                  _continue = false;
-                },
-                [&](const typename list<unsigned int>::Cons &_args) {
-                  std::visit(
-                      Overloaded{
-                          [&](const typename list<unsigned int>::Nil &) {
-                            if (_last) {
-                              std::get<typename list<unsigned int>::Cons>(
-                                  _last->v_mut())
-                                  .d_a1 = std::move(_loop_l1);
-                            } else {
-                              _head = std::move(_loop_l1);
-                            }
-                            _continue = false;
-                          },
-                          [&](const typename list<unsigned int>::Cons &_args0) {
-                            if (cmp(_args.d_a0, _args0.d_a0) <= 0u) {
-                              auto _cell =
-                                  list<unsigned int>::cons(_args.d_a0, nullptr);
-                              if (_last) {
-                                std::get<typename list<unsigned int>::Cons>(
-                                    _last->v_mut())
-                                    .d_a1 = _cell;
-                              } else {
-                                _head = _cell;
-                              }
-                              _last = _cell;
-                              std::shared_ptr<list<unsigned int>> _next_l1 =
-                                  _args.d_a1;
-                              unsigned int _next_fuel = f;
-                              _loop_l1 = std::move(_next_l1);
-                              _loop_fuel = std::move(_next_fuel);
-                            } else {
-                              auto _cell = list<unsigned int>::cons(_args0.d_a0,
-                                                                    nullptr);
-                              if (_last) {
-                                std::get<typename list<unsigned int>::Cons>(
-                                    _last->v_mut())
-                                    .d_a1 = _cell;
-                              } else {
-                                _head = _cell;
-                              }
-                              _last = _cell;
-                              std::shared_ptr<list<unsigned int>> _next_l2 =
-                                  _args0.d_a1;
-                              unsigned int _next_fuel = f;
-                              _loop_l2 = std::move(_next_l2);
-                              _loop_fuel = std::move(_next_fuel);
-                            }
-                          }},
-                      _loop_l2->v());
-                }},
-            _loop_l1->v());
+        if (std::holds_alternative<typename list<unsigned int>::Nil>(
+                _loop_l1->v())) {
+          if (_last) {
+            std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+                std::move(_loop_l2);
+          } else {
+            _head = std::move(_loop_l2);
+          }
+          _continue = false;
+        } else {
+          const auto &_m =
+              *std::get_if<typename list<unsigned int>::Cons>(&_loop_l1->v());
+          if (std::holds_alternative<typename list<unsigned int>::Nil>(
+                  _loop_l2->v())) {
+            if (_last) {
+              std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+                  std::move(_loop_l1);
+            } else {
+              _head = std::move(_loop_l1);
+            }
+            _continue = false;
+          } else {
+            const auto &_m0 =
+                *std::get_if<typename list<unsigned int>::Cons>(&_loop_l2->v());
+            if (cmp(_m.d_a0, _m0.d_a0) <= 0u) {
+              auto _cell = list<unsigned int>::cons(_m.d_a0, nullptr);
+              if (_last) {
+                std::get<typename list<unsigned int>::Cons>(_last->v_mut())
+                    .d_a1 = _cell;
+              } else {
+                _head = _cell;
+              }
+              _last = _cell;
+              std::shared_ptr<list<unsigned int>> _next_l1 = _m.d_a1;
+              unsigned int _next_fuel = f;
+              _loop_l1 = std::move(_next_l1);
+              _loop_fuel = std::move(_next_fuel);
+              continue;
+            } else {
+              auto _cell = list<unsigned int>::cons(_m0.d_a0, nullptr);
+              if (_last) {
+                std::get<typename list<unsigned int>::Cons>(_last->v_mut())
+                    .d_a1 = _cell;
+              } else {
+                _head = _cell;
+              }
+              _last = _cell;
+              std::shared_ptr<list<unsigned int>> _next_l2 = _m0.d_a1;
+              unsigned int _next_fuel = f;
+              _loop_l2 = std::move(_next_l2);
+              _loop_fuel = std::move(_next_fuel);
+              continue;
+            }
+          }
+        }
       }
     }
     return _head;
@@ -525,39 +479,39 @@ struct LoopifyPatterns {
     std::shared_ptr<list<unsigned int>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(
-          Overloaded{
-              [&](const typename list<unsigned int>::Nil &) {
-                if (_last) {
-                  std::get<typename list<unsigned int>::Cons>(_last->v_mut())
-                      .d_a1 = list<unsigned int>::nil();
-                } else {
-                  _head = list<unsigned int>::nil();
-                }
-                _continue = false;
-              },
-              [&](const typename list<unsigned int>::Cons &_args) {
-                if (p(_args.d_a0)) {
-                  if (_last) {
-                    std::get<typename list<unsigned int>::Cons>(_last->v_mut())
-                        .d_a1 = list<unsigned int>::nil();
-                  } else {
-                    _head = list<unsigned int>::nil();
-                  }
-                  _continue = false;
-                } else {
-                  auto _cell = list<unsigned int>::cons(_args.d_a0, nullptr);
-                  if (_last) {
-                    std::get<typename list<unsigned int>::Cons>(_last->v_mut())
-                        .d_a1 = _cell;
-                  } else {
-                    _head = _cell;
-                  }
-                  _last = _cell;
-                  _loop_l = _args.d_a1;
-                }
-              }},
-          _loop_l->v());
+      if (std::holds_alternative<typename list<unsigned int>::Nil>(
+              _loop_l->v())) {
+        if (_last) {
+          std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+              list<unsigned int>::nil();
+        } else {
+          _head = list<unsigned int>::nil();
+        }
+        _continue = false;
+      } else {
+        const auto &_m =
+            *std::get_if<typename list<unsigned int>::Cons>(&_loop_l->v());
+        if (p(_m.d_a0)) {
+          if (_last) {
+            std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+                list<unsigned int>::nil();
+          } else {
+            _head = list<unsigned int>::nil();
+          }
+          _continue = false;
+        } else {
+          auto _cell = list<unsigned int>::cons(_m.d_a0, nullptr);
+          if (_last) {
+            std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+                _cell;
+          } else {
+            _head = _cell;
+          }
+          _last = _cell;
+          _loop_l = _m.d_a1;
+          continue;
+        }
+      }
     }
     return _head;
   }
@@ -589,54 +543,43 @@ struct LoopifyPatterns {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<list<unsigned int>> l = _f.l;
-                std::visit(
-                    Overloaded{
-                        [&](const typename list<unsigned int>::Nil &) -> void {
-                          _result = std::make_pair(
-                              std::make_pair(list<unsigned int>::nil(),
-                                             list<unsigned int>::nil()),
-                              list<unsigned int>::nil());
-                        },
-                        [&](const typename list<unsigned int>::Cons &_args)
-                            -> void {
-                          _stack.emplace_back(_Call1{p, _args, q});
-                          _stack.emplace_back(_Enter{_args.d_a1});
-                        }},
-                    l->v());
-              },
-              [&](_Call1 _f) {
-                F0 p = _f._s0;
-                const typename list<unsigned int>::Cons _args = _f._s1;
-                F1 q = _f._s2;
-                const std::pair<std::shared_ptr<list<unsigned int>>,
-                                std::shared_ptr<list<unsigned int>>> &p0 =
-                    _result.first;
-                const std::shared_ptr<list<unsigned int>> &cs = _result.second;
-                const std::shared_ptr<list<unsigned int>> &as_ = p0.first;
-                const std::shared_ptr<list<unsigned int>> &bs = p0.second;
-                if (p(_args.d_a0)) {
-                  _result = std::make_pair(
-                      std::make_pair(list<unsigned int>::cons(_args.d_a0, as_),
-                                     bs),
-                      cs);
-                } else {
-                  if (q(_args.d_a0)) {
-                    _result = std::make_pair(
-                        std::make_pair(
-                            as_, list<unsigned int>::cons(_args.d_a0, bs)),
-                        cs);
-                  } else {
-                    _result = std::make_pair(
-                        std::make_pair(as_, bs),
-                        list<unsigned int>::cons(_args.d_a0, cs));
-                  }
-                }
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<list<unsigned int>> l = _f.l;
+        if (std::holds_alternative<typename list<unsigned int>::Nil>(l->v())) {
+          _result = std::make_pair(std::make_pair(list<unsigned int>::nil(),
+                                                  list<unsigned int>::nil()),
+                                   list<unsigned int>::nil());
+        } else {
+          const auto &_m =
+              *std::get_if<typename list<unsigned int>::Cons>(&l->v());
+          _stack.emplace_back(_Call1{p, _m, q});
+          _stack.emplace_back(_Enter{_m.d_a1});
+        }
+      } else {
+        const auto &_f = std::get<_Call1>(_frame);
+        F0 p = _f._s0;
+        const typename list<unsigned int>::Cons _m = _f._s1;
+        F1 q = _f._s2;
+        const std::pair<std::shared_ptr<list<unsigned int>>,
+                        std::shared_ptr<list<unsigned int>>> &p0 =
+            _result.first;
+        const std::shared_ptr<list<unsigned int>> &cs = _result.second;
+        const std::shared_ptr<list<unsigned int>> &as_ = p0.first;
+        const std::shared_ptr<list<unsigned int>> &bs = p0.second;
+        if (p(_m.d_a0)) {
+          _result = std::make_pair(
+              std::make_pair(list<unsigned int>::cons(_m.d_a0, as_), bs), cs);
+        } else {
+          if (q(_m.d_a0)) {
+            _result = std::make_pair(
+                std::make_pair(as_, list<unsigned int>::cons(_m.d_a0, bs)), cs);
+          } else {
+            _result = std::make_pair(std::make_pair(as_, bs),
+                                     list<unsigned int>::cons(_m.d_a0, cs));
+          }
+        }
+      }
     }
     return _result;
   }
@@ -659,39 +602,40 @@ struct LoopifyPatterns {
     std::shared_ptr<list<unsigned int>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(
-          Overloaded{
-              [&](const typename list<unsigned int>::Nil &) {
-                if (_last) {
-                  std::get<typename list<unsigned int>::Cons>(_last->v_mut())
-                      .d_a1 = list<unsigned int>::nil();
-                } else {
-                  _head = list<unsigned int>::nil();
-                }
-                _continue = false;
-              },
-              [&](const typename list<unsigned int>::Cons &_args) {
-                if (p(_loop_idx, _args.d_a0)) {
-                  auto _cell = list<unsigned int>::cons(f(_args.d_a0), nullptr);
-                  if (_last) {
-                    std::get<typename list<unsigned int>::Cons>(_last->v_mut())
-                        .d_a1 = _cell;
-                  } else {
-                    _head = _cell;
-                  }
-                  _last = _cell;
-                  unsigned int _next_idx = (_loop_idx + 1);
-                  std::shared_ptr<list<unsigned int>> _next_l = _args.d_a1;
-                  _loop_idx = std::move(_next_idx);
-                  _loop_l = std::move(_next_l);
-                } else {
-                  unsigned int _next_idx = (_loop_idx + 1);
-                  std::shared_ptr<list<unsigned int>> _next_l = _args.d_a1;
-                  _loop_idx = std::move(_next_idx);
-                  _loop_l = std::move(_next_l);
-                }
-              }},
-          _loop_l->v());
+      if (std::holds_alternative<typename list<unsigned int>::Nil>(
+              _loop_l->v())) {
+        if (_last) {
+          std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+              list<unsigned int>::nil();
+        } else {
+          _head = list<unsigned int>::nil();
+        }
+        _continue = false;
+      } else {
+        const auto &_m =
+            *std::get_if<typename list<unsigned int>::Cons>(&_loop_l->v());
+        if (p(_loop_idx, _m.d_a0)) {
+          auto _cell = list<unsigned int>::cons(f(_m.d_a0), nullptr);
+          if (_last) {
+            std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+                _cell;
+          } else {
+            _head = _cell;
+          }
+          _last = _cell;
+          unsigned int _next_idx = (_loop_idx + 1);
+          std::shared_ptr<list<unsigned int>> _next_l = _m.d_a1;
+          _loop_idx = std::move(_next_idx);
+          _loop_l = std::move(_next_l);
+          continue;
+        } else {
+          unsigned int _next_idx = (_loop_idx + 1);
+          std::shared_ptr<list<unsigned int>> _next_l = _m.d_a1;
+          _loop_idx = std::move(_next_idx);
+          _loop_l = std::move(_next_l);
+          continue;
+        }
+      }
     }
     return _head;
   }

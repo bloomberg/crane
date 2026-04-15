@@ -55,25 +55,25 @@ struct ForwardSpecAscii {
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int> F1>
   static T1 node_rect(F0 &&f, F1 &&f0, const std::shared_ptr<node> &n) {
-    return std::visit(Overloaded{[&](const typename node::ANode &_args) -> T1 {
-                                   return f(_args.d_a0);
-                                 },
-                                 [&](const typename node::BNode &_args) -> T1 {
-                                   return f0(_args.d_a0);
-                                 }},
-                      n->v());
+    if (std::holds_alternative<typename node::ANode>(n->v())) {
+      const auto &_m = *std::get_if<typename node::ANode>(&n->v());
+      return f(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename node::BNode>(&n->v());
+      return f0(_m.d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int> F1>
   static T1 node_rec(F0 &&f, F1 &&f0, const std::shared_ptr<node> &n) {
-    return std::visit(Overloaded{[&](const typename node::ANode &_args) -> T1 {
-                                   return f(_args.d_a0);
-                                 },
-                                 [&](const typename node::BNode &_args) -> T1 {
-                                   return f0(_args.d_a0);
-                                 }},
-                      n->v());
+    if (std::holds_alternative<typename node::ANode>(n->v())) {
+      const auto &_m = *std::get_if<typename node::ANode>(&n->v());
+      return f(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename node::BNode>(&n->v());
+      return f0(_m.d_a0);
+    }
   }
 
   __attribute__((pure)) static unsigned int helper_nat(const unsigned int n);

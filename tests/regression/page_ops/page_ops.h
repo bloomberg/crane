@@ -122,23 +122,23 @@ struct PageOps {
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 instruction_rect(const T1 f, F1 &&f0,
                              const std::shared_ptr<instruction> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instruction::NOP &) -> T1 { return f; },
-                   [&](const typename instruction::LDM &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        i->v());
+    if (std::holds_alternative<typename instruction::NOP>(i->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename instruction::LDM>(&i->v());
+      return f0(_m.d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 instruction_rec(const T1 f, F1 &&f0,
                             const std::shared_ptr<instruction> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instruction::NOP &) -> T1 { return f; },
-                   [&](const typename instruction::LDM &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        i->v());
+    if (std::holds_alternative<typename instruction::NOP>(i->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename instruction::LDM>(&i->v());
+      return f0(_m.d_a0);
+    }
   }
 
   static std::shared_ptr<instruction> decode(const unsigned int b1,
@@ -151,18 +151,14 @@ struct PageOps {
       return l;
     } else {
       unsigned int n_ = n - 1;
-      if (l.use_count() == 1 && l->v().index() == 0) {
+      if (std::holds_alternative<typename List<T1>::Nil>(l->v()) &&
+          l.use_count() == 1) {
         return l;
+      } else if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+        return List<T1>::nil();
       } else {
-        return std::visit(Overloaded{[](const typename List<T1>::Nil &)
-                                         -> std::shared_ptr<List<T1>> {
-                                       return List<T1>::nil();
-                                     },
-                                     [&](const typename List<T1>::Cons &_args)
-                                         -> std::shared_ptr<List<T1>> {
-                                       return drop<T1>(n_, _args.d_a1);
-                                     }},
-                          l->v());
+        const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+        return drop<T1>(n_, _m.d_a1);
       }
     }
   }

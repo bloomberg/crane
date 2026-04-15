@@ -74,23 +74,20 @@ public:
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const List *_self = _f._self;
-                std::visit(
-                    Overloaded{
-                        [&](const typename List<t_A>::Nil &) -> void {
-                          _result = 0u;
-                        },
-                        [&](const typename List<t_A>::Cons &_args) -> void {
-                          _stack.emplace_back(_Call1{});
-                          _stack.emplace_back(_Enter{_args.d_a1.get()});
-                        }},
-                    _self->v());
-              },
-              [&](_Call1) { _result = (_result + 1); }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const List *_self = _f._self;
+        if (std::holds_alternative<typename List<t_A>::Nil>(_self->v())) {
+          _result = 0u;
+        } else {
+          const auto &_m = *std::get_if<typename List<t_A>::Cons>(&_self->v());
+          _stack.emplace_back(_Call1{});
+          _stack.emplace_back(_Enter{_m.d_a1.get()});
+        }
+      } else {
+        const auto &_f = std::get<_Call1>(_frame);
+        _result = (_result + 1);
+      }
     }
     return _result;
   }

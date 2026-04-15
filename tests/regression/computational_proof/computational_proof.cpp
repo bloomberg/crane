@@ -88,35 +88,25 @@ ComputationalProof::max_dec(const unsigned int n, const unsigned int m) {
 std::shared_ptr<List<unsigned int>>
 ComputationalProof::insert_dec(const unsigned int x,
                                const std::shared_ptr<List<unsigned int>> &l) {
-  return std::visit(
-      Overloaded{[&](const typename List<unsigned int>::Nil &)
-                     -> std::shared_ptr<List<unsigned int>> {
-                   return List<unsigned int>::cons(x,
-                                                   List<unsigned int>::nil());
-                 },
-                 [&](const typename List<unsigned int>::Cons &_args)
-                     -> std::shared_ptr<List<unsigned int>> {
-                   if (le_dec(x, _args.d_a0)) {
-                     return List<unsigned int>::cons(
-                         x, List<unsigned int>::cons(_args.d_a0, _args.d_a1));
-                   } else {
-                     return List<unsigned int>::cons(_args.d_a0,
-                                                     insert_dec(x, _args.d_a1));
-                   }
-                 }},
-      l->v());
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+    return List<unsigned int>::cons(x, List<unsigned int>::nil());
+  } else {
+    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l->v());
+    if (le_dec(x, _m.d_a0)) {
+      return List<unsigned int>::cons(
+          x, List<unsigned int>::cons(_m.d_a0, _m.d_a1));
+    } else {
+      return List<unsigned int>::cons(_m.d_a0, insert_dec(x, _m.d_a1));
+    }
+  }
 }
 
 std::shared_ptr<List<unsigned int>>
 ComputationalProof::isort_dec(const std::shared_ptr<List<unsigned int>> &l) {
-  return std::visit(
-      Overloaded{[](const typename List<unsigned int>::Nil &)
-                     -> std::shared_ptr<List<unsigned int>> {
-                   return List<unsigned int>::nil();
-                 },
-                 [](const typename List<unsigned int>::Cons &_args)
-                     -> std::shared_ptr<List<unsigned int>> {
-                   return insert_dec(_args.d_a0, isort_dec(_args.d_a1));
-                 }},
-      l->v());
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+    return List<unsigned int>::nil();
+  } else {
+    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l->v());
+    return insert_dec(_m.d_a0, isort_dec(_m.d_a1));
+  }
 }

@@ -85,42 +85,35 @@ struct LoopifyExtrema {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<List<unsigned int>> l = _f.l;
-                std::visit(
-                    Overloaded{
-                        [&](const typename List<unsigned int>::Nil &) -> void {
-                          _result = 0u;
-                        },
-                        [&](const typename List<unsigned int>::Cons &_args)
-                            -> void {
-                          std::visit(
-                              Overloaded{
-                                  [&](const typename List<unsigned int>::Nil &)
-                                      -> void { _result = f(_args.d_a0); },
-                                  [&](const typename List<unsigned int>::Cons &)
-                                      -> void {
-                                    _stack.emplace_back(_Call1{_args, f});
-                                    _stack.emplace_back(_Enter{_args.d_a1});
-                                  }},
-                              _args.d_a1->v());
-                        }},
-                    l->v());
-              },
-              [&](_Call1 _f) {
-                const typename List<unsigned int>::Cons _args = _f._s0;
-                F0 f = _f._s1;
-                unsigned int rest_max = _result;
-                unsigned int fx = f(_args.d_a0);
-                if (rest_max < fx) {
-                  _result = fx;
-                } else {
-                  _result = rest_max;
-                }
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<List<unsigned int>> l = _f.l;
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+          _result = 0u;
+        } else {
+          const auto &_m =
+              *std::get_if<typename List<unsigned int>::Cons>(&l->v());
+          auto &&_sv = _m.d_a1;
+          if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                  _sv->v())) {
+            _result = f(_m.d_a0);
+          } else {
+            _stack.emplace_back(_Call1{_m, f});
+            _stack.emplace_back(_Enter{_m.d_a1});
+          }
+        }
+      } else {
+        const auto &_f = std::get<_Call1>(_frame);
+        const typename List<unsigned int>::Cons _m = _f._s0;
+        F0 f = _f._s1;
+        unsigned int rest_max = _result;
+        unsigned int fx = f(_m.d_a0);
+        if (rest_max < fx) {
+          _result = fx;
+        } else {
+          _result = rest_max;
+        }
+      }
     }
     return _result;
   }
@@ -144,42 +137,35 @@ struct LoopifyExtrema {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<List<unsigned int>> l = _f.l;
-                std::visit(
-                    Overloaded{
-                        [&](const typename List<unsigned int>::Nil &) -> void {
-                          _result = 0u;
-                        },
-                        [&](const typename List<unsigned int>::Cons &_args)
-                            -> void {
-                          std::visit(
-                              Overloaded{
-                                  [&](const typename List<unsigned int>::Nil &)
-                                      -> void { _result = f(_args.d_a0); },
-                                  [&](const typename List<unsigned int>::Cons &)
-                                      -> void {
-                                    _stack.emplace_back(_Call1{_args, f});
-                                    _stack.emplace_back(_Enter{_args.d_a1});
-                                  }},
-                              _args.d_a1->v());
-                        }},
-                    l->v());
-              },
-              [&](_Call1 _f) {
-                const typename List<unsigned int>::Cons _args = _f._s0;
-                F0 f = _f._s1;
-                unsigned int rest_min = _result;
-                unsigned int fx = f(_args.d_a0);
-                if (fx < rest_min) {
-                  _result = fx;
-                } else {
-                  _result = rest_min;
-                }
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<List<unsigned int>> l = _f.l;
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+          _result = 0u;
+        } else {
+          const auto &_m =
+              *std::get_if<typename List<unsigned int>::Cons>(&l->v());
+          auto &&_sv = _m.d_a1;
+          if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                  _sv->v())) {
+            _result = f(_m.d_a0);
+          } else {
+            _stack.emplace_back(_Call1{_m, f});
+            _stack.emplace_back(_Enter{_m.d_a1});
+          }
+        }
+      } else {
+        const auto &_f = std::get<_Call1>(_frame);
+        const typename List<unsigned int>::Cons _m = _f._s0;
+        F0 f = _f._s1;
+        unsigned int rest_min = _result;
+        unsigned int fx = f(_m.d_a0);
+        if (fx < rest_min) {
+          _result = fx;
+        } else {
+          _result = rest_min;
+        }
+      }
     }
     return _result;
   }
@@ -203,43 +189,36 @@ struct LoopifyExtrema {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<List<unsigned int>> l = _f.l;
-                std::visit(
-                    Overloaded{
-                        [&](const typename List<unsigned int>::Nil &) -> void {
-                          _result = 0u;
-                        },
-                        [&](const typename List<unsigned int>::Cons &_args)
-                            -> void {
-                          std::visit(
-                              Overloaded{
-                                  [&](const typename List<unsigned int>::Nil &)
-                                      -> void { _result = _args.d_a0; },
-                                  [&](const typename List<unsigned int>::Cons &)
-                                      -> void {
-                                    _stack.emplace_back(_Call1{_args, f});
-                                    _stack.emplace_back(_Enter{_args.d_a1});
-                                  }},
-                              _args.d_a1->v());
-                        }},
-                    l->v());
-              },
-              [&](_Call1 _f) {
-                const typename List<unsigned int>::Cons _args = _f._s0;
-                F0 f = _f._s1;
-                unsigned int rest_best = _result;
-                unsigned int fx = f(_args.d_a0);
-                unsigned int f_rest = f(rest_best);
-                if (f_rest < fx) {
-                  _result = _args.d_a0;
-                } else {
-                  _result = rest_best;
-                }
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<List<unsigned int>> l = _f.l;
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+          _result = 0u;
+        } else {
+          const auto &_m =
+              *std::get_if<typename List<unsigned int>::Cons>(&l->v());
+          auto &&_sv = _m.d_a1;
+          if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                  _sv->v())) {
+            _result = _m.d_a0;
+          } else {
+            _stack.emplace_back(_Call1{_m, f});
+            _stack.emplace_back(_Enter{_m.d_a1});
+          }
+        }
+      } else {
+        const auto &_f = std::get<_Call1>(_frame);
+        const typename List<unsigned int>::Cons _m = _f._s0;
+        F0 f = _f._s1;
+        unsigned int rest_best = _result;
+        unsigned int fx = f(_m.d_a0);
+        unsigned int f_rest = f(rest_best);
+        if (f_rest < fx) {
+          _result = _m.d_a0;
+        } else {
+          _result = rest_best;
+        }
+      }
     }
     return _result;
   }
@@ -263,43 +242,36 @@ struct LoopifyExtrema {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<List<unsigned int>> l = _f.l;
-                std::visit(
-                    Overloaded{
-                        [&](const typename List<unsigned int>::Nil &) -> void {
-                          _result = 0u;
-                        },
-                        [&](const typename List<unsigned int>::Cons &_args)
-                            -> void {
-                          std::visit(
-                              Overloaded{
-                                  [&](const typename List<unsigned int>::Nil &)
-                                      -> void { _result = _args.d_a0; },
-                                  [&](const typename List<unsigned int>::Cons &)
-                                      -> void {
-                                    _stack.emplace_back(_Call1{_args, f});
-                                    _stack.emplace_back(_Enter{_args.d_a1});
-                                  }},
-                              _args.d_a1->v());
-                        }},
-                    l->v());
-              },
-              [&](_Call1 _f) {
-                const typename List<unsigned int>::Cons _args = _f._s0;
-                F0 f = _f._s1;
-                unsigned int rest_best = _result;
-                unsigned int fx = f(_args.d_a0);
-                unsigned int f_rest = f(rest_best);
-                if (fx < f_rest) {
-                  _result = _args.d_a0;
-                } else {
-                  _result = rest_best;
-                }
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<List<unsigned int>> l = _f.l;
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+          _result = 0u;
+        } else {
+          const auto &_m =
+              *std::get_if<typename List<unsigned int>::Cons>(&l->v());
+          auto &&_sv = _m.d_a1;
+          if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                  _sv->v())) {
+            _result = _m.d_a0;
+          } else {
+            _stack.emplace_back(_Call1{_m, f});
+            _stack.emplace_back(_Enter{_m.d_a1});
+          }
+        }
+      } else {
+        const auto &_f = std::get<_Call1>(_frame);
+        const typename List<unsigned int>::Cons _m = _f._s0;
+        F0 f = _f._s1;
+        unsigned int rest_best = _result;
+        unsigned int fx = f(_m.d_a0);
+        unsigned int f_rest = f(rest_best);
+        if (fx < f_rest) {
+          _result = _m.d_a0;
+        } else {
+          _result = rest_best;
+        }
+      }
     }
     return _result;
   }
@@ -319,30 +291,29 @@ struct LoopifyExtrema {
     std::shared_ptr<List<unsigned int>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(
-          Overloaded{
-              [&](const typename List<unsigned int>::Nil &) {
-                _result = true;
-                _continue = false;
-              },
-              [&](const typename List<unsigned int>::Cons &_args) {
-                std::visit(
-                    Overloaded{
-                        [&](const typename List<unsigned int>::Nil &) {
-                          _result = true;
-                          _continue = false;
-                        },
-                        [&](const typename List<unsigned int>::Cons &_args0) {
-                          if (p(_args.d_a0, _args0.d_a0)) {
-                            _loop_l = _args.d_a1;
-                          } else {
-                            _result = false;
-                            _continue = false;
-                          }
-                        }},
-                    _args.d_a1->v());
-              }},
-          _loop_l->v());
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(
+              _loop_l->v())) {
+        _result = true;
+        _continue = false;
+      } else {
+        const auto &_m =
+            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
+        auto &&_sv0 = _m.d_a1;
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                _sv0->v())) {
+          _result = true;
+          _continue = false;
+        } else {
+          const auto &_m0 =
+              *std::get_if<typename List<unsigned int>::Cons>(&_sv0->v());
+          if (p(_m.d_a0, _m0.d_a0)) {
+            _loop_l = _m.d_a1;
+          } else {
+            _result = false;
+            _continue = false;
+          }
+        }
+      }
     }
     return _result;
   }

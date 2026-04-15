@@ -113,19 +113,13 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A projT1() const {
-    return std::visit(
-        Overloaded{[](const typename SigT<t_A, t_P>::ExistT &_args) -> t_A {
-          return _args.d_x;
-        }},
-        this->v());
+    const auto &_m = *std::get_if<typename SigT<t_A, t_P>::ExistT>(&this->v());
+    return _m.d_x;
   }
 
   t_P projT2() const {
-    return std::visit(
-        Overloaded{[](const typename SigT<t_A, t_P>::ExistT &_args) -> t_P {
-          return _args.d_a1;
-        }},
-        this->v());
+    const auto &_m = *std::get_if<typename SigT<t_A, t_P>::ExistT>(&this->v());
+    return _m.d_a1;
   }
 };
 

@@ -93,14 +93,12 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
-    return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil &)
-                       -> std::shared_ptr<List<t_A>> { return m; },
-                   [&](const typename List<t_A>::Cons &_args)
-                       -> std::shared_ptr<List<t_A>> {
-                     return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return m;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return List<t_A>::cons(_m.d_a0, _m.d_a1->app(m));
+    }
   }
 };
 
@@ -149,24 +147,22 @@ struct NestedTree {
 
   template <typename T1, typename T2, typename F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree<T2>> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree<T2>::Leaf &) -> T1 { return f; },
-                   [&](const typename tree<T2>::Node &_args) -> T1 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               tree_rect<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree<T2>::Leaf>(t->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename tree<T2>::Node>(&t->v());
+      return f0(_m.d_a0, _m.d_a1, tree_rect<T1, T2>(f, f0, _m.d_a1));
+    }
   }
 
   template <typename T1, typename T2, typename F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree<T2>> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree<T2>::Leaf &) -> T1 { return f; },
-                   [&](const typename tree<T2>::Node &_args) -> T1 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               tree_rec<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree<T2>::Leaf>(t->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename tree<T2>::Node>(&t->v());
+      return f0(_m.d_a0, _m.d_a1, tree_rec<T1, T2>(f, f0, _m.d_a1));
+    }
   }
 
   static inline const std::shared_ptr<tree<std::shared_ptr<Nat>>> example1 =
@@ -218,23 +214,20 @@ template <typename T1, typename T2, MapsTo<std::shared_ptr<List<T2>>, T1> F0>
 std::shared_ptr<List<std::shared_ptr<List<T2>>>>
 _flatten_tree_go(F0 &&f,
                  const std::shared_ptr<NestedTree::template tree<T1>> &t0) {
-  return std::visit(
-      Overloaded{[](const typename NestedTree::template tree<T1>::Leaf &)
-                     -> std::shared_ptr<List<std::shared_ptr<List<T2>>>> {
-                   return List<std::shared_ptr<List<T2>>>::nil();
-                 },
-                 [&](const typename NestedTree::template tree<T1>::Node &_args)
-                     -> std::shared_ptr<List<std::shared_ptr<List<T2>>>> {
-                   return List<std::shared_ptr<List<T2>>>::cons(
-                       f(_args.d_a0),
-                       _flatten_tree_go<T1, T2>(
-                           [=](std::pair<T1, T1> _x0) mutable
-                               -> std::shared_ptr<List<T2>> {
-                             return NestedTree::template lift<T1, T2>(f, _x0);
-                           },
-                           _args.d_a1));
-                 }},
-      t0->v());
+  if (std::holds_alternative<typename NestedTree::template tree<T1>::Leaf>(
+          t0->v())) {
+    return List<std::shared_ptr<List<T2>>>::nil();
+  } else {
+    const auto &_m =
+        *std::get_if<typename NestedTree::template tree<T1>::Node>(&t0->v());
+    return List<std::shared_ptr<List<T2>>>::cons(
+        f(_m.d_a0),
+        _flatten_tree_go<T1, T2>(
+            [=](std::pair<T1, T1> _x0) mutable -> std::shared_ptr<List<T2>> {
+              return NestedTree::template lift<T1, T2>(f, _x0);
+            },
+            _m.d_a1));
+  }
 }
 
 #endif // INCLUDED_NESTED_TREE

@@ -25,35 +25,27 @@ unsigned int RecursiveMonadic::countdown(const unsigned int n) {
 /// 2. Recursive sum over list with logging
 unsigned int
 RecursiveMonadic::sum_list(const std::shared_ptr<List<unsigned int>> &xs) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<unsigned int>::Nil &) -> unsigned int {
-            return 0u;
-          },
-          [](const typename List<unsigned int>::Cons &_args) -> unsigned int {
-            std::cout << "adding"s << '\n';
-            unsigned int s = sum_list(_args.d_a1);
-            return (_args.d_a0 + s);
-          }},
-      xs->v());
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(xs->v())) {
+    return 0u;
+  } else {
+    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&xs->v());
+    std::cout << "adding"s << '\n';
+    unsigned int s = sum_list(_m.d_a1);
+    return (_m.d_a0 + s);
+  }
 }
 
 /// 3. Recursive collect: transforms each element with effect
 std::shared_ptr<List<int64_t>> RecursiveMonadic::collect_lengths(
     const std::shared_ptr<List<std::string>> &xs) {
-  return std::visit(Overloaded{[](const typename List<std::string>::Nil &)
-                                   -> std::shared_ptr<List<int64_t>> {
-                                 return List<int64_t>::nil();
-                               },
-                               [](const typename List<std::string>::Cons &_args)
-                                   -> std::shared_ptr<List<int64_t>> {
-                                 std::cout << _args.d_a0 << '\n';
-                                 std::shared_ptr<List<int64_t>> rest_ =
-                                     collect_lengths(_args.d_a1);
-                                 return List<int64_t>::cons(_args.d_a0.length(),
-                                                            rest_);
-                               }},
-                    xs->v());
+  if (std::holds_alternative<typename List<std::string>::Nil>(xs->v())) {
+    return List<int64_t>::nil();
+  } else {
+    const auto &_m = *std::get_if<typename List<std::string>::Cons>(&xs->v());
+    std::cout << _m.d_a0 << '\n';
+    std::shared_ptr<List<int64_t>> rest_ = collect_lengths(_m.d_a1);
+    return List<int64_t>::cons(_m.d_a0.length(), rest_);
+  }
 }
 
 /// 4. Recursive with two recursive calls (tree-like)

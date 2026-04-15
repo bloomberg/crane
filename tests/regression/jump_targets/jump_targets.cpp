@@ -9,25 +9,22 @@
 std::shared_ptr<List<unsigned int>> JumpTargets::collect_targets(
     const std::shared_ptr<List<std::shared_ptr<JumpTargets::instr_collection>>>
         &prog) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<
-              std::shared_ptr<JumpTargets::instr_collection>>::Nil &)
-              -> std::shared_ptr<List<unsigned int>> {
-            return List<unsigned int>::nil();
-          },
-          [](const typename List<
-              std::shared_ptr<JumpTargets::instr_collection>>::Cons &_args)
-              -> std::shared_ptr<List<unsigned int>> {
-            auto _cs = _args.d_a0->jump_target_collection();
-            if (_cs.has_value()) {
-              const unsigned int &a = *_cs;
-              return List<unsigned int>::cons(a, collect_targets(_args.d_a1));
-            } else {
-              return collect_targets(_args.d_a1);
-            }
-          }},
-      prog->v());
+  if (std::holds_alternative<
+          typename List<std::shared_ptr<JumpTargets::instr_collection>>::Nil>(
+          prog->v())) {
+    return List<unsigned int>::nil();
+  } else {
+    const auto &_m = *std::get_if<
+        typename List<std::shared_ptr<JumpTargets::instr_collection>>::Cons>(
+        &prog->v());
+    auto _cs = _m.d_a0->jump_target_collection();
+    if (_cs.has_value()) {
+      const unsigned int &a = *_cs;
+      return List<unsigned int>::cons(a, collect_targets(_m.d_a1));
+    } else {
+      return collect_targets(_m.d_a1);
+    }
+  }
 }
 
 __attribute__((pure)) bool

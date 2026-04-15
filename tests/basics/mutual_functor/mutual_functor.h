@@ -119,95 +119,89 @@ template <Elem E> struct MutualTree {
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int, std::shared_ptr<forest>> F1>
   static T1 tree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<tree> &t0) {
-    return std::visit(Overloaded{[&](const typename tree::Leaf &_args) -> T1 {
-                                   return f(_args.d_a0);
-                                 },
-                                 [&](const typename tree::Node &_args) -> T1 {
-                                   return f0(_args.d_a0, _args.d_a1);
-                                 }},
-                      t0->v());
+    if (std::holds_alternative<typename tree::Leaf>(t0->v())) {
+      const auto &_m = *std::get_if<typename tree::Leaf>(&t0->v());
+      return f(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename tree::Node>(&t0->v());
+      return f0(_m.d_a0, _m.d_a1);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int, std::shared_ptr<forest>> F1>
   static T1 tree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<tree> &t0) {
-    return std::visit(Overloaded{[&](const typename tree::Leaf &_args) -> T1 {
-                                   return f(_args.d_a0);
-                                 },
-                                 [&](const typename tree::Node &_args) -> T1 {
-                                   return f0(_args.d_a0, _args.d_a1);
-                                 }},
-                      t0->v());
+    if (std::holds_alternative<typename tree::Leaf>(t0->v())) {
+      const auto &_m = *std::get_if<typename tree::Leaf>(&t0->v());
+      return f(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename tree::Node>(&t0->v());
+      return f0(_m.d_a0, _m.d_a1);
+    }
   }
 
   template <typename T1,
             MapsTo<T1, std::shared_ptr<tree>, std::shared_ptr<forest>, T1> F1>
   static T1 forest_rect(const T1 f, F1 &&f0,
                         const std::shared_ptr<forest> &f1) {
-    return std::visit(
-        Overloaded{[&](const typename forest::FNil &) -> T1 { return f; },
-                   [&](const typename forest::FCons &_args) -> T1 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               forest_rect<T1>(f, f0, _args.d_a1));
-                   }},
-        f1->v());
+    if (std::holds_alternative<typename forest::FNil>(f1->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename forest::FCons>(&f1->v());
+      return f0(_m.d_a0, _m.d_a1, forest_rect<T1>(f, f0, _m.d_a1));
+    }
   }
 
   template <typename T1,
             MapsTo<T1, std::shared_ptr<tree>, std::shared_ptr<forest>, T1> F1>
   static T1 forest_rec(const T1 f, F1 &&f0, const std::shared_ptr<forest> &f1) {
-    return std::visit(
-        Overloaded{[&](const typename forest::FNil &) -> T1 { return f; },
-                   [&](const typename forest::FCons &_args) -> T1 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               forest_rec<T1>(f, f0, _args.d_a1));
-                   }},
-        f1->v());
+    if (std::holds_alternative<typename forest::FNil>(f1->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename forest::FCons>(&f1->v());
+      return f0(_m.d_a0, _m.d_a1, forest_rec<T1>(f, f0, _m.d_a1));
+    }
   }
 
   __attribute__((pure)) static unsigned int
   tree_size(const std::shared_ptr<tree> &t0) {
-    return std::visit(
-        Overloaded{
-            [](const typename tree::Leaf &) -> unsigned int { return 1u; },
-            [](const typename tree::Node &_args) -> unsigned int {
-              return (1u + forest_size(_args.d_a1));
-            }},
-        t0->v());
+    if (std::holds_alternative<typename tree::Leaf>(t0->v())) {
+      return 1u;
+    } else {
+      const auto &_m = *std::get_if<typename tree::Node>(&t0->v());
+      return (1u + forest_size(_m.d_a1));
+    }
   }
 
   __attribute__((pure)) static unsigned int
   forest_size(const std::shared_ptr<forest> &f) {
-    return std::visit(
-        Overloaded{
-            [](const typename forest::FNil &) -> unsigned int { return 0u; },
-            [](const typename forest::FCons &_args) -> unsigned int {
-              return (tree_size(_args.d_a0) + forest_size(_args.d_a1));
-            }},
-        f->v());
+    if (std::holds_alternative<typename forest::FNil>(f->v())) {
+      return 0u;
+    } else {
+      const auto &_m = *std::get_if<typename forest::FCons>(&f->v());
+      return (tree_size(_m.d_a0) + forest_size(_m.d_a1));
+    }
   }
 
   __attribute__((pure)) static unsigned int
   tree_sum(const std::shared_ptr<tree> &t0) {
-    return std::visit(
-        Overloaded{[](const typename tree::Leaf &_args) -> unsigned int {
-                     return _args.d_a0;
-                   },
-                   [](const typename tree::Node &_args) -> unsigned int {
-                     return (_args.d_a0 + forest_sum(_args.d_a1));
-                   }},
-        t0->v());
+    if (std::holds_alternative<typename tree::Leaf>(t0->v())) {
+      const auto &_m = *std::get_if<typename tree::Leaf>(&t0->v());
+      return _m.d_a0;
+    } else {
+      const auto &_m = *std::get_if<typename tree::Node>(&t0->v());
+      return (_m.d_a0 + forest_sum(_m.d_a1));
+    }
   }
 
   __attribute__((pure)) static unsigned int
   forest_sum(const std::shared_ptr<forest> &f) {
-    return std::visit(
-        Overloaded{
-            [](const typename forest::FNil &) -> unsigned int { return 0u; },
-            [](const typename forest::FCons &_args) -> unsigned int {
-              return (tree_sum(_args.d_a0) + forest_sum(_args.d_a1));
-            }},
-        f->v());
+    if (std::holds_alternative<typename forest::FNil>(f->v())) {
+      return 0u;
+    } else {
+      const auto &_m = *std::get_if<typename forest::FCons>(&f->v());
+      return (tree_sum(_m.d_a0) + forest_sum(_m.d_a1));
+    }
   }
 
   static const std::shared_ptr<tree> &leaf1() {

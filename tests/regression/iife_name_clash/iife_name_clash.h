@@ -53,23 +53,23 @@ struct IifeNameClash {
   template <typename T1, MapsTo<T1, unsigned int> F0>
   static T1 wrapper_rect(F0 &&f, const T1 f0,
                          const std::shared_ptr<wrapper> &w) {
-    return std::visit(
-        Overloaded{[&](const typename wrapper::Wrap &_args) -> T1 {
-                     return f(_args.d_n);
-                   },
-                   [&](const typename wrapper::Empty &) -> T1 { return f0; }},
-        w->v());
+    if (std::holds_alternative<typename wrapper::Wrap>(w->v())) {
+      const auto &_m = *std::get_if<typename wrapper::Wrap>(&w->v());
+      return f(_m.d_n);
+    } else {
+      return f0;
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0>
   static T1 wrapper_rec(F0 &&f, const T1 f0,
                         const std::shared_ptr<wrapper> &w) {
-    return std::visit(
-        Overloaded{[&](const typename wrapper::Wrap &_args) -> T1 {
-                     return f(_args.d_n);
-                   },
-                   [&](const typename wrapper::Empty &) -> T1 { return f0; }},
-        w->v());
+    if (std::holds_alternative<typename wrapper::Wrap>(w->v())) {
+      const auto &_m = *std::get_if<typename wrapper::Wrap>(&w->v());
+      return f(_m.d_n);
+    } else {
+      return f0;
+    }
   }
 
   __attribute__((pure)) static unsigned int

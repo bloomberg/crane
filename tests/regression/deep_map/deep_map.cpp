@@ -21,14 +21,12 @@ DeepMap::build_right(const unsigned int n,
       _continue = false;
     } else {
       unsigned int n_ = _loop_n - 1;
-      {
-        std::shared_ptr<DeepMap::tree<unsigned int>> _next_acc =
-            tree<unsigned int>::node(tree<unsigned int>::leaf(), _loop_n,
-                                     _loop_acc);
-        unsigned int _next_n = n_;
-        _loop_acc = std::move(_next_acc);
-        _loop_n = std::move(_next_n);
-      }
+      std::shared_ptr<DeepMap::tree<unsigned int>> _next_acc =
+          tree<unsigned int>::node(tree<unsigned int>::leaf(), _loop_n,
+                                   _loop_acc);
+      unsigned int _next_n = n_;
+      _loop_acc = std::move(_next_acc);
+      _loop_n = std::move(_next_n);
     }
   }
   return _result;
@@ -43,10 +41,12 @@ DeepMap::map_inc(const std::shared_ptr<DeepMap::tree<unsigned int>> &t) {
 /// Get root value.
 __attribute__((pure)) unsigned int
 DeepMap::root_or_zero(const std::shared_ptr<DeepMap::tree<unsigned int>> &t) {
-  return std::visit(
-      Overloaded{[](const typename DeepMap::tree<unsigned int>::Leaf &)
-                     -> unsigned int { return 0u; },
-                 [](const typename DeepMap::tree<unsigned int>::Node &_args)
-                     -> unsigned int { return _args.d_a1; }},
-      t->v());
+  if (std::holds_alternative<typename DeepMap::tree<unsigned int>::Leaf>(
+          t->v())) {
+    return 0u;
+  } else {
+    const auto &_m =
+        *std::get_if<typename DeepMap::tree<unsigned int>::Node>(&t->v());
+    return _m.d_a1;
+  }
 }

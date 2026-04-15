@@ -24,11 +24,12 @@ From Crane Require Export Monads.ITreeBase.
 
 (* Extract itreeF as a custom inductive: the type maps to ITree<R>::variant_t,
    constructors are empty (only matched, never constructed), and the custom
-   match template generates std::visit over the variant. *)
+   match template generates an if/else-if chain using holds_alternative and
+   get_if, consistent with how Crane generates all other variant pattern matches. *)
 Crane Extract Inductive itreeF =>
   "itreeF_t<%t1>"
   [ "" "" "" ]
-  "return std::visit(Overloaded{[&](const typename ITree<%t1>::Ret& _itf) -> decltype(auto) { auto %b0a0 = _itf.value; %br0 }, [&](const typename ITree<%t1>::Tau& _itf) -> decltype(auto) { auto %b1a0 = _itf.next; %br1 }, [&](const typename ITree<%t1>::Vis& _itf) -> decltype(auto) { auto %b2a0 = _itf.effect; auto %b2a1 = _itf.cont; %br2 }}, %scrut);"
+  "if (std::holds_alternative<typename ITree<%t1>::Ret>(%scrut)) { const auto& _itf = *std::get_if<typename ITree<%t1>::Ret>(&%scrut); auto %b0a0 = _itf.value; %br0 } else if (std::holds_alternative<typename ITree<%t1>::Tau>(%scrut)) { const auto& _itf = *std::get_if<typename ITree<%t1>::Tau>(&%scrut); auto %b1a0 = _itf.next; %br1 } else { const auto& _itf = *std::get_if<typename ITree<%t1>::Vis>(&%scrut); auto %b2a0 = _itf.effect; auto %b2a1 = _itf.cont; %br2 }"
   From "crane_itree.h".
 
 (* The ITree library defines Ret/Tau/Vis as Notations. Shadow them with

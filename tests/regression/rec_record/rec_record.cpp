@@ -8,13 +8,14 @@
 
 __attribute__((pure)) unsigned int
 RecRecord::rlist_sum(const std::shared_ptr<RecRecord::rlist<unsigned int>> &l) {
-  return std::visit(
-      Overloaded{
-          [](const typename RecRecord::rlist<unsigned int>::Rnil &)
-              -> unsigned int { return 0u; },
-          [](const typename RecRecord::rlist<unsigned int>::Rcons &_args)
-              -> unsigned int { return (_args.d_a0 + rlist_sum(_args.d_a1)); }},
-      l->v());
+  if (std::holds_alternative<typename RecRecord::rlist<unsigned int>::Rnil>(
+          l->v())) {
+    return 0u;
+  } else {
+    const auto &_m =
+        *std::get_if<typename RecRecord::rlist<unsigned int>::Rcons>(&l->v());
+    return (_m.d_a0 + rlist_sum(_m.d_a1));
+  }
 }
 
 __attribute__((pure)) unsigned int

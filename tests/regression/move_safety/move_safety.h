@@ -70,33 +70,24 @@ struct MoveSafety {
     }
 
     __attribute__((pure)) unsigned int sum_values(const unsigned int x) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename tree::Leaf &) -> unsigned int { return x; },
-              [&](const typename tree::Node &_args) -> unsigned int {
-                return std::visit(
-                    Overloaded{
-                        [&](const typename tree::Leaf &) -> unsigned int {
-                          return (_args.d_a1 + x);
-                        },
-                        [&](const typename tree::Node &_args0) -> unsigned int {
-                          return std::visit(
-                              Overloaded{[&](const typename tree::Leaf &)
-                                             -> unsigned int {
-                                           return (_args0.d_a1 + x);
-                                         },
-                                         [&](const typename tree::Node &_args1)
-                                             -> unsigned int {
-                                           return (
-                                               ((_args0.d_a1 + _args1.d_a1) +
-                                                _args.d_a1) +
-                                               x);
-                                         }},
-                              _args.d_a2->v());
-                        }},
-                    _args.d_a0->v());
-              }},
-          this->v());
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        return x;
+      } else {
+        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
+        auto &&_sv0 = _m.d_a0;
+        if (std::holds_alternative<typename tree::Leaf>(_sv0->v())) {
+          return (_m.d_a1 + x);
+        } else {
+          const auto &_m0 = *std::get_if<typename tree::Node>(&_sv0->v());
+          auto &&_sv1 = _m.d_a2;
+          if (std::holds_alternative<typename tree::Leaf>(_sv1->v())) {
+            return (_m0.d_a1 + x);
+          } else {
+            const auto &_m1 = *std::get_if<typename tree::Node>(&_sv1->v());
+            return (((_m0.d_a1 + _m1.d_a1) + _m.d_a1) + x);
+          }
+        }
+      }
     }
   };
 
@@ -109,17 +100,17 @@ struct MoveSafety {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s0;
-      decltype(std::declval<const typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s3;
+      decltype(std::declval<typename tree::Node &>().d_a0) _s0;
+      decltype(std::declval<typename tree::Node &>().d_a2) _s1;
+      decltype(std::declval<typename tree::Node &>().d_a1) _s2;
+      decltype(std::declval<typename tree::Node &>().d_a0) _s3;
     };
 
     struct _Call2 {
       T1 _s0;
-      decltype(std::declval<const typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s3;
+      decltype(std::declval<typename tree::Node &>().d_a2) _s1;
+      decltype(std::declval<typename tree::Node &>().d_a1) _s2;
+      decltype(std::declval<typename tree::Node &>().d_a0) _s3;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -129,30 +120,24 @@ struct MoveSafety {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree> t = _f.t;
-                std::visit(
-                    Overloaded{[&](const typename tree::Leaf &) -> void {
-                                 _result = f;
-                               },
-                               [&](const typename tree::Node &_args) -> void {
-                                 _stack.emplace_back(
-                                     _Call1{_args.d_a0, _args.d_a2, _args.d_a1,
-                                            _args.d_a0});
-                                 _stack.emplace_back(_Enter{_args.d_a2});
-                               }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.emplace_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<tree> t = _f.t;
+        if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+          _result = f;
+        } else {
+          const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+          _stack.emplace_back(_Call1{_m.d_a0, _m.d_a2, _m.d_a1, _m.d_a0});
+          _stack.emplace_back(_Enter{_m.d_a2});
+        }
+      } else if (std::holds_alternative<_Call1>(_frame)) {
+        const auto &_f = std::get<_Call1>(_frame);
+        _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+        _stack.emplace_back(_Enter{_f._s0});
+      } else {
+        const auto &_f = std::get<_Call2>(_frame);
+        _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+      }
     }
     return _result;
   }
@@ -166,17 +151,17 @@ struct MoveSafety {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s0;
-      decltype(std::declval<const typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s3;
+      decltype(std::declval<typename tree::Node &>().d_a0) _s0;
+      decltype(std::declval<typename tree::Node &>().d_a2) _s1;
+      decltype(std::declval<typename tree::Node &>().d_a1) _s2;
+      decltype(std::declval<typename tree::Node &>().d_a0) _s3;
     };
 
     struct _Call2 {
       T1 _s0;
-      decltype(std::declval<const typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s3;
+      decltype(std::declval<typename tree::Node &>().d_a2) _s1;
+      decltype(std::declval<typename tree::Node &>().d_a1) _s2;
+      decltype(std::declval<typename tree::Node &>().d_a0) _s3;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -186,30 +171,24 @@ struct MoveSafety {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree> t = _f.t;
-                std::visit(
-                    Overloaded{[&](const typename tree::Leaf &) -> void {
-                                 _result = f;
-                               },
-                               [&](const typename tree::Node &_args) -> void {
-                                 _stack.emplace_back(
-                                     _Call1{_args.d_a0, _args.d_a2, _args.d_a1,
-                                            _args.d_a0});
-                                 _stack.emplace_back(_Enter{_args.d_a2});
-                               }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.emplace_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<tree> t = _f.t;
+        if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+          _result = f;
+        } else {
+          const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+          _stack.emplace_back(_Call1{_m.d_a0, _m.d_a2, _m.d_a1, _m.d_a0});
+          _stack.emplace_back(_Enter{_m.d_a2});
+        }
+      } else if (std::holds_alternative<_Call1>(_frame)) {
+        const auto &_f = std::get<_Call1>(_frame);
+        _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+        _stack.emplace_back(_Enter{_f._s0});
+      } else {
+        const auto &_f = std::get<_Call2>(_frame);
+        _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+      }
     }
     return _result;
   }
@@ -243,31 +222,22 @@ struct MoveSafety {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int apply_box(const unsigned int x) const {
-      return std::visit(
-          Overloaded{[&](const typename fn_box::Box &_args) -> unsigned int {
-            return _args.d_a0(x);
-          }},
-          this->v());
+      const auto &_m = *std::get_if<typename fn_box::Box>(&this->v());
+      return _m.d_a0(x);
     }
 
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 fn_box_rec(F0 &&f) const {
-      return std::visit(
-          Overloaded{[&](const typename fn_box::Box &_args) -> T1 {
-            return f(_args.d_a0);
-          }},
-          this->v());
+      const auto &_m = *std::get_if<typename fn_box::Box>(&this->v());
+      return f(_m.d_a0);
     }
 
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 fn_box_rect(F0 &&f) const {
-      return std::visit(
-          Overloaded{[&](const typename fn_box::Box &_args) -> T1 {
-            return f(_args.d_a0);
-          }},
-          this->v());
+      const auto &_m = *std::get_if<typename fn_box::Box>(&this->v());
+      return f(_m.d_a0);
     }
   };
 
@@ -324,14 +294,12 @@ struct MoveSafety {
         return t->sum_values(_x0);
       };
       std::shared_ptr<tree> t2 = tree_id(std::move(t));
-      return std::visit(
-          Overloaded{[&](const typename tree::Leaf &) -> unsigned int {
-                       return f(0u);
-                     },
-                     [&](const typename tree::Node &_args) -> unsigned int {
-                       return f(_args.d_a1);
-                     }},
-          t2->v());
+      if (std::holds_alternative<typename tree::Leaf>(t2->v())) {
+        return f(0u);
+      } else {
+        const auto &_m = *std::get_if<typename tree::Node>(&t2->v());
+        return f(_m.d_a1);
+      }
     }();
   }();
 };

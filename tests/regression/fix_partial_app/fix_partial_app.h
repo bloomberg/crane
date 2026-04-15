@@ -66,28 +66,26 @@ struct FixPartialApp {
                                 std::shared_ptr<tree>, T1>
                              F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, _args.d_a2,
-                               tree_rect<T1>(f, f0, _args.d_a2));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+      return f0(_m.d_a0, tree_rect<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
+                tree_rect<T1>(f, f0, _m.d_a2));
+    }
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
                                 std::shared_ptr<tree>, T1>
                              F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, _args.d_a2,
-                               tree_rec<T1>(f, f0, _args.d_a2));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return f;
+    } else {
+      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+      return f0(_m.d_a0, tree_rec<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
+                tree_rec<T1>(f, f0, _m.d_a2));
+    }
   }
 
   /// count_nodes: counts nodes in a tree. Will be partially applied.
@@ -156,16 +154,12 @@ struct FixPartialApp {
   template <MapsTo<unsigned int, unsigned int> F0>
   static std::shared_ptr<tree> tree_map(F0 &&f,
                                         const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{
-            [](const typename tree::Leaf &) -> std::shared_ptr<tree> {
-              return tree::leaf();
-            },
-            [&](const typename tree::Node &_args) -> std::shared_ptr<tree> {
-              return tree::node(tree_map(f, _args.d_a0), f(_args.d_a1),
-                                tree_map(f, _args.d_a2));
-            }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return tree::leaf();
+    } else {
+      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+      return tree::node(tree_map(f, _m.d_a0), f(_m.d_a1), tree_map(f, _m.d_a2));
+    }
   }
 
   __attribute__((pure)) static unsigned int

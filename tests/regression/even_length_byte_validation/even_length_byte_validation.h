@@ -57,22 +57,21 @@ public:
 
   template <MapsTo<bool, t_A> F0>
   __attribute__((pure)) bool forallb(F0 &&f) const {
-    return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil &) -> bool { return true; },
-                   [&](const typename List<t_A>::Cons &_args) -> bool {
-                     return (f(_args.d_a0) && _args.d_a1->forallb(f));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return true;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return (f(_m.d_a0) && _m.d_a1->forallb(f));
+    }
   }
 
   __attribute__((pure)) unsigned int length() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons &_args) -> unsigned int {
-              return (_args.d_a1->length() + 1);
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return 0u;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return (_m.d_a1->length() + 1);
+    }
   }
 };
 

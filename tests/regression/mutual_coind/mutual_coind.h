@@ -158,44 +158,30 @@ struct MutualCoind {
 
   template <typename T1>
   static T1 headA(const std::shared_ptr<streamA<T1>> &s) {
-    return std::visit(
-        Overloaded{[](const typename streamA<T1>::ConsA &_args) -> T1 {
-          return _args.d_a0;
-        }},
-        s->v());
+    const auto &_m = *std::get_if<typename streamA<T1>::ConsA>(&s->v());
+    return _m.d_a0;
   }
 
   template <typename T1>
   static std::shared_ptr<streamB<T1>>
   tailA(const std::shared_ptr<streamA<T1>> &s) {
-    return streamB<T1>::lazy_([=]() mutable -> std::shared_ptr<streamB<T1>> {
-      return std::visit(Overloaded{[](const typename streamA<T1>::ConsA &_args)
-                                       -> std::shared_ptr<streamB<T1>> {
-                          return _args.d_a1;
-                        }},
-                        s->v());
-    });
+    const auto &_m = *std::get_if<typename streamA<T1>::ConsA>(&s->v());
+    return streamB<T1>::lazy_(
+        [=]() mutable -> std::shared_ptr<streamB<T1>> { return _m.d_a1; });
   }
 
   template <typename T1>
   static T1 headB(const std::shared_ptr<streamB<T1>> &s) {
-    return std::visit(
-        Overloaded{[](const typename streamB<T1>::ConsB &_args) -> T1 {
-          return _args.d_a0;
-        }},
-        s->v());
+    const auto &_m = *std::get_if<typename streamB<T1>::ConsB>(&s->v());
+    return _m.d_a0;
   }
 
   template <typename T1>
   static std::shared_ptr<streamA<T1>>
   tailB(const std::shared_ptr<streamB<T1>> &s) {
-    return streamA<T1>::lazy_([=]() mutable -> std::shared_ptr<streamA<T1>> {
-      return std::visit(Overloaded{[](const typename streamB<T1>::ConsB &_args)
-                                       -> std::shared_ptr<streamA<T1>> {
-                          return _args.d_a1;
-                        }},
-                        s->v());
-    });
+    const auto &_m = *std::get_if<typename streamB<T1>::ConsB>(&s->v());
+    return streamA<T1>::lazy_(
+        [=]() mutable -> std::shared_ptr<streamA<T1>> { return _m.d_a1; });
   }
 
   static std::shared_ptr<streamA<unsigned int>> countA(const unsigned int n);
@@ -208,12 +194,8 @@ struct MutualCoind {
       return List<T1>::nil();
     } else {
       unsigned int f = fuel - 1;
-      return std::visit(Overloaded{[&](const typename streamA<T1>::ConsA &_args)
-                                       -> std::shared_ptr<List<T1>> {
-                          return List<T1>::cons(_args.d_a0,
-                                                takeB<T1>(f, _args.d_a1));
-                        }},
-                        s->v());
+      const auto &_m = *std::get_if<typename streamA<T1>::ConsA>(&s->v());
+      return List<T1>::cons(_m.d_a0, takeB<T1>(f, _m.d_a1));
     }
   }
 
@@ -224,12 +206,8 @@ struct MutualCoind {
       return List<T1>::nil();
     } else {
       unsigned int f = fuel - 1;
-      return std::visit(Overloaded{[&](const typename streamB<T1>::ConsB &_args)
-                                       -> std::shared_ptr<List<T1>> {
-                          return List<T1>::cons(_args.d_a0,
-                                                takeA<T1>(f, _args.d_a1));
-                        }},
-                        s->v());
+      const auto &_m = *std::get_if<typename streamB<T1>::ConsB>(&s->v());
+      return List<T1>::cons(_m.d_a0, takeA<T1>(f, _m.d_a1));
     }
   }
 

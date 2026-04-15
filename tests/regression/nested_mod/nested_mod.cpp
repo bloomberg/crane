@@ -7,17 +7,22 @@
 
 __attribute__((pure)) unsigned int NestedMod::Outer::Inner::area(
     const std::shared_ptr<NestedMod::Outer::Inner::shape> &s) {
-  return std::visit(
-      Overloaded{
-          [](const typename NestedMod::Outer::Inner::shape::Circle &_args)
-              -> unsigned int { return ((_args.d_a0 * _args.d_a0) * 3u); },
-          [](const typename NestedMod::Outer::Inner::shape::Square &_args)
-              -> unsigned int { return (_args.d_a0 * _args.d_a0); },
-          [](const typename NestedMod::Outer::Inner::shape::Triangle &_args)
-              -> unsigned int {
-            return (2u ? (_args.d_a0 * _args.d_a1) / 2u : 0);
-          }},
-      s->v());
+  if (std::holds_alternative<typename NestedMod::Outer::Inner::shape::Circle>(
+          s->v())) {
+    const auto &_m =
+        *std::get_if<typename NestedMod::Outer::Inner::shape::Circle>(&s->v());
+    return ((_m.d_a0 * _m.d_a0) * 3u);
+  } else if (std::holds_alternative<
+                 typename NestedMod::Outer::Inner::shape::Square>(s->v())) {
+    const auto &_m =
+        *std::get_if<typename NestedMod::Outer::Inner::shape::Square>(&s->v());
+    return (_m.d_a0 * _m.d_a0);
+  } else {
+    const auto &_m =
+        *std::get_if<typename NestedMod::Outer::Inner::shape::Triangle>(
+            &s->v());
+    return (2u ? (_m.d_a0 * _m.d_a1) / 2u : 0);
+  }
 }
 
 __attribute__((pure)) unsigned int

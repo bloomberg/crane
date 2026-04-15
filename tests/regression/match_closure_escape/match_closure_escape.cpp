@@ -15,17 +15,13 @@
 /// holds a dangling reference to a destroyed shared_ptr.
 std::shared_ptr<MatchClosureEscape::fn_box> MatchClosureEscape::match_arm_box(
     const std::shared_ptr<MatchClosureEscape::tree> &t) {
-  return std::visit(
-      Overloaded{[](const typename MatchClosureEscape::tree::Leaf &)
-                     -> std::shared_ptr<MatchClosureEscape::fn_box> {
-                   return fn_box::box([](const unsigned int x) { return x; });
-                 },
-                 [](const typename MatchClosureEscape::tree::Node &_args)
-                     -> std::shared_ptr<MatchClosureEscape::fn_box> {
-                   return fn_box::box(
-                       [=](unsigned int _x0) mutable -> unsigned int {
-                         return _args.d_a0->sum_values(_x0);
-                       });
-                 }},
-      t->v());
+  if (std::holds_alternative<typename MatchClosureEscape::tree::Leaf>(t->v())) {
+    return fn_box::box([](const unsigned int x) { return x; });
+  } else {
+    const auto &_m =
+        *std::get_if<typename MatchClosureEscape::tree::Node>(&t->v());
+    return fn_box::box([=](unsigned int _x0) mutable -> unsigned int {
+      return _m.d_a0->sum_values(_x0);
+    });
+  }
 }

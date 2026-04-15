@@ -62,16 +62,14 @@ void EffectPoly::test_unless() {
 /// 5. Monadic sequence of list of actions
 void EffectPoly::sequence_void(
     const std::shared_ptr<List<std::monostate>> &actions) {
-  {
-    std::visit(Overloaded{[](const typename List<std::monostate>::Nil &)
-                              -> std::monostate { return std::monostate{}; },
-                          [](const typename List<std::monostate>::Cons &_args)
-                              -> std::monostate {
-                            _args.d_a0;
-                            sequence_void(_args.d_a1);
-                            return std::monostate{};
-                          }},
-               actions->v());
+  if (std::holds_alternative<typename List<std::monostate>::Nil>(
+          actions->v())) {
+    return;
+  } else {
+    const auto &_m =
+        *std::get_if<typename List<std::monostate>::Cons>(&actions->v());
+    _m.d_a0;
+    sequence_void(_m.d_a1);
     return;
   }
 }

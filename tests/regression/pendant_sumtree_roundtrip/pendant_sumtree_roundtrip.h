@@ -61,72 +61,62 @@ public:
 
   template <MapsTo<bool, t_A> F0>
   __attribute__((pure)) bool forallb(F0 &&f) const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil0 &) -> bool { return true; },
-            [&](const typename List<t_A>::Cons0 &_args) -> bool {
-              return (f(_args.d_a0) && _args.d_a1->forallb(f));
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
+      return true;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons0>(&this->v());
+      return (f(_m.d_a0) && _m.d_a1->forallb(f));
+    }
   }
 
   template <typename T1, MapsTo<T1, t_A, T1> F0>
   T1 fold_right(F0 &&f, const T1 a0) const {
-    return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil0 &) -> T1 { return a0; },
-                   [&](const typename List<t_A>::Cons0 &_args) -> T1 {
-                     return f(_args.d_a0,
-                              _args.d_a1->template fold_right<T1>(f, a0));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
+      return a0;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons0>(&this->v());
+      return f(_m.d_a0, _m.d_a1->template fold_right<T1>(f, a0));
+    }
   }
 
   template <typename T1> std::shared_ptr<List<T1>> concat() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<std::shared_ptr<List<T1>>>::Nil0 &)
-                -> std::shared_ptr<List<T1>> { return List<T1>::nil0(); },
-            [](const typename List<std::shared_ptr<List<T1>>>::Cons0 &_args)
-                -> std::shared_ptr<List<T1>> {
-              return _args.d_a0->app(_args.d_a1->template concat<T1>());
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<std::shared_ptr<List<T1>>>::Nil0>(
+            this->v())) {
+      return List<T1>::nil0();
+    } else {
+      const auto &_m =
+          *std::get_if<typename List<std::shared_ptr<List<T1>>>::Cons0>(
+              &this->v());
+      return _m.d_a0->app(_m.d_a1->template concat<T1>());
+    }
   }
 
   template <typename T1, MapsTo<T1, t_A> F0>
   std::shared_ptr<List<T1>> map(F0 &&f) const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil0 &) -> std::shared_ptr<List<T1>> {
-              return List<T1>::nil0();
-            },
-            [&](const typename List<t_A>::Cons0 &_args)
-                -> std::shared_ptr<List<T1>> {
-              return List<T1>::cons0(f(_args.d_a0),
-                                     _args.d_a1->template map<T1>(f));
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
+      return List<T1>::nil0();
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons0>(&this->v());
+      return List<T1>::cons0(f(_m.d_a0), _m.d_a1->template map<T1>(f));
+    }
   }
 
   __attribute__((pure)) unsigned int length() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil0 &) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons0 &_args) -> unsigned int {
-              return (_args.d_a1->length() + 1);
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
+      return 0u;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons0>(&this->v());
+      return (_m.d_a1->length() + 1);
+    }
   }
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
-    return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil0 &)
-                       -> std::shared_ptr<List<t_A>> { return m; },
-                   [&](const typename List<t_A>::Cons0 &_args)
-                       -> std::shared_ptr<List<t_A>> {
-                     return List<t_A>::cons0(_args.d_a0, _args.d_a1->app(m));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
+      return m;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons0>(&this->v());
+      return List<t_A>::cons0(_m.d_a0, _m.d_a1->app(m));
+    }
   }
 };
 
@@ -272,21 +262,15 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   std::shared_ptr<Sig<unsigned int>> to_nat(const unsigned int) const {
-    return std::visit(
-        Overloaded{
-            [](const typename T::F1 &) -> std::shared_ptr<Sig<unsigned int>> {
-              return Sig<unsigned int>::exist(0u);
-            },
-            [](const typename T::FS &_args)
-                -> std::shared_ptr<Sig<unsigned int>> {
-              return std::visit(
-                  Overloaded{[](const typename Sig<unsigned int>::Exist &_args0)
-                                 -> std::shared_ptr<Sig<unsigned int>> {
-                    return Sig<unsigned int>::exist((_args0.d_x + 1));
-                  }},
-                  _args.d_a1->to_nat(_args.d_n)->v());
-            }},
-        this->v());
+    if (std::holds_alternative<typename T::F1>(this->v())) {
+      return Sig<unsigned int>::exist(0u);
+    } else {
+      const auto &_m = *std::get_if<typename T::FS>(&this->v());
+      auto &&_sv0 = _m.d_a1->to_nat(_m.d_n);
+      const auto &_m0 =
+          *std::get_if<typename Sig<unsigned int>::Exist>(&_sv0->v());
+      return Sig<unsigned int>::exist((_m0.d_x + 1));
+    }
   }
 };
 
@@ -530,14 +514,13 @@ struct PendantSumtreeRoundtripCase {
                 F2>
   static T1 SumTree_rect(const unsigned int, F1 &&f, F2 &&f0,
                          const std::shared_ptr<SumTree> &s) {
-    return std::visit(
-        Overloaded{[&](const typename SumTree::SumLeaf &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename SumTree::SumNode &_args) -> T1 {
-                     return f0(_args.d_a0, _args.d_a1);
-                   }},
-        s->v());
+    if (std::holds_alternative<typename SumTree::SumLeaf>(s->v())) {
+      const auto &_m = *std::get_if<typename SumTree::SumLeaf>(&s->v());
+      return f(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename SumTree::SumNode>(&s->v());
+      return f0(_m.d_a0, _m.d_a1);
+    }
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<CertifiedPendant>> F1,
@@ -546,14 +529,13 @@ struct PendantSumtreeRoundtripCase {
                 F2>
   static T1 SumTree_rec(const unsigned int, F1 &&f, F2 &&f0,
                         const std::shared_ptr<SumTree> &s) {
-    return std::visit(
-        Overloaded{[&](const typename SumTree::SumLeaf &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename SumTree::SumNode &_args) -> T1 {
-                     return f0(_args.d_a0, _args.d_a1);
-                   }},
-        s->v());
+    if (std::holds_alternative<typename SumTree::SumLeaf>(s->v())) {
+      const auto &_m = *std::get_if<typename SumTree::SumLeaf>(&s->v());
+      return f(_m.d_a0);
+    } else {
+      const auto &_m = *std::get_if<typename SumTree::SumNode>(&s->v());
+      return f0(_m.d_a0, _m.d_a1);
+    }
   }
 
   static std::shared_ptr<CertifiedPendant>
@@ -719,15 +701,12 @@ std::shared_ptr<List<T1>> Vector::to_list(const unsigned int n,
   fold_right_fix =
       [&](unsigned int, std::shared_ptr<T0<T1>> v0,
           std::shared_ptr<List<T1>> b) -> std::shared_ptr<List<T1>> {
-    return std::visit(
-        Overloaded{[&](const typename T0<T1>::Nil &)
-                       -> std::shared_ptr<List<T1>> { return b; },
-                   [&](const typename T0<T1>::Cons &_args)
-                       -> std::shared_ptr<List<T1>> {
-                     return List<T1>::cons0(
-                         _args.d_h, fold_right_fix(_args.d_n, _args.d_a2, b));
-                   }},
-        v0->v());
+    if (std::holds_alternative<typename T0<T1>::Nil>(v0->v())) {
+      return b;
+    } else {
+      const auto &_m = *std::get_if<typename T0<T1>::Cons>(&v0->v());
+      return List<T1>::cons0(_m.d_h, fold_right_fix(_m.d_n, _m.d_a2, b));
+    }
   };
   return fold_right_fix(n, v, List<T1>::nil0());
 }

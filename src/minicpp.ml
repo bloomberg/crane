@@ -169,6 +169,31 @@ and cpp_stmt =
       * cpp_type list (* type args for %t0, %t1, ... *)
     (* Block template expansion: multi-statement inline custom that
        substitutes %result with the bind target variable name. *)
+  | Smatch of smatch_branch list * cpp_stmt list option
+    (* If/else-if pattern match chain using std::holds_alternative and std::get.
+       Branches are checked in order. The optional else body is [Some stmts] for
+       a wildcard/default case, or [None] to emit std::unreachable(). *)
+
+(** A branch in an [Smatch] if/else-if pattern match chain. *)
+and smatch_branch = {
+  smb_scrutinee : cpp_expr;
+    (** Variant accessor expression, e.g. [scrut->v()] or [scrut.v()].
+        Each branch carries its own scrutinee so that multi-match branches
+        can reference different scrutinees. *)
+  smb_ctor_type : cpp_type;
+    (** Constructor struct type for the [std::holds_alternative] /
+        [std::get] template argument. *)
+  smb_var : Id.t option;
+    (** Binding variable for [std::get], or [None] when no fields
+        are accessed in the branch body. *)
+  smb_extra_conds : cpp_expr list;
+    (** Additional [&&]-joined conditions after the primary check.
+        Used for reuse optimization ([use_count() == 1]) and multi-match
+        ([holds_alternative] on a second scrutinee). *)
+  smb_body : cpp_stmt list;
+    (** Branch body statements. When [smb_var = Some _], field accesses
+        use arrow syntax ([_m->d_field]) since [_m] is a pointer. *)
+}
 
 (** C++ expressions. *)
 and cpp_expr =
@@ -422,6 +447,17 @@ let map_stmt
   | Scontinue -> s
   | Sblock_custom (r, tmpl, id, ty, args, tys) ->
     Sblock_custom (r, tmpl, id, ft ty, List.map fe args, List.map ft tys)
+  | Smatch (branches, default) ->
+    Smatch
+      ( List.map
+          (fun br ->
+            { smb_scrutinee = fe br.smb_scrutinee;
+              smb_ctor_type = ft br.smb_ctor_type;
+              smb_var = br.smb_var;
+              smb_extra_conds = List.map fe br.smb_extra_conds;
+              smb_body = List.map fs br.smb_body })
+          branches,
+        Option.map (List.map fs) default )
 
 (** C++ top-level declarations. *)
 type cpp_decl =

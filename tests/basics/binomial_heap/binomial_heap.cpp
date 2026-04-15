@@ -10,124 +10,65 @@
 std::shared_ptr<BinomialHeap::tree>
 BinomialHeap::smash(const std::shared_ptr<BinomialHeap::tree> &t,
                     const std::shared_ptr<BinomialHeap::tree> &u) {
-  return std::visit(
-      Overloaded{
-          [&](const typename BinomialHeap::tree::Node &_args)
-              -> std::shared_ptr<BinomialHeap::tree> {
-            return std::visit(
-                Overloaded{
-                    [](const typename BinomialHeap::tree::Node &)
-                        -> std::shared_ptr<BinomialHeap::tree> {
-                      return tree::leaf();
-                    },
-                    [&](const typename BinomialHeap::tree::Leaf &)
-                        -> std::shared_ptr<BinomialHeap::tree> {
-                      return std::visit(
-                          Overloaded{
-                              [&](const typename BinomialHeap::tree::Node
-                                      &_args1)
-                                  -> std::shared_ptr<BinomialHeap::tree> {
-                                return std::visit(
-                                    Overloaded{[](const typename BinomialHeap::
-                                                      tree::Node &)
-                                                   -> std::shared_ptr<
-                                                       BinomialHeap::tree> {
-                                                 return tree::leaf();
-                                               },
-                                               [&](const typename BinomialHeap::
-                                                       tree::Leaf &)
-                                                   -> std::shared_ptr<
-                                                       BinomialHeap::tree> {
-                                                 if (_args1.d_a0 < _args.d_a0) {
-                                                   return tree::node(
-                                                       _args.d_a0,
-                                                       tree::node(_args1.d_a0,
-                                                                  _args1.d_a1,
-                                                                  _args.d_a1),
-                                                       tree::leaf());
-                                                 } else {
-                                                   return tree::node(
-                                                       _args1.d_a0,
-                                                       tree::node(_args.d_a0,
-                                                                  _args.d_a1,
-                                                                  _args1.d_a1),
-                                                       tree::leaf());
-                                                 }
-                                               }},
-                                    _args1.d_a2->v());
-                              },
-                              [](const typename BinomialHeap::tree::Leaf &)
-                                  -> std::shared_ptr<BinomialHeap::tree> {
-                                return tree::leaf();
-                              }},
-                          u->v());
-                    }},
-                _args.d_a2->v());
-          },
-          [](const typename BinomialHeap::tree::Leaf &)
-              -> std::shared_ptr<BinomialHeap::tree> { return tree::leaf(); }},
-      t->v());
+  if (std::holds_alternative<typename BinomialHeap::tree::Node>(t->v())) {
+    const auto &_m = *std::get_if<typename BinomialHeap::tree::Node>(&t->v());
+    auto &&_sv = _m.d_a2;
+    if (std::holds_alternative<typename BinomialHeap::tree::Node>(_sv->v())) {
+      return tree::leaf();
+    } else {
+      if (std::holds_alternative<typename BinomialHeap::tree::Node>(u->v())) {
+        const auto &_m1 =
+            *std::get_if<typename BinomialHeap::tree::Node>(&u->v());
+        auto &&_sv = _m1.d_a2;
+        if (std::holds_alternative<typename BinomialHeap::tree::Node>(
+                _sv->v())) {
+          return tree::leaf();
+        } else {
+          if (_m1.d_a0 < _m.d_a0) {
+            return tree::node(_m.d_a0, tree::node(_m1.d_a0, _m1.d_a1, _m.d_a1),
+                              tree::leaf());
+          } else {
+            return tree::node(_m1.d_a0, tree::node(_m.d_a0, _m.d_a1, _m1.d_a1),
+                              tree::leaf());
+          }
+        }
+      } else {
+        return tree::leaf();
+      }
+    }
+  } else {
+    return tree::leaf();
+  }
 }
 
 std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> BinomialHeap::carry(
     const std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> &q,
     std::shared_ptr<BinomialHeap::tree> t) {
-  return std::visit(
-      Overloaded{
-          [&](const typename List<std::shared_ptr<BinomialHeap::tree>>::Nil &)
-              -> std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> {
-            return std::visit(
-                Overloaded{
-                    [&](const typename BinomialHeap::tree::Node &)
-                        -> std::shared_ptr<
-                            List<std::shared_ptr<BinomialHeap::tree>>> {
-                      return List<std::shared_ptr<BinomialHeap::tree>>::cons(
-                          t, List<std::shared_ptr<BinomialHeap::tree>>::nil());
-                    },
-                    [](const typename BinomialHeap::tree::Leaf &)
-                        -> std::shared_ptr<
-                            List<std::shared_ptr<BinomialHeap::tree>>> {
-                      return List<std::shared_ptr<BinomialHeap::tree>>::nil();
-                    }},
-                t->v());
-          },
-          [&](const typename List<std::shared_ptr<BinomialHeap::tree>>::Cons
-                  &_args)
-              -> std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> {
-            return std::visit(
-                Overloaded{
-                    [&](const typename BinomialHeap::tree::Node &)
-                        -> std::shared_ptr<
-                            List<std::shared_ptr<BinomialHeap::tree>>> {
-                      return std::visit(
-                          Overloaded{
-                              [&](const typename BinomialHeap::tree::Node &)
-                                  -> std::shared_ptr<List<
-                                      std::shared_ptr<BinomialHeap::tree>>> {
-                                return List<
-                                    std::shared_ptr<BinomialHeap::tree>>::
-                                    cons(tree::leaf(),
-                                         carry(_args.d_a1,
-                                               smash(t, _args.d_a0)));
-                              },
-                              [&](const typename BinomialHeap::tree::Leaf &)
-                                  -> std::shared_ptr<List<
-                                      std::shared_ptr<BinomialHeap::tree>>> {
-                                return List<std::shared_ptr<
-                                    BinomialHeap::tree>>::cons(_args.d_a0,
-                                                               _args.d_a1);
-                              }},
-                          t->v());
-                    },
-                    [&](const typename BinomialHeap::tree::Leaf &)
-                        -> std::shared_ptr<
-                            List<std::shared_ptr<BinomialHeap::tree>>> {
-                      return List<std::shared_ptr<BinomialHeap::tree>>::cons(
-                          t, _args.d_a1);
-                    }},
-                _args.d_a0->v());
-          }},
-      q->v());
+  if (std::holds_alternative<
+          typename List<std::shared_ptr<BinomialHeap::tree>>::Nil>(q->v())) {
+    if (std::holds_alternative<typename BinomialHeap::tree::Node>(t->v())) {
+      return List<std::shared_ptr<BinomialHeap::tree>>::cons(
+          t, List<std::shared_ptr<BinomialHeap::tree>>::nil());
+    } else {
+      return List<std::shared_ptr<BinomialHeap::tree>>::nil();
+    }
+  } else {
+    const auto &_m =
+        *std::get_if<typename List<std::shared_ptr<BinomialHeap::tree>>::Cons>(
+            &q->v());
+    auto &&_sv = _m.d_a0;
+    if (std::holds_alternative<typename BinomialHeap::tree::Node>(_sv->v())) {
+      if (std::holds_alternative<typename BinomialHeap::tree::Node>(t->v())) {
+        return List<std::shared_ptr<BinomialHeap::tree>>::cons(
+            tree::leaf(), carry(_m.d_a1, smash(t, _m.d_a0)));
+      } else {
+        return List<std::shared_ptr<BinomialHeap::tree>>::cons(_m.d_a0,
+                                                               _m.d_a1);
+      }
+    } else {
+      return List<std::shared_ptr<BinomialHeap::tree>>::cons(t, _m.d_a1);
+    }
+  }
 }
 
 __attribute__((pure)) BinomialHeap::priqueue BinomialHeap::insert(
@@ -140,447 +81,183 @@ __attribute__((pure)) BinomialHeap::priqueue BinomialHeap::join(
     const std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> &p,
     const std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> &q,
     std::shared_ptr<BinomialHeap::tree> c) {
-  return std::visit(
-      Overloaded{
-          [&](const typename List<std::shared_ptr<BinomialHeap::tree>>::Nil &)
-              -> std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> {
-            return carry(q, std::move(c));
-          },
-          [&](const typename List<std::shared_ptr<
-                  BinomialHeap::tree>>::Cons &_args) -> std::
-                                                         shared_ptr<List<
-                                                             std::shared_ptr<
-                                                                 BinomialHeap::
-                                                                     tree>>> {
-                                                           return std::
-                                                               visit(Overloaded{
-                                                                         [&](const typename BinomialHeap::tree::Node
-                                                                                 &) -> std::
-                                                                                        shared_ptr<List<
-                                                                                            std::shared_ptr<
-                                                                                                BinomialHeap::
-                                                                                                    tree>>> {
-                                                                                          return std::visit(
-                                                                                              Overloaded{
-                                                                                                  [&](const typename List<
-                                                                                                      std::shared_ptr<
-                                                                                                          BinomialHeap::
-                                                                                                              tree>>::
-                                                                                                          Nil &)
-                                                                                                      -> std::shared_ptr<
-                                                                                                          List<std::shared_ptr<
-                                                                                                              BinomialHeap::
-                                                                                                                  tree>>> {
-                                                                                                    return carry(
-                                                                                                        p,
-                                                                                                        std::move(
-                                                                                                            c));
-                                                                                                  },
-                                                                                                  [&](const typename List<
-                                                                                                      std::shared_ptr<
-                                                                                                          BinomialHeap::
-                                                                                                              tree>>::
-                                                                                                          Cons &
-                                                                                                              _args1)
-                                                                                                      -> std::shared_ptr<List<std::
-                                                                                                                                  shared_ptr<
-                                                                                                                                      BinomialHeap::
-                                                                                                                                          tree>>> {
-                                                                                                    return std::visit(
-                                                                                                        Overloaded{
-                                                                                                            [&](const typename BinomialHeap::tree::Node
-                                                                                                                    &) -> std::
-                                                                                                                           shared_ptr<List<
-                                                                                                                               std::shared_ptr<
-                                                                                                                                   BinomialHeap::
-                                                                                                                                       tree>>> {
-                                                                                                                             return List<
-                                                                                                                                 std::shared_ptr<
-                                                                                                                                     BinomialHeap::
-                                                                                                                                         tree>>::
-                                                                                                                                 cons(
-                                                                                                                                     c,
-                                                                                                                                     join(
-                                                                                                                                         _args
-                                                                                                                                             .d_a1,
-                                                                                                                                         _args1
-                                                                                                                                             .d_a1,
-                                                                                                                                         smash(
-                                                                                                                                             _args
-                                                                                                                                                 .d_a0,
-                                                                                                                                             _args1
-                                                                                                                                                 .d_a0)));
-                                                                                                                           },
-                                                                                                            [&](const typename BinomialHeap::
-                                                                                                                    tree::Leaf
-                                                                                                                        &) -> std::
-                                                                                                                               shared_ptr<List<
-                                                                                                                                   std::shared_ptr<
-                                                                                                                                       BinomialHeap::
-                                                                                                                                           tree>>> {
-                                                                                                                                 return std::visit(
-                                                                                                                                     Overloaded{
-                                                                                                                                         [&](const typename BinomialHeap::
-                                                                                                                                                 tree::Node
-                                                                                                                                                     &)
-                                                                                                                                             -> std::shared_ptr<
-                                                                                                                                                 List<std::shared_ptr<
-                                                                                                                                                     BinomialHeap::
-                                                                                                                                                         tree>>> {
-                                                                                                                                           return List<
-                                                                                                                                               std::shared_ptr<
-                                                                                                                                                   BinomialHeap::
-                                                                                                                                                       tree>>::
-                                                                                                                                               cons(
-                                                                                                                                                   tree::
-                                                                                                                                                       leaf(),
-                                                                                                                                                   join(
-                                                                                                                                                       _args
-                                                                                                                                                           .d_a1,
-                                                                                                                                                       _args1
-                                                                                                                                                           .d_a1,
-                                                                                                                                                       smash(
-                                                                                                                                                           c,
-                                                                                                                                                           _args
-                                                                                                                                                               .d_a0)));
-                                                                                                                                         },
-                                                                                                                                         [&](const typename BinomialHeap::
-                                                                                                                                                 tree::Leaf
-                                                                                                                                                     &)
-                                                                                                                                             -> std::shared_ptr<
-                                                                                                                                                 List<std::shared_ptr<
-                                                                                                                                                     BinomialHeap::
-                                                                                                                                                         tree>>> {
-                                                                                                                                           return List<
-                                                                                                                                               std::shared_ptr<
-                                                                                                                                                   BinomialHeap::
-                                                                                                                                                       tree>>::
-                                                                                                                                               cons(
-                                                                                                                                                   _args
-                                                                                                                                                       .d_a0,
-                                                                                                                                                   join(
-                                                                                                                                                       _args
-                                                                                                                                                           .d_a1,
-                                                                                                                                                       _args1
-                                                                                                                                                           .d_a1,
-                                                                                                                                                       tree::
-                                                                                                                                                           leaf()));
-                                                                                                                                         }},
-                                                                                                                                     c->v());
-                                                                                                                               }},
-                                                                                                        _args1
-                                                                                                            .d_a0
-                                                                                                            ->v());
-                                                                                                  }},
-                                                                                              q->v());
-                                                                                        },
-                                                                         [&](const typename BinomialHeap::
-                                                                                 tree::Leaf
-                                                                                     &)
-                                                                             -> std::
-                                                                                 shared_ptr<List<
-                                                                                     std::shared_ptr<
-                                                                                         BinomialHeap::tree>>> {
-                                                                                   return std::visit(
-                                                                                       Overloaded{
-                                                                                           [&](const typename List<
-                                                                                               std::shared_ptr<
-                                                                                                   BinomialHeap::
-                                                                                                       tree>>::
-                                                                                                   Nil &)
-                                                                                               -> std::shared_ptr<
-                                                                                                   List<std::shared_ptr<
-                                                                                                       BinomialHeap::
-                                                                                                           tree>>> {
-                                                                                             return carry(
-                                                                                                 p,
-                                                                                                 std::move(
-                                                                                                     c));
-                                                                                           },
-                                                                                           [&](const typename List<
-                                                                                               std::shared_ptr<
-                                                                                                   BinomialHeap::
-                                                                                                       tree>>::
-                                                                                                   Cons &
-                                                                                                       _args1)
-                                                                                               -> std::shared_ptr<
-                                                                                                   List<std::shared_ptr<
-                                                                                                       BinomialHeap::
-                                                                                                           tree>>> {
-                                                                                             return std::
-                                                                                                 visit(
-                                                                                                     Overloaded{
-                                                                                                         [&](const typename BinomialHeap::tree::
-                                                                                                                 Node &) -> std::
-                                                                                                                             shared_ptr<List<
-                                                                                                                                 std::shared_ptr<
-                                                                                                                                     BinomialHeap::
-                                                                                                                                         tree>>> {
-                                                                                                                               return std::visit(
-                                                                                                                                   Overloaded{
-                                                                                                                                       [&](const typename BinomialHeap::
-                                                                                                                                               tree::Node
-                                                                                                                                                   &)
-                                                                                                                                           -> std::shared_ptr<
-                                                                                                                                               List<std::shared_ptr<
-                                                                                                                                                   BinomialHeap::
-                                                                                                                                                       tree>>> {
-                                                                                                                                         return List<
-                                                                                                                                             std::shared_ptr<
-                                                                                                                                                 BinomialHeap::
-                                                                                                                                                     tree>>::
-                                                                                                                                             cons(
-                                                                                                                                                 tree::
-                                                                                                                                                     leaf(),
-                                                                                                                                                 join(
-                                                                                                                                                     _args
-                                                                                                                                                         .d_a1,
-                                                                                                                                                     _args1
-                                                                                                                                                         .d_a1,
-                                                                                                                                                     smash(
-                                                                                                                                                         c,
-                                                                                                                                                         _args1
-                                                                                                                                                             .d_a0)));
-                                                                                                                                       },
-                                                                                                                                       [&](const typename BinomialHeap::
-                                                                                                                                               tree::Leaf
-                                                                                                                                                   &)
-                                                                                                                                           -> std::shared_ptr<
-                                                                                                                                               List<std::shared_ptr<
-                                                                                                                                                   BinomialHeap::
-                                                                                                                                                       tree>>> {
-                                                                                                                                         return List<
-                                                                                                                                             std::shared_ptr<
-                                                                                                                                                 BinomialHeap::
-                                                                                                                                                     tree>>::
-                                                                                                                                             cons(
-                                                                                                                                                 _args1
-                                                                                                                                                     .d_a0,
-                                                                                                                                                 join(
-                                                                                                                                                     _args
-                                                                                                                                                         .d_a1,
-                                                                                                                                                     _args1
-                                                                                                                                                         .d_a1,
-                                                                                                                                                     tree::
-                                                                                                                                                         leaf()));
-                                                                                                                                       }},
-                                                                                                                                   c->v());
-                                                                                                                             },
-                                                                                                         [&](const typename BinomialHeap::
-                                                                                                                 tree::Leaf &) -> std::
-                                                                                                                                   shared_ptr<List<
-                                                                                                                                       std::shared_ptr<
-                                                                                                                                           BinomialHeap::
-                                                                                                                                               tree>>> {
-                                                                                                                                     return List<
-                                                                                                                                         std::shared_ptr<
-                                                                                                                                             BinomialHeap::
-                                                                                                                                                 tree>>::
-                                                                                                                                         cons(
-                                                                                                                                             c,
-                                                                                                                                             join(
-                                                                                                                                                 _args
-                                                                                                                                                     .d_a1,
-                                                                                                                                                 _args1
-                                                                                                                                                     .d_a1,
-                                                                                                                                                 tree::
-                                                                                                                                                     leaf()));
-                                                                                                                                   }},
-                                                                                                     _args1
-                                                                                                         .d_a0
-                                                                                                         ->v());
-                                                                                           }},
-                                                                                       q->v());
-                                                                                 }},
-                                                                     _args.d_a0
-                                                                         ->v());
-                                                         }},
-      p->v());
+  if (std::holds_alternative<
+          typename List<std::shared_ptr<BinomialHeap::tree>>::Nil>(p->v())) {
+    return carry(q, std::move(c));
+  } else {
+    const auto &_m =
+        *std::get_if<typename List<std::shared_ptr<BinomialHeap::tree>>::Cons>(
+            &p->v());
+    auto &&_sv = _m.d_a0;
+    if (std::holds_alternative<typename BinomialHeap::tree::Node>(_sv->v())) {
+      if (std::holds_alternative<
+              typename List<std::shared_ptr<BinomialHeap::tree>>::Nil>(
+              q->v())) {
+        return carry(p, std::move(c));
+      } else {
+        const auto &_m1 = *std::get_if<
+            typename List<std::shared_ptr<BinomialHeap::tree>>::Cons>(&q->v());
+        auto &&_sv = _m1.d_a0;
+        if (std::holds_alternative<typename BinomialHeap::tree::Node>(
+                _sv->v())) {
+          return List<std::shared_ptr<BinomialHeap::tree>>::cons(
+              c, join(_m.d_a1, _m1.d_a1, smash(_m.d_a0, _m1.d_a0)));
+        } else {
+          if (std::holds_alternative<typename BinomialHeap::tree::Node>(
+                  c->v())) {
+            return List<std::shared_ptr<BinomialHeap::tree>>::cons(
+                tree::leaf(), join(_m.d_a1, _m1.d_a1, smash(c, _m.d_a0)));
+          } else {
+            return List<std::shared_ptr<BinomialHeap::tree>>::cons(
+                _m.d_a0, join(_m.d_a1, _m1.d_a1, tree::leaf()));
+          }
+        }
+      }
+    } else {
+      if (std::holds_alternative<
+              typename List<std::shared_ptr<BinomialHeap::tree>>::Nil>(
+              q->v())) {
+        return carry(p, std::move(c));
+      } else {
+        const auto &_m1 = *std::get_if<
+            typename List<std::shared_ptr<BinomialHeap::tree>>::Cons>(&q->v());
+        auto &&_sv = _m1.d_a0;
+        if (std::holds_alternative<typename BinomialHeap::tree::Node>(
+                _sv->v())) {
+          if (std::holds_alternative<typename BinomialHeap::tree::Node>(
+                  c->v())) {
+            return List<std::shared_ptr<BinomialHeap::tree>>::cons(
+                tree::leaf(), join(_m.d_a1, _m1.d_a1, smash(c, _m1.d_a0)));
+          } else {
+            return List<std::shared_ptr<BinomialHeap::tree>>::cons(
+                _m1.d_a0, join(_m.d_a1, _m1.d_a1, tree::leaf()));
+          }
+        } else {
+          return List<std::shared_ptr<BinomialHeap::tree>>::cons(
+              c, join(_m.d_a1, _m1.d_a1, tree::leaf()));
+        }
+      }
+    }
+  }
 }
 
 __attribute__((pure)) BinomialHeap::priqueue
 BinomialHeap::heap_delete_max(const std::shared_ptr<BinomialHeap::tree> &t) {
-  return std::visit(
-      Overloaded{
-          [](const typename BinomialHeap::tree::Node &_args)
-              -> std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> {
-            return std::visit(
-                Overloaded{
-                    [](const typename BinomialHeap::tree::Node &)
-                        -> std::shared_ptr<
-                            List<std::shared_ptr<BinomialHeap::tree>>> {
-                      return List<std::shared_ptr<BinomialHeap::tree>>::nil();
-                    },
-                    [&](const typename BinomialHeap::tree::Leaf &)
-                        -> std::shared_ptr<
-                            List<std::shared_ptr<BinomialHeap::tree>>> {
-                      return unzip(
-                          _args.d_a1,
-                          [](std::shared_ptr<
-                              List<std::shared_ptr<BinomialHeap::tree>>>
-                                 u) { return u; });
-                    }},
-                _args.d_a2->v());
-          },
-          [](const typename BinomialHeap::tree::Leaf &)
-              -> std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> {
-            return List<std::shared_ptr<BinomialHeap::tree>>::nil();
-          }},
-      t->v());
+  if (std::holds_alternative<typename BinomialHeap::tree::Node>(t->v())) {
+    const auto &_m = *std::get_if<typename BinomialHeap::tree::Node>(&t->v());
+    auto &&_sv = _m.d_a2;
+    if (std::holds_alternative<typename BinomialHeap::tree::Node>(_sv->v())) {
+      return List<std::shared_ptr<BinomialHeap::tree>>::nil();
+    } else {
+      return unzip(
+          _m.d_a1,
+          [](std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> u) {
+            return u;
+          });
+    }
+  } else {
+    return List<std::shared_ptr<BinomialHeap::tree>>::nil();
+  }
 }
 
 __attribute__((pure)) BinomialHeap::key BinomialHeap::find_max_helper(
     const unsigned int current,
     const std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> &q) {
-  return std::visit(
-      Overloaded{
-          [&](const typename List<std::shared_ptr<BinomialHeap::tree>>::Nil &)
-              -> unsigned int { return current; },
-          [&](const typename List<std::shared_ptr<BinomialHeap::tree>>::Cons
-                  &_args) -> unsigned int {
-            return std::visit(
-                Overloaded{[&](const typename BinomialHeap::tree::Node &_args0)
-                               -> unsigned int {
-                             return find_max_helper(
-                                 [&]() -> unsigned int {
-                                   if (current < _args0.d_a0) {
-                                     return _args0.d_a0;
-                                   } else {
-                                     return current;
-                                   }
-                                 }(),
-                                 _args.d_a1);
-                           },
-                           [&](const typename BinomialHeap::tree::Leaf &)
-                               -> unsigned int {
-                             return find_max_helper(current, _args.d_a1);
-                           }},
-                _args.d_a0->v());
-          }},
-      q->v());
+  if (std::holds_alternative<
+          typename List<std::shared_ptr<BinomialHeap::tree>>::Nil>(q->v())) {
+    return current;
+  } else {
+    const auto &_m =
+        *std::get_if<typename List<std::shared_ptr<BinomialHeap::tree>>::Cons>(
+            &q->v());
+    auto &&_sv0 = _m.d_a0;
+    if (std::holds_alternative<typename BinomialHeap::tree::Node>(_sv0->v())) {
+      const auto &_m0 =
+          *std::get_if<typename BinomialHeap::tree::Node>(&_sv0->v());
+      return find_max_helper(
+          [&]() -> unsigned int {
+            if (current < _m0.d_a0) {
+              return _m0.d_a0;
+            } else {
+              return current;
+            }
+          }(),
+          _m.d_a1);
+    } else {
+      return find_max_helper(current, _m.d_a1);
+    }
+  }
 }
 
 __attribute__((pure)) std::optional<BinomialHeap::key> BinomialHeap::find_max(
     const std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> &q) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<std::shared_ptr<BinomialHeap::tree>>::Nil &)
-              -> std::optional<unsigned int> {
-            return std::optional<unsigned int>();
-          },
-          [](const typename List<std::shared_ptr<BinomialHeap::tree>>::Cons
-                 &_args) -> std::optional<unsigned int> {
-            return std::visit(
-                Overloaded{[&](const typename BinomialHeap::tree::Node &_args0)
-                               -> std::optional<unsigned int> {
-                             return std::make_optional<unsigned int>(
-                                 find_max_helper(_args0.d_a0, _args.d_a1));
-                           },
-                           [&](const typename BinomialHeap::tree::Leaf &)
-                               -> std::optional<unsigned int> {
-                             return find_max(_args.d_a1);
-                           }},
-                _args.d_a0->v());
-          }},
-      q->v());
+  if (std::holds_alternative<
+          typename List<std::shared_ptr<BinomialHeap::tree>>::Nil>(q->v())) {
+    return std::optional<unsigned int>();
+  } else {
+    const auto &_m =
+        *std::get_if<typename List<std::shared_ptr<BinomialHeap::tree>>::Cons>(
+            &q->v());
+    auto &&_sv0 = _m.d_a0;
+    if (std::holds_alternative<typename BinomialHeap::tree::Node>(_sv0->v())) {
+      const auto &_m0 =
+          *std::get_if<typename BinomialHeap::tree::Node>(&_sv0->v());
+      return std::make_optional<unsigned int>(
+          find_max_helper(_m0.d_a0, _m.d_a1));
+    } else {
+      return find_max(_m.d_a1);
+    }
+  }
 }
 
 __attribute__((pure)) std::pair<BinomialHeap::priqueue, BinomialHeap::priqueue>
 BinomialHeap::delete_max_aux(
     const unsigned int m,
     const std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> &p) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<std::shared_ptr<BinomialHeap::tree>>::Nil &)
-              -> std::pair<
-                  std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>>,
-                  std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>>> {
-            return std::make_pair(
-                List<std::shared_ptr<BinomialHeap::tree>>::nil(),
-                List<std::shared_ptr<BinomialHeap::tree>>::nil());
-          },
-          [&](const typename List<std::shared_ptr<BinomialHeap::tree>>::Cons
-                  &_args)
-              -> std::pair<
-                  std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>>,
-                  std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>>> {
-            return std::visit(
-                Overloaded{
-                    [&](const typename BinomialHeap::tree::Node &_args0)
-                        -> std::pair<
-                            std::shared_ptr<
-                                List<std::shared_ptr<BinomialHeap::tree>>>,
-                            std::shared_ptr<
-                                List<std::shared_ptr<BinomialHeap::tree>>>> {
-                      return std::visit(
-                          Overloaded{
-                              [](const typename BinomialHeap::tree::Node &)
-                                  -> std::pair<
-                                      std::shared_ptr<List<
-                                          std::shared_ptr<BinomialHeap::tree>>>,
-                                      std::shared_ptr<List<std::shared_ptr<
-                                          BinomialHeap::tree>>>> {
-                                return std::make_pair(
-                                    List<std::shared_ptr<BinomialHeap::tree>>::
-                                        nil(),
-                                    List<std::shared_ptr<BinomialHeap::tree>>::
-                                        nil());
-                              },
-                              [&](const typename BinomialHeap::tree::Leaf &)
-                                  -> std::pair<
-                                      std::shared_ptr<List<
-                                          std::shared_ptr<BinomialHeap::tree>>>,
-                                      std::shared_ptr<List<std::shared_ptr<
-                                          BinomialHeap::tree>>>> {
-                                if (_args0.d_a0 < m) {
-                                  auto _cs = delete_max_aux(m, _args.d_a1);
-                                  const std::shared_ptr<
-                                      List<std::shared_ptr<BinomialHeap::tree>>>
-                                      &j = _cs.first;
-                                  const std::shared_ptr<
-                                      List<std::shared_ptr<BinomialHeap::tree>>>
-                                      &k = _cs.second;
-                                  return std::make_pair(
-                                      List<
-                                          std::shared_ptr<BinomialHeap::tree>>::
-                                          cons(tree::node(_args0.d_a0,
-                                                          _args0.d_a1,
-                                                          tree::leaf()),
-                                               j),
-                                      k);
-                                } else {
-                                  return std::make_pair(
-                                      List<
-                                          std::shared_ptr<BinomialHeap::tree>>::
-                                          cons(tree::leaf(), _args.d_a1),
-                                      heap_delete_max(
-                                          tree::node(_args0.d_a0, _args0.d_a1,
-                                                     tree::leaf())));
-                                }
-                              }},
-                          _args0.d_a2->v());
-                    },
-                    [&](const typename BinomialHeap::tree::Leaf &)
-                        -> std::pair<
-                            std::shared_ptr<
-                                List<std::shared_ptr<BinomialHeap::tree>>>,
-                            std::shared_ptr<
-                                List<std::shared_ptr<BinomialHeap::tree>>>> {
-                      auto _cs = delete_max_aux(m, _args.d_a1);
-                      const std::shared_ptr<
-                          List<std::shared_ptr<BinomialHeap::tree>>> &j =
-                          _cs.first;
-                      const std::shared_ptr<
-                          List<std::shared_ptr<BinomialHeap::tree>>> &k =
-                          _cs.second;
-                      return std::make_pair(
-                          List<std::shared_ptr<BinomialHeap::tree>>::cons(
-                              tree::leaf(), j),
-                          k);
-                    }},
-                _args.d_a0->v());
-          }},
-      p->v());
+  if (std::holds_alternative<
+          typename List<std::shared_ptr<BinomialHeap::tree>>::Nil>(p->v())) {
+    return std::make_pair(List<std::shared_ptr<BinomialHeap::tree>>::nil(),
+                          List<std::shared_ptr<BinomialHeap::tree>>::nil());
+  } else {
+    const auto &_m =
+        *std::get_if<typename List<std::shared_ptr<BinomialHeap::tree>>::Cons>(
+            &p->v());
+    auto &&_sv0 = _m.d_a0;
+    if (std::holds_alternative<typename BinomialHeap::tree::Node>(_sv0->v())) {
+      const auto &_m0 =
+          *std::get_if<typename BinomialHeap::tree::Node>(&_sv0->v());
+      auto &&_sv = _m0.d_a2;
+      if (std::holds_alternative<typename BinomialHeap::tree::Node>(_sv->v())) {
+        return std::make_pair(List<std::shared_ptr<BinomialHeap::tree>>::nil(),
+                              List<std::shared_ptr<BinomialHeap::tree>>::nil());
+      } else {
+        if (_m0.d_a0 < m) {
+          auto _cs = delete_max_aux(m, _m.d_a1);
+          const std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> &j =
+              _cs.first;
+          const std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> &k =
+              _cs.second;
+          return std::make_pair(
+              List<std::shared_ptr<BinomialHeap::tree>>::cons(
+                  tree::node(_m0.d_a0, _m0.d_a1, tree::leaf()), j),
+              k);
+        } else {
+          return std::make_pair(
+              List<std::shared_ptr<BinomialHeap::tree>>::cons(tree::leaf(),
+                                                              _m.d_a1),
+              heap_delete_max(tree::node(_m0.d_a0, _m0.d_a1, tree::leaf())));
+        }
+      }
+    } else {
+      auto _cs = delete_max_aux(m, _m.d_a1);
+      const std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> &j =
+          _cs.first;
+      const std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> &k =
+          _cs.second;
+      return std::make_pair(
+          List<std::shared_ptr<BinomialHeap::tree>>::cons(tree::leaf(), j), k);
+    }
+  }
 }
 
 __attribute__((pure))
@@ -615,17 +292,12 @@ __attribute__((pure)) BinomialHeap::priqueue BinomialHeap::merge(
 __attribute__((pure)) BinomialHeap::priqueue BinomialHeap::insert_list(
     const std::shared_ptr<List<unsigned int>> &l,
     std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> q) {
-  return std::visit(
-      Overloaded{
-          [&](const typename List<unsigned int>::Nil &)
-              -> std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> {
-            return q;
-          },
-          [&](const typename List<unsigned int>::Cons &_args)
-              -> std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> {
-            return insert_list(_args.d_a1, insert(_args.d_a0, std::move(q)));
-          }},
-      l->v());
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+    return q;
+  } else {
+    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l->v());
+    return insert_list(_m.d_a1, insert(_m.d_a0, std::move(q)));
+  }
 }
 
 std::shared_ptr<List<unsigned int>>

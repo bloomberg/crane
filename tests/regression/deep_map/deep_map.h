@@ -72,17 +72,17 @@ struct DeepMap {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a0) _s0;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a0) _s3;
+      decltype(std::declval<typename tree<T1>::Node &>().d_a0) _s0;
+      decltype(std::declval<typename tree<T1>::Node &>().d_a2) _s1;
+      decltype(std::declval<typename tree<T1>::Node &>().d_a1) _s2;
+      decltype(std::declval<typename tree<T1>::Node &>().d_a0) _s3;
     };
 
     struct _Call2 {
       T2 _s0;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a0) _s3;
+      decltype(std::declval<typename tree<T1>::Node &>().d_a2) _s1;
+      decltype(std::declval<typename tree<T1>::Node &>().d_a1) _s2;
+      decltype(std::declval<typename tree<T1>::Node &>().d_a0) _s3;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -92,30 +92,24 @@ struct DeepMap {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree<T1>> t = _f.t;
-                std::visit(
-                    Overloaded{
-                        [&](const typename tree<T1>::Leaf &) -> void {
-                          _result = f;
-                        },
-                        [&](const typename tree<T1>::Node &_args) -> void {
-                          _stack.emplace_back(_Call1{_args.d_a0, _args.d_a2,
-                                                     _args.d_a1, _args.d_a0});
-                          _stack.emplace_back(_Enter{_args.d_a2});
-                        }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.emplace_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<tree<T1>> t = _f.t;
+        if (std::holds_alternative<typename tree<T1>::Leaf>(t->v())) {
+          _result = f;
+        } else {
+          const auto &_m = *std::get_if<typename tree<T1>::Node>(&t->v());
+          _stack.emplace_back(_Call1{_m.d_a0, _m.d_a2, _m.d_a1, _m.d_a0});
+          _stack.emplace_back(_Enter{_m.d_a2});
+        }
+      } else if (std::holds_alternative<_Call1>(_frame)) {
+        const auto &_f = std::get<_Call1>(_frame);
+        _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+        _stack.emplace_back(_Enter{_f._s0});
+      } else {
+        const auto &_f = std::get<_Call2>(_frame);
+        _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+      }
     }
     return _result;
   }
@@ -130,17 +124,17 @@ struct DeepMap {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a0) _s0;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a0) _s3;
+      decltype(std::declval<typename tree<T1>::Node &>().d_a0) _s0;
+      decltype(std::declval<typename tree<T1>::Node &>().d_a2) _s1;
+      decltype(std::declval<typename tree<T1>::Node &>().d_a1) _s2;
+      decltype(std::declval<typename tree<T1>::Node &>().d_a0) _s3;
     };
 
     struct _Call2 {
       T2 _s0;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a0) _s3;
+      decltype(std::declval<typename tree<T1>::Node &>().d_a2) _s1;
+      decltype(std::declval<typename tree<T1>::Node &>().d_a1) _s2;
+      decltype(std::declval<typename tree<T1>::Node &>().d_a0) _s3;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -150,30 +144,24 @@ struct DeepMap {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree<T1>> t = _f.t;
-                std::visit(
-                    Overloaded{
-                        [&](const typename tree<T1>::Leaf &) -> void {
-                          _result = f;
-                        },
-                        [&](const typename tree<T1>::Node &_args) -> void {
-                          _stack.emplace_back(_Call1{_args.d_a0, _args.d_a2,
-                                                     _args.d_a1, _args.d_a0});
-                          _stack.emplace_back(_Enter{_args.d_a2});
-                        }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.emplace_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<tree<T1>> t = _f.t;
+        if (std::holds_alternative<typename tree<T1>::Leaf>(t->v())) {
+          _result = f;
+        } else {
+          const auto &_m = *std::get_if<typename tree<T1>::Node>(&t->v());
+          _stack.emplace_back(_Call1{_m.d_a0, _m.d_a2, _m.d_a1, _m.d_a0});
+          _stack.emplace_back(_Enter{_m.d_a2});
+        }
+      } else if (std::holds_alternative<_Call1>(_frame)) {
+        const auto &_f = std::get<_Call1>(_frame);
+        _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+        _stack.emplace_back(_Enter{_f._s0});
+      } else {
+        const auto &_f = std::get<_Call2>(_frame);
+        _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+      }
     }
     return _result;
   }
@@ -192,7 +180,7 @@ struct DeepMap {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a0) _s0;
+      decltype(std::declval<typename tree<T1>::Node &>().d_a0) _s0;
       T2 _s1;
     };
 
@@ -208,30 +196,24 @@ struct DeepMap {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree<T1>> t = _f.t;
-                std::visit(
-                    Overloaded{
-                        [&](const typename tree<T1>::Leaf &) -> void {
-                          _result = tree<T2>::leaf();
-                        },
-                        [&](const typename tree<T1>::Node &_args) -> void {
-                          _stack.emplace_back(
-                              _Call1{_args.d_a0, f(_args.d_a1)});
-                          _stack.emplace_back(_Enter{_args.d_a2});
-                        }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.emplace_back(_Call2{_result, _f._s1});
-                _stack.emplace_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = tree<T2>::node(_result, _f._s1, _f._s0);
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<tree<T1>> t = _f.t;
+        if (std::holds_alternative<typename tree<T1>::Leaf>(t->v())) {
+          _result = tree<T2>::leaf();
+        } else {
+          const auto &_m = *std::get_if<typename tree<T1>::Node>(&t->v());
+          _stack.emplace_back(_Call1{_m.d_a0, f(_m.d_a1)});
+          _stack.emplace_back(_Enter{_m.d_a2});
+        }
+      } else if (std::holds_alternative<_Call1>(_frame)) {
+        const auto &_f = std::get<_Call1>(_frame);
+        _stack.emplace_back(_Call2{_result, _f._s1});
+        _stack.emplace_back(_Enter{_f._s0});
+      } else {
+        const auto &_f = std::get<_Call2>(_frame);
+        _result = tree<T2>::node(_result, _f._s1, _f._s0);
+      }
     }
     return _result;
   }

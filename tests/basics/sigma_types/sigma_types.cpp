@@ -18,23 +18,25 @@ SigmaTypes::positive_succ(const unsigned int n) {
 
 __attribute__((pure)) unsigned int
 SigmaTypes::get_positive(const unsigned int n) {
-  return std::visit(
-      Overloaded{[](const typename Sig<unsigned int>::Exist &_args) -> auto {
-        return _args.d_x;
-      }},
-      positive_succ(n)->v());
+  auto &&_sv = positive_succ(n);
+  const auto &_m = *std::get_if<typename Sig<unsigned int>::Exist>(&_sv->v());
+  return _m.d_x;
 }
 
 std::shared_ptr<Sig<unsigned int>>
 SigmaTypes::double_positive(const unsigned int n) {
   std::shared_ptr<Sig<unsigned int>> p = positive_succ(n);
   return Sig<unsigned int>::exist(
-      (std::visit(Overloaded{[](const typename Sig<unsigned int>::Exist &_args)
-                                 -> auto { return _args.d_x; }},
-                  p->v()) +
-       std::visit(Overloaded{[](const typename Sig<unsigned int>::Exist &_args0)
-                                 -> auto { return _args0.d_x; }},
-                  p->v())));
+      ([&]() {
+        const auto &_m =
+            *std::get_if<typename Sig<unsigned int>::Exist>(&p->v());
+        return _m.d_x;
+      }() +
+       [&]() {
+         const auto &_m0 =
+             *std::get_if<typename Sig<unsigned int>::Exist>(&p->v());
+         return _m0.d_x;
+       }()));
 }
 
 __attribute__((pure)) unsigned int
@@ -49,9 +51,12 @@ SigmaTypes::positives_up_to(const unsigned int k) {
   } else {
     unsigned int k_ = k - 1;
     return List<unsigned int>::cons(
-        std::visit(Overloaded{[](const typename Sig<unsigned int>::Exist &_args)
-                                  -> auto { return _args.d_x; }},
-                   positive_succ(k_)->v()),
+        [&]() {
+          auto &&_sv = positive_succ(k_);
+          const auto &_m =
+              *std::get_if<typename Sig<unsigned int>::Exist>(&_sv->v());
+          return _m.d_x;
+        }(),
         positives_up_to(k_));
   }
 }

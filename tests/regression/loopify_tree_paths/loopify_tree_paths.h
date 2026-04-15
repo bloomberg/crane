@@ -64,28 +64,26 @@ public:
     const List *_loop_self = this;
     bool _continue = true;
     while (_continue) {
-      std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) {
-                if (_last) {
-                  std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
-                } else {
-                  _head = m;
-                }
-                _continue = false;
-              },
-              [&](const typename List<t_A>::Cons &_args) {
-                auto _cell = List<t_A>::cons(_args.d_a0, nullptr);
-                if (_last) {
-                  std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
-                      _cell;
-                } else {
-                  _head = _cell;
-                }
-                _last = _cell;
-                _loop_self = _args.d_a1.get();
-              }},
-          _loop_self->v());
+      if (std::holds_alternative<typename List<t_A>::Nil>(_loop_self->v())) {
+        if (_last) {
+          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
+        } else {
+          _head = m;
+        }
+        _continue = false;
+      } else {
+        const auto &_m =
+            *std::get_if<typename List<t_A>::Cons>(&_loop_self->v());
+        auto _cell = List<t_A>::cons(_m.d_a0, nullptr);
+        if (_last) {
+          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = _cell;
+        } else {
+          _head = _cell;
+        }
+        _last = _cell;
+        _loop_self = _m.d_a1.get();
+        continue;
+      }
     }
     return _head;
   }
@@ -145,13 +143,13 @@ struct LoopifyTreePaths {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename tree::Node &>().d_a0.get()) _s0;
-        decltype(std::declval<const typename tree::Node &>().d_a1) _s1;
+        decltype(std::declval<typename tree::Node &>().d_a0.get()) _s0;
+        decltype(std::declval<typename tree::Node &>().d_a1) _s1;
       };
 
       struct _Call2 {
         std::shared_ptr<List<unsigned int>> _s0;
-        decltype(std::declval<const typename tree::Node &>().d_a1) _s1;
+        decltype(std::declval<typename tree::Node &>().d_a1) _s1;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -161,31 +159,24 @@ struct LoopifyTreePaths {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const tree *_self = _f._self;
-                  std::visit(
-                      Overloaded{[&](const typename tree::Leaf &) -> void {
-                                   _result = List<unsigned int>::nil();
-                                 },
-                                 [&](const typename tree::Node &_args) -> void {
-                                   _stack.emplace_back(
-                                       _Call1{_args.d_a0.get(), _args.d_a1});
-                                   _stack.emplace_back(
-                                       _Enter{_args.d_a2.get()});
-                                 }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _result =
-                      List<unsigned int>::cons(_f._s1, _result->app(_f._s0));
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const tree *_self = _f._self;
+          if (std::holds_alternative<typename tree::Leaf>(_self->v())) {
+            _result = List<unsigned int>::nil();
+          } else {
+            const auto &_m = *std::get_if<typename tree::Node>(&_self->v());
+            _stack.emplace_back(_Call1{_m.d_a0.get(), _m.d_a1});
+            _stack.emplace_back(_Enter{_m.d_a2.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = List<unsigned int>::cons(_f._s1, _result->app(_f._s0));
+        }
       }
       return _result;
     }
@@ -198,13 +189,13 @@ struct LoopifyTreePaths {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename tree::Node &>().d_a0.get()) _s0;
-        decltype(std::declval<const typename tree::Node &>().d_a1) _s1;
+        decltype(std::declval<typename tree::Node &>().d_a0.get()) _s0;
+        decltype(std::declval<typename tree::Node &>().d_a1) _s1;
       };
 
       struct _Call2 {
         unsigned int _s0;
-        decltype(std::declval<const typename tree::Node &>().d_a1) _s1;
+        decltype(std::declval<typename tree::Node &>().d_a1) _s1;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -214,30 +205,24 @@ struct LoopifyTreePaths {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{[&](_Enter _f) {
-                         const tree *_self = _f._self;
-                         std::visit(
-                             Overloaded{
-                                 [&](const typename tree::Leaf &) -> void {
-                                   _result = 0u;
-                                 },
-                                 [&](const typename tree::Node &_args) -> void {
-                                   _stack.emplace_back(
-                                       _Call1{_args.d_a0.get(), _args.d_a1});
-                                   _stack.emplace_back(
-                                       _Enter{_args.d_a2.get()});
-                                 }},
-                             _self->v());
-                       },
-                       [&](_Call1 _f) {
-                         _stack.emplace_back(_Call2{_result, _f._s1});
-                         _stack.emplace_back(_Enter{_f._s0});
-                       },
-                       [&](_Call2 _f) {
-                         _result = (_f._s1 + std::max(_result, _f._s0));
-                       }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const tree *_self = _f._self;
+          if (std::holds_alternative<typename tree::Leaf>(_self->v())) {
+            _result = 0u;
+          } else {
+            const auto &_m = *std::get_if<typename tree::Node>(&_self->v());
+            _stack.emplace_back(_Call1{_m.d_a0.get(), _m.d_a1});
+            _stack.emplace_back(_Enter{_m.d_a2.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = (_f._s1 + std::max(_result, _f._s0));
+        }
       }
       return _result;
     }
@@ -268,58 +253,47 @@ struct LoopifyTreePaths {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const tree *_self = _f._self;
-                  const unsigned int acc = _f.acc;
-                  std::visit(
-                      Overloaded{[&](const typename tree::Leaf &) -> void {
-                                   if (acc == target) {
-                                     _result = std::make_optional<
-                                         std::shared_ptr<List<unsigned int>>>(
-                                         List<unsigned int>::nil());
-                                   } else {
-                                     _result = std::optional<
-                                         std::shared_ptr<List<unsigned int>>>();
-                                   }
-                                 },
-                                 [&](const typename tree::Node &_args) -> void {
-                                   unsigned int new_acc = (acc + _args.d_a1);
-                                   _stack.emplace_back(
-                                       _Call1{_args, target, new_acc});
-                                   _stack.emplace_back(
-                                       _Enter{_args.d_a0.get(), new_acc});
-                                 }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  const typename tree::Node _args = _f._s0;
-                  const unsigned int target = _f._s1;
-                  unsigned int new_acc = _f._s2;
-                  if (_result.has_value()) {
-                    const std::shared_ptr<List<unsigned int>> &path = *_result;
-                    _result =
-                        std::make_optional<std::shared_ptr<List<unsigned int>>>(
-                            List<unsigned int>::cons(_args.d_a1, path));
-                  } else {
-                    _stack.emplace_back(_Call2{_args});
-                    _stack.emplace_back(_Enter{_args.d_a2.get(), new_acc});
-                  }
-                },
-                [&](_Call2 _f) {
-                  const typename tree::Node _args = _f._s0;
-                  if (_result.has_value()) {
-                    const std::shared_ptr<List<unsigned int>> &path = *_result;
-                    _result =
-                        std::make_optional<std::shared_ptr<List<unsigned int>>>(
-                            List<unsigned int>::cons(_args.d_a1, path));
-                  } else {
-                    _result =
-                        std::optional<std::shared_ptr<List<unsigned int>>>();
-                  }
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const tree *_self = _f._self;
+          const unsigned int acc = _f.acc;
+          if (std::holds_alternative<typename tree::Leaf>(_self->v())) {
+            if (acc == target) {
+              _result = std::make_optional<std::shared_ptr<List<unsigned int>>>(
+                  List<unsigned int>::nil());
+            } else {
+              _result = std::optional<std::shared_ptr<List<unsigned int>>>();
+            }
+          } else {
+            const auto &_m = *std::get_if<typename tree::Node>(&_self->v());
+            unsigned int new_acc = (acc + _m.d_a1);
+            _stack.emplace_back(_Call1{_m, target, new_acc});
+            _stack.emplace_back(_Enter{_m.d_a0.get(), new_acc});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          const typename tree::Node _m = _f._s0;
+          const unsigned int target = _f._s1;
+          unsigned int new_acc = _f._s2;
+          if (_result.has_value()) {
+            const std::shared_ptr<List<unsigned int>> &path = *_result;
+            _result = std::make_optional<std::shared_ptr<List<unsigned int>>>(
+                List<unsigned int>::cons(_m.d_a1, path));
+          } else {
+            _stack.emplace_back(_Call2{_m});
+            _stack.emplace_back(_Enter{_m.d_a2.get(), new_acc});
+          }
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          const typename tree::Node _m = _f._s0;
+          if (_result.has_value()) {
+            const std::shared_ptr<List<unsigned int>> &path = *_result;
+            _result = std::make_optional<std::shared_ptr<List<unsigned int>>>(
+                List<unsigned int>::cons(_m.d_a1, path));
+          } else {
+            _result = std::optional<std::shared_ptr<List<unsigned int>>>();
+          }
+        }
       }
       return _result;
     }
@@ -340,7 +314,7 @@ struct LoopifyTreePaths {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename tree::Node &>().d_a0.get()) _s0;
+        decltype(std::declval<typename tree::Node &>().d_a0.get()) _s0;
         unsigned int _s1;
       };
 
@@ -355,34 +329,30 @@ struct LoopifyTreePaths {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{[&](_Enter _f) {
-                         const tree *_self = _f._self;
-                         const unsigned int acc = _f.acc;
-                         std::visit(
-                             Overloaded{
-                                 [&](const typename tree::Leaf &) -> void {
-                                   if (acc == target) {
-                                     _result = 1u;
-                                   } else {
-                                     _result = 0u;
-                                   }
-                                 },
-                                 [&](const typename tree::Node &_args) -> void {
-                                   unsigned int new_acc = (acc + _args.d_a1);
-                                   _stack.emplace_back(
-                                       _Call1{_args.d_a0.get(), new_acc});
-                                   _stack.emplace_back(
-                                       _Enter{_args.d_a2.get(), new_acc});
-                                 }},
-                             _self->v());
-                       },
-                       [&](_Call1 _f) {
-                         _stack.emplace_back(_Call2{_result});
-                         _stack.emplace_back(_Enter{_f._s0, _f._s1});
-                       },
-                       [&](_Call2 _f) { _result = (_result + _f._s0); }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const tree *_self = _f._self;
+          const unsigned int acc = _f.acc;
+          if (std::holds_alternative<typename tree::Leaf>(_self->v())) {
+            if (acc == target) {
+              _result = 1u;
+            } else {
+              _result = 0u;
+            }
+          } else {
+            const auto &_m = *std::get_if<typename tree::Node>(&_self->v());
+            unsigned int new_acc = (acc + _m.d_a1);
+            _stack.emplace_back(_Call1{_m.d_a0.get(), new_acc});
+            _stack.emplace_back(_Enter{_m.d_a2.get(), new_acc});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result});
+          _stack.emplace_back(_Enter{_f._s0, _f._s1});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = (_result + _f._s0);
+        }
       }
       return _result;
     }
@@ -395,15 +365,15 @@ struct LoopifyTreePaths {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename tree::Node &>().d_a0.get()) _s0;
-        decltype(std::declval<const typename tree::Node &>().d_a1) _s1;
-        decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
+        decltype(std::declval<typename tree::Node &>().d_a0.get()) _s0;
+        decltype(std::declval<typename tree::Node &>().d_a1) _s1;
+        decltype(std::declval<typename tree::Node &>().d_a1) _s2;
       };
 
       struct _Call2 {
         std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _s0;
-        decltype(std::declval<const typename tree::Node &>().d_a1) _s1;
-        decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
+        decltype(std::declval<typename tree::Node &>().d_a1) _s1;
+        decltype(std::declval<typename tree::Node &>().d_a1) _s2;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -413,35 +383,26 @@ struct LoopifyTreePaths {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const tree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename tree::Leaf &) -> void {
-                            _result =
-                                List<std::shared_ptr<List<unsigned int>>>::cons(
-                                    List<unsigned int>::nil(),
-                                    List<std::shared_ptr<List<unsigned int>>>::
-                                        nil());
-                          },
-                          [&](const typename tree::Node &_args) -> void {
-                            _stack.emplace_back(_Call1{_args.d_a0.get(),
-                                                       _args.d_a1, _args.d_a1});
-                            _stack.emplace_back(_Enter{_args.d_a2.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _result =
-                      map_cons(_f._s2, _result)->app(map_cons(_f._s1, _f._s0));
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const tree *_self = _f._self;
+          if (std::holds_alternative<typename tree::Leaf>(_self->v())) {
+            _result = List<std::shared_ptr<List<unsigned int>>>::cons(
+                List<unsigned int>::nil(),
+                List<std::shared_ptr<List<unsigned int>>>::nil());
+          } else {
+            const auto &_m = *std::get_if<typename tree::Node>(&_self->v());
+            _stack.emplace_back(_Call1{_m.d_a0.get(), _m.d_a1, _m.d_a1});
+            _stack.emplace_back(_Enter{_m.d_a2.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = map_cons(_f._s2, _result)->app(map_cons(_f._s1, _f._s0));
+        }
       }
       return _result;
     }
@@ -456,17 +417,17 @@ struct LoopifyTreePaths {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s0;
-      decltype(std::declval<const typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s3;
+      decltype(std::declval<typename tree::Node &>().d_a0) _s0;
+      decltype(std::declval<typename tree::Node &>().d_a2) _s1;
+      decltype(std::declval<typename tree::Node &>().d_a1) _s2;
+      decltype(std::declval<typename tree::Node &>().d_a0) _s3;
     };
 
     struct _Call2 {
       T1 _s0;
-      decltype(std::declval<const typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s3;
+      decltype(std::declval<typename tree::Node &>().d_a2) _s1;
+      decltype(std::declval<typename tree::Node &>().d_a1) _s2;
+      decltype(std::declval<typename tree::Node &>().d_a0) _s3;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -476,30 +437,24 @@ struct LoopifyTreePaths {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree> t = _f.t;
-                std::visit(
-                    Overloaded{[&](const typename tree::Leaf &) -> void {
-                                 _result = f;
-                               },
-                               [&](const typename tree::Node &_args) -> void {
-                                 _stack.emplace_back(
-                                     _Call1{_args.d_a0, _args.d_a2, _args.d_a1,
-                                            _args.d_a0});
-                                 _stack.emplace_back(_Enter{_args.d_a2});
-                               }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.emplace_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<tree> t = _f.t;
+        if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+          _result = f;
+        } else {
+          const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+          _stack.emplace_back(_Call1{_m.d_a0, _m.d_a2, _m.d_a1, _m.d_a0});
+          _stack.emplace_back(_Enter{_m.d_a2});
+        }
+      } else if (std::holds_alternative<_Call1>(_frame)) {
+        const auto &_f = std::get<_Call1>(_frame);
+        _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+        _stack.emplace_back(_Enter{_f._s0});
+      } else {
+        const auto &_f = std::get<_Call2>(_frame);
+        _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+      }
     }
     return _result;
   }
@@ -513,17 +468,17 @@ struct LoopifyTreePaths {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s0;
-      decltype(std::declval<const typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s3;
+      decltype(std::declval<typename tree::Node &>().d_a0) _s0;
+      decltype(std::declval<typename tree::Node &>().d_a2) _s1;
+      decltype(std::declval<typename tree::Node &>().d_a1) _s2;
+      decltype(std::declval<typename tree::Node &>().d_a0) _s3;
     };
 
     struct _Call2 {
       T1 _s0;
-      decltype(std::declval<const typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s3;
+      decltype(std::declval<typename tree::Node &>().d_a2) _s1;
+      decltype(std::declval<typename tree::Node &>().d_a1) _s2;
+      decltype(std::declval<typename tree::Node &>().d_a0) _s3;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -533,30 +488,24 @@ struct LoopifyTreePaths {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree> t = _f.t;
-                std::visit(
-                    Overloaded{[&](const typename tree::Leaf &) -> void {
-                                 _result = f;
-                               },
-                               [&](const typename tree::Node &_args) -> void {
-                                 _stack.emplace_back(
-                                     _Call1{_args.d_a0, _args.d_a2, _args.d_a1,
-                                            _args.d_a0});
-                                 _stack.emplace_back(_Enter{_args.d_a2});
-                               }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.emplace_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<tree> t = _f.t;
+        if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+          _result = f;
+        } else {
+          const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+          _stack.emplace_back(_Call1{_m.d_a0, _m.d_a2, _m.d_a1, _m.d_a0});
+          _stack.emplace_back(_Enter{_m.d_a2});
+        }
+      } else if (std::holds_alternative<_Call1>(_frame)) {
+        const auto &_f = std::get<_Call1>(_frame);
+        _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+        _stack.emplace_back(_Enter{_f._s0});
+      } else {
+        const auto &_f = std::get<_Call2>(_frame);
+        _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+      }
     }
     return _result;
   }
@@ -618,8 +567,7 @@ struct LoopifyTreePaths {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename bool_tree::BNode &>()
-                     .d_a0.get()) _s0;
+        decltype(std::declval<typename bool_tree::BNode &>().d_a0.get()) _s0;
       };
 
       struct _Call2 {
@@ -633,27 +581,27 @@ struct LoopifyTreePaths {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const bool_tree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename bool_tree::BLeaf &_args) -> void {
-                            _result = p(_args.d_a0);
-                          },
-                          [&](const typename bool_tree::BNode &_args) -> void {
-                            _stack.emplace_back(_Call1{_args.d_a0.get()});
-                            _stack.emplace_back(_Enter{_args.d_a1.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) { _result = (_result && _f._s0); }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const bool_tree *_self = _f._self;
+          if (std::holds_alternative<typename bool_tree::BLeaf>(_self->v())) {
+            const auto &_m =
+                *std::get_if<typename bool_tree::BLeaf>(&_self->v());
+            _result = p(_m.d_a0);
+          } else {
+            const auto &_m =
+                *std::get_if<typename bool_tree::BNode>(&_self->v());
+            _stack.emplace_back(_Call1{_m.d_a0.get()});
+            _stack.emplace_back(_Enter{_m.d_a1.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = (_result && _f._s0);
+        }
       }
       return _result;
     }
@@ -667,8 +615,7 @@ struct LoopifyTreePaths {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename bool_tree::BNode &>()
-                     .d_a0.get()) _s0;
+        decltype(std::declval<typename bool_tree::BNode &>().d_a0.get()) _s0;
       };
 
       struct _Call2 {
@@ -682,27 +629,27 @@ struct LoopifyTreePaths {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const bool_tree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename bool_tree::BLeaf &_args) -> void {
-                            _result = p(_args.d_a0);
-                          },
-                          [&](const typename bool_tree::BNode &_args) -> void {
-                            _stack.emplace_back(_Call1{_args.d_a0.get()});
-                            _stack.emplace_back(_Enter{_args.d_a1.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) { _result = (_result || _f._s0); }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const bool_tree *_self = _f._self;
+          if (std::holds_alternative<typename bool_tree::BLeaf>(_self->v())) {
+            const auto &_m =
+                *std::get_if<typename bool_tree::BLeaf>(&_self->v());
+            _result = p(_m.d_a0);
+          } else {
+            const auto &_m =
+                *std::get_if<typename bool_tree::BNode>(&_self->v());
+            _stack.emplace_back(_Call1{_m.d_a0.get()});
+            _stack.emplace_back(_Enter{_m.d_a1.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = (_result || _f._s0);
+        }
       }
       return _result;
     }
@@ -719,16 +666,15 @@ struct LoopifyTreePaths {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename bool_tree::BNode &>()
-                     .d_a0.get()) _s0;
-        decltype(std::declval<const typename bool_tree::BNode &>().d_a1) _s1;
-        decltype(std::declval<const typename bool_tree::BNode &>().d_a0) _s2;
+        decltype(std::declval<typename bool_tree::BNode &>().d_a0.get()) _s0;
+        decltype(std::declval<typename bool_tree::BNode &>().d_a1) _s1;
+        decltype(std::declval<typename bool_tree::BNode &>().d_a0) _s2;
       };
 
       struct _Call2 {
         T1 _s0;
-        decltype(std::declval<const typename bool_tree::BNode &>().d_a1) _s1;
-        decltype(std::declval<const typename bool_tree::BNode &>().d_a0) _s2;
+        decltype(std::declval<typename bool_tree::BNode &>().d_a1) _s1;
+        decltype(std::declval<typename bool_tree::BNode &>().d_a0) _s2;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -738,30 +684,27 @@ struct LoopifyTreePaths {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const bool_tree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename bool_tree::BLeaf &_args) -> void {
-                            _result = f(_args.d_a0);
-                          },
-                          [&](const typename bool_tree::BNode &_args) -> void {
-                            _stack.emplace_back(_Call1{_args.d_a0.get(),
-                                                       _args.d_a1, _args.d_a0});
-                            _stack.emplace_back(_Enter{_args.d_a1.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _result = f0(_f._s2, _result, _f._s1, _f._s0);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const bool_tree *_self = _f._self;
+          if (std::holds_alternative<typename bool_tree::BLeaf>(_self->v())) {
+            const auto &_m =
+                *std::get_if<typename bool_tree::BLeaf>(&_self->v());
+            _result = f(_m.d_a0);
+          } else {
+            const auto &_m =
+                *std::get_if<typename bool_tree::BNode>(&_self->v());
+            _stack.emplace_back(_Call1{_m.d_a0.get(), _m.d_a1, _m.d_a0});
+            _stack.emplace_back(_Enter{_m.d_a1.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = f0(_f._s2, _result, _f._s1, _f._s0);
+        }
       }
       return _result;
     }
@@ -778,16 +721,15 @@ struct LoopifyTreePaths {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename bool_tree::BNode &>()
-                     .d_a0.get()) _s0;
-        decltype(std::declval<const typename bool_tree::BNode &>().d_a1) _s1;
-        decltype(std::declval<const typename bool_tree::BNode &>().d_a0) _s2;
+        decltype(std::declval<typename bool_tree::BNode &>().d_a0.get()) _s0;
+        decltype(std::declval<typename bool_tree::BNode &>().d_a1) _s1;
+        decltype(std::declval<typename bool_tree::BNode &>().d_a0) _s2;
       };
 
       struct _Call2 {
         T1 _s0;
-        decltype(std::declval<const typename bool_tree::BNode &>().d_a1) _s1;
-        decltype(std::declval<const typename bool_tree::BNode &>().d_a0) _s2;
+        decltype(std::declval<typename bool_tree::BNode &>().d_a1) _s1;
+        decltype(std::declval<typename bool_tree::BNode &>().d_a0) _s2;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -797,30 +739,27 @@ struct LoopifyTreePaths {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const bool_tree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename bool_tree::BLeaf &_args) -> void {
-                            _result = f(_args.d_a0);
-                          },
-                          [&](const typename bool_tree::BNode &_args) -> void {
-                            _stack.emplace_back(_Call1{_args.d_a0.get(),
-                                                       _args.d_a1, _args.d_a0});
-                            _stack.emplace_back(_Enter{_args.d_a1.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _result = f0(_f._s2, _result, _f._s1, _f._s0);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const bool_tree *_self = _f._self;
+          if (std::holds_alternative<typename bool_tree::BLeaf>(_self->v())) {
+            const auto &_m =
+                *std::get_if<typename bool_tree::BLeaf>(&_self->v());
+            _result = f(_m.d_a0);
+          } else {
+            const auto &_m =
+                *std::get_if<typename bool_tree::BNode>(&_self->v());
+            _stack.emplace_back(_Call1{_m.d_a0.get(), _m.d_a1, _m.d_a0});
+            _stack.emplace_back(_Enter{_m.d_a1.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = f0(_f._s2, _result, _f._s1, _f._s0);
+        }
       }
       return _result;
     }

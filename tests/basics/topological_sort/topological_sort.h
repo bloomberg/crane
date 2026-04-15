@@ -62,121 +62,97 @@ public:
   template <typename T1>
   std::shared_ptr<List<std::pair<t_A, T1>>>
   combine(const std::shared_ptr<List<T1>> &l_) const {
-    return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil &)
-                       -> std::shared_ptr<List<std::pair<t_A, T1>>> {
-                     return List<std::pair<t_A, T1>>::nil();
-                   },
-                   [&](const typename List<t_A>::Cons &_args)
-                       -> std::shared_ptr<List<std::pair<t_A, T1>>> {
-                     return std::visit(
-                         Overloaded{
-                             [](const typename List<T1>::Nil &)
-                                 -> std::shared_ptr<List<std::pair<t_A, T1>>> {
-                               return List<std::pair<t_A, T1>>::nil();
-                             },
-                             [&](const typename List<T1>::Cons &_args0)
-                                 -> std::shared_ptr<List<std::pair<t_A, T1>>> {
-                               return List<std::pair<t_A, T1>>::cons(
-                                   std::make_pair(_args.d_a0, _args0.d_a0),
-                                   _args.d_a1->template combine<T1>(
-                                       _args0.d_a1));
-                             }},
-                         l_->v());
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return List<std::pair<t_A, T1>>::nil();
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(l_->v())) {
+        return List<std::pair<t_A, T1>>::nil();
+      } else {
+        const auto &_m0 = *std::get_if<typename List<T1>::Cons>(&l_->v());
+        return List<std::pair<t_A, T1>>::cons(
+            std::make_pair(_m.d_a0, _m0.d_a0),
+            _m.d_a1->template combine<T1>(_m0.d_a1));
+      }
+    }
   }
 
   template <MapsTo<bool, t_A> F0>
   __attribute__((pure)) std::optional<t_A> find(F0 &&f) const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> std::optional<t_A> {
-              return std::optional<t_A>();
-            },
-            [&](const typename List<t_A>::Cons &_args) -> std::optional<t_A> {
-              if (f(_args.d_a0)) {
-                return std::make_optional<t_A>(_args.d_a0);
-              } else {
-                return _args.d_a1->find(f);
-              }
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return std::optional<t_A>();
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      if (f(_m.d_a0)) {
+        return std::make_optional<t_A>(_m.d_a0);
+      } else {
+        return _m.d_a1->find(f);
+      }
+    }
   }
 
   template <MapsTo<bool, t_A> F0>
   std::shared_ptr<List<t_A>> filter(F0 &&f) const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> std::shared_ptr<List<t_A>> {
-              return List<t_A>::nil();
-            },
-            [&](const typename List<t_A>::Cons &_args)
-                -> std::shared_ptr<List<t_A>> {
-              if (f(_args.d_a0)) {
-                return List<t_A>::cons(_args.d_a0, _args.d_a1->filter(f));
-              } else {
-                return _args.d_a1->filter(f);
-              }
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return List<t_A>::nil();
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      if (f(_m.d_a0)) {
+        return List<t_A>::cons(_m.d_a0, _m.d_a1->filter(f));
+      } else {
+        return _m.d_a1->filter(f);
+      }
+    }
   }
 
   template <typename T1, MapsTo<T1, t_A, T1> F0>
   T1 fold_right(F0 &&f, const T1 a0) const {
-    return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil &) -> T1 { return a0; },
-                   [&](const typename List<t_A>::Cons &_args) -> T1 {
-                     return f(_args.d_a0,
-                              _args.d_a1->template fold_right<T1>(f, a0));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return a0;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return f(_m.d_a0, _m.d_a1->template fold_right<T1>(f, a0));
+    }
   }
 
   template <typename T1> std::shared_ptr<List<T1>> concat() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<std::shared_ptr<List<T1>>>::Nil &)
-                -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
-            [](const typename List<std::shared_ptr<List<T1>>>::Cons &_args)
-                -> std::shared_ptr<List<T1>> {
-              return _args.d_a0->app(_args.d_a1->template concat<T1>());
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<std::shared_ptr<List<T1>>>::Nil>(
+            this->v())) {
+      return List<T1>::nil();
+    } else {
+      const auto &_m =
+          *std::get_if<typename List<std::shared_ptr<List<T1>>>::Cons>(
+              &this->v());
+      return _m.d_a0->app(_m.d_a1->template concat<T1>());
+    }
   }
 
   template <typename T1, MapsTo<T1, t_A> F0>
   std::shared_ptr<List<T1>> map(F0 &&f) const {
-    return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil &)
-                       -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
-                   [&](const typename List<t_A>::Cons &_args)
-                       -> std::shared_ptr<List<T1>> {
-                     return List<T1>::cons(f(_args.d_a0),
-                                           _args.d_a1->template map<T1>(f));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return List<T1>::nil();
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return List<T1>::cons(f(_m.d_a0), _m.d_a1->template map<T1>(f));
+    }
   }
 
   __attribute__((pure)) unsigned int length() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons &_args) -> unsigned int {
-              return (_args.d_a1->length() + 1);
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return 0u;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return (_m.d_a1->length() + 1);
+    }
   }
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
-    return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil &)
-                       -> std::shared_ptr<List<t_A>> { return m; },
-                   [&](const typename List<t_A>::Cons &_args)
-                       -> std::shared_ptr<List<t_A>> {
-                     return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return m;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return List<t_A>::cons(_m.d_a0, _m.d_a1->app(m));
+    }
   }
 };
 
@@ -199,43 +175,33 @@ struct ToString {
   __attribute__((pure)) static std::string
   intersperse(F0 &&p, const std::string sep,
               const std::shared_ptr<List<T1>> &l) {
-    return std::visit(
-        Overloaded{
-            [](const typename List<T1>::Nil &) -> std::string { return ""; },
-            [&](const typename List<T1>::Cons &_args) -> std::string {
-              return std::visit(
-                  Overloaded{
-                      [&](const typename List<T1>::Nil &) -> std::string {
-                        return sep + p(_args.d_a0);
-                      },
-                      [&](const typename List<T1>::Cons &) -> std::string {
-                        return sep + p(_args.d_a0) +
-                               intersperse<T1>(p, sep, _args.d_a1);
-                      }},
-                  _args.d_a1->v());
-            }},
-        l->v());
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return "";
+    } else {
+      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+      auto &&_sv = _m.d_a1;
+      if (std::holds_alternative<typename List<T1>::Nil>(_sv->v())) {
+        return sep + p(_m.d_a0);
+      } else {
+        return sep + p(_m.d_a0) + intersperse<T1>(p, sep, _m.d_a1);
+      }
+    }
   }
 
   template <typename T1, MapsTo<std::string, T1> F0>
   __attribute__((pure)) static std::string
   list_to_string(F0 &&p, const std::shared_ptr<List<T1>> &l) {
-    return std::visit(
-        Overloaded{
-            [](const typename List<T1>::Nil &) -> std::string { return "[]"; },
-            [&](const typename List<T1>::Cons &_args) -> std::string {
-              return std::visit(
-                  Overloaded{
-                      [&](const typename List<T1>::Nil &) -> std::string {
-                        return "["s + p(_args.d_a0) + "]"s;
-                      },
-                      [&](const typename List<T1>::Cons &) -> std::string {
-                        return "["s + p(_args.d_a0) +
-                               intersperse<T1>(p, "; ", _args.d_a1) + "]"s;
-                      }},
-                  _args.d_a1->v());
-            }},
-        l->v());
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return "[]";
+    } else {
+      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+      auto &&_sv = _m.d_a1;
+      if (std::holds_alternative<typename List<T1>::Nil>(_sv->v())) {
+        return "["s + p(_m.d_a0) + "]"s;
+      } else {
+        return "["s + p(_m.d_a0) + intersperse<T1>(p, "; ", _m.d_a1) + "]"s;
+      }
+    }
   }
 };
 
@@ -255,42 +221,40 @@ struct TopologicalSort {
     get_elems_aux =
         [&](std::shared_ptr<List<std::pair<T1, T1>>> l0,
             std::shared_ptr<List<T1>> h) -> std::shared_ptr<List<T1>> {
-      return std::visit(
-          Overloaded{
-              [&](const typename List<std::pair<T1, T1>>::Nil &)
-                  -> std::shared_ptr<List<T1>> { return h; },
-              [&](const typename List<std::pair<T1, T1>>::Cons &_args)
-                  -> std::shared_ptr<List<T1>> {
-                const T1 &e1 = _args.d_a0.first;
-                const T1 &e2 = _args.d_a0.second;
-                std::optional<T1> f1 = h->find(
-                    [=](const T1 x) mutable { return eqb_node(e1, x); });
-                std::optional<T1> f2 = h->find(
-                    [=](const T1 x) mutable { return eqb_node(e2, x); });
-                if (f1.has_value()) {
-                  const T1 &_x = *f1;
-                  if (f2.has_value()) {
-                    const T1 &_x0 = *f2;
-                    return get_elems_aux(_args.d_a1, std::move(h));
-                  } else {
-                    return get_elems_aux(_args.d_a1, List<T1>::cons(e2, h));
-                  }
-                } else {
-                  if (f2.has_value()) {
-                    const T1 &_x = *f2;
-                    return get_elems_aux(_args.d_a1, List<T1>::cons(e1, h));
-                  } else {
-                    if (eqb_node(e1, e2)) {
-                      return get_elems_aux(_args.d_a1, List<T1>::cons(e1, h));
-                    } else {
-                      return get_elems_aux(
-                          _args.d_a1,
-                          List<T1>::cons(e1, List<T1>::cons(e2, h)));
-                    }
-                  }
-                }
-              }},
-          l0->v());
+      if (std::holds_alternative<typename List<std::pair<T1, T1>>::Nil>(
+              l0->v())) {
+        return h;
+      } else {
+        const auto &_m =
+            *std::get_if<typename List<std::pair<T1, T1>>::Cons>(&l0->v());
+        const T1 &e1 = _m.d_a0.first;
+        const T1 &e2 = _m.d_a0.second;
+        std::optional<T1> f1 =
+            h->find([=](const T1 x) mutable { return eqb_node(e1, x); });
+        std::optional<T1> f2 =
+            h->find([=](const T1 x) mutable { return eqb_node(e2, x); });
+        if (f1.has_value()) {
+          const T1 &_x = *f1;
+          if (f2.has_value()) {
+            const T1 &_x0 = *f2;
+            return get_elems_aux(_m.d_a1, std::move(h));
+          } else {
+            return get_elems_aux(_m.d_a1, List<T1>::cons(e2, h));
+          }
+        } else {
+          if (f2.has_value()) {
+            const T1 &_x = *f2;
+            return get_elems_aux(_m.d_a1, List<T1>::cons(e1, h));
+          } else {
+            if (eqb_node(e1, e2)) {
+              return get_elems_aux(_m.d_a1, List<T1>::cons(e1, h));
+            } else {
+              return get_elems_aux(_m.d_a1,
+                                   List<T1>::cons(e1, List<T1>::cons(e2, h)));
+            }
+          }
+        }
+      }
     };
     return get_elems_aux(l, List<T1>::nil());
   }
@@ -372,15 +336,13 @@ struct TopologicalSort {
       } else {
         unsigned int c = counter - 1;
         std::shared_ptr<List<T1>> l = graph_lookup<T1>(eqb_node, elem, graph0);
-        return std::visit(
-            Overloaded{
-                [&](const typename List<T1>::Nil &) -> T1 { return elem; },
-                [&](const typename List<T1>::Cons &_args) -> T1 {
-                  return cycle_entry_aux<T1>(eqb_node, graph0,
-                                             List<T1>::cons(elem, seens),
-                                             _args.d_a0, c);
-                }},
-            l->v());
+        if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+          return elem;
+        } else {
+          const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+          return cycle_entry_aux<T1>(eqb_node, graph0,
+                                     List<T1>::cons(elem, seens), _m.d_a0, c);
+        }
       }
     }
   }
@@ -390,20 +352,19 @@ struct TopologicalSort {
       F0 &&eqb_node,
       const std::shared_ptr<List<std::pair<T1, std::shared_ptr<List<T1>>>>>
           &graph0) {
-    return std::visit(
-        Overloaded{[](const typename List<
-                       std::pair<T1, std::shared_ptr<List<T1>>>>::Nil &)
-                       -> std::optional<T1> { return std::optional<T1>(); },
-                   [&](const typename List<
-                       std::pair<T1, std::shared_ptr<List<T1>>>>::Cons &_args)
-                       -> std::optional<T1> {
-                     const T1 &e = _args.d_a0.first;
-                     const std::shared_ptr<List<T1>> &_x0 = _args.d_a0.second;
-                     return std::make_optional<T1>(
-                         cycle_entry_aux<T1>(eqb_node, graph0, List<T1>::nil(),
-                                             e, graph0->length()));
-                   }},
-        graph0->v());
+    if (std::holds_alternative<
+            typename List<std::pair<T1, std::shared_ptr<List<T1>>>>::Nil>(
+            graph0->v())) {
+      return std::optional<T1>();
+    } else {
+      const auto &_m = *std::get_if<
+          typename List<std::pair<T1, std::shared_ptr<List<T1>>>>::Cons>(
+          &graph0->v());
+      const T1 &e = _m.d_a0.first;
+      const std::shared_ptr<List<T1>> &_x0 = _m.d_a0.second;
+      return std::make_optional<T1>(cycle_entry_aux<T1>(
+          eqb_node, graph0, List<T1>::nil(), e, graph0->length()));
+    }
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
@@ -447,11 +408,11 @@ struct TopologicalSort {
 
   template <typename T1>
   __attribute__((pure)) static bool null(const std::shared_ptr<List<T1>> &xs) {
-    return std::visit(
-        Overloaded{
-            [](const typename List<T1>::Nil &) -> bool { return true; },
-            [](const typename List<T1>::Cons &) -> bool { return false; }},
-        xs->v());
+    if (std::holds_alternative<typename List<T1>::Nil>(xs->v())) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>

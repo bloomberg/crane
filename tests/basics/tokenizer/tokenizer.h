@@ -63,28 +63,21 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   std::shared_ptr<List<t_A>> rev() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> std::shared_ptr<List<t_A>> {
-              return List<t_A>::nil();
-            },
-            [](const typename List<t_A>::Cons &_args)
-                -> std::shared_ptr<List<t_A>> {
-              return _args.d_a1->rev()->app(
-                  List<t_A>::cons(_args.d_a0, List<t_A>::nil()));
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return List<t_A>::nil();
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return _m.d_a1->rev()->app(List<t_A>::cons(_m.d_a0, List<t_A>::nil()));
+    }
   }
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
-    return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil &)
-                       -> std::shared_ptr<List<t_A>> { return m; },
-                   [&](const typename List<t_A>::Cons &_args)
-                       -> std::shared_ptr<List<t_A>> {
-                     return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return m;
+    } else {
+      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      return List<t_A>::cons(_m.d_a0, _m.d_a1->app(m));
+    }
   }
 };
 
@@ -102,43 +95,33 @@ struct ToString {
   __attribute__((pure)) static std::string
   intersperse(F0 &&p, const std::string sep,
               const std::shared_ptr<List<T1>> &l) {
-    return std::visit(
-        Overloaded{
-            [](const typename List<T1>::Nil &) -> std::string { return ""; },
-            [&](const typename List<T1>::Cons &_args) -> std::string {
-              return std::visit(
-                  Overloaded{
-                      [&](const typename List<T1>::Nil &) -> std::string {
-                        return sep + p(_args.d_a0);
-                      },
-                      [&](const typename List<T1>::Cons &) -> std::string {
-                        return sep + p(_args.d_a0) +
-                               intersperse<T1>(p, sep, _args.d_a1);
-                      }},
-                  _args.d_a1->v());
-            }},
-        l->v());
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return "";
+    } else {
+      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+      auto &&_sv = _m.d_a1;
+      if (std::holds_alternative<typename List<T1>::Nil>(_sv->v())) {
+        return sep + p(_m.d_a0);
+      } else {
+        return sep + p(_m.d_a0) + intersperse<T1>(p, sep, _m.d_a1);
+      }
+    }
   }
 
   template <typename T1, MapsTo<std::string, T1> F0>
   __attribute__((pure)) static std::string
   list_to_string(F0 &&p, const std::shared_ptr<List<T1>> &l) {
-    return std::visit(
-        Overloaded{
-            [](const typename List<T1>::Nil &) -> std::string { return "[]"; },
-            [&](const typename List<T1>::Cons &_args) -> std::string {
-              return std::visit(
-                  Overloaded{
-                      [&](const typename List<T1>::Nil &) -> std::string {
-                        return "["s + p(_args.d_a0) + "]"s;
-                      },
-                      [&](const typename List<T1>::Cons &) -> std::string {
-                        return "["s + p(_args.d_a0) +
-                               intersperse<T1>(p, "; ", _args.d_a1) + "]"s;
-                      }},
-                  _args.d_a1->v());
-            }},
-        l->v());
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return "[]";
+    } else {
+      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+      auto &&_sv = _m.d_a1;
+      if (std::holds_alternative<typename List<T1>::Nil>(_sv->v())) {
+        return "["s + p(_m.d_a0) + "]"s;
+      } else {
+        return "["s + p(_m.d_a0) + intersperse<T1>(p, "; ", _m.d_a1) + "]"s;
+      }
+    }
   }
 };
 
@@ -155,16 +138,14 @@ struct Tokenizer {
 
   template <typename T1>
   static std::vector<T1> list_to_vec_h(const std::shared_ptr<List<T1>> &l) {
-    return std::visit(
-        Overloaded{[](const typename List<T1>::Nil &) -> std::vector<T1> {
-                     return {};
-                   },
-                   [](const typename List<T1>::Cons &_args) -> std::vector<T1> {
-                     std::vector<T1> v = list_to_vec_h<T1>(_args.d_a1);
-                     v.push_back(_args.d_a0);
-                     return v;
-                   }},
-        l->v());
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return {};
+    } else {
+      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+      std::vector<T1> v = list_to_vec_h<T1>(_m.d_a1);
+      v.push_back(_m.d_a0);
+      return v;
+    }
   }
 
   template <typename T1>
@@ -175,17 +156,14 @@ struct Tokenizer {
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
   static std::vector<T2> list_to_vec_map_h(F0 &&f,
                                            const std::shared_ptr<List<T1>> &l) {
-    return std::visit(
-        Overloaded{
-            [](const typename List<T1>::Nil &) -> std::vector<T2> {
-              return {};
-            },
-            [&](const typename List<T1>::Cons &_args) -> std::vector<T2> {
-              std::vector<T2> v = list_to_vec_map_h<T1, T2>(f, _args.d_a1);
-              v.push_back(f(_args.d_a0));
-              return v;
-            }},
-        l->v());
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return {};
+    } else {
+      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+      std::vector<T2> v = list_to_vec_map_h<T1, T2>(f, _m.d_a1);
+      v.push_back(f(_m.d_a0));
+      return v;
+    }
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>

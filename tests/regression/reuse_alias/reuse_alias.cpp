@@ -8,17 +8,15 @@
 /// Increment the head — candidate for reuse optimization when use_count = 1.
 std::shared_ptr<ReuseAlias::mylist<unsigned int>> ReuseAlias::inc_head(
     const std::shared_ptr<ReuseAlias::mylist<unsigned int>> &l) {
-  return std::visit(
-      Overloaded{
-          [](const typename ReuseAlias::mylist<unsigned int>::Mynil &)
-              -> std::shared_ptr<ReuseAlias::mylist<unsigned int>> {
-            return mylist<unsigned int>::mynil();
-          },
-          [](const typename ReuseAlias::mylist<unsigned int>::Mycons &_args)
-              -> std::shared_ptr<ReuseAlias::mylist<unsigned int>> {
-            return mylist<unsigned int>::mycons((_args.d_a0 + 1u), _args.d_a1);
-          }},
-      l->v());
+  if (std::holds_alternative<typename ReuseAlias::mylist<unsigned int>::Mynil>(
+          l->v())) {
+    return mylist<unsigned int>::mynil();
+  } else {
+    const auto &_m =
+        *std::get_if<typename ReuseAlias::mylist<unsigned int>::Mycons>(
+            &l->v());
+    return mylist<unsigned int>::mycons((_m.d_a0 + 1u), _m.d_a1);
+  }
 }
 
 /// Use the same list twice: once through inc_head, once directly.
@@ -45,19 +43,15 @@ __attribute__((pure))
 std::pair<std::shared_ptr<ReuseAlias::mylist<unsigned int>>, unsigned int>
 ReuseAlias::alias_and_match(
     std::shared_ptr<ReuseAlias::mylist<unsigned int>> l) {
-  return std::visit(
-      Overloaded{
-          [&](const typename ReuseAlias::mylist<unsigned int>::Mynil &)
-              -> std::pair<std::shared_ptr<ReuseAlias::mylist<unsigned int>>,
-                           unsigned int> {
-            return std::make_pair(std::move(l), 0u);
-          },
-          [&](const typename ReuseAlias::mylist<unsigned int>::Mycons &_args)
-              -> std::pair<std::shared_ptr<ReuseAlias::mylist<unsigned int>>,
-                           unsigned int> {
-            return std::make_pair(std::move(l), _args.d_a0);
-          }},
-      l->v());
+  if (std::holds_alternative<typename ReuseAlias::mylist<unsigned int>::Mynil>(
+          l->v())) {
+    return std::make_pair(std::move(l), 0u);
+  } else {
+    const auto &_m =
+        *std::get_if<typename ReuseAlias::mylist<unsigned int>::Mycons>(
+            &l->v());
+    return std::make_pair(std::move(l), _m.d_a0);
+  }
 }
 
 /// Build a result that refers to the scrutinee AND a pattern variable
@@ -67,20 +61,16 @@ std::pair<std::shared_ptr<ReuseAlias::mylist<unsigned int>>,
           std::shared_ptr<ReuseAlias::mylist<unsigned int>>>
 ReuseAlias::scrutinee_in_branch(
     std::shared_ptr<ReuseAlias::mylist<unsigned int>> l) {
-  return std::visit(
-      Overloaded{
-          [](const typename ReuseAlias::mylist<unsigned int>::Mynil &)
-              -> std::pair<std::shared_ptr<ReuseAlias::mylist<unsigned int>>,
-                           std::shared_ptr<ReuseAlias::mylist<unsigned int>>> {
-            return std::make_pair(mylist<unsigned int>::mynil(),
-                                  mylist<unsigned int>::mynil());
-          },
-          [&](const typename ReuseAlias::mylist<unsigned int>::Mycons &_args)
-              -> std::pair<std::shared_ptr<ReuseAlias::mylist<unsigned int>>,
-                           std::shared_ptr<ReuseAlias::mylist<unsigned int>>> {
-            return std::make_pair(std::move(l), _args.d_a1);
-          }},
-      l->v());
+  if (std::holds_alternative<typename ReuseAlias::mylist<unsigned int>::Mynil>(
+          l->v())) {
+    return std::make_pair(mylist<unsigned int>::mynil(),
+                          mylist<unsigned int>::mynil());
+  } else {
+    const auto &_m =
+        *std::get_if<typename ReuseAlias::mylist<unsigned int>::Mycons>(
+            &l->v());
+    return std::make_pair(std::move(l), _m.d_a1);
+  }
 }
 
 /// Chain inc_head: each call might try to reuse.

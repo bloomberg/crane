@@ -65,7 +65,7 @@ struct OpcodeOperandDecode {
 
   __attribute__((pure)) static Instruction decode(const unsigned int b1,
                                                   const unsigned int _x);
-  static inline const unsigned int t = []() -> unsigned int {
+  static inline const unsigned int t = []() {
     switch (decode(224u, 0u)) {
     case Instruction::e_WRM_: {
       return 1u;

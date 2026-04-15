@@ -331,28 +331,23 @@ struct LargeMutual {
             MapsTo<T1, std::shared_ptr<bexpr>, std::shared_ptr<stmt>, T1> F3>
   static T1 stmt_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, const T1 f3,
                       const std::shared_ptr<stmt> &s) {
-    return std::visit(
-        Overloaded{[&](const typename stmt::SAssign &_args) -> T1 {
-                     return f(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename stmt::SSeq &_args) -> T1 {
-                     return f0(_args.d_a0,
-                               stmt_rect<T1>(f, f0, f1, f2, f3, _args.d_a0),
-                               _args.d_a1,
-                               stmt_rect<T1>(f, f0, f1, f2, f3, _args.d_a1));
-                   },
-                   [&](const typename stmt::SIf &_args) -> T1 {
-                     return f1(_args.d_a0, _args.d_a1,
-                               stmt_rect<T1>(f, f0, f1, f2, f3, _args.d_a1),
-                               _args.d_a2,
-                               stmt_rect<T1>(f, f0, f1, f2, f3, _args.d_a2));
-                   },
-                   [&](const typename stmt::SWhile &_args) -> T1 {
-                     return f2(_args.d_a0, _args.d_a1,
-                               stmt_rect<T1>(f, f0, f1, f2, f3, _args.d_a1));
-                   },
-                   [&](const typename stmt::SSkip &) -> T1 { return f3; }},
-        s->v());
+    if (std::holds_alternative<typename stmt::SAssign>(s->v())) {
+      const auto &_m = *std::get_if<typename stmt::SAssign>(&s->v());
+      return f(_m.d_a0, _m.d_a1);
+    } else if (std::holds_alternative<typename stmt::SSeq>(s->v())) {
+      const auto &_m = *std::get_if<typename stmt::SSeq>(&s->v());
+      return f0(_m.d_a0, stmt_rect<T1>(f, f0, f1, f2, f3, _m.d_a0), _m.d_a1,
+                stmt_rect<T1>(f, f0, f1, f2, f3, _m.d_a1));
+    } else if (std::holds_alternative<typename stmt::SIf>(s->v())) {
+      const auto &_m = *std::get_if<typename stmt::SIf>(&s->v());
+      return f1(_m.d_a0, _m.d_a1, stmt_rect<T1>(f, f0, f1, f2, f3, _m.d_a1),
+                _m.d_a2, stmt_rect<T1>(f, f0, f1, f2, f3, _m.d_a2));
+    } else if (std::holds_alternative<typename stmt::SWhile>(s->v())) {
+      const auto &_m = *std::get_if<typename stmt::SWhile>(&s->v());
+      return f2(_m.d_a0, _m.d_a1, stmt_rect<T1>(f, f0, f1, f2, f3, _m.d_a1));
+    } else {
+      return f3;
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int, std::shared_ptr<expr>> F0,
@@ -363,28 +358,23 @@ struct LargeMutual {
             MapsTo<T1, std::shared_ptr<bexpr>, std::shared_ptr<stmt>, T1> F3>
   static T1 stmt_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, const T1 f3,
                      const std::shared_ptr<stmt> &s) {
-    return std::visit(
-        Overloaded{[&](const typename stmt::SAssign &_args) -> T1 {
-                     return f(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename stmt::SSeq &_args) -> T1 {
-                     return f0(_args.d_a0,
-                               stmt_rec<T1>(f, f0, f1, f2, f3, _args.d_a0),
-                               _args.d_a1,
-                               stmt_rec<T1>(f, f0, f1, f2, f3, _args.d_a1));
-                   },
-                   [&](const typename stmt::SIf &_args) -> T1 {
-                     return f1(_args.d_a0, _args.d_a1,
-                               stmt_rec<T1>(f, f0, f1, f2, f3, _args.d_a1),
-                               _args.d_a2,
-                               stmt_rec<T1>(f, f0, f1, f2, f3, _args.d_a2));
-                   },
-                   [&](const typename stmt::SWhile &_args) -> T1 {
-                     return f2(_args.d_a0, _args.d_a1,
-                               stmt_rec<T1>(f, f0, f1, f2, f3, _args.d_a1));
-                   },
-                   [&](const typename stmt::SSkip &) -> T1 { return f3; }},
-        s->v());
+    if (std::holds_alternative<typename stmt::SAssign>(s->v())) {
+      const auto &_m = *std::get_if<typename stmt::SAssign>(&s->v());
+      return f(_m.d_a0, _m.d_a1);
+    } else if (std::holds_alternative<typename stmt::SSeq>(s->v())) {
+      const auto &_m = *std::get_if<typename stmt::SSeq>(&s->v());
+      return f0(_m.d_a0, stmt_rec<T1>(f, f0, f1, f2, f3, _m.d_a0), _m.d_a1,
+                stmt_rec<T1>(f, f0, f1, f2, f3, _m.d_a1));
+    } else if (std::holds_alternative<typename stmt::SIf>(s->v())) {
+      const auto &_m = *std::get_if<typename stmt::SIf>(&s->v());
+      return f1(_m.d_a0, _m.d_a1, stmt_rec<T1>(f, f0, f1, f2, f3, _m.d_a1),
+                _m.d_a2, stmt_rec<T1>(f, f0, f1, f2, f3, _m.d_a2));
+    } else if (std::holds_alternative<typename stmt::SWhile>(s->v())) {
+      const auto &_m = *std::get_if<typename stmt::SWhile>(&s->v());
+      return f2(_m.d_a0, _m.d_a1, stmt_rec<T1>(f, f0, f1, f2, f3, _m.d_a1));
+    } else {
+      return f3;
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -396,32 +386,25 @@ struct LargeMutual {
                 F4>
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                       const std::shared_ptr<expr> &e) {
-    return std::visit(
-        Overloaded{[&](const typename expr::ENum &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename expr::EVar &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename expr::EAdd &_args) -> T1 {
-                     return f1(_args.d_a0,
-                               expr_rect<T1>(f, f0, f1, f2, f3, _args.d_a0),
-                               _args.d_a1,
-                               expr_rect<T1>(f, f0, f1, f2, f3, _args.d_a1));
-                   },
-                   [&](const typename expr::EMul &_args) -> T1 {
-                     return f2(_args.d_a0,
-                               expr_rect<T1>(f, f0, f1, f2, f3, _args.d_a0),
-                               _args.d_a1,
-                               expr_rect<T1>(f, f0, f1, f2, f3, _args.d_a1));
-                   },
-                   [&](const typename expr::ECond &_args) -> T1 {
-                     return f3(_args.d_a0, _args.d_a1,
-                               expr_rect<T1>(f, f0, f1, f2, f3, _args.d_a1),
-                               _args.d_a2,
-                               expr_rect<T1>(f, f0, f1, f2, f3, _args.d_a2));
-                   }},
-        e->v());
+    if (std::holds_alternative<typename expr::ENum>(e->v())) {
+      const auto &_m = *std::get_if<typename expr::ENum>(&e->v());
+      return f(_m.d_a0);
+    } else if (std::holds_alternative<typename expr::EVar>(e->v())) {
+      const auto &_m = *std::get_if<typename expr::EVar>(&e->v());
+      return f0(_m.d_a0);
+    } else if (std::holds_alternative<typename expr::EAdd>(e->v())) {
+      const auto &_m = *std::get_if<typename expr::EAdd>(&e->v());
+      return f1(_m.d_a0, expr_rect<T1>(f, f0, f1, f2, f3, _m.d_a0), _m.d_a1,
+                expr_rect<T1>(f, f0, f1, f2, f3, _m.d_a1));
+    } else if (std::holds_alternative<typename expr::EMul>(e->v())) {
+      const auto &_m = *std::get_if<typename expr::EMul>(&e->v());
+      return f2(_m.d_a0, expr_rect<T1>(f, f0, f1, f2, f3, _m.d_a0), _m.d_a1,
+                expr_rect<T1>(f, f0, f1, f2, f3, _m.d_a1));
+    } else {
+      const auto &_m = *std::get_if<typename expr::ECond>(&e->v());
+      return f3(_m.d_a0, _m.d_a1, expr_rect<T1>(f, f0, f1, f2, f3, _m.d_a1),
+                _m.d_a2, expr_rect<T1>(f, f0, f1, f2, f3, _m.d_a2));
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -433,30 +416,25 @@ struct LargeMutual {
                 F4>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                      const std::shared_ptr<expr> &e) {
-    return std::visit(
-        Overloaded{
-            [&](const typename expr::ENum &_args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename expr::EVar &_args) -> T1 {
-              return f0(_args.d_a0);
-            },
-            [&](const typename expr::EAdd &_args) -> T1 {
-              return f1(_args.d_a0, expr_rec<T1>(f, f0, f1, f2, f3, _args.d_a0),
-                        _args.d_a1,
-                        expr_rec<T1>(f, f0, f1, f2, f3, _args.d_a1));
-            },
-            [&](const typename expr::EMul &_args) -> T1 {
-              return f2(_args.d_a0, expr_rec<T1>(f, f0, f1, f2, f3, _args.d_a0),
-                        _args.d_a1,
-                        expr_rec<T1>(f, f0, f1, f2, f3, _args.d_a1));
-            },
-            [&](const typename expr::ECond &_args) -> T1 {
-              return f3(_args.d_a0, _args.d_a1,
-                        expr_rec<T1>(f, f0, f1, f2, f3, _args.d_a1), _args.d_a2,
-                        expr_rec<T1>(f, f0, f1, f2, f3, _args.d_a2));
-            }},
-        e->v());
+    if (std::holds_alternative<typename expr::ENum>(e->v())) {
+      const auto &_m = *std::get_if<typename expr::ENum>(&e->v());
+      return f(_m.d_a0);
+    } else if (std::holds_alternative<typename expr::EVar>(e->v())) {
+      const auto &_m = *std::get_if<typename expr::EVar>(&e->v());
+      return f0(_m.d_a0);
+    } else if (std::holds_alternative<typename expr::EAdd>(e->v())) {
+      const auto &_m = *std::get_if<typename expr::EAdd>(&e->v());
+      return f1(_m.d_a0, expr_rec<T1>(f, f0, f1, f2, f3, _m.d_a0), _m.d_a1,
+                expr_rec<T1>(f, f0, f1, f2, f3, _m.d_a1));
+    } else if (std::holds_alternative<typename expr::EMul>(e->v())) {
+      const auto &_m = *std::get_if<typename expr::EMul>(&e->v());
+      return f2(_m.d_a0, expr_rec<T1>(f, f0, f1, f2, f3, _m.d_a0), _m.d_a1,
+                expr_rec<T1>(f, f0, f1, f2, f3, _m.d_a1));
+    } else {
+      const auto &_m = *std::get_if<typename expr::ECond>(&e->v());
+      return f3(_m.d_a0, _m.d_a1, expr_rec<T1>(f, f0, f1, f2, f3, _m.d_a1),
+                _m.d_a2, expr_rec<T1>(f, f0, f1, f2, f3, _m.d_a2));
+    }
   }
 
   template <
@@ -467,33 +445,28 @@ struct LargeMutual {
       MapsTo<T1, std::shared_ptr<bexpr>, T1> F6>
   static T1 bexpr_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
                        F5 &&f4, F6 &&f5, const std::shared_ptr<bexpr> &b) {
-    return std::visit(
-        Overloaded{
-            [&](const typename bexpr::BTrue &) -> T1 { return f; },
-            [&](const typename bexpr::BFalse &) -> T1 { return f0; },
-            [&](const typename bexpr::BEq &_args) -> T1 {
-              return f1(_args.d_a0, _args.d_a1);
-            },
-            [&](const typename bexpr::BLt &_args) -> T1 {
-              return f2(_args.d_a0, _args.d_a1);
-            },
-            [&](const typename bexpr::BAnd &_args) -> T1 {
-              return f3(_args.d_a0,
-                        bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0),
-                        _args.d_a1,
-                        bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a1));
-            },
-            [&](const typename bexpr::BOr &_args) -> T1 {
-              return f4(_args.d_a0,
-                        bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0),
-                        _args.d_a1,
-                        bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a1));
-            },
-            [&](const typename bexpr::BNot &_args) -> T1 {
-              return f5(_args.d_a0,
-                        bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0));
-            }},
-        b->v());
+    if (std::holds_alternative<typename bexpr::BTrue>(b->v())) {
+      return f;
+    } else if (std::holds_alternative<typename bexpr::BFalse>(b->v())) {
+      return f0;
+    } else if (std::holds_alternative<typename bexpr::BEq>(b->v())) {
+      const auto &_m = *std::get_if<typename bexpr::BEq>(&b->v());
+      return f1(_m.d_a0, _m.d_a1);
+    } else if (std::holds_alternative<typename bexpr::BLt>(b->v())) {
+      const auto &_m = *std::get_if<typename bexpr::BLt>(&b->v());
+      return f2(_m.d_a0, _m.d_a1);
+    } else if (std::holds_alternative<typename bexpr::BAnd>(b->v())) {
+      const auto &_m = *std::get_if<typename bexpr::BAnd>(&b->v());
+      return f3(_m.d_a0, bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a0),
+                _m.d_a1, bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a1));
+    } else if (std::holds_alternative<typename bexpr::BOr>(b->v())) {
+      const auto &_m = *std::get_if<typename bexpr::BOr>(&b->v());
+      return f4(_m.d_a0, bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a0),
+                _m.d_a1, bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a1));
+    } else {
+      const auto &_m = *std::get_if<typename bexpr::BNot>(&b->v());
+      return f5(_m.d_a0, bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a0));
+    }
   }
 
   template <
@@ -504,33 +477,28 @@ struct LargeMutual {
       MapsTo<T1, std::shared_ptr<bexpr>, T1> F6>
   static T1 bexpr_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
                       F5 &&f4, F6 &&f5, const std::shared_ptr<bexpr> &b) {
-    return std::visit(
-        Overloaded{
-            [&](const typename bexpr::BTrue &) -> T1 { return f; },
-            [&](const typename bexpr::BFalse &) -> T1 { return f0; },
-            [&](const typename bexpr::BEq &_args) -> T1 {
-              return f1(_args.d_a0, _args.d_a1);
-            },
-            [&](const typename bexpr::BLt &_args) -> T1 {
-              return f2(_args.d_a0, _args.d_a1);
-            },
-            [&](const typename bexpr::BAnd &_args) -> T1 {
-              return f3(_args.d_a0,
-                        bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0),
-                        _args.d_a1,
-                        bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a1));
-            },
-            [&](const typename bexpr::BOr &_args) -> T1 {
-              return f4(_args.d_a0,
-                        bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0),
-                        _args.d_a1,
-                        bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a1));
-            },
-            [&](const typename bexpr::BNot &_args) -> T1 {
-              return f5(_args.d_a0,
-                        bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0));
-            }},
-        b->v());
+    if (std::holds_alternative<typename bexpr::BTrue>(b->v())) {
+      return f;
+    } else if (std::holds_alternative<typename bexpr::BFalse>(b->v())) {
+      return f0;
+    } else if (std::holds_alternative<typename bexpr::BEq>(b->v())) {
+      const auto &_m = *std::get_if<typename bexpr::BEq>(&b->v());
+      return f1(_m.d_a0, _m.d_a1);
+    } else if (std::holds_alternative<typename bexpr::BLt>(b->v())) {
+      const auto &_m = *std::get_if<typename bexpr::BLt>(&b->v());
+      return f2(_m.d_a0, _m.d_a1);
+    } else if (std::holds_alternative<typename bexpr::BAnd>(b->v())) {
+      const auto &_m = *std::get_if<typename bexpr::BAnd>(&b->v());
+      return f3(_m.d_a0, bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a0),
+                _m.d_a1, bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a1));
+    } else if (std::holds_alternative<typename bexpr::BOr>(b->v())) {
+      const auto &_m = *std::get_if<typename bexpr::BOr>(&b->v());
+      return f4(_m.d_a0, bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a0),
+                _m.d_a1, bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a1));
+    } else {
+      const auto &_m = *std::get_if<typename bexpr::BNot>(&b->v());
+      return f5(_m.d_a0, bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a0));
+    }
   }
 
   __attribute__((pure)) static unsigned int
