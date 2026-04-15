@@ -300,18 +300,18 @@ ValidatedVirtualCrossmatchTraceCase::epitope_dedup(
     return List<std::shared_ptr<
         ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
   } else {
-    const auto &_m = *std::get_if<typename List<std::shared_ptr<
-        ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::Cons>(&l->v());
-    if (_m.d_a1->existsb(
+    const auto &[d_a0, d_a1] = std::get<typename List<std::shared_ptr<
+        ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::Cons>(l->v());
+    if (d_a1->existsb(
             [=](const std::shared_ptr<
                 ValidatedVirtualCrossmatchTraceCase::HLAEpitope> &_x0) mutable
-                -> bool { return epitope_eqb(_m.d_a0, _x0); })) {
-      return epitope_dedup(_m.d_a1);
+                -> bool { return epitope_eqb(d_a0, _x0); })) {
+      return epitope_dedup(d_a1);
     } else {
       return List<std::shared_ptr<
-          ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::cons(_m.d_a0,
+          ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::cons(d_a0,
                                                                   epitope_dedup(
-                                                                      _m.d_a1));
+                                                                      d_a1));
     }
   }
 }
@@ -602,44 +602,44 @@ Nat::of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc) {
   if (std::holds_alternative<typename Uint::Nil>(d->v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint::D0>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D0>(&d->v());
-    return Nat::of_uint_acc(_m.d_a0, Nat::tail_mul(10u, acc));
+    const auto &[d_a0] = std::get<typename Uint::D0>(d->v());
+    return Nat::of_uint_acc(d_a0, Nat::tail_mul(10u, acc));
   } else if (std::holds_alternative<typename Uint::D1>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D1>(&d->v());
-    return Nat::of_uint_acc(_m.d_a0, (Nat::tail_mul(10u, acc) + 1));
+    const auto &[d_a0] = std::get<typename Uint::D1>(d->v());
+    return Nat::of_uint_acc(d_a0, (Nat::tail_mul(10u, acc) + 1));
   } else if (std::holds_alternative<typename Uint::D2>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D2>(&d->v());
-    return Nat::of_uint_acc(_m.d_a0, ((Nat::tail_mul(10u, acc) + 1) + 1));
+    const auto &[d_a0] = std::get<typename Uint::D2>(d->v());
+    return Nat::of_uint_acc(d_a0, ((Nat::tail_mul(10u, acc) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D3>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D3>(&d->v());
-    return Nat::of_uint_acc(_m.d_a0, (((Nat::tail_mul(10u, acc) + 1) + 1) + 1));
+    const auto &[d_a0] = std::get<typename Uint::D3>(d->v());
+    return Nat::of_uint_acc(d_a0, (((Nat::tail_mul(10u, acc) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D4>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D4>(&d->v());
-    return Nat::of_uint_acc(_m.d_a0,
+    const auto &[d_a0] = std::get<typename Uint::D4>(d->v());
+    return Nat::of_uint_acc(d_a0,
                             ((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D5>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D5>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint::D5>(d->v());
     return Nat::of_uint_acc(
-        _m.d_a0, (((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1));
+        d_a0, (((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D6>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D6>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint::D6>(d->v());
     return Nat::of_uint_acc(
-        _m.d_a0, ((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
+        d_a0, ((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D7>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D7>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint::D7>(d->v());
     return Nat::of_uint_acc(
-        _m.d_a0,
+        d_a0,
         (((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D8>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D8>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint::D8>(d->v());
     return Nat::of_uint_acc(
-        _m.d_a0,
+        d_a0,
         ((((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
          1));
   } else {
-    const auto &_m = *std::get_if<typename Uint::D9>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint::D9>(d->v());
     return Nat::of_uint_acc(
-        _m.d_a0,
+        d_a0,
         (((((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
           1) +
          1));
@@ -656,69 +656,69 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
   if (std::holds_alternative<typename Uint0::Nil0>(d->v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint0::D10>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D10>(&d->v());
-    return Nat::of_hex_uint_acc(_m.d_a0, Nat::tail_mul(16u, acc));
+    const auto &[d_a0] = std::get<typename Uint0::D10>(d->v());
+    return Nat::of_hex_uint_acc(d_a0, Nat::tail_mul(16u, acc));
   } else if (std::holds_alternative<typename Uint0::D11>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D11>(&d->v());
-    return Nat::of_hex_uint_acc(_m.d_a0, (Nat::tail_mul(16u, acc) + 1));
+    const auto &[d_a0] = std::get<typename Uint0::D11>(d->v());
+    return Nat::of_hex_uint_acc(d_a0, (Nat::tail_mul(16u, acc) + 1));
   } else if (std::holds_alternative<typename Uint0::D12>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D12>(&d->v());
-    return Nat::of_hex_uint_acc(_m.d_a0, ((Nat::tail_mul(16u, acc) + 1) + 1));
+    const auto &[d_a0] = std::get<typename Uint0::D12>(d->v());
+    return Nat::of_hex_uint_acc(d_a0, ((Nat::tail_mul(16u, acc) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D13>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D13>(&d->v());
-    return Nat::of_hex_uint_acc(_m.d_a0,
+    const auto &[d_a0] = std::get<typename Uint0::D13>(d->v());
+    return Nat::of_hex_uint_acc(d_a0,
                                 (((Nat::tail_mul(16u, acc) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D14>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D14>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::D14>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0, ((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1));
+        d_a0, ((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D15>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D15>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::D15>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0, (((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1));
+        d_a0, (((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D16>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D16>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::D16>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0, ((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
+        d_a0, ((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D17>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D17>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::D17>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         (((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D18>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D18>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::D18>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         ((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
          1));
   } else if (std::holds_alternative<typename Uint0::D19>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D19>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::D19>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         (((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Da>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::Da>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::Da>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         ((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
            1) +
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Db>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::Db>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::Db>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         (((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
             1) +
            1) +
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Dc>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::Dc>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::Dc>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         ((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
              1) +
             1) +
@@ -726,9 +726,9 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Dd>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::Dd>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::Dd>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         (((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                1) +
               1) +
@@ -738,9 +738,9 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::De>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::De>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::De>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         ((((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                 1) +
                1) +
@@ -751,9 +751,9 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
           1) +
          1));
   } else {
-    const auto &_m = *std::get_if<typename Uint0::Df>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::Df>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         (((((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                  1) +
                 1) +
@@ -775,10 +775,10 @@ Nat::of_hex_uint(const std::shared_ptr<Uint0> &d) {
 __attribute__((pure)) unsigned int
 Nat::of_num_uint(const std::shared_ptr<Uint1> &d) {
   if (std::holds_alternative<typename Uint1::UIntDecimal>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint1::UIntDecimal>(&d->v());
-    return Nat::of_uint(_m.d_u);
+    const auto &[d_u] = std::get<typename Uint1::UIntDecimal>(d->v());
+    return Nat::of_uint(d_u);
   } else {
-    const auto &_m = *std::get_if<typename Uint1::UIntHexadecimal>(&d->v());
-    return Nat::of_hex_uint(_m.d_u);
+    const auto &[d_u] = std::get<typename Uint1::UIntHexadecimal>(d->v());
+    return Nat::of_hex_uint(d_u);
   }
 }

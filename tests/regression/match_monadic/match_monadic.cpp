@@ -82,11 +82,12 @@ MatchMonadic::tree_sum(const std::shared_ptr<Tree<unsigned int>> &t) {
   if (std::holds_alternative<typename Tree<unsigned int>::Leaf>(t->v())) {
     return 0u;
   } else {
-    const auto &_m = *std::get_if<typename Tree<unsigned int>::Node>(&t->v());
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename Tree<unsigned int>::Node>(t->v());
     std::cout << "visiting"s << '\n';
-    unsigned int sl = tree_sum(_m.d_a0);
-    unsigned int sr = tree_sum(_m.d_a2);
-    return ((sl + _m.d_a1) + sr);
+    unsigned int sl = tree_sum(d_a0);
+    unsigned int sr = tree_sum(d_a2);
+    return ((sl + d_a1) + sr);
   }
 }
 

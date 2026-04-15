@@ -106,15 +106,15 @@ struct CoindGuard {
   };
 
   template <typename T1> static T1 hd(const std::shared_ptr<Stream<T1>> &s) {
-    const auto &_m = *std::get_if<typename Stream<T1>::Cons>(&s->v());
-    return _m.d_a0;
+    const auto &[d_a0, d_a1] = std::get<typename Stream<T1>::Cons>(s->v());
+    return d_a0;
   }
 
   template <typename T1>
   static std::shared_ptr<Stream<T1>> tl(const std::shared_ptr<Stream<T1>> &s) {
-    const auto &_m = *std::get_if<typename Stream<T1>::Cons>(&s->v());
+    const auto &[d_a0, d_a1] = std::get<typename Stream<T1>::Cons>(s->v());
     return Stream<T1>::lazy_(
-        [=]() mutable -> std::shared_ptr<Stream<T1>> { return _m.d_a1; });
+        [=]() mutable -> std::shared_ptr<Stream<T1>> { return d_a1; });
   }
 
   template <typename T1, MapsTo<T1, T1> F0>

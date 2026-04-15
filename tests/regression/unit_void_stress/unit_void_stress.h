@@ -103,13 +103,13 @@ struct UnitVoidStress {
     if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
       return List<std::monostate>::nil();
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
       return List<std::monostate>::cons(
           [&]() {
-            f(_m.d_a0);
+            f(d_a0);
             return std::monostate{};
           }(),
-          map_void<T1>(f, _m.d_a1));
+          map_void<T1>(f, d_a1));
     }
   }
 

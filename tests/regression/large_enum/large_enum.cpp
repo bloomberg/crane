@@ -92,8 +92,8 @@ __attribute__((pure)) bool LargeEnum::is_neutral(const LargeEnum::Color c) {
 __attribute__((pure)) unsigned int
 LargeEnum::tok_to_nat(const std::shared_ptr<LargeEnum::tok> &t) {
   if (std::holds_alternative<typename LargeEnum::tok::TNum>(t->v())) {
-    const auto &_m = *std::get_if<typename LargeEnum::tok::TNum>(&t->v());
-    return _m.d_a0;
+    const auto &[d_a0] = std::get<typename LargeEnum::tok::TNum>(t->v());
+    return d_a0;
   } else if (std::holds_alternative<typename LargeEnum::tok::TPlus>(t->v())) {
     return 100u;
   } else if (std::holds_alternative<typename LargeEnum::tok::TMinus>(t->v())) {
@@ -114,8 +114,8 @@ LargeEnum::tok_to_nat(const std::shared_ptr<LargeEnum::tok> &t) {
                  t->v())) {
     return 108u;
   } else if (std::holds_alternative<typename LargeEnum::tok::TIdent>(t->v())) {
-    const auto &_m = *std::get_if<typename LargeEnum::tok::TIdent>(&t->v());
-    return (200u + _m.d_a0);
+    const auto &[d_a0] = std::get<typename LargeEnum::tok::TIdent>(t->v());
+    return (200u + d_a0);
   } else {
     return 999u;
   }

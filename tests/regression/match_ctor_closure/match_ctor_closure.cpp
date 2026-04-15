@@ -15,10 +15,10 @@ std::shared_ptr<MatchCtorClosure::fn_box> MatchCtorClosure::match_and_box(
   if (std::holds_alternative<typename MatchCtorClosure::tree::Leaf>(t->v())) {
     return fn_box::box([](const unsigned int x) { return x; });
   } else {
-    const auto &_m =
-        *std::get_if<typename MatchCtorClosure::tree::Node>(&t->v());
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename MatchCtorClosure::tree::Node>(t->v());
     return fn_box::box([=](unsigned int _x0) mutable -> unsigned int {
-      return _m.d_a0->sum_values(_x0);
+      return d_a0->sum_values(_x0);
     });
   }
 }

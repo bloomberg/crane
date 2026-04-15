@@ -27,18 +27,18 @@ LoopifyCombinatorics::remove(const unsigned int x,
       }
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-      if (x == _m.d_a0) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      if (x == d_a0) {
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              _m.d_a1;
+              d_a1;
         } else {
-          _head = _m.d_a1;
+          _head = d_a1;
         }
         _continue = false;
       } else {
-        auto _cell = List<unsigned int>::cons(_m.d_a0, nullptr);
+        auto _cell = List<unsigned int>::cons(d_a0, nullptr);
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
               _cell;
@@ -46,7 +46,7 @@ LoopifyCombinatorics::remove(const unsigned int x,
           _head = _cell;
         }
         _last = _cell;
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
         continue;
       }
     }
@@ -76,11 +76,11 @@ LoopifyCombinatorics::map_cons(
       }
       _continue = false;
     } else {
-      const auto &_m = *std::get_if<
-          typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-          &_loop_lsts->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+              _loop_lsts->v());
       auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
-          List<unsigned int>::cons(x, _m.d_a0), nullptr);
+          List<unsigned int>::cons(x, d_a0), nullptr);
       if (_last) {
         std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
             _last->v_mut())
@@ -89,7 +89,7 @@ LoopifyCombinatorics::map_cons(
         _head = _cell;
       }
       _last = _cell;
-      _loop_lsts = _m.d_a1;
+      _loop_lsts = d_a1;
       continue;
     }
   }
@@ -113,7 +113,7 @@ LoopifyCombinatorics::perms_choices_fuel(
 
   struct _Call1 {
     decltype(map_cons(
-        std::declval<typename List<unsigned int>::Cons &>().d_a0,
+        std::declval<unsigned int &>(),
         List<std::shared_ptr<List<unsigned int>>>::cons(
             List<unsigned int>::nil(),
             List<std::shared_ptr<List<unsigned int>>>::nil()))) _s0;
@@ -123,12 +123,12 @@ LoopifyCombinatorics::perms_choices_fuel(
     std::shared_ptr<List<unsigned int>> _s0;
     std::shared_ptr<List<unsigned int>> _s1;
     unsigned int _s2;
-    decltype(std::declval<typename List<unsigned int>::Cons &>().d_a0) _s3;
+    unsigned int _s3;
   };
 
   struct _Call3 {
     std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _s0;
-    decltype(std::declval<typename List<unsigned int>::Cons &>().d_a0) _s1;
+    unsigned int _s1;
   };
 
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
@@ -151,20 +151,19 @@ LoopifyCombinatorics::perms_choices_fuel(
                 choices->v())) {
           _result = List<std::shared_ptr<List<unsigned int>>>::nil();
         } else {
-          const auto &_m =
-              *std::get_if<typename List<unsigned int>::Cons>(&choices->v());
-          std::shared_ptr<List<unsigned int>> remaining = remove(_m.d_a0, orig);
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(choices->v());
+          std::shared_ptr<List<unsigned int>> remaining = remove(d_a0, orig);
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   remaining->v())) {
             _stack.emplace_back(_Call1{map_cons(
-                _m.d_a0,
-                List<std::shared_ptr<List<unsigned int>>>::cons(
-                    List<unsigned int>::nil(),
-                    List<std::shared_ptr<List<unsigned int>>>::nil()))});
-            _stack.emplace_back(_Enter{orig, _m.d_a1, f});
+                d_a0, List<std::shared_ptr<List<unsigned int>>>::cons(
+                          List<unsigned int>::nil(),
+                          List<std::shared_ptr<List<unsigned int>>>::nil()))});
+            _stack.emplace_back(_Enter{orig, d_a1, f});
           } else {
-            _stack.emplace_back(_Call2{remaining, remaining, f, _m.d_a0});
-            _stack.emplace_back(_Enter{orig, _m.d_a1, f});
+            _stack.emplace_back(_Call2{remaining, remaining, f, d_a0});
+            _stack.emplace_back(_Enter{orig, d_a1, f});
           }
         }
       }
@@ -217,10 +216,10 @@ LoopifyCombinatorics::len_list(const std::shared_ptr<List<unsigned int>> &l) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
         _result = 0u;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
         _stack.emplace_back(_Call1{});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
@@ -280,7 +279,7 @@ LoopifyCombinatorics::subsequences(
   };
 
   struct _Call1 {
-    const typename List<unsigned int>::Cons _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -298,14 +297,14 @@ LoopifyCombinatorics::subsequences(
             List<unsigned int>::nil(),
             List<std::shared_ptr<List<unsigned int>>>::nil());
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-        _stack.emplace_back(_Call1{_m});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
+        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename List<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> rest = _result;
       std::function<std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>(
           std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>)>
@@ -318,10 +317,7 @@ LoopifyCombinatorics::subsequences(
         };
         struct _Call1 {
           decltype(List<unsigned int>::cons(
-              _m.d_a0,
-              std::declval<
-                  typename List<std::shared_ptr<List<unsigned int>>>::Cons &>()
-                  .d_a0)) _s0;
+              d_a0, std::declval<std::shared_ptr<List<unsigned int>> &>())) _s0;
         };
         using _Frame = std::variant<_Enter, _Call1>;
         std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
@@ -339,12 +335,12 @@ LoopifyCombinatorics::subsequences(
                     lst->v())) {
               _result = List<std::shared_ptr<List<unsigned int>>>::nil();
             } else {
-              const auto &_m0 = *std::get_if<
+              const auto &[d_a00, d_a10] = std::get<
                   typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-                  &lst->v());
+                  lst->v());
               _stack.emplace_back(
-                  _Call1{List<unsigned int>::cons(_m.d_a0, _m0.d_a0)});
-              _stack.emplace_back(_Enter{_m0.d_a1});
+                  _Call1{List<unsigned int>::cons(d_a0, d_a00)});
+              _stack.emplace_back(_Enter{d_a10});
             }
           } else {
             const auto &_f = std::get<_Call1>(_frame);
@@ -380,10 +376,10 @@ LoopifyCombinatorics::map_pairs(const unsigned int y,
       }
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       auto _cell = List<std::pair<unsigned int, unsigned int>>::cons(
-          std::make_pair(_m.d_a0, y), nullptr);
+          std::make_pair(d_a0, y), nullptr);
       if (_last) {
         std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
             _last->v_mut())
@@ -392,7 +388,7 @@ LoopifyCombinatorics::map_pairs(const unsigned int y,
         _head = _cell;
       }
       _last = _cell;
-      _loop_l = _m.d_a1;
+      _loop_l = d_a1;
       continue;
     }
   }
@@ -409,7 +405,7 @@ LoopifyCombinatorics::cartesian(const std::shared_ptr<List<unsigned int>> &l1,
 
   struct _Call1 {
     decltype(map_pairs(
-        std::declval<typename List<unsigned int>::Cons &>().d_a0,
+        std::declval<unsigned int &>(),
         std::declval<const std::shared_ptr<List<unsigned int>> &>())) _s0;
   };
 
@@ -426,10 +422,10 @@ LoopifyCombinatorics::cartesian(const std::shared_ptr<List<unsigned int>> &l1,
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l2->v())) {
         _result = List<std::pair<unsigned int, unsigned int>>::nil();
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l2->v());
-        _stack.emplace_back(_Call1{map_pairs(_m.d_a0, l1)});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l2->v());
+        _stack.emplace_back(_Call1{map_pairs(d_a0, l1)});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
@@ -447,7 +443,7 @@ LoopifyCombinatorics::power_set(const std::shared_ptr<List<unsigned int>> &l) {
   };
 
   struct _Call1 {
-    const typename List<unsigned int>::Cons _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -465,14 +461,14 @@ LoopifyCombinatorics::power_set(const std::shared_ptr<List<unsigned int>> &l) {
             List<unsigned int>::nil(),
             List<std::shared_ptr<List<unsigned int>>>::nil());
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-        _stack.emplace_back(_Call1{_m});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
+        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename List<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> rest = _result;
       std::function<std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>(
           std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>)>
@@ -485,10 +481,7 @@ LoopifyCombinatorics::power_set(const std::shared_ptr<List<unsigned int>> &l) {
         };
         struct _Call1 {
           decltype(List<unsigned int>::cons(
-              _m.d_a0,
-              std::declval<
-                  typename List<std::shared_ptr<List<unsigned int>>>::Cons &>()
-                  .d_a0)) _s0;
+              d_a0, std::declval<std::shared_ptr<List<unsigned int>> &>())) _s0;
         };
         using _Frame = std::variant<_Enter, _Call1>;
         std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
@@ -506,12 +499,12 @@ LoopifyCombinatorics::power_set(const std::shared_ptr<List<unsigned int>> &l) {
                     lst->v())) {
               _result = List<std::shared_ptr<List<unsigned int>>>::nil();
             } else {
-              const auto &_m0 = *std::get_if<
+              const auto &[d_a00, d_a10] = std::get<
                   typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-                  &lst->v());
+                  lst->v());
               _stack.emplace_back(
-                  _Call1{List<unsigned int>::cons(_m.d_a0, _m0.d_a0)});
-              _stack.emplace_back(_Enter{_m0.d_a1});
+                  _Call1{List<unsigned int>::cons(d_a0, d_a00)});
+              _stack.emplace_back(_Enter{d_a10});
             }
           } else {
             const auto &_f = std::get<_Call1>(_frame);
@@ -536,7 +529,7 @@ LoopifyCombinatorics::insert_everywhere(const unsigned int x,
   };
 
   struct _Call1 {
-    const typename List<unsigned int>::Cons _s0;
+    unsigned int _s0;
     std::shared_ptr<List<unsigned int>> _s1;
     const unsigned int _s2;
   };
@@ -556,14 +549,14 @@ LoopifyCombinatorics::insert_everywhere(const unsigned int x,
             List<unsigned int>::cons(x, List<unsigned int>::nil()),
             List<std::shared_ptr<List<unsigned int>>>::nil());
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-        _stack.emplace_back(_Call1{_m, l, x});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
+        _stack.emplace_back(_Call1{d_a0, l, x});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename List<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       std::shared_ptr<List<unsigned int>> l = _f._s1;
       const unsigned int x = _f._s2;
       std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> rest = _result;
@@ -578,10 +571,7 @@ LoopifyCombinatorics::insert_everywhere(const unsigned int x,
         };
         struct _Call1 {
           decltype(List<unsigned int>::cons(
-              _m.d_a0,
-              std::declval<
-                  typename List<std::shared_ptr<List<unsigned int>>>::Cons &>()
-                  .d_a0)) _s0;
+              d_a0, std::declval<std::shared_ptr<List<unsigned int>> &>())) _s0;
         };
         using _Frame = std::variant<_Enter, _Call1>;
         std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
@@ -599,12 +589,12 @@ LoopifyCombinatorics::insert_everywhere(const unsigned int x,
                     lsts->v())) {
               _result = List<std::shared_ptr<List<unsigned int>>>::nil();
             } else {
-              const auto &_m0 = *std::get_if<
+              const auto &[d_a00, d_a10] = std::get<
                   typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-                  &lsts->v());
+                  lsts->v());
               _stack.emplace_back(
-                  _Call1{List<unsigned int>::cons(_m.d_a0, _m0.d_a0)});
-              _stack.emplace_back(_Enter{_m0.d_a1});
+                  _Call1{List<unsigned int>::cons(d_a0, d_a00)});
+              _stack.emplace_back(_Enter{d_a10});
             }
           } else {
             const auto &_f = std::get<_Call1>(_frame);
@@ -631,7 +621,7 @@ LoopifyCombinatorics::elem(const unsigned int x,
 
   struct _Call1 {
     decltype(std::declval<const unsigned int &>() ==
-             std::declval<typename List<unsigned int>::Cons &>().d_a0) _s0;
+             std::declval<unsigned int &>()) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -647,10 +637,10 @@ LoopifyCombinatorics::elem(const unsigned int x,
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
         _result = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-        _stack.emplace_back(_Call1{x == _m.d_a0});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
+        _stack.emplace_back(_Call1{x == d_a0});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
@@ -682,10 +672,10 @@ LoopifyCombinatorics::len_impl(const std::shared_ptr<List<unsigned int>> &l) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
         _result = 0u;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
         _stack.emplace_back(_Call1{});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
@@ -705,7 +695,7 @@ LoopifyCombinatorics::dedup_fuel(const unsigned int fuel,
   };
 
   struct _Call1 {
-    const typename List<unsigned int>::Cons _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -726,20 +716,20 @@ LoopifyCombinatorics::dedup_fuel(const unsigned int fuel,
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
           _result = List<unsigned int>::nil();
         } else {
-          const auto &_m =
-              *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-          _stack.emplace_back(_Call1{_m});
-          _stack.emplace_back(_Enter{_m.d_a1, f});
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l->v());
+          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Enter{d_a1, f});
         }
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename List<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       std::shared_ptr<List<unsigned int>> rest = _result;
-      if (elem(_m.d_a0, rest)) {
+      if (elem(d_a0, rest)) {
         _result = std::move(rest);
       } else {
-        _result = List<unsigned int>::cons(_m.d_a0, rest);
+        _result = List<unsigned int>::cons(d_a0, rest);
       }
     }
   }

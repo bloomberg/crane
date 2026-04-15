@@ -70,16 +70,16 @@ public:
         }
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<t_A>::Cons>(&_loop_self->v());
-        auto _cell = List<t_A>::cons(_m.d_a0, nullptr);
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<t_A>::Cons>(_loop_self->v());
+        auto _cell = List<t_A>::cons(d_a0, nullptr);
         if (_last) {
           std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = _cell;
         } else {
           _head = _cell;
         }
         _last = _cell;
-        _loop_self = _m.d_a1.get();
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -167,7 +167,7 @@ struct LoopifyExprVariants {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename cond_expr::Add &>().d_a0.get()) _s0;
+        cond_expr *_s0;
         decltype(1u) _s1;
       };
 
@@ -209,14 +209,15 @@ struct LoopifyExprVariants {
             _result = 1u;
           } else if (std::holds_alternative<typename cond_expr::Add>(
                          _self->v())) {
-            const auto &_m = *std::get_if<typename cond_expr::Add>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get(), 1u});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename cond_expr::Add>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), 1u});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename cond_expr::Cond>(&_self->v());
-            _stack.emplace_back(_Call3{_m.d_a1.get(), _m.d_a0.get(), 1u});
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename cond_expr::Cond>(_self->v());
+            _stack.emplace_back(_Call3{d_a1.get(), d_a0.get(), 1u});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -249,7 +250,7 @@ struct LoopifyExprVariants {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename cond_expr::Add &>().d_a0.get()) _s0;
+        cond_expr *_s0;
       };
 
       struct _Call2 {
@@ -257,7 +258,8 @@ struct LoopifyExprVariants {
       };
 
       struct _Call3 {
-        const typename cond_expr::Cond _s0;
+        std::shared_ptr<cond_expr> _s0;
+        std::shared_ptr<cond_expr> _s1;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
@@ -271,18 +273,19 @@ struct LoopifyExprVariants {
           const auto &_f = std::get<_Enter>(_frame);
           const cond_expr *_self = _f._self;
           if (std::holds_alternative<typename cond_expr::Lit>(_self->v())) {
-            const auto &_m = *std::get_if<typename cond_expr::Lit>(&_self->v());
-            _result = _m.d_a0;
+            const auto &[d_a0] = std::get<typename cond_expr::Lit>(_self->v());
+            _result = d_a0;
           } else if (std::holds_alternative<typename cond_expr::Add>(
                          _self->v())) {
-            const auto &_m = *std::get_if<typename cond_expr::Add>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename cond_expr::Add>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename cond_expr::Cond>(&_self->v());
-            _stack.emplace_back(_Call3{_m});
-            _stack.emplace_back(_Enter{_m.d_a0.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename cond_expr::Cond>(_self->v());
+            _stack.emplace_back(_Call3{d_a1, d_a2});
+            _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -293,12 +296,13 @@ struct LoopifyExprVariants {
           _result = (_result + _f._s0);
         } else {
           const auto &_f = std::get<_Call3>(_frame);
-          const typename cond_expr::Cond _m = _f._s0;
+          std::shared_ptr<cond_expr> d_a1 = _f._s0;
+          std::shared_ptr<cond_expr> d_a2 = _f._s1;
           unsigned int _cond0 = _result;
           if (0u < _cond0) {
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         }
       }
@@ -321,39 +325,39 @@ struct LoopifyExprVariants {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename cond_expr::Add &>().d_a0.get()) _s0;
-        decltype(std::declval<typename cond_expr::Add &>().d_a1) _s1;
-        decltype(std::declval<typename cond_expr::Add &>().d_a0) _s2;
+        cond_expr *_s0;
+        std::shared_ptr<cond_expr> _s1;
+        std::shared_ptr<cond_expr> _s2;
       };
 
       struct _Call2 {
         T1 _s0;
-        decltype(std::declval<typename cond_expr::Add &>().d_a1) _s1;
-        decltype(std::declval<typename cond_expr::Add &>().d_a0) _s2;
+        std::shared_ptr<cond_expr> _s1;
+        std::shared_ptr<cond_expr> _s2;
       };
 
       struct _Call3 {
         const cond_expr *_s0;
         const cond_expr *_s1;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a2) _s2;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a1) _s3;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a0) _s4;
+        std::shared_ptr<cond_expr> _s2;
+        std::shared_ptr<cond_expr> _s3;
+        std::shared_ptr<cond_expr> _s4;
       };
 
       struct _Call4 {
         T1 _s0;
         const cond_expr *_s1;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a2) _s2;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a1) _s3;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a0) _s4;
+        std::shared_ptr<cond_expr> _s2;
+        std::shared_ptr<cond_expr> _s3;
+        std::shared_ptr<cond_expr> _s4;
       };
 
       struct _Call5 {
         T1 _s0;
         T1 _s1;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a2) _s2;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a1) _s3;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a0) _s4;
+        std::shared_ptr<cond_expr> _s2;
+        std::shared_ptr<cond_expr> _s3;
+        std::shared_ptr<cond_expr> _s4;
       };
 
       using _Frame =
@@ -368,19 +372,20 @@ struct LoopifyExprVariants {
           const auto &_f = std::get<_Enter>(_frame);
           const cond_expr *_self = _f._self;
           if (std::holds_alternative<typename cond_expr::Lit>(_self->v())) {
-            const auto &_m = *std::get_if<typename cond_expr::Lit>(&_self->v());
-            _result = f(_m.d_a0);
+            const auto &[d_a0] = std::get<typename cond_expr::Lit>(_self->v());
+            _result = f(d_a0);
           } else if (std::holds_alternative<typename cond_expr::Add>(
                          _self->v())) {
-            const auto &_m = *std::get_if<typename cond_expr::Add>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get(), _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename cond_expr::Add>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename cond_expr::Cond>(&_self->v());
-            _stack.emplace_back(_Call3{_m.d_a1.get(), _m.d_a0.get(), _m.d_a2,
-                                       _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename cond_expr::Cond>(_self->v());
+            _stack.emplace_back(
+                _Call3{d_a1.get(), d_a0.get(), d_a2, d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -421,39 +426,39 @@ struct LoopifyExprVariants {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename cond_expr::Add &>().d_a0.get()) _s0;
-        decltype(std::declval<typename cond_expr::Add &>().d_a1) _s1;
-        decltype(std::declval<typename cond_expr::Add &>().d_a0) _s2;
+        cond_expr *_s0;
+        std::shared_ptr<cond_expr> _s1;
+        std::shared_ptr<cond_expr> _s2;
       };
 
       struct _Call2 {
         T1 _s0;
-        decltype(std::declval<typename cond_expr::Add &>().d_a1) _s1;
-        decltype(std::declval<typename cond_expr::Add &>().d_a0) _s2;
+        std::shared_ptr<cond_expr> _s1;
+        std::shared_ptr<cond_expr> _s2;
       };
 
       struct _Call3 {
         const cond_expr *_s0;
         const cond_expr *_s1;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a2) _s2;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a1) _s3;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a0) _s4;
+        std::shared_ptr<cond_expr> _s2;
+        std::shared_ptr<cond_expr> _s3;
+        std::shared_ptr<cond_expr> _s4;
       };
 
       struct _Call4 {
         T1 _s0;
         const cond_expr *_s1;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a2) _s2;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a1) _s3;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a0) _s4;
+        std::shared_ptr<cond_expr> _s2;
+        std::shared_ptr<cond_expr> _s3;
+        std::shared_ptr<cond_expr> _s4;
       };
 
       struct _Call5 {
         T1 _s0;
         T1 _s1;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a2) _s2;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a1) _s3;
-        decltype(std::declval<typename cond_expr::Cond &>().d_a0) _s4;
+        std::shared_ptr<cond_expr> _s2;
+        std::shared_ptr<cond_expr> _s3;
+        std::shared_ptr<cond_expr> _s4;
       };
 
       using _Frame =
@@ -468,19 +473,20 @@ struct LoopifyExprVariants {
           const auto &_f = std::get<_Enter>(_frame);
           const cond_expr *_self = _f._self;
           if (std::holds_alternative<typename cond_expr::Lit>(_self->v())) {
-            const auto &_m = *std::get_if<typename cond_expr::Lit>(&_self->v());
-            _result = f(_m.d_a0);
+            const auto &[d_a0] = std::get<typename cond_expr::Lit>(_self->v());
+            _result = f(d_a0);
           } else if (std::holds_alternative<typename cond_expr::Add>(
                          _self->v())) {
-            const auto &_m = *std::get_if<typename cond_expr::Add>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get(), _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename cond_expr::Add>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename cond_expr::Cond>(&_self->v());
-            _stack.emplace_back(_Call3{_m.d_a1.get(), _m.d_a0.get(), _m.d_a2,
-                                       _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename cond_expr::Cond>(_self->v());
+            _stack.emplace_back(
+                _Call3{d_a1.get(), d_a0.get(), d_a2, d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -594,7 +600,7 @@ struct LoopifyExprVariants {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename arith_expr::AAdd &>().d_a0.get()) _s0;
+        arith_expr *_s0;
         decltype(1u) _s1;
       };
 
@@ -604,7 +610,7 @@ struct LoopifyExprVariants {
       };
 
       struct _Call3 {
-        decltype(std::declval<typename arith_expr::AMul &>().d_a0.get()) _s0;
+        arith_expr *_s0;
         decltype(1u) _s1;
       };
 
@@ -614,7 +620,7 @@ struct LoopifyExprVariants {
       };
 
       struct _Call5 {
-        decltype(std::declval<typename arith_expr::ADiv &>().d_a0.get()) _s0;
+        arith_expr *_s0;
         decltype(1u) _s1;
       };
 
@@ -638,21 +644,21 @@ struct LoopifyExprVariants {
             _result = 0u;
           } else if (std::holds_alternative<typename arith_expr::AAdd>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename arith_expr::AAdd>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get(), 1u});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename arith_expr::AAdd>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), 1u});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename arith_expr::AMul>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename arith_expr::AMul>(&_self->v());
-            _stack.emplace_back(_Call3{_m.d_a0.get(), 1u});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename arith_expr::AMul>(_self->v());
+            _stack.emplace_back(_Call3{d_a0.get(), 1u});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename arith_expr::ADiv>(&_self->v());
-            _stack.emplace_back(_Call5{_m.d_a0.get(), 1u});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename arith_expr::ADiv>(_self->v());
+            _stack.emplace_back(_Call5{d_a0.get(), 1u});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -688,7 +694,7 @@ struct LoopifyExprVariants {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename arith_expr::AAdd &>().d_a0.get()) _s0;
+        arith_expr *_s0;
       };
 
       struct _Call2 {
@@ -696,7 +702,7 @@ struct LoopifyExprVariants {
       };
 
       struct _Call3 {
-        decltype(std::declval<typename arith_expr::AMul &>().d_a0.get()) _s0;
+        arith_expr *_s0;
       };
 
       struct _Call4 {
@@ -704,7 +710,7 @@ struct LoopifyExprVariants {
       };
 
       struct _Call5 {
-        const typename arith_expr::ADiv _s0;
+        std::shared_ptr<arith_expr> _s0;
       };
 
       struct _Call6 {
@@ -723,26 +729,26 @@ struct LoopifyExprVariants {
           const auto &_f = std::get<_Enter>(_frame);
           const arith_expr *_self = _f._self;
           if (std::holds_alternative<typename arith_expr::ANum>(_self->v())) {
-            const auto &_m =
-                *std::get_if<typename arith_expr::ANum>(&_self->v());
-            _result = _m.d_a0;
+            const auto &[d_a0] =
+                std::get<typename arith_expr::ANum>(_self->v());
+            _result = d_a0;
           } else if (std::holds_alternative<typename arith_expr::AAdd>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename arith_expr::AAdd>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename arith_expr::AAdd>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename arith_expr::AMul>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename arith_expr::AMul>(&_self->v());
-            _stack.emplace_back(_Call3{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename arith_expr::AMul>(_self->v());
+            _stack.emplace_back(_Call3{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename arith_expr::ADiv>(&_self->v());
-            _stack.emplace_back(_Call5{_m});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename arith_expr::ADiv>(_self->v());
+            _stack.emplace_back(_Call5{d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -760,13 +766,13 @@ struct LoopifyExprVariants {
           _result = (_result * _f._s0);
         } else if (std::holds_alternative<_Call5>(_frame)) {
           const auto &_f = std::get<_Call5>(_frame);
-          const typename arith_expr::ADiv _m = _f._s0;
+          std::shared_ptr<arith_expr> d_a0 = _f._s0;
           if (_result <= 0) {
             _result = 0u;
           } else {
             unsigned int n = _result - 1;
             _stack.emplace_back(_Call6{(n + 1)});
-            _stack.emplace_back(_Enter{_m.d_a0.get()});
+            _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else {
           const auto &_f = std::get<_Call6>(_frame);
@@ -794,39 +800,39 @@ struct LoopifyExprVariants {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename arith_expr::AAdd &>().d_a0.get()) _s0;
-        decltype(std::declval<typename arith_expr::AAdd &>().d_a1) _s1;
-        decltype(std::declval<typename arith_expr::AAdd &>().d_a0) _s2;
+        arith_expr *_s0;
+        std::shared_ptr<arith_expr> _s1;
+        std::shared_ptr<arith_expr> _s2;
       };
 
       struct _Call2 {
         T1 _s0;
-        decltype(std::declval<typename arith_expr::AAdd &>().d_a1) _s1;
-        decltype(std::declval<typename arith_expr::AAdd &>().d_a0) _s2;
+        std::shared_ptr<arith_expr> _s1;
+        std::shared_ptr<arith_expr> _s2;
       };
 
       struct _Call3 {
-        decltype(std::declval<typename arith_expr::AMul &>().d_a0.get()) _s0;
-        decltype(std::declval<typename arith_expr::AMul &>().d_a1) _s1;
-        decltype(std::declval<typename arith_expr::AMul &>().d_a0) _s2;
+        arith_expr *_s0;
+        std::shared_ptr<arith_expr> _s1;
+        std::shared_ptr<arith_expr> _s2;
       };
 
       struct _Call4 {
         T1 _s0;
-        decltype(std::declval<typename arith_expr::AMul &>().d_a1) _s1;
-        decltype(std::declval<typename arith_expr::AMul &>().d_a0) _s2;
+        std::shared_ptr<arith_expr> _s1;
+        std::shared_ptr<arith_expr> _s2;
       };
 
       struct _Call5 {
-        decltype(std::declval<typename arith_expr::ADiv &>().d_a0.get()) _s0;
-        decltype(std::declval<typename arith_expr::ADiv &>().d_a1) _s1;
-        decltype(std::declval<typename arith_expr::ADiv &>().d_a0) _s2;
+        arith_expr *_s0;
+        std::shared_ptr<arith_expr> _s1;
+        std::shared_ptr<arith_expr> _s2;
       };
 
       struct _Call6 {
         T1 _s0;
-        decltype(std::declval<typename arith_expr::ADiv &>().d_a1) _s1;
-        decltype(std::declval<typename arith_expr::ADiv &>().d_a0) _s2;
+        std::shared_ptr<arith_expr> _s1;
+        std::shared_ptr<arith_expr> _s2;
       };
 
       using _Frame =
@@ -841,26 +847,26 @@ struct LoopifyExprVariants {
           const auto &_f = std::get<_Enter>(_frame);
           const arith_expr *_self = _f._self;
           if (std::holds_alternative<typename arith_expr::ANum>(_self->v())) {
-            const auto &_m =
-                *std::get_if<typename arith_expr::ANum>(&_self->v());
-            _result = f(_m.d_a0);
+            const auto &[d_a0] =
+                std::get<typename arith_expr::ANum>(_self->v());
+            _result = f(d_a0);
           } else if (std::holds_alternative<typename arith_expr::AAdd>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename arith_expr::AAdd>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get(), _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename arith_expr::AAdd>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename arith_expr::AMul>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename arith_expr::AMul>(&_self->v());
-            _stack.emplace_back(_Call3{_m.d_a0.get(), _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename arith_expr::AMul>(_self->v());
+            _stack.emplace_back(_Call3{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename arith_expr::ADiv>(&_self->v());
-            _stack.emplace_back(_Call5{_m.d_a0.get(), _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename arith_expr::ADiv>(_self->v());
+            _stack.emplace_back(_Call5{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -906,39 +912,39 @@ struct LoopifyExprVariants {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename arith_expr::AAdd &>().d_a0.get()) _s0;
-        decltype(std::declval<typename arith_expr::AAdd &>().d_a1) _s1;
-        decltype(std::declval<typename arith_expr::AAdd &>().d_a0) _s2;
+        arith_expr *_s0;
+        std::shared_ptr<arith_expr> _s1;
+        std::shared_ptr<arith_expr> _s2;
       };
 
       struct _Call2 {
         T1 _s0;
-        decltype(std::declval<typename arith_expr::AAdd &>().d_a1) _s1;
-        decltype(std::declval<typename arith_expr::AAdd &>().d_a0) _s2;
+        std::shared_ptr<arith_expr> _s1;
+        std::shared_ptr<arith_expr> _s2;
       };
 
       struct _Call3 {
-        decltype(std::declval<typename arith_expr::AMul &>().d_a0.get()) _s0;
-        decltype(std::declval<typename arith_expr::AMul &>().d_a1) _s1;
-        decltype(std::declval<typename arith_expr::AMul &>().d_a0) _s2;
+        arith_expr *_s0;
+        std::shared_ptr<arith_expr> _s1;
+        std::shared_ptr<arith_expr> _s2;
       };
 
       struct _Call4 {
         T1 _s0;
-        decltype(std::declval<typename arith_expr::AMul &>().d_a1) _s1;
-        decltype(std::declval<typename arith_expr::AMul &>().d_a0) _s2;
+        std::shared_ptr<arith_expr> _s1;
+        std::shared_ptr<arith_expr> _s2;
       };
 
       struct _Call5 {
-        decltype(std::declval<typename arith_expr::ADiv &>().d_a0.get()) _s0;
-        decltype(std::declval<typename arith_expr::ADiv &>().d_a1) _s1;
-        decltype(std::declval<typename arith_expr::ADiv &>().d_a0) _s2;
+        arith_expr *_s0;
+        std::shared_ptr<arith_expr> _s1;
+        std::shared_ptr<arith_expr> _s2;
       };
 
       struct _Call6 {
         T1 _s0;
-        decltype(std::declval<typename arith_expr::ADiv &>().d_a1) _s1;
-        decltype(std::declval<typename arith_expr::ADiv &>().d_a0) _s2;
+        std::shared_ptr<arith_expr> _s1;
+        std::shared_ptr<arith_expr> _s2;
       };
 
       using _Frame =
@@ -953,26 +959,26 @@ struct LoopifyExprVariants {
           const auto &_f = std::get<_Enter>(_frame);
           const arith_expr *_self = _f._self;
           if (std::holds_alternative<typename arith_expr::ANum>(_self->v())) {
-            const auto &_m =
-                *std::get_if<typename arith_expr::ANum>(&_self->v());
-            _result = f(_m.d_a0);
+            const auto &[d_a0] =
+                std::get<typename arith_expr::ANum>(_self->v());
+            _result = f(d_a0);
           } else if (std::holds_alternative<typename arith_expr::AAdd>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename arith_expr::AAdd>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get(), _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename arith_expr::AAdd>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename arith_expr::AMul>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename arith_expr::AMul>(&_self->v());
-            _stack.emplace_back(_Call3{_m.d_a0.get(), _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename arith_expr::AMul>(_self->v());
+            _stack.emplace_back(_Call3{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename arith_expr::ADiv>(&_self->v());
-            _stack.emplace_back(_Call5{_m.d_a0.get(), _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename arith_expr::ADiv>(_self->v());
+            _stack.emplace_back(_Call5{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -1107,10 +1113,11 @@ struct LoopifyExprVariants {
           _result = bool_expr::bfalse();
         } else if (std::holds_alternative<typename bool_expr::BAnd>(
                        _self->v())) {
-          const auto &_m = *std::get_if<typename bool_expr::BAnd>(&_self->v());
-          auto &&_sv0 = _m.d_a0->simplify_bool();
+          const auto &[d_a0, d_a1] =
+              std::get<typename bool_expr::BAnd>(_self->v());
+          auto &&_sv0 = d_a0->simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv0->v())) {
-            auto &&_sv1 = _m.d_a1->simplify_bool();
+            auto &&_sv1 = d_a1->simplify_bool();
             if (std::holds_alternative<typename bool_expr::BTrue>(_sv1->v())) {
               _result = bool_expr::btrue();
             } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1118,28 +1125,28 @@ struct LoopifyExprVariants {
               _result = bool_expr::bfalse();
             } else if (std::holds_alternative<typename bool_expr::BAnd>(
                            _sv1->v())) {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BAnd>(&_sv1->v());
-              _result = bool_expr::band(_m1.d_a0, _m1.d_a1);
+              const auto &[d_a01, d_a11] =
+                  std::get<typename bool_expr::BAnd>(_sv1->v());
+              _result = bool_expr::band(d_a01, d_a11);
             } else if (std::holds_alternative<typename bool_expr::BOr>(
                            _sv1->v())) {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BOr>(&_sv1->v());
-              _result = bool_expr::bor(_m1.d_a0, _m1.d_a1);
+              const auto &[d_a01, d_a11] =
+                  std::get<typename bool_expr::BOr>(_sv1->v());
+              _result = bool_expr::bor(d_a01, d_a11);
             } else {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BNot>(&_sv1->v());
-              _result = bool_expr::bnot(_m1.d_a0);
+              const auto &[d_a01] =
+                  std::get<typename bool_expr::BNot>(_sv1->v());
+              _result = bool_expr::bnot(d_a01);
             }
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
                          _sv0->v())) {
             _result = bool_expr::bfalse();
           } else if (std::holds_alternative<typename bool_expr::BAnd>(
                          _sv0->v())) {
-            const auto &_m0 =
-                *std::get_if<typename bool_expr::BAnd>(&_sv0->v());
-            std::shared_ptr<bool_expr> a_ = bool_expr::band(_m0.d_a0, _m0.d_a1);
-            auto &&_sv1 = _m.d_a1->simplify_bool();
+            const auto &[d_a00, d_a10] =
+                std::get<typename bool_expr::BAnd>(_sv0->v());
+            std::shared_ptr<bool_expr> a_ = bool_expr::band(d_a00, d_a10);
+            auto &&_sv1 = d_a1->simplify_bool();
             if (std::holds_alternative<typename bool_expr::BTrue>(_sv1->v())) {
               _result = std::move(a_);
             } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1147,25 +1154,25 @@ struct LoopifyExprVariants {
               _result = bool_expr::bfalse();
             } else if (std::holds_alternative<typename bool_expr::BAnd>(
                            _sv1->v())) {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BAnd>(&_sv1->v());
-              _result =
-                  bool_expr::band(a_, bool_expr::band(_m1.d_a0, _m1.d_a1));
+              const auto &[d_a01, d_a11] =
+                  std::get<typename bool_expr::BAnd>(_sv1->v());
+              _result = bool_expr::band(a_, bool_expr::band(d_a01, d_a11));
             } else if (std::holds_alternative<typename bool_expr::BOr>(
                            _sv1->v())) {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BOr>(&_sv1->v());
-              _result = bool_expr::band(a_, bool_expr::bor(_m1.d_a0, _m1.d_a1));
+              const auto &[d_a01, d_a11] =
+                  std::get<typename bool_expr::BOr>(_sv1->v());
+              _result = bool_expr::band(a_, bool_expr::bor(d_a01, d_a11));
             } else {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BNot>(&_sv1->v());
-              _result = bool_expr::band(a_, bool_expr::bnot(_m1.d_a0));
+              const auto &[d_a01] =
+                  std::get<typename bool_expr::BNot>(_sv1->v());
+              _result = bool_expr::band(a_, bool_expr::bnot(d_a01));
             }
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv0->v())) {
-            const auto &_m0 = *std::get_if<typename bool_expr::BOr>(&_sv0->v());
-            std::shared_ptr<bool_expr> a_ = bool_expr::bor(_m0.d_a0, _m0.d_a1);
-            auto &&_sv1 = _m.d_a1->simplify_bool();
+            const auto &[d_a00, d_a10] =
+                std::get<typename bool_expr::BOr>(_sv0->v());
+            std::shared_ptr<bool_expr> a_ = bool_expr::bor(d_a00, d_a10);
+            auto &&_sv1 = d_a1->simplify_bool();
             if (std::holds_alternative<typename bool_expr::BTrue>(_sv1->v())) {
               _result = std::move(a_);
             } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1173,25 +1180,23 @@ struct LoopifyExprVariants {
               _result = bool_expr::bfalse();
             } else if (std::holds_alternative<typename bool_expr::BAnd>(
                            _sv1->v())) {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BAnd>(&_sv1->v());
-              _result =
-                  bool_expr::band(a_, bool_expr::band(_m1.d_a0, _m1.d_a1));
+              const auto &[d_a01, d_a11] =
+                  std::get<typename bool_expr::BAnd>(_sv1->v());
+              _result = bool_expr::band(a_, bool_expr::band(d_a01, d_a11));
             } else if (std::holds_alternative<typename bool_expr::BOr>(
                            _sv1->v())) {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BOr>(&_sv1->v());
-              _result = bool_expr::band(a_, bool_expr::bor(_m1.d_a0, _m1.d_a1));
+              const auto &[d_a01, d_a11] =
+                  std::get<typename bool_expr::BOr>(_sv1->v());
+              _result = bool_expr::band(a_, bool_expr::bor(d_a01, d_a11));
             } else {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BNot>(&_sv1->v());
-              _result = bool_expr::band(a_, bool_expr::bnot(_m1.d_a0));
+              const auto &[d_a01] =
+                  std::get<typename bool_expr::BNot>(_sv1->v());
+              _result = bool_expr::band(a_, bool_expr::bnot(d_a01));
             }
           } else {
-            const auto &_m0 =
-                *std::get_if<typename bool_expr::BNot>(&_sv0->v());
-            std::shared_ptr<bool_expr> a_ = bool_expr::bnot(_m0.d_a0);
-            auto &&_sv1 = _m.d_a1->simplify_bool();
+            const auto &[d_a00] = std::get<typename bool_expr::BNot>(_sv0->v());
+            std::shared_ptr<bool_expr> a_ = bool_expr::bnot(d_a00);
+            auto &&_sv1 = d_a1->simplify_bool();
             if (std::holds_alternative<typename bool_expr::BTrue>(_sv1->v())) {
               _result = std::move(a_);
             } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1199,30 +1204,30 @@ struct LoopifyExprVariants {
               _result = bool_expr::bfalse();
             } else if (std::holds_alternative<typename bool_expr::BAnd>(
                            _sv1->v())) {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BAnd>(&_sv1->v());
-              _result =
-                  bool_expr::band(a_, bool_expr::band(_m1.d_a0, _m1.d_a1));
+              const auto &[d_a01, d_a11] =
+                  std::get<typename bool_expr::BAnd>(_sv1->v());
+              _result = bool_expr::band(a_, bool_expr::band(d_a01, d_a11));
             } else if (std::holds_alternative<typename bool_expr::BOr>(
                            _sv1->v())) {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BOr>(&_sv1->v());
-              _result = bool_expr::band(a_, bool_expr::bor(_m1.d_a0, _m1.d_a1));
+              const auto &[d_a01, d_a11] =
+                  std::get<typename bool_expr::BOr>(_sv1->v());
+              _result = bool_expr::band(a_, bool_expr::bor(d_a01, d_a11));
             } else {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BNot>(&_sv1->v());
-              _result = bool_expr::band(a_, bool_expr::bnot(_m1.d_a0));
+              const auto &[d_a01] =
+                  std::get<typename bool_expr::BNot>(_sv1->v());
+              _result = bool_expr::band(a_, bool_expr::bnot(d_a01));
             }
           }
         } else if (std::holds_alternative<typename bool_expr::BOr>(
                        _self->v())) {
-          const auto &_m = *std::get_if<typename bool_expr::BOr>(&_self->v());
-          auto &&_sv0 = _m.d_a0->simplify_bool();
+          const auto &[d_a0, d_a1] =
+              std::get<typename bool_expr::BOr>(_self->v());
+          auto &&_sv0 = d_a0->simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv0->v())) {
             _result = bool_expr::btrue();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
                          _sv0->v())) {
-            auto &&_sv1 = _m.d_a1->simplify_bool();
+            auto &&_sv1 = d_a1->simplify_bool();
             if (std::holds_alternative<typename bool_expr::BTrue>(_sv1->v())) {
               _result = bool_expr::btrue();
             } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1230,25 +1235,25 @@ struct LoopifyExprVariants {
               _result = bool_expr::bfalse();
             } else if (std::holds_alternative<typename bool_expr::BAnd>(
                            _sv1->v())) {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BAnd>(&_sv1->v());
-              _result = bool_expr::band(_m1.d_a0, _m1.d_a1);
+              const auto &[d_a01, d_a11] =
+                  std::get<typename bool_expr::BAnd>(_sv1->v());
+              _result = bool_expr::band(d_a01, d_a11);
             } else if (std::holds_alternative<typename bool_expr::BOr>(
                            _sv1->v())) {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BOr>(&_sv1->v());
-              _result = bool_expr::bor(_m1.d_a0, _m1.d_a1);
+              const auto &[d_a01, d_a11] =
+                  std::get<typename bool_expr::BOr>(_sv1->v());
+              _result = bool_expr::bor(d_a01, d_a11);
             } else {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BNot>(&_sv1->v());
-              _result = bool_expr::bnot(_m1.d_a0);
+              const auto &[d_a01] =
+                  std::get<typename bool_expr::BNot>(_sv1->v());
+              _result = bool_expr::bnot(d_a01);
             }
           } else if (std::holds_alternative<typename bool_expr::BAnd>(
                          _sv0->v())) {
-            const auto &_m0 =
-                *std::get_if<typename bool_expr::BAnd>(&_sv0->v());
-            std::shared_ptr<bool_expr> a_ = bool_expr::band(_m0.d_a0, _m0.d_a1);
-            auto &&_sv1 = _m.d_a1->simplify_bool();
+            const auto &[d_a00, d_a10] =
+                std::get<typename bool_expr::BAnd>(_sv0->v());
+            std::shared_ptr<bool_expr> a_ = bool_expr::band(d_a00, d_a10);
+            auto &&_sv1 = d_a1->simplify_bool();
             if (std::holds_alternative<typename bool_expr::BTrue>(_sv1->v())) {
               _result = bool_expr::btrue();
             } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1256,24 +1261,25 @@ struct LoopifyExprVariants {
               _result = std::move(a_);
             } else if (std::holds_alternative<typename bool_expr::BAnd>(
                            _sv1->v())) {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BAnd>(&_sv1->v());
-              _result = bool_expr::bor(a_, bool_expr::band(_m1.d_a0, _m1.d_a1));
+              const auto &[d_a01, d_a11] =
+                  std::get<typename bool_expr::BAnd>(_sv1->v());
+              _result = bool_expr::bor(a_, bool_expr::band(d_a01, d_a11));
             } else if (std::holds_alternative<typename bool_expr::BOr>(
                            _sv1->v())) {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BOr>(&_sv1->v());
-              _result = bool_expr::bor(a_, bool_expr::bor(_m1.d_a0, _m1.d_a1));
+              const auto &[d_a01, d_a11] =
+                  std::get<typename bool_expr::BOr>(_sv1->v());
+              _result = bool_expr::bor(a_, bool_expr::bor(d_a01, d_a11));
             } else {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BNot>(&_sv1->v());
-              _result = bool_expr::bor(a_, bool_expr::bnot(_m1.d_a0));
+              const auto &[d_a01] =
+                  std::get<typename bool_expr::BNot>(_sv1->v());
+              _result = bool_expr::bor(a_, bool_expr::bnot(d_a01));
             }
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv0->v())) {
-            const auto &_m0 = *std::get_if<typename bool_expr::BOr>(&_sv0->v());
-            std::shared_ptr<bool_expr> a_ = bool_expr::bor(_m0.d_a0, _m0.d_a1);
-            auto &&_sv1 = _m.d_a1->simplify_bool();
+            const auto &[d_a00, d_a10] =
+                std::get<typename bool_expr::BOr>(_sv0->v());
+            std::shared_ptr<bool_expr> a_ = bool_expr::bor(d_a00, d_a10);
+            auto &&_sv1 = d_a1->simplify_bool();
             if (std::holds_alternative<typename bool_expr::BTrue>(_sv1->v())) {
               _result = bool_expr::btrue();
             } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1281,24 +1287,23 @@ struct LoopifyExprVariants {
               _result = std::move(a_);
             } else if (std::holds_alternative<typename bool_expr::BAnd>(
                            _sv1->v())) {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BAnd>(&_sv1->v());
-              _result = bool_expr::bor(a_, bool_expr::band(_m1.d_a0, _m1.d_a1));
+              const auto &[d_a01, d_a11] =
+                  std::get<typename bool_expr::BAnd>(_sv1->v());
+              _result = bool_expr::bor(a_, bool_expr::band(d_a01, d_a11));
             } else if (std::holds_alternative<typename bool_expr::BOr>(
                            _sv1->v())) {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BOr>(&_sv1->v());
-              _result = bool_expr::bor(a_, bool_expr::bor(_m1.d_a0, _m1.d_a1));
+              const auto &[d_a01, d_a11] =
+                  std::get<typename bool_expr::BOr>(_sv1->v());
+              _result = bool_expr::bor(a_, bool_expr::bor(d_a01, d_a11));
             } else {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BNot>(&_sv1->v());
-              _result = bool_expr::bor(a_, bool_expr::bnot(_m1.d_a0));
+              const auto &[d_a01] =
+                  std::get<typename bool_expr::BNot>(_sv1->v());
+              _result = bool_expr::bor(a_, bool_expr::bnot(d_a01));
             }
           } else {
-            const auto &_m0 =
-                *std::get_if<typename bool_expr::BNot>(&_sv0->v());
-            std::shared_ptr<bool_expr> a_ = bool_expr::bnot(_m0.d_a0);
-            auto &&_sv1 = _m.d_a1->simplify_bool();
+            const auto &[d_a00] = std::get<typename bool_expr::BNot>(_sv0->v());
+            std::shared_ptr<bool_expr> a_ = bool_expr::bnot(d_a00);
+            auto &&_sv1 = d_a1->simplify_bool();
             if (std::holds_alternative<typename bool_expr::BTrue>(_sv1->v())) {
               _result = bool_expr::btrue();
             } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1306,23 +1311,23 @@ struct LoopifyExprVariants {
               _result = std::move(a_);
             } else if (std::holds_alternative<typename bool_expr::BAnd>(
                            _sv1->v())) {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BAnd>(&_sv1->v());
-              _result = bool_expr::bor(a_, bool_expr::band(_m1.d_a0, _m1.d_a1));
+              const auto &[d_a01, d_a11] =
+                  std::get<typename bool_expr::BAnd>(_sv1->v());
+              _result = bool_expr::bor(a_, bool_expr::band(d_a01, d_a11));
             } else if (std::holds_alternative<typename bool_expr::BOr>(
                            _sv1->v())) {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BOr>(&_sv1->v());
-              _result = bool_expr::bor(a_, bool_expr::bor(_m1.d_a0, _m1.d_a1));
+              const auto &[d_a01, d_a11] =
+                  std::get<typename bool_expr::BOr>(_sv1->v());
+              _result = bool_expr::bor(a_, bool_expr::bor(d_a01, d_a11));
             } else {
-              const auto &_m1 =
-                  *std::get_if<typename bool_expr::BNot>(&_sv1->v());
-              _result = bool_expr::bor(a_, bool_expr::bnot(_m1.d_a0));
+              const auto &[d_a01] =
+                  std::get<typename bool_expr::BNot>(_sv1->v());
+              _result = bool_expr::bor(a_, bool_expr::bnot(d_a01));
             }
           }
         } else {
-          const auto &_m = *std::get_if<typename bool_expr::BNot>(&_self->v());
-          auto &&_sv0 = _m.d_a0->simplify_bool();
+          const auto &[d_a0] = std::get<typename bool_expr::BNot>(_self->v());
+          auto &&_sv0 = d_a0->simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv0->v())) {
             _result = bool_expr::bfalse();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1330,17 +1335,17 @@ struct LoopifyExprVariants {
             _result = bool_expr::btrue();
           } else if (std::holds_alternative<typename bool_expr::BAnd>(
                          _sv0->v())) {
-            const auto &_m0 =
-                *std::get_if<typename bool_expr::BAnd>(&_sv0->v());
-            _result = bool_expr::bnot(bool_expr::band(_m0.d_a0, _m0.d_a1));
+            const auto &[d_a00, d_a10] =
+                std::get<typename bool_expr::BAnd>(_sv0->v());
+            _result = bool_expr::bnot(bool_expr::band(d_a00, d_a10));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv0->v())) {
-            const auto &_m0 = *std::get_if<typename bool_expr::BOr>(&_sv0->v());
-            _result = bool_expr::bnot(bool_expr::bor(_m0.d_a0, _m0.d_a1));
+            const auto &[d_a00, d_a10] =
+                std::get<typename bool_expr::BOr>(_sv0->v());
+            _result = bool_expr::bnot(bool_expr::bor(d_a00, d_a10));
           } else {
-            const auto &_m0 =
-                *std::get_if<typename bool_expr::BNot>(&_sv0->v());
-            _result = bool_expr::bnot(bool_expr::bnot(_m0.d_a0));
+            const auto &[d_a00] = std::get<typename bool_expr::BNot>(_sv0->v());
+            _result = bool_expr::bnot(bool_expr::bnot(d_a00));
           }
         }
       }
@@ -1355,7 +1360,7 @@ struct LoopifyExprVariants {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename bool_expr::BAnd &>().d_a0.get()) _s0;
+        bool_expr *_s0;
       };
 
       struct _Call2 {
@@ -1363,7 +1368,7 @@ struct LoopifyExprVariants {
       };
 
       struct _Call3 {
-        decltype(std::declval<typename bool_expr::BOr &>().d_a0.get()) _s0;
+        bool_expr *_s0;
       };
 
       struct _Call4 {
@@ -1390,20 +1395,20 @@ struct LoopifyExprVariants {
             _result = false;
           } else if (std::holds_alternative<typename bool_expr::BAnd>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename bool_expr::BAnd>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename bool_expr::BAnd>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _self->v())) {
-            const auto &_m = *std::get_if<typename bool_expr::BOr>(&_self->v());
-            _stack.emplace_back(_Call3{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename bool_expr::BOr>(_self->v());
+            _stack.emplace_back(_Call3{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename bool_expr::BNot>(&_self->v());
+            const auto &[d_a0] = std::get<typename bool_expr::BNot>(_self->v());
             _stack.emplace_back(_Call5{});
-            _stack.emplace_back(_Enter{_m.d_a0.get()});
+            _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -1442,31 +1447,31 @@ struct LoopifyExprVariants {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename bool_expr::BAnd &>().d_a0) _s0;
-      decltype(std::declval<typename bool_expr::BAnd &>().d_a1) _s1;
-      decltype(std::declval<typename bool_expr::BAnd &>().d_a0) _s2;
+      std::shared_ptr<bool_expr> _s0;
+      std::shared_ptr<bool_expr> _s1;
+      std::shared_ptr<bool_expr> _s2;
     };
 
     struct _Call2 {
       T1 _s0;
-      decltype(std::declval<typename bool_expr::BAnd &>().d_a1) _s1;
-      decltype(std::declval<typename bool_expr::BAnd &>().d_a0) _s2;
+      std::shared_ptr<bool_expr> _s1;
+      std::shared_ptr<bool_expr> _s2;
     };
 
     struct _Call3 {
-      decltype(std::declval<typename bool_expr::BOr &>().d_a0) _s0;
-      decltype(std::declval<typename bool_expr::BOr &>().d_a1) _s1;
-      decltype(std::declval<typename bool_expr::BOr &>().d_a0) _s2;
+      std::shared_ptr<bool_expr> _s0;
+      std::shared_ptr<bool_expr> _s1;
+      std::shared_ptr<bool_expr> _s2;
     };
 
     struct _Call4 {
       T1 _s0;
-      decltype(std::declval<typename bool_expr::BOr &>().d_a1) _s1;
-      decltype(std::declval<typename bool_expr::BOr &>().d_a0) _s2;
+      std::shared_ptr<bool_expr> _s1;
+      std::shared_ptr<bool_expr> _s2;
     };
 
     struct _Call5 {
-      decltype(std::declval<typename bool_expr::BNot &>().d_a0) _s0;
+      std::shared_ptr<bool_expr> _s0;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
@@ -1484,17 +1489,17 @@ struct LoopifyExprVariants {
         } else if (std::holds_alternative<typename bool_expr::BFalse>(b->v())) {
           _result = f0;
         } else if (std::holds_alternative<typename bool_expr::BAnd>(b->v())) {
-          const auto &_m = *std::get_if<typename bool_expr::BAnd>(&b->v());
-          _stack.emplace_back(_Call1{_m.d_a0, _m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] = std::get<typename bool_expr::BAnd>(b->v());
+          _stack.emplace_back(_Call1{d_a0, d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         } else if (std::holds_alternative<typename bool_expr::BOr>(b->v())) {
-          const auto &_m = *std::get_if<typename bool_expr::BOr>(&b->v());
-          _stack.emplace_back(_Call3{_m.d_a0, _m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] = std::get<typename bool_expr::BOr>(b->v());
+          _stack.emplace_back(_Call3{d_a0, d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         } else {
-          const auto &_m = *std::get_if<typename bool_expr::BNot>(&b->v());
-          _stack.emplace_back(_Call5{_m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a0});
+          const auto &[d_a0] = std::get<typename bool_expr::BNot>(b->v());
+          _stack.emplace_back(_Call5{d_a0});
+          _stack.emplace_back(_Enter{d_a0});
         }
       } else if (std::holds_alternative<_Call1>(_frame)) {
         const auto &_f = std::get<_Call1>(_frame);
@@ -1532,31 +1537,31 @@ struct LoopifyExprVariants {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename bool_expr::BAnd &>().d_a0) _s0;
-      decltype(std::declval<typename bool_expr::BAnd &>().d_a1) _s1;
-      decltype(std::declval<typename bool_expr::BAnd &>().d_a0) _s2;
+      std::shared_ptr<bool_expr> _s0;
+      std::shared_ptr<bool_expr> _s1;
+      std::shared_ptr<bool_expr> _s2;
     };
 
     struct _Call2 {
       T1 _s0;
-      decltype(std::declval<typename bool_expr::BAnd &>().d_a1) _s1;
-      decltype(std::declval<typename bool_expr::BAnd &>().d_a0) _s2;
+      std::shared_ptr<bool_expr> _s1;
+      std::shared_ptr<bool_expr> _s2;
     };
 
     struct _Call3 {
-      decltype(std::declval<typename bool_expr::BOr &>().d_a0) _s0;
-      decltype(std::declval<typename bool_expr::BOr &>().d_a1) _s1;
-      decltype(std::declval<typename bool_expr::BOr &>().d_a0) _s2;
+      std::shared_ptr<bool_expr> _s0;
+      std::shared_ptr<bool_expr> _s1;
+      std::shared_ptr<bool_expr> _s2;
     };
 
     struct _Call4 {
       T1 _s0;
-      decltype(std::declval<typename bool_expr::BOr &>().d_a1) _s1;
-      decltype(std::declval<typename bool_expr::BOr &>().d_a0) _s2;
+      std::shared_ptr<bool_expr> _s1;
+      std::shared_ptr<bool_expr> _s2;
     };
 
     struct _Call5 {
-      decltype(std::declval<typename bool_expr::BNot &>().d_a0) _s0;
+      std::shared_ptr<bool_expr> _s0;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
@@ -1574,17 +1579,17 @@ struct LoopifyExprVariants {
         } else if (std::holds_alternative<typename bool_expr::BFalse>(b->v())) {
           _result = f0;
         } else if (std::holds_alternative<typename bool_expr::BAnd>(b->v())) {
-          const auto &_m = *std::get_if<typename bool_expr::BAnd>(&b->v());
-          _stack.emplace_back(_Call1{_m.d_a0, _m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] = std::get<typename bool_expr::BAnd>(b->v());
+          _stack.emplace_back(_Call1{d_a0, d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         } else if (std::holds_alternative<typename bool_expr::BOr>(b->v())) {
-          const auto &_m = *std::get_if<typename bool_expr::BOr>(&b->v());
-          _stack.emplace_back(_Call3{_m.d_a0, _m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] = std::get<typename bool_expr::BOr>(b->v());
+          _stack.emplace_back(_Call3{d_a0, d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         } else {
-          const auto &_m = *std::get_if<typename bool_expr::BNot>(&b->v());
-          _stack.emplace_back(_Call5{_m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a0});
+          const auto &[d_a0] = std::get<typename bool_expr::BNot>(b->v());
+          _stack.emplace_back(_Call5{d_a0});
+          _stack.emplace_back(_Enter{d_a0});
         }
       } else if (std::holds_alternative<_Call1>(_frame)) {
         const auto &_f = std::get<_Call1>(_frame);
@@ -1692,7 +1697,7 @@ struct LoopifyExprVariants {
       };
 
       struct _Call2 {
-        decltype(std::declval<typename list_expr::LAppend &>().d_a0.get()) _s0;
+        list_expr *_s0;
         decltype(1u) _s1;
       };
 
@@ -1712,16 +1717,16 @@ struct LoopifyExprVariants {
           const auto &_f = std::get<_Enter>(_frame);
           const list_expr *_self = _f._self;
           if (std::holds_alternative<typename list_expr::LCons>(_self->v())) {
-            const auto &_m =
-                *std::get_if<typename list_expr::LCons>(&_self->v());
+            const auto &[d_a0, d_a1] =
+                std::get<typename list_expr::LCons>(_self->v());
             _stack.emplace_back(_Call1{1u});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename list_expr::LAppend>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename list_expr::LAppend>(&_self->v());
-            _stack.emplace_back(_Call2{_m.d_a0.get(), 1u});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename list_expr::LAppend>(_self->v());
+            _stack.emplace_back(_Call2{d_a0.get(), 1u});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             _result = 1u;
           }
@@ -1748,11 +1753,11 @@ struct LoopifyExprVariants {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename list_expr::LCons &>().d_a0) _s0;
+        unsigned int _s0;
       };
 
       struct _Call2 {
-        decltype(std::declval<typename list_expr::LAppend &>().d_a0.get()) _s0;
+        list_expr *_s0;
       };
 
       struct _Call3 {
@@ -1773,20 +1778,20 @@ struct LoopifyExprVariants {
             _result = List<unsigned int>::nil();
           } else if (std::holds_alternative<typename list_expr::LCons>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename list_expr::LCons>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename list_expr::LCons>(_self->v());
+            _stack.emplace_back(_Call1{d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename list_expr::LAppend>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename list_expr::LAppend>(&_self->v());
-            _stack.emplace_back(_Call2{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename list_expr::LAppend>(_self->v());
+            _stack.emplace_back(_Call2{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename list_expr::LReplicate>(&_self->v());
-            _result = ListDef::template repeat<unsigned int>(_m.d_a1, _m.d_a0);
+            const auto &[d_a0, d_a1] =
+                std::get<typename list_expr::LReplicate>(_self->v());
+            _result = ListDef::template repeat<unsigned int>(d_a1, d_a0);
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -1816,20 +1821,20 @@ struct LoopifyExprVariants {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename list_expr::LCons &>().d_a1) _s0;
-      decltype(std::declval<typename list_expr::LCons &>().d_a0) _s1;
+      std::shared_ptr<list_expr> _s0;
+      unsigned int _s1;
     };
 
     struct _Call2 {
-      decltype(std::declval<typename list_expr::LAppend &>().d_a0) _s0;
-      decltype(std::declval<typename list_expr::LAppend &>().d_a1) _s1;
-      decltype(std::declval<typename list_expr::LAppend &>().d_a0) _s2;
+      std::shared_ptr<list_expr> _s0;
+      std::shared_ptr<list_expr> _s1;
+      std::shared_ptr<list_expr> _s2;
     };
 
     struct _Call3 {
       T1 _s0;
-      decltype(std::declval<typename list_expr::LAppend &>().d_a1) _s1;
-      decltype(std::declval<typename list_expr::LAppend &>().d_a0) _s2;
+      std::shared_ptr<list_expr> _s1;
+      std::shared_ptr<list_expr> _s2;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
@@ -1845,18 +1850,20 @@ struct LoopifyExprVariants {
         if (std::holds_alternative<typename list_expr::LNil>(l->v())) {
           _result = f;
         } else if (std::holds_alternative<typename list_expr::LCons>(l->v())) {
-          const auto &_m = *std::get_if<typename list_expr::LCons>(&l->v());
-          _stack.emplace_back(_Call1{_m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] =
+              std::get<typename list_expr::LCons>(l->v());
+          _stack.emplace_back(_Call1{d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         } else if (std::holds_alternative<typename list_expr::LAppend>(
                        l->v())) {
-          const auto &_m = *std::get_if<typename list_expr::LAppend>(&l->v());
-          _stack.emplace_back(_Call2{_m.d_a0, _m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] =
+              std::get<typename list_expr::LAppend>(l->v());
+          _stack.emplace_back(_Call2{d_a0, d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         } else {
-          const auto &_m =
-              *std::get_if<typename list_expr::LReplicate>(&l->v());
-          _result = f2(_m.d_a0, _m.d_a1);
+          const auto &[d_a0, d_a1] =
+              std::get<typename list_expr::LReplicate>(l->v());
+          _result = f2(d_a0, d_a1);
         }
       } else if (std::holds_alternative<_Call1>(_frame)) {
         const auto &_f = std::get<_Call1>(_frame);
@@ -1885,20 +1892,20 @@ struct LoopifyExprVariants {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename list_expr::LCons &>().d_a1) _s0;
-      decltype(std::declval<typename list_expr::LCons &>().d_a0) _s1;
+      std::shared_ptr<list_expr> _s0;
+      unsigned int _s1;
     };
 
     struct _Call2 {
-      decltype(std::declval<typename list_expr::LAppend &>().d_a0) _s0;
-      decltype(std::declval<typename list_expr::LAppend &>().d_a1) _s1;
-      decltype(std::declval<typename list_expr::LAppend &>().d_a0) _s2;
+      std::shared_ptr<list_expr> _s0;
+      std::shared_ptr<list_expr> _s1;
+      std::shared_ptr<list_expr> _s2;
     };
 
     struct _Call3 {
       T1 _s0;
-      decltype(std::declval<typename list_expr::LAppend &>().d_a1) _s1;
-      decltype(std::declval<typename list_expr::LAppend &>().d_a0) _s2;
+      std::shared_ptr<list_expr> _s1;
+      std::shared_ptr<list_expr> _s2;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
@@ -1914,18 +1921,20 @@ struct LoopifyExprVariants {
         if (std::holds_alternative<typename list_expr::LNil>(l->v())) {
           _result = f;
         } else if (std::holds_alternative<typename list_expr::LCons>(l->v())) {
-          const auto &_m = *std::get_if<typename list_expr::LCons>(&l->v());
-          _stack.emplace_back(_Call1{_m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] =
+              std::get<typename list_expr::LCons>(l->v());
+          _stack.emplace_back(_Call1{d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         } else if (std::holds_alternative<typename list_expr::LAppend>(
                        l->v())) {
-          const auto &_m = *std::get_if<typename list_expr::LAppend>(&l->v());
-          _stack.emplace_back(_Call2{_m.d_a0, _m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] =
+              std::get<typename list_expr::LAppend>(l->v());
+          _stack.emplace_back(_Call2{d_a0, d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         } else {
-          const auto &_m =
-              *std::get_if<typename list_expr::LReplicate>(&l->v());
-          _result = f2(_m.d_a0, _m.d_a1);
+          const auto &[d_a0, d_a1] =
+              std::get<typename list_expr::LReplicate>(l->v());
+          _result = f2(d_a0, d_a1);
         }
       } else if (std::holds_alternative<_Call1>(_frame)) {
         const auto &_f = std::get<_Call1>(_frame);

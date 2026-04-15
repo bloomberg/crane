@@ -17,13 +17,13 @@ LoopifyOptionMaybe::find_even(const std::shared_ptr<List<unsigned int>> &l) {
       _result = std::optional<unsigned int>();
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-      if ((2u ? _m.d_a0 % 2u : _m.d_a0) == 0u) {
-        _result = std::make_optional<unsigned int>(_m.d_a0);
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      if ((2u ? d_a0 % 2u : d_a0) == 0u) {
+        _result = std::make_optional<unsigned int>(d_a0);
         _continue = false;
       } else {
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
       }
     }
   }
@@ -42,13 +42,13 @@ LoopifyOptionMaybe::find_greater(const unsigned int threshold,
       _result = std::optional<unsigned int>();
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-      if (threshold < _m.d_a0) {
-        _result = std::make_optional<unsigned int>(_m.d_a0);
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      if (threshold < d_a0) {
+        _result = std::make_optional<unsigned int>(d_a0);
         _continue = false;
       } else {
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
       }
     }
   }
@@ -68,16 +68,16 @@ __attribute__((pure)) std::optional<unsigned int> LoopifyOptionMaybe::lookup(
       _result = std::optional<unsigned int>();
       _continue = false;
     } else {
-      const auto &_m = *std::get_if<
-          typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-          &_loop_l->v());
-      const unsigned int &k = _m.d_a0.first;
-      const unsigned int &v = _m.d_a0.second;
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
+              _loop_l->v());
+      const unsigned int &k = d_a0.first;
+      const unsigned int &v = d_a0.second;
       if (key == k) {
         _result = std::make_optional<unsigned int>(v);
         _continue = false;
       } else {
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
       }
     }
   }
@@ -103,11 +103,11 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::lookup_all(
       }
       _continue = false;
     } else {
-      const auto &_m = *std::get_if<
-          typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-          &_loop_l->v());
-      const unsigned int &k = _m.d_a0.first;
-      const unsigned int &v = _m.d_a0.second;
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
+              _loop_l->v());
+      const unsigned int &k = d_a0.first;
+      const unsigned int &v = d_a0.second;
       if (key == k) {
         auto _cell = List<unsigned int>::cons(v, nullptr);
         if (_last) {
@@ -117,10 +117,10 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::lookup_all(
           _head = _cell;
         }
         _last = _cell;
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
         continue;
       } else {
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
         continue;
       }
     }
@@ -133,8 +133,9 @@ LoopifyOptionMaybe::safe_head(const std::shared_ptr<List<unsigned int>> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
     return std::optional<unsigned int>();
   } else {
-    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-    return std::make_optional<unsigned int>(_m.d_a0);
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(l->v());
+    return std::make_optional<unsigned int>(d_a0);
   }
 }
 
@@ -143,8 +144,9 @@ LoopifyOptionMaybe::safe_tail(const std::shared_ptr<List<unsigned int>> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
     return std::optional<std::shared_ptr<List<unsigned int>>>();
   } else {
-    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-    return std::make_optional<std::shared_ptr<List<unsigned int>>>(_m.d_a1);
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(l->v());
+    return std::make_optional<std::shared_ptr<List<unsigned int>>>(d_a1);
   }
 }
 
@@ -165,11 +167,11 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::catMaybes(
       }
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<std::optional<unsigned int>>::Cons>(
-              &_loop_l->v());
-      if (_m.d_a0.has_value()) {
-        const unsigned int &x = *_m.d_a0;
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::optional<unsigned int>>::Cons>(
+              _loop_l->v());
+      if (d_a0.has_value()) {
+        const unsigned int &x = *d_a0;
         auto _cell = List<unsigned int>::cons(x, nullptr);
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
@@ -178,10 +180,10 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::catMaybes(
           _head = _cell;
         }
         _last = _cell;
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
         continue;
       } else {
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
         continue;
       }
     }
@@ -202,14 +204,14 @@ LoopifyOptionMaybe::find_index_even_aux(
       _result = std::optional<unsigned int>();
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-      if ((2u ? _m.d_a0 % 2u : _m.d_a0) == 0u) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      if ((2u ? d_a0 % 2u : d_a0) == 0u) {
         _result = std::make_optional<unsigned int>(_loop_idx);
         _continue = false;
       } else {
         unsigned int _next_idx = (_loop_idx + 1u);
-        std::shared_ptr<List<unsigned int>> _next_l = _m.d_a1;
+        std::shared_ptr<List<unsigned int>> _next_l = d_a1;
         _loop_idx = std::move(_next_idx);
         _loop_l = std::move(_next_l);
       }

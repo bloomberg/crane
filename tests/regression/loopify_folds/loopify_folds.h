@@ -78,9 +78,10 @@ public:
         if (std::holds_alternative<typename List<t_A>::Nil>(_self->v())) {
           _result = 0u;
         } else {
-          const auto &_m = *std::get_if<typename List<t_A>::Cons>(&_self->v());
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<t_A>::Cons>(_self->v());
           _stack.emplace_back(_Call1{});
-          _stack.emplace_back(_Enter{_m.d_a1.get()});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
@@ -106,10 +107,10 @@ struct LoopifyFolds {
         _result = _loop_acc;
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-        std::shared_ptr<List<unsigned int>> _next_l = _m.d_a1;
-        unsigned int _next_acc = f(_loop_acc, _m.d_a0);
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+        std::shared_ptr<List<unsigned int>> _next_l = d_a1;
+        unsigned int _next_acc = f(_loop_acc, d_a0);
         _loop_l = std::move(_next_l);
         _loop_acc = std::move(_next_acc);
       }
@@ -126,7 +127,7 @@ struct LoopifyFolds {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename List<unsigned int>::Cons &>().d_a0) _s0;
+      unsigned int _s0;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -142,10 +143,10 @@ struct LoopifyFolds {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
           _result = acc;
         } else {
-          const auto &_m =
-              *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-          _stack.emplace_back(_Call1{_m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l->v());
+          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
@@ -176,8 +177,8 @@ struct LoopifyFolds {
         }
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         auto _cell = List<unsigned int>::cons(_loop_acc, nullptr);
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
@@ -186,8 +187,8 @@ struct LoopifyFolds {
           _head = _cell;
         }
         _last = _cell;
-        std::shared_ptr<List<unsigned int>> _next_l = _m.d_a1;
-        unsigned int _next_acc = f(_loop_acc, _m.d_a0);
+        std::shared_ptr<List<unsigned int>> _next_l = d_a1;
+        unsigned int _next_acc = f(_loop_acc, d_a0);
         _loop_l = std::move(_next_l);
         _loop_acc = std::move(_next_acc);
         continue;
@@ -216,16 +217,16 @@ struct LoopifyFolds {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
         _result = List<unsigned int>::cons(acc, List<unsigned int>::nil());
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-        auto &&_sv0 = scanr(f, acc, _m.d_a1);
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
+        auto &&_sv0 = scanr(f, acc, d_a1);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv0->v())) {
           _result = List<unsigned int>::cons(acc, List<unsigned int>::nil());
         } else {
-          const auto &_m0 =
-              *std::get_if<typename List<unsigned int>::Cons>(&_sv0->v());
-          _result = List<unsigned int>::cons(f(_m.d_a0, _m0.d_a0), _m0.d_a1);
+          const auto &[d_a00, d_a10] =
+              std::get<typename List<unsigned int>::Cons>(_sv0->v());
+          _result = List<unsigned int>::cons(f(d_a0, d_a00), d_a10);
         }
       }
     }
@@ -251,18 +252,17 @@ struct LoopifyFolds {
           _result = 0u;
           _continue = false;
         } else {
-          const auto &_m =
-              *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-          auto &&_sv0 = _m.d_a1;
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(_loop_l->v());
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  _sv0->v())) {
-            _result = _m.d_a0;
+                  d_a1->v())) {
+            _result = d_a0;
             _continue = false;
           } else {
-            const auto &_m0 =
-                *std::get_if<typename List<unsigned int>::Cons>(&_sv0->v());
+            const auto &[d_a00, d_a10] =
+                std::get<typename List<unsigned int>::Cons>(d_a1->v());
             std::shared_ptr<List<unsigned int>> _next_l =
-                List<unsigned int>::cons(f(_m.d_a0, _m0.d_a0), _m0.d_a1);
+                List<unsigned int>::cons(f(d_a0, d_a00), d_a10);
             unsigned int _next_fuel = fuel_;
             _loop_l = std::move(_next_l);
             _loop_fuel = std::move(_next_fuel);
@@ -287,7 +287,7 @@ struct LoopifyFolds {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename List<unsigned int>::Cons &>().d_a0) _s0;
+      unsigned int _s0;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -303,15 +303,14 @@ struct LoopifyFolds {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
           _result = 0u;
         } else {
-          const auto &_m =
-              *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-          auto &&_sv = _m.d_a1;
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l->v());
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  _sv->v())) {
-            _result = _m.d_a0;
+                  d_a1->v())) {
+            _result = d_a0;
           } else {
-            _stack.emplace_back(_Call1{_m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1});
+            _stack.emplace_back(_Call1{d_a0});
+            _stack.emplace_back(_Enter{d_a1});
           }
         }
       } else {
@@ -352,13 +351,13 @@ struct LoopifyFolds {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
           _result = std::make_pair(acc, List<unsigned int>::nil());
         } else {
-          const auto &_m =
-              *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-          auto _cs = f(acc, _m.d_a0);
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l->v());
+          auto _cs = f(acc, d_a0);
           const unsigned int &acc_ = _cs.first;
           const unsigned int &y = _cs.second;
           _stack.emplace_back(_Call1{y});
-          _stack.emplace_back(_Enter{_m.d_a1, acc_});
+          _stack.emplace_back(_Enter{d_a1, acc_});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);

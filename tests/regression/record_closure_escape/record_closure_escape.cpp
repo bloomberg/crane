@@ -12,23 +12,21 @@ __attribute__((pure)) unsigned int RecordClosureEscape::sum_values(
           t->v())) {
     return x;
   } else {
-    const auto &_m =
-        *std::get_if<typename RecordClosureEscape::tree::Node>(&t->v());
-    auto &&_sv0 = _m.d_a0;
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename RecordClosureEscape::tree::Node>(t->v());
     if (std::holds_alternative<typename RecordClosureEscape::tree::Leaf>(
-            _sv0->v())) {
-      return (_m.d_a1 + x);
+            d_a0->v())) {
+      return (d_a1 + x);
     } else {
-      const auto &_m0 =
-          *std::get_if<typename RecordClosureEscape::tree::Node>(&_sv0->v());
-      auto &&_sv1 = _m.d_a2;
+      const auto &[d_a00, d_a10, d_a20] =
+          std::get<typename RecordClosureEscape::tree::Node>(d_a0->v());
       if (std::holds_alternative<typename RecordClosureEscape::tree::Leaf>(
-              _sv1->v())) {
-        return (_m0.d_a1 + x);
+              d_a2->v())) {
+        return (d_a10 + x);
       } else {
-        const auto &_m1 =
-            *std::get_if<typename RecordClosureEscape::tree::Node>(&_sv1->v());
-        return (((_m0.d_a1 + _m1.d_a1) + _m.d_a1) + x);
+        const auto &[d_a01, d_a11, d_a21] =
+            std::get<typename RecordClosureEscape::tree::Node>(d_a2->v());
+        return (((d_a10 + d_a11) + d_a1) + x);
       }
     }
   }

@@ -111,25 +111,26 @@ public:
 
   std::any eval(const Ty) const {
     if (std::holds_alternative<typename Expr::ENat>(this->v())) {
-      const auto &_m = *std::get_if<typename Expr::ENat>(&this->v());
-      return _m.d_a0;
+      const auto &[d_a0] = std::get<typename Expr::ENat>(this->v());
+      return d_a0;
     } else if (std::holds_alternative<typename Expr::EBool>(this->v())) {
-      const auto &_m = *std::get_if<typename Expr::EBool>(&this->v());
-      return _m.d_a0;
+      const auto &[d_a0] = std::get<typename Expr::EBool>(this->v());
+      return d_a0;
     } else if (std::holds_alternative<typename Expr::EAdd>(this->v())) {
-      const auto &_m = *std::get_if<typename Expr::EAdd>(&this->v());
-      return (std::any_cast<unsigned int>(_m.d_a0->eval(Ty::e_TNAT)) +
-              std::any_cast<unsigned int>(_m.d_a1->eval(Ty::e_TNAT)));
+      const auto &[d_a0, d_a1] = std::get<typename Expr::EAdd>(this->v());
+      return (std::any_cast<unsigned int>(d_a0->eval(Ty::e_TNAT)) +
+              std::any_cast<unsigned int>(d_a1->eval(Ty::e_TNAT)));
     } else if (std::holds_alternative<typename Expr::EEq>(this->v())) {
-      const auto &_m = *std::get_if<typename Expr::EEq>(&this->v());
-      return std::any_cast<unsigned int>(_m.d_a0->eval(Ty::e_TNAT)) ==
-             std::any_cast<unsigned int>(_m.d_a1->eval(Ty::e_TNAT));
+      const auto &[d_a0, d_a1] = std::get<typename Expr::EEq>(this->v());
+      return std::any_cast<unsigned int>(d_a0->eval(Ty::e_TNAT)) ==
+             std::any_cast<unsigned int>(d_a1->eval(Ty::e_TNAT));
     } else {
-      const auto &_m = *std::get_if<typename Expr::EIf>(&this->v());
-      if (std::any_cast<bool>(_m.d_a1->eval(Ty::e_TBOOL))) {
-        return _m.d_a2->eval(_m.d_t);
+      const auto &[d_t, d_a1, d_a2, d_a3] =
+          std::get<typename Expr::EIf>(this->v());
+      if (std::any_cast<bool>(d_a1->eval(Ty::e_TBOOL))) {
+        return d_a2->eval(d_t);
       } else {
-        return _m.d_a3->eval(_m.d_t);
+        return d_a3->eval(d_t);
       }
     }
   }

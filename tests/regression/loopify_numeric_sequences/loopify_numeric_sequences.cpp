@@ -398,26 +398,26 @@ __attribute__((pure)) unsigned int LoopifyNumericSequences::alternate_sum(
       _result = _loop_acc;
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_sign) {
-        std::shared_ptr<List<unsigned int>> _next_l = _m.d_a1;
-        unsigned int _next_acc = (_loop_acc + _m.d_a0);
+        std::shared_ptr<List<unsigned int>> _next_l = d_a1;
+        unsigned int _next_acc = (_loop_acc + d_a0);
         bool _next_sign = false;
         _loop_l = std::move(_next_l);
         _loop_acc = std::move(_next_acc);
         _loop_sign = std::move(_next_sign);
       } else {
-        if (_m.d_a0 <= _loop_acc) {
-          std::shared_ptr<List<unsigned int>> _next_l = _m.d_a1;
+        if (d_a0 <= _loop_acc) {
+          std::shared_ptr<List<unsigned int>> _next_l = d_a1;
           unsigned int _next_acc =
-              (((_loop_acc - _m.d_a0) > _loop_acc ? 0 : (_loop_acc - _m.d_a0)));
+              (((_loop_acc - d_a0) > _loop_acc ? 0 : (_loop_acc - d_a0)));
           bool _next_sign = true;
           _loop_l = std::move(_next_l);
           _loop_acc = std::move(_next_acc);
           _loop_sign = std::move(_next_sign);
         } else {
-          std::shared_ptr<List<unsigned int>> _next_l = _m.d_a1;
+          std::shared_ptr<List<unsigned int>> _next_l = d_a1;
           unsigned int _next_acc = 0u;
           bool _next_sign = true;
           _loop_l = std::move(_next_l);

@@ -129,14 +129,14 @@ struct LoopifyAdvancedPatterns {
   static T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1,
                        const std::shared_ptr<shape> &s) {
     if (std::holds_alternative<typename shape::Circle>(s->v())) {
-      const auto &_m = *std::get_if<typename shape::Circle>(&s->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename shape::Circle>(s->v());
+      return f(d_a0);
     } else if (std::holds_alternative<typename shape::Square>(s->v())) {
-      const auto &_m = *std::get_if<typename shape::Square>(&s->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename shape::Square>(s->v());
+      return f0(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename shape::Triangle>(&s->v());
-      return f1(_m.d_a0);
+      const auto &[d_a0] = std::get<typename shape::Triangle>(s->v());
+      return f1(d_a0);
     }
   }
 
@@ -145,14 +145,14 @@ struct LoopifyAdvancedPatterns {
   static T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1,
                       const std::shared_ptr<shape> &s) {
     if (std::holds_alternative<typename shape::Circle>(s->v())) {
-      const auto &_m = *std::get_if<typename shape::Circle>(&s->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename shape::Circle>(s->v());
+      return f(d_a0);
     } else if (std::holds_alternative<typename shape::Square>(s->v())) {
-      const auto &_m = *std::get_if<typename shape::Square>(&s->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename shape::Square>(s->v());
+      return f0(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename shape::Triangle>(&s->v());
-      return f1(_m.d_a0);
+      const auto &[d_a0] = std::get<typename shape::Triangle>(s->v());
+      return f1(d_a0);
     }
   }
 

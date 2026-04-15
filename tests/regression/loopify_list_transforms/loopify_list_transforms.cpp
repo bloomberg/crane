@@ -25,34 +25,34 @@ LoopifyListTransforms::run_length_encode(
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
       _result = List<std::pair<unsigned int, unsigned int>>::nil();
     } else {
-      const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-      auto &&_sv = _m.d_a1;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv->v())) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l->v());
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
         _result = List<std::pair<unsigned int, unsigned int>>::cons(
-            std::make_pair(_m.d_a0, 1u),
+            std::make_pair(d_a0, 1u),
             List<std::pair<unsigned int, unsigned int>>::nil());
       } else {
-        auto &&_sv1 = run_length_encode(_m.d_a1);
+        auto &&_sv1 = run_length_encode(d_a1);
         if (std::holds_alternative<
                 typename List<std::pair<unsigned int, unsigned int>>::Nil>(
                 _sv1->v())) {
           _result = List<std::pair<unsigned int, unsigned int>>::cons(
-              std::make_pair(_m.d_a0, 1u),
+              std::make_pair(d_a0, 1u),
               List<std::pair<unsigned int, unsigned int>>::nil());
         } else {
-          const auto &_m1 = *std::get_if<
+          const auto &[d_a01, d_a11] = std::get<
               typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-              &_sv1->v());
-          const unsigned int &y = _m1.d_a0.first;
-          const unsigned int &n = _m1.d_a0.second;
-          if (_m.d_a0 == y) {
+              _sv1->v());
+          const unsigned int &y = d_a01.first;
+          const unsigned int &n = d_a01.second;
+          if (d_a0 == y) {
             _result = List<std::pair<unsigned int, unsigned int>>::cons(
-                std::make_pair(y, (n + 1u)), _m1.d_a1);
+                std::make_pair(y, (n + 1u)), d_a11);
           } else {
             _result = List<std::pair<unsigned int, unsigned int>>::cons(
-                std::make_pair(_m.d_a0, 1u),
+                std::make_pair(d_a0, 1u),
                 List<std::pair<unsigned int, unsigned int>>::cons(
-                    std::make_pair(y, n), _m1.d_a1));
+                    std::make_pair(y, n), d_a11));
           }
         }
       }
@@ -79,8 +79,8 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::prefix_sums(
       }
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       auto _cell = List<unsigned int>::cons(_loop_acc, nullptr);
       if (_last) {
         std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
@@ -89,8 +89,8 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::prefix_sums(
         _head = _cell;
       }
       _last = _cell;
-      std::shared_ptr<List<unsigned int>> _next_l = _m.d_a1;
-      unsigned int _next_acc = (_loop_acc + _m.d_a0);
+      std::shared_ptr<List<unsigned int>> _next_l = d_a1;
+      unsigned int _next_acc = (_loop_acc + d_a0);
       _loop_l = std::move(_next_l);
       _loop_acc = std::move(_next_acc);
       continue;
@@ -130,11 +130,10 @@ LoopifyListTransforms::sliding_pairs_fuel(
         }
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-        auto &&_sv0 = _m.d_a1;
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _sv0->v())) {
+                d_a1->v())) {
           if (_last) {
             std::get<
                 typename List<std::pair<unsigned int, unsigned int>>::Cons>(
@@ -145,10 +144,10 @@ LoopifyListTransforms::sliding_pairs_fuel(
           }
           _continue = false;
         } else {
-          const auto &_m0 =
-              *std::get_if<typename List<unsigned int>::Cons>(&_sv0->v());
+          const auto &[d_a00, d_a10] =
+              std::get<typename List<unsigned int>::Cons>(d_a1->v());
           auto _cell = List<std::pair<unsigned int, unsigned int>>::cons(
-              std::make_pair(_m.d_a0, _m0.d_a0), nullptr);
+              std::make_pair(d_a0, d_a00), nullptr);
           if (_last) {
             std::get<
                 typename List<std::pair<unsigned int, unsigned int>>::Cons>(
@@ -158,7 +157,7 @@ LoopifyListTransforms::sliding_pairs_fuel(
             _head = _cell;
           }
           _last = _cell;
-          std::shared_ptr<List<unsigned int>> _next_l = _m.d_a1;
+          std::shared_ptr<List<unsigned int>> _next_l = d_a1;
           unsigned int _next_fuel = fuel_;
           _loop_l = std::move(_next_l);
           _loop_fuel = std::move(_next_fuel);
@@ -214,11 +213,10 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::differences_fuel(
         }
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-        auto &&_sv0 = _m.d_a1;
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _sv0->v())) {
+                d_a1->v())) {
           if (_last) {
             std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
                 List<unsigned int>::nil();
@@ -227,10 +225,9 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::differences_fuel(
           }
           _continue = false;
         } else {
-          const auto &_m0 =
-              *std::get_if<typename List<unsigned int>::Cons>(&_sv0->v());
-          auto _cell =
-              List<unsigned int>::cons(abs_diff(_m.d_a0, _m0.d_a0), nullptr);
+          const auto &[d_a00, d_a10] =
+              std::get<typename List<unsigned int>::Cons>(d_a1->v());
+          auto _cell = List<unsigned int>::cons(abs_diff(d_a0, d_a00), nullptr);
           if (_last) {
             std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
                 _cell;
@@ -238,7 +235,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::differences_fuel(
             _head = _cell;
           }
           _last = _cell;
-          std::shared_ptr<List<unsigned int>> _next_l = _m.d_a1;
+          std::shared_ptr<List<unsigned int>> _next_l = d_a1;
           unsigned int _next_fuel = fuel_;
           _loop_l = std::move(_next_l);
           _loop_fuel = std::move(_next_fuel);
@@ -285,9 +282,9 @@ LoopifyListTransforms::take(const unsigned int n,
         }
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-        auto _cell = List<unsigned int>::cons(_m.d_a0, nullptr);
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+        auto _cell = List<unsigned int>::cons(d_a0, nullptr);
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
               _cell;
@@ -295,7 +292,7 @@ LoopifyListTransforms::take(const unsigned int n,
           _head = _cell;
         }
         _last = _cell;
-        std::shared_ptr<List<unsigned int>> _next_l = _m.d_a1;
+        std::shared_ptr<List<unsigned int>> _next_l = d_a1;
         unsigned int _next_n = n_;
         _loop_l = std::move(_next_l);
         _loop_n = std::move(_next_n);
@@ -329,9 +326,9 @@ LoopifyListTransforms::drop(const unsigned int n,
         _result = List<unsigned int>::nil();
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-        std::shared_ptr<List<unsigned int>> _next_l = _m.d_a1;
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+        std::shared_ptr<List<unsigned int>> _next_l = d_a1;
         unsigned int _next_n = n_;
         _loop_l = std::move(_next_l);
         _loop_n = std::move(_next_n);
@@ -441,10 +438,10 @@ LoopifyListTransforms::rotate_left_fuel(const unsigned int fuel,
           _result = List<unsigned int>::nil();
           _continue = false;
         } else {
-          const auto &_m =
-              *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-          std::shared_ptr<List<unsigned int>> rotated = _m.d_a1->app(
-              List<unsigned int>::cons(_m.d_a0, List<unsigned int>::nil()));
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+          std::shared_ptr<List<unsigned int>> rotated = d_a1->app(
+              List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
           std::shared_ptr<List<unsigned int>> _next_l = std::move(rotated);
           unsigned int _next_n =
               (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
@@ -492,30 +489,28 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::uniq_sorted_fuel(
         }
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-        auto &&_sv0 = _m.d_a1;
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _sv0->v())) {
+                d_a1->v())) {
           if (_last) {
             std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                List<unsigned int>::cons(_m.d_a0, List<unsigned int>::nil());
+                List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
           } else {
-            _head =
-                List<unsigned int>::cons(_m.d_a0, List<unsigned int>::nil());
+            _head = List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
           }
           _continue = false;
         } else {
-          const auto &_m0 =
-              *std::get_if<typename List<unsigned int>::Cons>(&_sv0->v());
-          if (_m.d_a0 == _m0.d_a0) {
-            std::shared_ptr<List<unsigned int>> _next_l = _m.d_a1;
+          const auto &[d_a00, d_a10] =
+              std::get<typename List<unsigned int>::Cons>(d_a1->v());
+          if (d_a0 == d_a00) {
+            std::shared_ptr<List<unsigned int>> _next_l = d_a1;
             unsigned int _next_fuel = fuel_;
             _loop_l = std::move(_next_l);
             _loop_fuel = std::move(_next_fuel);
             continue;
           } else {
-            auto _cell = List<unsigned int>::cons(_m.d_a0, nullptr);
+            auto _cell = List<unsigned int>::cons(d_a0, nullptr);
             if (_last) {
               std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
                   _cell;
@@ -523,7 +518,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::uniq_sorted_fuel(
               _head = _cell;
             }
             _last = _cell;
-            std::shared_ptr<List<unsigned int>> _next_l = _m.d_a1;
+            std::shared_ptr<List<unsigned int>> _next_l = d_a1;
             unsigned int _next_fuel = fuel_;
             _loop_l = std::move(_next_l);
             _loop_fuel = std::move(_next_fuel);
@@ -565,16 +560,16 @@ LoopifyListTransforms::step_sum(const std::shared_ptr<List<unsigned int>> &l) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
         _result = 0u;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
         unsigned int contribution;
-        if ((2u ? _m.d_a0 % 2u : _m.d_a0) == 0u) {
-          contribution = _m.d_a0;
+        if ((2u ? d_a0 % 2u : d_a0) == 0u) {
+          contribution = d_a0;
         } else {
-          contribution = (_m.d_a0 * 2u);
+          contribution = (d_a0 * 2u);
         }
         _stack.emplace_back(_Call1{contribution});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);

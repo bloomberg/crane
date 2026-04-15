@@ -62,8 +62,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return false;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (f(_m.d_a0) || _m.d_a1->existsb(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (f(d_a0) || d_a1->existsb(f));
     }
   }
 
@@ -72,8 +72,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return _m.d_a1->template fold_left<T1>(f, f(a0, _m.d_a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return d_a1->template fold_left<T1>(f, f(a0, d_a0));
     }
   }
 
@@ -82,8 +82,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return f(_m.d_a0)->app(_m.d_a1->template flat_map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return f(d_a0)->app(d_a1->template flat_map<T1>(f));
     }
   }
 
@@ -91,8 +91,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (_m.d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
     }
   }
 
@@ -100,8 +100,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return List<t_A>::cons(_m.d_a0, _m.d_a1->app(m));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, d_a1->app(m));
     }
   }
 };

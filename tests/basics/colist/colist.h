@@ -152,13 +152,13 @@ public:
     if (std::holds_alternative<typename Nat::O>(fuel->v())) {
       return List<t_A>::nil();
     } else {
-      const auto &_m = *std::get_if<typename Nat::S>(&fuel->v());
+      const auto &[d_a0] = std::get<typename Nat::S>(fuel->v());
       if (std::holds_alternative<typename Colist<t_A>::Conil>(this->v())) {
         return List<t_A>::nil();
       } else {
-        const auto &_m0 =
-            *std::get_if<typename Colist<t_A>::Cocons>(&this->v());
-        return List<t_A>::cons(_m0.d_a0, _m0.d_a1->list_of_colist(_m.d_a0));
+        const auto &[d_a00, d_a10] =
+            std::get<typename Colist<t_A>::Cocons>(this->v());
+        return List<t_A>::cons(d_a00, d_a10->list_of_colist(d_a0));
       }
     }
   }
@@ -169,9 +169,10 @@ public:
       return Colist<T1>::lazy_(
           []() -> std::shared_ptr<Colist<T1>> { return Colist<T1>::conil(); });
     } else {
-      const auto &_m = *std::get_if<typename Colist<t_A>::Cocons>(&this->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename Colist<t_A>::Cocons>(this->v());
       return Colist<T1>::lazy_([=]() mutable -> std::shared_ptr<Colist<T1>> {
-        return Colist<T1>::cocons(f(_m.d_a0), _m.d_a1->template comap<T1>(f));
+        return Colist<T1>::cocons(f(d_a0), d_a1->template comap<T1>(f));
       });
     }
   }

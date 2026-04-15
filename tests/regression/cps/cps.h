@@ -60,8 +60,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (_m.d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
     }
   }
 };
@@ -154,12 +154,12 @@ struct CPS {
             MapsTo<T1, std::shared_ptr<tree>, T1, std::shared_ptr<tree>, T1> F1>
   static T1 tree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<tree> &t) {
     if (std::holds_alternative<typename tree::Leaf>(t->v())) {
-      const auto &_m = *std::get_if<typename tree::Leaf>(&t->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename tree::Leaf>(t->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
-      return f0(_m.d_a0, tree_rect<T1>(f, f0, _m.d_a0), _m.d_a1,
-                tree_rect<T1>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rect<T1>(f, f0, d_a0), d_a1,
+                tree_rect<T1>(f, f0, d_a1));
     }
   }
 
@@ -167,12 +167,12 @@ struct CPS {
             MapsTo<T1, std::shared_ptr<tree>, T1, std::shared_ptr<tree>, T1> F1>
   static T1 tree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<tree> &t) {
     if (std::holds_alternative<typename tree::Leaf>(t->v())) {
-      const auto &_m = *std::get_if<typename tree::Leaf>(&t->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename tree::Leaf>(t->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
-      return f0(_m.d_a0, tree_rec<T1>(f, f0, _m.d_a0), _m.d_a1,
-                tree_rec<T1>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rec<T1>(f, f0, d_a0), d_a1,
+                tree_rec<T1>(f, f0, d_a1));
     }
   }
 
@@ -180,14 +180,13 @@ struct CPS {
   tree_sum_cps(const std::shared_ptr<tree> &t,
                const std::function<unsigned int(unsigned int)> k) {
     if (std::holds_alternative<typename tree::Leaf>(t->v())) {
-      const auto &_m = *std::get_if<typename tree::Leaf>(&t->v());
-      return k(_m.d_a0);
+      const auto &[d_a0] = std::get<typename tree::Leaf>(t->v());
+      return k(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
-      return tree_sum_cps(_m.d_a0, [=](const unsigned int sl) mutable {
-        return tree_sum_cps(_m.d_a1, [=](const unsigned int sr) mutable {
-          return k((sl + sr));
-        });
+      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t->v());
+      return tree_sum_cps(d_a0, [=](const unsigned int sl) mutable {
+        return tree_sum_cps(
+            d_a1, [=](const unsigned int sr) mutable { return k((sl + sr)); });
       });
     }
   }
@@ -201,10 +200,10 @@ struct CPS {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
       return k(0u);
     } else {
-      const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-      return sum_cps(_m.d_a1, [=](const unsigned int r) mutable {
-        return k((_m.d_a0 + r));
-      });
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l->v());
+      return sum_cps(
+          d_a1, [=](const unsigned int r) mutable { return k((d_a0 + r)); });
     }
   }
 
@@ -220,15 +219,16 @@ struct CPS {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
       return k(List<unsigned int>::nil(), List<unsigned int>::nil());
     } else {
-      const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l->v());
       return partition_cps(
-          p, _m.d_a1,
+          p, d_a1,
           [=](std::shared_ptr<List<unsigned int>> yes,
               std::shared_ptr<List<unsigned int>> no) mutable {
-            if (p(_m.d_a0)) {
-              return k(List<unsigned int>::cons(_m.d_a0, yes), no);
+            if (p(d_a0)) {
+              return k(List<unsigned int>::cons(d_a0, yes), no);
             } else {
-              return k(yes, List<unsigned int>::cons(_m.d_a0, no));
+              return k(yes, List<unsigned int>::cons(d_a0, no));
             }
           });
     }

@@ -63,8 +63,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return List<t_A>::cons(_m.d_a0, _m.d_a1->app(m));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, d_a1->app(m));
     }
   }
 };

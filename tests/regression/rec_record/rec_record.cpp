@@ -12,9 +12,9 @@ RecRecord::rlist_sum(const std::shared_ptr<RecRecord::rlist<unsigned int>> &l) {
           l->v())) {
     return 0u;
   } else {
-    const auto &_m =
-        *std::get_if<typename RecRecord::rlist<unsigned int>::Rcons>(&l->v());
-    return (_m.d_a0 + rlist_sum(_m.d_a1));
+    const auto &[d_a0, d_a1] =
+        std::get<typename RecRecord::rlist<unsigned int>::Rcons>(l->v());
+    return (d_a0 + rlist_sum(d_a1));
   }
 }
 

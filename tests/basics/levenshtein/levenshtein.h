@@ -57,12 +57,12 @@ public:
     if (std::holds_alternative<typename Nat::O>(this->v())) {
       return Bool0::e_TRUE0;
     } else {
-      const auto &_m = *std::get_if<typename Nat::S>(&this->v());
+      const auto &[d_a0] = std::get<typename Nat::S>(this->v());
       if (std::holds_alternative<typename Nat::O>(m->v())) {
         return Bool0::e_FALSE0;
       } else {
-        const auto &_m0 = *std::get_if<typename Nat::S>(&m->v());
-        return _m.d_a0->leb(_m0.d_a0);
+        const auto &[d_a00] = std::get<typename Nat::S>(m->v());
+        return d_a0->leb(d_a00);
       }
     }
   }
@@ -97,8 +97,9 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A projT1() const {
-    const auto &_m = *std::get_if<typename SigT<t_A, t_P>::ExistT>(&this->v());
-    return _m.d_x;
+    const auto &[d_x, d_a1] =
+        std::get<typename SigT<t_A, t_P>::ExistT>(this->v());
+    return d_x;
   }
 };
 enum class Sumbool { e_LEFT, e_RIGHT };
@@ -145,23 +146,25 @@ public:
 
   __attribute__((pure)) Sumbool
   ascii_dec(const std::shared_ptr<Ascii> &b) const {
-    const auto &_m = *std::get_if<typename Ascii::Ascii0>(&this->v());
-    const auto &_m0 = *std::get_if<typename Ascii::Ascii0>(&b->v());
-    switch (Bool::bool_dec(_m.d_a0, _m0.d_a0)) {
+    const auto &[d_a0, d_a1, d_a2, d_a3, d_a4, d_a5, d_a6, d_a7] =
+        std::get<typename Ascii::Ascii0>(this->v());
+    const auto &[d_a00, d_a10, d_a20, d_a30, d_a40, d_a50, d_a60, d_a70] =
+        std::get<typename Ascii::Ascii0>(b->v());
+    switch (Bool::bool_dec(d_a0, d_a00)) {
     case Sumbool::e_LEFT: {
-      switch (Bool::bool_dec(_m.d_a1, _m0.d_a1)) {
+      switch (Bool::bool_dec(d_a1, d_a10)) {
       case Sumbool::e_LEFT: {
-        switch (Bool::bool_dec(_m.d_a2, _m0.d_a2)) {
+        switch (Bool::bool_dec(d_a2, d_a20)) {
         case Sumbool::e_LEFT: {
-          switch (Bool::bool_dec(_m.d_a3, _m0.d_a3)) {
+          switch (Bool::bool_dec(d_a3, d_a30)) {
           case Sumbool::e_LEFT: {
-            switch (Bool::bool_dec(_m.d_a4, _m0.d_a4)) {
+            switch (Bool::bool_dec(d_a4, d_a40)) {
             case Sumbool::e_LEFT: {
-              switch (Bool::bool_dec(_m.d_a5, _m0.d_a5)) {
+              switch (Bool::bool_dec(d_a5, d_a50)) {
               case Sumbool::e_LEFT: {
-                switch (Bool::bool_dec(_m.d_a6, _m0.d_a6)) {
+                switch (Bool::bool_dec(d_a6, d_a60)) {
                 case Sumbool::e_LEFT: {
-                  switch (Bool::bool_dec(_m.d_a7, _m0.d_a7)) {
+                  switch (Bool::bool_dec(d_a7, d_a70)) {
                   case Sumbool::e_LEFT: {
                     return Sumbool::e_LEFT;
                   }
@@ -268,8 +271,8 @@ public:
     if (std::holds_alternative<typename String::EmptyString>(this->v())) {
       return s2;
     } else {
-      const auto &_m = *std::get_if<typename String::String0>(&this->v());
-      return String::string0(_m.d_a0, _m.d_a1->append(s2));
+      const auto &[d_a0, d_a1] = std::get<typename String::String0>(this->v());
+      return String::string0(d_a0, d_a1->append(s2));
     }
   }
 
@@ -277,8 +280,8 @@ public:
     if (std::holds_alternative<typename String::EmptyString>(this->v())) {
       return Nat::o();
     } else {
-      const auto &_m = *std::get_if<typename String::String0>(&this->v());
-      return Nat::s(_m.d_a1->length());
+      const auto &[d_a0, d_a1] = std::get<typename String::String0>(this->v());
+      return Nat::s(d_a1->length());
     }
   }
 };
@@ -364,14 +367,15 @@ struct Levenshtein {
     T1 edit_rec(F0 &&f, F1 &&f0, F2 &&f1, const std::shared_ptr<String> &,
                 const std::shared_ptr<String> &) const {
       if (std::holds_alternative<typename edit::Insertion>(this->v())) {
-        const auto &_m = *std::get_if<typename edit::Insertion>(&this->v());
-        return f(_m.d_a, _m.d_s);
+        const auto &[d_a, d_s] = std::get<typename edit::Insertion>(this->v());
+        return f(d_a, d_s);
       } else if (std::holds_alternative<typename edit::Deletion>(this->v())) {
-        const auto &_m = *std::get_if<typename edit::Deletion>(&this->v());
-        return f0(_m.d_a, _m.d_s);
+        const auto &[d_a, d_s] = std::get<typename edit::Deletion>(this->v());
+        return f0(d_a, d_s);
       } else {
-        const auto &_m = *std::get_if<typename edit::Update>(&this->v());
-        return f1(_m.d_a, _m.d_a_1, _m.d_neq);
+        const auto &[d_a, d_a_1, d_neq] =
+            std::get<typename edit::Update>(this->v());
+        return f1(d_a, d_a_1, d_neq);
       }
     }
 
@@ -384,14 +388,15 @@ struct Levenshtein {
     T1 edit_rect(F0 &&f, F1 &&f0, F2 &&f1, const std::shared_ptr<String> &,
                  const std::shared_ptr<String> &) const {
       if (std::holds_alternative<typename edit::Insertion>(this->v())) {
-        const auto &_m = *std::get_if<typename edit::Insertion>(&this->v());
-        return f(_m.d_a, _m.d_s);
+        const auto &[d_a, d_s] = std::get<typename edit::Insertion>(this->v());
+        return f(d_a, d_s);
       } else if (std::holds_alternative<typename edit::Deletion>(this->v())) {
-        const auto &_m = *std::get_if<typename edit::Deletion>(&this->v());
-        return f0(_m.d_a, _m.d_s);
+        const auto &[d_a, d_s] = std::get<typename edit::Deletion>(this->v());
+        return f0(d_a, d_s);
       } else {
-        const auto &_m = *std::get_if<typename edit::Update>(&this->v());
-        return f1(_m.d_a, _m.d_a_1, _m.d_neq);
+        const auto &[d_a, d_a_1, d_neq] =
+            std::get<typename edit::Update>(this->v());
+        return f1(d_a, d_a_1, d_neq);
       }
     }
   };
@@ -567,13 +572,15 @@ struct Levenshtein {
     if (std::holds_alternative<typename chain::Empty>(c->v())) {
       return f;
     } else if (std::holds_alternative<typename chain::Skip>(c->v())) {
-      const auto &_m = *std::get_if<typename chain::Skip>(&c->v());
-      return f0(_m.d_a, _m.d_s, _m.d_t, _m.d_n, _m.d_a4,
-                chain_rect<T1>(f, f0, f1, _m.d_s, _m.d_t, _m.d_n, _m.d_a4));
+      const auto &[d_a, d_s, d_t, d_n, d_a4] =
+          std::get<typename chain::Skip>(c->v());
+      return f0(d_a, d_s, d_t, d_n, d_a4,
+                chain_rect<T1>(f, f0, f1, d_s, d_t, d_n, d_a4));
     } else {
-      const auto &_m = *std::get_if<typename chain::Change>(&c->v());
-      return f1(_m.d_s, _m.d_t, _m.d_u, _m.d_n, _m.d_a4, _m.d_a5,
-                chain_rect<T1>(f, f0, f1, _m.d_t, _m.d_u, _m.d_n, _m.d_a5));
+      const auto &[d_s, d_t, d_u, d_n, d_a4, d_a5] =
+          std::get<typename chain::Change>(c->v());
+      return f1(d_s, d_t, d_u, d_n, d_a4, d_a5,
+                chain_rect<T1>(f, f0, f1, d_t, d_u, d_n, d_a5));
     }
   }
 
@@ -593,13 +600,15 @@ struct Levenshtein {
     if (std::holds_alternative<typename chain::Empty>(c->v())) {
       return f;
     } else if (std::holds_alternative<typename chain::Skip>(c->v())) {
-      const auto &_m = *std::get_if<typename chain::Skip>(&c->v());
-      return f0(_m.d_a, _m.d_s, _m.d_t, _m.d_n, _m.d_a4,
-                chain_rec<T1>(f, f0, f1, _m.d_s, _m.d_t, _m.d_n, _m.d_a4));
+      const auto &[d_a, d_s, d_t, d_n, d_a4] =
+          std::get<typename chain::Skip>(c->v());
+      return f0(d_a, d_s, d_t, d_n, d_a4,
+                chain_rec<T1>(f, f0, f1, d_s, d_t, d_n, d_a4));
     } else {
-      const auto &_m = *std::get_if<typename chain::Change>(&c->v());
-      return f1(_m.d_s, _m.d_t, _m.d_u, _m.d_n, _m.d_a4, _m.d_a5,
-                chain_rec<T1>(f, f0, f1, _m.d_t, _m.d_u, _m.d_n, _m.d_a5));
+      const auto &[d_s, d_t, d_u, d_n, d_a4, d_a5] =
+          std::get<typename chain::Change>(c->v());
+      return f1(d_s, d_t, d_u, d_n, d_a4, d_a5,
+                chain_rec<T1>(f, f0, f1, d_t, d_u, d_n, d_a5));
     }
   }
 
@@ -610,9 +619,9 @@ struct Levenshtein {
     if (std::holds_alternative<typename String::EmptyString>(s->v())) {
       return chain::empty();
     } else {
-      const auto &_m0 = *std::get_if<typename String::String0>(&s->v());
-      return chain::skip(_m0.d_a0, _m0.d_a1, _m0.d_a1, Nat::o(),
-                         _inserts_chain_F<T1>(_m0.d_a1));
+      const auto &[d_a00, d_a10] = std::get<typename String::String0>(s->v());
+      return chain::skip(d_a00, d_a10, d_a10, Nat::o(),
+                         _inserts_chain_F<T1>(d_a10));
     }
   }
 

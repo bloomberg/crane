@@ -114,8 +114,8 @@ struct UniversePoly {
     if (std::holds_alternative<typename poption<T1>::Pnone>(p->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename poption<T1>::Psome>(&p->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename poption<T1>::Psome>(p->v());
+      return f0(d_a0);
     }
   }
 
@@ -125,8 +125,8 @@ struct UniversePoly {
     if (std::holds_alternative<typename poption<T1>::Pnone>(p->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename poption<T1>::Psome>(&p->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename poption<T1>::Psome>(p->v());
+      return f0(d_a0);
     }
   }
 
@@ -136,8 +136,8 @@ struct UniversePoly {
     if (std::holds_alternative<typename poption<T1>::Pnone>(o->v())) {
       return poption<T2>::pnone();
     } else {
-      const auto &_m = *std::get_if<typename poption<T1>::Psome>(&o->v());
-      return poption<T2>::psome(f(_m.d_a0));
+      const auto &[d_a0] = std::get<typename poption<T1>::Psome>(o->v());
+      return poption<T2>::psome(f(d_a0));
     }
   }
 
@@ -148,8 +148,8 @@ struct UniversePoly {
     if (std::holds_alternative<typename poption<T1>::Pnone>(o->v())) {
       return poption<T2>::pnone();
     } else {
-      const auto &_m = *std::get_if<typename poption<T1>::Psome>(&o->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename poption<T1>::Psome>(o->v());
+      return f(d_a0);
     }
   }
 
@@ -173,8 +173,8 @@ struct UniversePoly {
     if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
-      return (poly_length<T1>(_m.d_a1) + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      return (poly_length<T1>(d_a1) + 1);
     }
   }
 

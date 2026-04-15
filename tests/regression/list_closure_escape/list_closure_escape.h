@@ -65,18 +65,19 @@ struct ListClosureEscape {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return x;
       } else {
-        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
-        auto &&_sv0 = _m.d_a0;
-        if (std::holds_alternative<typename tree::Leaf>(_sv0->v())) {
-          return (_m.d_a1 + x);
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        if (std::holds_alternative<typename tree::Leaf>(d_a0->v())) {
+          return (d_a1 + x);
         } else {
-          const auto &_m0 = *std::get_if<typename tree::Node>(&_sv0->v());
-          auto &&_sv1 = _m.d_a2;
-          if (std::holds_alternative<typename tree::Leaf>(_sv1->v())) {
-            return (_m0.d_a1 + x);
+          const auto &[d_a00, d_a10, d_a20] =
+              std::get<typename tree::Node>(d_a0->v());
+          if (std::holds_alternative<typename tree::Leaf>(d_a2->v())) {
+            return (d_a10 + x);
           } else {
-            const auto &_m1 = *std::get_if<typename tree::Node>(&_sv1->v());
-            return (((_m0.d_a1 + _m1.d_a1) + _m.d_a1) + x);
+            const auto &[d_a01, d_a11, d_a21] =
+                std::get<typename tree::Node>(d_a2->v());
+            return (((d_a10 + d_a11) + d_a1) + x);
           }
         }
       }
@@ -90,9 +91,9 @@ struct ListClosureEscape {
     if (std::holds_alternative<typename tree::Leaf>(t->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
-      return f0(_m.d_a0, tree_rect<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
-                tree_rect<T1>(f, f0, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rect<T1>(f, f0, d_a0), d_a1, d_a2,
+                tree_rect<T1>(f, f0, d_a2));
     }
   }
 
@@ -103,9 +104,9 @@ struct ListClosureEscape {
     if (std::holds_alternative<typename tree::Leaf>(t->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
-      return f0(_m.d_a0, tree_rec<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
-                tree_rec<T1>(f, f0, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rec<T1>(f, f0, d_a0), d_a1, d_a2,
+                tree_rec<T1>(f, f0, d_a2));
     }
   }
 
@@ -157,8 +158,8 @@ struct ListClosureEscape {
       if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
         return x;
       } else {
-        const auto &_m = *std::get_if<typename fn_list::FCons>(&this->v());
-        return _m.d_a0(x);
+        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(this->v());
+        return d_a0(x);
       }
     }
   };
@@ -171,8 +172,8 @@ struct ListClosureEscape {
     if (std::holds_alternative<typename fn_list::FNil>(f1->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename fn_list::FCons>(&f1->v());
-      return f0(_m.d_a0, _m.d_a1, fn_list_rect<T1>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(f1->v());
+      return f0(d_a0, d_a1, fn_list_rect<T1>(f, f0, d_a1));
     }
   }
 
@@ -184,8 +185,8 @@ struct ListClosureEscape {
     if (std::holds_alternative<typename fn_list::FNil>(f1->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename fn_list::FCons>(&f1->v());
-      return f0(_m.d_a0, _m.d_a1, fn_list_rec<T1>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(f1->v());
+      return f0(d_a0, d_a1, fn_list_rec<T1>(f, f0, d_a1));
     }
   }
 

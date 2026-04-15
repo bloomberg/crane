@@ -113,8 +113,8 @@ struct InstructionSequenceExec {
     } else if (std::holds_alternative<typename instruction::INC_PC>(i->v())) {
       return f0;
     } else {
-      const auto &_m = *std::get_if<typename instruction::ADD_ACC>(&i->v());
-      return f1(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction::ADD_ACC>(i->v());
+      return f1(d_a0);
     }
   }
 
@@ -126,8 +126,8 @@ struct InstructionSequenceExec {
     } else if (std::holds_alternative<typename instruction::INC_PC>(i->v())) {
       return f0;
     } else {
-      const auto &_m = *std::get_if<typename instruction::ADD_ACC>(&i->v());
-      return f1(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction::ADD_ACC>(i->v());
+      return f1(d_a0);
     }
   }
 

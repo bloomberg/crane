@@ -67,8 +67,8 @@ template <Elem E> struct Container {
     if (std::holds_alternative<typename maybe::Nothing>(m->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename maybe::Just>(&m->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename maybe::Just>(m->v());
+      return f0(d_a0);
     }
   }
 
@@ -77,8 +77,8 @@ template <Elem E> struct Container {
     if (std::holds_alternative<typename maybe::Nothing>(m->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename maybe::Just>(&m->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename maybe::Just>(m->v());
+      return f0(d_a0);
     }
   }
 
@@ -130,8 +130,8 @@ template <Elem E> struct Container {
     if (std::holds_alternative<typename mlist::MNil>(m->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename mlist::MCons>(&m->v());
-      return f0(_m.d_a0, _m.d_a1, mlist_rect<T1>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename mlist::MCons>(m->v());
+      return f0(d_a0, d_a1, mlist_rect<T1>(f, f0, d_a1));
     }
   }
 
@@ -141,8 +141,8 @@ template <Elem E> struct Container {
     if (std::holds_alternative<typename mlist::MNil>(m->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename mlist::MCons>(&m->v());
-      return f0(_m.d_a0, _m.d_a1, mlist_rec<T1>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename mlist::MCons>(m->v());
+      return f0(d_a0, d_a1, mlist_rec<T1>(f, f0, d_a1));
     }
   }
 
@@ -195,11 +195,11 @@ template <Elem E> struct Container {
             MapsTo<T1, std::shared_ptr<mlist>> F1>
   static T1 mtree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<mtree> &m) {
     if (std::holds_alternative<typename mtree::Leaf>(m->v())) {
-      const auto &_m = *std::get_if<typename mtree::Leaf>(&m->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename mtree::Leaf>(m->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename mtree::Node>(&m->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename mtree::Node>(m->v());
+      return f0(d_a0);
     }
   }
 
@@ -207,11 +207,11 @@ template <Elem E> struct Container {
             MapsTo<T1, std::shared_ptr<mlist>> F1>
   static T1 mtree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<mtree> &m) {
     if (std::holds_alternative<typename mtree::Leaf>(m->v())) {
-      const auto &_m = *std::get_if<typename mtree::Leaf>(&m->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename mtree::Leaf>(m->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename mtree::Node>(&m->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename mtree::Node>(m->v());
+      return f0(d_a0);
     }
   }
 
@@ -229,23 +229,23 @@ template <Elem E> struct Container {
     if (std::holds_alternative<typename mlist::MNil>(l->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename mlist::MCons>(&l->v());
-      return (mlist_length(_m.d_a1) + 1);
+      const auto &[d_a0, d_a1] = std::get<typename mlist::MCons>(l->v());
+      return (mlist_length(d_a1) + 1);
     }
   }
 
   __attribute__((pure)) static unsigned int
   tree_size(const std::shared_ptr<mtree> &t0) {
     if (std::holds_alternative<typename mtree::Leaf>(t0->v())) {
-      const auto &_m = *std::get_if<typename mtree::Leaf>(&t0->v());
-      if (is_nothing(_m.d_a0)) {
+      const auto &[d_a0] = std::get<typename mtree::Leaf>(t0->v());
+      if (is_nothing(d_a0)) {
         return 0u;
       } else {
         return 1u;
       }
     } else {
-      const auto &_m = *std::get_if<typename mtree::Node>(&t0->v());
-      return mlist_length(_m.d_a0);
+      const auto &[d_a0] = std::get<typename mtree::Node>(t0->v());
+      return mlist_length(d_a0);
     }
   }
 

@@ -88,19 +88,19 @@ struct FreeMonad {
   static T1 IO_rect(F0 &&f, F1 &&f0, const T1 f1, F3 &&f2,
                     const std::shared_ptr<IO> &i) {
     if (std::holds_alternative<typename IO::Pure>(i->v())) {
-      const auto &_m = *std::get_if<typename IO::Pure>(&i->v());
-      return f(_m.d_a);
+      const auto &[d_a] = std::get<typename IO::Pure>(i->v());
+      return f(d_a);
     } else if (std::holds_alternative<typename IO::Bind>(i->v())) {
-      const auto &_m = *std::get_if<typename IO::Bind>(&i->v());
-      return f0(_m.d_a, IO_rect<T1>(f, f0, f1, f2, _m.d_a), _m.d_b,
+      const auto &[d_a, d_b] = std::get<typename IO::Bind>(i->v());
+      return f0(d_a, IO_rect<T1>(f, f0, f1, f2, d_a), d_b,
                 [=](const std::any a) mutable {
-                  return IO_rect<T1>(f, f0, f1, f2, _m.d_b(a));
+                  return IO_rect<T1>(f, f0, f1, f2, d_b(a));
                 });
     } else if (std::holds_alternative<typename IO::Get_line>(i->v())) {
       return f1;
     } else {
-      const auto &_m = *std::get_if<typename IO::Print>(&i->v());
-      return f2(_m.d_a0);
+      const auto &[d_a0] = std::get<typename IO::Print>(i->v());
+      return f2(d_a0);
     }
   }
 
@@ -108,19 +108,19 @@ struct FreeMonad {
   static T1 IO_rec(F0 &&f, F1 &&f0, const T1 f1, F3 &&f2,
                    const std::shared_ptr<IO> &i) {
     if (std::holds_alternative<typename IO::Pure>(i->v())) {
-      const auto &_m = *std::get_if<typename IO::Pure>(&i->v());
-      return f(_m.d_a);
+      const auto &[d_a] = std::get<typename IO::Pure>(i->v());
+      return f(d_a);
     } else if (std::holds_alternative<typename IO::Bind>(i->v())) {
-      const auto &_m = *std::get_if<typename IO::Bind>(&i->v());
-      return f0(_m.d_a, IO_rec<T1>(f, f0, f1, f2, _m.d_a), _m.d_b,
+      const auto &[d_a, d_b] = std::get<typename IO::Bind>(i->v());
+      return f0(d_a, IO_rec<T1>(f, f0, f1, f2, d_a), d_b,
                 [=](const std::any a) mutable {
-                  return IO_rec<T1>(f, f0, f1, f2, _m.d_b(a));
+                  return IO_rec<T1>(f, f0, f1, f2, d_b(a));
                 });
     } else if (std::holds_alternative<typename IO::Get_line>(i->v())) {
       return f1;
     } else {
-      const auto &_m = *std::get_if<typename IO::Print>(&i->v());
-      return f2(_m.d_a0);
+      const auto &[d_a0] = std::get<typename IO::Print>(i->v());
+      return f2(d_a0);
     }
   }
 

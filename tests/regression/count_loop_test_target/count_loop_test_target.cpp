@@ -14,9 +14,9 @@ __attribute__((pure)) unsigned int CountLoopTestTarget::target_of(
     const std::shared_ptr<CountLoopTestTarget::instruction> &i) {
   if (std::holds_alternative<typename CountLoopTestTarget::instruction::ISZ>(
           i->v())) {
-    const auto &_m =
-        *std::get_if<typename CountLoopTestTarget::instruction::ISZ>(&i->v());
-    return _m.d_a1;
+    const auto &[d_a0, d_a1] =
+        std::get<typename CountLoopTestTarget::instruction::ISZ>(i->v());
+    return d_a1;
   } else {
     return 0u;
   }

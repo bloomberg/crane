@@ -110,11 +110,10 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::history_times_valid(
           events->v())) {
     return true;
   } else {
-    const auto &_m = *std::get_if<typename List<
+    const auto &[d_a0, d_a1] = std::get<typename List<
         std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons>(
-        &events->v());
-    return (event_time_valid(now, _m.d_a0) &&
-            history_times_valid(now, _m.d_a1));
+        events->v());
+    return (event_time_valid(now, d_a0) && history_times_valid(now, d_a1));
   }
 }
 
@@ -128,11 +127,11 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::history_sorted_from(
           events->v())) {
     return true;
   } else {
-    const auto &_m = *std::get_if<typename List<
+    const auto &[d_a0, d_a1] = std::get<typename List<
         std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons>(
-        &events->v());
-    return (_m.d_a0->be_time_minutes <= prev &&
-            history_sorted_from(_m.d_a0->be_time_minutes, _m.d_a1));
+        events->v());
+    return (d_a0->be_time_minutes <= prev &&
+            history_sorted_from(d_a0->be_time_minutes, d_a1));
   }
 }
 
@@ -145,10 +144,10 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::history_sorted_desc(
           events->v())) {
     return true;
   } else {
-    const auto &_m = *std::get_if<typename List<
+    const auto &[d_a0, d_a1] = std::get<typename List<
         std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons>(
-        &events->v());
-    return history_sorted_from(_m.d_a0->be_time_minutes, _m.d_a1);
+        events->v());
+    return history_sorted_from(d_a0->be_time_minutes, d_a1);
   }
 }
 
@@ -226,11 +225,11 @@ ValidatedPumpDeliveryTraceCase::total_bilinear_iob(
           events->v())) {
     return 0u;
   } else {
-    const auto &_m = *std::get_if<typename List<
+    const auto &[d_a0, d_a1] = std::get<typename List<
         std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons>(
-        &events->v());
-    return (bilinear_iob_from_bolus(now, _m.d_a0, dia, itype) +
-            total_bilinear_iob(now, _m.d_a1, dia, itype));
+        events->v());
+    return (bilinear_iob_from_bolus(now, d_a0, dia, itype) +
+            total_bilinear_iob(now, d_a1, dia, itype));
   }
 }
 
@@ -420,13 +419,13 @@ ValidatedPumpDeliveryTraceCase::apply_suspend(
   } else if (std::holds_alternative<typename ValidatedPumpDeliveryTraceCase::
                                         SuspendDecision::Suspend_Reduce>(
                  decision->v())) {
-    const auto &_m =
-        *std::get_if<typename ValidatedPumpDeliveryTraceCase::SuspendDecision::
-                         Suspend_Reduce>(&decision->v());
-    if (proposed <= _m.d_a0) {
+    const auto &[d_a0] =
+        std::get<typename ValidatedPumpDeliveryTraceCase::SuspendDecision::
+                     Suspend_Reduce>(decision->v());
+    if (proposed <= d_a0) {
       return proposed;
     } else {
-      return _m.d_a0;
+      return d_a0;
     }
   } else {
     return 0u;
@@ -547,15 +546,15 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::bolus_too_soon(
           history->v())) {
     return false;
   } else {
-    const auto &_m = *std::get_if<typename List<
+    const auto &[d_a0, d_a1] = std::get<typename List<
         std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons>(
-        &history->v());
-    if (now < _m.d_a0->be_time_minutes) {
+        history->v());
+    if (now < d_a0->be_time_minutes) {
       return false;
     } else {
-      return (((now - _m.d_a0->be_time_minutes) > now
+      return (((now - d_a0->be_time_minutes) > now
                    ? 0
-                   : (now - _m.d_a0->be_time_minutes))) < 15u;
+                   : (now - d_a0->be_time_minutes))) < 15u;
     }
   }
 }
@@ -695,10 +694,10 @@ ValidatedPumpDeliveryTraceCase::prec_result_twentieths(
   if (std::holds_alternative<
           typename ValidatedPumpDeliveryTraceCase::PrecisionResult::PrecOK>(
           r->v())) {
-    const auto &_m = *std::get_if<
+    const auto &[d_a0, d_a1] = std::get<
         typename ValidatedPumpDeliveryTraceCase::PrecisionResult::PrecOK>(
-        &r->v());
-    return std::make_optional<unsigned int>(_m.d_a0);
+        r->v());
+    return std::make_optional<unsigned int>(d_a0);
   } else {
     return std::optional<unsigned int>();
   }
@@ -774,10 +773,10 @@ ValidatedPumpDeliveryTraceCase::final_delivery(
   if (std::holds_alternative<
           typename ValidatedPumpDeliveryTraceCase::PrecisionResult::PrecOK>(
           result->v())) {
-    const auto &_m = *std::get_if<
+    const auto &[d_a0, d_a1] = std::get<
         typename ValidatedPumpDeliveryTraceCase::PrecisionResult::PrecOK>(
-        &result->v());
-    return std::make_optional<unsigned int>(apply_rounding(mode, _m.d_a0));
+        result->v());
+    return std::make_optional<unsigned int>(apply_rounding(mode, d_a0));
   } else {
     return std::optional<unsigned int>();
   }
@@ -875,44 +874,44 @@ Nat::of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc) {
   if (std::holds_alternative<typename Uint::Nil>(d->v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint::D0>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D0>(&d->v());
-    return Nat::of_uint_acc(_m.d_a0, Nat::tail_mul(10u, acc));
+    const auto &[d_a0] = std::get<typename Uint::D0>(d->v());
+    return Nat::of_uint_acc(d_a0, Nat::tail_mul(10u, acc));
   } else if (std::holds_alternative<typename Uint::D1>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D1>(&d->v());
-    return Nat::of_uint_acc(_m.d_a0, (Nat::tail_mul(10u, acc) + 1));
+    const auto &[d_a0] = std::get<typename Uint::D1>(d->v());
+    return Nat::of_uint_acc(d_a0, (Nat::tail_mul(10u, acc) + 1));
   } else if (std::holds_alternative<typename Uint::D2>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D2>(&d->v());
-    return Nat::of_uint_acc(_m.d_a0, ((Nat::tail_mul(10u, acc) + 1) + 1));
+    const auto &[d_a0] = std::get<typename Uint::D2>(d->v());
+    return Nat::of_uint_acc(d_a0, ((Nat::tail_mul(10u, acc) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D3>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D3>(&d->v());
-    return Nat::of_uint_acc(_m.d_a0, (((Nat::tail_mul(10u, acc) + 1) + 1) + 1));
+    const auto &[d_a0] = std::get<typename Uint::D3>(d->v());
+    return Nat::of_uint_acc(d_a0, (((Nat::tail_mul(10u, acc) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D4>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D4>(&d->v());
-    return Nat::of_uint_acc(_m.d_a0,
+    const auto &[d_a0] = std::get<typename Uint::D4>(d->v());
+    return Nat::of_uint_acc(d_a0,
                             ((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D5>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D5>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint::D5>(d->v());
     return Nat::of_uint_acc(
-        _m.d_a0, (((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1));
+        d_a0, (((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D6>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D6>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint::D6>(d->v());
     return Nat::of_uint_acc(
-        _m.d_a0, ((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
+        d_a0, ((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D7>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D7>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint::D7>(d->v());
     return Nat::of_uint_acc(
-        _m.d_a0,
+        d_a0,
         (((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D8>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint::D8>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint::D8>(d->v());
     return Nat::of_uint_acc(
-        _m.d_a0,
+        d_a0,
         ((((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
          1));
   } else {
-    const auto &_m = *std::get_if<typename Uint::D9>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint::D9>(d->v());
     return Nat::of_uint_acc(
-        _m.d_a0,
+        d_a0,
         (((((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
           1) +
          1));
@@ -929,69 +928,69 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
   if (std::holds_alternative<typename Uint0::Nil0>(d->v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint0::D10>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D10>(&d->v());
-    return Nat::of_hex_uint_acc(_m.d_a0, Nat::tail_mul(16u, acc));
+    const auto &[d_a0] = std::get<typename Uint0::D10>(d->v());
+    return Nat::of_hex_uint_acc(d_a0, Nat::tail_mul(16u, acc));
   } else if (std::holds_alternative<typename Uint0::D11>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D11>(&d->v());
-    return Nat::of_hex_uint_acc(_m.d_a0, (Nat::tail_mul(16u, acc) + 1));
+    const auto &[d_a0] = std::get<typename Uint0::D11>(d->v());
+    return Nat::of_hex_uint_acc(d_a0, (Nat::tail_mul(16u, acc) + 1));
   } else if (std::holds_alternative<typename Uint0::D12>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D12>(&d->v());
-    return Nat::of_hex_uint_acc(_m.d_a0, ((Nat::tail_mul(16u, acc) + 1) + 1));
+    const auto &[d_a0] = std::get<typename Uint0::D12>(d->v());
+    return Nat::of_hex_uint_acc(d_a0, ((Nat::tail_mul(16u, acc) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D13>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D13>(&d->v());
-    return Nat::of_hex_uint_acc(_m.d_a0,
+    const auto &[d_a0] = std::get<typename Uint0::D13>(d->v());
+    return Nat::of_hex_uint_acc(d_a0,
                                 (((Nat::tail_mul(16u, acc) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D14>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D14>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::D14>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0, ((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1));
+        d_a0, ((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D15>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D15>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::D15>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0, (((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1));
+        d_a0, (((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D16>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D16>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::D16>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0, ((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
+        d_a0, ((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D17>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D17>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::D17>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         (((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D18>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D18>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::D18>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         ((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
          1));
   } else if (std::holds_alternative<typename Uint0::D19>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::D19>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::D19>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         (((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Da>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::Da>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::Da>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         ((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
            1) +
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Db>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::Db>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::Db>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         (((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
             1) +
            1) +
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Dc>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::Dc>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::Dc>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         ((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
              1) +
             1) +
@@ -999,9 +998,9 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Dd>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::Dd>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::Dd>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         (((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                1) +
               1) +
@@ -1011,9 +1010,9 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::De>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint0::De>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::De>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         ((((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                 1) +
                1) +
@@ -1024,9 +1023,9 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
           1) +
          1));
   } else {
-    const auto &_m = *std::get_if<typename Uint0::Df>(&d->v());
+    const auto &[d_a0] = std::get<typename Uint0::Df>(d->v());
     return Nat::of_hex_uint_acc(
-        _m.d_a0,
+        d_a0,
         (((((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                  1) +
                 1) +
@@ -1048,10 +1047,10 @@ Nat::of_hex_uint(const std::shared_ptr<Uint0> &d) {
 __attribute__((pure)) unsigned int
 Nat::of_num_uint(const std::shared_ptr<Uint1> &d) {
   if (std::holds_alternative<typename Uint1::UIntDecimal>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint1::UIntDecimal>(&d->v());
-    return Nat::of_uint(_m.d_u);
+    const auto &[d_u] = std::get<typename Uint1::UIntDecimal>(d->v());
+    return Nat::of_uint(d_u);
   } else {
-    const auto &_m = *std::get_if<typename Uint1::UIntHexadecimal>(&d->v());
-    return Nat::of_hex_uint(_m.d_u);
+    const auto &[d_u] = std::get<typename Uint1::UIntHexadecimal>(d->v());
+    return Nat::of_hex_uint(d_u);
   }
 }

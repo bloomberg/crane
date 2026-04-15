@@ -25,14 +25,14 @@ FetchOps::fetch_pair(const std::shared_ptr<List<unsigned int>> &rom_data,
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv->v())) {
     return std::make_pair(0u, 0u);
   } else {
-    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&_sv->v());
-    auto &&_sv0 = _m.d_a1;
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0->v())) {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(_sv->v());
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
       return std::make_pair(0u, 0u);
     } else {
-      const auto &_m0 =
-          *std::get_if<typename List<unsigned int>::Cons>(&_sv0->v());
-      return std::make_pair(_m.d_a0, _m0.d_a0);
+      const auto &[d_a00, d_a10] =
+          std::get<typename List<unsigned int>::Cons>(d_a1->v());
+      return std::make_pair(d_a0, d_a00);
     }
   }
 }
@@ -44,13 +44,13 @@ FetchOps::fetch_window(const std::shared_ptr<List<unsigned int>> &rom_data,
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv->v())) {
     return std::optional<std::pair<unsigned int, unsigned int>>();
   } else {
-    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&_sv->v());
-    auto &&_sv = _m.d_a1;
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv->v())) {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(_sv->v());
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
       return std::optional<std::pair<unsigned int, unsigned int>>();
     } else {
       return std::make_optional<std::pair<unsigned int, unsigned int>>(
-          std::make_pair(_m.d_a0, (addr + 2u)));
+          std::make_pair(d_a0, (addr + 2u)));
     }
   }
 }

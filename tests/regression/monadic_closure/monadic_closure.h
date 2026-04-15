@@ -101,9 +101,10 @@ struct MonadicClosure {
     if (std::holds_alternative<typename List<std::string>::Nil>(xs->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<std::string>::Cons>(&xs->v());
-      unsigned int n = count_matching(pred, _m.d_a1);
-      if (pred(_m.d_a0)) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::string>::Cons>(xs->v());
+      unsigned int n = count_matching(pred, d_a1);
+      if (pred(d_a0)) {
         return (n + 1);
       } else {
         return n;

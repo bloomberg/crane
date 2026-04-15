@@ -46,10 +46,10 @@ EffectHigherOrder::lookup_all(const std::shared_ptr<List<std::string>> &names) {
   if (std::holds_alternative<typename List<std::string>::Nil>(names->v())) {
     return List<std::string>::nil();
   } else {
-    const auto &_m =
-        *std::get_if<typename List<std::string>::Cons>(&names->v());
-    std::string v = lookup_or_ask(_m.d_a0);
-    std::shared_ptr<List<std::string>> vs = lookup_all(_m.d_a1);
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<std::string>::Cons>(names->v());
+    std::string v = lookup_or_ask(d_a0);
+    std::shared_ptr<List<std::string>> vs = lookup_all(d_a1);
     return List<std::string>::cons(v, vs);
   }
 }

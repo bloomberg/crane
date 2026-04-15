@@ -107,15 +107,15 @@ struct LoopifyCoindStream {
   };
 
   template <typename T1> static T1 hd(const std::shared_ptr<stream<T1>> &s) {
-    const auto &_m = *std::get_if<typename stream<T1>::Scons>(&s->v());
-    return _m.d_a0;
+    const auto &[d_a0, d_a1] = std::get<typename stream<T1>::Scons>(s->v());
+    return d_a0;
   }
 
   template <typename T1>
   static std::shared_ptr<stream<T1>> tl(const std::shared_ptr<stream<T1>> &s) {
-    const auto &_m = *std::get_if<typename stream<T1>::Scons>(&s->v());
+    const auto &[d_a0, d_a1] = std::get<typename stream<T1>::Scons>(s->v());
     return stream<T1>::lazy_(
-        [=]() mutable -> std::shared_ptr<stream<T1>> { return _m.d_a1; });
+        [=]() mutable -> std::shared_ptr<stream<T1>> { return d_a1; });
   }
 
   template <typename T1>

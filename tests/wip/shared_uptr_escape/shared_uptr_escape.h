@@ -66,12 +66,13 @@ struct SharedUptrEscape {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return tree::leaf();
       } else {
-        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
         if (which <= 0) {
-          return _m.d_a0;
+          return d_a0;
         } else {
           unsigned int _x0 = which - 1;
-          return _m.d_a2;
+          return d_a2;
         }
       }
     }
@@ -91,8 +92,9 @@ struct SharedUptrEscape {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return 0u;
       } else {
-        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
-        return ((_m.d_a0->tree_sum() + _m.d_a1) + _m.d_a2->tree_sum());
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return ((d_a0->tree_sum() + d_a1) + d_a2->tree_sum());
       }
     }
   };
@@ -104,9 +106,9 @@ struct SharedUptrEscape {
     if (std::holds_alternative<typename tree::Leaf>(t->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
-      return f0(_m.d_a0, tree_rect<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
-                tree_rect<T1>(f, f0, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rect<T1>(f, f0, d_a0), d_a1, d_a2,
+                tree_rect<T1>(f, f0, d_a2));
     }
   }
 
@@ -117,9 +119,9 @@ struct SharedUptrEscape {
     if (std::holds_alternative<typename tree::Leaf>(t->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
-      return f0(_m.d_a0, tree_rec<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
-                tree_rec<T1>(f, f0, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rec<T1>(f, f0, d_a0), d_a1, d_a2,
+                tree_rec<T1>(f, f0, d_a2));
     }
   }
 
@@ -175,22 +177,22 @@ struct SharedUptrEscape {
 
   template <typename T1, MapsTo<T1, std::shared_ptr<tree>> F0>
   static T1 wrapper_rect(F0 &&f, const std::shared_ptr<wrapper> &w) {
-    const auto &_m = *std::get_if<typename wrapper::Wrap>(&w->v());
-    return f(_m.d_a0);
+    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w->v());
+    return f(d_a0);
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<tree>> F0>
   static T1 wrapper_rec(F0 &&f, const std::shared_ptr<wrapper> &w) {
-    const auto &_m = *std::get_if<typename wrapper::Wrap>(&w->v());
-    return f(_m.d_a0);
+    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w->v());
+    return f(d_a0);
   }
 
   static std::shared_ptr<wrapper> wrap_tree(std::shared_ptr<tree> t);
   static inline const unsigned int unwrap_and_dup = []() {
     std::shared_ptr<tree> t = tree::node(tree::leaf(), 42u, tree::leaf());
     std::shared_ptr<wrapper> w = wrap_tree(std::move(t));
-    const auto &_m = *std::get_if<typename wrapper::Wrap>(&w->v());
-    return (_m.d_a0->tree_sum() + _m.d_a0->tree_sum());
+    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w->v());
+    return (d_a0->tree_sum() + d_a0->tree_sum());
   }();
 };
 

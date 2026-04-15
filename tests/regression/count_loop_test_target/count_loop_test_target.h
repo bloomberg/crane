@@ -55,8 +55,8 @@ struct CountLoopTestTarget {
   static T1 instruction_rect(F0 &&f, const T1 f0,
                              const std::shared_ptr<instruction> &i) {
     if (std::holds_alternative<typename instruction::ISZ>(i->v())) {
-      const auto &_m = *std::get_if<typename instruction::ISZ>(&i->v());
-      return f(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename instruction::ISZ>(i->v());
+      return f(d_a0, d_a1);
     } else {
       return f0;
     }
@@ -66,8 +66,8 @@ struct CountLoopTestTarget {
   static T1 instruction_rec(F0 &&f, const T1 f0,
                             const std::shared_ptr<instruction> &i) {
     if (std::holds_alternative<typename instruction::ISZ>(i->v())) {
-      const auto &_m = *std::get_if<typename instruction::ISZ>(&i->v());
-      return f(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename instruction::ISZ>(i->v());
+      return f(d_a0, d_a1);
     } else {
       return f0;
     }

@@ -54,8 +54,8 @@ struct MatchFallbackNat {
   static T1 maybe_nat_rect(F0 &&f, const T1 f0,
                            const std::shared_ptr<maybe_nat> &m) {
     if (std::holds_alternative<typename maybe_nat::SomeNat>(m->v())) {
-      const auto &_m = *std::get_if<typename maybe_nat::SomeNat>(&m->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename maybe_nat::SomeNat>(m->v());
+      return f(d_a0);
     } else {
       return f0;
     }
@@ -65,8 +65,8 @@ struct MatchFallbackNat {
   static T1 maybe_nat_rec(F0 &&f, const T1 f0,
                           const std::shared_ptr<maybe_nat> &m) {
     if (std::holds_alternative<typename maybe_nat::SomeNat>(m->v())) {
-      const auto &_m = *std::get_if<typename maybe_nat::SomeNat>(&m->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename maybe_nat::SomeNat>(m->v());
+      return f(d_a0);
     } else {
       return f0;
     }

@@ -103,8 +103,8 @@ struct DepElim {
       if (std::holds_alternative<typename fin::FZ>(this->v())) {
         return 0u;
       } else {
-        const auto &_m = *std::get_if<typename fin::FS>(&this->v());
-        return (_m.d_a1->fin_to_nat(_m.d_n) + 1);
+        const auto &[d_n, d_a1] = std::get<typename fin::FS>(this->v());
+        return (d_a1->fin_to_nat(d_n) + 1);
       }
     }
 
@@ -112,12 +112,11 @@ struct DepElim {
               MapsTo<T1, unsigned int, std::shared_ptr<fin>, T1> F1>
     T1 fin_rec(F0 &&f, F1 &&f0, const unsigned int) const {
       if (std::holds_alternative<typename fin::FZ>(this->v())) {
-        const auto &_m = *std::get_if<typename fin::FZ>(&this->v());
-        return f(_m.d_n);
+        const auto &[d_n] = std::get<typename fin::FZ>(this->v());
+        return f(d_n);
       } else {
-        const auto &_m = *std::get_if<typename fin::FS>(&this->v());
-        return f0(_m.d_n, _m.d_a1,
-                  _m.d_a1->template fin_rec<T1>(f, f0, _m.d_n));
+        const auto &[d_n, d_a1] = std::get<typename fin::FS>(this->v());
+        return f0(d_n, d_a1, d_a1->template fin_rec<T1>(f, f0, d_n));
       }
     }
 
@@ -125,12 +124,11 @@ struct DepElim {
               MapsTo<T1, unsigned int, std::shared_ptr<fin>, T1> F1>
     T1 fin_rect(F0 &&f, F1 &&f0, const unsigned int) const {
       if (std::holds_alternative<typename fin::FZ>(this->v())) {
-        const auto &_m = *std::get_if<typename fin::FZ>(&this->v());
-        return f(_m.d_n);
+        const auto &[d_n] = std::get<typename fin::FZ>(this->v());
+        return f(d_n);
       } else {
-        const auto &_m = *std::get_if<typename fin::FS>(&this->v());
-        return f0(_m.d_n, _m.d_a1,
-                  _m.d_a1->template fin_rect<T1>(f, f0, _m.d_n));
+        const auto &[d_n, d_a1] = std::get<typename fin::FS>(this->v());
+        return f0(d_n, d_a1, d_a1->template fin_rect<T1>(f, f0, d_n));
       }
     }
   };
@@ -182,8 +180,9 @@ struct DepElim {
       if (std::holds_alternative<typename vec<t_A>::Vnil>(this->v())) {
         throw std::logic_error("unreachable");
       } else {
-        const auto &_m = *std::get_if<typename vec<t_A>::Vcons>(&this->v());
-        return _m.d_a2;
+        const auto &[d_n, d_a1, d_a2] =
+            std::get<typename vec<t_A>::Vcons>(this->v());
+        return d_a2;
       }
     }
 
@@ -191,8 +190,9 @@ struct DepElim {
       if (std::holds_alternative<typename vec<t_A>::Vnil>(this->v())) {
         throw std::logic_error("unreachable");
       } else {
-        const auto &_m = *std::get_if<typename vec<t_A>::Vcons>(&this->v());
-        return _m.d_a1;
+        const auto &[d_n, d_a1, d_a2] =
+            std::get<typename vec<t_A>::Vcons>(this->v());
+        return d_a1;
       }
     }
 
@@ -201,9 +201,9 @@ struct DepElim {
       if (std::holds_alternative<typename vec<t_A>::Vnil>(this->v())) {
         return vec<T1>::vnil();
       } else {
-        const auto &_m = *std::get_if<typename vec<t_A>::Vcons>(&this->v());
-        return vec<T1>::vcons(_m.d_n, f(_m.d_a1),
-                              _m.d_a2->template vec_map<T1>(_m.d_n, f));
+        const auto &[d_n, d_a1, d_a2] =
+            std::get<typename vec<t_A>::Vcons>(this->v());
+        return vec<T1>::vcons(d_n, f(d_a1), d_a2->template vec_map<T1>(d_n, f));
       }
     }
 
@@ -211,8 +211,9 @@ struct DepElim {
       if (std::holds_alternative<typename vec<t_A>::Vnil>(this->v())) {
         return List<t_A>::nil();
       } else {
-        const auto &_m = *std::get_if<typename vec<t_A>::Vcons>(&this->v());
-        return List<t_A>::cons(_m.d_a1, _m.d_a2->vec_to_list(_m.d_n));
+        const auto &[d_n, d_a1, d_a2] =
+            std::get<typename vec<t_A>::Vcons>(this->v());
+        return List<t_A>::cons(d_a1, d_a2->vec_to_list(d_n));
       }
     }
   };
@@ -224,9 +225,8 @@ struct DepElim {
     if (std::holds_alternative<typename vec<T1>::Vnil>(v->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename vec<T1>::Vcons>(&v->v());
-      return f0(_m.d_n, _m.d_a1, _m.d_a2,
-                vec_rect<T1, T2>(f, f0, _m.d_n, _m.d_a2));
+      const auto &[d_n, d_a1, d_a2] = std::get<typename vec<T1>::Vcons>(v->v());
+      return f0(d_n, d_a1, d_a2, vec_rect<T1, T2>(f, f0, d_n, d_a2));
     }
   }
 
@@ -237,9 +237,8 @@ struct DepElim {
     if (std::holds_alternative<typename vec<T1>::Vnil>(v->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename vec<T1>::Vcons>(&v->v());
-      return f0(_m.d_n, _m.d_a1, _m.d_a2,
-                vec_rec<T1, T2>(f, f0, _m.d_n, _m.d_a2));
+      const auto &[d_n, d_a1, d_a2] = std::get<typename vec<T1>::Vcons>(v->v());
+      return f0(d_n, d_a1, d_a2, vec_rec<T1, T2>(f, f0, d_n, d_a2));
     }
   }
 
@@ -279,8 +278,8 @@ struct DepElim {
 
     __attribute__((pure)) unsigned int get_present() const {
       if (std::holds_alternative<typename avail::Present>(this->v())) {
-        const auto &_m = *std::get_if<typename avail::Present>(&this->v());
-        return _m.d_a0;
+        const auto &[d_a0] = std::get<typename avail::Present>(this->v());
+        return d_a0;
       } else {
         throw std::logic_error("unreachable");
       }
@@ -289,8 +288,8 @@ struct DepElim {
     template <typename T1, MapsTo<T1, unsigned int> F0>
     T1 avail_rec(F0 &&f, const T1 f0, const bool) const {
       if (std::holds_alternative<typename avail::Present>(this->v())) {
-        const auto &_m = *std::get_if<typename avail::Present>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename avail::Present>(this->v());
+        return f(d_a0);
       } else {
         return f0;
       }
@@ -299,8 +298,8 @@ struct DepElim {
     template <typename T1, MapsTo<T1, unsigned int> F0>
     T1 avail_rect(F0 &&f, const T1 f0, const bool) const {
       if (std::holds_alternative<typename avail::Present>(this->v())) {
-        const auto &_m = *std::get_if<typename avail::Present>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename avail::Present>(this->v());
+        return f(d_a0);
       } else {
         return f0;
       }

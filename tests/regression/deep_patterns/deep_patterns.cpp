@@ -44,27 +44,26 @@ DeepPatterns::list_shape(const std::shared_ptr<List<unsigned int>> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
     return 0u;
   } else {
-    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-    auto &&_sv0 = _m.d_a1;
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0->v())) {
-      return _m.d_a0;
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(l->v());
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
+      return d_a0;
     } else {
-      const auto &_m0 =
-          *std::get_if<typename List<unsigned int>::Cons>(&_sv0->v());
-      auto &&_sv1 = _m0.d_a1;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv1->v())) {
-        return (_m.d_a0 + _m0.d_a0);
+      const auto &[d_a00, d_a10] =
+          std::get<typename List<unsigned int>::Cons>(d_a1->v());
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(
+              d_a10->v())) {
+        return (d_a0 + d_a00);
       } else {
-        const auto &_m1 =
-            *std::get_if<typename List<unsigned int>::Cons>(&_sv1->v());
-        auto &&_sv2 = _m1.d_a1;
+        const auto &[d_a01, d_a11] =
+            std::get<typename List<unsigned int>::Cons>(d_a10->v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _sv2->v())) {
-          return ((_m.d_a0 + _m0.d_a0) + _m1.d_a0);
+                d_a11->v())) {
+          return ((d_a0 + d_a00) + d_a01);
         } else {
-          const auto &_m2 =
-              *std::get_if<typename List<unsigned int>::Cons>(&_sv2->v());
-          return (((_m.d_a0 + _m0.d_a0) + _m1.d_a0) + _m2.d_a1->length());
+          const auto &[d_a02, d_a12] =
+              std::get<typename List<unsigned int>::Cons>(d_a11->v());
+          return (((d_a0 + d_a00) + d_a01) + d_a12->length());
         }
       }
     }
@@ -74,26 +73,24 @@ DeepPatterns::list_shape(const std::shared_ptr<List<unsigned int>> &l) {
 __attribute__((pure)) unsigned int
 DeepPatterns::deep_sum(const std::shared_ptr<DeepPatterns::outer> &o) {
   if (std::holds_alternative<typename DeepPatterns::outer::OLeft>(o->v())) {
-    const auto &_m = *std::get_if<typename DeepPatterns::outer::OLeft>(&o->v());
-    auto &&_sv0 = _m.d_a0;
+    const auto &[d_a0] = std::get<typename DeepPatterns::outer::OLeft>(o->v());
     if (std::holds_alternative<typename DeepPatterns::inner::ILeft>(
-            _sv0->v())) {
-      const auto &_m0 =
-          *std::get_if<typename DeepPatterns::inner::ILeft>(&_sv0->v());
-      return _m0.d_a0;
+            d_a0->v())) {
+      const auto &[d_a00] =
+          std::get<typename DeepPatterns::inner::ILeft>(d_a0->v());
+      return d_a00;
     } else {
-      const auto &_m0 =
-          *std::get_if<typename DeepPatterns::inner::IRight>(&_sv0->v());
-      if (_m0.d_a0) {
+      const auto &[d_a00] =
+          std::get<typename DeepPatterns::inner::IRight>(d_a0->v());
+      if (d_a00) {
         return 1u;
       } else {
         return 0u;
       }
     }
   } else {
-    const auto &_m =
-        *std::get_if<typename DeepPatterns::outer::ORight>(&o->v());
-    return (_m.d_a0 + 100u);
+    const auto &[d_a0] = std::get<typename DeepPatterns::outer::ORight>(o->v());
+    return (d_a0 + 100u);
   }
 }
 
@@ -108,14 +105,14 @@ __attribute__((pure)) unsigned int DeepPatterns::complex_match(
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
       return n;
     } else {
-      const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-      auto &&_sv0 = _m.d_a1;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0->v())) {
-        return (n + _m.d_a0);
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l->v());
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
+        return (n + d_a0);
       } else {
-        const auto &_m0 =
-            *std::get_if<typename List<unsigned int>::Cons>(&_sv0->v());
-        return ((n + _m.d_a0) + _m0.d_a1->length());
+        const auto &[d_a00, d_a10] =
+            std::get<typename List<unsigned int>::Cons>(d_a1->v());
+        return ((n + d_a0) + d_a10->length());
       }
     }
   } else {
@@ -141,14 +138,13 @@ __attribute__((pure)) unsigned int DeepPatterns::match_pair_list(
           DeepPatterns::pair<unsigned int, unsigned int>>>::Nil>(l->v())) {
     return 0u;
   } else {
-    const auto &_m = *std::get_if<typename DeepPatterns::mylist<
+    const auto &[d_a0, d_a1] = std::get<typename DeepPatterns::mylist<
         std::shared_ptr<DeepPatterns::pair<unsigned int, unsigned int>>>::Cons>(
-        &l->v());
-    auto &&_sv0 = _m.d_a0;
-    const auto &_m0 = *std::get_if<
+        l->v());
+    const auto &[d_a00, d_a10] = std::get<
         typename DeepPatterns::pair<unsigned int, unsigned int>::Pair0>(
-        &_sv0->v());
-    return _m0.d_a0;
+        d_a0->v());
+    return d_a00;
   }
 }
 
@@ -158,10 +154,9 @@ __attribute__((pure)) unsigned int DeepPatterns::match_two(
           l->v())) {
     return 0u;
   } else {
-    const auto &_m =
-        *std::get_if<typename DeepPatterns::mylist<unsigned int>::Cons>(
-            &l->v());
-    return _m.d_a0;
+    const auto &[d_a0, d_a1] =
+        std::get<typename DeepPatterns::mylist<unsigned int>::Cons>(l->v());
+    return d_a0;
   }
 }
 
@@ -175,28 +170,26 @@ __attribute__((pure)) unsigned int DeepPatterns::match_triple(
           l->v())) {
     return 0u;
   } else {
-    const auto &_m = *std::get_if<
+    const auto &[d_a0, d_a1] = std::get<
         typename DeepPatterns::mylist<std::shared_ptr<DeepPatterns::mylist<
             std::shared_ptr<DeepPatterns::mylist<unsigned int>>>>>::Cons>(
-        &l->v());
-    auto &&_sv0 = _m.d_a0;
+        l->v());
     if (std::holds_alternative<typename DeepPatterns::mylist<
             std::shared_ptr<DeepPatterns::mylist<unsigned int>>>::Nil>(
-            _sv0->v())) {
+            d_a0->v())) {
       return 1u;
     } else {
-      const auto &_m0 = *std::get_if<typename DeepPatterns::mylist<
+      const auto &[d_a00, d_a10] = std::get<typename DeepPatterns::mylist<
           std::shared_ptr<DeepPatterns::mylist<unsigned int>>>::Cons>(
-          &_sv0->v());
-      auto &&_sv1 = _m0.d_a0;
+          d_a0->v());
       if (std::holds_alternative<
-              typename DeepPatterns::mylist<unsigned int>::Nil>(_sv1->v())) {
+              typename DeepPatterns::mylist<unsigned int>::Nil>(d_a00->v())) {
         return 2u;
       } else {
-        const auto &_m1 =
-            *std::get_if<typename DeepPatterns::mylist<unsigned int>::Cons>(
-                &_sv1->v());
-        return _m1.d_a0;
+        const auto &[d_a01, d_a11] =
+            std::get<typename DeepPatterns::mylist<unsigned int>::Cons>(
+                d_a00->v());
+        return d_a01;
       }
     }
   }
@@ -206,13 +199,12 @@ __attribute__((pure)) unsigned int DeepPatterns::deep_wildcard(
     const std::shared_ptr<DeepPatterns::pair<
         std::shared_ptr<DeepPatterns::pair<unsigned int, unsigned int>>,
         std::shared_ptr<DeepPatterns::pair<unsigned int, unsigned int>>>> &p) {
-  const auto &_m = *std::get_if<typename DeepPatterns::pair<
+  const auto &[d_a0, d_a1] = std::get<typename DeepPatterns::pair<
       std::shared_ptr<DeepPatterns::pair<unsigned int, unsigned int>>,
       std::shared_ptr<DeepPatterns::pair<unsigned int, unsigned int>>>::Pair0>(
-      &p->v());
-  auto &&_sv0 = _m.d_a0;
-  const auto &_m0 = *std::get_if<
-      typename DeepPatterns::pair<unsigned int, unsigned int>::Pair0>(
-      &_sv0->v());
-  return _m0.d_a0;
+      p->v());
+  const auto &[d_a00, d_a10] =
+      std::get<typename DeepPatterns::pair<unsigned int, unsigned int>::Pair0>(
+          d_a0->v());
+  return d_a00;
 }

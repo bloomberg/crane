@@ -71,16 +71,16 @@ public:
         }
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<t_A>::Cons>(&_loop_self->v());
-        auto _cell = List<t_A>::cons(_m.d_a0, nullptr);
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<t_A>::Cons>(_loop_self->v());
+        auto _cell = List<t_A>::cons(d_a0, nullptr);
         if (_last) {
           std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = _cell;
         } else {
           _head = _cell;
         }
         _last = _cell;
-        _loop_self = _m.d_a1.get();
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -127,10 +127,10 @@ struct LoopifyAdvancedLists {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
           _result = List<unsigned int>::nil();
         } else {
-          const auto &_m =
-              *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-          _stack.emplace_back(_Call1{f(_m.d_a0)});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l->v());
+          _stack.emplace_back(_Call1{f(d_a0)});
+          _stack.emplace_back(_Enter{d_a1});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
@@ -164,10 +164,10 @@ struct LoopifyAdvancedLists {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
           _result = true;
         } else {
-          const auto &_m =
-              *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-          _stack.emplace_back(_Call1{p(_m.d_a0)});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l->v());
+          _stack.emplace_back(_Call1{p(d_a0)});
+          _stack.emplace_back(_Enter{d_a1});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
@@ -201,10 +201,10 @@ struct LoopifyAdvancedLists {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
           _result = false;
         } else {
-          const auto &_m =
-              *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-          _stack.emplace_back(_Call1{p(_m.d_a0)});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l->v());
+          _stack.emplace_back(_Call1{p(d_a0)});
+          _stack.emplace_back(_Enter{d_a1});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
@@ -226,13 +226,13 @@ struct LoopifyAdvancedLists {
         _result = std::optional<unsigned int>();
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-        if (p(_m.d_a0)) {
-          _result = std::make_optional<unsigned int>(_m.d_a0);
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+        if (p(d_a0)) {
+          _result = std::make_optional<unsigned int>(d_a0);
           _continue = false;
         } else {
-          _loop_l = _m.d_a1;
+          _loop_l = d_a1;
         }
       }
     }

@@ -52,20 +52,20 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::spherical_shoelace_aux(
           pts->v())) {
     return Real::from_z(INT64_C(0));
   } else {
-    const auto &_m = *std::get_if<typename List<
-        std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons>(&pts->v());
+    const auto &[d_a0, d_a1] = std::get<typename List<
+        std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons>(pts->v());
     unsigned int n = all_pts->length();
     Real lambda_prev =
         nth_cyclic<std::shared_ptr<PolygonWindingAreaTraceCase::Point>>(
-            _m.d_a0, all_pts,
+            d_a0, all_pts,
             ((((idx + n) - 1u) > (idx + n) ? 0 : ((idx + n) - 1u))))
             ->lambda;
     Real lambda_next =
         nth_cyclic<std::shared_ptr<PolygonWindingAreaTraceCase::Point>>(
-            _m.d_a0, all_pts, (idx + 1u))
+            d_a0, all_pts, (idx + 1u))
             ->lambda;
-    Real term = (lon_diff(lambda_prev, lambda_next) * r_sin(_m.d_a0->phi));
-    return (term + spherical_shoelace_aux(_m.d_a1, all_pts, (idx + 1u)));
+    Real term = (lon_diff(lambda_prev, lambda_next) * r_sin(d_a0->phi));
+    return (term + spherical_shoelace_aux(d_a1, all_pts, (idx + 1u)));
   }
 }
 
@@ -128,19 +128,17 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::winding_sum_aux(
           pts->v())) {
     return Real::from_z(INT64_C(0));
   } else {
-    const auto &_m = *std::get_if<typename List<
-        std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons>(&pts->v());
-    auto &&_sv0 = _m.d_a1;
+    const auto &[d_a0, d_a1] = std::get<typename List<
+        std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons>(pts->v());
     if (std::holds_alternative<typename List<
             std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil>(
-            _sv0->v())) {
-      return segment_angle(p, _m.d_a0, first);
+            d_a1->v())) {
+      return segment_angle(p, d_a0, first);
     } else {
-      const auto &_m0 = *std::get_if<typename List<
+      const auto &[d_a00, d_a10] = std::get<typename List<
           std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons>(
-          &_sv0->v());
-      return (segment_angle(p, _m.d_a0, _m0.d_a0) +
-              winding_sum_aux(p, _m.d_a1, first));
+          d_a1->v());
+      return (segment_angle(p, d_a0, d_a00) + winding_sum_aux(p, d_a1, first));
     }
   }
 }
@@ -154,9 +152,9 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::winding_sum(
           poly->v())) {
     return Real::from_z(INT64_C(0));
   } else {
-    const auto &_m = *std::get_if<typename List<
-        std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons>(&poly->v());
-    return winding_sum_aux(p, poly, _m.d_a0);
+    const auto &[d_a0, d_a1] = std::get<typename List<
+        std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons>(poly->v());
+    return winding_sum_aux(p, poly, d_a0);
   }
 }
 

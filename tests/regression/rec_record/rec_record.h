@@ -65,8 +65,8 @@ struct RecRecord {
     if (std::holds_alternative<typename rlist<T1>::Rnil>(r->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename rlist<T1>::Rcons>(&r->v());
-      return f0(_m.d_a0, _m.d_a1, rlist_rect<T1, T2>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename rlist<T1>::Rcons>(r->v());
+      return f0(d_a0, d_a1, rlist_rect<T1, T2>(f, f0, d_a1));
     }
   }
 
@@ -77,8 +77,8 @@ struct RecRecord {
     if (std::holds_alternative<typename rlist<T1>::Rnil>(r->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename rlist<T1>::Rcons>(&r->v());
-      return f0(_m.d_a0, _m.d_a1, rlist_rec<T1, T2>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename rlist<T1>::Rcons>(r->v());
+      return f0(d_a0, d_a1, rlist_rec<T1, T2>(f, f0, d_a1));
     }
   }
 
@@ -120,8 +120,8 @@ struct RecRecord {
     if (std::holds_alternative<typename rlist<T1>::Rnil>(l->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename rlist<T1>::Rcons>(&l->v());
-      return (rlist_length<T1>(_m.d_a1) + 1);
+      const auto &[d_a0, d_a1] = std::get<typename rlist<T1>::Rcons>(l->v());
+      return (rlist_length<T1>(d_a1) + 1);
     }
   }
 

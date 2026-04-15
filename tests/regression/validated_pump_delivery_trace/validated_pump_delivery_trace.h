@@ -61,8 +61,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return true;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (f(_m.d_a0) && _m.d_a1->forallb(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (f(d_a0) && d_a1->forallb(f));
     }
   }
 
@@ -71,8 +71,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return _m.d_a1->template fold_left<T1>(f, f(a0, _m.d_a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return d_a1->template fold_left<T1>(f, f(a0, d_a0));
     }
   }
 
@@ -80,8 +80,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (_m.d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
     }
   }
 };
@@ -733,9 +733,9 @@ struct ValidatedPumpDeliveryTraceCase {
         return false;
       } else if (std::holds_alternative<
                      typename FaultStatus::Fault_LowReservoir>(this->v())) {
-        const auto &_m =
-            *std::get_if<typename FaultStatus::Fault_LowReservoir>(&this->v());
-        return _m.d_a0 < 10u;
+        const auto &[d_a0] =
+            std::get<typename FaultStatus::Fault_LowReservoir>(this->v());
+        return d_a0 < 10u;
       } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
                      this->v())) {
         return false;
@@ -756,9 +756,9 @@ struct ValidatedPumpDeliveryTraceCase {
       return f0;
     } else if (std::holds_alternative<typename FaultStatus::Fault_LowReservoir>(
                    f4->v())) {
-      const auto &_m =
-          *std::get_if<typename FaultStatus::Fault_LowReservoir>(&f4->v());
-      return f1(_m.d_a0);
+      const auto &[d_a0] =
+          std::get<typename FaultStatus::Fault_LowReservoir>(f4->v());
+      return f1(d_a0);
     } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
                    f4->v())) {
       return f2;
@@ -778,9 +778,9 @@ struct ValidatedPumpDeliveryTraceCase {
       return f0;
     } else if (std::holds_alternative<typename FaultStatus::Fault_LowReservoir>(
                    f4->v())) {
-      const auto &_m =
-          *std::get_if<typename FaultStatus::Fault_LowReservoir>(&f4->v());
-      return f1(_m.d_a0);
+      const auto &[d_a0] =
+          std::get<typename FaultStatus::Fault_LowReservoir>(f4->v());
+      return f1(d_a0);
     } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
                    f4->v())) {
       return f2;
@@ -935,9 +935,9 @@ struct ValidatedPumpDeliveryTraceCase {
       return f;
     } else if (std::holds_alternative<typename SuspendDecision::Suspend_Reduce>(
                    s->v())) {
-      const auto &_m =
-          *std::get_if<typename SuspendDecision::Suspend_Reduce>(&s->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] =
+          std::get<typename SuspendDecision::Suspend_Reduce>(s->v());
+      return f0(d_a0);
     } else {
       return f1;
     }
@@ -951,9 +951,9 @@ struct ValidatedPumpDeliveryTraceCase {
       return f;
     } else if (std::holds_alternative<typename SuspendDecision::Suspend_Reduce>(
                    s->v())) {
-      const auto &_m =
-          *std::get_if<typename SuspendDecision::Suspend_Reduce>(&s->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] =
+          std::get<typename SuspendDecision::Suspend_Reduce>(s->v());
+      return f0(d_a0);
     } else {
       return f1;
     }
@@ -1061,9 +1061,9 @@ struct ValidatedPumpDeliveryTraceCase {
 
     __attribute__((pure)) bool result_modified() const {
       if (std::holds_alternative<typename PrecisionResult::PrecOK>(this->v())) {
-        const auto &_m =
-            *std::get_if<typename PrecisionResult::PrecOK>(&this->v());
-        return _m.d_a1;
+        const auto &[d_a0, d_a1] =
+            std::get<typename PrecisionResult::PrecOK>(this->v());
+        return d_a1;
       } else {
         return false;
       }
@@ -1073,9 +1073,9 @@ struct ValidatedPumpDeliveryTraceCase {
       if (std::holds_alternative<typename PrecisionResult::PrecOK>(this->v())) {
         return 0u;
       } else {
-        const auto &_m =
-            *std::get_if<typename PrecisionResult::PrecError>(&this->v());
-        return _m.d_a0;
+        const auto &[d_a0] =
+            std::get<typename PrecisionResult::PrecError>(this->v());
+        return d_a0;
       }
     }
   };
@@ -1085,12 +1085,13 @@ struct ValidatedPumpDeliveryTraceCase {
   static T1 PrecisionResult_rect(F0 &&f, F1 &&f0,
                                  const std::shared_ptr<PrecisionResult> &p) {
     if (std::holds_alternative<typename PrecisionResult::PrecOK>(p->v())) {
-      const auto &_m = *std::get_if<typename PrecisionResult::PrecOK>(&p->v());
-      return f(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] =
+          std::get<typename PrecisionResult::PrecOK>(p->v());
+      return f(d_a0, d_a1);
     } else {
-      const auto &_m =
-          *std::get_if<typename PrecisionResult::PrecError>(&p->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] =
+          std::get<typename PrecisionResult::PrecError>(p->v());
+      return f0(d_a0);
     }
   }
 
@@ -1099,12 +1100,13 @@ struct ValidatedPumpDeliveryTraceCase {
   static T1 PrecisionResult_rec(F0 &&f, F1 &&f0,
                                 const std::shared_ptr<PrecisionResult> &p) {
     if (std::holds_alternative<typename PrecisionResult::PrecOK>(p->v())) {
-      const auto &_m = *std::get_if<typename PrecisionResult::PrecOK>(&p->v());
-      return f(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] =
+          std::get<typename PrecisionResult::PrecOK>(p->v());
+      return f(d_a0, d_a1);
     } else {
-      const auto &_m =
-          *std::get_if<typename PrecisionResult::PrecError>(&p->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] =
+          std::get<typename PrecisionResult::PrecError>(p->v());
+      return f0(d_a0);
     }
   }
 

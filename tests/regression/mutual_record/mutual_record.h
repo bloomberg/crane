@@ -132,8 +132,9 @@ struct MutualRecord {
       MapsTo<T1, unsigned int, std::shared_ptr<List<std::shared_ptr<employee>>>>
           F0>
   static T1 department_rect(F0 &&f, const std::shared_ptr<department> &d) {
-    const auto &_m = *std::get_if<typename department::Mk_department>(&d->v());
-    return f(_m.d_a0, _m.d_a1);
+    const auto &[d_a0, d_a1] =
+        std::get<typename department::Mk_department>(d->v());
+    return f(d_a0, d_a1);
   }
 
   template <
@@ -141,20 +142,21 @@ struct MutualRecord {
       MapsTo<T1, unsigned int, std::shared_ptr<List<std::shared_ptr<employee>>>>
           F0>
   static T1 department_rec(F0 &&f, const std::shared_ptr<department> &d) {
-    const auto &_m = *std::get_if<typename department::Mk_department>(&d->v());
-    return f(_m.d_a0, _m.d_a1);
+    const auto &[d_a0, d_a1] =
+        std::get<typename department::Mk_department>(d->v());
+    return f(d_a0, d_a1);
   }
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
   static T1 employee_rect(F0 &&f, const std::shared_ptr<employee> &e) {
-    const auto &_m = *std::get_if<typename employee::Mk_employee>(&e->v());
-    return f(_m.d_a0, _m.d_a1);
+    const auto &[d_a0, d_a1] = std::get<typename employee::Mk_employee>(e->v());
+    return f(d_a0, d_a1);
   }
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
   static T1 employee_rec(F0 &&f, const std::shared_ptr<employee> &e) {
-    const auto &_m = *std::get_if<typename employee::Mk_employee>(&e->v());
-    return f(_m.d_a0, _m.d_a1);
+    const auto &[d_a0, d_a1] = std::get<typename employee::Mk_employee>(e->v());
+    return f(d_a0, d_a1);
   }
 
   __attribute__((pure)) static unsigned int

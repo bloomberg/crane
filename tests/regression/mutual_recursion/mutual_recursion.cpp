@@ -67,25 +67,25 @@ MutualRecursion::process_b(const unsigned int n, const unsigned int m) {
 __attribute__((pure)) unsigned int
 MutualRecursion::eval_expr(const std::shared_ptr<MutualRecursion::expr> &e) {
   if (std::holds_alternative<typename MutualRecursion::expr::Val>(e->v())) {
-    const auto &_m = *std::get_if<typename MutualRecursion::expr::Val>(&e->v());
-    return _m.d_a0;
+    const auto &[d_a0] = std::get<typename MutualRecursion::expr::Val>(e->v());
+    return d_a0;
   } else if (std::holds_alternative<typename MutualRecursion::expr::BinOp>(
                  e->v())) {
-    const auto &_m =
-        *std::get_if<typename MutualRecursion::expr::BinOp>(&e->v());
-    if (_m.d_a0 <= 0) {
-      return (eval_expr(_m.d_a1) + eval_expr(_m.d_a2));
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename MutualRecursion::expr::BinOp>(e->v());
+    if (d_a0 <= 0) {
+      return (eval_expr(d_a1) + eval_expr(d_a2));
     } else {
-      unsigned int _x = _m.d_a0 - 1;
-      return (eval_expr(_m.d_a1) * eval_expr(_m.d_a2));
+      unsigned int _x = d_a0 - 1;
+      return (eval_expr(d_a1) * eval_expr(d_a2));
     }
   } else {
-    const auto &_m =
-        *std::get_if<typename MutualRecursion::expr::UnOp>(&e->v());
-    if (_m.d_a0 <= 0) {
-      return eval_expr(_m.d_a1);
+    const auto &[d_a0, d_a1] =
+        std::get<typename MutualRecursion::expr::UnOp>(e->v());
+    if (d_a0 <= 0) {
+      return eval_expr(d_a1);
     } else {
-      unsigned int _x = _m.d_a0 - 1;
+      unsigned int _x = d_a0 - 1;
       return 0u;
     }
   }

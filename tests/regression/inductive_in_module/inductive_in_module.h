@@ -102,8 +102,8 @@ struct InductiveInModule {
         if (std::holds_alternative<typename option<T1>::None>(o->v())) {
           return f;
         } else {
-          const auto &_m = *std::get_if<typename option<T1>::Some>(&o->v());
-          return f0(_m.d_a0);
+          const auto &[d_a0] = std::get<typename option<T1>::Some>(o->v());
+          return f0(d_a0);
         }
       }
 
@@ -113,8 +113,8 @@ struct InductiveInModule {
         if (std::holds_alternative<typename option<T1>::None>(o->v())) {
           return f;
         } else {
-          const auto &_m = *std::get_if<typename option<T1>::Some>(&o->v());
-          return f0(_m.d_a0);
+          const auto &[d_a0] = std::get<typename option<T1>::Some>(o->v());
+          return f0(d_a0);
         }
       }
 
@@ -124,8 +124,8 @@ struct InductiveInModule {
         if (std::holds_alternative<typename option<T1>::None>(o->v())) {
           return default0;
         } else {
-          const auto &_m = *std::get_if<typename option<T1>::Some>(&o->v());
-          return _m.d_a0;
+          const auto &[d_a0] = std::get<typename option<T1>::Some>(o->v());
+          return d_a0;
         }
       }
     };

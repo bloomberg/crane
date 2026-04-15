@@ -22,13 +22,13 @@ __attribute__((pure)) std::optional<unsigned int> LoopifyOption::lookup_opt(
       _result = std::optional<unsigned int>();
       _continue = false;
     } else {
-      const auto &_m = *std::get_if<typename LoopifyOption::list<
-          std::pair<unsigned int, unsigned int>>::Cons>(&_loop_l->v());
-      if (_m.d_a0.first == key) {
-        _result = std::make_optional<unsigned int>(_m.d_a0.second);
+      const auto &[d_a0, d_a1] = std::get<typename LoopifyOption::list<
+          std::pair<unsigned int, unsigned int>>::Cons>(_loop_l->v());
+      if (d_a0.first == key) {
+        _result = std::make_optional<unsigned int>(d_a0.second);
         _continue = false;
       } else {
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
       }
     }
   }

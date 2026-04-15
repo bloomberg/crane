@@ -67,8 +67,8 @@ struct ClosureEscapeMatch {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename mylist<T1>::Mycons>(&m->v());
-      return f0(_m.d_a0, _m.d_a1, mylist_rect<T1, T2>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m->v());
+      return f0(d_a0, d_a1, mylist_rect<T1, T2>(f, f0, d_a1));
     }
   }
 
@@ -79,8 +79,8 @@ struct ClosureEscapeMatch {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename mylist<T1>::Mycons>(&m->v());
-      return f0(_m.d_a0, _m.d_a1, mylist_rec<T1, T2>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m->v());
+      return f0(d_a0, d_a1, mylist_rec<T1, T2>(f, f0, d_a1));
     }
   }
 
@@ -90,8 +90,8 @@ struct ClosureEscapeMatch {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(l->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename mylist<T1>::Mycons>(&l->v());
-      return (length<T1>(_m.d_a1) + 1);
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l->v());
+      return (length<T1>(d_a1) + 1);
     }
   }
 
@@ -101,8 +101,8 @@ struct ClosureEscapeMatch {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(l1->v())) {
       return l2;
     } else {
-      const auto &_m = *std::get_if<typename mylist<T1>::Mycons>(&l1->v());
-      return mylist<T1>::mycons(_m.d_a0, app<T1>(_m.d_a1, l2));
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l1->v());
+      return mylist<T1>::mycons(d_a0, app<T1>(d_a1, l2));
     }
   }
 

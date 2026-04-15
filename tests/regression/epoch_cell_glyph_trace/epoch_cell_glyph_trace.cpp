@@ -7,11 +7,11 @@
 
 std::shared_ptr<Positive> Pos::succ(const std::shared_ptr<Positive> &x) {
   if (std::holds_alternative<typename Positive::XI>(x->v())) {
-    const auto &_m = *std::get_if<typename Positive::XI>(&x->v());
-    return Positive::xo(succ(_m.d_a0));
+    const auto &[d_a0] = std::get<typename Positive::XI>(x->v());
+    return Positive::xo(succ(d_a0));
   } else if (std::holds_alternative<typename Positive::XO>(x->v())) {
-    const auto &_m = *std::get_if<typename Positive::XO>(&x->v());
-    return Positive::xi(_m.d_a0);
+    const auto &[d_a0] = std::get<typename Positive::XO>(x->v());
+    return Positive::xi(d_a0);
   } else {
     return Positive::xo(Positive::xh());
   }
@@ -20,34 +20,34 @@ std::shared_ptr<Positive> Pos::succ(const std::shared_ptr<Positive> &x) {
 std::shared_ptr<Positive> Pos::add(const std::shared_ptr<Positive> &x,
                                    const std::shared_ptr<Positive> &y) {
   if (std::holds_alternative<typename Positive::XI>(x->v())) {
-    const auto &_m = *std::get_if<typename Positive::XI>(&x->v());
+    const auto &[d_a0] = std::get<typename Positive::XI>(x->v());
     if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XI>(&y->v());
-      return Positive::xo(add_carry(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
+      return Positive::xo(add_carry(d_a0, d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XO>(&y->v());
-      return Positive::xi(add(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
+      return Positive::xi(add(d_a0, d_a00));
     } else {
-      return Positive::xo(succ(_m.d_a0));
+      return Positive::xo(succ(d_a0));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x->v())) {
-    const auto &_m = *std::get_if<typename Positive::XO>(&x->v());
+    const auto &[d_a0] = std::get<typename Positive::XO>(x->v());
     if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XI>(&y->v());
-      return Positive::xi(add(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
+      return Positive::xi(add(d_a0, d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XO>(&y->v());
-      return Positive::xo(add(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
+      return Positive::xo(add(d_a0, d_a00));
     } else {
-      return Positive::xi(_m.d_a0);
+      return Positive::xi(d_a0);
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XI>(&y->v());
-      return Positive::xo(succ(_m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
+      return Positive::xo(succ(d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XO>(&y->v());
-      return Positive::xi(_m0.d_a0);
+      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
+      return Positive::xi(d_a00);
     } else {
       return Positive::xo(Positive::xh());
     }
@@ -57,34 +57,34 @@ std::shared_ptr<Positive> Pos::add(const std::shared_ptr<Positive> &x,
 std::shared_ptr<Positive> Pos::add_carry(const std::shared_ptr<Positive> &x,
                                          const std::shared_ptr<Positive> &y) {
   if (std::holds_alternative<typename Positive::XI>(x->v())) {
-    const auto &_m = *std::get_if<typename Positive::XI>(&x->v());
+    const auto &[d_a0] = std::get<typename Positive::XI>(x->v());
     if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XI>(&y->v());
-      return Positive::xi(add_carry(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
+      return Positive::xi(add_carry(d_a0, d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XO>(&y->v());
-      return Positive::xo(add_carry(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
+      return Positive::xo(add_carry(d_a0, d_a00));
     } else {
-      return Positive::xi(succ(_m.d_a0));
+      return Positive::xi(succ(d_a0));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x->v())) {
-    const auto &_m = *std::get_if<typename Positive::XO>(&x->v());
+    const auto &[d_a0] = std::get<typename Positive::XO>(x->v());
     if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XI>(&y->v());
-      return Positive::xo(add_carry(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
+      return Positive::xo(add_carry(d_a0, d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XO>(&y->v());
-      return Positive::xi(add(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
+      return Positive::xi(add(d_a0, d_a00));
     } else {
-      return Positive::xo(succ(_m.d_a0));
+      return Positive::xo(succ(d_a0));
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XI>(&y->v());
-      return Positive::xi(succ(_m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
+      return Positive::xi(succ(d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XO>(&y->v());
-      return Positive::xo(succ(_m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
+      return Positive::xo(succ(d_a00));
     } else {
       return Positive::xi(Positive::xh());
     }
@@ -93,11 +93,11 @@ std::shared_ptr<Positive> Pos::add_carry(const std::shared_ptr<Positive> &x,
 
 std::shared_ptr<Positive> Pos::pred_double(const std::shared_ptr<Positive> &x) {
   if (std::holds_alternative<typename Positive::XI>(x->v())) {
-    const auto &_m = *std::get_if<typename Positive::XI>(&x->v());
-    return Positive::xi(Positive::xo(_m.d_a0));
+    const auto &[d_a0] = std::get<typename Positive::XI>(x->v());
+    return Positive::xi(Positive::xo(d_a0));
   } else if (std::holds_alternative<typename Positive::XO>(x->v())) {
-    const auto &_m = *std::get_if<typename Positive::XO>(&x->v());
-    return Positive::xi(pred_double(_m.d_a0));
+    const auto &[d_a0] = std::get<typename Positive::XO>(x->v());
+    return Positive::xi(pred_double(d_a0));
   } else {
     return Positive::xh();
   }
@@ -106,11 +106,11 @@ std::shared_ptr<Positive> Pos::pred_double(const std::shared_ptr<Positive> &x) {
 std::shared_ptr<Positive> Pos::mul(const std::shared_ptr<Positive> &x,
                                    std::shared_ptr<Positive> y) {
   if (std::holds_alternative<typename Positive::XI>(x->v())) {
-    const auto &_m = *std::get_if<typename Positive::XI>(&x->v());
-    return add(y, Positive::xo(mul(_m.d_a0, y)));
+    const auto &[d_a0] = std::get<typename Positive::XI>(x->v());
+    return add(y, Positive::xo(mul(d_a0, y)));
   } else if (std::holds_alternative<typename Positive::XO>(x->v())) {
-    const auto &_m = *std::get_if<typename Positive::XO>(&x->v());
-    return Positive::xo(mul(_m.d_a0, y));
+    const auto &[d_a0] = std::get<typename Positive::XO>(x->v());
+    return Positive::xo(mul(d_a0, y));
   } else {
     return y;
   }
@@ -120,24 +120,24 @@ __attribute__((pure)) Comparison
 Pos::compare_cont(const Comparison r, const std::shared_ptr<Positive> &x,
                   const std::shared_ptr<Positive> &y) {
   if (std::holds_alternative<typename Positive::XI>(x->v())) {
-    const auto &_m = *std::get_if<typename Positive::XI>(&x->v());
+    const auto &[d_a0] = std::get<typename Positive::XI>(x->v());
     if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XI>(&y->v());
-      return compare_cont(r, _m.d_a0, _m0.d_a0);
+      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
+      return compare_cont(r, d_a0, d_a00);
     } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XO>(&y->v());
-      return compare_cont(Comparison::e_GT, _m.d_a0, _m0.d_a0);
+      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
+      return compare_cont(Comparison::e_GT, d_a0, d_a00);
     } else {
       return Comparison::e_GT;
     }
   } else if (std::holds_alternative<typename Positive::XO>(x->v())) {
-    const auto &_m = *std::get_if<typename Positive::XO>(&x->v());
+    const auto &[d_a0] = std::get<typename Positive::XO>(x->v());
     if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XI>(&y->v());
-      return compare_cont(Comparison::e_LT, _m.d_a0, _m0.d_a0);
+      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
+      return compare_cont(Comparison::e_LT, d_a0, d_a00);
     } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XO>(&y->v());
-      return compare_cont(r, _m.d_a0, _m0.d_a0);
+      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
+      return compare_cont(r, d_a0, d_a00);
     } else {
       return Comparison::e_GT;
     }
@@ -159,18 +159,18 @@ Pos::compare(const std::shared_ptr<Positive> &_x0,
 __attribute__((pure)) bool Pos::eqb(const std::shared_ptr<Positive> &p,
                                     const std::shared_ptr<Positive> &q) {
   if (std::holds_alternative<typename Positive::XI>(p->v())) {
-    const auto &_m = *std::get_if<typename Positive::XI>(&p->v());
+    const auto &[d_a0] = std::get<typename Positive::XI>(p->v());
     if (std::holds_alternative<typename Positive::XI>(q->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XI>(&q->v());
-      return eqb(_m.d_a0, _m0.d_a0);
+      const auto &[d_a00] = std::get<typename Positive::XI>(q->v());
+      return eqb(d_a0, d_a00);
     } else {
       return false;
     }
   } else if (std::holds_alternative<typename Positive::XO>(p->v())) {
-    const auto &_m = *std::get_if<typename Positive::XO>(&p->v());
+    const auto &[d_a0] = std::get<typename Positive::XO>(p->v());
     if (std::holds_alternative<typename Positive::XO>(q->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XO>(&q->v());
-      return eqb(_m.d_a0, _m0.d_a0);
+      const auto &[d_a00] = std::get<typename Positive::XO>(q->v());
+      return eqb(d_a0, d_a00);
     } else {
       return false;
     }
@@ -196,11 +196,11 @@ std::shared_ptr<Z> BinInt::double_(const std::shared_ptr<Z> &x) {
   if (std::holds_alternative<typename Z::Z0>(x->v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(x->v())) {
-    const auto &_m = *std::get_if<typename Z::Zpos>(&x->v());
-    return Z::zpos(Positive::xo(_m.d_a0));
+    const auto &[d_a0] = std::get<typename Z::Zpos>(x->v());
+    return Z::zpos(Positive::xo(d_a0));
   } else {
-    const auto &_m = *std::get_if<typename Z::Zneg>(&x->v());
-    return Z::zneg(Positive::xo(_m.d_a0));
+    const auto &[d_a0] = std::get<typename Z::Zneg>(x->v());
+    return Z::zneg(Positive::xo(d_a0));
   }
 }
 
@@ -208,11 +208,11 @@ std::shared_ptr<Z> BinInt::succ_double(const std::shared_ptr<Z> &x) {
   if (std::holds_alternative<typename Z::Z0>(x->v())) {
     return Z::zpos(Positive::xh());
   } else if (std::holds_alternative<typename Z::Zpos>(x->v())) {
-    const auto &_m = *std::get_if<typename Z::Zpos>(&x->v());
-    return Z::zpos(Positive::xi(_m.d_a0));
+    const auto &[d_a0] = std::get<typename Z::Zpos>(x->v());
+    return Z::zpos(Positive::xi(d_a0));
   } else {
-    const auto &_m = *std::get_if<typename Z::Zneg>(&x->v());
-    return Z::zneg(Pos::pred_double(_m.d_a0));
+    const auto &[d_a0] = std::get<typename Z::Zneg>(x->v());
+    return Z::zneg(Pos::pred_double(d_a0));
   }
 }
 
@@ -220,45 +220,45 @@ std::shared_ptr<Z> BinInt::pred_double(const std::shared_ptr<Z> &x) {
   if (std::holds_alternative<typename Z::Z0>(x->v())) {
     return Z::zneg(Positive::xh());
   } else if (std::holds_alternative<typename Z::Zpos>(x->v())) {
-    const auto &_m = *std::get_if<typename Z::Zpos>(&x->v());
-    return Z::zpos(Pos::pred_double(_m.d_a0));
+    const auto &[d_a0] = std::get<typename Z::Zpos>(x->v());
+    return Z::zpos(Pos::pred_double(d_a0));
   } else {
-    const auto &_m = *std::get_if<typename Z::Zneg>(&x->v());
-    return Z::zneg(Positive::xi(_m.d_a0));
+    const auto &[d_a0] = std::get<typename Z::Zneg>(x->v());
+    return Z::zneg(Positive::xi(d_a0));
   }
 }
 
 std::shared_ptr<Z> BinInt::pos_sub(const std::shared_ptr<Positive> &x,
                                    const std::shared_ptr<Positive> &y) {
   if (std::holds_alternative<typename Positive::XI>(x->v())) {
-    const auto &_m = *std::get_if<typename Positive::XI>(&x->v());
+    const auto &[d_a0] = std::get<typename Positive::XI>(x->v());
     if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XI>(&y->v());
-      return BinInt::double_(BinInt::pos_sub(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
+      return BinInt::double_(BinInt::pos_sub(d_a0, d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XO>(&y->v());
-      return BinInt::succ_double(BinInt::pos_sub(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
+      return BinInt::succ_double(BinInt::pos_sub(d_a0, d_a00));
     } else {
-      return Z::zpos(Positive::xo(_m.d_a0));
+      return Z::zpos(Positive::xo(d_a0));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x->v())) {
-    const auto &_m = *std::get_if<typename Positive::XO>(&x->v());
+    const auto &[d_a0] = std::get<typename Positive::XO>(x->v());
     if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XI>(&y->v());
-      return BinInt::pred_double(BinInt::pos_sub(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
+      return BinInt::pred_double(BinInt::pos_sub(d_a0, d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XO>(&y->v());
-      return BinInt::double_(BinInt::pos_sub(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
+      return BinInt::double_(BinInt::pos_sub(d_a0, d_a00));
     } else {
-      return Z::zpos(Pos::pred_double(_m.d_a0));
+      return Z::zpos(Pos::pred_double(d_a0));
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XI>(&y->v());
-      return Z::zneg(Positive::xo(_m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
+      return Z::zneg(Positive::xo(d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Positive::XO>(&y->v());
-      return Z::zneg(Pos::pred_double(_m0.d_a0));
+      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
+      return Z::zneg(Pos::pred_double(d_a00));
     } else {
       return Z::z0();
     }
@@ -269,38 +269,38 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
   if (std::holds_alternative<typename Z::Z0>(x->v())) {
     return y;
   } else if (std::holds_alternative<typename Z::Zpos>(x->v())) {
-    const auto &_m = *std::get_if<typename Z::Zpos>(&x->v());
+    const auto &[d_a0] = std::get<typename Z::Zpos>(x->v());
     if (std::holds_alternative<typename Z::Zpos>(y->v()) &&
         y.use_count() == 1) {
       auto &_rf = std::get<1>(y->v_mut());
       std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
-      _rf.d_a0 = Pos::add(std::move(_m.d_a0), y_);
+      _rf.d_a0 = Pos::add(std::move(d_a0), y_);
       return y;
     } else if (std::holds_alternative<typename Z::Z0>(y->v())) {
       return x;
     } else if (std::holds_alternative<typename Z::Zpos>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Z::Zpos>(&y->v());
-      return Z::zpos(Pos::add(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Z::Zpos>(y->v());
+      return Z::zpos(Pos::add(d_a0, d_a00));
     } else {
-      const auto &_m0 = *std::get_if<typename Z::Zneg>(&y->v());
-      return BinInt::pos_sub(_m.d_a0, _m0.d_a0);
+      const auto &[d_a00] = std::get<typename Z::Zneg>(y->v());
+      return BinInt::pos_sub(d_a0, d_a00);
     }
   } else {
-    const auto &_m = *std::get_if<typename Z::Zneg>(&x->v());
+    const auto &[d_a0] = std::get<typename Z::Zneg>(x->v());
     if (std::holds_alternative<typename Z::Zneg>(y->v()) &&
         y.use_count() == 1) {
       auto &_rf = std::get<2>(y->v_mut());
       std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
-      _rf.d_a0 = Pos::add(std::move(_m.d_a0), y_);
+      _rf.d_a0 = Pos::add(std::move(d_a0), y_);
       return y;
     } else if (std::holds_alternative<typename Z::Z0>(y->v())) {
       return x;
     } else if (std::holds_alternative<typename Z::Zpos>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Z::Zpos>(&y->v());
-      return BinInt::pos_sub(_m0.d_a0, _m.d_a0);
+      const auto &[d_a00] = std::get<typename Z::Zpos>(y->v());
+      return BinInt::pos_sub(d_a00, d_a0);
     } else {
-      const auto &_m0 = *std::get_if<typename Z::Zneg>(&y->v());
-      return Z::zneg(Pos::add(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Z::Zneg>(y->v());
+      return Z::zneg(Pos::add(d_a0, d_a00));
     }
   }
 }
@@ -309,11 +309,11 @@ std::shared_ptr<Z> BinInt::opp(const std::shared_ptr<Z> &x) {
   if (std::holds_alternative<typename Z::Z0>(x->v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(x->v())) {
-    const auto &_m = *std::get_if<typename Z::Zpos>(&x->v());
-    return Z::zneg(_m.d_a0);
+    const auto &[d_a0] = std::get<typename Z::Zpos>(x->v());
+    return Z::zneg(d_a0);
   } else {
-    const auto &_m = *std::get_if<typename Z::Zneg>(&x->v());
-    return Z::zpos(_m.d_a0);
+    const auto &[d_a0] = std::get<typename Z::Zneg>(x->v());
+    return Z::zpos(d_a0);
   }
 }
 
@@ -327,26 +327,26 @@ std::shared_ptr<Z> BinInt::mul(const std::shared_ptr<Z> &x,
   if (std::holds_alternative<typename Z::Z0>(x->v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(x->v())) {
-    const auto &_m = *std::get_if<typename Z::Zpos>(&x->v());
+    const auto &[d_a0] = std::get<typename Z::Zpos>(x->v());
     if (std::holds_alternative<typename Z::Z0>(y->v())) {
       return Z::z0();
     } else if (std::holds_alternative<typename Z::Zpos>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Z::Zpos>(&y->v());
-      return Z::zpos(Pos::mul(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Z::Zpos>(y->v());
+      return Z::zpos(Pos::mul(d_a0, d_a00));
     } else {
-      const auto &_m0 = *std::get_if<typename Z::Zneg>(&y->v());
-      return Z::zneg(Pos::mul(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Z::Zneg>(y->v());
+      return Z::zneg(Pos::mul(d_a0, d_a00));
     }
   } else {
-    const auto &_m = *std::get_if<typename Z::Zneg>(&x->v());
+    const auto &[d_a0] = std::get<typename Z::Zneg>(x->v());
     if (std::holds_alternative<typename Z::Z0>(y->v())) {
       return Z::z0();
     } else if (std::holds_alternative<typename Z::Zpos>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Z::Zpos>(&y->v());
-      return Z::zneg(Pos::mul(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Z::Zpos>(y->v());
+      return Z::zneg(Pos::mul(d_a0, d_a00));
     } else {
-      const auto &_m0 = *std::get_if<typename Z::Zneg>(&y->v());
-      return Z::zpos(Pos::mul(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Z::Zneg>(y->v());
+      return Z::zpos(Pos::mul(d_a0, d_a00));
     }
   }
 }
@@ -362,18 +362,18 @@ __attribute__((pure)) Comparison BinInt::compare(const std::shared_ptr<Z> &x,
       return Comparison::e_GT;
     }
   } else if (std::holds_alternative<typename Z::Zpos>(x->v())) {
-    const auto &_m = *std::get_if<typename Z::Zpos>(&x->v());
+    const auto &[d_a0] = std::get<typename Z::Zpos>(x->v());
     if (std::holds_alternative<typename Z::Zpos>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Z::Zpos>(&y->v());
-      return Pos::compare(_m.d_a0, _m0.d_a0);
+      const auto &[d_a00] = std::get<typename Z::Zpos>(y->v());
+      return Pos::compare(d_a0, d_a00);
     } else {
       return Comparison::e_GT;
     }
   } else {
-    const auto &_m = *std::get_if<typename Z::Zneg>(&x->v());
+    const auto &[d_a0] = std::get<typename Z::Zneg>(x->v());
     if (std::holds_alternative<typename Z::Zneg>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Z::Zneg>(&y->v());
-      return Datatypes::CompOpp(Pos::compare(_m.d_a0, _m0.d_a0));
+      const auto &[d_a00] = std::get<typename Z::Zneg>(y->v());
+      return Datatypes::CompOpp(Pos::compare(d_a0, d_a00));
     } else {
       return Comparison::e_LT;
     }
@@ -413,18 +413,18 @@ __attribute__((pure)) bool BinInt::eqb(const std::shared_ptr<Z> &x,
       return false;
     }
   } else if (std::holds_alternative<typename Z::Zpos>(x->v())) {
-    const auto &_m = *std::get_if<typename Z::Zpos>(&x->v());
+    const auto &[d_a0] = std::get<typename Z::Zpos>(x->v());
     if (std::holds_alternative<typename Z::Zpos>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Z::Zpos>(&y->v());
-      return Pos::eqb(_m.d_a0, _m0.d_a0);
+      const auto &[d_a00] = std::get<typename Z::Zpos>(y->v());
+      return Pos::eqb(d_a0, d_a00);
     } else {
       return false;
     }
   } else {
-    const auto &_m = *std::get_if<typename Z::Zneg>(&x->v());
+    const auto &[d_a0] = std::get<typename Z::Zneg>(x->v());
     if (std::holds_alternative<typename Z::Zneg>(y->v())) {
-      const auto &_m0 = *std::get_if<typename Z::Zneg>(&y->v());
-      return Pos::eqb(_m.d_a0, _m0.d_a0);
+      const auto &[d_a00] = std::get<typename Z::Zneg>(y->v());
+      return Pos::eqb(d_a0, d_a00);
     } else {
       return false;
     }
@@ -433,8 +433,8 @@ __attribute__((pure)) bool BinInt::eqb(const std::shared_ptr<Z> &x,
 
 __attribute__((pure)) unsigned int BinInt::to_nat(const std::shared_ptr<Z> &z) {
   if (std::holds_alternative<typename Z::Zpos>(z->v())) {
-    const auto &_m = *std::get_if<typename Z::Zpos>(&z->v());
-    return Pos::to_nat(_m.d_a0);
+    const auto &[d_a0] = std::get<typename Z::Zpos>(z->v());
+    return Pos::to_nat(d_a0);
   } else {
     return 0u;
   }
@@ -444,8 +444,8 @@ __attribute__((pure)) std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>>
 BinInt::pos_div_eucl(const std::shared_ptr<Positive> &a,
                      const std::shared_ptr<Z> &b) {
   if (std::holds_alternative<typename Positive::XI>(a->v())) {
-    const auto &_m = *std::get_if<typename Positive::XI>(&a->v());
-    auto _cs = BinInt::pos_div_eucl(_m.d_a0, b);
+    const auto &[d_a0] = std::get<typename Positive::XI>(a->v());
+    auto _cs = BinInt::pos_div_eucl(d_a0, b);
     const std::shared_ptr<Z> &q = _cs.first;
     const std::shared_ptr<Z> &r = _cs.second;
     std::shared_ptr<Z> r_ =
@@ -461,8 +461,8 @@ BinInt::pos_div_eucl(const std::shared_ptr<Positive> &a,
           BinInt::sub(std::move(r_), b));
     }
   } else if (std::holds_alternative<typename Positive::XO>(a->v())) {
-    const auto &_m = *std::get_if<typename Positive::XO>(&a->v());
-    auto _cs = BinInt::pos_div_eucl(_m.d_a0, b);
+    const auto &[d_a0] = std::get<typename Positive::XO>(a->v());
+    auto _cs = BinInt::pos_div_eucl(d_a0, b);
     const std::shared_ptr<Z> &q = _cs.first;
     const std::shared_ptr<Z> &r = _cs.second;
     std::shared_ptr<Z> r_ =
@@ -490,14 +490,14 @@ BinInt::div_eucl(std::shared_ptr<Z> a, const std::shared_ptr<Z> &b) {
   if (std::holds_alternative<typename Z::Z0>(a->v())) {
     return std::make_pair(Z::z0(), Z::z0());
   } else if (std::holds_alternative<typename Z::Zpos>(a->v())) {
-    const auto &_m = *std::get_if<typename Z::Zpos>(&a->v());
+    const auto &[d_a0] = std::get<typename Z::Zpos>(a->v());
     if (std::holds_alternative<typename Z::Z0>(b->v())) {
       return std::make_pair(Z::z0(), std::move(a));
     } else if (std::holds_alternative<typename Z::Zpos>(b->v())) {
-      return BinInt::pos_div_eucl(_m.d_a0, b);
+      return BinInt::pos_div_eucl(d_a0, b);
     } else {
-      const auto &_m0 = *std::get_if<typename Z::Zneg>(&b->v());
-      auto _cs = BinInt::pos_div_eucl(_m.d_a0, Z::zpos(_m0.d_a0));
+      const auto &[d_a00] = std::get<typename Z::Zneg>(b->v());
+      auto _cs = BinInt::pos_div_eucl(d_a0, Z::zpos(d_a00));
       const std::shared_ptr<Z> &q = _cs.first;
       const std::shared_ptr<Z> &r = _cs.second;
       if (std::holds_alternative<typename Z::Z0>(r->v())) {
@@ -509,11 +509,11 @@ BinInt::div_eucl(std::shared_ptr<Z> a, const std::shared_ptr<Z> &b) {
       }
     }
   } else {
-    const auto &_m = *std::get_if<typename Z::Zneg>(&a->v());
+    const auto &[d_a0] = std::get<typename Z::Zneg>(a->v());
     if (std::holds_alternative<typename Z::Z0>(b->v())) {
       return std::make_pair(Z::z0(), std::move(a));
     } else if (std::holds_alternative<typename Z::Zpos>(b->v())) {
-      auto _cs = BinInt::pos_div_eucl(_m.d_a0, b);
+      auto _cs = BinInt::pos_div_eucl(d_a0, b);
       const std::shared_ptr<Z> &q = _cs.first;
       const std::shared_ptr<Z> &r = _cs.second;
       if (std::holds_alternative<typename Z::Z0>(r->v())) {
@@ -524,8 +524,8 @@ BinInt::div_eucl(std::shared_ptr<Z> a, const std::shared_ptr<Z> &b) {
             BinInt::sub(b, r));
       }
     } else {
-      const auto &_m0 = *std::get_if<typename Z::Zneg>(&b->v());
-      auto _cs = BinInt::pos_div_eucl(_m.d_a0, Z::zpos(_m0.d_a0));
+      const auto &[d_a00] = std::get<typename Z::Zneg>(b->v());
+      auto _cs = BinInt::pos_div_eucl(d_a0, Z::zpos(d_a00));
       const std::shared_ptr<Z> &q = _cs.first;
       const std::shared_ptr<Z> &r = _cs.second;
       return std::make_pair(q, BinInt::opp(r));
@@ -553,11 +553,11 @@ std::shared_ptr<Z> BinInt::abs(const std::shared_ptr<Z> &z) {
   if (std::holds_alternative<typename Z::Z0>(z->v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(z->v())) {
-    const auto &_m = *std::get_if<typename Z::Zpos>(&z->v());
-    return Z::zpos(_m.d_a0);
+    const auto &[d_a0] = std::get<typename Z::Zpos>(z->v());
+    return Z::zpos(d_a0);
   } else {
-    const auto &_m = *std::get_if<typename Z::Zneg>(&z->v());
-    return Z::zpos(_m.d_a0);
+    const auto &[d_a0] = std::get<typename Z::Zneg>(z->v());
+    return Z::zpos(d_a0);
   }
 }
 
@@ -992,11 +992,11 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::count_total_lunar(
           es->v())) {
     return 0u;
   } else {
-    const auto &_m = *std::get_if<typename List<
+    const auto &[d_a0, d_a1] = std::get<typename List<
         std::shared_ptr<EpochCellGlyphTraceCase::HistoricalEclipse>>::Cons>(
-        &es->v());
+        es->v());
     unsigned int count_here = [&]() {
-      switch (_m.d_a0->he_category) {
+      switch (d_a0->he_category) {
       case EclipseCategory::e_EC_TOTALLUNAR: {
         return 1u;
       }
@@ -1005,7 +1005,7 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::count_total_lunar(
       }
       }
     }();
-    return (count_here + count_total_lunar(_m.d_a1));
+    return (count_here + count_total_lunar(d_a1));
   }
 }
 
@@ -1019,13 +1019,13 @@ EpochCellGlyphTraceCase::count_visible_total_lunar(
           es->v())) {
     return 0u;
   } else {
-    const auto &_m = *std::get_if<typename List<
+    const auto &[d_a0, d_a1] = std::get<typename List<
         std::shared_ptr<EpochCellGlyphTraceCase::HistoricalEclipse>>::Cons>(
-        &es->v());
+        es->v());
     unsigned int count_here = [&]() {
-      switch (_m.d_a0->he_category) {
+      switch (d_a0->he_category) {
       case EclipseCategory::e_EC_TOTALLUNAR: {
-        if (_m.d_a0->he_visible_mediterranean) {
+        if (d_a0->he_visible_mediterranean) {
           return 1u;
         } else {
           return 0u;
@@ -1036,7 +1036,7 @@ EpochCellGlyphTraceCase::count_visible_total_lunar(
       }
       }
     }();
-    return (count_here + count_visible_total_lunar(_m.d_a1));
+    return (count_here + count_visible_total_lunar(d_a1));
   }
 }
 
@@ -1050,16 +1050,16 @@ EpochCellGlyphTraceCase::visible_series_checksum(
           es->v())) {
     return 0u;
   } else {
-    const auto &_m = *std::get_if<typename List<
+    const auto &[d_a0, d_a1] = std::get<typename List<
         std::shared_ptr<EpochCellGlyphTraceCase::HistoricalEclipse>>::Cons>(
-        &es->v());
+        es->v());
     unsigned int term;
-    if (_m.d_a0->he_visible_mediterranean) {
-      term = BinInt::to_nat(BinInt::abs(_m.d_a0->he_saros_series));
+    if (d_a0->he_visible_mediterranean) {
+      term = BinInt::to_nat(BinInt::abs(d_a0->he_saros_series));
     } else {
       term = 0u;
     }
-    return (term + visible_series_checksum(_m.d_a1));
+    return (term + visible_series_checksum(d_a1));
   }
 }
 

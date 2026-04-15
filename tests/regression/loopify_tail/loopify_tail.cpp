@@ -19,14 +19,14 @@ LoopifyTail::member(const unsigned int x,
       _result = false;
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename LoopifyTail::list<unsigned int>::Cons>(
-              &_loop_l->v());
-      if (x == _m.d_a0) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename LoopifyTail::list<unsigned int>::Cons>(
+              _loop_l->v());
+      if (x == d_a0) {
         _result = true;
         _continue = false;
       } else {
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
       }
     }
   }
@@ -48,14 +48,14 @@ LoopifyTail::nth(const unsigned int n,
       _result = default0;
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename LoopifyTail::list<unsigned int>::Cons>(
-              &_loop_l->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename LoopifyTail::list<unsigned int>::Cons>(
+              _loop_l->v());
       if (_loop_n == 0u) {
-        _result = _m.d_a0;
+        _result = d_a0;
         _continue = false;
       } else {
-        std::shared_ptr<LoopifyTail::list<unsigned int>> _next_l = _m.d_a1;
+        std::shared_ptr<LoopifyTail::list<unsigned int>> _next_l = d_a1;
         unsigned int _next_n =
             (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
         _loop_l = std::move(_next_l);
@@ -81,13 +81,13 @@ __attribute__((pure)) unsigned int LoopifyTail::lookup(
       _result = 0u;
       _continue = false;
     } else {
-      const auto &_m = *std::get_if<typename LoopifyTail::list<
-          std::pair<unsigned int, unsigned int>>::Cons>(&_loop_l->v());
-      if (_m.d_a0.first == key) {
-        _result = _m.d_a0.second;
+      const auto &[d_a0, d_a1] = std::get<typename LoopifyTail::list<
+          std::pair<unsigned int, unsigned int>>::Cons>(_loop_l->v());
+      if (d_a0.first == key) {
+        _result = d_a0.second;
         _continue = false;
       } else {
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
       }
     }
   }

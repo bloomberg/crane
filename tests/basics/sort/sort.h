@@ -60,8 +60,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (_m.d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
     }
   }
 };
@@ -119,8 +119,8 @@ struct Sort {
       if (std::holds_alternative<typename List<T1>::Nil>(ls->v())) {
         return x;
       } else {
-        const auto &_m = *std::get_if<typename List<T1>::Cons>(&ls->v());
-        return x0(_m.d_a0);
+        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(ls->v());
+        return x0(d_a0);
       }
     }
   }
@@ -132,18 +132,18 @@ struct Sort {
     if (std::holds_alternative<typename List<T1>::Nil>(ls->v())) {
       return std::make_pair(List<T1>::nil(), List<T1>::nil());
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&ls->v());
-      auto &&_sv0 = _m.d_a1;
-      if (std::holds_alternative<typename List<T1>::Nil>(_sv0->v())) {
-        return std::make_pair(List<T1>::cons(_m.d_a0, List<T1>::nil()),
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(ls->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(d_a1->v())) {
+        return std::make_pair(List<T1>::cons(d_a0, List<T1>::nil()),
                               List<T1>::nil());
       } else {
-        const auto &_m0 = *std::get_if<typename List<T1>::Cons>(&_sv0->v());
-        auto _cs = split<T1>(_m0.d_a1);
+        const auto &[d_a00, d_a10] =
+            std::get<typename List<T1>::Cons>(d_a1->v());
+        auto _cs = split<T1>(d_a10);
         const std::shared_ptr<List<T1>> &ls1 = _cs.first;
         const std::shared_ptr<List<T1>> &ls2 = _cs.second;
-        return std::make_pair(List<T1>::cons(_m.d_a0, ls1),
-                              List<T1>::cons(_m0.d_a0, ls2));
+        return std::make_pair(List<T1>::cons(d_a0, ls1),
+                              List<T1>::cons(d_a00, ls2));
       }
     }
   }
@@ -162,14 +162,14 @@ struct Sort {
     if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
       return x;
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
-      auto &&_sv0 = _m.d_a1;
-      if (std::holds_alternative<typename List<T1>::Nil>(_sv0->v())) {
-        return x0(_m.d_a0);
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(d_a1->v())) {
+        return x0(d_a0);
       } else {
-        const auto &_m0 = *std::get_if<typename List<T1>::Cons>(&_sv0->v());
-        return x2(_m.d_a0, _m0.d_a0, _m0.d_a1, x1(_m.d_a0, _m0.d_a0),
-                  div_conq_pair<T1, T2>(x, x0, x1, x2, _m0.d_a1));
+        const auto &[d_a00, d_a10] =
+            std::get<typename List<T1>::Cons>(d_a1->v());
+        return x2(d_a0, d_a00, d_a10, x1(d_a0, d_a00),
+                  div_conq_pair<T1, T2>(x, x0, x1, x2, d_a10));
       }
     }
   }
@@ -182,14 +182,14 @@ struct Sort {
     if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
       return std::make_pair(List<T1>::nil(), List<T1>::nil());
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
-      auto _cs = split_pivot<T1>(le_dec0, pivot, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      auto _cs = split_pivot<T1>(le_dec0, pivot, d_a1);
       const std::shared_ptr<List<T1>> &l1 = _cs.first;
       const std::shared_ptr<List<T1>> &l2 = _cs.second;
-      if (le_dec0(_m.d_a0, pivot)) {
-        return std::make_pair(List<T1>::cons(_m.d_a0, l1), l2);
+      if (le_dec0(d_a0, pivot)) {
+        return std::make_pair(List<T1>::cons(d_a0, l1), l2);
       } else {
-        return std::make_pair(l1, List<T1>::cons(_m.d_a0, l2));
+        return std::make_pair(l1, List<T1>::cons(d_a0, l2));
       }
     }
   }
@@ -201,13 +201,12 @@ struct Sort {
     if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
       return x;
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
-      return x0(
-          _m.d_a0, _m.d_a1,
-          div_conq_pivot<T1, T2>(le_dec0, x, x0,
-                                 split_pivot(le_dec0, _m.d_a0, _m.d_a1).first),
-          div_conq_pivot<T1, T2>(
-              le_dec0, x, x0, split_pivot(le_dec0, _m.d_a0, _m.d_a1).second));
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      return x0(d_a0, d_a1,
+                div_conq_pivot<T1, T2>(le_dec0, x, x0,
+                                       split_pivot(le_dec0, d_a0, d_a1).first),
+                div_conq_pivot<T1, T2>(
+                    le_dec0, x, x0, split_pivot(le_dec0, d_a0, d_a1).second));
     }
   }
 

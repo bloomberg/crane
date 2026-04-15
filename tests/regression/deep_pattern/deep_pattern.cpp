@@ -13,29 +13,25 @@ __attribute__((pure)) unsigned int DeepPattern::list_deep_match(
           l->v())) {
     return 0u;
   } else {
-    const auto &_m = *std::get_if<
+    const auto &[d_a0, d_a1] = std::get<
         typename DeepPattern::list<std::shared_ptr<DeepPattern::tree>>::Cons>(
-        &l->v());
-    auto &&_sv0 = _m.d_a0;
-    if (std::holds_alternative<typename DeepPattern::tree::Leaf>(_sv0->v())) {
-      const auto &_m0 =
-          *std::get_if<typename DeepPattern::tree::Leaf>(&_sv0->v());
-      auto &&_sv1 = _m.d_a1;
+        l->v());
+    if (std::holds_alternative<typename DeepPattern::tree::Leaf>(d_a0->v())) {
+      const auto &[d_a00] =
+          std::get<typename DeepPattern::tree::Leaf>(d_a0->v());
       if (std::holds_alternative<typename DeepPattern::list<
-              std::shared_ptr<DeepPattern::tree>>::Nil>(_sv1->v())) {
-        return _m0.d_a0;
+              std::shared_ptr<DeepPattern::tree>>::Nil>(d_a1->v())) {
+        return d_a00;
       } else {
-        const auto &_m1 = *std::get_if<typename DeepPattern::list<
-            std::shared_ptr<DeepPattern::tree>>::Cons>(&_sv1->v());
-        auto &&_sv2 = _m1.d_a0;
+        const auto &[d_a01, d_a11] = std::get<typename DeepPattern::list<
+            std::shared_ptr<DeepPattern::tree>>::Cons>(d_a1->v());
         if (std::holds_alternative<typename DeepPattern::tree::Leaf>(
-                _sv2->v())) {
-          const auto &_m2 =
-              *std::get_if<typename DeepPattern::tree::Leaf>(&_sv2->v());
-          auto &&_sv = _m1.d_a1;
+                d_a01->v())) {
+          const auto &[d_a02] =
+              std::get<typename DeepPattern::tree::Leaf>(d_a01->v());
           if (std::holds_alternative<typename DeepPattern::list<
-                  std::shared_ptr<DeepPattern::tree>>::Nil>(_sv->v())) {
-            return (_m0.d_a0 + _m2.d_a0);
+                  std::shared_ptr<DeepPattern::tree>>::Nil>(d_a11->v())) {
+            return (d_a00 + d_a02);
           } else {
             return 0u;
           }
@@ -44,54 +40,47 @@ __attribute__((pure)) unsigned int DeepPattern::list_deep_match(
         }
       }
     } else {
-      const auto &_m0 =
-          *std::get_if<typename DeepPattern::tree::Node>(&_sv0->v());
-      auto &&_sv1 = _m0.d_a0;
-      if (std::holds_alternative<typename DeepPattern::tree::Leaf>(_sv1->v())) {
-        const auto &_m1 =
-            *std::get_if<typename DeepPattern::tree::Leaf>(&_sv1->v());
-        auto &&_sv2 = _m0.d_a1;
+      const auto &[d_a00, d_a10] =
+          std::get<typename DeepPattern::tree::Node>(d_a0->v());
+      if (std::holds_alternative<typename DeepPattern::tree::Leaf>(
+              d_a00->v())) {
+        const auto &[d_a01] =
+            std::get<typename DeepPattern::tree::Leaf>(d_a00->v());
         if (std::holds_alternative<typename DeepPattern::tree::Leaf>(
-                _sv2->v())) {
-          const auto &_m2 =
-              *std::get_if<typename DeepPattern::tree::Leaf>(&_sv2->v());
-          auto &&_sv3 = _m.d_a1;
+                d_a10->v())) {
+          const auto &[d_a02] =
+              std::get<typename DeepPattern::tree::Leaf>(d_a10->v());
           if (std::holds_alternative<typename DeepPattern::list<
-                  std::shared_ptr<DeepPattern::tree>>::Nil>(_sv3->v())) {
+                  std::shared_ptr<DeepPattern::tree>>::Nil>(d_a1->v())) {
             return 0u;
           } else {
-            const auto &_m3 = *std::get_if<typename DeepPattern::list<
-                std::shared_ptr<DeepPattern::tree>>::Cons>(&_sv3->v());
-            auto &&_sv4 = _m3.d_a0;
+            const auto &[d_a03, d_a13] = std::get<typename DeepPattern::list<
+                std::shared_ptr<DeepPattern::tree>>::Cons>(d_a1->v());
             if (std::holds_alternative<typename DeepPattern::tree::Leaf>(
-                    _sv4->v())) {
-              const auto &_m4 =
-                  *std::get_if<typename DeepPattern::tree::Leaf>(&_sv4->v());
-              auto &&_sv = _m3.d_a1;
+                    d_a03->v())) {
+              const auto &[d_a04] =
+                  std::get<typename DeepPattern::tree::Leaf>(d_a03->v());
               if (std::holds_alternative<typename DeepPattern::list<
-                      std::shared_ptr<DeepPattern::tree>>::Nil>(_sv->v())) {
-                return ((_m1.d_a0 + _m2.d_a0) + _m4.d_a0);
+                      std::shared_ptr<DeepPattern::tree>>::Nil>(d_a13->v())) {
+                return ((d_a01 + d_a02) + d_a04);
               } else {
                 return 0u;
               }
             } else {
-              const auto &_m4 =
-                  *std::get_if<typename DeepPattern::tree::Node>(&_sv4->v());
-              auto &&_sv5 = _m4.d_a0;
+              const auto &[d_a04, d_a14] =
+                  std::get<typename DeepPattern::tree::Node>(d_a03->v());
               if (std::holds_alternative<typename DeepPattern::tree::Leaf>(
-                      _sv5->v())) {
-                const auto &_m5 =
-                    *std::get_if<typename DeepPattern::tree::Leaf>(&_sv5->v());
-                auto &&_sv6 = _m4.d_a1;
+                      d_a04->v())) {
+                const auto &[d_a05] =
+                    std::get<typename DeepPattern::tree::Leaf>(d_a04->v());
                 if (std::holds_alternative<typename DeepPattern::tree::Leaf>(
-                        _sv6->v())) {
-                  const auto &_m6 =
-                      *std::get_if<typename DeepPattern::tree::Leaf>(
-                          &_sv6->v());
-                  auto &&_sv = _m3.d_a1;
+                        d_a14->v())) {
+                  const auto &[d_a06] =
+                      std::get<typename DeepPattern::tree::Leaf>(d_a14->v());
                   if (std::holds_alternative<typename DeepPattern::list<
-                          std::shared_ptr<DeepPattern::tree>>::Nil>(_sv->v())) {
-                    return (((_m1.d_a0 + _m2.d_a0) + _m5.d_a0) + _m6.d_a0);
+                          std::shared_ptr<DeepPattern::tree>>::Nil>(
+                          d_a13->v())) {
+                    return (((d_a01 + d_a02) + d_a05) + d_a06);
                   } else {
                     return 0u;
                   }

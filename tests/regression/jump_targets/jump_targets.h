@@ -60,8 +60,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (_m.d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
     }
   }
 };
@@ -115,14 +115,14 @@ struct JumpTargets {
     jump_target_collection() const {
       if (std::holds_alternative<typename instr_collection::JUN_coll>(
               this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_collection::JUN_coll>(&this->v());
-        return std::make_optional<unsigned int>(_m.d_a0);
+        const auto &[d_a0] =
+            std::get<typename instr_collection::JUN_coll>(this->v());
+        return std::make_optional<unsigned int>(d_a0);
       } else if (std::holds_alternative<typename instr_collection::JMS_coll>(
                      this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_collection::JMS_coll>(&this->v());
-        return std::make_optional<unsigned int>(_m.d_a0);
+        const auto &[d_a0] =
+            std::get<typename instr_collection::JMS_coll>(this->v());
+        return std::make_optional<unsigned int>(d_a0);
       } else {
         return std::optional<unsigned int>();
       }
@@ -133,14 +133,14 @@ struct JumpTargets {
     T1 instr_collection_rec(F0 &&f, F1 &&f0, const T1 f1) const {
       if (std::holds_alternative<typename instr_collection::JUN_coll>(
               this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_collection::JUN_coll>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] =
+            std::get<typename instr_collection::JUN_coll>(this->v());
+        return f(d_a0);
       } else if (std::holds_alternative<typename instr_collection::JMS_coll>(
                      this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_collection::JMS_coll>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] =
+            std::get<typename instr_collection::JMS_coll>(this->v());
+        return f0(d_a0);
       } else {
         return f1;
       }
@@ -151,14 +151,14 @@ struct JumpTargets {
     T1 instr_collection_rect(F0 &&f, F1 &&f0, const T1 f1) const {
       if (std::holds_alternative<typename instr_collection::JUN_coll>(
               this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_collection::JUN_coll>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] =
+            std::get<typename instr_collection::JUN_coll>(this->v());
+        return f(d_a0);
       } else if (std::holds_alternative<typename instr_collection::JMS_coll>(
                      this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_collection::JMS_coll>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] =
+            std::get<typename instr_collection::JMS_coll>(this->v());
+        return f0(d_a0);
       } else {
         return f1;
       }
@@ -227,14 +227,14 @@ struct JumpTargets {
     __attribute__((pure)) std::optional<unsigned int>
     jump_target_region() const {
       if (std::holds_alternative<typename instr_region::JUN_reg>(this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_region::JUN_reg>(&this->v());
-        return std::make_optional<unsigned int>(_m.d_a0);
+        const auto &[d_a0] =
+            std::get<typename instr_region::JUN_reg>(this->v());
+        return std::make_optional<unsigned int>(d_a0);
       } else if (std::holds_alternative<typename instr_region::JMS_reg>(
                      this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_region::JMS_reg>(&this->v());
-        return std::make_optional<unsigned int>(_m.d_a0);
+        const auto &[d_a0] =
+            std::get<typename instr_region::JMS_reg>(this->v());
+        return std::make_optional<unsigned int>(d_a0);
       } else {
         return std::optional<unsigned int>();
       }
@@ -244,14 +244,14 @@ struct JumpTargets {
               MapsTo<T1, unsigned int> F1>
     T1 instr_region_rec(F0 &&f, F1 &&f0, const T1 f1) const {
       if (std::holds_alternative<typename instr_region::JUN_reg>(this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_region::JUN_reg>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] =
+            std::get<typename instr_region::JUN_reg>(this->v());
+        return f(d_a0);
       } else if (std::holds_alternative<typename instr_region::JMS_reg>(
                      this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_region::JMS_reg>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] =
+            std::get<typename instr_region::JMS_reg>(this->v());
+        return f0(d_a0);
       } else {
         return f1;
       }
@@ -261,14 +261,14 @@ struct JumpTargets {
               MapsTo<T1, unsigned int> F1>
     T1 instr_region_rect(F0 &&f, F1 &&f0, const T1 f1) const {
       if (std::holds_alternative<typename instr_region::JUN_reg>(this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_region::JUN_reg>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] =
+            std::get<typename instr_region::JUN_reg>(this->v());
+        return f(d_a0);
       } else if (std::holds_alternative<typename instr_region::JMS_reg>(
                      this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_region::JMS_reg>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] =
+            std::get<typename instr_region::JMS_reg>(this->v());
+        return f0(d_a0);
       } else {
         return f1;
       }
@@ -334,12 +334,12 @@ struct JumpTargets {
 
     __attribute__((pure)) std::optional<unsigned int> jump_target_jms() const {
       if (std::holds_alternative<typename instr_jms::JUN_jms>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_jms::JUN_jms>(&this->v());
-        return std::make_optional<unsigned int>(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jms::JUN_jms>(this->v());
+        return std::make_optional<unsigned int>(d_a0);
       } else if (std::holds_alternative<typename instr_jms::JMS_jms>(
                      this->v())) {
-        const auto &_m = *std::get_if<typename instr_jms::JMS_jms>(&this->v());
-        return std::make_optional<unsigned int>(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jms::JMS_jms>(this->v());
+        return std::make_optional<unsigned int>(d_a0);
       } else {
         return std::optional<unsigned int>();
       }
@@ -349,12 +349,12 @@ struct JumpTargets {
               MapsTo<T1, unsigned int> F1>
     T1 instr_jms_rec(F0 &&f, F1 &&f0, const T1 f1) const {
       if (std::holds_alternative<typename instr_jms::JUN_jms>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_jms::JUN_jms>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jms::JUN_jms>(this->v());
+        return f(d_a0);
       } else if (std::holds_alternative<typename instr_jms::JMS_jms>(
                      this->v())) {
-        const auto &_m = *std::get_if<typename instr_jms::JMS_jms>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jms::JMS_jms>(this->v());
+        return f0(d_a0);
       } else {
         return f1;
       }
@@ -364,12 +364,12 @@ struct JumpTargets {
               MapsTo<T1, unsigned int> F1>
     T1 instr_jms_rect(F0 &&f, F1 &&f0, const T1 f1) const {
       if (std::holds_alternative<typename instr_jms::JUN_jms>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_jms::JUN_jms>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jms::JUN_jms>(this->v());
+        return f(d_a0);
       } else if (std::holds_alternative<typename instr_jms::JMS_jms>(
                      this->v())) {
-        const auto &_m = *std::get_if<typename instr_jms::JMS_jms>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jms::JMS_jms>(this->v());
+        return f0(d_a0);
       } else {
         return f1;
       }
@@ -427,12 +427,12 @@ struct JumpTargets {
 
     __attribute__((pure)) std::optional<unsigned int> jump_target_jun() const {
       if (std::holds_alternative<typename instr_jun::JUN_jun>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_jun::JUN_jun>(&this->v());
-        return std::make_optional<unsigned int>(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jun::JUN_jun>(this->v());
+        return std::make_optional<unsigned int>(d_a0);
       } else if (std::holds_alternative<typename instr_jun::JMS_jun>(
                      this->v())) {
-        const auto &_m = *std::get_if<typename instr_jun::JMS_jun>(&this->v());
-        return std::make_optional<unsigned int>(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jun::JMS_jun>(this->v());
+        return std::make_optional<unsigned int>(d_a0);
       } else {
         return std::optional<unsigned int>();
       }
@@ -442,12 +442,12 @@ struct JumpTargets {
               MapsTo<T1, unsigned int> F1>
     T1 instr_jun_rec(F0 &&f, F1 &&f0, const T1 f1) const {
       if (std::holds_alternative<typename instr_jun::JUN_jun>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_jun::JUN_jun>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jun::JUN_jun>(this->v());
+        return f(d_a0);
       } else if (std::holds_alternative<typename instr_jun::JMS_jun>(
                      this->v())) {
-        const auto &_m = *std::get_if<typename instr_jun::JMS_jun>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jun::JMS_jun>(this->v());
+        return f0(d_a0);
       } else {
         return f1;
       }
@@ -457,12 +457,12 @@ struct JumpTargets {
               MapsTo<T1, unsigned int> F1>
     T1 instr_jun_rect(F0 &&f, F1 &&f0, const T1 f1) const {
       if (std::holds_alternative<typename instr_jun::JUN_jun>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_jun::JUN_jun>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jun::JUN_jun>(this->v());
+        return f(d_a0);
       } else if (std::holds_alternative<typename instr_jun::JMS_jun>(
                      this->v())) {
-        const auto &_m = *std::get_if<typename instr_jun::JMS_jun>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jun::JMS_jun>(this->v());
+        return f0(d_a0);
       } else {
         return f1;
       }

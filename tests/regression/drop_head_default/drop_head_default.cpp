@@ -12,7 +12,8 @@ DropHeadDefault::head_after_drop(const std::shared_ptr<List<unsigned int>> &rom,
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv->v())) {
     return 0u;
   } else {
-    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&_sv->v());
-    return _m.d_a0;
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(_sv->v());
+    return d_a0;
   }
 }

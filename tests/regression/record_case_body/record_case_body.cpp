@@ -145,10 +145,9 @@ __attribute__((pure)) unsigned int RecordCaseBody::sum_list(
           l->v())) {
     return 0u;
   } else {
-    const auto &_m =
-        *std::get_if<typename RecordCaseBody::list<unsigned int>::Cons>(
-            &l->v());
-    return (_m.d_a0 + sum_list(_m.d_a1));
+    const auto &[d_a0, d_a1] =
+        std::get<typename RecordCaseBody::list<unsigned int>::Cons>(l->v());
+    return (d_a0 + sum_list(d_a1));
   }
 }
 

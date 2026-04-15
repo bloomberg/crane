@@ -42,18 +42,18 @@ struct PolyInductive {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     t_A punbox() const {
-      const auto &_m = *std::get_if<typename pbox<t_A>::PBox>(&this->v());
-      return _m.d_a0;
+      const auto &[d_a0] = std::get<typename pbox<t_A>::PBox>(this->v());
+      return d_a0;
     }
 
     template <typename T1, MapsTo<T1, t_A> F0> T1 pbox_rec(F0 &&f) const {
-      const auto &_m = *std::get_if<typename pbox<t_A>::PBox>(&this->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename pbox<t_A>::PBox>(this->v());
+      return f(d_a0);
     }
 
     template <typename T1, MapsTo<T1, t_A> F0> T1 pbox_rect(F0 &&f) const {
-      const auto &_m = *std::get_if<typename pbox<t_A>::PBox>(&this->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename pbox<t_A>::PBox>(this->v());
+      return f(d_a0);
     }
   };
 
@@ -86,28 +86,28 @@ struct PolyInductive {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     t_B psnd() const {
-      const auto &_m =
-          *std::get_if<typename ppair<t_A, t_B>::PPair>(&this->v());
-      return _m.d_a1;
+      const auto &[d_a0, d_a1] =
+          std::get<typename ppair<t_A, t_B>::PPair>(this->v());
+      return d_a1;
     }
 
     t_A pfst() const {
-      const auto &_m =
-          *std::get_if<typename ppair<t_A, t_B>::PPair>(&this->v());
-      return _m.d_a0;
+      const auto &[d_a0, d_a1] =
+          std::get<typename ppair<t_A, t_B>::PPair>(this->v());
+      return d_a0;
     }
 
     template <typename T1, MapsTo<T1, t_A, t_B> F0> T1 ppair_rec(F0 &&f) const {
-      const auto &_m =
-          *std::get_if<typename ppair<t_A, t_B>::PPair>(&this->v());
-      return f(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] =
+          std::get<typename ppair<t_A, t_B>::PPair>(this->v());
+      return f(d_a0, d_a1);
     }
 
     template <typename T1, MapsTo<T1, t_A, t_B> F0>
     T1 ppair_rect(F0 &&f) const {
-      const auto &_m =
-          *std::get_if<typename ppair<t_A, t_B>::PPair>(&this->v());
-      return f(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] =
+          std::get<typename ppair<t_A, t_B>::PPair>(this->v());
+      return f(d_a0, d_a1);
     }
   };
 
@@ -150,8 +150,8 @@ struct PolyInductive {
       if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(this->v())) {
         return pmaybe<T1>::pnothing();
       } else {
-        const auto &_m = *std::get_if<typename pmaybe<t_A>::PJust>(&this->v());
-        return pmaybe<T1>::pjust(f(_m.d_a0));
+        const auto &[d_a0] = std::get<typename pmaybe<t_A>::PJust>(this->v());
+        return pmaybe<T1>::pjust(f(d_a0));
       }
     }
   };
@@ -162,8 +162,8 @@ struct PolyInductive {
     if (std::holds_alternative<typename pmaybe<T1>::PNothing>(p->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename pmaybe<T1>::PJust>(&p->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename pmaybe<T1>::PJust>(p->v());
+      return f0(d_a0);
     }
   }
 
@@ -173,8 +173,8 @@ struct PolyInductive {
     if (std::holds_alternative<typename pmaybe<T1>::PNothing>(p->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename pmaybe<T1>::PJust>(&p->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename pmaybe<T1>::PJust>(p->v());
+      return f0(d_a0);
     }
   }
 
@@ -183,8 +183,8 @@ struct PolyInductive {
     if (std::holds_alternative<typename pmaybe<T1>::PNothing>(m->v())) {
       return d;
     } else {
-      const auto &_m = *std::get_if<typename pmaybe<T1>::PJust>(&m->v());
-      return _m.d_a0;
+      const auto &[d_a0] = std::get<typename pmaybe<T1>::PJust>(m->v());
+      return d_a0;
     }
   }
 
@@ -236,8 +236,9 @@ struct PolyInductive {
       if (std::holds_alternative<typename ptree<t_A>::PLeaf>(this->v())) {
         return 1u;
       } else {
-        const auto &_m = *std::get_if<typename ptree<t_A>::PNode>(&this->v());
-        return ((_m.d_a0->ptree_size() + _m.d_a1->ptree_size()) + 1);
+        const auto &[d_a0, d_a1] =
+            std::get<typename ptree<t_A>::PNode>(this->v());
+        return ((d_a0->ptree_size() + d_a1->ptree_size()) + 1);
       }
     }
 
@@ -247,12 +248,13 @@ struct PolyInductive {
                   F1>
     T1 ptree_rec(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename ptree<t_A>::PLeaf>(this->v())) {
-        const auto &_m = *std::get_if<typename ptree<t_A>::PLeaf>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename ptree<t_A>::PLeaf>(this->v());
+        return f(d_a0);
       } else {
-        const auto &_m = *std::get_if<typename ptree<t_A>::PNode>(&this->v());
-        return f0(_m.d_a0, _m.d_a0->template ptree_rec<T1>(f, f0), _m.d_a1,
-                  _m.d_a1->template ptree_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1] =
+            std::get<typename ptree<t_A>::PNode>(this->v());
+        return f0(d_a0, d_a0->template ptree_rec<T1>(f, f0), d_a1,
+                  d_a1->template ptree_rec<T1>(f, f0));
       }
     }
 
@@ -262,12 +264,13 @@ struct PolyInductive {
                   F1>
     T1 ptree_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename ptree<t_A>::PLeaf>(this->v())) {
-        const auto &_m = *std::get_if<typename ptree<t_A>::PLeaf>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename ptree<t_A>::PLeaf>(this->v());
+        return f(d_a0);
       } else {
-        const auto &_m = *std::get_if<typename ptree<t_A>::PNode>(&this->v());
-        return f0(_m.d_a0, _m.d_a0->template ptree_rect<T1>(f, f0), _m.d_a1,
-                  _m.d_a1->template ptree_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1] =
+            std::get<typename ptree<t_A>::PNode>(this->v());
+        return f0(d_a0, d_a0->template ptree_rect<T1>(f, f0), d_a1,
+                  d_a1->template ptree_rect<T1>(f, f0));
       }
     }
   };

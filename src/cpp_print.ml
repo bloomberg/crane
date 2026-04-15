@@ -267,9 +267,15 @@ let[@warning "-39"] rec lambda_needs_capture
             let acc = List.fold_left collect_from_expr acc br.smb_extra_conds in
             let refs', decls' = acc in
             let branch_decls =
+              (* Add structured-binding field names as declared. *)
+              let d =
+                List.fold_left
+                  (fun d (bname, _) -> IdSet.add bname d)
+                  decls' br.smb_field_bindings
+              in
               match br.smb_var with
-              | Some id -> IdSet.add id decls'
-              | None -> decls'
+              | Some id -> IdSet.add id d
+              | None -> d
             in
             List.fold_left collect_from_stmt (refs', branch_decls) br.smb_body)
           (refs, decls) branches
@@ -1613,33 +1619,23 @@ and pp_cpp_stmt env args = function
   | Smatch (branches, default) ->
     require_header "variant";
     (* Print an if/else-if chain using [std::holds_alternative] for
-       discrimination, then a [const T&] binding inside each block via
-       [*std::get_if]:
+       discrimination, then structured bindings via [std::get]:
 
          if (std::holds_alternative<Ctor>(_sv->v())) {
-           const auto& _m = *std::get_if<Ctor>(&_sv->v());  // non-null, [.] access
+           const auto& [d_f0, d_f1] = std::get<Ctor>(_sv->v());
            body
          }
 
-       The binding is placed INSIDE the if-block (not in the condition) so
-       that the same name [_m] can be reused across branches without
-       violating C++ scope rules — a name introduced in [if (auto* x = ...)]
-       would be in scope for the entire if/else chain.
+       Structured bindings ([smb_field_bindings] non-empty) decompose the
+       constructor struct into individual field variables.  The binding
+       names come from the Rocq constructor field names (with numeric
+       suffixes for nested matches to avoid shadowing).
 
-       [*get_if] rather than [get]: both are equivalent here (the alternative
-       is guaranteed present after the [holds_alternative] check), but [get_if]
-       is the null-safe accessor.  The dereference produces [const T&], keeping
-       [[=]]-capture semantics identical to [std::get] — closures copy the
-       struct value, not a raw pointer.
+       Frame-dispatch branches ([smb_field_bindings] empty, [smb_var = Some _f])
+       use a single aggregate binding:
+         [const auto& _f = std::get<FrameType>(_fsv);]
 
-       Binding strategy:
-       - Inductive match branches ([smb_var = _m, _m0, …]):
-           [const auto& _m = *std::get_if<Ctor>(&_sv->v());] — reference, [.] access.
-       - Frame-dispatch branches ([smb_var = _f]):
-           [const auto& _f = std::get<FrameType>(_fsv);] — reference, [.] access.
-         (Frame bodies use [CPPmember] dot access and are unchanged.)
-       - Branches without a binding ([smb_var = None]):
-           no binding statement emitted.
+       Branches without a binding ([smb_var = None]) emit no binding.
 
        The scrutinee is evaluated once and stored in [auto&&] to prevent
        re-evaluation and to keep temporaries alive across branches.
@@ -1654,12 +1650,7 @@ and pp_cpp_stmt env args = function
     let pp_scrut = pp_cpp_expr env args in
     (* Derive a unique scrutinee variable name from the first branch's binding
        variable, so that two Smatch nodes in the same scope never redeclare the
-       same scrutinee name — no block-scoping is needed.
-
-       Inductive-match branches use [_m], [_m0], [_m5], … (from the match-param
-       counter in translation.ml) → scrutinee [_sv], [_sv0], [_sv5], …
-       Frame-dispatch branches use [_f] (from loopify.ml) → scrutinee [_fsv].
-       The numeric suffix (if any) is preserved to keep names unique. *)
+       same scrutinee name — no block-scoping is needed. *)
     let sv_name =
       match List.find_opt (fun br -> br.smb_var <> None) branches with
       | Some { smb_var = Some id; _ } ->
@@ -1671,21 +1662,12 @@ and pp_cpp_stmt env args = function
           else None
         in
         ( match strip_prefix "_m" with
-        | Some suffix -> "_sv" ^ suffix          (* _m, _m0, _m5 → _sv, _sv0, _sv5 *)
+        | Some suffix -> "_sv" ^ suffix
         | None ->
           match strip_prefix "_f" with
-          | Some suffix -> "_fsv" ^ suffix       (* _f → _fsv (loopify frame dispatch) *)
+          | Some suffix -> "_fsv" ^ suffix
           | None -> "_sv" )
       | _ -> "_sv"
-    in
-    (* True when this Smatch is a frame-dispatch (loopify): binding var is [_f].
-       Frame handlers access fields with dot ([_f.field]) via [CPPmember], so
-       we keep the [const auto& _f = std::get<T>(scrut)] binding style here.
-       Inductive matches use [_m] and arrow ([_m->field]) via [CPParrow], so
-       they get [auto* _m = std::get_if<T>(&scrut)] instead. *)
-    let is_frame_dispatch =
-      String.length sv_name >= 4
-      && String.sub sv_name 0 4 = "_fsv"
     in
     (* Helper: [std::holds_alternative<Ctor>(scrut)]. *)
     let pp_holds scrut_var_pp br =
@@ -1694,28 +1676,31 @@ and pp_cpp_stmt env args = function
       ++ scrut_var_pp ++ str ")"
     in
     (* Helper: binding statement inside the if-block.
-       - Inductive: [const auto& _m = *std::get_if<T>(&scrut_ref);]
-         Dereferencing [get_if] gives a [const T&] reference; dot access and
-         [[=]] closures are safe since they copy the struct value, not a pointer.
-       - Frame:     [const auto& _f = std::get<T>(scrut_var);] — reference, [.] access.
-         (Frame bodies use [CPPmember] dot access and are unchanged.) *)
-    let pp_block_binding scrut_var_pp scrut_ref_pp br =
-      match br.smb_var with
-      | Some var_id when is_frame_dispatch ->
-        str "const auto& " ++ Id.print var_id
-        ++ str " = " ++ str (sn ()).get ++ str "<"
+       - Structured bindings: [const auto& [f1, f2] = std::get<T>(scrut);]
+       - Frame dispatch (no field bindings): [const auto& _f = std::get<T>(scrut);]
+       - No binding: empty. *)
+    let pp_block_binding scrut_var_pp br =
+      match br.smb_field_bindings with
+      | _ :: _ ->
+        str "const auto& ["
+        ++ prlist_with_sep (fun () -> str ", ")
+             (fun (bname, _ty) -> Id.print bname)
+             br.smb_field_bindings
+        ++ str "] = " ++ str (sn ()).get ++ str "<"
         ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("
         ++ scrut_var_pp ++ str ");"
-      | Some var_id ->
-        str "const auto& " ++ Id.print var_id
-        ++ str " = *" ++ str (sn ()).get_if ++ str "<"
-        ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("
-        ++ scrut_ref_pp ++ str ");"
-      | None -> mt ()
+      | [] ->
+        ( match br.smb_var with
+        | Some var_id ->
+          str "const auto& " ++ Id.print var_id
+          ++ str " = " ++ str (sn ()).get ++ str "<"
+          ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("
+          ++ scrut_var_pp ++ str ");"
+        | None -> mt () )
     in
     (* Extract the scrutinee object expression from [CPPmethod_call(obj, "v", [])].
        Bind it with [auto&&] to extend any temporary's lifetime, then
-       reconstruct the variant accessors as [_svN->v()] and [&_svN->v()].
+       reconstruct the variant accessor as [_svN->v()].
        Falls back to the raw scrutinee expression when the pattern doesn't match. *)
     let first_scrut = (List.hd branches).smb_scrutinee in
     let scrut_obj_opt =
@@ -1724,42 +1709,33 @@ and pp_cpp_stmt env args = function
         Some obj
       | _ -> None
     in
-    let scrut_binding_pp, scrut_var_pp, scrut_ref_pp =
+    let scrut_binding_pp, scrut_var_pp =
       match scrut_obj_opt with
       | Some (CPPvar id) ->
-        (* Object is already a plain variable — use it directly via [->v()].
-           No need to cache in [_sv]. *)
         let name = Id.to_string id in
-        (mt (), str (name ^ "->v()"), str ("&" ^ name ^ "->v()"))
+        (mt (), str (name ^ "->v()"))
       | Some CPPthis ->
-        (* [this] is always in scope — use it directly. *)
-        (mt (), str "this->v()", str "&this->v()")
+        (mt (), str "this->v()")
       | Some obj_expr ->
-        (* Non-trivial object expression — cache in [_sv] so [->v()] is only
-           evaluated once and any temporary's lifetime is extended. *)
         let obj_pp = pp_scrut obj_expr in
         ( str ("auto&& " ^ sv_name ^ " = ") ++ obj_pp ++ str ";" ++ fnl (),
-          str (sv_name ^ "->v()"),
-          str ("&" ^ sv_name ^ "->v()") )
+          str (sv_name ^ "->v()") )
       | None ->
         ( match first_scrut with
         | CPPvar id ->
-          (* Already a plain variable — no caching needed, use it directly. *)
           let name = Id.to_string id in
-          (mt (), str name, str ("&" ^ name))
+          (mt (), str name)
         | _ ->
-          (* Non-trivial expression — cache in a local to avoid re-evaluation. *)
           let raw_pp = pp_scrut first_scrut in
           ( str ("const auto& " ^ sv_name ^ " = ") ++ raw_pp ++ str ";" ++ fnl (),
-            str sv_name,
-            str ("&" ^ sv_name) ) )
+            str sv_name ) )
     in
     if n_branches = 1 && default = None then
       (* Single-constructor exhaustive match: emit binding + body inline.
          No if/else needed. *)
       let br = List.hd branches in
       let body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
-      let binding = pp_block_binding scrut_var_pp scrut_ref_pp br in
+      let binding = pp_block_binding scrut_var_pp br in
       if binding = mt () then body_pp
       else scrut_binding_pp ++ binding ++ fnl () ++ body_pp
     else
@@ -1769,18 +1745,13 @@ and pp_cpp_stmt env args = function
         i = n_branches - 1 && default = None && n_branches > 1
       in
       let body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
-      let binding = pp_block_binding scrut_var_pp scrut_ref_pp br in
+      let binding = pp_block_binding scrut_var_pp br in
       if is_last_no_wild then
-        (* Last branch of exhaustive match: plain [else].  The binding
-           lives directly inside the else-block. *)
         if binding = mt () then
           str "} else {" ++ fnl () ++ body_pp
         else
           str "} else {" ++ fnl () ++ binding ++ fnl () ++ body_pp
       else
-        (* Check with [holds_alternative]; binding lives inside the if-block
-           (not in the condition), so the same name can be reused across
-           branches without C++ re-declaration errors. *)
         let holds_pp = pp_holds scrut_var_pp br in
         let cond_pp =
           match br.smb_extra_conds with
@@ -1814,7 +1785,6 @@ and pp_cpp_stmt env args = function
       | None when branches = [] ->
         str "std::unreachable();"
       | None ->
-        (* Exhaustive match — last branch already printed as plain else. *)
         mt ()
     in
     branches_pp ++ default_pp ++ fnl () ++ str "}"

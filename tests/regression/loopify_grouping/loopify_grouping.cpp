@@ -29,11 +29,11 @@ LoopifyGrouping::prepend_to_groups(
           List<unsigned int>::cons(x, List<unsigned int>::nil()),
           List<std::shared_ptr<List<unsigned int>>>::nil());
     } else {
-      const auto &_m = *std::get_if<
-          typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-          &groups->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+              groups->v());
       return List<std::shared_ptr<List<unsigned int>>>::cons(
-          List<unsigned int>::cons(x, _m.d_a0), _m.d_a1);
+          List<unsigned int>::cons(x, d_a0), d_a1);
     }
   } else {
     return List<std::shared_ptr<List<unsigned int>>>::cons(
@@ -50,8 +50,8 @@ LoopifyGrouping::group_fuel(const unsigned int fuel,
   };
 
   struct _Call1 {
-    const typename List<unsigned int>::Cons _s0;
-    const typename List<unsigned int>::Cons _s1;
+    unsigned int _s0;
+    unsigned int _s1;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -72,31 +72,29 @@ LoopifyGrouping::group_fuel(const unsigned int fuel,
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
           _result = List<std::shared_ptr<List<unsigned int>>>::nil();
         } else {
-          const auto &_m =
-              *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-          auto &&_sv0 = _m.d_a1;
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l->v());
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  _sv0->v())) {
+                  d_a1->v())) {
             _result = List<std::shared_ptr<List<unsigned int>>>::cons(
-                List<unsigned int>::cons(_m.d_a0, List<unsigned int>::nil()),
+                List<unsigned int>::cons(d_a0, List<unsigned int>::nil()),
                 List<std::shared_ptr<List<unsigned int>>>::nil());
           } else {
-            const auto &_m0 =
-                *std::get_if<typename List<unsigned int>::Cons>(&_sv0->v());
-            _stack.emplace_back(_Call1{_m, _m0});
+            const auto &[d_a00, d_a10] =
+                std::get<typename List<unsigned int>::Cons>(d_a1->v());
+            _stack.emplace_back(_Call1{d_a0, d_a00});
             _stack.emplace_back(
-                _Enter{List<unsigned int>::cons(_m0.d_a0, _m0.d_a1), fuel_});
+                _Enter{List<unsigned int>::cons(d_a00, d_a10), fuel_});
           }
         }
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename List<unsigned int>::Cons _m = _f._s0;
-      const typename List<unsigned int>::Cons _m0 = _f._s1;
+      unsigned int d_a0 = _f._s0;
+      unsigned int d_a00 = _f._s1;
       std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> rec_result =
           _result;
-      _result = prepend_to_groups(_m.d_a0, _m.d_a0 == _m0.d_a0,
-                                  std::move(rec_result));
+      _result = prepend_to_groups(d_a0, d_a0 == d_a00, std::move(rec_result));
     }
   }
   return _result;
@@ -119,13 +117,13 @@ LoopifyGrouping::elem(const unsigned int x,
       _result = false;
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-      if (x == _m.d_a0) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      if (x == d_a0) {
         _result = true;
         _continue = false;
       } else {
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
       }
     }
   }
@@ -139,7 +137,7 @@ LoopifyGrouping::nub(const std::shared_ptr<List<unsigned int>> &l) {
   };
 
   struct _Call1 {
-    const typename List<unsigned int>::Cons _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -155,19 +153,19 @@ LoopifyGrouping::nub(const std::shared_ptr<List<unsigned int>> &l) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
         _result = List<unsigned int>::nil();
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-        _stack.emplace_back(_Call1{_m});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
+        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename List<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       std::shared_ptr<List<unsigned int>> rest = _result;
-      if (elem(_m.d_a0, rest)) {
+      if (elem(d_a0, rest)) {
         _result = std::move(rest);
       } else {
-        _result = List<unsigned int>::cons(_m.d_a0, rest);
+        _result = List<unsigned int>::cons(d_a0, rest);
       }
     }
   }
@@ -192,13 +190,13 @@ LoopifyGrouping::remove_elem(const unsigned int x,
       }
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-      if (x == _m.d_a0) {
-        _loop_l = _m.d_a1;
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      if (x == d_a0) {
+        _loop_l = d_a1;
         continue;
       } else {
-        auto _cell = List<unsigned int>::cons(_m.d_a0, nullptr);
+        auto _cell = List<unsigned int>::cons(d_a0, nullptr);
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
               _cell;
@@ -206,7 +204,7 @@ LoopifyGrouping::remove_elem(const unsigned int x,
           _head = _cell;
         }
         _last = _cell;
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
         continue;
       }
     }
@@ -225,7 +223,7 @@ LoopifyGrouping::partition3(const unsigned int pivot,
 
   struct _Call1 {
     const unsigned int _s0;
-    const typename List<unsigned int>::Cons _s1;
+    unsigned int _s1;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -246,31 +244,31 @@ LoopifyGrouping::partition3(const unsigned int pivot,
                                                 List<unsigned int>::nil()),
                                  List<unsigned int>::nil());
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-        _stack.emplace_back(_Call1{pivot, _m});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
+        _stack.emplace_back(_Call1{pivot, d_a0});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
       const unsigned int pivot = _f._s0;
-      const typename List<unsigned int>::Cons _m = _f._s1;
+      unsigned int d_a0 = _f._s1;
       const std::pair<std::shared_ptr<List<unsigned int>>,
                       std::shared_ptr<List<unsigned int>>> &p = _result.first;
       const std::shared_ptr<List<unsigned int>> &greater = _result.second;
       const std::shared_ptr<List<unsigned int>> &less = p.first;
       const std::shared_ptr<List<unsigned int>> &equal = p.second;
-      if (_m.d_a0 < pivot) {
+      if (d_a0 < pivot) {
         _result = std::make_pair(
-            std::make_pair(List<unsigned int>::cons(_m.d_a0, less), equal),
+            std::make_pair(List<unsigned int>::cons(d_a0, less), equal),
             greater);
       } else {
-        if (pivot < _m.d_a0) {
+        if (pivot < d_a0) {
           _result = std::make_pair(std::make_pair(less, equal),
-                                   List<unsigned int>::cons(_m.d_a0, greater));
+                                   List<unsigned int>::cons(d_a0, greater));
         } else {
           _result = std::make_pair(
-              std::make_pair(less, List<unsigned int>::cons(_m.d_a0, equal)),
+              std::make_pair(less, List<unsigned int>::cons(d_a0, equal)),
               greater);
         }
       }
@@ -303,13 +301,13 @@ LoopifyGrouping::count_elem(const unsigned int x,
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
         _result = 0u;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-        if (x == _m.d_a0) {
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
+        if (x == d_a0) {
           _stack.emplace_back(_Call1{1u});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          _stack.emplace_back(_Enter{d_a1});
         } else {
-          _stack.emplace_back(_Enter{_m.d_a1});
+          _stack.emplace_back(_Enter{d_a1});
         }
       }
     } else {
@@ -338,10 +336,9 @@ LoopifyGrouping::group_pairs(const std::shared_ptr<List<unsigned int>> &l) {
       }
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-      auto &&_sv = _m.d_a1;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv->v())) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
         if (_last) {
           std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
               _last->v_mut())
@@ -351,9 +348,8 @@ LoopifyGrouping::group_pairs(const std::shared_ptr<List<unsigned int>> &l) {
         }
         _continue = false;
       } else {
-        auto &&_sv1 = _m.d_a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _sv1->v())) {
+                d_a1->v())) {
           if (_last) {
             std::get<
                 typename List<std::pair<unsigned int, unsigned int>>::Cons>(
@@ -364,10 +360,10 @@ LoopifyGrouping::group_pairs(const std::shared_ptr<List<unsigned int>> &l) {
           }
           _continue = false;
         } else {
-          const auto &_m1 =
-              *std::get_if<typename List<unsigned int>::Cons>(&_sv1->v());
+          const auto &[d_a01, d_a11] =
+              std::get<typename List<unsigned int>::Cons>(d_a1->v());
           auto _cell = List<std::pair<unsigned int, unsigned int>>::cons(
-              std::make_pair(_m.d_a0, _m1.d_a0), nullptr);
+              std::make_pair(d_a0, d_a01), nullptr);
           if (_last) {
             std::get<
                 typename List<std::pair<unsigned int, unsigned int>>::Cons>(
@@ -377,7 +373,7 @@ LoopifyGrouping::group_pairs(const std::shared_ptr<List<unsigned int>> &l) {
             _head = _cell;
           }
           _last = _cell;
-          _loop_l = _m1.d_a1;
+          _loop_l = d_a11;
           continue;
         }
       }

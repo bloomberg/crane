@@ -56,8 +56,8 @@ public:
     if (bsl::holds_alternative<typename Nat::O>(this->v())) {
       return 0;
     } else {
-      const auto &_m = *bsl::get_if<typename Nat::S>(&this->v());
-      return 1 + _m.d_n->nat_to_int();
+      const auto &[d_n] = bsl::get<typename Nat::S>(this->v());
+      return 1 + d_n->nat_to_int();
     }
   }
   template <typename T1, MapsTo<T1, bsl::shared_ptr<Nat>, T1> F1>
@@ -65,8 +65,8 @@ public:
     if (bsl::holds_alternative<typename Nat::O>(this->v())) {
       return f;
     } else {
-      const auto &_m = *bsl::get_if<typename Nat::S>(&this->v());
-      return f0(_m.d_n, _m.d_n->template nat_rec<T1>(f, f0));
+      const auto &[d_n] = bsl::get<typename Nat::S>(this->v());
+      return f0(d_n, d_n->template nat_rec<T1>(f, f0));
     }
   }
   template <typename T1, MapsTo<T1, bsl::shared_ptr<Nat>, T1> F1>
@@ -74,16 +74,16 @@ public:
     if (bsl::holds_alternative<typename Nat::O>(this->v())) {
       return f;
     } else {
-      const auto &_m = *bsl::get_if<typename Nat::S>(&this->v());
-      return f0(_m.d_n, _m.d_n->template nat_rect<T1>(f, f0));
+      const auto &[d_n] = bsl::get<typename Nat::S>(this->v());
+      return f0(d_n, d_n->template nat_rect<T1>(f, f0));
     }
   }
   bsl::shared_ptr<Nat> add(bsl::shared_ptr<Nat> n) const {
     if (bsl::holds_alternative<typename Nat::O>(this->v())) {
       return n;
     } else {
-      const auto &_m = *bsl::get_if<typename Nat::S>(&this->v());
-      return Nat::s(_m.d_n->add(n));
+      const auto &[d_n] = bsl::get<typename Nat::S>(this->v());
+      return Nat::s(d_n->add(n));
     }
   }
 };

@@ -59,8 +59,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return x;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return _m.d_a1->last(_m.d_a0);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return d_a1->last(d_a0);
     }
   }
 
@@ -68,8 +68,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return x;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return _m.d_a0;
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return d_a0;
     }
   }
 
@@ -78,8 +78,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return f0(_m.d_a0, _m.d_a1, _m.d_a1->template list_rec<T1>(f, f0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return f0(d_a0, d_a1, d_a1->template list_rec<T1>(f, f0));
     }
   }
 
@@ -88,8 +88,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return f0(_m.d_a0, _m.d_a1, _m.d_a1->template list_rect<T1>(f, f0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return f0(d_a0, d_a1, d_a1->template list_rect<T1>(f, f0));
     }
   }
 
@@ -97,8 +97,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<t_A>::nil();
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return _m.d_a1;
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return d_a1;
     }
   }
 
@@ -106,8 +106,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return l2;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return List<t_A>::cons(_m.d_a0, _m.d_a1->app(l2));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, d_a1->app(l2));
     }
   }
 
@@ -116,8 +116,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return List<T1>::cons(f(_m.d_a0), _m.d_a1->template map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<T1>::cons(f(d_a0), d_a1->template map<T1>(f));
     }
   }
 

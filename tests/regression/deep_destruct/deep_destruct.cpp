@@ -42,9 +42,8 @@ __attribute__((pure)) unsigned int DeepDestruct::head_or_zero(
           typename DeepDestruct::mylist<unsigned int>::Mynil>(l->v())) {
     return 0u;
   } else {
-    const auto &_m =
-        *std::get_if<typename DeepDestruct::mylist<unsigned int>::Mycons>(
-            &l->v());
-    return _m.d_a0;
+    const auto &[d_a0, d_a1] =
+        std::get<typename DeepDestruct::mylist<unsigned int>::Mycons>(l->v());
+    return d_a0;
   }
 }

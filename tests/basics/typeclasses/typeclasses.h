@@ -109,8 +109,8 @@ struct Typeclasses {
         if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
           return 0u;
         } else {
-          const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
-          return (_tcI0::to_nat(_m.d_a0) + sum(_m.d_a1));
+          const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+          return (_tcI0::to_nat(d_a0) + sum(d_a1));
         }
       };
       return sum(a0);

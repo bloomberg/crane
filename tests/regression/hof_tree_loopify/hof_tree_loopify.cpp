@@ -98,75 +98,75 @@ Nat::of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc) {
       _result = _loop_acc;
       _continue = false;
     } else if (std::holds_alternative<typename Uint::D0>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint::D0>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint::D0>(_loop_d->v());
       unsigned int _next_acc = Nat::tail_mul(10u, _loop_acc);
-      std::shared_ptr<Uint> _next_d = _m.d_a0;
+      std::shared_ptr<Uint> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint::D1>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint::D1>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint::D1>(_loop_d->v());
       unsigned int _next_acc = (Nat::tail_mul(10u, _loop_acc) + 1);
-      std::shared_ptr<Uint> _next_d = _m.d_a0;
+      std::shared_ptr<Uint> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint::D2>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint::D2>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint::D2>(_loop_d->v());
       unsigned int _next_acc = ((Nat::tail_mul(10u, _loop_acc) + 1) + 1);
-      std::shared_ptr<Uint> _next_d = _m.d_a0;
+      std::shared_ptr<Uint> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint::D3>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint::D3>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint::D3>(_loop_d->v());
       unsigned int _next_acc = (((Nat::tail_mul(10u, _loop_acc) + 1) + 1) + 1);
-      std::shared_ptr<Uint> _next_d = _m.d_a0;
+      std::shared_ptr<Uint> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint::D4>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint::D4>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint::D4>(_loop_d->v());
       unsigned int _next_acc =
           ((((Nat::tail_mul(10u, _loop_acc) + 1) + 1) + 1) + 1);
-      std::shared_ptr<Uint> _next_d = _m.d_a0;
+      std::shared_ptr<Uint> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint::D5>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint::D5>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint::D5>(_loop_d->v());
       unsigned int _next_acc =
           (((((Nat::tail_mul(10u, _loop_acc) + 1) + 1) + 1) + 1) + 1);
-      std::shared_ptr<Uint> _next_d = _m.d_a0;
+      std::shared_ptr<Uint> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint::D6>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint::D6>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint::D6>(_loop_d->v());
       unsigned int _next_acc =
           ((((((Nat::tail_mul(10u, _loop_acc) + 1) + 1) + 1) + 1) + 1) + 1);
-      std::shared_ptr<Uint> _next_d = _m.d_a0;
+      std::shared_ptr<Uint> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint::D7>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint::D7>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint::D7>(_loop_d->v());
       unsigned int _next_acc =
           (((((((Nat::tail_mul(10u, _loop_acc) + 1) + 1) + 1) + 1) + 1) + 1) +
            1);
-      std::shared_ptr<Uint> _next_d = _m.d_a0;
+      std::shared_ptr<Uint> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint::D8>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint::D8>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint::D8>(_loop_d->v());
       unsigned int _next_acc =
           ((((((((Nat::tail_mul(10u, _loop_acc) + 1) + 1) + 1) + 1) + 1) + 1) +
             1) +
            1);
-      std::shared_ptr<Uint> _next_d = _m.d_a0;
+      std::shared_ptr<Uint> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else {
-      const auto &_m = *std::get_if<typename Uint::D9>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint::D9>(_loop_d->v());
       unsigned int _next_acc =
           (((((((((Nat::tail_mul(10u, _loop_acc) + 1) + 1) + 1) + 1) + 1) + 1) +
              1) +
             1) +
            1);
-      std::shared_ptr<Uint> _next_d = _m.d_a0;
+      std::shared_ptr<Uint> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     }
@@ -190,79 +190,79 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
       _result = _loop_acc;
       _continue = false;
     } else if (std::holds_alternative<typename Uint0::D10>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint0::D10>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint0::D10>(_loop_d->v());
       unsigned int _next_acc = Nat::tail_mul(16u, _loop_acc);
-      std::shared_ptr<Uint0> _next_d = _m.d_a0;
+      std::shared_ptr<Uint0> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint0::D11>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint0::D11>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint0::D11>(_loop_d->v());
       unsigned int _next_acc = (Nat::tail_mul(16u, _loop_acc) + 1);
-      std::shared_ptr<Uint0> _next_d = _m.d_a0;
+      std::shared_ptr<Uint0> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint0::D12>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint0::D12>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint0::D12>(_loop_d->v());
       unsigned int _next_acc = ((Nat::tail_mul(16u, _loop_acc) + 1) + 1);
-      std::shared_ptr<Uint0> _next_d = _m.d_a0;
+      std::shared_ptr<Uint0> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint0::D13>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint0::D13>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint0::D13>(_loop_d->v());
       unsigned int _next_acc = (((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1);
-      std::shared_ptr<Uint0> _next_d = _m.d_a0;
+      std::shared_ptr<Uint0> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint0::D14>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint0::D14>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint0::D14>(_loop_d->v());
       unsigned int _next_acc =
           ((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1);
-      std::shared_ptr<Uint0> _next_d = _m.d_a0;
+      std::shared_ptr<Uint0> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint0::D15>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint0::D15>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint0::D15>(_loop_d->v());
       unsigned int _next_acc =
           (((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1);
-      std::shared_ptr<Uint0> _next_d = _m.d_a0;
+      std::shared_ptr<Uint0> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint0::D16>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint0::D16>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint0::D16>(_loop_d->v());
       unsigned int _next_acc =
           ((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) + 1);
-      std::shared_ptr<Uint0> _next_d = _m.d_a0;
+      std::shared_ptr<Uint0> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint0::D17>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint0::D17>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint0::D17>(_loop_d->v());
       unsigned int _next_acc =
           (((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) + 1) +
            1);
-      std::shared_ptr<Uint0> _next_d = _m.d_a0;
+      std::shared_ptr<Uint0> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint0::D18>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint0::D18>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint0::D18>(_loop_d->v());
       unsigned int _next_acc =
           ((((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) + 1) +
             1) +
            1);
-      std::shared_ptr<Uint0> _next_d = _m.d_a0;
+      std::shared_ptr<Uint0> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint0::D19>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint0::D19>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint0::D19>(_loop_d->v());
       unsigned int _next_acc =
           (((((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) + 1) +
              1) +
             1) +
            1);
-      std::shared_ptr<Uint0> _next_d = _m.d_a0;
+      std::shared_ptr<Uint0> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint0::Da>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint0::Da>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint0::Da>(_loop_d->v());
       unsigned int _next_acc =
           ((((((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) +
                1) +
@@ -270,11 +270,11 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
              1) +
             1) +
            1);
-      std::shared_ptr<Uint0> _next_d = _m.d_a0;
+      std::shared_ptr<Uint0> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint0::Db>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint0::Db>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint0::Db>(_loop_d->v());
       unsigned int _next_acc =
           (((((((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) +
                 1) +
@@ -283,11 +283,11 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
              1) +
             1) +
            1);
-      std::shared_ptr<Uint0> _next_d = _m.d_a0;
+      std::shared_ptr<Uint0> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint0::Dc>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint0::Dc>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint0::Dc>(_loop_d->v());
       unsigned int _next_acc =
           ((((((((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) +
                  1) +
@@ -297,11 +297,11 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
              1) +
             1) +
            1);
-      std::shared_ptr<Uint0> _next_d = _m.d_a0;
+      std::shared_ptr<Uint0> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint0::Dd>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint0::Dd>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint0::Dd>(_loop_d->v());
       unsigned int _next_acc =
           (((((((((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) +
                   1) +
@@ -312,11 +312,11 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
              1) +
             1) +
            1);
-      std::shared_ptr<Uint0> _next_d = _m.d_a0;
+      std::shared_ptr<Uint0> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else if (std::holds_alternative<typename Uint0::De>(_loop_d->v())) {
-      const auto &_m = *std::get_if<typename Uint0::De>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint0::De>(_loop_d->v());
       unsigned int _next_acc =
           ((((((((((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) +
                    1) +
@@ -328,11 +328,11 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
              1) +
             1) +
            1);
-      std::shared_ptr<Uint0> _next_d = _m.d_a0;
+      std::shared_ptr<Uint0> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     } else {
-      const auto &_m = *std::get_if<typename Uint0::Df>(&_loop_d->v());
+      const auto &[d_a0] = std::get<typename Uint0::Df>(_loop_d->v());
       unsigned int _next_acc =
           (((((((((((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) +
                      1) +
@@ -346,7 +346,7 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
              1) +
             1) +
            1);
-      std::shared_ptr<Uint0> _next_d = _m.d_a0;
+      std::shared_ptr<Uint0> _next_d = d_a0;
       _loop_acc = std::move(_next_acc);
       _loop_d = std::move(_next_d);
     }
@@ -362,10 +362,10 @@ Nat::of_hex_uint(const std::shared_ptr<Uint0> &d) {
 __attribute__((pure)) unsigned int
 Nat::of_num_uint(const std::shared_ptr<Uint1> &d) {
   if (std::holds_alternative<typename Uint1::UIntDecimal>(d->v())) {
-    const auto &_m = *std::get_if<typename Uint1::UIntDecimal>(&d->v());
-    return Nat::of_uint(_m.d_u);
+    const auto &[d_u] = std::get<typename Uint1::UIntDecimal>(d->v());
+    return Nat::of_uint(d_u);
   } else {
-    const auto &_m = *std::get_if<typename Uint1::UIntHexadecimal>(&d->v());
-    return Nat::of_hex_uint(_m.d_u);
+    const auto &[d_u] = std::get<typename Uint1::UIntHexadecimal>(d->v());
+    return Nat::of_hex_uint(d_u);
   }
 }

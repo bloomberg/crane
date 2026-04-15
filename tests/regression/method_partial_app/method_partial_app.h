@@ -71,8 +71,9 @@ struct MethodPartialApp {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return 0u;
       } else {
-        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
-        return ((_m.d_a0->tree_sum() + _m.d_a1) + _m.d_a2->tree_sum());
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return ((d_a0->tree_sum() + d_a1) + d_a2->tree_sum());
       }
     }
   };
@@ -84,9 +85,9 @@ struct MethodPartialApp {
     if (std::holds_alternative<typename tree::Leaf>(t->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
-      return f0(_m.d_a0, tree_rect<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
-                tree_rect<T1>(f, f0, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rect<T1>(f, f0, d_a0), d_a1, d_a2,
+                tree_rect<T1>(f, f0, d_a2));
     }
   }
 
@@ -97,9 +98,9 @@ struct MethodPartialApp {
     if (std::holds_alternative<typename tree::Leaf>(t->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
-      return f0(_m.d_a0, tree_rec<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
-                tree_rec<T1>(f, f0, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rec<T1>(f, f0, d_a0), d_a1, d_a2,
+                tree_rec<T1>(f, f0, d_a2));
     }
   }
 
@@ -148,15 +149,15 @@ struct MethodPartialApp {
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 box_rec(F0 &&f) const {
-      const auto &_m = *std::get_if<typename box::Box0>(&this->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename box::Box0>(this->v());
+      return f(d_a0);
     }
 
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 box_rect(F0 &&f) const {
-      const auto &_m = *std::get_if<typename box::Box0>(&this->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename box::Box0>(this->v());
+      return f(d_a0);
     }
   };
 
@@ -169,8 +170,8 @@ struct MethodPartialApp {
           box::box0([=](unsigned int _x0) mutable -> unsigned int {
             return t->add_to_sum(_x0);
           });
-      const auto &_m = *std::get_if<typename box::Box0>(&b->v());
-      return (_m.d_a0(5u) + _m.d_a0(10u));
+      const auto &[d_a0] = std::get<typename box::Box0>(b->v());
+      return (d_a0(5u) + d_a0(10u));
     }();
   }();
   /// Two partial apps from different trees.

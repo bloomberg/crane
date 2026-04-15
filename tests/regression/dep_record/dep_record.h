@@ -127,9 +127,9 @@ struct DepRecord {
             l->v())) {
       return _tcI0::m_id();
     } else {
-      const auto &_m =
-          *std::get_if<typename List<typename _tcI0::m_carrier>::Cons>(&l->v());
-      return _tcI0::m_op(_m.d_a0, mfold<_tcI0>(_m.d_a1));
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<typename _tcI0::m_carrier>::Cons>(l->v());
+      return _tcI0::m_op(d_a0, mfold<_tcI0>(d_a1));
     }
   }
 

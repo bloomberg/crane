@@ -60,8 +60,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return true;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (f(_m.d_a0) && _m.d_a1->forallb(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (f(d_a0) && d_a1->forallb(f));
     }
   }
 
@@ -69,8 +69,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (_m.d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
     }
   }
 };

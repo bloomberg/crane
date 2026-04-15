@@ -60,8 +60,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (_m.d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
     }
   }
 };
@@ -134,11 +134,11 @@ struct DisassembleOps {
     } else if (std::holds_alternative<typename instruction::NOP2>(i->v())) {
       return f0;
     } else if (std::holds_alternative<typename instruction::LDM>(i->v())) {
-      const auto &_m = *std::get_if<typename instruction::LDM>(&i->v());
-      return f1(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction::LDM>(i->v());
+      return f1(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename instruction::LDM2>(&i->v());
-      return f2(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction::LDM2>(i->v());
+      return f2(d_a0);
     }
   }
 
@@ -151,11 +151,11 @@ struct DisassembleOps {
     } else if (std::holds_alternative<typename instruction::NOP2>(i->v())) {
       return f0;
     } else if (std::holds_alternative<typename instruction::LDM>(i->v())) {
-      const auto &_m = *std::get_if<typename instruction::LDM>(&i->v());
-      return f1(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction::LDM>(i->v());
+      return f1(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename instruction::LDM2>(&i->v());
-      return f2(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction::LDM2>(i->v());
+      return f2(d_a0);
     }
   }
 
@@ -202,8 +202,8 @@ struct DisassembleOps {
       } else if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
         return List<T1>::nil();
       } else {
-        const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
-        return drop<T1>(n_, _m.d_a1);
+        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+        return drop<T1>(n_, d_a1);
       }
     }
   }

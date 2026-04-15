@@ -78,9 +78,10 @@ public:
         if (std::holds_alternative<typename List<t_A>::Nil>(_self->v())) {
           _result = 0u;
         } else {
-          const auto &_m = *std::get_if<typename List<t_A>::Cons>(&_self->v());
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<t_A>::Cons>(_self->v());
           _stack.emplace_back(_Call1{});
-          _stack.emplace_back(_Enter{_m.d_a1.get()});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);

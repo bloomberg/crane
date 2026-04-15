@@ -71,16 +71,16 @@ public:
         }
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<t_A>::Cons>(&_loop_self->v());
-        auto _cell = List<t_A>::cons(_m.d_a0, nullptr);
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<t_A>::Cons>(_loop_self->v());
+        auto _cell = List<t_A>::cons(d_a0, nullptr);
         if (_last) {
           std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = _cell;
         } else {
           _head = _cell;
         }
         _last = _cell;
-        _loop_self = _m.d_a1.get();
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -153,8 +153,8 @@ struct LoopifyGenerators {
         }
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l1->v());
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _loop_l2->v())) {
           if (_last) {
@@ -165,9 +165,9 @@ struct LoopifyGenerators {
           }
           _continue = false;
         } else {
-          const auto &_m0 =
-              *std::get_if<typename List<unsigned int>::Cons>(&_loop_l2->v());
-          auto _cell = List<unsigned int>::cons(f(_m.d_a0, _m0.d_a0), nullptr);
+          const auto &[d_a00, d_a10] =
+              std::get<typename List<unsigned int>::Cons>(_loop_l2->v());
+          auto _cell = List<unsigned int>::cons(f(d_a0, d_a00), nullptr);
           if (_last) {
             std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
                 _cell;
@@ -175,8 +175,8 @@ struct LoopifyGenerators {
             _head = _cell;
           }
           _last = _cell;
-          std::shared_ptr<List<unsigned int>> _next_l2 = _m0.d_a1;
-          std::shared_ptr<List<unsigned int>> _next_l1 = _m.d_a1;
+          std::shared_ptr<List<unsigned int>> _next_l2 = d_a10;
+          std::shared_ptr<List<unsigned int>> _next_l1 = d_a1;
           _loop_l2 = std::move(_next_l2);
           _loop_l1 = std::move(_next_l1);
           continue;

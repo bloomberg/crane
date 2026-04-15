@@ -62,8 +62,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return _m.d_a1->template fold_left<T1>(f, f(a0, _m.d_a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return d_a1->template fold_left<T1>(f, f(a0, d_a0));
     }
   }
 
@@ -72,8 +72,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return List<T1>::cons(f(_m.d_a0), _m.d_a1->template map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<T1>::cons(f(d_a0), d_a1->template map<T1>(f));
     }
   }
 };

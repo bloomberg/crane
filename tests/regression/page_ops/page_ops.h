@@ -125,8 +125,8 @@ struct PageOps {
     if (std::holds_alternative<typename instruction::NOP>(i->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename instruction::LDM>(&i->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction::LDM>(i->v());
+      return f0(d_a0);
     }
   }
 
@@ -136,8 +136,8 @@ struct PageOps {
     if (std::holds_alternative<typename instruction::NOP>(i->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename instruction::LDM>(&i->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction::LDM>(i->v());
+      return f0(d_a0);
     }
   }
 
@@ -157,8 +157,8 @@ struct PageOps {
       } else if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
         return List<T1>::nil();
       } else {
-        const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
-        return drop<T1>(n_, _m.d_a1);
+        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+        return drop<T1>(n_, d_a1);
       }
     }
   }

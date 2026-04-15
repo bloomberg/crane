@@ -14,12 +14,12 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::process_twice_fuel(
   };
 
   struct _Call1 {
-    const typename List<unsigned int>::Cons _s0;
+    unsigned int _s0;
     unsigned int _s1;
   };
 
   struct _Call2 {
-    const typename List<unsigned int>::Cons _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -40,24 +40,24 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::process_twice_fuel(
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
           _result = List<unsigned int>::nil();
         } else {
-          const auto &_m =
-              *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-          _stack.emplace_back(_Call1{_m, fuel_});
-          _stack.emplace_back(_Enter{_m.d_a1, fuel_});
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l->v());
+          _stack.emplace_back(_Call1{d_a0, fuel_});
+          _stack.emplace_back(_Enter{d_a1, fuel_});
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename List<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       unsigned int fuel_ = _f._s1;
       std::shared_ptr<List<unsigned int>> first = _result;
-      _stack.emplace_back(_Call2{_m});
+      _stack.emplace_back(_Call2{d_a0});
       _stack.emplace_back(_Enter{std::move(first), fuel_});
     } else {
       const auto &_f = std::get<_Call2>(_frame);
-      const typename List<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       std::shared_ptr<List<unsigned int>> second = _result;
-      _result = List<unsigned int>::cons(_m.d_a0, second);
+      _result = List<unsigned int>::cons(d_a0, second);
     }
   }
   return _result;
@@ -77,7 +77,7 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::double_append(
   };
 
   struct _Call1 {
-    const typename List<unsigned int>::Cons _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -94,16 +94,16 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::double_append(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l1->v())) {
         _result = std::move(l2);
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l1->v());
-        _stack.emplace_back(_Call1{_m});
-        _stack.emplace_back(_Enter{std::move(l2), _m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l1->v());
+        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Enter{std::move(l2), d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename List<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       std::shared_ptr<List<unsigned int>> rest = _result;
-      _result = List<unsigned int>::cons(_m.d_a0, rest->app(rest));
+      _result = List<unsigned int>::cons(d_a0, rest->app(rest));
     }
   }
   return _result;
@@ -126,24 +126,23 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::remove_if_sum_even(
       }
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       unsigned int next_val = [&]() {
-        auto &&_sv0 = _m.d_a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _sv0->v())) {
+                d_a1->v())) {
           return 0u;
         } else {
-          const auto &_m0 =
-              *std::get_if<typename List<unsigned int>::Cons>(&_sv0->v());
-          return _m0.d_a0;
+          const auto &[d_a00, d_a10] =
+              std::get<typename List<unsigned int>::Cons>(d_a1->v());
+          return d_a00;
         }
       }();
-      if ((2u ? (_m.d_a0 + next_val) % 2u : (_m.d_a0 + next_val)) == 0u) {
-        _loop_l = _m.d_a1;
+      if ((2u ? (d_a0 + next_val) % 2u : (d_a0 + next_val)) == 0u) {
+        _loop_l = d_a1;
         continue;
       } else {
-        auto _cell = List<unsigned int>::cons(_m.d_a0, nullptr);
+        auto _cell = List<unsigned int>::cons(d_a0, nullptr);
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
               _cell;
@@ -151,7 +150,7 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::remove_if_sum_even(
           _head = _cell;
         }
         _last = _cell;
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
         continue;
       }
     }
@@ -177,10 +176,10 @@ LoopifySpecialRecursion::reverse_insert(const unsigned int x,
       }
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-      if (_m.d_a0 < x) {
-        auto _cell = List<unsigned int>::cons(_m.d_a0, nullptr);
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      if (d_a0 < x) {
+        auto _cell = List<unsigned int>::cons(d_a0, nullptr);
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
               _cell;
@@ -188,7 +187,7 @@ LoopifySpecialRecursion::reverse_insert(const unsigned int x,
           _head = _cell;
         }
         _last = _cell;
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
         continue;
       } else {
         if (_last) {
@@ -211,16 +210,13 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::collect_sorted(
   };
 
   struct _Call1 {
-    decltype(std::declval<typename LoopifySpecialRecursion::tree::Node &>()
-                 .d_a0) _s0;
-    decltype(std::declval<typename LoopifySpecialRecursion::tree::Node &>()
-                 .d_a1) _s1;
+    std::shared_ptr<LoopifySpecialRecursion::tree> _s0;
+    unsigned int _s1;
   };
 
   struct _Call2 {
     std::shared_ptr<List<unsigned int>> _s0;
-    decltype(std::declval<typename LoopifySpecialRecursion::tree::Node &>()
-                 .d_a1) _s1;
+    unsigned int _s1;
   };
 
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -237,10 +233,10 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::collect_sorted(
               t->v())) {
         _result = List<unsigned int>::nil();
       } else {
-        const auto &_m =
-            *std::get_if<typename LoopifySpecialRecursion::tree::Node>(&t->v());
-        _stack.emplace_back(_Call1{_m.d_a0, _m.d_a1});
-        _stack.emplace_back(_Enter{_m.d_a2});
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename LoopifySpecialRecursion::tree::Node>(t->v());
+        _stack.emplace_back(_Call1{d_a0, d_a1});
+        _stack.emplace_back(_Enter{d_a2});
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       const auto &_f = std::get<_Call1>(_frame);
@@ -262,7 +258,7 @@ __attribute__((pure)) unsigned int LoopifySpecialRecursion::sum_odd_indices_aux(
   };
 
   struct _Call1 {
-    decltype(std::declval<typename List<unsigned int>::Cons &>().d_a0) _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -279,13 +275,13 @@ __attribute__((pure)) unsigned int LoopifySpecialRecursion::sum_odd_indices_aux(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
         _result = 0u;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
         if ((2u ? idx % 2u : idx) == 1u) {
-          _stack.emplace_back(_Call1{_m.d_a0});
-          _stack.emplace_back(_Enter{(idx + 1u), _m.d_a1});
+          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Enter{(idx + 1u), d_a1});
         } else {
-          _stack.emplace_back(_Enter{(idx + 1u), _m.d_a1});
+          _stack.emplace_back(_Enter{(idx + 1u), d_a1});
         }
       }
     } else {
@@ -332,18 +328,18 @@ __attribute__((pure)) unsigned int LoopifySpecialRecursion::categorize_by(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
         _result = 0u;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-        if (k < _m.d_a0) {
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
+        if (k < d_a0) {
           _stack.emplace_back(_Call1{3u});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          _stack.emplace_back(_Enter{d_a1});
         } else {
-          if (_m.d_a0 == k) {
+          if (d_a0 == k) {
             _stack.emplace_back(_Call2{2u});
-            _stack.emplace_back(_Enter{_m.d_a1});
+            _stack.emplace_back(_Enter{d_a1});
           } else {
             _stack.emplace_back(_Call3{1u});
-            _stack.emplace_back(_Enter{_m.d_a1});
+            _stack.emplace_back(_Enter{d_a1});
           }
         }
       }
@@ -379,11 +375,11 @@ LoopifySpecialRecursion::between(const unsigned int lo, const unsigned int hi,
       }
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-      if (lo <= _m.d_a0) {
-        if (_m.d_a0 <= hi) {
-          auto _cell = List<unsigned int>::cons(_m.d_a0, nullptr);
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      if (lo <= d_a0) {
+        if (d_a0 <= hi) {
+          auto _cell = List<unsigned int>::cons(d_a0, nullptr);
           if (_last) {
             std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
                 _cell;
@@ -391,14 +387,14 @@ LoopifySpecialRecursion::between(const unsigned int lo, const unsigned int hi,
             _head = _cell;
           }
           _last = _cell;
-          _loop_l = _m.d_a1;
+          _loop_l = d_a1;
           continue;
         } else {
-          _loop_l = _m.d_a1;
+          _loop_l = d_a1;
           continue;
         }
       } else {
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
         continue;
       }
     }
@@ -413,9 +409,7 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::merge_levels(
   };
 
   struct _Call1 {
-    decltype(std::declval<
-                 typename List<std::shared_ptr<List<unsigned int>>>::Cons &>()
-                 .d_a0) _s0;
+    std::shared_ptr<List<unsigned int>> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -434,10 +428,11 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::merge_levels(
               ll->v())) {
         _result = List<unsigned int>::nil();
       } else {
-        const auto &_m = *std::get_if<
-            typename List<std::shared_ptr<List<unsigned int>>>::Cons>(&ll->v());
-        _stack.emplace_back(_Call1{_m.d_a0});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+                ll->v());
+        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);

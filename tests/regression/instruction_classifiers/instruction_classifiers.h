@@ -317,26 +317,26 @@ struct InstructionClassifiers {
                      const T1 f21, const T1 f22, const T1 f23,
                      const T1 f24) const {
       if (std::holds_alternative<typename instr_acc::LDM>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_acc::LDM>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_acc::LDM>(this->v());
+        return f(d_a0);
       } else if (std::holds_alternative<typename instr_acc::LD>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_acc::LD>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_acc::LD>(this->v());
+        return f0(d_a0);
       } else if (std::holds_alternative<typename instr_acc::ADD>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_acc::ADD>(&this->v());
-        return f1(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_acc::ADD>(this->v());
+        return f1(d_a0);
       } else if (std::holds_alternative<typename instr_acc::SUB>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_acc::SUB>(&this->v());
-        return f2(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_acc::SUB>(this->v());
+        return f2(d_a0);
       } else if (std::holds_alternative<typename instr_acc::INC>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_acc::INC>(&this->v());
-        return f3(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_acc::INC>(this->v());
+        return f3(d_a0);
       } else if (std::holds_alternative<typename instr_acc::XCH>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_acc::XCH>(&this->v());
-        return f4(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_acc::XCH>(this->v());
+        return f4(d_a0);
       } else if (std::holds_alternative<typename instr_acc::BBL>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_acc::BBL>(&this->v());
-        return f5(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_acc::BBL>(this->v());
+        return f5(d_a0);
       } else if (std::holds_alternative<typename instr_acc::SBM>(this->v())) {
         return f6;
       } else if (std::holds_alternative<typename instr_acc::RDM>(this->v())) {
@@ -390,26 +390,26 @@ struct InstructionClassifiers {
                       const T1 f21, const T1 f22, const T1 f23,
                       const T1 f24) const {
       if (std::holds_alternative<typename instr_acc::LDM>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_acc::LDM>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_acc::LDM>(this->v());
+        return f(d_a0);
       } else if (std::holds_alternative<typename instr_acc::LD>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_acc::LD>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_acc::LD>(this->v());
+        return f0(d_a0);
       } else if (std::holds_alternative<typename instr_acc::ADD>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_acc::ADD>(&this->v());
-        return f1(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_acc::ADD>(this->v());
+        return f1(d_a0);
       } else if (std::holds_alternative<typename instr_acc::SUB>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_acc::SUB>(&this->v());
-        return f2(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_acc::SUB>(this->v());
+        return f2(d_a0);
       } else if (std::holds_alternative<typename instr_acc::INC>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_acc::INC>(&this->v());
-        return f3(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_acc::INC>(this->v());
+        return f3(d_a0);
       } else if (std::holds_alternative<typename instr_acc::XCH>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_acc::XCH>(&this->v());
-        return f4(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_acc::XCH>(this->v());
+        return f4(d_a0);
       } else if (std::holds_alternative<typename instr_acc::BBL>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_acc::BBL>(&this->v());
-        return f5(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_acc::BBL>(this->v());
+        return f5(d_a0);
       } else if (std::holds_alternative<typename instr_acc::SBM>(this->v())) {
         return f6;
       } else if (std::holds_alternative<typename instr_acc::RDM>(this->v())) {
@@ -583,8 +583,8 @@ struct InstructionClassifiers {
     } else if (std::holds_alternative<typename instr_ram::NOP_ram>(i->v())) {
       return f5;
     } else {
-      const auto &_m = *std::get_if<typename instr_ram::ADD_ram>(&i->v());
-      return f6(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instr_ram::ADD_ram>(i->v());
+      return f6(d_a0);
     }
   }
 
@@ -607,8 +607,8 @@ struct InstructionClassifiers {
     } else if (std::holds_alternative<typename instr_ram::NOP_ram>(i->v())) {
       return f5;
     } else {
-      const auto &_m = *std::get_if<typename instr_ram::ADD_ram>(&i->v());
-      return f6(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instr_ram::ADD_ram>(i->v());
+      return f6(d_a0);
     }
   }
 
@@ -734,30 +734,29 @@ struct InstructionClassifiers {
     T1 instr_regs_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, const T1 f4,
                       F6 &&f5) const {
       if (std::holds_alternative<typename instr_regs::XCH_regs>(this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_regs::XCH_regs>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_regs::XCH_regs>(this->v());
+        return f(d_a0);
       } else if (std::holds_alternative<typename instr_regs::INC_regs>(
                      this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_regs::INC_regs>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_regs::INC_regs>(this->v());
+        return f0(d_a0);
       } else if (std::holds_alternative<typename instr_regs::FIM>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_regs::FIM>(&this->v());
-        return f1(_m.d_a0, _m.d_a1);
+        const auto &[d_a0, d_a1] =
+            std::get<typename instr_regs::FIM>(this->v());
+        return f1(d_a0, d_a1);
       } else if (std::holds_alternative<typename instr_regs::FIN>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_regs::FIN>(&this->v());
-        return f2(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_regs::FIN>(this->v());
+        return f2(d_a0);
       } else if (std::holds_alternative<typename instr_regs::ISZ>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_regs::ISZ>(&this->v());
-        return f3(_m.d_a0, _m.d_a1);
+        const auto &[d_a0, d_a1] =
+            std::get<typename instr_regs::ISZ>(this->v());
+        return f3(d_a0, d_a1);
       } else if (std::holds_alternative<typename instr_regs::NOP_regs>(
                      this->v())) {
         return f4;
       } else {
-        const auto &_m =
-            *std::get_if<typename instr_regs::ADD_regs>(&this->v());
-        return f5(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_regs::ADD_regs>(this->v());
+        return f5(d_a0);
       }
     }
 
@@ -768,30 +767,29 @@ struct InstructionClassifiers {
     T1 instr_regs_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, const T1 f4,
                        F6 &&f5) const {
       if (std::holds_alternative<typename instr_regs::XCH_regs>(this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_regs::XCH_regs>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_regs::XCH_regs>(this->v());
+        return f(d_a0);
       } else if (std::holds_alternative<typename instr_regs::INC_regs>(
                      this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_regs::INC_regs>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_regs::INC_regs>(this->v());
+        return f0(d_a0);
       } else if (std::holds_alternative<typename instr_regs::FIM>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_regs::FIM>(&this->v());
-        return f1(_m.d_a0, _m.d_a1);
+        const auto &[d_a0, d_a1] =
+            std::get<typename instr_regs::FIM>(this->v());
+        return f1(d_a0, d_a1);
       } else if (std::holds_alternative<typename instr_regs::FIN>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_regs::FIN>(&this->v());
-        return f2(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_regs::FIN>(this->v());
+        return f2(d_a0);
       } else if (std::holds_alternative<typename instr_regs::ISZ>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_regs::ISZ>(&this->v());
-        return f3(_m.d_a0, _m.d_a1);
+        const auto &[d_a0, d_a1] =
+            std::get<typename instr_regs::ISZ>(this->v());
+        return f3(d_a0, d_a1);
       } else if (std::holds_alternative<typename instr_regs::NOP_regs>(
                      this->v())) {
         return f4;
       } else {
-        const auto &_m =
-            *std::get_if<typename instr_regs::ADD_regs>(&this->v());
-        return f5(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_regs::ADD_regs>(this->v());
+        return f5(d_a0);
       }
     }
   };
@@ -929,32 +927,31 @@ struct InstructionClassifiers {
     T1 instr_jump_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                       F6 &&f5, const T1 f6) const {
       if (std::holds_alternative<typename instr_jump::JCN>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_jump::JCN>(&this->v());
-        return f(_m.d_a0, _m.d_a1);
+        const auto &[d_a0, d_a1] =
+            std::get<typename instr_jump::JCN>(this->v());
+        return f(d_a0, d_a1);
       } else if (std::holds_alternative<typename instr_jump::JUN>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_jump::JUN>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jump::JUN>(this->v());
+        return f0(d_a0);
       } else if (std::holds_alternative<typename instr_jump::JMS>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_jump::JMS>(&this->v());
-        return f1(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jump::JMS>(this->v());
+        return f1(d_a0);
       } else if (std::holds_alternative<typename instr_jump::JIN>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_jump::JIN>(&this->v());
-        return f2(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jump::JIN>(this->v());
+        return f2(d_a0);
       } else if (std::holds_alternative<typename instr_jump::BBL_jump>(
                      this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_jump::BBL_jump>(&this->v());
-        return f3(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jump::BBL_jump>(this->v());
+        return f3(d_a0);
       } else if (std::holds_alternative<typename instr_jump::ISZ_jump>(
                      this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_jump::ISZ_jump>(&this->v());
-        return f4(_m.d_a0, _m.d_a1);
+        const auto &[d_a0, d_a1] =
+            std::get<typename instr_jump::ISZ_jump>(this->v());
+        return f4(d_a0, d_a1);
       } else if (std::holds_alternative<typename instr_jump::ADD_jump>(
                      this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_jump::ADD_jump>(&this->v());
-        return f5(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jump::ADD_jump>(this->v());
+        return f5(d_a0);
       } else {
         return f6;
       }
@@ -968,32 +965,31 @@ struct InstructionClassifiers {
     T1 instr_jump_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                        F6 &&f5, const T1 f6) const {
       if (std::holds_alternative<typename instr_jump::JCN>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_jump::JCN>(&this->v());
-        return f(_m.d_a0, _m.d_a1);
+        const auto &[d_a0, d_a1] =
+            std::get<typename instr_jump::JCN>(this->v());
+        return f(d_a0, d_a1);
       } else if (std::holds_alternative<typename instr_jump::JUN>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_jump::JUN>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jump::JUN>(this->v());
+        return f0(d_a0);
       } else if (std::holds_alternative<typename instr_jump::JMS>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_jump::JMS>(&this->v());
-        return f1(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jump::JMS>(this->v());
+        return f1(d_a0);
       } else if (std::holds_alternative<typename instr_jump::JIN>(this->v())) {
-        const auto &_m = *std::get_if<typename instr_jump::JIN>(&this->v());
-        return f2(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jump::JIN>(this->v());
+        return f2(d_a0);
       } else if (std::holds_alternative<typename instr_jump::BBL_jump>(
                      this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_jump::BBL_jump>(&this->v());
-        return f3(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jump::BBL_jump>(this->v());
+        return f3(d_a0);
       } else if (std::holds_alternative<typename instr_jump::ISZ_jump>(
                      this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_jump::ISZ_jump>(&this->v());
-        return f4(_m.d_a0, _m.d_a1);
+        const auto &[d_a0, d_a1] =
+            std::get<typename instr_jump::ISZ_jump>(this->v());
+        return f4(d_a0, d_a1);
       } else if (std::holds_alternative<typename instr_jump::ADD_jump>(
                      this->v())) {
-        const auto &_m =
-            *std::get_if<typename instr_jump::ADD_jump>(&this->v());
-        return f5(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instr_jump::ADD_jump>(this->v());
+        return f5(d_a0);
       } else {
         return f6;
       }

@@ -54,8 +54,8 @@ struct IifeNameClash {
   static T1 wrapper_rect(F0 &&f, const T1 f0,
                          const std::shared_ptr<wrapper> &w) {
     if (std::holds_alternative<typename wrapper::Wrap>(w->v())) {
-      const auto &_m = *std::get_if<typename wrapper::Wrap>(&w->v());
-      return f(_m.d_n);
+      const auto &[d_n] = std::get<typename wrapper::Wrap>(w->v());
+      return f(d_n);
     } else {
       return f0;
     }
@@ -65,8 +65,8 @@ struct IifeNameClash {
   static T1 wrapper_rec(F0 &&f, const T1 f0,
                         const std::shared_ptr<wrapper> &w) {
     if (std::holds_alternative<typename wrapper::Wrap>(w->v())) {
-      const auto &_m = *std::get_if<typename wrapper::Wrap>(&w->v());
-      return f(_m.d_n);
+      const auto &[d_n] = std::get<typename wrapper::Wrap>(w->v());
+      return f(d_n);
     } else {
       return f0;
     }

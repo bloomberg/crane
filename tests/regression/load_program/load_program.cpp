@@ -32,12 +32,12 @@ LoadProgram::load_program(std::shared_ptr<LoadProgram::state> s,
   if (std::holds_alternative<typename List<unsigned int>::Nil>(bytes->v())) {
     return s;
   } else {
-    const auto &_m =
-        *std::get_if<typename List<unsigned int>::Cons>(&bytes->v());
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(bytes->v());
     std::shared_ptr<LoadProgram::state> s_ =
-        set_prom_params(std::move(s), base, _m.d_a0, true);
+        set_prom_params(std::move(s), base, d_a0, true);
     std::shared_ptr<LoadProgram::state> s__ = execute_wpm(std::move(s_));
-    return load_program(std::move(s__), (base + 1u), _m.d_a1);
+    return load_program(std::move(s__), (base + 1u), d_a1);
   }
 }
 
@@ -75,8 +75,8 @@ std::shared_ptr<LoadProgram::state_simple> LoadProgram::load_program_simple(
   if (std::holds_alternative<typename List<unsigned int>::Nil>(bytes->v())) {
     return s;
   } else {
-    const auto &_m =
-        *std::get_if<typename List<unsigned int>::Cons>(&bytes->v());
-    return load_program_simple(write_byte(std::move(s), _m.d_a0), _m.d_a1);
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(bytes->v());
+    return load_program_simple(write_byte(std::move(s), d_a0), d_a1);
   }
 }

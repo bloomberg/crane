@@ -32,15 +32,15 @@ __attribute__((pure)) unsigned int LoopifyMatchArg::count_dots(
               xs->v())) {
         _result = 0u;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<LoopifyMatchArg::Cell>::Cons>(&xs->v());
-        switch (_m.d_a0) {
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<LoopifyMatchArg::Cell>::Cons>(xs->v());
+        switch (d_a0) {
         case Cell::e_DOT: {
           _stack.emplace_back(_Call1{1u});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          _stack.emplace_back(_Enter{d_a1});
         }
         default: {
-          _stack.emplace_back(_Enter{_m.d_a1});
+          _stack.emplace_back(_Enter{d_a1});
         }
         }
       }
@@ -78,10 +78,10 @@ __attribute__((pure)) unsigned int LoopifyMatchArg::my_length(
               xs->v())) {
         _result = 0u;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<LoopifyMatchArg::Cell>::Cons>(&xs->v());
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<LoopifyMatchArg::Cell>::Cons>(xs->v());
         _stack.emplace_back(_Call1{1u});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);

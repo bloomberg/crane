@@ -11,9 +11,9 @@ NestedPartialApp::tree_sum(const std::shared_ptr<NestedPartialApp::tree> &t) {
   if (std::holds_alternative<typename NestedPartialApp::tree::Leaf>(t->v())) {
     return 0u;
   } else {
-    const auto &_m =
-        *std::get_if<typename NestedPartialApp::tree::Node>(&t->v());
-    return ((tree_sum(_m.d_a0) + _m.d_a1) + tree_sum(_m.d_a2));
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename NestedPartialApp::tree::Node>(t->v());
+    return ((tree_sum(d_a0) + d_a1) + tree_sum(d_a2));
   }
 }
 

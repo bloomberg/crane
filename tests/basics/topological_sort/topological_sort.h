@@ -65,14 +65,13 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<std::pair<t_A, T1>>::nil();
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
       if (std::holds_alternative<typename List<T1>::Nil>(l_->v())) {
         return List<std::pair<t_A, T1>>::nil();
       } else {
-        const auto &_m0 = *std::get_if<typename List<T1>::Cons>(&l_->v());
+        const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l_->v());
         return List<std::pair<t_A, T1>>::cons(
-            std::make_pair(_m.d_a0, _m0.d_a0),
-            _m.d_a1->template combine<T1>(_m0.d_a1));
+            std::make_pair(d_a0, d_a00), d_a1->template combine<T1>(d_a10));
       }
     }
   }
@@ -82,11 +81,11 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return std::optional<t_A>();
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      if (f(_m.d_a0)) {
-        return std::make_optional<t_A>(_m.d_a0);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      if (f(d_a0)) {
+        return std::make_optional<t_A>(d_a0);
       } else {
-        return _m.d_a1->find(f);
+        return d_a1->find(f);
       }
     }
   }
@@ -96,11 +95,11 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<t_A>::nil();
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      if (f(_m.d_a0)) {
-        return List<t_A>::cons(_m.d_a0, _m.d_a1->filter(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      if (f(d_a0)) {
+        return List<t_A>::cons(d_a0, d_a1->filter(f));
       } else {
-        return _m.d_a1->filter(f);
+        return d_a1->filter(f);
       }
     }
   }
@@ -110,8 +109,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return f(_m.d_a0, _m.d_a1->template fold_right<T1>(f, a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return f(d_a0, d_a1->template fold_right<T1>(f, a0));
     }
   }
 
@@ -120,10 +119,9 @@ public:
             this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &_m =
-          *std::get_if<typename List<std::shared_ptr<List<T1>>>::Cons>(
-              &this->v());
-      return _m.d_a0->app(_m.d_a1->template concat<T1>());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::shared_ptr<List<T1>>>::Cons>(this->v());
+      return d_a0->app(d_a1->template concat<T1>());
     }
   }
 
@@ -132,8 +130,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return List<T1>::cons(f(_m.d_a0), _m.d_a1->template map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<T1>::cons(f(d_a0), d_a1->template map<T1>(f));
     }
   }
 
@@ -141,8 +139,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (_m.d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
     }
   }
 
@@ -150,8 +148,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return List<t_A>::cons(_m.d_a0, _m.d_a1->app(m));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, d_a1->app(m));
     }
   }
 };
@@ -178,12 +176,11 @@ struct ToString {
     if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
       return "";
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
-      auto &&_sv = _m.d_a1;
-      if (std::holds_alternative<typename List<T1>::Nil>(_sv->v())) {
-        return sep + p(_m.d_a0);
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(d_a1->v())) {
+        return sep + p(d_a0);
       } else {
-        return sep + p(_m.d_a0) + intersperse<T1>(p, sep, _m.d_a1);
+        return sep + p(d_a0) + intersperse<T1>(p, sep, d_a1);
       }
     }
   }
@@ -194,12 +191,11 @@ struct ToString {
     if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
       return "[]";
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
-      auto &&_sv = _m.d_a1;
-      if (std::holds_alternative<typename List<T1>::Nil>(_sv->v())) {
-        return "["s + p(_m.d_a0) + "]"s;
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(d_a1->v())) {
+        return "["s + p(d_a0) + "]"s;
       } else {
-        return "["s + p(_m.d_a0) + intersperse<T1>(p, "; ", _m.d_a1) + "]"s;
+        return "["s + p(d_a0) + intersperse<T1>(p, "; ", d_a1) + "]"s;
       }
     }
   }
@@ -225,10 +221,10 @@ struct TopologicalSort {
               l0->v())) {
         return h;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<std::pair<T1, T1>>::Cons>(&l0->v());
-        const T1 &e1 = _m.d_a0.first;
-        const T1 &e2 = _m.d_a0.second;
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<std::pair<T1, T1>>::Cons>(l0->v());
+        const T1 &e1 = d_a0.first;
+        const T1 &e2 = d_a0.second;
         std::optional<T1> f1 =
             h->find([=](const T1 x) mutable { return eqb_node(e1, x); });
         std::optional<T1> f2 =
@@ -237,19 +233,19 @@ struct TopologicalSort {
           const T1 &_x = *f1;
           if (f2.has_value()) {
             const T1 &_x0 = *f2;
-            return get_elems_aux(_m.d_a1, std::move(h));
+            return get_elems_aux(d_a1, std::move(h));
           } else {
-            return get_elems_aux(_m.d_a1, List<T1>::cons(e2, h));
+            return get_elems_aux(d_a1, List<T1>::cons(e2, h));
           }
         } else {
           if (f2.has_value()) {
             const T1 &_x = *f2;
-            return get_elems_aux(_m.d_a1, List<T1>::cons(e1, h));
+            return get_elems_aux(d_a1, List<T1>::cons(e1, h));
           } else {
             if (eqb_node(e1, e2)) {
-              return get_elems_aux(_m.d_a1, List<T1>::cons(e1, h));
+              return get_elems_aux(d_a1, List<T1>::cons(e1, h));
             } else {
-              return get_elems_aux(_m.d_a1,
+              return get_elems_aux(d_a1,
                                    List<T1>::cons(e1, List<T1>::cons(e2, h)));
             }
           }
@@ -339,9 +335,9 @@ struct TopologicalSort {
         if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
           return elem;
         } else {
-          const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+          const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
           return cycle_entry_aux<T1>(eqb_node, graph0,
-                                     List<T1>::cons(elem, seens), _m.d_a0, c);
+                                     List<T1>::cons(elem, seens), d_a0, c);
         }
       }
     }
@@ -357,11 +353,11 @@ struct TopologicalSort {
             graph0->v())) {
       return std::optional<T1>();
     } else {
-      const auto &_m = *std::get_if<
+      const auto &[d_a0, d_a1] = std::get<
           typename List<std::pair<T1, std::shared_ptr<List<T1>>>>::Cons>(
-          &graph0->v());
-      const T1 &e = _m.d_a0.first;
-      const std::shared_ptr<List<T1>> &_x0 = _m.d_a0.second;
+          graph0->v());
+      const T1 &e = d_a0.first;
+      const std::shared_ptr<List<T1>> &_x0 = d_a0.second;
       return std::make_optional<T1>(cycle_entry_aux<T1>(
           eqb_node, graph0, List<T1>::nil(), e, graph0->length()));
     }

@@ -66,10 +66,10 @@ void EffectPoly::sequence_void(
           actions->v())) {
     return;
   } else {
-    const auto &_m =
-        *std::get_if<typename List<std::monostate>::Cons>(&actions->v());
-    _m.d_a0;
-    sequence_void(_m.d_a1);
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<std::monostate>::Cons>(actions->v());
+    d_a0;
+    sequence_void(d_a1);
     return;
   }
 }

@@ -93,9 +93,9 @@ struct EffectPoly {
     if (std::holds_alternative<typename List<T2>::Nil>(xs->v())) {
       return init;
     } else {
-      const auto &_m = *std::get_if<typename List<T2>::Cons>(&xs->v());
-      T1 acc = f(init, _m.d_a0);
-      return fold_m<T1, T2>(f, acc, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename List<T2>::Cons>(xs->v());
+      T1 acc = f(init, d_a0);
+      return fold_m<T1, T2>(f, acc, d_a1);
     }
   }
 

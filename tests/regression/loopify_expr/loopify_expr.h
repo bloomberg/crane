@@ -194,376 +194,393 @@ struct LoopifyExpr {
           const auto &_f = std::get<_Enter>(_frame);
           const expr *_self = _f._self;
           if (std::holds_alternative<typename expr::Val>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Val>(&_self->v());
-            _result = expr::val(_m.d_a0);
+            const auto &[d_a0] = std::get<typename expr::Val>(_self->v());
+            _result = expr::val(d_a0);
           } else if (std::holds_alternative<typename expr::Succ>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Succ>(&_self->v());
+            const auto &[d_a0] = std::get<typename expr::Succ>(_self->v());
             _stack.emplace_back(_Call1{});
-            _stack.emplace_back(_Enter{_m.d_a0.get()});
+            _stack.emplace_back(_Enter{d_a0.get()});
           } else if (std::holds_alternative<typename expr::Add>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Add>(&_self->v());
-            auto &&_sv0 = _m.d_a0->simplify();
+            const auto &[d_a0, d_a1] = std::get<typename expr::Add>(_self->v());
+            auto &&_sv0 = d_a0->simplify();
             if (std::holds_alternative<typename expr::Val>(_sv0->v())) {
-              const auto &_m0 = *std::get_if<typename expr::Val>(&_sv0->v());
-              if (_m0.d_a0 <= 0) {
-                _stack.emplace_back(_Enter{_m.d_a1.get()});
+              const auto &[d_a00] = std::get<typename expr::Val>(_sv0->v());
+              if (d_a00 <= 0) {
+                _stack.emplace_back(_Enter{d_a1.get()});
               } else {
-                unsigned int n0 = _m0.d_a0 - 1;
+                unsigned int n0 = d_a00 - 1;
                 std::shared_ptr<expr> s1 = expr::val((n0 + 1));
-                auto &&_sv1 = _m.d_a1->simplify();
+                auto &&_sv1 = d_a1->simplify();
                 if (std::holds_alternative<typename expr::Val>(_sv1->v())) {
-                  const auto &_m1 =
-                      *std::get_if<typename expr::Val>(&_sv1->v());
-                  if (_m1.d_a0 <= 0) {
+                  const auto &[d_a01] = std::get<typename expr::Val>(_sv1->v());
+                  if (d_a01 <= 0) {
                     _result = std::move(s1);
                   } else {
-                    unsigned int n2 = _m1.d_a0 - 1;
+                    unsigned int n2 = d_a01 - 1;
                     _result = expr::add(s1, expr::val((n2 + 1)));
                   }
                 } else if (std::holds_alternative<typename expr::Succ>(
                                _sv1->v())) {
-                  const auto &_m1 =
-                      *std::get_if<typename expr::Succ>(&_sv1->v());
-                  _result = expr::add(s1, expr::succ(_m1.d_a0));
+                  const auto &[d_a01] =
+                      std::get<typename expr::Succ>(_sv1->v());
+                  _result = expr::add(s1, expr::succ(d_a01));
                 } else if (std::holds_alternative<typename expr::Add>(
                                _sv1->v())) {
-                  const auto &_m1 =
-                      *std::get_if<typename expr::Add>(&_sv1->v());
-                  _result = expr::add(s1, expr::add(_m1.d_a0, _m1.d_a1));
+                  const auto &[d_a01, d_a11] =
+                      std::get<typename expr::Add>(_sv1->v());
+                  _result = expr::add(s1, expr::add(d_a01, d_a11));
                 } else if (std::holds_alternative<typename expr::Mul>(
                                _sv1->v())) {
-                  const auto &_m1 =
-                      *std::get_if<typename expr::Mul>(&_sv1->v());
-                  _result = expr::add(s1, expr::mul(_m1.d_a0, _m1.d_a1));
+                  const auto &[d_a01, d_a11] =
+                      std::get<typename expr::Mul>(_sv1->v());
+                  _result = expr::add(s1, expr::mul(d_a01, d_a11));
                 } else {
-                  const auto &_m1 =
-                      *std::get_if<typename expr::Cond>(&_sv1->v());
-                  _result =
-                      expr::add(s1, expr::cond(_m1.d_a0, _m1.d_a1, _m1.d_a2));
+                  const auto &[d_a01, d_a11, d_a21] =
+                      std::get<typename expr::Cond>(_sv1->v());
+                  _result = expr::add(s1, expr::cond(d_a01, d_a11, d_a21));
                 }
               }
             } else if (std::holds_alternative<typename expr::Succ>(_sv0->v())) {
-              const auto &_m0 = *std::get_if<typename expr::Succ>(&_sv0->v());
-              std::shared_ptr<expr> s1 = expr::succ(_m0.d_a0);
-              auto &&_sv1 = _m.d_a1->simplify();
+              const auto &[d_a00] = std::get<typename expr::Succ>(_sv0->v());
+              std::shared_ptr<expr> s1 = expr::succ(d_a00);
+              auto &&_sv1 = d_a1->simplify();
               if (std::holds_alternative<typename expr::Val>(_sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Val>(&_sv1->v());
-                if (_m1.d_a0 <= 0) {
+                const auto &[d_a01] = std::get<typename expr::Val>(_sv1->v());
+                if (d_a01 <= 0) {
                   _result = std::move(s1);
                 } else {
-                  unsigned int n0 = _m1.d_a0 - 1;
+                  unsigned int n0 = d_a01 - 1;
                   _result = expr::add(s1, expr::val((n0 + 1)));
                 }
               } else if (std::holds_alternative<typename expr::Succ>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Succ>(&_sv1->v());
-                _result = expr::add(s1, expr::succ(_m1.d_a0));
+                const auto &[d_a01] = std::get<typename expr::Succ>(_sv1->v());
+                _result = expr::add(s1, expr::succ(d_a01));
               } else if (std::holds_alternative<typename expr::Add>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Add>(&_sv1->v());
-                _result = expr::add(s1, expr::add(_m1.d_a0, _m1.d_a1));
+                const auto &[d_a01, d_a11] =
+                    std::get<typename expr::Add>(_sv1->v());
+                _result = expr::add(s1, expr::add(d_a01, d_a11));
               } else if (std::holds_alternative<typename expr::Mul>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Mul>(&_sv1->v());
-                _result = expr::add(s1, expr::mul(_m1.d_a0, _m1.d_a1));
+                const auto &[d_a01, d_a11] =
+                    std::get<typename expr::Mul>(_sv1->v());
+                _result = expr::add(s1, expr::mul(d_a01, d_a11));
               } else {
-                const auto &_m1 = *std::get_if<typename expr::Cond>(&_sv1->v());
-                _result =
-                    expr::add(s1, expr::cond(_m1.d_a0, _m1.d_a1, _m1.d_a2));
+                const auto &[d_a01, d_a11, d_a21] =
+                    std::get<typename expr::Cond>(_sv1->v());
+                _result = expr::add(s1, expr::cond(d_a01, d_a11, d_a21));
               }
             } else if (std::holds_alternative<typename expr::Add>(_sv0->v())) {
-              const auto &_m0 = *std::get_if<typename expr::Add>(&_sv0->v());
-              std::shared_ptr<expr> s1 = expr::add(_m0.d_a0, _m0.d_a1);
-              auto &&_sv1 = _m.d_a1->simplify();
+              const auto &[d_a00, d_a10] =
+                  std::get<typename expr::Add>(_sv0->v());
+              std::shared_ptr<expr> s1 = expr::add(d_a00, d_a10);
+              auto &&_sv1 = d_a1->simplify();
               if (std::holds_alternative<typename expr::Val>(_sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Val>(&_sv1->v());
-                if (_m1.d_a0 <= 0) {
+                const auto &[d_a01] = std::get<typename expr::Val>(_sv1->v());
+                if (d_a01 <= 0) {
                   _result = std::move(s1);
                 } else {
-                  unsigned int n0 = _m1.d_a0 - 1;
+                  unsigned int n0 = d_a01 - 1;
                   _result = expr::add(s1, expr::val((n0 + 1)));
                 }
               } else if (std::holds_alternative<typename expr::Succ>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Succ>(&_sv1->v());
-                _result = expr::add(s1, expr::succ(_m1.d_a0));
+                const auto &[d_a01] = std::get<typename expr::Succ>(_sv1->v());
+                _result = expr::add(s1, expr::succ(d_a01));
               } else if (std::holds_alternative<typename expr::Add>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Add>(&_sv1->v());
-                _result = expr::add(s1, expr::add(_m1.d_a0, _m1.d_a1));
+                const auto &[d_a01, d_a11] =
+                    std::get<typename expr::Add>(_sv1->v());
+                _result = expr::add(s1, expr::add(d_a01, d_a11));
               } else if (std::holds_alternative<typename expr::Mul>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Mul>(&_sv1->v());
-                _result = expr::add(s1, expr::mul(_m1.d_a0, _m1.d_a1));
+                const auto &[d_a01, d_a11] =
+                    std::get<typename expr::Mul>(_sv1->v());
+                _result = expr::add(s1, expr::mul(d_a01, d_a11));
               } else {
-                const auto &_m1 = *std::get_if<typename expr::Cond>(&_sv1->v());
-                _result =
-                    expr::add(s1, expr::cond(_m1.d_a0, _m1.d_a1, _m1.d_a2));
+                const auto &[d_a01, d_a11, d_a21] =
+                    std::get<typename expr::Cond>(_sv1->v());
+                _result = expr::add(s1, expr::cond(d_a01, d_a11, d_a21));
               }
             } else if (std::holds_alternative<typename expr::Mul>(_sv0->v())) {
-              const auto &_m0 = *std::get_if<typename expr::Mul>(&_sv0->v());
-              std::shared_ptr<expr> s1 = expr::mul(_m0.d_a0, _m0.d_a1);
-              auto &&_sv1 = _m.d_a1->simplify();
+              const auto &[d_a00, d_a10] =
+                  std::get<typename expr::Mul>(_sv0->v());
+              std::shared_ptr<expr> s1 = expr::mul(d_a00, d_a10);
+              auto &&_sv1 = d_a1->simplify();
               if (std::holds_alternative<typename expr::Val>(_sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Val>(&_sv1->v());
-                if (_m1.d_a0 <= 0) {
+                const auto &[d_a01] = std::get<typename expr::Val>(_sv1->v());
+                if (d_a01 <= 0) {
                   _result = std::move(s1);
                 } else {
-                  unsigned int n0 = _m1.d_a0 - 1;
+                  unsigned int n0 = d_a01 - 1;
                   _result = expr::add(s1, expr::val((n0 + 1)));
                 }
               } else if (std::holds_alternative<typename expr::Succ>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Succ>(&_sv1->v());
-                _result = expr::add(s1, expr::succ(_m1.d_a0));
+                const auto &[d_a01] = std::get<typename expr::Succ>(_sv1->v());
+                _result = expr::add(s1, expr::succ(d_a01));
               } else if (std::holds_alternative<typename expr::Add>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Add>(&_sv1->v());
-                _result = expr::add(s1, expr::add(_m1.d_a0, _m1.d_a1));
+                const auto &[d_a01, d_a11] =
+                    std::get<typename expr::Add>(_sv1->v());
+                _result = expr::add(s1, expr::add(d_a01, d_a11));
               } else if (std::holds_alternative<typename expr::Mul>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Mul>(&_sv1->v());
-                _result = expr::add(s1, expr::mul(_m1.d_a0, _m1.d_a1));
+                const auto &[d_a01, d_a11] =
+                    std::get<typename expr::Mul>(_sv1->v());
+                _result = expr::add(s1, expr::mul(d_a01, d_a11));
               } else {
-                const auto &_m1 = *std::get_if<typename expr::Cond>(&_sv1->v());
-                _result =
-                    expr::add(s1, expr::cond(_m1.d_a0, _m1.d_a1, _m1.d_a2));
+                const auto &[d_a01, d_a11, d_a21] =
+                    std::get<typename expr::Cond>(_sv1->v());
+                _result = expr::add(s1, expr::cond(d_a01, d_a11, d_a21));
               }
             } else {
-              const auto &_m0 = *std::get_if<typename expr::Cond>(&_sv0->v());
-              std::shared_ptr<expr> s1 =
-                  expr::cond(_m0.d_a0, _m0.d_a1, _m0.d_a2);
-              auto &&_sv1 = _m.d_a1->simplify();
+              const auto &[d_a00, d_a10, d_a20] =
+                  std::get<typename expr::Cond>(_sv0->v());
+              std::shared_ptr<expr> s1 = expr::cond(d_a00, d_a10, d_a20);
+              auto &&_sv1 = d_a1->simplify();
               if (std::holds_alternative<typename expr::Val>(_sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Val>(&_sv1->v());
-                if (_m1.d_a0 <= 0) {
+                const auto &[d_a01] = std::get<typename expr::Val>(_sv1->v());
+                if (d_a01 <= 0) {
                   _result = std::move(s1);
                 } else {
-                  unsigned int n0 = _m1.d_a0 - 1;
+                  unsigned int n0 = d_a01 - 1;
                   _result = expr::add(s1, expr::val((n0 + 1)));
                 }
               } else if (std::holds_alternative<typename expr::Succ>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Succ>(&_sv1->v());
-                _result = expr::add(s1, expr::succ(_m1.d_a0));
+                const auto &[d_a01] = std::get<typename expr::Succ>(_sv1->v());
+                _result = expr::add(s1, expr::succ(d_a01));
               } else if (std::holds_alternative<typename expr::Add>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Add>(&_sv1->v());
-                _result = expr::add(s1, expr::add(_m1.d_a0, _m1.d_a1));
+                const auto &[d_a01, d_a11] =
+                    std::get<typename expr::Add>(_sv1->v());
+                _result = expr::add(s1, expr::add(d_a01, d_a11));
               } else if (std::holds_alternative<typename expr::Mul>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Mul>(&_sv1->v());
-                _result = expr::add(s1, expr::mul(_m1.d_a0, _m1.d_a1));
+                const auto &[d_a01, d_a11] =
+                    std::get<typename expr::Mul>(_sv1->v());
+                _result = expr::add(s1, expr::mul(d_a01, d_a11));
               } else {
-                const auto &_m1 = *std::get_if<typename expr::Cond>(&_sv1->v());
-                _result =
-                    expr::add(s1, expr::cond(_m1.d_a0, _m1.d_a1, _m1.d_a2));
+                const auto &[d_a01, d_a11, d_a21] =
+                    std::get<typename expr::Cond>(_sv1->v());
+                _result = expr::add(s1, expr::cond(d_a01, d_a11, d_a21));
               }
             }
           } else if (std::holds_alternative<typename expr::Mul>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Mul>(&_self->v());
-            auto &&_sv0 = _m.d_a0->simplify();
+            const auto &[d_a0, d_a1] = std::get<typename expr::Mul>(_self->v());
+            auto &&_sv0 = d_a0->simplify();
             if (std::holds_alternative<typename expr::Val>(_sv0->v())) {
-              const auto &_m0 = *std::get_if<typename expr::Val>(&_sv0->v());
-              if (_m0.d_a0 <= 0) {
+              const auto &[d_a00] = std::get<typename expr::Val>(_sv0->v());
+              if (d_a00 <= 0) {
                 _result = expr::val(0u);
               } else {
-                unsigned int _x = _m0.d_a0 - 1;
-                auto &&_sv1 = _m.d_a1->simplify();
+                unsigned int _x = d_a00 - 1;
+                auto &&_sv1 = d_a1->simplify();
                 if (std::holds_alternative<typename expr::Val>(_sv1->v())) {
-                  const auto &_m1 =
-                      *std::get_if<typename expr::Val>(&_sv1->v());
-                  if (_m1.d_a0 <= 0) {
+                  const auto &[d_a01] = std::get<typename expr::Val>(_sv1->v());
+                  if (d_a01 <= 0) {
                     _result = expr::val(0u);
                   } else {
-                    unsigned int n1 = _m1.d_a0 - 1;
+                    unsigned int n1 = d_a01 - 1;
                     std::shared_ptr<expr> s2 = expr::val((n1 + 1));
-                    if (_m0.d_a0 == 1u) {
+                    if (d_a00 == 1u) {
                       _result = std::move(s2);
                     } else {
-                      _result = expr::mul(expr::val(_m0.d_a0), s2);
+                      _result = expr::mul(expr::val(d_a00), s2);
                     }
                   }
                 } else if (std::holds_alternative<typename expr::Succ>(
                                _sv1->v())) {
-                  const auto &_m1 =
-                      *std::get_if<typename expr::Succ>(&_sv1->v());
-                  std::shared_ptr<expr> s2 = expr::succ(_m1.d_a0);
-                  if (_m0.d_a0 == 1u) {
+                  const auto &[d_a01] =
+                      std::get<typename expr::Succ>(_sv1->v());
+                  std::shared_ptr<expr> s2 = expr::succ(d_a01);
+                  if (d_a00 == 1u) {
                     _result = std::move(s2);
                   } else {
-                    _result = expr::mul(expr::val(_m0.d_a0), s2);
+                    _result = expr::mul(expr::val(d_a00), s2);
                   }
                 } else if (std::holds_alternative<typename expr::Add>(
                                _sv1->v())) {
-                  const auto &_m1 =
-                      *std::get_if<typename expr::Add>(&_sv1->v());
-                  std::shared_ptr<expr> s2 = expr::add(_m1.d_a0, _m1.d_a1);
-                  if (_m0.d_a0 == 1u) {
+                  const auto &[d_a01, d_a11] =
+                      std::get<typename expr::Add>(_sv1->v());
+                  std::shared_ptr<expr> s2 = expr::add(d_a01, d_a11);
+                  if (d_a00 == 1u) {
                     _result = std::move(s2);
                   } else {
-                    _result = expr::mul(expr::val(_m0.d_a0), s2);
+                    _result = expr::mul(expr::val(d_a00), s2);
                   }
                 } else if (std::holds_alternative<typename expr::Mul>(
                                _sv1->v())) {
-                  const auto &_m1 =
-                      *std::get_if<typename expr::Mul>(&_sv1->v());
-                  std::shared_ptr<expr> s2 = expr::mul(_m1.d_a0, _m1.d_a1);
-                  if (_m0.d_a0 == 1u) {
+                  const auto &[d_a01, d_a11] =
+                      std::get<typename expr::Mul>(_sv1->v());
+                  std::shared_ptr<expr> s2 = expr::mul(d_a01, d_a11);
+                  if (d_a00 == 1u) {
                     _result = std::move(s2);
                   } else {
-                    _result = expr::mul(expr::val(_m0.d_a0), s2);
+                    _result = expr::mul(expr::val(d_a00), s2);
                   }
                 } else {
-                  const auto &_m1 =
-                      *std::get_if<typename expr::Cond>(&_sv1->v());
-                  std::shared_ptr<expr> s2 =
-                      expr::cond(_m1.d_a0, _m1.d_a1, _m1.d_a2);
-                  if (_m0.d_a0 == 1u) {
+                  const auto &[d_a01, d_a11, d_a21] =
+                      std::get<typename expr::Cond>(_sv1->v());
+                  std::shared_ptr<expr> s2 = expr::cond(d_a01, d_a11, d_a21);
+                  if (d_a00 == 1u) {
                     _result = std::move(s2);
                   } else {
-                    _result = expr::mul(expr::val(_m0.d_a0), s2);
+                    _result = expr::mul(expr::val(d_a00), s2);
                   }
                 }
               }
             } else if (std::holds_alternative<typename expr::Succ>(_sv0->v())) {
-              const auto &_m0 = *std::get_if<typename expr::Succ>(&_sv0->v());
-              std::shared_ptr<expr> s1 = expr::succ(_m0.d_a0);
-              auto &&_sv1 = _m.d_a1->simplify();
+              const auto &[d_a00] = std::get<typename expr::Succ>(_sv0->v());
+              std::shared_ptr<expr> s1 = expr::succ(d_a00);
+              auto &&_sv1 = d_a1->simplify();
               if (std::holds_alternative<typename expr::Val>(_sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Val>(&_sv1->v());
-                if (_m1.d_a0 <= 0) {
+                const auto &[d_a01] = std::get<typename expr::Val>(_sv1->v());
+                if (d_a01 <= 0) {
                   _result = expr::val(0u);
                 } else {
-                  unsigned int _x = _m1.d_a0 - 1;
-                  if (_m1.d_a0 == 1u) {
+                  unsigned int _x = d_a01 - 1;
+                  if (d_a01 == 1u) {
                     _result = std::move(s1);
                   } else {
-                    _result = expr::mul(s1, expr::val(_m1.d_a0));
+                    _result = expr::mul(s1, expr::val(d_a01));
                   }
                 }
               } else if (std::holds_alternative<typename expr::Succ>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Succ>(&_sv1->v());
-                _result = expr::mul(s1, expr::succ(_m1.d_a0));
+                const auto &[d_a01] = std::get<typename expr::Succ>(_sv1->v());
+                _result = expr::mul(s1, expr::succ(d_a01));
               } else if (std::holds_alternative<typename expr::Add>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Add>(&_sv1->v());
-                _result = expr::mul(s1, expr::add(_m1.d_a0, _m1.d_a1));
+                const auto &[d_a01, d_a11] =
+                    std::get<typename expr::Add>(_sv1->v());
+                _result = expr::mul(s1, expr::add(d_a01, d_a11));
               } else if (std::holds_alternative<typename expr::Mul>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Mul>(&_sv1->v());
-                _result = expr::mul(s1, expr::mul(_m1.d_a0, _m1.d_a1));
+                const auto &[d_a01, d_a11] =
+                    std::get<typename expr::Mul>(_sv1->v());
+                _result = expr::mul(s1, expr::mul(d_a01, d_a11));
               } else {
-                const auto &_m1 = *std::get_if<typename expr::Cond>(&_sv1->v());
-                _result =
-                    expr::mul(s1, expr::cond(_m1.d_a0, _m1.d_a1, _m1.d_a2));
+                const auto &[d_a01, d_a11, d_a21] =
+                    std::get<typename expr::Cond>(_sv1->v());
+                _result = expr::mul(s1, expr::cond(d_a01, d_a11, d_a21));
               }
             } else if (std::holds_alternative<typename expr::Add>(_sv0->v())) {
-              const auto &_m0 = *std::get_if<typename expr::Add>(&_sv0->v());
-              std::shared_ptr<expr> s1 = expr::add(_m0.d_a0, _m0.d_a1);
-              auto &&_sv1 = _m.d_a1->simplify();
+              const auto &[d_a00, d_a10] =
+                  std::get<typename expr::Add>(_sv0->v());
+              std::shared_ptr<expr> s1 = expr::add(d_a00, d_a10);
+              auto &&_sv1 = d_a1->simplify();
               if (std::holds_alternative<typename expr::Val>(_sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Val>(&_sv1->v());
-                if (_m1.d_a0 <= 0) {
+                const auto &[d_a01] = std::get<typename expr::Val>(_sv1->v());
+                if (d_a01 <= 0) {
                   _result = expr::val(0u);
                 } else {
-                  unsigned int _x = _m1.d_a0 - 1;
-                  if (_m1.d_a0 == 1u) {
+                  unsigned int _x = d_a01 - 1;
+                  if (d_a01 == 1u) {
                     _result = std::move(s1);
                   } else {
-                    _result = expr::mul(s1, expr::val(_m1.d_a0));
+                    _result = expr::mul(s1, expr::val(d_a01));
                   }
                 }
               } else if (std::holds_alternative<typename expr::Succ>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Succ>(&_sv1->v());
-                _result = expr::mul(s1, expr::succ(_m1.d_a0));
+                const auto &[d_a01] = std::get<typename expr::Succ>(_sv1->v());
+                _result = expr::mul(s1, expr::succ(d_a01));
               } else if (std::holds_alternative<typename expr::Add>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Add>(&_sv1->v());
-                _result = expr::mul(s1, expr::add(_m1.d_a0, _m1.d_a1));
+                const auto &[d_a01, d_a11] =
+                    std::get<typename expr::Add>(_sv1->v());
+                _result = expr::mul(s1, expr::add(d_a01, d_a11));
               } else if (std::holds_alternative<typename expr::Mul>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Mul>(&_sv1->v());
-                _result = expr::mul(s1, expr::mul(_m1.d_a0, _m1.d_a1));
+                const auto &[d_a01, d_a11] =
+                    std::get<typename expr::Mul>(_sv1->v());
+                _result = expr::mul(s1, expr::mul(d_a01, d_a11));
               } else {
-                const auto &_m1 = *std::get_if<typename expr::Cond>(&_sv1->v());
-                _result =
-                    expr::mul(s1, expr::cond(_m1.d_a0, _m1.d_a1, _m1.d_a2));
+                const auto &[d_a01, d_a11, d_a21] =
+                    std::get<typename expr::Cond>(_sv1->v());
+                _result = expr::mul(s1, expr::cond(d_a01, d_a11, d_a21));
               }
             } else if (std::holds_alternative<typename expr::Mul>(_sv0->v())) {
-              const auto &_m0 = *std::get_if<typename expr::Mul>(&_sv0->v());
-              std::shared_ptr<expr> s1 = expr::mul(_m0.d_a0, _m0.d_a1);
-              auto &&_sv1 = _m.d_a1->simplify();
+              const auto &[d_a00, d_a10] =
+                  std::get<typename expr::Mul>(_sv0->v());
+              std::shared_ptr<expr> s1 = expr::mul(d_a00, d_a10);
+              auto &&_sv1 = d_a1->simplify();
               if (std::holds_alternative<typename expr::Val>(_sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Val>(&_sv1->v());
-                if (_m1.d_a0 <= 0) {
+                const auto &[d_a01] = std::get<typename expr::Val>(_sv1->v());
+                if (d_a01 <= 0) {
                   _result = expr::val(0u);
                 } else {
-                  unsigned int _x = _m1.d_a0 - 1;
-                  if (_m1.d_a0 == 1u) {
+                  unsigned int _x = d_a01 - 1;
+                  if (d_a01 == 1u) {
                     _result = std::move(s1);
                   } else {
-                    _result = expr::mul(s1, expr::val(_m1.d_a0));
+                    _result = expr::mul(s1, expr::val(d_a01));
                   }
                 }
               } else if (std::holds_alternative<typename expr::Succ>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Succ>(&_sv1->v());
-                _result = expr::mul(s1, expr::succ(_m1.d_a0));
+                const auto &[d_a01] = std::get<typename expr::Succ>(_sv1->v());
+                _result = expr::mul(s1, expr::succ(d_a01));
               } else if (std::holds_alternative<typename expr::Add>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Add>(&_sv1->v());
-                _result = expr::mul(s1, expr::add(_m1.d_a0, _m1.d_a1));
+                const auto &[d_a01, d_a11] =
+                    std::get<typename expr::Add>(_sv1->v());
+                _result = expr::mul(s1, expr::add(d_a01, d_a11));
               } else if (std::holds_alternative<typename expr::Mul>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Mul>(&_sv1->v());
-                _result = expr::mul(s1, expr::mul(_m1.d_a0, _m1.d_a1));
+                const auto &[d_a01, d_a11] =
+                    std::get<typename expr::Mul>(_sv1->v());
+                _result = expr::mul(s1, expr::mul(d_a01, d_a11));
               } else {
-                const auto &_m1 = *std::get_if<typename expr::Cond>(&_sv1->v());
-                _result =
-                    expr::mul(s1, expr::cond(_m1.d_a0, _m1.d_a1, _m1.d_a2));
+                const auto &[d_a01, d_a11, d_a21] =
+                    std::get<typename expr::Cond>(_sv1->v());
+                _result = expr::mul(s1, expr::cond(d_a01, d_a11, d_a21));
               }
             } else {
-              const auto &_m0 = *std::get_if<typename expr::Cond>(&_sv0->v());
-              std::shared_ptr<expr> s1 =
-                  expr::cond(_m0.d_a0, _m0.d_a1, _m0.d_a2);
-              auto &&_sv1 = _m.d_a1->simplify();
+              const auto &[d_a00, d_a10, d_a20] =
+                  std::get<typename expr::Cond>(_sv0->v());
+              std::shared_ptr<expr> s1 = expr::cond(d_a00, d_a10, d_a20);
+              auto &&_sv1 = d_a1->simplify();
               if (std::holds_alternative<typename expr::Val>(_sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Val>(&_sv1->v());
-                if (_m1.d_a0 <= 0) {
+                const auto &[d_a01] = std::get<typename expr::Val>(_sv1->v());
+                if (d_a01 <= 0) {
                   _result = expr::val(0u);
                 } else {
-                  unsigned int _x = _m1.d_a0 - 1;
-                  if (_m1.d_a0 == 1u) {
+                  unsigned int _x = d_a01 - 1;
+                  if (d_a01 == 1u) {
                     _result = std::move(s1);
                   } else {
-                    _result = expr::mul(s1, expr::val(_m1.d_a0));
+                    _result = expr::mul(s1, expr::val(d_a01));
                   }
                 }
               } else if (std::holds_alternative<typename expr::Succ>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Succ>(&_sv1->v());
-                _result = expr::mul(s1, expr::succ(_m1.d_a0));
+                const auto &[d_a01] = std::get<typename expr::Succ>(_sv1->v());
+                _result = expr::mul(s1, expr::succ(d_a01));
               } else if (std::holds_alternative<typename expr::Add>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Add>(&_sv1->v());
-                _result = expr::mul(s1, expr::add(_m1.d_a0, _m1.d_a1));
+                const auto &[d_a01, d_a11] =
+                    std::get<typename expr::Add>(_sv1->v());
+                _result = expr::mul(s1, expr::add(d_a01, d_a11));
               } else if (std::holds_alternative<typename expr::Mul>(
                              _sv1->v())) {
-                const auto &_m1 = *std::get_if<typename expr::Mul>(&_sv1->v());
-                _result = expr::mul(s1, expr::mul(_m1.d_a0, _m1.d_a1));
+                const auto &[d_a01, d_a11] =
+                    std::get<typename expr::Mul>(_sv1->v());
+                _result = expr::mul(s1, expr::mul(d_a01, d_a11));
               } else {
-                const auto &_m1 = *std::get_if<typename expr::Cond>(&_sv1->v());
-                _result =
-                    expr::mul(s1, expr::cond(_m1.d_a0, _m1.d_a1, _m1.d_a2));
+                const auto &[d_a01, d_a11, d_a21] =
+                    std::get<typename expr::Cond>(_sv1->v());
+                _result = expr::mul(s1, expr::cond(d_a01, d_a11, d_a21));
               }
             }
           } else {
-            const auto &_m = *std::get_if<typename expr::Cond>(&_self->v());
-            _stack.emplace_back(_Call2{_m.d_a1.get(), _m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename expr::Cond>(_self->v());
+            _stack.emplace_back(_Call2{d_a1.get(), d_a0.get()});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -595,7 +612,7 @@ struct LoopifyExpr {
       struct _Call1 {};
 
       struct _Call2 {
-        decltype(std::declval<typename expr::Add &>().d_a0.get()) _s0;
+        expr *_s0;
       };
 
       struct _Call3 {
@@ -603,7 +620,7 @@ struct LoopifyExpr {
       };
 
       struct _Call4 {
-        decltype(std::declval<typename expr::Mul &>().d_a0.get()) _s0;
+        expr *_s0;
       };
 
       struct _Call5 {
@@ -639,21 +656,22 @@ struct LoopifyExpr {
           if (std::holds_alternative<typename expr::Val>(_self->v())) {
             _result = 1u;
           } else if (std::holds_alternative<typename expr::Succ>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Succ>(&_self->v());
+            const auto &[d_a0] = std::get<typename expr::Succ>(_self->v());
             _stack.emplace_back(_Call1{});
-            _stack.emplace_back(_Enter{_m.d_a0.get()});
+            _stack.emplace_back(_Enter{d_a0.get()});
           } else if (std::holds_alternative<typename expr::Add>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Add>(&_self->v());
-            _stack.emplace_back(_Call2{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] = std::get<typename expr::Add>(_self->v());
+            _stack.emplace_back(_Call2{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename expr::Mul>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Mul>(&_self->v());
-            _stack.emplace_back(_Call4{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] = std::get<typename expr::Mul>(_self->v());
+            _stack.emplace_back(_Call4{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m = *std::get_if<typename expr::Cond>(&_self->v());
-            _stack.emplace_back(_Call6{_m.d_a1.get(), _m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename expr::Cond>(_self->v());
+            _stack.emplace_back(_Call6{d_a1.get(), d_a0.get()});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -697,7 +715,7 @@ struct LoopifyExpr {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename expr::Add &>().d_a0.get()) _s0;
+        expr *_s0;
       };
 
       struct _Call2 {
@@ -705,7 +723,7 @@ struct LoopifyExpr {
       };
 
       struct _Call3 {
-        decltype(std::declval<typename expr::Mul &>().d_a0.get()) _s0;
+        expr *_s0;
       };
 
       struct _Call4 {
@@ -741,20 +759,21 @@ struct LoopifyExpr {
           if (std::holds_alternative<typename expr::Val>(_self->v())) {
             _result = 1u;
           } else if (std::holds_alternative<typename expr::Succ>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Succ>(&_self->v());
-            _stack.emplace_back(_Enter{_m.d_a0.get()});
+            const auto &[d_a0] = std::get<typename expr::Succ>(_self->v());
+            _stack.emplace_back(_Enter{d_a0.get()});
           } else if (std::holds_alternative<typename expr::Add>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Add>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] = std::get<typename expr::Add>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename expr::Mul>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Mul>(&_self->v());
-            _stack.emplace_back(_Call3{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] = std::get<typename expr::Mul>(_self->v());
+            _stack.emplace_back(_Call3{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m = *std::get_if<typename expr::Cond>(&_self->v());
-            _stack.emplace_back(_Call5{_m.d_a1.get(), _m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename expr::Cond>(_self->v());
+            _stack.emplace_back(_Call5{d_a1.get(), d_a0.get()});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -797,7 +816,7 @@ struct LoopifyExpr {
       struct _Call1 {};
 
       struct _Call2 {
-        decltype(std::declval<typename expr::Add &>().d_a0.get()) _s0;
+        expr *_s0;
       };
 
       struct _Call3 {
@@ -805,7 +824,7 @@ struct LoopifyExpr {
       };
 
       struct _Call4 {
-        decltype(std::declval<typename expr::Mul &>().d_a0.get()) _s0;
+        expr *_s0;
       };
 
       struct _Call5 {
@@ -841,21 +860,22 @@ struct LoopifyExpr {
           if (std::holds_alternative<typename expr::Val>(_self->v())) {
             _result = 0u;
           } else if (std::holds_alternative<typename expr::Succ>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Succ>(&_self->v());
+            const auto &[d_a0] = std::get<typename expr::Succ>(_self->v());
             _stack.emplace_back(_Call1{});
-            _stack.emplace_back(_Enter{_m.d_a0.get()});
+            _stack.emplace_back(_Enter{d_a0.get()});
           } else if (std::holds_alternative<typename expr::Add>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Add>(&_self->v());
-            _stack.emplace_back(_Call2{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] = std::get<typename expr::Add>(_self->v());
+            _stack.emplace_back(_Call2{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename expr::Mul>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Mul>(&_self->v());
-            _stack.emplace_back(_Call4{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] = std::get<typename expr::Mul>(_self->v());
+            _stack.emplace_back(_Call4{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m = *std::get_if<typename expr::Cond>(&_self->v());
-            _stack.emplace_back(_Call6{_m.d_a1.get(), _m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename expr::Cond>(_self->v());
+            _stack.emplace_back(_Call6{d_a1.get(), d_a0.get()});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -901,7 +921,7 @@ struct LoopifyExpr {
       struct _Call1 {};
 
       struct _Call2 {
-        decltype(std::declval<typename expr::Add &>().d_a0.get()) _s0;
+        expr *_s0;
       };
 
       struct _Call3 {
@@ -909,7 +929,7 @@ struct LoopifyExpr {
       };
 
       struct _Call4 {
-        decltype(std::declval<typename expr::Mul &>().d_a0.get()) _s0;
+        expr *_s0;
       };
 
       struct _Call5 {
@@ -917,7 +937,8 @@ struct LoopifyExpr {
       };
 
       struct _Call6 {
-        const typename expr::Cond _s0;
+        std::shared_ptr<expr> _s0;
+        std::shared_ptr<expr> _s1;
       };
 
       using _Frame =
@@ -932,24 +953,25 @@ struct LoopifyExpr {
           const auto &_f = std::get<_Enter>(_frame);
           const expr *_self = _f._self;
           if (std::holds_alternative<typename expr::Val>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Val>(&_self->v());
-            _result = _m.d_a0;
+            const auto &[d_a0] = std::get<typename expr::Val>(_self->v());
+            _result = d_a0;
           } else if (std::holds_alternative<typename expr::Succ>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Succ>(&_self->v());
+            const auto &[d_a0] = std::get<typename expr::Succ>(_self->v());
             _stack.emplace_back(_Call1{});
-            _stack.emplace_back(_Enter{_m.d_a0.get()});
+            _stack.emplace_back(_Enter{d_a0.get()});
           } else if (std::holds_alternative<typename expr::Add>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Add>(&_self->v());
-            _stack.emplace_back(_Call2{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] = std::get<typename expr::Add>(_self->v());
+            _stack.emplace_back(_Call2{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename expr::Mul>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Mul>(&_self->v());
-            _stack.emplace_back(_Call4{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] = std::get<typename expr::Mul>(_self->v());
+            _stack.emplace_back(_Call4{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m = *std::get_if<typename expr::Cond>(&_self->v());
-            _stack.emplace_back(_Call6{_m});
-            _stack.emplace_back(_Enter{_m.d_a0.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename expr::Cond>(_self->v());
+            _stack.emplace_back(_Call6{d_a1, d_a2});
+            _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -970,12 +992,13 @@ struct LoopifyExpr {
           _result = (_result * _f._s0);
         } else {
           const auto &_f = std::get<_Call6>(_frame);
-          const typename expr::Cond _m = _f._s0;
+          std::shared_ptr<expr> d_a1 = _f._s0;
+          std::shared_ptr<expr> d_a2 = _f._s1;
           unsigned int _cond0 = _result;
           if (0u < _cond0) {
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         }
       }
@@ -998,55 +1021,55 @@ struct LoopifyExpr {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename expr::Succ &>().d_a0) _s0;
+        std::shared_ptr<expr> _s0;
       };
 
       struct _Call2 {
-        decltype(std::declval<typename expr::Add &>().d_a0.get()) _s0;
-        decltype(std::declval<typename expr::Add &>().d_a1) _s1;
-        decltype(std::declval<typename expr::Add &>().d_a0) _s2;
+        expr *_s0;
+        std::shared_ptr<expr> _s1;
+        std::shared_ptr<expr> _s2;
       };
 
       struct _Call3 {
         T1 _s0;
-        decltype(std::declval<typename expr::Add &>().d_a1) _s1;
-        decltype(std::declval<typename expr::Add &>().d_a0) _s2;
+        std::shared_ptr<expr> _s1;
+        std::shared_ptr<expr> _s2;
       };
 
       struct _Call4 {
-        decltype(std::declval<typename expr::Mul &>().d_a0.get()) _s0;
-        decltype(std::declval<typename expr::Mul &>().d_a1) _s1;
-        decltype(std::declval<typename expr::Mul &>().d_a0) _s2;
+        expr *_s0;
+        std::shared_ptr<expr> _s1;
+        std::shared_ptr<expr> _s2;
       };
 
       struct _Call5 {
         T1 _s0;
-        decltype(std::declval<typename expr::Mul &>().d_a1) _s1;
-        decltype(std::declval<typename expr::Mul &>().d_a0) _s2;
+        std::shared_ptr<expr> _s1;
+        std::shared_ptr<expr> _s2;
       };
 
       struct _Call6 {
         const expr *_s0;
         const expr *_s1;
-        decltype(std::declval<typename expr::Cond &>().d_a2) _s2;
-        decltype(std::declval<typename expr::Cond &>().d_a1) _s3;
-        decltype(std::declval<typename expr::Cond &>().d_a0) _s4;
+        std::shared_ptr<expr> _s2;
+        std::shared_ptr<expr> _s3;
+        std::shared_ptr<expr> _s4;
       };
 
       struct _Call7 {
         T1 _s0;
         const expr *_s1;
-        decltype(std::declval<typename expr::Cond &>().d_a2) _s2;
-        decltype(std::declval<typename expr::Cond &>().d_a1) _s3;
-        decltype(std::declval<typename expr::Cond &>().d_a0) _s4;
+        std::shared_ptr<expr> _s2;
+        std::shared_ptr<expr> _s3;
+        std::shared_ptr<expr> _s4;
       };
 
       struct _Call8 {
         T1 _s0;
         T1 _s1;
-        decltype(std::declval<typename expr::Cond &>().d_a2) _s2;
-        decltype(std::declval<typename expr::Cond &>().d_a1) _s3;
-        decltype(std::declval<typename expr::Cond &>().d_a0) _s4;
+        std::shared_ptr<expr> _s2;
+        std::shared_ptr<expr> _s3;
+        std::shared_ptr<expr> _s4;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4,
@@ -1061,25 +1084,26 @@ struct LoopifyExpr {
           const auto &_f = std::get<_Enter>(_frame);
           const expr *_self = _f._self;
           if (std::holds_alternative<typename expr::Val>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Val>(&_self->v());
-            _result = f(_m.d_a0);
+            const auto &[d_a0] = std::get<typename expr::Val>(_self->v());
+            _result = f(d_a0);
           } else if (std::holds_alternative<typename expr::Succ>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Succ>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a0.get()});
+            const auto &[d_a0] = std::get<typename expr::Succ>(_self->v());
+            _stack.emplace_back(_Call1{d_a0});
+            _stack.emplace_back(_Enter{d_a0.get()});
           } else if (std::holds_alternative<typename expr::Add>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Add>(&_self->v());
-            _stack.emplace_back(_Call2{_m.d_a0.get(), _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] = std::get<typename expr::Add>(_self->v());
+            _stack.emplace_back(_Call2{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename expr::Mul>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Mul>(&_self->v());
-            _stack.emplace_back(_Call4{_m.d_a0.get(), _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] = std::get<typename expr::Mul>(_self->v());
+            _stack.emplace_back(_Call4{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m = *std::get_if<typename expr::Cond>(&_self->v());
-            _stack.emplace_back(_Call6{_m.d_a1.get(), _m.d_a0.get(), _m.d_a2,
-                                       _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename expr::Cond>(_self->v());
+            _stack.emplace_back(
+                _Call6{d_a1.get(), d_a0.get(), d_a2, d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -1130,55 +1154,55 @@ struct LoopifyExpr {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename expr::Succ &>().d_a0) _s0;
+        std::shared_ptr<expr> _s0;
       };
 
       struct _Call2 {
-        decltype(std::declval<typename expr::Add &>().d_a0.get()) _s0;
-        decltype(std::declval<typename expr::Add &>().d_a1) _s1;
-        decltype(std::declval<typename expr::Add &>().d_a0) _s2;
+        expr *_s0;
+        std::shared_ptr<expr> _s1;
+        std::shared_ptr<expr> _s2;
       };
 
       struct _Call3 {
         T1 _s0;
-        decltype(std::declval<typename expr::Add &>().d_a1) _s1;
-        decltype(std::declval<typename expr::Add &>().d_a0) _s2;
+        std::shared_ptr<expr> _s1;
+        std::shared_ptr<expr> _s2;
       };
 
       struct _Call4 {
-        decltype(std::declval<typename expr::Mul &>().d_a0.get()) _s0;
-        decltype(std::declval<typename expr::Mul &>().d_a1) _s1;
-        decltype(std::declval<typename expr::Mul &>().d_a0) _s2;
+        expr *_s0;
+        std::shared_ptr<expr> _s1;
+        std::shared_ptr<expr> _s2;
       };
 
       struct _Call5 {
         T1 _s0;
-        decltype(std::declval<typename expr::Mul &>().d_a1) _s1;
-        decltype(std::declval<typename expr::Mul &>().d_a0) _s2;
+        std::shared_ptr<expr> _s1;
+        std::shared_ptr<expr> _s2;
       };
 
       struct _Call6 {
         const expr *_s0;
         const expr *_s1;
-        decltype(std::declval<typename expr::Cond &>().d_a2) _s2;
-        decltype(std::declval<typename expr::Cond &>().d_a1) _s3;
-        decltype(std::declval<typename expr::Cond &>().d_a0) _s4;
+        std::shared_ptr<expr> _s2;
+        std::shared_ptr<expr> _s3;
+        std::shared_ptr<expr> _s4;
       };
 
       struct _Call7 {
         T1 _s0;
         const expr *_s1;
-        decltype(std::declval<typename expr::Cond &>().d_a2) _s2;
-        decltype(std::declval<typename expr::Cond &>().d_a1) _s3;
-        decltype(std::declval<typename expr::Cond &>().d_a0) _s4;
+        std::shared_ptr<expr> _s2;
+        std::shared_ptr<expr> _s3;
+        std::shared_ptr<expr> _s4;
       };
 
       struct _Call8 {
         T1 _s0;
         T1 _s1;
-        decltype(std::declval<typename expr::Cond &>().d_a2) _s2;
-        decltype(std::declval<typename expr::Cond &>().d_a1) _s3;
-        decltype(std::declval<typename expr::Cond &>().d_a0) _s4;
+        std::shared_ptr<expr> _s2;
+        std::shared_ptr<expr> _s3;
+        std::shared_ptr<expr> _s4;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4,
@@ -1193,25 +1217,26 @@ struct LoopifyExpr {
           const auto &_f = std::get<_Enter>(_frame);
           const expr *_self = _f._self;
           if (std::holds_alternative<typename expr::Val>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Val>(&_self->v());
-            _result = f(_m.d_a0);
+            const auto &[d_a0] = std::get<typename expr::Val>(_self->v());
+            _result = f(d_a0);
           } else if (std::holds_alternative<typename expr::Succ>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Succ>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a0.get()});
+            const auto &[d_a0] = std::get<typename expr::Succ>(_self->v());
+            _stack.emplace_back(_Call1{d_a0});
+            _stack.emplace_back(_Enter{d_a0.get()});
           } else if (std::holds_alternative<typename expr::Add>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Add>(&_self->v());
-            _stack.emplace_back(_Call2{_m.d_a0.get(), _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] = std::get<typename expr::Add>(_self->v());
+            _stack.emplace_back(_Call2{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename expr::Mul>(_self->v())) {
-            const auto &_m = *std::get_if<typename expr::Mul>(&_self->v());
-            _stack.emplace_back(_Call4{_m.d_a0.get(), _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] = std::get<typename expr::Mul>(_self->v());
+            _stack.emplace_back(_Call4{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m = *std::get_if<typename expr::Cond>(&_self->v());
-            _stack.emplace_back(_Call6{_m.d_a1.get(), _m.d_a0.get(), _m.d_a2,
-                                       _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename expr::Cond>(_self->v());
+            _stack.emplace_back(
+                _Call6{d_a1.get(), d_a0.get(), d_a2, d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -1323,7 +1348,7 @@ struct LoopifyExpr {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename simple_expr::Plus &>().d_a0.get()) _s0;
+        simple_expr *_s0;
       };
 
       struct _Call2 {
@@ -1360,15 +1385,15 @@ struct LoopifyExpr {
             _result = 0u;
           } else if (std::holds_alternative<typename simple_expr::Plus>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename simple_expr::Plus>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename simple_expr::Plus>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename simple_expr::IfPos>(&_self->v());
-            _stack.emplace_back(_Call3{_m.d_a1.get(), _m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename simple_expr::IfPos>(_self->v());
+            _stack.emplace_back(_Call3{d_a1.get(), d_a0.get()});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -1402,7 +1427,7 @@ struct LoopifyExpr {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename simple_expr::Plus &>().d_a0.get()) _s0;
+        simple_expr *_s0;
       };
 
       struct _Call2 {
@@ -1410,7 +1435,8 @@ struct LoopifyExpr {
       };
 
       struct _Call3 {
-        const typename simple_expr::IfPos _s0;
+        std::shared_ptr<simple_expr> _s0;
+        std::shared_ptr<simple_expr> _s1;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
@@ -1424,20 +1450,20 @@ struct LoopifyExpr {
           const auto &_f = std::get<_Enter>(_frame);
           const simple_expr *_self = _f._self;
           if (std::holds_alternative<typename simple_expr::Lit>(_self->v())) {
-            const auto &_m =
-                *std::get_if<typename simple_expr::Lit>(&_self->v());
-            _result = _m.d_a0;
+            const auto &[d_a0] =
+                std::get<typename simple_expr::Lit>(_self->v());
+            _result = d_a0;
           } else if (std::holds_alternative<typename simple_expr::Plus>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename simple_expr::Plus>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename simple_expr::Plus>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename simple_expr::IfPos>(&_self->v());
-            _stack.emplace_back(_Call3{_m});
-            _stack.emplace_back(_Enter{_m.d_a0.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename simple_expr::IfPos>(_self->v());
+            _stack.emplace_back(_Call3{d_a1, d_a2});
+            _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -1448,12 +1474,13 @@ struct LoopifyExpr {
           _result = (_result + _f._s0);
         } else {
           const auto &_f = std::get<_Call3>(_frame);
-          const typename simple_expr::IfPos _m = _f._s0;
+          std::shared_ptr<simple_expr> d_a1 = _f._s0;
+          std::shared_ptr<simple_expr> d_a2 = _f._s1;
           unsigned int _cond0 = _result;
           if (0u < _cond0) {
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         }
       }
@@ -1476,39 +1503,39 @@ struct LoopifyExpr {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename simple_expr::Plus &>().d_a0.get()) _s0;
-        decltype(std::declval<typename simple_expr::Plus &>().d_a1) _s1;
-        decltype(std::declval<typename simple_expr::Plus &>().d_a0) _s2;
+        simple_expr *_s0;
+        std::shared_ptr<simple_expr> _s1;
+        std::shared_ptr<simple_expr> _s2;
       };
 
       struct _Call2 {
         T1 _s0;
-        decltype(std::declval<typename simple_expr::Plus &>().d_a1) _s1;
-        decltype(std::declval<typename simple_expr::Plus &>().d_a0) _s2;
+        std::shared_ptr<simple_expr> _s1;
+        std::shared_ptr<simple_expr> _s2;
       };
 
       struct _Call3 {
         const simple_expr *_s0;
         const simple_expr *_s1;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a2) _s2;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a1) _s3;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a0) _s4;
+        std::shared_ptr<simple_expr> _s2;
+        std::shared_ptr<simple_expr> _s3;
+        std::shared_ptr<simple_expr> _s4;
       };
 
       struct _Call4 {
         T1 _s0;
         const simple_expr *_s1;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a2) _s2;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a1) _s3;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a0) _s4;
+        std::shared_ptr<simple_expr> _s2;
+        std::shared_ptr<simple_expr> _s3;
+        std::shared_ptr<simple_expr> _s4;
       };
 
       struct _Call5 {
         T1 _s0;
         T1 _s1;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a2) _s2;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a1) _s3;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a0) _s4;
+        std::shared_ptr<simple_expr> _s2;
+        std::shared_ptr<simple_expr> _s3;
+        std::shared_ptr<simple_expr> _s4;
       };
 
       using _Frame =
@@ -1523,21 +1550,21 @@ struct LoopifyExpr {
           const auto &_f = std::get<_Enter>(_frame);
           const simple_expr *_self = _f._self;
           if (std::holds_alternative<typename simple_expr::Lit>(_self->v())) {
-            const auto &_m =
-                *std::get_if<typename simple_expr::Lit>(&_self->v());
-            _result = f(_m.d_a0);
+            const auto &[d_a0] =
+                std::get<typename simple_expr::Lit>(_self->v());
+            _result = f(d_a0);
           } else if (std::holds_alternative<typename simple_expr::Plus>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename simple_expr::Plus>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get(), _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename simple_expr::Plus>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename simple_expr::IfPos>(&_self->v());
-            _stack.emplace_back(_Call3{_m.d_a1.get(), _m.d_a0.get(), _m.d_a2,
-                                       _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename simple_expr::IfPos>(_self->v());
+            _stack.emplace_back(
+                _Call3{d_a1.get(), d_a0.get(), d_a2, d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -1578,39 +1605,39 @@ struct LoopifyExpr {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename simple_expr::Plus &>().d_a0.get()) _s0;
-        decltype(std::declval<typename simple_expr::Plus &>().d_a1) _s1;
-        decltype(std::declval<typename simple_expr::Plus &>().d_a0) _s2;
+        simple_expr *_s0;
+        std::shared_ptr<simple_expr> _s1;
+        std::shared_ptr<simple_expr> _s2;
       };
 
       struct _Call2 {
         T1 _s0;
-        decltype(std::declval<typename simple_expr::Plus &>().d_a1) _s1;
-        decltype(std::declval<typename simple_expr::Plus &>().d_a0) _s2;
+        std::shared_ptr<simple_expr> _s1;
+        std::shared_ptr<simple_expr> _s2;
       };
 
       struct _Call3 {
         const simple_expr *_s0;
         const simple_expr *_s1;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a2) _s2;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a1) _s3;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a0) _s4;
+        std::shared_ptr<simple_expr> _s2;
+        std::shared_ptr<simple_expr> _s3;
+        std::shared_ptr<simple_expr> _s4;
       };
 
       struct _Call4 {
         T1 _s0;
         const simple_expr *_s1;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a2) _s2;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a1) _s3;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a0) _s4;
+        std::shared_ptr<simple_expr> _s2;
+        std::shared_ptr<simple_expr> _s3;
+        std::shared_ptr<simple_expr> _s4;
       };
 
       struct _Call5 {
         T1 _s0;
         T1 _s1;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a2) _s2;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a1) _s3;
-        decltype(std::declval<typename simple_expr::IfPos &>().d_a0) _s4;
+        std::shared_ptr<simple_expr> _s2;
+        std::shared_ptr<simple_expr> _s3;
+        std::shared_ptr<simple_expr> _s4;
       };
 
       using _Frame =
@@ -1625,21 +1652,21 @@ struct LoopifyExpr {
           const auto &_f = std::get<_Enter>(_frame);
           const simple_expr *_self = _f._self;
           if (std::holds_alternative<typename simple_expr::Lit>(_self->v())) {
-            const auto &_m =
-                *std::get_if<typename simple_expr::Lit>(&_self->v());
-            _result = f(_m.d_a0);
+            const auto &[d_a0] =
+                std::get<typename simple_expr::Lit>(_self->v());
+            _result = f(d_a0);
           } else if (std::holds_alternative<typename simple_expr::Plus>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename simple_expr::Plus>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get(), _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename simple_expr::Plus>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename simple_expr::IfPos>(&_self->v());
-            _stack.emplace_back(_Call3{_m.d_a1.get(), _m.d_a0.get(), _m.d_a2,
-                                       _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename simple_expr::IfPos>(_self->v());
+            _stack.emplace_back(
+                _Call3{d_a1.get(), d_a0.get(), d_a2, d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -1716,14 +1743,14 @@ struct LoopifyExpr {
               MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2>
     T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename shape::Circle>(this->v())) {
-        const auto &_m = *std::get_if<typename shape::Circle>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename shape::Circle>(this->v());
+        return f(d_a0);
       } else if (std::holds_alternative<typename shape::Square>(this->v())) {
-        const auto &_m = *std::get_if<typename shape::Square>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename shape::Square>(this->v());
+        return f0(d_a0);
       } else {
-        const auto &_m = *std::get_if<typename shape::Triangle>(&this->v());
-        return f1(_m.d_a0);
+        const auto &[d_a0] = std::get<typename shape::Triangle>(this->v());
+        return f1(d_a0);
       }
     }
 
@@ -1731,14 +1758,14 @@ struct LoopifyExpr {
               MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2>
     T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename shape::Circle>(this->v())) {
-        const auto &_m = *std::get_if<typename shape::Circle>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename shape::Circle>(this->v());
+        return f(d_a0);
       } else if (std::holds_alternative<typename shape::Square>(this->v())) {
-        const auto &_m = *std::get_if<typename shape::Square>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename shape::Square>(this->v());
+        return f0(d_a0);
       } else {
-        const auto &_m = *std::get_if<typename shape::Triangle>(&this->v());
-        return f1(_m.d_a0);
+        const auto &[d_a0] = std::get<typename shape::Triangle>(this->v());
+        return f1(d_a0);
       }
     }
   };
@@ -1829,7 +1856,7 @@ struct LoopifyExpr {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename cond_expr::CPlus &>().d_a0.get()) _s0;
+        cond_expr *_s0;
       };
 
       struct _Call2 {
@@ -1866,15 +1893,15 @@ struct LoopifyExpr {
             _result = 0u;
           } else if (std::holds_alternative<typename cond_expr::CPlus>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename cond_expr::CPlus>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename cond_expr::CPlus>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename cond_expr::CCond>(&_self->v());
-            _stack.emplace_back(_Call3{_m.d_a1.get(), _m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename cond_expr::CCond>(_self->v());
+            _stack.emplace_back(_Call3{d_a1.get(), d_a0.get()});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -1908,7 +1935,7 @@ struct LoopifyExpr {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename cond_expr::CPlus &>().d_a0.get()) _s0;
+        cond_expr *_s0;
       };
 
       struct _Call2 {
@@ -1916,7 +1943,8 @@ struct LoopifyExpr {
       };
 
       struct _Call3 {
-        const typename cond_expr::CCond _s0;
+        std::shared_ptr<cond_expr> _s0;
+        std::shared_ptr<cond_expr> _s1;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
@@ -1930,20 +1958,19 @@ struct LoopifyExpr {
           const auto &_f = std::get<_Enter>(_frame);
           const cond_expr *_self = _f._self;
           if (std::holds_alternative<typename cond_expr::CLit>(_self->v())) {
-            const auto &_m =
-                *std::get_if<typename cond_expr::CLit>(&_self->v());
-            _result = _m.d_a0;
+            const auto &[d_a0] = std::get<typename cond_expr::CLit>(_self->v());
+            _result = d_a0;
           } else if (std::holds_alternative<typename cond_expr::CPlus>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename cond_expr::CPlus>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get()});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename cond_expr::CPlus>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename cond_expr::CCond>(&_self->v());
-            _stack.emplace_back(_Call3{_m});
-            _stack.emplace_back(_Enter{_m.d_a0.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename cond_expr::CCond>(_self->v());
+            _stack.emplace_back(_Call3{d_a1, d_a2});
+            _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -1954,12 +1981,13 @@ struct LoopifyExpr {
           _result = (_result + _f._s0);
         } else {
           const auto &_f = std::get<_Call3>(_frame);
-          const typename cond_expr::CCond _m = _f._s0;
+          std::shared_ptr<cond_expr> d_a1 = _f._s0;
+          std::shared_ptr<cond_expr> d_a2 = _f._s1;
           unsigned int _cond0 = _result;
           if (0u < _cond0) {
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         }
       }
@@ -1982,39 +2010,39 @@ struct LoopifyExpr {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename cond_expr::CPlus &>().d_a0.get()) _s0;
-        decltype(std::declval<typename cond_expr::CPlus &>().d_a1) _s1;
-        decltype(std::declval<typename cond_expr::CPlus &>().d_a0) _s2;
+        cond_expr *_s0;
+        std::shared_ptr<cond_expr> _s1;
+        std::shared_ptr<cond_expr> _s2;
       };
 
       struct _Call2 {
         T1 _s0;
-        decltype(std::declval<typename cond_expr::CPlus &>().d_a1) _s1;
-        decltype(std::declval<typename cond_expr::CPlus &>().d_a0) _s2;
+        std::shared_ptr<cond_expr> _s1;
+        std::shared_ptr<cond_expr> _s2;
       };
 
       struct _Call3 {
         const cond_expr *_s0;
         const cond_expr *_s1;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a2) _s2;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a1) _s3;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a0) _s4;
+        std::shared_ptr<cond_expr> _s2;
+        std::shared_ptr<cond_expr> _s3;
+        std::shared_ptr<cond_expr> _s4;
       };
 
       struct _Call4 {
         T1 _s0;
         const cond_expr *_s1;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a2) _s2;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a1) _s3;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a0) _s4;
+        std::shared_ptr<cond_expr> _s2;
+        std::shared_ptr<cond_expr> _s3;
+        std::shared_ptr<cond_expr> _s4;
       };
 
       struct _Call5 {
         T1 _s0;
         T1 _s1;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a2) _s2;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a1) _s3;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a0) _s4;
+        std::shared_ptr<cond_expr> _s2;
+        std::shared_ptr<cond_expr> _s3;
+        std::shared_ptr<cond_expr> _s4;
       };
 
       using _Frame =
@@ -2029,21 +2057,20 @@ struct LoopifyExpr {
           const auto &_f = std::get<_Enter>(_frame);
           const cond_expr *_self = _f._self;
           if (std::holds_alternative<typename cond_expr::CLit>(_self->v())) {
-            const auto &_m =
-                *std::get_if<typename cond_expr::CLit>(&_self->v());
-            _result = f(_m.d_a0);
+            const auto &[d_a0] = std::get<typename cond_expr::CLit>(_self->v());
+            _result = f(d_a0);
           } else if (std::holds_alternative<typename cond_expr::CPlus>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename cond_expr::CPlus>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get(), _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename cond_expr::CPlus>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename cond_expr::CCond>(&_self->v());
-            _stack.emplace_back(_Call3{_m.d_a1.get(), _m.d_a0.get(), _m.d_a2,
-                                       _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename cond_expr::CCond>(_self->v());
+            _stack.emplace_back(
+                _Call3{d_a1.get(), d_a0.get(), d_a2, d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
@@ -2084,39 +2111,39 @@ struct LoopifyExpr {
       };
 
       struct _Call1 {
-        decltype(std::declval<typename cond_expr::CPlus &>().d_a0.get()) _s0;
-        decltype(std::declval<typename cond_expr::CPlus &>().d_a1) _s1;
-        decltype(std::declval<typename cond_expr::CPlus &>().d_a0) _s2;
+        cond_expr *_s0;
+        std::shared_ptr<cond_expr> _s1;
+        std::shared_ptr<cond_expr> _s2;
       };
 
       struct _Call2 {
         T1 _s0;
-        decltype(std::declval<typename cond_expr::CPlus &>().d_a1) _s1;
-        decltype(std::declval<typename cond_expr::CPlus &>().d_a0) _s2;
+        std::shared_ptr<cond_expr> _s1;
+        std::shared_ptr<cond_expr> _s2;
       };
 
       struct _Call3 {
         const cond_expr *_s0;
         const cond_expr *_s1;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a2) _s2;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a1) _s3;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a0) _s4;
+        std::shared_ptr<cond_expr> _s2;
+        std::shared_ptr<cond_expr> _s3;
+        std::shared_ptr<cond_expr> _s4;
       };
 
       struct _Call4 {
         T1 _s0;
         const cond_expr *_s1;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a2) _s2;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a1) _s3;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a0) _s4;
+        std::shared_ptr<cond_expr> _s2;
+        std::shared_ptr<cond_expr> _s3;
+        std::shared_ptr<cond_expr> _s4;
       };
 
       struct _Call5 {
         T1 _s0;
         T1 _s1;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a2) _s2;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a1) _s3;
-        decltype(std::declval<typename cond_expr::CCond &>().d_a0) _s4;
+        std::shared_ptr<cond_expr> _s2;
+        std::shared_ptr<cond_expr> _s3;
+        std::shared_ptr<cond_expr> _s4;
       };
 
       using _Frame =
@@ -2131,21 +2158,20 @@ struct LoopifyExpr {
           const auto &_f = std::get<_Enter>(_frame);
           const cond_expr *_self = _f._self;
           if (std::holds_alternative<typename cond_expr::CLit>(_self->v())) {
-            const auto &_m =
-                *std::get_if<typename cond_expr::CLit>(&_self->v());
-            _result = f(_m.d_a0);
+            const auto &[d_a0] = std::get<typename cond_expr::CLit>(_self->v());
+            _result = f(d_a0);
           } else if (std::holds_alternative<typename cond_expr::CPlus>(
                          _self->v())) {
-            const auto &_m =
-                *std::get_if<typename cond_expr::CPlus>(&_self->v());
-            _stack.emplace_back(_Call1{_m.d_a0.get(), _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1.get()});
+            const auto &[d_a0, d_a1] =
+                std::get<typename cond_expr::CPlus>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            const auto &_m =
-                *std::get_if<typename cond_expr::CCond>(&_self->v());
-            _stack.emplace_back(_Call3{_m.d_a1.get(), _m.d_a0.get(), _m.d_a2,
-                                       _m.d_a1, _m.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a2.get()});
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename cond_expr::CCond>(_self->v());
+            _stack.emplace_back(
+                _Call3{d_a1.get(), d_a0.get(), d_a2, d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);

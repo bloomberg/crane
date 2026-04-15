@@ -1165,8 +1165,9 @@ __attribute__((pure)) unsigned int LoopifyNumbers::sum_odd_indices_fuel(
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-      return (_m.d_a0 + sum_even_indices_fuel(f, _m.d_a1));
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l->v());
+      return (d_a0 + sum_even_indices_fuel(f, d_a1));
     }
   }
 }
@@ -1179,7 +1180,7 @@ __attribute__((pure)) unsigned int LoopifyNumbers::sum_even_indices_fuel(
   };
 
   struct _Call1 {
-    decltype(std::declval<typename List<unsigned int>::Cons &>().d_a0) _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -1200,9 +1201,9 @@ __attribute__((pure)) unsigned int LoopifyNumbers::sum_even_indices_fuel(
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
           _result = 0u;
         } else {
-          const auto &_m =
-              *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-          const std::shared_ptr<List<unsigned int>> &_inl_l = _m.d_a1;
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l->v());
+          const std::shared_ptr<List<unsigned int>> &_inl_l = d_a1;
           const unsigned int _inl_fuel = f;
           if (_inl_fuel <= 0) {
             _result = 0u;
@@ -1212,10 +1213,10 @@ __attribute__((pure)) unsigned int LoopifyNumbers::sum_even_indices_fuel(
                     _inl_l->v())) {
               _result = 0u;
             } else {
-              const auto &_m =
-                  *std::get_if<typename List<unsigned int>::Cons>(&_inl_l->v());
-              _stack.emplace_back(_Call1{_m.d_a0});
-              _stack.emplace_back(_Enter{_m.d_a1, f});
+              const auto &[d_a0, d_a1] =
+                  std::get<typename List<unsigned int>::Cons>(_inl_l->v());
+              _stack.emplace_back(_Call1{d_a0});
+              _stack.emplace_back(_Enter{d_a1, f});
             }
           }
         }

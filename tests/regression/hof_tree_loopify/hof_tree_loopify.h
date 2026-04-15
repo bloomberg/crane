@@ -550,17 +550,17 @@ struct HofTreeLoopify {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename tree<T1>::Node &>().d_a0) _s0;
-      decltype(std::declval<typename tree<T1>::Node &>().d_a2) _s1;
-      decltype(std::declval<typename tree<T1>::Node &>().d_a1) _s2;
-      decltype(std::declval<typename tree<T1>::Node &>().d_a0) _s3;
+      std::shared_ptr<tree<T1>> _s0;
+      std::shared_ptr<tree<T1>> _s1;
+      T1 _s2;
+      std::shared_ptr<tree<T1>> _s3;
     };
 
     struct _Call2 {
       T2 _s0;
-      decltype(std::declval<typename tree<T1>::Node &>().d_a2) _s1;
-      decltype(std::declval<typename tree<T1>::Node &>().d_a1) _s2;
-      decltype(std::declval<typename tree<T1>::Node &>().d_a0) _s3;
+      std::shared_ptr<tree<T1>> _s1;
+      T1 _s2;
+      std::shared_ptr<tree<T1>> _s3;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -576,9 +576,10 @@ struct HofTreeLoopify {
         if (std::holds_alternative<typename tree<T1>::Leaf>(t->v())) {
           _result = f;
         } else {
-          const auto &_m = *std::get_if<typename tree<T1>::Node>(&t->v());
-          _stack.emplace_back(_Call1{_m.d_a0, _m.d_a2, _m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a2});
+          const auto &[d_a0, d_a1, d_a2] =
+              std::get<typename tree<T1>::Node>(t->v());
+          _stack.emplace_back(_Call1{d_a0, d_a2, d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a2});
         }
       } else if (std::holds_alternative<_Call1>(_frame)) {
         const auto &_f = std::get<_Call1>(_frame);
@@ -602,17 +603,17 @@ struct HofTreeLoopify {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename tree<T1>::Node &>().d_a0) _s0;
-      decltype(std::declval<typename tree<T1>::Node &>().d_a2) _s1;
-      decltype(std::declval<typename tree<T1>::Node &>().d_a1) _s2;
-      decltype(std::declval<typename tree<T1>::Node &>().d_a0) _s3;
+      std::shared_ptr<tree<T1>> _s0;
+      std::shared_ptr<tree<T1>> _s1;
+      T1 _s2;
+      std::shared_ptr<tree<T1>> _s3;
     };
 
     struct _Call2 {
       T2 _s0;
-      decltype(std::declval<typename tree<T1>::Node &>().d_a2) _s1;
-      decltype(std::declval<typename tree<T1>::Node &>().d_a1) _s2;
-      decltype(std::declval<typename tree<T1>::Node &>().d_a0) _s3;
+      std::shared_ptr<tree<T1>> _s1;
+      T1 _s2;
+      std::shared_ptr<tree<T1>> _s3;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -628,9 +629,10 @@ struct HofTreeLoopify {
         if (std::holds_alternative<typename tree<T1>::Leaf>(t->v())) {
           _result = f;
         } else {
-          const auto &_m = *std::get_if<typename tree<T1>::Node>(&t->v());
-          _stack.emplace_back(_Call1{_m.d_a0, _m.d_a2, _m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a2});
+          const auto &[d_a0, d_a1, d_a2] =
+              std::get<typename tree<T1>::Node>(t->v());
+          _stack.emplace_back(_Call1{d_a0, d_a2, d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a2});
         }
       } else if (std::holds_alternative<_Call1>(_frame)) {
         const auto &_f = std::get<_Call1>(_frame);
@@ -654,7 +656,7 @@ struct HofTreeLoopify {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename tree<T1>::Node &>().d_a0) _s0;
+      std::shared_ptr<tree<T1>> _s0;
       T2 _s1;
     };
 
@@ -676,9 +678,10 @@ struct HofTreeLoopify {
         if (std::holds_alternative<typename tree<T1>::Leaf>(t->v())) {
           _result = tree<T2>::leaf();
         } else {
-          const auto &_m = *std::get_if<typename tree<T1>::Node>(&t->v());
-          _stack.emplace_back(_Call1{_m.d_a0, f(_m.d_a1)});
-          _stack.emplace_back(_Enter{_m.d_a2});
+          const auto &[d_a0, d_a1, d_a2] =
+              std::get<typename tree<T1>::Node>(t->v());
+          _stack.emplace_back(_Call1{d_a0, f(d_a1)});
+          _stack.emplace_back(_Enter{d_a2});
         }
       } else if (std::holds_alternative<_Call1>(_frame)) {
         const auto &_f = std::get<_Call1>(_frame);
@@ -700,13 +703,13 @@ struct HofTreeLoopify {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename tree<T1>::Node &>().d_a0) _s0;
-      decltype(std::declval<typename tree<T1>::Node &>().d_a1) _s1;
+      std::shared_ptr<tree<T1>> _s0;
+      T1 _s1;
     };
 
     struct _Call2 {
       T2 _s0;
-      decltype(std::declval<typename tree<T1>::Node &>().d_a1) _s1;
+      T1 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -722,9 +725,10 @@ struct HofTreeLoopify {
         if (std::holds_alternative<typename tree<T1>::Leaf>(t->v())) {
           _result = base;
         } else {
-          const auto &_m = *std::get_if<typename tree<T1>::Node>(&t->v());
-          _stack.emplace_back(_Call1{_m.d_a0, _m.d_a1});
-          _stack.emplace_back(_Enter{_m.d_a2});
+          const auto &[d_a0, d_a1, d_a2] =
+              std::get<typename tree<T1>::Node>(t->v());
+          _stack.emplace_back(_Call1{d_a0, d_a1});
+          _stack.emplace_back(_Enter{d_a2});
         }
       } else if (std::holds_alternative<_Call1>(_frame)) {
         const auto &_f = std::get<_Call1>(_frame);
@@ -748,8 +752,8 @@ struct HofTreeLoopify {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename tree<T2>::Node &>().d_a0) _s0;
-      decltype(std::declval<typename tree<T1>::Node &>().d_a0) _s1;
+      std::shared_ptr<tree<T2>> _s0;
+      std::shared_ptr<tree<T1>> _s1;
       T3 _s2;
     };
 
@@ -772,14 +776,15 @@ struct HofTreeLoopify {
         if (std::holds_alternative<typename tree<T1>::Leaf>(t1->v())) {
           _result = tree<T3>::leaf();
         } else {
-          const auto &_m = *std::get_if<typename tree<T1>::Node>(&t1->v());
+          const auto &[d_a0, d_a1, d_a2] =
+              std::get<typename tree<T1>::Node>(t1->v());
           if (std::holds_alternative<typename tree<T2>::Leaf>(t2->v())) {
             _result = tree<T3>::leaf();
           } else {
-            const auto &_m0 = *std::get_if<typename tree<T2>::Node>(&t2->v());
-            _stack.emplace_back(
-                _Call1{_m0.d_a0, _m.d_a0, f(_m.d_a1, _m0.d_a1)});
-            _stack.emplace_back(_Enter{_m0.d_a2, _m.d_a2});
+            const auto &[d_a00, d_a10, d_a20] =
+                std::get<typename tree<T2>::Node>(t2->v());
+            _stack.emplace_back(_Call1{d_a00, d_a0, f(d_a1, d_a10)});
+            _stack.emplace_back(_Enter{d_a20, d_a2});
           }
         }
       } else if (std::holds_alternative<_Call1>(_frame)) {
@@ -805,7 +810,8 @@ struct HofTreeLoopify {
 
     struct _Call1 {
       F0 _s0;
-      const typename tree<T1>::Node _s1;
+      T1 _s1;
+      std::shared_ptr<tree<T1>> _s2;
     };
 
     struct _Call2 {
@@ -827,21 +833,23 @@ struct HofTreeLoopify {
         if (std::holds_alternative<typename tree<T1>::Leaf>(t->v())) {
           _result = std::make_pair(acc, tree<T2>::leaf());
         } else {
-          const auto &_m = *std::get_if<typename tree<T1>::Node>(&t->v());
-          _stack.emplace_back(_Call1{f, _m});
-          _stack.emplace_back(_Enter{_m.d_a0, acc});
+          const auto &[d_a0, d_a1, d_a2] =
+              std::get<typename tree<T1>::Node>(t->v());
+          _stack.emplace_back(_Call1{f, d_a1, d_a2});
+          _stack.emplace_back(_Enter{d_a0, acc});
         }
       } else if (std::holds_alternative<_Call1>(_frame)) {
         const auto &_f = std::get<_Call1>(_frame);
         F0 f = _f._s0;
-        const typename tree<T1>::Node _m = _f._s1;
+        T1 d_a1 = _f._s1;
+        std::shared_ptr<tree<T1>> d_a2 = _f._s2;
         const T3 &acc1 = _result.first;
         const std::shared_ptr<tree<T2>> &l_ = _result.second;
-        auto _cs = f(acc1, _m.d_a1);
+        auto _cs = f(acc1, d_a1);
         const T3 &acc2 = _cs.first;
         const T2 &x_ = _cs.second;
         _stack.emplace_back(_Call2{x_, l_});
-        _stack.emplace_back(_Enter{_m.d_a2, acc2});
+        _stack.emplace_back(_Enter{d_a2, acc2});
       } else {
         const auto &_f = std::get<_Call2>(_frame);
         T2 x_ = _f._s0;

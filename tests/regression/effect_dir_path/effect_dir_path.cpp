@@ -24,9 +24,9 @@ std::optional<std::string> EffectDirPath::first_file(const std::string path) {
   if (std::holds_alternative<typename List<std::string>::Nil>(files->v())) {
     return std::optional<std::string>();
   } else {
-    const auto &_m =
-        *std::get_if<typename List<std::string>::Cons>(&files->v());
-    return std::make_optional<std::string>(_m.d_a0);
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<std::string>::Cons>(files->v());
+    return std::make_optional<std::string>(d_a0);
   }
 }
 
@@ -90,18 +90,19 @@ EffectDirPath::count_entries(const std::shared_ptr<List<std::string>> &dirs,
   if (std::holds_alternative<typename List<std::string>::Nil>(dirs->v())) {
     return acc;
   } else {
-    const auto &_m = *std::get_if<typename List<std::string>::Cons>(&dirs->v());
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<std::string>::Cons>(dirs->v());
     std::shared_ptr<List<std::string>> files =
         [&]() -> std::shared_ptr<List<std::string>> {
       auto result = List<std::string>::nil();
-      for (const auto &entry : std::filesystem::directory_iterator(_m.d_a0)) {
+      for (const auto &entry : std::filesystem::directory_iterator(d_a0)) {
         result = List<std::string>::cons(entry.path().filename().string(),
                                          std::move(result));
       }
       return result;
     }();
     unsigned int n = std::move(files)->length();
-    return count_entries(_m.d_a1, (acc + n));
+    return count_entries(d_a1, (acc + n));
   }
 }
 

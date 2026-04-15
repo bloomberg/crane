@@ -82,12 +82,12 @@ struct RecursiveMonadic {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(xs->v())) {
       return List<unsigned int>::nil();
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&xs->v());
-      std::shared_ptr<List<unsigned int>> rest_ = filter_print(pred, _m.d_a1);
-      if (pred(_m.d_a0)) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(xs->v());
+      std::shared_ptr<List<unsigned int>> rest_ = filter_print(pred, d_a1);
+      if (pred(d_a0)) {
         std::cout << "keep"s << '\n';
-        return List<unsigned int>::cons(_m.d_a0, rest_);
+        return List<unsigned int>::cons(d_a0, rest_);
       } else {
         return rest_;
       }
@@ -107,13 +107,13 @@ struct RecursiveMonadic {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(xs->v())) {
       return std::optional<unsigned int>();
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&xs->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(xs->v());
       std::cout << "checking"s << '\n';
-      if (pred(_m.d_a0)) {
-        return std::make_optional<unsigned int>(_m.d_a0);
+      if (pred(d_a0)) {
+        return std::make_optional<unsigned int>(d_a0);
       } else {
-        return find_first(pred, _m.d_a1);
+        return find_first(pred, d_a1);
       }
     }
   }

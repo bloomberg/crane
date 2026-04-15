@@ -169,14 +169,14 @@ template <typename K, typename V> struct CHT {
             xs->v())) {
       return std::optional<T2>();
     } else {
-      const auto &_m =
-          *std::get_if<typename List<std::pair<T1, T2>>::Cons>(&xs->v());
-      const T1 &k_ = _m.d_a0.first;
-      const T2 &v = _m.d_a0.second;
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::pair<T1, T2>>::Cons>(xs->v());
+      const T1 &k_ = d_a0.first;
+      const T2 &v = d_a0.second;
       if (eqb(k, k_)) {
         return std::make_optional<T2>(v);
       } else {
-        return CHT<int, int>::template assoc_lookup<T1, T2>(eqb, k, _m.d_a1);
+        return CHT<int, int>::template assoc_lookup<T1, T2>(eqb, k, d_a1);
       }
     }
   }
@@ -190,17 +190,17 @@ template <typename K, typename V> struct CHT {
       return List<std::pair<T1, T2>>::cons(std::make_pair(k, v),
                                            List<std::pair<T1, T2>>::nil());
     } else {
-      const auto &_m =
-          *std::get_if<typename List<std::pair<T1, T2>>::Cons>(&xs->v());
-      const T1 &k_ = _m.d_a0.first;
-      const T2 &v_ = _m.d_a0.second;
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::pair<T1, T2>>::Cons>(xs->v());
+      const T1 &k_ = d_a0.first;
+      const T2 &v_ = d_a0.second;
       if (eqb(k, k_)) {
-        return List<std::pair<T1, T2>>::cons(std::make_pair(k, v), _m.d_a1);
+        return List<std::pair<T1, T2>>::cons(std::make_pair(k, v), d_a1);
       } else {
         return List<std::pair<T1, T2>>::cons(
             std::make_pair(k_, v_),
             CHT<int, int>::template assoc_insert_or_replace<T1, T2>(eqb, k, v,
-                                                                    _m.d_a1));
+                                                                    d_a1));
       }
     }
   }
@@ -214,15 +214,15 @@ template <typename K, typename V> struct CHT {
             xs->v())) {
       return std::make_pair(std::optional<T2>(), std::move(xs));
     } else {
-      const auto &_m =
-          *std::get_if<typename List<std::pair<T1, T2>>::Cons>(&xs->v());
-      const T1 &k_ = _m.d_a0.first;
-      const T2 &v_ = _m.d_a0.second;
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::pair<T1, T2>>::Cons>(xs->v());
+      const T1 &k_ = d_a0.first;
+      const T2 &v_ = d_a0.second;
       if (eqb(k, k_)) {
-        return std::make_pair(std::make_optional<T2>(v_), _m.d_a1);
+        return std::make_pair(std::make_optional<T2>(v_), d_a1);
       } else {
         std::pair<std::optional<T2>, std::shared_ptr<List<std::pair<T1, T2>>>>
-            q = CHT<int, int>::template assoc_remove<T1, T2>(eqb, k, _m.d_a1);
+            q = CHT<int, int>::template assoc_remove<T1, T2>(eqb, k, d_a1);
         return std::make_pair(q.first, List<std::pair<T1, T2>>::cons(
                                            std::make_pair(k_, v_), q.second));
       }

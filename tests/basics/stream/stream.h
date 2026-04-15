@@ -142,17 +142,18 @@ public:
     if (std::holds_alternative<typename Nat::O>(n->v())) {
       return List<t_A>::nil();
     } else {
-      const auto &_m = *std::get_if<typename Nat::S>(&n->v());
-      const auto &_m0 = *std::get_if<typename Stream<t_A>::Scons>(&this->v());
-      return List<t_A>::cons(_m0.d_a0, _m0.d_a1->take(_m.d_a0));
+      const auto &[d_a0] = std::get<typename Nat::S>(n->v());
+      const auto &[d_a00, d_a10] =
+          std::get<typename Stream<t_A>::Scons>(this->v());
+      return List<t_A>::cons(d_a00, d_a10->take(d_a0));
     }
   }
 
   std::shared_ptr<Stream<t_A>>
   interleave(const std::shared_ptr<Stream<t_A>> &sb) const {
-    const auto &_m = *std::get_if<typename Stream<t_A>::Scons>(&this->v());
+    const auto &[d_a0, d_a1] = std::get<typename Stream<t_A>::Scons>(this->v());
     return Stream<t_A>::lazy_([=]() mutable -> std::shared_ptr<Stream<t_A>> {
-      return Stream<t_A>::scons(_m.d_a0, sb->interleave(_m.d_a1));
+      return Stream<t_A>::scons(d_a0, sb->interleave(d_a1));
     });
   }
 

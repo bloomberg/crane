@@ -103,10 +103,9 @@ FoldSequenceStateTraceCase::execute_sequence(
           seq->v())) {
     return st;
   } else {
-    const auto &_m = *std::get_if<typename List<
-        std::shared_ptr<FoldSequenceStateTraceCase::FoldStep>>::Cons>(
-        &seq->v());
-    return execute_sequence(add_fold_to_state(std::move(st), _m.d_a0), _m.d_a1);
+    const auto &[d_a0, d_a1] = std::get<typename List<
+        std::shared_ptr<FoldSequenceStateTraceCase::FoldStep>>::Cons>(seq->v());
+    return execute_sequence(add_fold_to_state(std::move(st), d_a0), d_a1);
   }
 }
 

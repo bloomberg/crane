@@ -12,15 +12,15 @@ ReuseScrutinee::left_val(const std::shared_ptr<ReuseScrutinee::tree> &t) {
   if (std::holds_alternative<typename ReuseScrutinee::tree::Leaf>(t->v())) {
     return 0u;
   } else {
-    const auto &_m = *std::get_if<typename ReuseScrutinee::tree::Node>(&t->v());
-    auto &&_sv0 = _m.d_a0;
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename ReuseScrutinee::tree::Node>(t->v());
     if (std::holds_alternative<typename ReuseScrutinee::tree::Leaf>(
-            _sv0->v())) {
+            d_a0->v())) {
       return 0u;
     } else {
-      const auto &_m0 =
-          *std::get_if<typename ReuseScrutinee::tree::Node>(&_sv0->v());
-      return _m0.d_a1;
+      const auto &[d_a00, d_a10, d_a20] =
+          std::get<typename ReuseScrutinee::tree::Node>(d_a0->v());
+      return d_a10;
     }
   }
 }
@@ -31,15 +31,15 @@ ReuseScrutinee::right_val(const std::shared_ptr<ReuseScrutinee::tree> &t) {
   if (std::holds_alternative<typename ReuseScrutinee::tree::Leaf>(t->v())) {
     return 0u;
   } else {
-    const auto &_m = *std::get_if<typename ReuseScrutinee::tree::Node>(&t->v());
-    auto &&_sv0 = _m.d_a2;
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename ReuseScrutinee::tree::Node>(t->v());
     if (std::holds_alternative<typename ReuseScrutinee::tree::Leaf>(
-            _sv0->v())) {
+            d_a2->v())) {
       return 0u;
     } else {
-      const auto &_m0 =
-          *std::get_if<typename ReuseScrutinee::tree::Node>(&_sv0->v());
-      return _m0.d_a1;
+      const auto &[d_a00, d_a10, d_a20] =
+          std::get<typename ReuseScrutinee::tree::Node>(d_a2->v());
+      return d_a10;
     }
   }
 }

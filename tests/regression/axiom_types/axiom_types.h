@@ -71,13 +71,11 @@ struct AxiomTypes {
   static T1 AxiomInductive_rect(F0 &&f, F1 &&f0,
                                 const std::shared_ptr<AxiomInductive> &a) {
     if (std::holds_alternative<typename AxiomInductive::AxConstr1>(a->v())) {
-      const auto &_m =
-          *std::get_if<typename AxiomInductive::AxConstr1>(&a->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename AxiomInductive::AxConstr1>(a->v());
+      return f(d_a0);
     } else {
-      const auto &_m =
-          *std::get_if<typename AxiomInductive::AxConstr2>(&a->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename AxiomInductive::AxConstr2>(a->v());
+      return f0(d_a0);
     }
   }
 
@@ -86,13 +84,11 @@ struct AxiomTypes {
   static T1 AxiomInductive_rec(F0 &&f, F1 &&f0,
                                const std::shared_ptr<AxiomInductive> &a) {
     if (std::holds_alternative<typename AxiomInductive::AxConstr1>(a->v())) {
-      const auto &_m =
-          *std::get_if<typename AxiomInductive::AxConstr1>(&a->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename AxiomInductive::AxConstr1>(a->v());
+      return f(d_a0);
     } else {
-      const auto &_m =
-          *std::get_if<typename AxiomInductive::AxConstr2>(&a->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename AxiomInductive::AxConstr2>(a->v());
+      return f0(d_a0);
     }
   }
 
@@ -149,8 +145,8 @@ struct AxiomTypes {
     if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
-      return f0(_m.d_a0, _m.d_a1, list_rect<T1, T2>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+      return f0(d_a0, d_a1, list_rect<T1, T2>(f, f0, d_a1));
     }
   }
 
@@ -160,8 +156,8 @@ struct AxiomTypes {
     if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
-      return f0(_m.d_a0, _m.d_a1, list_rec<T1, T2>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+      return f0(d_a0, d_a1, list_rec<T1, T2>(f, f0, d_a1));
     }
   }
 

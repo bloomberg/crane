@@ -79,9 +79,10 @@ public:
         if (std::holds_alternative<typename List<t_A>::Nil>(_self->v())) {
           _result = 0u;
         } else {
-          const auto &_m = *std::get_if<typename List<t_A>::Cons>(&_self->v());
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<t_A>::Cons>(_self->v());
           _stack.emplace_back(_Call1{});
-          _stack.emplace_back(_Enter{_m.d_a1.get()});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
@@ -105,16 +106,16 @@ public:
         }
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<t_A>::Cons>(&_loop_self->v());
-        auto _cell = List<t_A>::cons(_m.d_a0, nullptr);
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<t_A>::Cons>(_loop_self->v());
+        auto _cell = List<t_A>::cons(d_a0, nullptr);
         if (_last) {
           std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = _cell;
         } else {
           _head = _cell;
         }
         _last = _cell;
-        _loop_self = _m.d_a1.get();
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -138,8 +139,7 @@ struct LoopifySequences {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename List<std::shared_ptr<List<T1>>>::Cons &>()
-                   .d_a0) _s0;
+      std::shared_ptr<List<T1>> _s0;
       const std::shared_ptr<List<T1>> _s1;
     };
 
@@ -157,16 +157,15 @@ struct LoopifySequences {
                 typename List<std::shared_ptr<List<T1>>>::Nil>(lists->v())) {
           _result = List<T1>::nil();
         } else {
-          const auto &_m =
-              *std::get_if<typename List<std::shared_ptr<List<T1>>>::Cons>(
-                  &lists->v());
-          auto &&_sv = _m.d_a1;
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<std::shared_ptr<List<T1>>>::Cons>(
+                  lists->v());
           if (std::holds_alternative<
-                  typename List<std::shared_ptr<List<T1>>>::Nil>(_sv->v())) {
-            _result = _m.d_a0;
+                  typename List<std::shared_ptr<List<T1>>>::Nil>(d_a1->v())) {
+            _result = d_a0;
           } else {
-            _stack.emplace_back(_Call1{_m.d_a0, sep});
-            _stack.emplace_back(_Enter{_m.d_a1});
+            _stack.emplace_back(_Call1{d_a0, sep});
+            _stack.emplace_back(_Enter{d_a1});
           }
         }
       } else {
@@ -184,7 +183,7 @@ struct LoopifySequences {
     if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
       return List<T1>::nil();
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
       std::function<std::shared_ptr<List<T1>>(std::shared_ptr<List<T1>>)> go;
       go = [&](std::shared_ptr<List<T1>> rest) -> std::shared_ptr<List<T1>> {
         struct _Enter {
@@ -192,7 +191,7 @@ struct LoopifySequences {
         };
         struct _Call1 {
           decltype(sep) _s0;
-          decltype(std::declval<typename List<T1>::Cons &>().d_a0) _s1;
+          T1 _s1;
         };
         using _Frame = std::variant<_Enter, _Call1>;
         std::shared_ptr<List<T1>> _result{};
@@ -207,10 +206,10 @@ struct LoopifySequences {
             if (std::holds_alternative<typename List<T1>::Nil>(rest->v())) {
               _result = List<T1>::nil();
             } else {
-              const auto &_m0 =
-                  *std::get_if<typename List<T1>::Cons>(&rest->v());
-              _stack.emplace_back(_Call1{sep, _m0.d_a0});
-              _stack.emplace_back(_Enter{_m0.d_a1});
+              const auto &[d_a00, d_a10] =
+                  std::get<typename List<T1>::Cons>(rest->v());
+              _stack.emplace_back(_Call1{sep, d_a00});
+              _stack.emplace_back(_Enter{d_a10});
             }
           } else {
             const auto &_f = std::get<_Call1>(_frame);
@@ -219,7 +218,7 @@ struct LoopifySequences {
         }
         return _result;
       };
-      return List<T1>::cons(_m.d_a0, go(_m.d_a1));
+      return List<T1>::cons(d_a0, go(d_a1));
     }
   } /// transpose l transposes a list of lists.
 
@@ -258,12 +257,11 @@ struct LoopifySequences {
               _result = true;
               _continue = false;
             } else {
-              const auto &_m =
-                  *std::get_if<typename List<std::shared_ptr<List<T1>>>::Cons>(
-                      &_loop_l->v());
-              auto &&_sv = _m.d_a0;
-              if (std::holds_alternative<typename List<T1>::Nil>(_sv->v())) {
-                _loop_l = _m.d_a1;
+              const auto &[d_a0, d_a1] =
+                  std::get<typename List<std::shared_ptr<List<T1>>>::Cons>(
+                      _loop_l->v());
+              if (std::holds_alternative<typename List<T1>::Nil>(d_a0->v())) {
+                _loop_l = d_a1;
               } else {
                 _result = false;
                 _continue = false;
@@ -291,7 +289,7 @@ struct LoopifySequences {
               std::shared_ptr<List<std::shared_ptr<List<T1>>>> l;
             };
             struct _Call1 {
-              decltype(std::declval<typename List<T1>::Cons &>().d_a0) _s0;
+              T1 _s0;
             };
             using _Frame = std::variant<_Enter, _Call1>;
             std::shared_ptr<List<T1>> _result{};
@@ -308,17 +306,17 @@ struct LoopifySequences {
                         l->v())) {
                   _result = List<T1>::nil();
                 } else {
-                  const auto &_m0 = *std::get_if<
-                      typename List<std::shared_ptr<List<T1>>>::Cons>(&l->v());
-                  auto &&_sv1 = _m0.d_a0;
+                  const auto &[d_a00, d_a10] =
+                      std::get<typename List<std::shared_ptr<List<T1>>>::Cons>(
+                          l->v());
                   if (std::holds_alternative<typename List<T1>::Nil>(
-                          _sv1->v())) {
-                    _stack.emplace_back(_Enter{_m0.d_a1});
+                          d_a00->v())) {
+                    _stack.emplace_back(_Enter{d_a10});
                   } else {
-                    const auto &_m1 =
-                        *std::get_if<typename List<T1>::Cons>(&_sv1->v());
-                    _stack.emplace_back(_Call1{_m1.d_a0});
-                    _stack.emplace_back(_Enter{_m0.d_a1});
+                    const auto &[d_a01, d_a11] =
+                        std::get<typename List<T1>::Cons>(d_a00->v());
+                    _stack.emplace_back(_Call1{d_a01});
+                    _stack.emplace_back(_Enter{d_a10});
                   }
                 }
               } else {
@@ -337,7 +335,7 @@ struct LoopifySequences {
               std::shared_ptr<List<std::shared_ptr<List<T1>>>> l;
             };
             struct _Call1 {
-              decltype(std::declval<typename List<T1>::Cons &>().d_a1) _s0;
+              std::shared_ptr<List<T1>> _s0;
             };
             using _Frame = std::variant<_Enter, _Call1>;
             std::shared_ptr<List<std::shared_ptr<List<T1>>>> _result{};
@@ -354,17 +352,17 @@ struct LoopifySequences {
                         l->v())) {
                   _result = List<std::shared_ptr<List<T1>>>::nil();
                 } else {
-                  const auto &_m1 = *std::get_if<
-                      typename List<std::shared_ptr<List<T1>>>::Cons>(&l->v());
-                  auto &&_sv2 = _m1.d_a0;
+                  const auto &[d_a01, d_a11] =
+                      std::get<typename List<std::shared_ptr<List<T1>>>::Cons>(
+                          l->v());
                   if (std::holds_alternative<typename List<T1>::Nil>(
-                          _sv2->v())) {
-                    _stack.emplace_back(_Enter{_m1.d_a1});
+                          d_a01->v())) {
+                    _stack.emplace_back(_Enter{d_a11});
                   } else {
-                    const auto &_m2 =
-                        *std::get_if<typename List<T1>::Cons>(&_sv2->v());
-                    _stack.emplace_back(_Call1{_m2.d_a1});
-                    _stack.emplace_back(_Enter{_m1.d_a1});
+                    const auto &[d_a02, d_a12] =
+                        std::get<typename List<T1>::Cons>(d_a01->v());
+                    _stack.emplace_back(_Call1{d_a12});
+                    _stack.emplace_back(_Enter{d_a11});
                   }
                 }
               } else {
@@ -552,10 +550,10 @@ struct LoopifySequences {
         }
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-        if (p(_m.d_a0)) {
-          auto _cell = List<unsigned int>::cons(_m.d_a0, nullptr);
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+        if (p(d_a0)) {
+          auto _cell = List<unsigned int>::cons(d_a0, nullptr);
           if (_last) {
             std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
                 _cell;
@@ -563,7 +561,7 @@ struct LoopifySequences {
             _head = _cell;
           }
           _last = _cell;
-          _loop_l = _m.d_a1;
+          _loop_l = d_a1;
           continue;
         } else {
           if (_last) {
@@ -592,12 +590,12 @@ struct LoopifySequences {
         _result = List<unsigned int>::nil();
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-        if (p(_m.d_a0)) {
-          _loop_l = _m.d_a1;
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+        if (p(d_a0)) {
+          _loop_l = d_a1;
         } else {
-          _result = List<unsigned int>::cons(_m.d_a0, _m.d_a1);
+          _result = List<unsigned int>::cons(d_a0, d_a1);
           _continue = false;
         }
       }
@@ -656,10 +654,10 @@ struct LoopifySequences {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
           _result = true;
         } else {
-          const auto &_m =
-              *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-          _stack.emplace_back(_Call1{p(_m.d_a0)});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l->v());
+          _stack.emplace_back(_Call1{p(d_a0)});
+          _stack.emplace_back(_Enter{d_a1});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);

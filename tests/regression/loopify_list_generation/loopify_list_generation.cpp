@@ -55,10 +55,10 @@ LoopifyListGeneration::stutter(const std::shared_ptr<List<unsigned int>> &l) {
       }
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-      auto _cell = List<unsigned int>::cons(_m.d_a0, nullptr);
-      auto _cell1 = List<unsigned int>::cons(_m.d_a0, nullptr);
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      auto _cell = List<unsigned int>::cons(d_a0, nullptr);
+      auto _cell1 = List<unsigned int>::cons(d_a0, nullptr);
       std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1 = _cell1;
       if (_last) {
         std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
@@ -67,7 +67,7 @@ LoopifyListGeneration::stutter(const std::shared_ptr<List<unsigned int>> &l) {
         _head = _cell;
       }
       _last = _cell1;
-      _loop_l = _m.d_a1;
+      _loop_l = d_a1;
       continue;
     }
   }
@@ -172,14 +172,13 @@ std::shared_ptr<List<unsigned int>> LoopifyListGeneration::replicate_list(
               l->v())) {
         _result = List<unsigned int>::nil();
       } else {
-        const auto &_m = *std::get_if<
-            typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-            &l->v());
-        const unsigned int &n = _m.d_a0.first;
-        const unsigned int &x = _m.d_a0.second;
+        const auto &[d_a0, d_a1] = std::get<
+            typename List<std::pair<unsigned int, unsigned int>>::Cons>(l->v());
+        const unsigned int &n = d_a0.first;
+        const unsigned int &x = d_a0.second;
         std::shared_ptr<List<unsigned int>> rep = replicate(n, x);
         _stack.emplace_back(_Call1{std::move(rep)});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);

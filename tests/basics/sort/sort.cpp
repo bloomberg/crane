@@ -14,20 +14,20 @@ Sort::sort_cons_prog(const unsigned int a,
     return Sig<std::shared_ptr<List<unsigned int>>>::exist(
         List<unsigned int>::cons(a, List<unsigned int>::nil()));
   } else {
-    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l_->v());
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(l_->v());
     std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>> s =
-        sort_cons_prog(a, _m.d_a1, _m.d_a1);
-    const auto &_m0 =
-        *std::get_if<typename Sig<std::shared_ptr<List<unsigned int>>>::Exist>(
-            &s->v());
-    bool s0 = Compare_dec::le_lt_dec(a, _m.d_a0);
+        sort_cons_prog(a, d_a1, d_a1);
+    const auto &[d_x0] =
+        std::get<typename Sig<std::shared_ptr<List<unsigned int>>>::Exist>(
+            s->v());
+    bool s0 = Compare_dec::le_lt_dec(a, d_a0);
     if (s0) {
       return Sig<std::shared_ptr<List<unsigned int>>>::exist(
-          List<unsigned int>::cons(a,
-                                   List<unsigned int>::cons(_m.d_a0, _m.d_a1)));
+          List<unsigned int>::cons(a, List<unsigned int>::cons(d_a0, d_a1)));
     } else {
       return Sig<std::shared_ptr<List<unsigned int>>>::exist(
-          List<unsigned int>::cons(_m.d_a0, _m0.d_x));
+          List<unsigned int>::cons(d_a0, d_x0));
     }
   }
 }
@@ -38,12 +38,13 @@ Sort::isort(const std::shared_ptr<List<unsigned int>> &l) {
     return Sig<std::shared_ptr<List<unsigned int>>>::exist(
         List<unsigned int>::nil());
   } else {
-    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-    auto &&_sv0 = isort(_m.d_a1);
-    const auto &_m0 =
-        *std::get_if<typename Sig<std::shared_ptr<List<unsigned int>>>::Exist>(
-            &_sv0->v());
-    return sort_cons_prog(_m.d_a0, _m.d_a1, _m0.d_x);
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(l->v());
+    auto &&_sv0 = isort(d_a1);
+    const auto &[d_x0] =
+        std::get<typename Sig<std::shared_ptr<List<unsigned int>>>::Exist>(
+            _sv0->v());
+    return sort_cons_prog(d_a0, d_a1, d_x0);
   }
 }
 
@@ -58,17 +59,17 @@ Sort::merge(std::shared_ptr<List<unsigned int>> l1,
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l1->v())) {
       return l3;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&l1->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l1->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l3->v())) {
         return l1;
       } else {
-        const auto &_m0 =
-            *std::get_if<typename List<unsigned int>::Cons>(&l3->v());
-        if (Compare_dec::le_lt_dec(_m.d_a0, _m0.d_a0)) {
-          return List<unsigned int>::cons(_m.d_a0, merge(_m.d_a1, l3));
+        const auto &[d_a00, d_a10] =
+            std::get<typename List<unsigned int>::Cons>(l3->v());
+        if (Compare_dec::le_lt_dec(d_a0, d_a00)) {
+          return List<unsigned int>::cons(d_a0, merge(d_a1, l3));
         } else {
-          return List<unsigned int>::cons(_m0.d_a0, merge_aux(_m0.d_a1));
+          return List<unsigned int>::cons(d_a00, merge_aux(d_a10));
         }
       }
     }
@@ -95,11 +96,13 @@ Sort::msort(const std::shared_ptr<List<unsigned int>> &_x0) {
       [](const std::shared_ptr<List<unsigned int>> &ls,
          const std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>> &x,
          const std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>> &x0) {
-        const auto &_m = *std::get_if<
-            typename Sig<std::shared_ptr<List<unsigned int>>>::Exist>(&x->v());
-        const auto &_m0 = *std::get_if<
-            typename Sig<std::shared_ptr<List<unsigned int>>>::Exist>(&x0->v());
-        return merge_prog(ls, _m.d_x, _m0.d_x);
+        const auto &[d_x] =
+            std::get<typename Sig<std::shared_ptr<List<unsigned int>>>::Exist>(
+                x->v());
+        const auto &[d_x0] =
+            std::get<typename Sig<std::shared_ptr<List<unsigned int>>>::Exist>(
+                x0->v());
+        return merge_prog(ls, d_x, d_x0);
       },
       _x0);
 }
@@ -137,11 +140,13 @@ Sort::psort(const std::shared_ptr<List<unsigned int>> &_x0) {
          const std::shared_ptr<List<unsigned int>> &l,
          const std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>> &x,
          const std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>> &x0) {
-        const auto &_m = *std::get_if<
-            typename Sig<std::shared_ptr<List<unsigned int>>>::Exist>(&x->v());
-        const auto &_m0 = *std::get_if<
-            typename Sig<std::shared_ptr<List<unsigned int>>>::Exist>(&x0->v());
-        return pair_merge_prog(a1, a2, l, _m0.d_x, _m.d_x);
+        const auto &[d_x] =
+            std::get<typename Sig<std::shared_ptr<List<unsigned int>>>::Exist>(
+                x->v());
+        const auto &[d_x0] =
+            std::get<typename Sig<std::shared_ptr<List<unsigned int>>>::Exist>(
+                x0->v());
+        return pair_merge_prog(a1, a2, l, d_x0, d_x);
       },
       _x0);
 }
@@ -155,12 +160,14 @@ Sort::qsort(const std::shared_ptr<List<unsigned int>> &_x0) {
       [](const unsigned int a, const std::shared_ptr<List<unsigned int>> &,
          const std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>> &x,
          const std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>> &x0) {
-        const auto &_m = *std::get_if<
-            typename Sig<std::shared_ptr<List<unsigned int>>>::Exist>(&x->v());
-        const auto &_m0 = *std::get_if<
-            typename Sig<std::shared_ptr<List<unsigned int>>>::Exist>(&x0->v());
+        const auto &[d_x] =
+            std::get<typename Sig<std::shared_ptr<List<unsigned int>>>::Exist>(
+                x->v());
+        const auto &[d_x0] =
+            std::get<typename Sig<std::shared_ptr<List<unsigned int>>>::Exist>(
+                x0->v());
         return Sig<std::shared_ptr<List<unsigned int>>>::exist(
-            merge(_m.d_x, List<unsigned int>::cons(a, _m0.d_x)));
+            merge(d_x, List<unsigned int>::cons(a, d_x0)));
       },
       _x0);
 }

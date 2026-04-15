@@ -115,10 +115,9 @@ struct Dim10TowerProofChainCase {
           _rf.d_x = x;
           return s;
         } else {
-          const auto &_m =
-              *std::get_if<typename SigT<unsigned int, std::any>::ExistT>(
-                  &s->v());
-          return SigT<unsigned int, std::any>::existt(_m.d_x, std::any{});
+          const auto &[d_x, d_a1] =
+              std::get<typename SigT<unsigned int, std::any>::ExistT>(s->v());
+          return SigT<unsigned int, std::any>::existt(d_x, std::any{});
         }
       }();
   static inline const std::shared_ptr<SigT<unsigned int, std::any>>
@@ -133,10 +132,9 @@ struct Dim10TowerProofChainCase {
           _rf.d_x = x;
           return s;
         } else {
-          const auto &_m =
-              *std::get_if<typename SigT<unsigned int, std::any>::ExistT>(
-                  &s->v());
-          return SigT<unsigned int, std::any>::existt(_m.d_x, std::any{});
+          const auto &[d_x, d_a1] =
+              std::get<typename SigT<unsigned int, std::any>::ExistT>(s->v());
+          return SigT<unsigned int, std::any>::existt(d_x, std::any{});
         }
       }();
   __attribute__((pure)) static std::pair<
@@ -188,15 +186,15 @@ struct Dim10TowerProofChainCase {
       dim10_bundle->dt_tower->ggt_D(10u)->go_dim;
   static inline const unsigned int dim10_layers_cutoff = []() {
     auto &&_sv = dim10_bundle->dt_chain->gc_layers_stabilize;
-    const auto &_m =
-        *std::get_if<typename SigT<unsigned int, std::any>::ExistT>(&_sv->v());
-    return _m.d_x;
+    const auto &[d_x, d_a1] =
+        std::get<typename SigT<unsigned int, std::any>::ExistT>(_sv->v());
+    return d_x;
   }();
   static inline const unsigned int dim10_P_cutoff = []() {
     auto &&_sv0 = dim10_bundle->dt_chain->gc_P_stabilize;
-    const auto &_m0 =
-        *std::get_if<typename SigT<unsigned int, std::any>::ExistT>(&_sv0->v());
-    return _m0.d_x;
+    const auto &[d_x0, d_a10] =
+        std::get<typename SigT<unsigned int, std::any>::ExistT>(_sv0->v());
+    return d_x0;
   }();
   static inline const bool dim10_layers_cutoff_matches =
       dim10_layers_cutoff == 10u;

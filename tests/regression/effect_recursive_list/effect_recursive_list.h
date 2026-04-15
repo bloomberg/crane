@@ -71,9 +71,10 @@ struct EffectRecursiveList {
     if (std::holds_alternative<typename List<std::string>::Nil>(xs->v())) {
       return;
     } else {
-      const auto &_m = *std::get_if<typename List<std::string>::Cons>(&xs->v());
-      f(_m.d_a0);
-      map_effect(f, _m.d_a1);
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::string>::Cons>(xs->v());
+      f(d_a0);
+      map_effect(f, d_a1);
       return;
     }
   }

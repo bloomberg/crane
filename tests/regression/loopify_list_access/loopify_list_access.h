@@ -89,13 +89,13 @@ struct LoopifyListAccess {
         _result = 0u;
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-        if (p(_m.d_a0)) {
-          _result = _m.d_a0;
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+        if (p(d_a0)) {
+          _result = d_a0;
           _continue = false;
         } else {
-          _loop_l = _m.d_a1;
+          _loop_l = d_a1;
         }
       }
     }
@@ -129,13 +129,13 @@ struct LoopifyListAccess {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
           _result = 0u;
         } else {
-          const auto &_m =
-              *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-          if (p(_m.d_a0)) {
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l->v());
+          if (p(d_a0)) {
             _stack.emplace_back(_Call1{1u});
-            _stack.emplace_back(_Enter{_m.d_a1});
+            _stack.emplace_back(_Enter{d_a1});
           } else {
-            _stack.emplace_back(_Enter{_m.d_a1});
+            _stack.emplace_back(_Enter{d_a1});
           }
         }
       } else {

@@ -70,9 +70,9 @@ struct HofClosureEscape {
     if (std::holds_alternative<typename tree::Leaf>(t->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
-      return f0(_m.d_a0, tree_rect<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
-                tree_rect<T1>(f, f0, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rect<T1>(f, f0, d_a0), d_a1, d_a2,
+                tree_rect<T1>(f, f0, d_a2));
     }
   }
 
@@ -83,9 +83,9 @@ struct HofClosureEscape {
     if (std::holds_alternative<typename tree::Leaf>(t->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
-      return f0(_m.d_a0, tree_rec<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
-                tree_rec<T1>(f, f0, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rec<T1>(f, f0, d_a0), d_a1, d_a2,
+                tree_rec<T1>(f, f0, d_a2));
     }
   }
 

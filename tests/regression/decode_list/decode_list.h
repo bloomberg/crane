@@ -59,8 +59,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (_m.d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
     }
   }
 };
@@ -107,8 +107,8 @@ struct DecodeList {
     if (std::holds_alternative<typename instruction::NOP>(i->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename instruction::LDM>(&i->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction::LDM>(i->v());
+      return f0(d_a0);
     }
   }
 
@@ -118,8 +118,8 @@ struct DecodeList {
     if (std::holds_alternative<typename instruction::NOP>(i->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename instruction::LDM>(&i->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction::LDM>(i->v());
+      return f0(d_a0);
     }
   }
 
@@ -138,14 +138,12 @@ struct DecodeList {
             typename List<std::shared_ptr<instruction>>::Nil>(_sv0->v())) {
       return 0u;
     } else {
-      const auto &_m0 =
-          *std::get_if<typename List<std::shared_ptr<instruction>>::Cons>(
-              &_sv0->v());
-      auto &&_sv = _m0.d_a0;
-      if (std::holds_alternative<typename instruction::NOP>(_sv->v())) {
-        auto &&_sv = _m0.d_a1;
+      const auto &[d_a00, d_a10] =
+          std::get<typename List<std::shared_ptr<instruction>>::Cons>(
+              _sv0->v());
+      if (std::holds_alternative<typename instruction::NOP>(d_a00->v())) {
         if (std::holds_alternative<
-                typename List<std::shared_ptr<instruction>>::Nil>(_sv->v())) {
+                typename List<std::shared_ptr<instruction>>::Nil>(d_a10->v())) {
           return 1u;
         } else {
           return 0u;

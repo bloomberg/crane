@@ -69,8 +69,8 @@ struct LoopifyTmc {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename list<T1>::Cons &>().d_a1) _s0;
-      decltype(std::declval<typename list<T1>::Cons &>().d_a0) _s1;
+      std::shared_ptr<list<T1>> _s0;
+      T1 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -86,9 +86,9 @@ struct LoopifyTmc {
         if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
           _result = f;
         } else {
-          const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
-          _stack.emplace_back(_Call1{_m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+          _stack.emplace_back(_Call1{d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
@@ -106,8 +106,8 @@ struct LoopifyTmc {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename list<T1>::Cons &>().d_a1) _s0;
-      decltype(std::declval<typename list<T1>::Cons &>().d_a0) _s1;
+      std::shared_ptr<list<T1>> _s0;
+      T1 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -123,9 +123,9 @@ struct LoopifyTmc {
         if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
           _result = f;
         } else {
-          const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
-          _stack.emplace_back(_Call1{_m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+          _stack.emplace_back(_Call1{d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
@@ -153,15 +153,16 @@ struct LoopifyTmc {
         }
         _continue = false;
       } else {
-        const auto &_m = *std::get_if<typename list<T1>::Cons>(&_loop_l1->v());
-        auto _cell = list<T1>::cons(_m.d_a0, nullptr);
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l1->v());
+        auto _cell = list<T1>::cons(d_a0, nullptr);
         if (_last) {
           std::get<typename list<T1>::Cons>(_last->v_mut()).d_a1 = _cell;
         } else {
           _head = _cell;
         }
         _last = _cell;
-        _loop_l1 = _m.d_a1;
+        _loop_l1 = d_a1;
         continue;
       }
     }
@@ -186,15 +187,16 @@ struct LoopifyTmc {
         }
         _continue = false;
       } else {
-        const auto &_m = *std::get_if<typename list<T1>::Cons>(&_loop_l->v());
-        auto _cell = list<T2>::cons(f(_m.d_a0), nullptr);
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        auto _cell = list<T2>::cons(f(d_a0), nullptr);
         if (_last) {
           std::get<typename list<T2>::Cons>(_last->v_mut()).d_a1 = _cell;
         } else {
           _head = _cell;
         }
         _last = _cell;
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
         continue;
       }
     }
@@ -219,19 +221,20 @@ struct LoopifyTmc {
         }
         _continue = false;
       } else {
-        const auto &_m = *std::get_if<typename list<T1>::Cons>(&_loop_l->v());
-        if (f(_m.d_a0)) {
-          auto _cell = list<T1>::cons(_m.d_a0, nullptr);
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        if (f(d_a0)) {
+          auto _cell = list<T1>::cons(d_a0, nullptr);
           if (_last) {
             std::get<typename list<T1>::Cons>(_last->v_mut()).d_a1 = _cell;
           } else {
             _head = _cell;
           }
           _last = _cell;
-          _loop_l = _m.d_a1;
+          _loop_l = d_a1;
           continue;
         } else {
-          _loop_l = _m.d_a1;
+          _loop_l = d_a1;
           continue;
         }
       }
@@ -257,15 +260,16 @@ struct LoopifyTmc {
         }
         _continue = false;
       } else {
-        const auto &_m = *std::get_if<typename list<T1>::Cons>(&_loop_l->v());
-        auto _cell = list<T1>::cons(_m.d_a0, nullptr);
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        auto _cell = list<T1>::cons(d_a0, nullptr);
         if (_last) {
           std::get<typename list<T1>::Cons>(_last->v_mut()).d_a1 = _cell;
         } else {
           _head = _cell;
         }
         _last = _cell;
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
         continue;
       }
     }
@@ -328,7 +332,8 @@ struct LoopifyTmc {
         }
         _continue = false;
       } else {
-        const auto &_m = *std::get_if<typename list<T1>::Cons>(&_loop_l1->v());
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename list<T2>::Nil>(_loop_l2->v())) {
           if (_last) {
             std::get<typename list<T3>::Cons>(_last->v_mut()).d_a1 =
@@ -338,17 +343,17 @@ struct LoopifyTmc {
           }
           _continue = false;
         } else {
-          const auto &_m0 =
-              *std::get_if<typename list<T2>::Cons>(&_loop_l2->v());
-          auto _cell = list<T3>::cons(f(_m.d_a0, _m0.d_a0), nullptr);
+          const auto &[d_a00, d_a10] =
+              std::get<typename list<T2>::Cons>(_loop_l2->v());
+          auto _cell = list<T3>::cons(f(d_a0, d_a00), nullptr);
           if (_last) {
             std::get<typename list<T3>::Cons>(_last->v_mut()).d_a1 = _cell;
           } else {
             _head = _cell;
           }
           _last = _cell;
-          std::shared_ptr<list<T2>> _next_l2 = _m0.d_a1;
-          std::shared_ptr<list<T1>> _next_l1 = _m.d_a1;
+          std::shared_ptr<list<T2>> _next_l2 = d_a10;
+          std::shared_ptr<list<T1>> _next_l1 = d_a1;
           _loop_l2 = std::move(_next_l2);
           _loop_l1 = std::move(_next_l1);
           continue;
@@ -380,9 +385,10 @@ struct LoopifyTmc {
         }
         _continue = false;
       } else {
-        const auto &_m = *std::get_if<typename list<T1>::Cons>(&_loop_l->v());
-        auto _cell = list<T1>::cons(_m.d_a0, nullptr);
-        auto _cell1 = list<T1>::cons(_m.d_a0, nullptr);
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        auto _cell = list<T1>::cons(d_a0, nullptr);
+        auto _cell1 = list<T1>::cons(d_a0, nullptr);
         std::get<typename list<T1>::Cons>(_cell->v_mut()).d_a1 = _cell1;
         if (_last) {
           std::get<typename list<T1>::Cons>(_last->v_mut()).d_a1 = _cell;
@@ -390,7 +396,7 @@ struct LoopifyTmc {
           _head = _cell;
         }
         _last = _cell1;
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
         continue;
       }
     }

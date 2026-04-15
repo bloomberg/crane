@@ -172,16 +172,16 @@ struct FunctionVernac {
     T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int,
                   const unsigned int) const {
       if (std::holds_alternative<typename R_div2::R_div2_0>(this->v())) {
-        const auto &_m = *std::get_if<typename R_div2::R_div2_0>(&this->v());
-        return f(_m.d_n);
+        const auto &[d_n] = std::get<typename R_div2::R_div2_0>(this->v());
+        return f(d_n);
       } else if (std::holds_alternative<typename R_div2::R_div2_1>(this->v())) {
-        const auto &_m = *std::get_if<typename R_div2::R_div2_1>(&this->v());
-        return f0(_m.d_n);
+        const auto &[d_n] = std::get<typename R_div2::R_div2_1>(this->v());
+        return f0(d_n);
       } else {
-        const auto &_m = *std::get_if<typename R_div2::R_div2_2>(&this->v());
-        return f1(
-            _m.d_n, _m.d_p, _m.d_a2, _m.d__res,
-            _m.d__res->template R_div2_rec<T1>(f, f0, f1, _m.d_p, _m.d_a2));
+        const auto &[d_n, d_p, d_a2, d__res] =
+            std::get<typename R_div2::R_div2_2>(this->v());
+        return f1(d_n, d_p, d_a2, d__res,
+                  d__res->template R_div2_rec<T1>(f, f0, f1, d_p, d_a2));
       }
     }
 
@@ -193,16 +193,16 @@ struct FunctionVernac {
     T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int,
                    const unsigned int) const {
       if (std::holds_alternative<typename R_div2::R_div2_0>(this->v())) {
-        const auto &_m = *std::get_if<typename R_div2::R_div2_0>(&this->v());
-        return f(_m.d_n);
+        const auto &[d_n] = std::get<typename R_div2::R_div2_0>(this->v());
+        return f(d_n);
       } else if (std::holds_alternative<typename R_div2::R_div2_1>(this->v())) {
-        const auto &_m = *std::get_if<typename R_div2::R_div2_1>(&this->v());
-        return f0(_m.d_n);
+        const auto &[d_n] = std::get<typename R_div2::R_div2_1>(this->v());
+        return f0(d_n);
       } else {
-        const auto &_m = *std::get_if<typename R_div2::R_div2_2>(&this->v());
-        return f1(
-            _m.d_n, _m.d_p, _m.d_a2, _m.d__res,
-            _m.d__res->template R_div2_rect<T1>(f, f0, f1, _m.d_p, _m.d_a2));
+        const auto &[d_n, d_p, d_a2, d__res] =
+            std::get<typename R_div2::R_div2_2>(this->v());
+        return f1(d_n, d_p, d_a2, d__res,
+                  d__res->template R_div2_rect<T1>(f, f0, f1, d_p, d_a2));
       }
     }
   };
@@ -248,8 +248,9 @@ struct FunctionVernac {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-      return (_m.d_a0 + list_sum0(_m.d_a1));
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l->v());
+      return (d_a0 + list_sum0(d_a1));
     }
   }
 
@@ -327,15 +328,14 @@ struct FunctionVernac {
                       const unsigned int) const {
       if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(
               this->v())) {
-        const auto &_m =
-            *std::get_if<typename R_list_sum::R_list_sum_0>(&this->v());
-        return f(_m.d_l);
+        const auto &[d_l] =
+            std::get<typename R_list_sum::R_list_sum_0>(this->v());
+        return f(d_l);
       } else {
-        const auto &_m =
-            *std::get_if<typename R_list_sum::R_list_sum_1>(&this->v());
-        return f0(
-            _m.d_l, _m.d_x, _m.d_xs, _m.d_a3, _m.d__res,
-            _m.d__res->template R_list_sum_rec<T1>(f, f0, _m.d_xs, _m.d_a3));
+        const auto &[d_l, d_x, d_xs, d_a3, d__res] =
+            std::get<typename R_list_sum::R_list_sum_1>(this->v());
+        return f0(d_l, d_x, d_xs, d_a3, d__res,
+                  d__res->template R_list_sum_rec<T1>(f, f0, d_xs, d_a3));
       }
     }
 
@@ -349,15 +349,14 @@ struct FunctionVernac {
                        const unsigned int) const {
       if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(
               this->v())) {
-        const auto &_m =
-            *std::get_if<typename R_list_sum::R_list_sum_0>(&this->v());
-        return f(_m.d_l);
+        const auto &[d_l] =
+            std::get<typename R_list_sum::R_list_sum_0>(this->v());
+        return f(d_l);
       } else {
-        const auto &_m =
-            *std::get_if<typename R_list_sum::R_list_sum_1>(&this->v());
-        return f0(
-            _m.d_l, _m.d_x, _m.d_xs, _m.d_a3, _m.d__res,
-            _m.d__res->template R_list_sum_rect<T1>(f, f0, _m.d_xs, _m.d_a3));
+        const auto &[d_l, d_x, d_xs, d_a3, d__res] =
+            std::get<typename R_list_sum::R_list_sum_1>(this->v());
+        return f0(d_l, d_x, d_xs, d_a3, d__res,
+                  d__res->template R_list_sum_rect<T1>(f, f0, d_xs, d_a3));
       }
     }
   };
@@ -375,11 +374,12 @@ struct FunctionVernac {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
       return f2;
     } else {
-      const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l->v());
       std::function<T1(T1)> f3 = [=](T1 _pa0) mutable {
-        return f1(_m.d_a0, _m.d_a1, _pa0);
+        return f1(d_a0, d_a1, _pa0);
       };
-      T1 hrec = list_sum_rect<T1>(f, f0, _m.d_a1);
+      T1 hrec = list_sum_rect<T1>(f, f0, d_a1);
       return f3(hrec);
     }
   }

@@ -12,23 +12,21 @@ __attribute__((pure)) unsigned int OptionClosureEscape::sum_values(
           t->v())) {
     return x;
   } else {
-    const auto &_m =
-        *std::get_if<typename OptionClosureEscape::tree::Node>(&t->v());
-    auto &&_sv0 = _m.d_a0;
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename OptionClosureEscape::tree::Node>(t->v());
     if (std::holds_alternative<typename OptionClosureEscape::tree::Leaf>(
-            _sv0->v())) {
-      return (_m.d_a1 + x);
+            d_a0->v())) {
+      return (d_a1 + x);
     } else {
-      const auto &_m0 =
-          *std::get_if<typename OptionClosureEscape::tree::Node>(&_sv0->v());
-      auto &&_sv1 = _m.d_a2;
+      const auto &[d_a00, d_a10, d_a20] =
+          std::get<typename OptionClosureEscape::tree::Node>(d_a0->v());
       if (std::holds_alternative<typename OptionClosureEscape::tree::Leaf>(
-              _sv1->v())) {
-        return (_m0.d_a1 + x);
+              d_a2->v())) {
+        return (d_a10 + x);
       } else {
-        const auto &_m1 =
-            *std::get_if<typename OptionClosureEscape::tree::Node>(&_sv1->v());
-        return (((_m0.d_a1 + _m1.d_a1) + _m.d_a1) + x);
+        const auto &[d_a01, d_a11, d_a21] =
+            std::get<typename OptionClosureEscape::tree::Node>(d_a2->v());
+        return (((d_a10 + d_a11) + d_a1) + x);
       }
     }
   }
@@ -56,12 +54,12 @@ OptionClosureEscape::match_pair(
           t->v())) {
     return std::make_pair([](const unsigned int x) { return x; }, 0u);
   } else {
-    const auto &_m =
-        *std::get_if<typename OptionClosureEscape::tree::Node>(&t->v());
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename OptionClosureEscape::tree::Node>(t->v());
     return std::make_pair(
         [=](unsigned int _x0) mutable -> unsigned int {
-          return sum_values(_m.d_a0, _x0);
+          return sum_values(d_a0, _x0);
         },
-        _m.d_a1);
+        d_a1);
   }
 }

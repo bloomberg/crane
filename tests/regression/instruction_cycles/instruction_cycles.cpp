@@ -79,11 +79,10 @@ __attribute__((pure)) unsigned int InstructionCycles::program_cycles5(
           prog->v())) {
     return 0u;
   } else {
-    const auto &_m = *std::get_if<
+    const auto &[d_a0, d_a1] = std::get<
         typename List<std::shared_ptr<InstructionCycles::instruction5>>::Cons>(
-        &prog->v());
-    return (_m.d_a0->cycles_sum(s) +
-            program_cycles5(execute5(s, _m.d_a0), _m.d_a1));
+        prog->v());
+    return (d_a0->cycles_sum(s) + program_cycles5(execute5(s, d_a0), d_a1));
   }
 }
 
@@ -100,10 +99,10 @@ __attribute__((pure)) unsigned int InstructionCycles::program_cycles6(
           typename List<InstructionCycles::Instruction6>::Nil>(prog->v())) {
     return 0u;
   } else {
-    const auto &_m =
-        *std::get_if<typename List<InstructionCycles::Instruction6>::Cons>(
-            &prog->v());
-    return (cycles6(s, _m.d_a0) + program_cycles6(s, _m.d_a1));
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<InstructionCycles::Instruction6>::Cons>(
+            prog->v());
+    return (cycles6(s, d_a0) + program_cycles6(s, d_a1));
   }
 }
 
@@ -120,9 +119,9 @@ __attribute__((pure)) unsigned int InstructionCycles::program_cycles7(
           typename List<InstructionCycles::Instruction7>::Nil>(prog->v())) {
     return 0u;
   } else {
-    const auto &_m =
-        *std::get_if<typename List<InstructionCycles::Instruction7>::Cons>(
-            &prog->v());
-    return (cycles7(s, _m.d_a0) + program_cycles7(s, _m.d_a1));
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<InstructionCycles::Instruction7>::Cons>(
+            prog->v());
+    return (cycles7(s, d_a0) + program_cycles7(s, d_a1));
   }
 }

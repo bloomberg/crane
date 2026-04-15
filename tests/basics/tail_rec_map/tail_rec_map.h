@@ -60,8 +60,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<t_A>::nil();
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return _m.d_a1->rev()->app(List<t_A>::cons(_m.d_a0, List<t_A>::nil()));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return d_a1->rev()->app(List<t_A>::cons(d_a0, List<t_A>::nil()));
     }
   }
 
@@ -69,8 +69,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return List<t_A>::cons(_m.d_a0, _m.d_a1->app(m));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, d_a1->app(m));
     }
   }
 };
@@ -86,8 +86,8 @@ std::shared_ptr<List<T2>> better_map(F0 &&f,
     if (std::holds_alternative<typename List<T1>::Nil>(l0->v())) {
       return std::move(acc)->rev();
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l0->v());
-      return go(_m.d_a1, List<T2>::cons(f(_m.d_a0), acc));
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l0->v());
+      return go(d_a1, List<T2>::cons(f(d_a0), acc));
     }
   };
   return go(l, List<T2>::nil());

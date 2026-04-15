@@ -60,16 +60,18 @@ public:
       if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
         return default0;
       } else {
-        const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-        return _m.d_a0;
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<t_A>::Cons>(this->v());
+        return d_a0;
       }
     } else {
       unsigned int m = n - 1;
       if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
         return default0;
       } else {
-        const auto &_m0 = *std::get_if<typename List<t_A>::Cons>(&this->v());
-        return _m0.d_a1->nth(m, default0);
+        const auto &[d_a00, d_a10] =
+            std::get<typename List<t_A>::Cons>(this->v());
+        return d_a10->nth(m, default0);
       }
     }
   }
@@ -78,8 +80,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (_m.d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
     }
   }
 };

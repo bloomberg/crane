@@ -61,8 +61,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return List<t_A>::cons(_m.d_a0, _m.d_a1->app(m));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, d_a1->app(m));
     }
   }
 };
@@ -114,9 +114,9 @@ struct NestedInd {
       if (std::holds_alternative<typename custom_list<t_A>::Cnil>(this->v())) {
         return 0u;
       } else {
-        const auto &_m =
-            *std::get_if<typename custom_list<t_A>::Ccons>(&this->v());
-        return (1u + _m.d_a1->custom_list_length());
+        const auto &[d_a0, d_a1] =
+            std::get<typename custom_list<t_A>::Ccons>(this->v());
+        return (1u + d_a1->custom_list_length());
       }
     }
   };
@@ -128,8 +128,9 @@ struct NestedInd {
     if (std::holds_alternative<typename custom_list<T1>::Cnil>(c->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename custom_list<T1>::Ccons>(&c->v());
-      return f0(_m.d_a0, _m.d_a1, custom_list_rect<T1, T2>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] =
+          std::get<typename custom_list<T1>::Ccons>(c->v());
+      return f0(d_a0, d_a1, custom_list_rect<T1, T2>(f, f0, d_a1));
     }
   }
 
@@ -140,8 +141,9 @@ struct NestedInd {
     if (std::holds_alternative<typename custom_list<T1>::Cnil>(c->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename custom_list<T1>::Ccons>(&c->v());
-      return f0(_m.d_a0, _m.d_a1, custom_list_rec<T1, T2>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] =
+          std::get<typename custom_list<T1>::Ccons>(c->v());
+      return f0(d_a0, d_a1, custom_list_rec<T1, T2>(f, f0, d_a1));
     }
   }
 
@@ -181,13 +183,13 @@ struct NestedInd {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int children_count() const {
-      const auto &_m = *std::get_if<typename rose<t_A>::Node>(&this->v());
-      return _m.d_a1->custom_list_length();
+      const auto &[d_a0, d_a1] = std::get<typename rose<t_A>::Node>(this->v());
+      return d_a1->custom_list_length();
     }
 
     t_A root() const {
-      const auto &_m = *std::get_if<typename rose<t_A>::Node>(&this->v());
-      return _m.d_a0;
+      const auto &[d_a0, d_a1] = std::get<typename rose<t_A>::Node>(this->v());
+      return d_a0;
     }
 
     template <typename T1,
@@ -195,8 +197,8 @@ struct NestedInd {
                      std::shared_ptr<custom_list<std::shared_ptr<rose<t_A>>>>>
                   F0>
     T1 rose_rec(F0 &&f) const {
-      const auto &_m = *std::get_if<typename rose<t_A>::Node>(&this->v());
-      return f(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename rose<t_A>::Node>(this->v());
+      return f(d_a0, d_a1);
     }
 
     template <typename T1,
@@ -204,8 +206,8 @@ struct NestedInd {
                      std::shared_ptr<custom_list<std::shared_ptr<rose<t_A>>>>>
                   F0>
     T1 rose_rect(F0 &&f) const {
-      const auto &_m = *std::get_if<typename rose<t_A>::Node>(&this->v());
-      return f(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename rose<t_A>::Node>(this->v());
+      return f(d_a0, d_a1);
     }
   };
 
@@ -296,10 +298,10 @@ struct NestedInd {
     template <MapsTo<unsigned int, unsigned int> F0>
     std::shared_ptr<expr> lit_map(F0 &&f) const {
       if (std::holds_alternative<typename expr::Lit>(this->v())) {
-        const auto &_m = *std::get_if<typename expr::Lit>(&this->v());
-        return expr::lit(f(_m.d_a0));
+        const auto &[d_a0] = std::get<typename expr::Lit>(this->v());
+        return expr::lit(f(d_a0));
       } else if (std::holds_alternative<typename expr::Add>(this->v())) {
-        const auto &_m = *std::get_if<typename expr::Add>(&this->v());
+        const auto &[d_a0] = std::get<typename expr::Add>(this->v());
         return expr::add([&]() {
           std::function<std::shared_ptr<List<std::shared_ptr<expr>>>(
               std::shared_ptr<List<std::shared_ptr<expr>>>)>
@@ -310,17 +312,16 @@ struct NestedInd {
                     typename List<std::shared_ptr<expr>>::Nil>(l->v())) {
               return List<std::shared_ptr<expr>>::nil();
             } else {
-              const auto &_m =
-                  *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
-                      &l->v());
-              return List<std::shared_ptr<expr>>::cons(_m.d_a0->lit_map(f),
-                                                       aux(_m.d_a1));
+              const auto &[d_a0, d_a1] =
+                  std::get<typename List<std::shared_ptr<expr>>::Cons>(l->v());
+              return List<std::shared_ptr<expr>>::cons(d_a0->lit_map(f),
+                                                       aux(d_a1));
             }
           };
-          return aux(_m.d_a0);
+          return aux(d_a0);
         }());
       } else {
-        const auto &_m = *std::get_if<typename expr::Mul>(&this->v());
+        const auto &[d_a0] = std::get<typename expr::Mul>(this->v());
         return expr::mul([&]() {
           std::function<std::shared_ptr<List<std::shared_ptr<expr>>>(
               std::shared_ptr<List<std::shared_ptr<expr>>>)>
@@ -331,24 +332,23 @@ struct NestedInd {
                     typename List<std::shared_ptr<expr>>::Nil>(l->v())) {
               return List<std::shared_ptr<expr>>::nil();
             } else {
-              const auto &_m =
-                  *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
-                      &l->v());
-              return List<std::shared_ptr<expr>>::cons(_m.d_a0->lit_map(f),
-                                                       aux(_m.d_a1));
+              const auto &[d_a0, d_a1] =
+                  std::get<typename List<std::shared_ptr<expr>>::Cons>(l->v());
+              return List<std::shared_ptr<expr>>::cons(d_a0->lit_map(f),
+                                                       aux(d_a1));
             }
           };
-          return aux(_m.d_a0);
+          return aux(d_a0);
         }());
       }
     }
 
     std::shared_ptr<List<unsigned int>> literals() const {
       if (std::holds_alternative<typename expr::Lit>(this->v())) {
-        const auto &_m = *std::get_if<typename expr::Lit>(&this->v());
-        return List<unsigned int>::cons(_m.d_a0, List<unsigned int>::nil());
+        const auto &[d_a0] = std::get<typename expr::Lit>(this->v());
+        return List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
       } else if (std::holds_alternative<typename expr::Add>(this->v())) {
-        const auto &_m = *std::get_if<typename expr::Add>(&this->v());
+        const auto &[d_a0] = std::get<typename expr::Add>(this->v());
         std::function<std::shared_ptr<List<unsigned int>>(
             std::shared_ptr<List<std::shared_ptr<expr>>>)>
             aux;
@@ -358,15 +358,14 @@ struct NestedInd {
                   l->v())) {
             return List<unsigned int>::nil();
           } else {
-            const auto &_m0 =
-                *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
-                    &l->v());
-            return _m0.d_a0->literals()->app(aux(_m0.d_a1));
+            const auto &[d_a00, d_a10] =
+                std::get<typename List<std::shared_ptr<expr>>::Cons>(l->v());
+            return d_a00->literals()->app(aux(d_a10));
           }
         };
-        return aux(_m.d_a0);
+        return aux(d_a0);
       } else {
-        const auto &_m = *std::get_if<typename expr::Mul>(&this->v());
+        const auto &[d_a0] = std::get<typename expr::Mul>(this->v());
         std::function<std::shared_ptr<List<unsigned int>>(
             std::shared_ptr<List<std::shared_ptr<expr>>>)>
             aux;
@@ -376,13 +375,12 @@ struct NestedInd {
                   l->v())) {
             return List<unsigned int>::nil();
           } else {
-            const auto &_m0 =
-                *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
-                    &l->v());
-            return _m0.d_a0->literals()->app(aux(_m0.d_a1));
+            const auto &[d_a00, d_a10] =
+                std::get<typename List<std::shared_ptr<expr>>::Cons>(l->v());
+            return d_a00->literals()->app(aux(d_a10));
           }
         };
-        return aux(_m.d_a0);
+        return aux(d_a0);
       }
     }
 
@@ -390,7 +388,7 @@ struct NestedInd {
       if (std::holds_alternative<typename expr::Lit>(this->v())) {
         return 0u;
       } else if (std::holds_alternative<typename expr::Add>(this->v())) {
-        const auto &_m = *std::get_if<typename expr::Add>(&this->v());
+        const auto &[d_a0] = std::get<typename expr::Add>(this->v());
         return ([&]() {
           std::function<unsigned int(
               std::shared_ptr<List<std::shared_ptr<expr>>>)>
@@ -401,16 +399,15 @@ struct NestedInd {
                     typename List<std::shared_ptr<expr>>::Nil>(l->v())) {
               return 0u;
             } else {
-              const auto &_m =
-                  *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
-                      &l->v());
-              return std::max(_m.d_a0->expr_depth(), aux(_m.d_a1));
+              const auto &[d_a0, d_a1] =
+                  std::get<typename List<std::shared_ptr<expr>>::Cons>(l->v());
+              return std::max(d_a0->expr_depth(), aux(d_a1));
             }
           };
-          return aux(_m.d_a0);
+          return aux(d_a0);
         }() + 1);
       } else {
-        const auto &_m = *std::get_if<typename expr::Mul>(&this->v());
+        const auto &[d_a0] = std::get<typename expr::Mul>(this->v());
         return ([&]() {
           std::function<unsigned int(
               std::shared_ptr<List<std::shared_ptr<expr>>>)>
@@ -421,13 +418,12 @@ struct NestedInd {
                     typename List<std::shared_ptr<expr>>::Nil>(l->v())) {
               return 0u;
             } else {
-              const auto &_m =
-                  *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
-                      &l->v());
-              return std::max(_m.d_a0->expr_depth(), aux(_m.d_a1));
+              const auto &[d_a0, d_a1] =
+                  std::get<typename List<std::shared_ptr<expr>>::Cons>(l->v());
+              return std::max(d_a0->expr_depth(), aux(d_a1));
             }
           };
-          return aux(_m.d_a0);
+          return aux(d_a0);
         }() + 1);
       }
     }
@@ -436,7 +432,7 @@ struct NestedInd {
       if (std::holds_alternative<typename expr::Lit>(this->v())) {
         return 1u;
       } else if (std::holds_alternative<typename expr::Add>(this->v())) {
-        const auto &_m = *std::get_if<typename expr::Add>(&this->v());
+        const auto &[d_a0] = std::get<typename expr::Add>(this->v());
         return ([&]() {
           std::function<unsigned int(
               std::shared_ptr<List<std::shared_ptr<expr>>>)>
@@ -447,16 +443,15 @@ struct NestedInd {
                     typename List<std::shared_ptr<expr>>::Nil>(l->v())) {
               return 0u;
             } else {
-              const auto &_m =
-                  *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
-                      &l->v());
-              return (_m.d_a0->expr_size() + aux(_m.d_a1));
+              const auto &[d_a0, d_a1] =
+                  std::get<typename List<std::shared_ptr<expr>>::Cons>(l->v());
+              return (d_a0->expr_size() + aux(d_a1));
             }
           };
-          return aux(_m.d_a0);
+          return aux(d_a0);
         }() + 1);
       } else {
-        const auto &_m = *std::get_if<typename expr::Mul>(&this->v());
+        const auto &[d_a0] = std::get<typename expr::Mul>(this->v());
         return ([&]() {
           std::function<unsigned int(
               std::shared_ptr<List<std::shared_ptr<expr>>>)>
@@ -467,23 +462,22 @@ struct NestedInd {
                     typename List<std::shared_ptr<expr>>::Nil>(l->v())) {
               return 0u;
             } else {
-              const auto &_m =
-                  *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
-                      &l->v());
-              return (_m.d_a0->expr_size() + aux(_m.d_a1));
+              const auto &[d_a0, d_a1] =
+                  std::get<typename List<std::shared_ptr<expr>>::Cons>(l->v());
+              return (d_a0->expr_size() + aux(d_a1));
             }
           };
-          return aux(_m.d_a0);
+          return aux(d_a0);
         }() + 1);
       }
     }
 
     __attribute__((pure)) unsigned int eval() const {
       if (std::holds_alternative<typename expr::Lit>(this->v())) {
-        const auto &_m = *std::get_if<typename expr::Lit>(&this->v());
-        return _m.d_a0;
+        const auto &[d_a0] = std::get<typename expr::Lit>(this->v());
+        return d_a0;
       } else if (std::holds_alternative<typename expr::Add>(this->v())) {
-        const auto &_m = *std::get_if<typename expr::Add>(&this->v());
+        const auto &[d_a0] = std::get<typename expr::Add>(this->v());
         std::function<unsigned int(
             std::shared_ptr<List<std::shared_ptr<expr>>>)>
             sum_all;
@@ -493,15 +487,14 @@ struct NestedInd {
                   l->v())) {
             return 0u;
           } else {
-            const auto &_m0 =
-                *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
-                    &l->v());
-            return (_m0.d_a0->eval() + sum_all(_m0.d_a1));
+            const auto &[d_a00, d_a10] =
+                std::get<typename List<std::shared_ptr<expr>>::Cons>(l->v());
+            return (d_a00->eval() + sum_all(d_a10));
           }
         };
-        return sum_all(_m.d_a0);
+        return sum_all(d_a0);
       } else {
-        const auto &_m = *std::get_if<typename expr::Mul>(&this->v());
+        const auto &[d_a0] = std::get<typename expr::Mul>(this->v());
         std::function<unsigned int(
             std::shared_ptr<List<std::shared_ptr<expr>>>)>
             prod_all;
@@ -511,13 +504,12 @@ struct NestedInd {
                   l->v())) {
             return 1u;
           } else {
-            const auto &_m0 =
-                *std::get_if<typename List<std::shared_ptr<expr>>::Cons>(
-                    &l->v());
-            return (_m0.d_a0->eval() * prod_all(_m0.d_a1));
+            const auto &[d_a00, d_a10] =
+                std::get<typename List<std::shared_ptr<expr>>::Cons>(l->v());
+            return (d_a00->eval() * prod_all(d_a10));
           }
         };
-        return prod_all(_m.d_a0);
+        return prod_all(d_a0);
       }
     }
 
@@ -526,14 +518,14 @@ struct NestedInd {
               MapsTo<T1, std::shared_ptr<List<std::shared_ptr<expr>>>> F2>
     T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename expr::Lit>(this->v())) {
-        const auto &_m = *std::get_if<typename expr::Lit>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename expr::Lit>(this->v());
+        return f(d_a0);
       } else if (std::holds_alternative<typename expr::Add>(this->v())) {
-        const auto &_m = *std::get_if<typename expr::Add>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename expr::Add>(this->v());
+        return f0(d_a0);
       } else {
-        const auto &_m = *std::get_if<typename expr::Mul>(&this->v());
-        return f1(_m.d_a0);
+        const auto &[d_a0] = std::get<typename expr::Mul>(this->v());
+        return f1(d_a0);
       }
     }
 
@@ -542,14 +534,14 @@ struct NestedInd {
               MapsTo<T1, std::shared_ptr<List<std::shared_ptr<expr>>>> F2>
     T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename expr::Lit>(this->v())) {
-        const auto &_m = *std::get_if<typename expr::Lit>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename expr::Lit>(this->v());
+        return f(d_a0);
       } else if (std::holds_alternative<typename expr::Add>(this->v())) {
-        const auto &_m = *std::get_if<typename expr::Add>(&this->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename expr::Add>(this->v());
+        return f0(d_a0);
       } else {
-        const auto &_m = *std::get_if<typename expr::Mul>(&this->v());
-        return f1(_m.d_a0);
+        const auto &[d_a0] = std::get<typename expr::Mul>(this->v());
+        return f1(d_a0);
       }
     }
   };

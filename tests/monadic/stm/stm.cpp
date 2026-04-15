@@ -56,9 +56,10 @@ stmtest::stm_dequeue(const stm::TVar<std::shared_ptr<List<unsigned int>>> q) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(xs->v())) {
     return stm::retry<unsigned int>();
   } else {
-    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&xs->v());
-    stm::writeTVar(q, _m.d_a1);
-    return _m.d_a0;
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(xs->v());
+    stm::writeTVar(q, d_a1);
+    return d_a0;
   }
 }
 

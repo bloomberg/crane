@@ -56,8 +56,8 @@ public:
     if (std::holds_alternative<typename Nat::O>(this->v())) {
       return 0;
     } else {
-      const auto &_m = *std::get_if<typename Nat::S>(&this->v());
-      return 1 + _m.d_n->nat_to_int();
+      const auto &[d_n] = std::get<typename Nat::S>(this->v());
+      return 1 + d_n->nat_to_int();
     }
   }
 
@@ -66,8 +66,8 @@ public:
     if (std::holds_alternative<typename Nat::O>(this->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename Nat::S>(&this->v());
-      return f0(_m.d_n, _m.d_n->template nat_rec<T1>(f, f0));
+      const auto &[d_n] = std::get<typename Nat::S>(this->v());
+      return f0(d_n, d_n->template nat_rec<T1>(f, f0));
     }
   }
 
@@ -76,8 +76,8 @@ public:
     if (std::holds_alternative<typename Nat::O>(this->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename Nat::S>(&this->v());
-      return f0(_m.d_n, _m.d_n->template nat_rect<T1>(f, f0));
+      const auto &[d_n] = std::get<typename Nat::S>(this->v());
+      return f0(d_n, d_n->template nat_rect<T1>(f, f0));
     }
   }
 
@@ -86,8 +86,8 @@ public:
     if (std::holds_alternative<typename Nat::O>(this->v())) {
       return n;
     } else {
-      const auto &_m = *std::get_if<typename Nat::S>(&this->v());
-      return Nat::s(_m.d_n->add(n));
+      const auto &[d_n] = std::get<typename Nat::S>(this->v());
+      return Nat::s(d_n->add(n));
     }
   }
 };

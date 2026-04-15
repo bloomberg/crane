@@ -29,11 +29,11 @@ LoopifyTreePaths::map_cons(
       }
       _continue = false;
     } else {
-      const auto &_m = *std::get_if<
-          typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-          &_loop_ll->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+              _loop_ll->v());
       auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
-          List<unsigned int>::cons(x, _m.d_a0), nullptr);
+          List<unsigned int>::cons(x, d_a0), nullptr);
       if (_last) {
         std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
             _last->v_mut())
@@ -42,7 +42,7 @@ LoopifyTreePaths::map_cons(
         _head = _cell;
       }
       _last = _cell;
-      _loop_ll = _m.d_a1;
+      _loop_ll = d_a1;
       continue;
     }
   }

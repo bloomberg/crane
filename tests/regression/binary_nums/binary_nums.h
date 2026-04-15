@@ -236,11 +236,11 @@ struct Pos {
   template <typename T1, MapsTo<T1, T1, T1> F0>
   static T1 iter_op(F0 &&op, const std::shared_ptr<Positive> &p, const T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p->v())) {
-      const auto &_m = *std::get_if<typename Positive::XI>(&p->v());
-      return op(a, iter_op<T1>(op, _m.d_a0, op(a, a)));
+      const auto &[d_a0] = std::get<typename Positive::XI>(p->v());
+      return op(a, iter_op<T1>(op, d_a0, op(a, a)));
     } else if (std::holds_alternative<typename Positive::XO>(p->v())) {
-      const auto &_m = *std::get_if<typename Positive::XO>(&p->v());
-      return iter_op<T1>(op, _m.d_a0, op(a, a));
+      const auto &[d_a0] = std::get<typename Positive::XO>(p->v());
+      return iter_op<T1>(op, d_a0, op(a, a));
     } else {
       return a;
     }
@@ -263,11 +263,11 @@ struct Coq_Pos {
   template <typename T1, MapsTo<T1, T1, T1> F0>
   static T1 iter_op(F0 &&op, const std::shared_ptr<Positive> &p, const T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p->v())) {
-      const auto &_m = *std::get_if<typename Positive::XI>(&p->v());
-      return op(a, iter_op<T1>(op, _m.d_a0, op(a, a)));
+      const auto &[d_a0] = std::get<typename Positive::XI>(p->v());
+      return op(a, iter_op<T1>(op, d_a0, op(a, a)));
     } else if (std::holds_alternative<typename Positive::XO>(p->v())) {
-      const auto &_m = *std::get_if<typename Positive::XO>(&p->v());
-      return iter_op<T1>(op, _m.d_a0, op(a, a));
+      const auto &[d_a0] = std::get<typename Positive::XO>(p->v());
+      return iter_op<T1>(op, d_a0, op(a, a));
     } else {
       return a;
     }

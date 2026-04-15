@@ -171,23 +171,23 @@ struct Matcher {
     if (std::holds_alternative<typename regexp::Any>(r->v())) {
       return f;
     } else if (std::holds_alternative<typename regexp::Char>(r->v())) {
-      const auto &_m = *std::get_if<typename regexp::Char>(&r->v());
-      return f0(_m.d_c);
+      const auto &[d_c] = std::get<typename regexp::Char>(r->v());
+      return f0(d_c);
     } else if (std::holds_alternative<typename regexp::Eps>(r->v())) {
       return f1;
     } else if (std::holds_alternative<typename regexp::Cat>(r->v())) {
-      const auto &_m = *std::get_if<typename regexp::Cat>(&r->v());
-      return f2(_m.d_r1, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_r1),
-                _m.d_r2, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_r2));
+      const auto &[d_r1, d_r2] = std::get<typename regexp::Cat>(r->v());
+      return f2(d_r1, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_r1), d_r2,
+                regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_r2));
     } else if (std::holds_alternative<typename regexp::Alt>(r->v())) {
-      const auto &_m = *std::get_if<typename regexp::Alt>(&r->v());
-      return f3(_m.d_r1, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_r1),
-                _m.d_r2, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_r2));
+      const auto &[d_r1, d_r2] = std::get<typename regexp::Alt>(r->v());
+      return f3(d_r1, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_r1), d_r2,
+                regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_r2));
     } else if (std::holds_alternative<typename regexp::Zero>(r->v())) {
       return f4;
     } else {
-      const auto &_m = *std::get_if<typename regexp::Star>(&r->v());
-      return f5(_m.d_r, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_r));
+      const auto &[d_r] = std::get<typename regexp::Star>(r->v());
+      return f5(d_r, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_r));
     }
   }
 
@@ -201,23 +201,23 @@ struct Matcher {
     if (std::holds_alternative<typename regexp::Any>(r->v())) {
       return f;
     } else if (std::holds_alternative<typename regexp::Char>(r->v())) {
-      const auto &_m = *std::get_if<typename regexp::Char>(&r->v());
-      return f0(_m.d_c);
+      const auto &[d_c] = std::get<typename regexp::Char>(r->v());
+      return f0(d_c);
     } else if (std::holds_alternative<typename regexp::Eps>(r->v())) {
       return f1;
     } else if (std::holds_alternative<typename regexp::Cat>(r->v())) {
-      const auto &_m = *std::get_if<typename regexp::Cat>(&r->v());
-      return f2(_m.d_r1, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_r1),
-                _m.d_r2, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_r2));
+      const auto &[d_r1, d_r2] = std::get<typename regexp::Cat>(r->v());
+      return f2(d_r1, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_r1), d_r2,
+                regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_r2));
     } else if (std::holds_alternative<typename regexp::Alt>(r->v())) {
-      const auto &_m = *std::get_if<typename regexp::Alt>(&r->v());
-      return f3(_m.d_r1, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_r1),
-                _m.d_r2, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_r2));
+      const auto &[d_r1, d_r2] = std::get<typename regexp::Alt>(r->v());
+      return f3(d_r1, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_r1), d_r2,
+                regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_r2));
     } else if (std::holds_alternative<typename regexp::Zero>(r->v())) {
       return f4;
     } else {
-      const auto &_m = *std::get_if<typename regexp::Star>(&r->v());
-      return f5(_m.d_r, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_r));
+      const auto &[d_r] = std::get<typename regexp::Star>(r->v());
+      return f5(d_r, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_r));
     }
   }
 

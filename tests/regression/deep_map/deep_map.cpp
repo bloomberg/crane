@@ -45,8 +45,8 @@ DeepMap::root_or_zero(const std::shared_ptr<DeepMap::tree<unsigned int>> &t) {
           t->v())) {
     return 0u;
   } else {
-    const auto &_m =
-        *std::get_if<typename DeepMap::tree<unsigned int>::Node>(&t->v());
-    return _m.d_a1;
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename DeepMap::tree<unsigned int>::Node>(t->v());
+    return d_a1;
   }
 }

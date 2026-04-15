@@ -66,8 +66,8 @@ struct LoopifyTail {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename list<T1>::Cons &>().d_a1) _s0;
-      decltype(std::declval<typename list<T1>::Cons &>().d_a0) _s1;
+      std::shared_ptr<list<T1>> _s0;
+      T1 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -83,9 +83,9 @@ struct LoopifyTail {
         if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
           _result = f;
         } else {
-          const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
-          _stack.emplace_back(_Call1{_m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+          _stack.emplace_back(_Call1{d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
@@ -103,8 +103,8 @@ struct LoopifyTail {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename list<T1>::Cons &>().d_a1) _s0;
-      decltype(std::declval<typename list<T1>::Cons &>().d_a0) _s1;
+      std::shared_ptr<list<T1>> _s0;
+      T1 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -120,9 +120,9 @@ struct LoopifyTail {
         if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
           _result = f;
         } else {
-          const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
-          _stack.emplace_back(_Call1{_m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+          _stack.emplace_back(_Call1{d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
@@ -143,9 +143,10 @@ struct LoopifyTail {
         _result = _loop_x;
         _continue = false;
       } else {
-        const auto &_m = *std::get_if<typename list<T1>::Cons>(&_loop_l->v());
-        std::shared_ptr<list<T1>> _next_l = _m.d_a1;
-        T1 _next_x = _m.d_a0;
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        std::shared_ptr<list<T1>> _next_l = d_a1;
+        T1 _next_x = d_a0;
         _loop_l = std::move(_next_l);
         _loop_x = std::move(_next_x);
       }
@@ -165,8 +166,9 @@ struct LoopifyTail {
         _result = _loop_acc;
         _continue = false;
       } else {
-        const auto &_m = *std::get_if<typename list<T1>::Cons>(&_loop_l->v());
-        std::shared_ptr<list<T1>> _next_l = _m.d_a1;
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        std::shared_ptr<list<T1>> _next_l = d_a1;
         unsigned int _next_acc = (_loop_acc + 1);
         _loop_l = std::move(_next_l);
         _loop_acc = std::move(_next_acc);
@@ -202,9 +204,10 @@ struct LoopifyTail {
         _result = _loop_acc;
         _continue = false;
       } else {
-        const auto &_m = *std::get_if<typename list<T1>::Cons>(&_loop_l->v());
-        std::shared_ptr<list<T1>> _next_l = _m.d_a1;
-        T2 _next_acc = f(_loop_acc, _m.d_a0);
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        std::shared_ptr<list<T1>> _next_l = d_a1;
+        T2 _next_acc = f(_loop_acc, d_a0);
         _loop_l = std::move(_next_l);
         _loop_acc = std::move(_next_acc);
       }

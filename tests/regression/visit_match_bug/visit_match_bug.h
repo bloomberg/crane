@@ -69,12 +69,12 @@ struct VisitMatchBug {
                 F1>
   static T1 Tree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<Tree> &t) {
     if (std::holds_alternative<typename Tree::Leaf>(t->v())) {
-      const auto &_m = *std::get_if<typename Tree::Leaf>(&t->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename Tree::Leaf>(t->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename Tree::Node>(&t->v());
-      return f0(_m.d_a0, Tree_rect<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
-                Tree_rect<T1>(f, f0, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename Tree::Node>(t->v());
+      return f0(d_a0, Tree_rect<T1>(f, f0, d_a0), d_a1, d_a2,
+                Tree_rect<T1>(f, f0, d_a2));
     }
   }
 
@@ -84,12 +84,12 @@ struct VisitMatchBug {
                 F1>
   static T1 Tree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<Tree> &t) {
     if (std::holds_alternative<typename Tree::Leaf>(t->v())) {
-      const auto &_m = *std::get_if<typename Tree::Leaf>(&t->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename Tree::Leaf>(t->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename Tree::Node>(&t->v());
-      return f0(_m.d_a0, Tree_rec<T1>(f, f0, _m.d_a0), _m.d_a1, _m.d_a2,
-                Tree_rec<T1>(f, f0, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename Tree::Node>(t->v());
+      return f0(d_a0, Tree_rec<T1>(f, f0, d_a0), d_a1, d_a2,
+                Tree_rec<T1>(f, f0, d_a2));
     }
   }
 

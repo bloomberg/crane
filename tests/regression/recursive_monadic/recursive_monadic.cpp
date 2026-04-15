@@ -28,10 +28,11 @@ RecursiveMonadic::sum_list(const std::shared_ptr<List<unsigned int>> &xs) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(xs->v())) {
     return 0u;
   } else {
-    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&xs->v());
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(xs->v());
     std::cout << "adding"s << '\n';
-    unsigned int s = sum_list(_m.d_a1);
-    return (_m.d_a0 + s);
+    unsigned int s = sum_list(d_a1);
+    return (d_a0 + s);
   }
 }
 
@@ -41,10 +42,11 @@ std::shared_ptr<List<int64_t>> RecursiveMonadic::collect_lengths(
   if (std::holds_alternative<typename List<std::string>::Nil>(xs->v())) {
     return List<int64_t>::nil();
   } else {
-    const auto &_m = *std::get_if<typename List<std::string>::Cons>(&xs->v());
-    std::cout << _m.d_a0 << '\n';
-    std::shared_ptr<List<int64_t>> rest_ = collect_lengths(_m.d_a1);
-    return List<int64_t>::cons(_m.d_a0.length(), rest_);
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<std::string>::Cons>(xs->v());
+    std::cout << d_a0 << '\n';
+    std::shared_ptr<List<int64_t>> rest_ = collect_lengths(d_a1);
+    return List<int64_t>::cons(d_a0.length(), rest_);
   }
 }
 

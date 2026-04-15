@@ -64,8 +64,9 @@ public:
       if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
         return List<t_A>::nil();
       } else {
-        const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-        return _m.d_a1->skipn(n0);
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<t_A>::Cons>(this->v());
+        return d_a1->skipn(n0);
       }
     }
   }
@@ -78,8 +79,9 @@ public:
       if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
         return List<t_A>::nil();
       } else {
-        const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-        return List<t_A>::cons(_m.d_a0, _m.d_a1->firstn(n0));
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<t_A>::Cons>(this->v());
+        return List<t_A>::cons(d_a0, d_a1->firstn(n0));
       }
     }
   }
@@ -89,16 +91,18 @@ public:
       if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
         return default0;
       } else {
-        const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-        return _m.d_a0;
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<t_A>::Cons>(this->v());
+        return d_a0;
       }
     } else {
       unsigned int m = n - 1;
       if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
         return default0;
       } else {
-        const auto &_m0 = *std::get_if<typename List<t_A>::Cons>(&this->v());
-        return _m0.d_a1->nth(m, default0);
+        const auto &[d_a00, d_a10] =
+            std::get<typename List<t_A>::Cons>(this->v());
+        return d_a10->nth(m, default0);
       }
     }
   }
@@ -113,16 +117,16 @@ struct CpuEmulator {
       if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
         return List<T1>::nil();
       } else {
-        const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
-        return List<T1>::cons(x, _m.d_a1);
+        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+        return List<T1>::cons(x, d_a1);
       }
     } else {
       unsigned int n_ = n - 1;
       if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
         return List<T1>::nil();
       } else {
-        const auto &_m0 = *std::get_if<typename List<T1>::Cons>(&l->v());
-        return List<T1>::cons(_m0.d_a0, update_nth<T1>(n_, x, _m0.d_a1));
+        const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
+        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, d_a10));
       }
     }
   }
@@ -455,23 +459,23 @@ struct CpuEmulator {
     if (std::holds_alternative<typename instr::NOP>(i->v())) {
       return f;
     } else if (std::holds_alternative<typename instr::LDM>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::LDM>(&i->v());
-      return f0(_m.d_n);
+      const auto &[d_n] = std::get<typename instr::LDM>(i->v());
+      return f0(d_n);
     } else if (std::holds_alternative<typename instr::LD>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::LD>(&i->v());
-      return f1(_m.d_r);
+      const auto &[d_r] = std::get<typename instr::LD>(i->v());
+      return f1(d_r);
     } else if (std::holds_alternative<typename instr::XCH>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::XCH>(&i->v());
-      return f2(_m.d_r);
+      const auto &[d_r] = std::get<typename instr::XCH>(i->v());
+      return f2(d_r);
     } else if (std::holds_alternative<typename instr::INC>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::INC>(&i->v());
-      return f3(_m.d_r);
+      const auto &[d_r] = std::get<typename instr::INC>(i->v());
+      return f3(d_r);
     } else if (std::holds_alternative<typename instr::ADD>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::ADD>(&i->v());
-      return f4(_m.d_r);
+      const auto &[d_r] = std::get<typename instr::ADD>(i->v());
+      return f4(d_r);
     } else if (std::holds_alternative<typename instr::SUB>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::SUB>(&i->v());
-      return f5(_m.d_r);
+      const auto &[d_r] = std::get<typename instr::SUB>(i->v());
+      return f5(d_r);
     } else if (std::holds_alternative<typename instr::IAC>(i->v())) {
       return f6;
     } else if (std::holds_alternative<typename instr::DAC>(i->v())) {
@@ -499,32 +503,32 @@ struct CpuEmulator {
     } else if (std::holds_alternative<typename instr::KBP>(i->v())) {
       return f18;
     } else if (std::holds_alternative<typename instr::JUN>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::JUN>(&i->v());
-      return f19(_m.d_a);
+      const auto &[d_a] = std::get<typename instr::JUN>(i->v());
+      return f19(d_a);
     } else if (std::holds_alternative<typename instr::JMS>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::JMS>(&i->v());
-      return f20(_m.d_a);
+      const auto &[d_a] = std::get<typename instr::JMS>(i->v());
+      return f20(d_a);
     } else if (std::holds_alternative<typename instr::JCN>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::JCN>(&i->v());
-      return f21(_m.d_c, _m.d_a);
+      const auto &[d_c, d_a] = std::get<typename instr::JCN>(i->v());
+      return f21(d_c, d_a);
     } else if (std::holds_alternative<typename instr::FIM>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::FIM>(&i->v());
-      return f22(_m.d_r, _m.d_d);
+      const auto &[d_r, d_d] = std::get<typename instr::FIM>(i->v());
+      return f22(d_r, d_d);
     } else if (std::holds_alternative<typename instr::SRC>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::SRC>(&i->v());
-      return f23(_m.d_r);
+      const auto &[d_r] = std::get<typename instr::SRC>(i->v());
+      return f23(d_r);
     } else if (std::holds_alternative<typename instr::FIN>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::FIN>(&i->v());
-      return f24(_m.d_r);
+      const auto &[d_r] = std::get<typename instr::FIN>(i->v());
+      return f24(d_r);
     } else if (std::holds_alternative<typename instr::JIN>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::JIN>(&i->v());
-      return f25(_m.d_r);
+      const auto &[d_r] = std::get<typename instr::JIN>(i->v());
+      return f25(d_r);
     } else if (std::holds_alternative<typename instr::ISZ>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::ISZ>(&i->v());
-      return f26(_m.d_r, _m.d_a);
+      const auto &[d_r, d_a] = std::get<typename instr::ISZ>(i->v());
+      return f26(d_r, d_a);
     } else {
-      const auto &_m = *std::get_if<typename instr::BBL>(&i->v());
-      return f27(_m.d_d);
+      const auto &[d_d] = std::get<typename instr::BBL>(i->v());
+      return f27(d_d);
     }
   }
 
@@ -547,23 +551,23 @@ struct CpuEmulator {
     if (std::holds_alternative<typename instr::NOP>(i->v())) {
       return f;
     } else if (std::holds_alternative<typename instr::LDM>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::LDM>(&i->v());
-      return f0(_m.d_n);
+      const auto &[d_n] = std::get<typename instr::LDM>(i->v());
+      return f0(d_n);
     } else if (std::holds_alternative<typename instr::LD>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::LD>(&i->v());
-      return f1(_m.d_r);
+      const auto &[d_r] = std::get<typename instr::LD>(i->v());
+      return f1(d_r);
     } else if (std::holds_alternative<typename instr::XCH>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::XCH>(&i->v());
-      return f2(_m.d_r);
+      const auto &[d_r] = std::get<typename instr::XCH>(i->v());
+      return f2(d_r);
     } else if (std::holds_alternative<typename instr::INC>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::INC>(&i->v());
-      return f3(_m.d_r);
+      const auto &[d_r] = std::get<typename instr::INC>(i->v());
+      return f3(d_r);
     } else if (std::holds_alternative<typename instr::ADD>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::ADD>(&i->v());
-      return f4(_m.d_r);
+      const auto &[d_r] = std::get<typename instr::ADD>(i->v());
+      return f4(d_r);
     } else if (std::holds_alternative<typename instr::SUB>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::SUB>(&i->v());
-      return f5(_m.d_r);
+      const auto &[d_r] = std::get<typename instr::SUB>(i->v());
+      return f5(d_r);
     } else if (std::holds_alternative<typename instr::IAC>(i->v())) {
       return f6;
     } else if (std::holds_alternative<typename instr::DAC>(i->v())) {
@@ -591,32 +595,32 @@ struct CpuEmulator {
     } else if (std::holds_alternative<typename instr::KBP>(i->v())) {
       return f18;
     } else if (std::holds_alternative<typename instr::JUN>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::JUN>(&i->v());
-      return f19(_m.d_a);
+      const auto &[d_a] = std::get<typename instr::JUN>(i->v());
+      return f19(d_a);
     } else if (std::holds_alternative<typename instr::JMS>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::JMS>(&i->v());
-      return f20(_m.d_a);
+      const auto &[d_a] = std::get<typename instr::JMS>(i->v());
+      return f20(d_a);
     } else if (std::holds_alternative<typename instr::JCN>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::JCN>(&i->v());
-      return f21(_m.d_c, _m.d_a);
+      const auto &[d_c, d_a] = std::get<typename instr::JCN>(i->v());
+      return f21(d_c, d_a);
     } else if (std::holds_alternative<typename instr::FIM>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::FIM>(&i->v());
-      return f22(_m.d_r, _m.d_d);
+      const auto &[d_r, d_d] = std::get<typename instr::FIM>(i->v());
+      return f22(d_r, d_d);
     } else if (std::holds_alternative<typename instr::SRC>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::SRC>(&i->v());
-      return f23(_m.d_r);
+      const auto &[d_r] = std::get<typename instr::SRC>(i->v());
+      return f23(d_r);
     } else if (std::holds_alternative<typename instr::FIN>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::FIN>(&i->v());
-      return f24(_m.d_r);
+      const auto &[d_r] = std::get<typename instr::FIN>(i->v());
+      return f24(d_r);
     } else if (std::holds_alternative<typename instr::JIN>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::JIN>(&i->v());
-      return f25(_m.d_r);
+      const auto &[d_r] = std::get<typename instr::JIN>(i->v());
+      return f25(d_r);
     } else if (std::holds_alternative<typename instr::ISZ>(i->v())) {
-      const auto &_m = *std::get_if<typename instr::ISZ>(&i->v());
-      return f26(_m.d_r, _m.d_a);
+      const auto &[d_r, d_a] = std::get<typename instr::ISZ>(i->v());
+      return f26(d_r, d_a);
     } else {
-      const auto &_m = *std::get_if<typename instr::BBL>(&i->v());
-      return f27(_m.d_d);
+      const auto &[d_d] = std::get<typename instr::BBL>(i->v());
+      return f27(d_d);
     }
   }
 

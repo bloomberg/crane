@@ -28,12 +28,10 @@ std::shared_ptr<StepFetchDecodeExec::state> StepFetchDecodeExec::execute(
     return std::make_shared<StepFetchDecodeExec::state>(
         state{s->acc, (s->pc + 1u), s->rom});
   } else {
-    const auto &_m =
-        *std::get_if<typename StepFetchDecodeExec::instruction::ADD_ACC>(
-            &i->v());
-    return std::make_shared<StepFetchDecodeExec::state>(
-        state{(16u ? (s->acc + _m.d_a0) % 16u : (s->acc + _m.d_a0)),
-              (s->pc + 2u), s->rom});
+    const auto &[d_a0] =
+        std::get<typename StepFetchDecodeExec::instruction::ADD_ACC>(i->v());
+    return std::make_shared<StepFetchDecodeExec::state>(state{
+        (16u ? (s->acc + d_a0) % 16u : (s->acc + d_a0)), (s->pc + 2u), s->rom});
   }
 }
 

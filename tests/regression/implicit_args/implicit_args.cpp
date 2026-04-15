@@ -53,10 +53,9 @@ __attribute__((pure)) unsigned int ImplicitArgs::sum_with_init(
           typename ImplicitArgs::mylist<unsigned int>::Mynil>(l->v())) {
     return init;
   } else {
-    const auto &_m =
-        *std::get_if<typename ImplicitArgs::mylist<unsigned int>::Mycons>(
-            &l->v());
-    return (_m.d_a0 + sum_with_init(init, _m.d_a1));
+    const auto &[d_a0, d_a1] =
+        std::get<typename ImplicitArgs::mylist<unsigned int>::Mycons>(l->v());
+    return (d_a0 + sum_with_init(init, d_a1));
   }
 }
 

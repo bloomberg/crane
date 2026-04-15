@@ -61,8 +61,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (_m.d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
     }
   }
 };
@@ -108,20 +108,20 @@ struct FoldSequenceStateTraceCase {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     std::shared_ptr<Line> fold_line() const {
-      const auto &_m = *std::get_if<typename Fold::Fold_line_ctor>(&this->v());
-      return _m.d_a0;
+      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(this->v());
+      return d_a0;
     }
 
     template <typename T1, MapsTo<T1, std::shared_ptr<Line>> F0>
     T1 Fold_rec(F0 &&f) const {
-      const auto &_m = *std::get_if<typename Fold::Fold_line_ctor>(&this->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(this->v());
+      return f(d_a0);
     }
 
     template <typename T1, MapsTo<T1, std::shared_ptr<Line>> F0>
     T1 Fold_rect(F0 &&f) const {
-      const auto &_m = *std::get_if<typename Fold::Fold_line_ctor>(&this->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(this->v());
+      return f(d_a0);
     }
   };
 
@@ -207,14 +207,17 @@ struct FoldSequenceStateTraceCase {
 
     std::shared_ptr<Line> execute_fold_step() const {
       if (std::holds_alternative<typename FoldStep::FS_O1>(this->v())) {
-        const auto &_m = *std::get_if<typename FoldStep::FS_O1>(&this->v());
-        return fold_O1(_m.d_a0, _m.d_a1)->fold_line();
+        const auto &[d_a0, d_a1] =
+            std::get<typename FoldStep::FS_O1>(this->v());
+        return fold_O1(d_a0, d_a1)->fold_line();
       } else if (std::holds_alternative<typename FoldStep::FS_O2>(this->v())) {
-        const auto &_m = *std::get_if<typename FoldStep::FS_O2>(&this->v());
-        return fold_O2(_m.d_a0, _m.d_a1)->fold_line();
+        const auto &[d_a0, d_a1] =
+            std::get<typename FoldStep::FS_O2>(this->v());
+        return fold_O2(d_a0, d_a1)->fold_line();
       } else {
-        const auto &_m = *std::get_if<typename FoldStep::FS_O4>(&this->v());
-        return fold_O4(_m.d_a0, _m.d_a1)->fold_line();
+        const auto &[d_a0, d_a1] =
+            std::get<typename FoldStep::FS_O4>(this->v());
+        return fold_O4(d_a0, d_a1)->fold_line();
       }
     }
   };
@@ -226,14 +229,14 @@ struct FoldSequenceStateTraceCase {
   static T1 FoldStep_rect(F0 &&f, F1 &&f0, F2 &&f1,
                           const std::shared_ptr<FoldStep> &f2) {
     if (std::holds_alternative<typename FoldStep::FS_O1>(f2->v())) {
-      const auto &_m = *std::get_if<typename FoldStep::FS_O1>(&f2->v());
-      return f(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O1>(f2->v());
+      return f(d_a0, d_a1);
     } else if (std::holds_alternative<typename FoldStep::FS_O2>(f2->v())) {
-      const auto &_m = *std::get_if<typename FoldStep::FS_O2>(&f2->v());
-      return f0(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O2>(f2->v());
+      return f0(d_a0, d_a1);
     } else {
-      const auto &_m = *std::get_if<typename FoldStep::FS_O4>(&f2->v());
-      return f1(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O4>(f2->v());
+      return f1(d_a0, d_a1);
     }
   }
 
@@ -244,14 +247,14 @@ struct FoldSequenceStateTraceCase {
   static T1 FoldStep_rec(F0 &&f, F1 &&f0, F2 &&f1,
                          const std::shared_ptr<FoldStep> &f2) {
     if (std::holds_alternative<typename FoldStep::FS_O1>(f2->v())) {
-      const auto &_m = *std::get_if<typename FoldStep::FS_O1>(&f2->v());
-      return f(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O1>(f2->v());
+      return f(d_a0, d_a1);
     } else if (std::holds_alternative<typename FoldStep::FS_O2>(f2->v())) {
-      const auto &_m = *std::get_if<typename FoldStep::FS_O2>(&f2->v());
-      return f0(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O2>(f2->v());
+      return f0(d_a0, d_a1);
     } else {
-      const auto &_m = *std::get_if<typename FoldStep::FS_O4>(&f2->v());
-      return f1(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O4>(f2->v());
+      return f1(d_a0, d_a1);
     }
   }
 

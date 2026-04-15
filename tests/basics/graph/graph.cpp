@@ -18,12 +18,12 @@ __attribute__((pure)) bool nat_eqb(const std::shared_ptr<Nat> &n,
       return false;
     }
   } else {
-    const auto &_m = *std::get_if<typename Nat::S>(&n->v());
+    const auto &[d_a0] = std::get<typename Nat::S>(n->v());
     if (std::holds_alternative<typename Nat::O>(m->v())) {
       return false;
     } else {
-      const auto &_m0 = *std::get_if<typename Nat::S>(&m->v());
-      return nat_eqb(_m.d_a0, _m0.d_a0);
+      const auto &[d_a00] = std::get<typename Nat::S>(m->v());
+      return nat_eqb(d_a0, d_a00);
     }
   }
 }

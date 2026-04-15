@@ -29,10 +29,10 @@ LoopifyListWindows::len(const std::shared_ptr<List<unsigned int>> &l) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
         _result = 0u;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
         _stack.emplace_back(_Call1{1u});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
@@ -63,11 +63,11 @@ LoopifyListWindows::map_cons_helper(
       }
       _continue = false;
     } else {
-      const auto &_m = *std::get_if<
-          typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-          &_loop_ll->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+              _loop_ll->v());
       auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
-          List<unsigned int>::cons(x, _m.d_a0), nullptr);
+          List<unsigned int>::cons(x, d_a0), nullptr);
       if (_last) {
         std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
             _last->v_mut())
@@ -76,7 +76,7 @@ LoopifyListWindows::map_cons_helper(
         _head = _cell;
       }
       _last = _cell;
-      _loop_ll = _m.d_a1;
+      _loop_ll = d_a1;
       continue;
     }
   }
@@ -106,9 +106,9 @@ LoopifyListWindows::drop(const unsigned int m,
         _result = List<unsigned int>::nil();
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_xs->v());
-        std::shared_ptr<List<unsigned int>> _next_xs = _m.d_a1;
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_xs->v());
+        std::shared_ptr<List<unsigned int>> _next_xs = d_a1;
         unsigned int _next_m = m_;
         _loop_xs = std::move(_next_xs);
         _loop_m = std::move(_next_m);
@@ -127,7 +127,7 @@ LoopifyListWindows::span_eq(const unsigned int first,
   };
 
   struct _Call1 {
-    const typename List<unsigned int>::Cons _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -146,21 +146,21 @@ LoopifyListWindows::span_eq(const unsigned int first,
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&lst->v());
-        if (first == _m.d_a0) {
-          _stack.emplace_back(_Call1{_m});
-          _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(lst->v());
+        if (first == d_a0) {
+          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         } else {
           _result = std::make_pair(List<unsigned int>::nil(), std::move(lst));
         }
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename List<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       const std::shared_ptr<List<unsigned int>> &s = _result.first;
       const std::shared_ptr<List<unsigned int>> &r = _result.second;
-      _result = std::make_pair(List<unsigned int>::cons(_m.d_a0, s), r);
+      _result = std::make_pair(List<unsigned int>::cons(d_a0, s), r);
     }
   }
   return _result;
@@ -183,10 +183,9 @@ LoopifyListWindows::differences(const std::shared_ptr<List<unsigned int>> &l) {
       }
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-      auto &&_sv = _m.d_a1;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv->v())) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
               List<unsigned int>::nil();
@@ -195,9 +194,8 @@ LoopifyListWindows::differences(const std::shared_ptr<List<unsigned int>> &l) {
         }
         _continue = false;
       } else {
-        auto &&_sv1 = _m.d_a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _sv1->v())) {
+                d_a1->v())) {
           if (_last) {
             std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
                 List<unsigned int>::nil();
@@ -206,11 +204,10 @@ LoopifyListWindows::differences(const std::shared_ptr<List<unsigned int>> &l) {
           }
           _continue = false;
         } else {
-          const auto &_m1 =
-              *std::get_if<typename List<unsigned int>::Cons>(&_sv1->v());
+          const auto &[d_a01, d_a11] =
+              std::get<typename List<unsigned int>::Cons>(d_a1->v());
           auto _cell = List<unsigned int>::cons(
-              (((_m1.d_a0 - _m.d_a0) > _m1.d_a0 ? 0 : (_m1.d_a0 - _m.d_a0))),
-              nullptr);
+              (((d_a01 - d_a0) > d_a01 ? 0 : (d_a01 - d_a0))), nullptr);
           if (_last) {
             std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
                 _cell;
@@ -218,7 +215,7 @@ LoopifyListWindows::differences(const std::shared_ptr<List<unsigned int>> &l) {
             _head = _cell;
           }
           _last = _cell;
-          _loop_l = _m.d_a1;
+          _loop_l = d_a1;
           continue;
         }
       }
@@ -246,10 +243,9 @@ LoopifyListWindows::sliding_pairs(
       }
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-      auto &&_sv = _m.d_a1;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv->v())) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
         if (_last) {
           std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
               _last->v_mut())
@@ -259,9 +255,8 @@ LoopifyListWindows::sliding_pairs(
         }
         _continue = false;
       } else {
-        auto &&_sv1 = _m.d_a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _sv1->v())) {
+                d_a1->v())) {
           if (_last) {
             std::get<
                 typename List<std::pair<unsigned int, unsigned int>>::Cons>(
@@ -272,10 +267,10 @@ LoopifyListWindows::sliding_pairs(
           }
           _continue = false;
         } else {
-          const auto &_m1 =
-              *std::get_if<typename List<unsigned int>::Cons>(&_sv1->v());
+          const auto &[d_a01, d_a11] =
+              std::get<typename List<unsigned int>::Cons>(d_a1->v());
           auto _cell = List<std::pair<unsigned int, unsigned int>>::cons(
-              std::make_pair(_m.d_a0, _m1.d_a0), nullptr);
+              std::make_pair(d_a0, d_a01), nullptr);
           if (_last) {
             std::get<
                 typename List<std::pair<unsigned int, unsigned int>>::Cons>(
@@ -285,7 +280,7 @@ LoopifyListWindows::sliding_pairs(
             _head = _cell;
           }
           _last = _cell;
-          _loop_l = _m.d_a1;
+          _loop_l = d_a1;
           continue;
         }
       }
@@ -302,7 +297,7 @@ LoopifyListWindows::inits(const std::shared_ptr<List<unsigned int>> &l) {
 
   struct _Call1 {
     decltype(List<unsigned int>::nil()) _s0;
-    decltype(std::declval<typename List<unsigned int>::Cons &>().d_a0) _s1;
+    unsigned int _s1;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -320,10 +315,10 @@ LoopifyListWindows::inits(const std::shared_ptr<List<unsigned int>> &l) {
             List<unsigned int>::nil(),
             List<std::shared_ptr<List<unsigned int>>>::nil());
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-        _stack.emplace_back(_Call1{List<unsigned int>::nil(), _m.d_a0});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
+        _stack.emplace_back(_Call1{List<unsigned int>::nil(), d_a0});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
@@ -356,8 +351,8 @@ LoopifyListWindows::tails(std::shared_ptr<List<unsigned int>> l) {
       }
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       auto _cell =
           List<std::shared_ptr<List<unsigned int>>>::cons(_loop_l, nullptr);
       if (_last) {
@@ -368,7 +363,7 @@ LoopifyListWindows::tails(std::shared_ptr<List<unsigned int>> l) {
         _head = _cell;
       }
       _last = _cell;
-      _loop_l = _m.d_a1;
+      _loop_l = d_a1;
       continue;
     }
   }
@@ -404,9 +399,9 @@ LoopifyListWindows::take(const unsigned int n,
         }
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-        auto _cell = List<unsigned int>::cons(_m.d_a0, nullptr);
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+        auto _cell = List<unsigned int>::cons(d_a0, nullptr);
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
               _cell;
@@ -414,7 +409,7 @@ LoopifyListWindows::take(const unsigned int n,
           _head = _cell;
         }
         _last = _cell;
-        std::shared_ptr<List<unsigned int>> _next_l = _m.d_a1;
+        std::shared_ptr<List<unsigned int>> _next_l = d_a1;
         unsigned int _next_n = n_;
         _loop_l = std::move(_next_l);
         _loop_n = std::move(_next_n);
@@ -456,8 +451,8 @@ LoopifyListWindows::windows_fuel(const unsigned int fuel, const unsigned int n,
         }
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (len(_loop_l) < n) {
           if (_last) {
             std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
@@ -478,7 +473,7 @@ LoopifyListWindows::windows_fuel(const unsigned int fuel, const unsigned int n,
             _head = _cell;
           }
           _last = _cell;
-          std::shared_ptr<List<unsigned int>> _next_l = _m.d_a1;
+          std::shared_ptr<List<unsigned int>> _next_l = d_a1;
           unsigned int _next_fuel = fuel_;
           _loop_l = std::move(_next_l);
           _loop_fuel = std::move(_next_fuel);
@@ -587,13 +582,13 @@ LoopifyListWindows::group_fuel(const unsigned int fuel,
         }
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-        auto _cs = span_eq(_m.d_a0, _m.d_a1);
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+        auto _cs = span_eq(d_a0, d_a1);
         const std::shared_ptr<List<unsigned int>> &same = _cs.first;
         const std::shared_ptr<List<unsigned int>> &rest = _cs.second;
         auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
-            List<unsigned int>::cons(_m.d_a0, same), nullptr);
+            List<unsigned int>::cons(d_a0, same), nullptr);
         if (_last) {
           std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
               _last->v_mut())

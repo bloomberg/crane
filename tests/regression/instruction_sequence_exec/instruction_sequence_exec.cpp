@@ -18,11 +18,11 @@ InstructionSequenceExec::execute(
     return std::make_shared<InstructionSequenceExec::state>(
         state{(s->pc_ + 1), s->acc_});
   } else {
-    const auto &_m =
-        *std::get_if<typename InstructionSequenceExec::instruction::ADD_ACC>(
-            &i->v());
+    const auto &[d_a0] =
+        std::get<typename InstructionSequenceExec::instruction::ADD_ACC>(
+            i->v());
     return std::make_shared<InstructionSequenceExec::state>(
-        state{s->pc_, (s->acc_ + _m.d_a0)});
+        state{s->pc_, (s->acc_ + d_a0)});
   }
 }
 
@@ -36,9 +36,9 @@ InstructionSequenceExec::exec_program(
           prog->v())) {
     return s;
   } else {
-    const auto &_m = *std::get_if<typename List<
+    const auto &[d_a0, d_a1] = std::get<typename List<
         std::shared_ptr<InstructionSequenceExec::instruction>>::Cons>(
-        &prog->v());
-    return exec_program(_m.d_a1, execute(std::move(s), _m.d_a0));
+        prog->v());
+    return exec_program(d_a1, execute(std::move(s), d_a0));
   }
 }

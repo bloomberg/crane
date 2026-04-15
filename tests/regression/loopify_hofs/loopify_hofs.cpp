@@ -22,18 +22,18 @@ LoopifyHofs::is_prefix_of(const std::shared_ptr<List<unsigned int>> &l1,
       _result = true;
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l1->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l2->v())) {
         _result = false;
         _continue = false;
       } else {
-        const auto &_m0 =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l2->v());
-        if (_m.d_a0 == _m0.d_a0) {
-          std::shared_ptr<List<unsigned int>> _next_l2 = _m0.d_a1;
-          std::shared_ptr<List<unsigned int>> _next_l1 = _m.d_a1;
+        const auto &[d_a00, d_a10] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l2->v());
+        if (d_a0 == d_a00) {
+          std::shared_ptr<List<unsigned int>> _next_l2 = d_a10;
+          std::shared_ptr<List<unsigned int>> _next_l1 = d_a1;
           _loop_l2 = std::move(_next_l2);
           _loop_l1 = std::move(_next_l1);
         } else {
@@ -66,11 +66,11 @@ std::shared_ptr<List<unsigned int>> LoopifyHofs::lookup_all(
       }
       _continue = false;
     } else {
-      const auto &_m = *std::get_if<
-          typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-          &_loop_l->v());
-      const unsigned int &k = _m.d_a0.first;
-      const unsigned int &v = _m.d_a0.second;
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
+              _loop_l->v());
+      const unsigned int &k = d_a0.first;
+      const unsigned int &v = d_a0.second;
       if (k == key) {
         auto _cell = List<unsigned int>::cons(v, nullptr);
         if (_last) {
@@ -80,10 +80,10 @@ std::shared_ptr<List<unsigned int>> LoopifyHofs::lookup_all(
           _head = _cell;
         }
         _last = _cell;
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
         continue;
       } else {
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
         continue;
       }
     }
@@ -98,8 +98,9 @@ LoopifyHofs::head_default(const unsigned int default0,
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
     return default0;
   } else {
-    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-    return _m.d_a0;
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(l->v());
+    return d_a0;
   }
 }
 
@@ -111,7 +112,7 @@ LoopifyHofs::subsequences(const std::shared_ptr<List<unsigned int>> &l) {
   };
 
   struct _Call1 {
-    const typename List<unsigned int>::Cons _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -129,14 +130,14 @@ LoopifyHofs::subsequences(const std::shared_ptr<List<unsigned int>> &l) {
             List<unsigned int>::nil(),
             List<std::shared_ptr<List<unsigned int>>>::nil());
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-        _stack.emplace_back(_Call1{_m});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
+        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename List<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> rest = _result;
       std::function<std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>(
           std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>)>
@@ -149,10 +150,7 @@ LoopifyHofs::subsequences(const std::shared_ptr<List<unsigned int>> &l) {
         };
         struct _Call1 {
           decltype(List<unsigned int>::cons(
-              _m.d_a0,
-              std::declval<
-                  typename List<std::shared_ptr<List<unsigned int>>>::Cons &>()
-                  .d_a0)) _s0;
+              d_a0, std::declval<std::shared_ptr<List<unsigned int>> &>())) _s0;
         };
         using _Frame = std::variant<_Enter, _Call1>;
         std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
@@ -170,12 +168,12 @@ LoopifyHofs::subsequences(const std::shared_ptr<List<unsigned int>> &l) {
                     lsts->v())) {
               _result = List<std::shared_ptr<List<unsigned int>>>::nil();
             } else {
-              const auto &_m0 = *std::get_if<
+              const auto &[d_a00, d_a10] = std::get<
                   typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-                  &lsts->v());
+                  lsts->v());
               _stack.emplace_back(
-                  _Call1{List<unsigned int>::cons(_m.d_a0, _m0.d_a0)});
-              _stack.emplace_back(_Enter{_m0.d_a1});
+                  _Call1{List<unsigned int>::cons(d_a0, d_a00)});
+              _stack.emplace_back(_Enter{d_a10});
             }
           } else {
             const auto &_f = std::get<_Call1>(_frame);
@@ -211,10 +209,10 @@ LoopifyHofs::pair_with_all(const unsigned int x,
       }
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       auto _cell = List<std::pair<unsigned int, unsigned int>>::cons(
-          std::make_pair(x, _m.d_a0), nullptr);
+          std::make_pair(x, d_a0), nullptr);
       if (_last) {
         std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
             _last->v_mut())
@@ -223,7 +221,7 @@ LoopifyHofs::pair_with_all(const unsigned int x,
         _head = _cell;
       }
       _last = _cell;
-      _loop_l = _m.d_a1;
+      _loop_l = d_a1;
       continue;
     }
   }
@@ -240,7 +238,7 @@ LoopifyHofs::cartesian(const std::shared_ptr<List<unsigned int>> &l1,
 
   struct _Call1 {
     decltype(pair_with_all(
-        std::declval<typename List<unsigned int>::Cons &>().d_a0,
+        std::declval<unsigned int &>(),
         std::declval<const std::shared_ptr<List<unsigned int>> &>())) _s0;
   };
 
@@ -257,10 +255,10 @@ LoopifyHofs::cartesian(const std::shared_ptr<List<unsigned int>> &l1,
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l1->v())) {
         _result = List<std::pair<unsigned int, unsigned int>>::nil();
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l1->v());
-        _stack.emplace_back(_Call1{pair_with_all(_m.d_a0, l2)});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l1->v());
+        _stack.emplace_back(_Call1{pair_with_all(d_a0, l2)});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
@@ -311,24 +309,22 @@ LoopifyHofs::longest_run_fuel(const unsigned int fuel,
         }
         _continue = false;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-        auto &&_sv0 = _m.d_a1;
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _sv0->v())) {
+                d_a1->v())) {
           if (_last) {
             std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                List<unsigned int>::cons(_m.d_a0, List<unsigned int>::nil());
+                List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
           } else {
-            _head =
-                List<unsigned int>::cons(_m.d_a0, List<unsigned int>::nil());
+            _head = List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
           }
           _continue = false;
         } else {
-          const auto &_m0 =
-              *std::get_if<typename List<unsigned int>::Cons>(&_sv0->v());
-          if (_m.d_a0 == _m0.d_a0) {
-            auto _cell = List<unsigned int>::cons(_m.d_a0, nullptr);
+          const auto &[d_a00, d_a10] =
+              std::get<typename List<unsigned int>::Cons>(d_a1->v());
+          if (d_a0 == d_a00) {
+            auto _cell = List<unsigned int>::cons(d_a0, nullptr);
             if (_last) {
               std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
                   _cell;
@@ -337,29 +333,29 @@ LoopifyHofs::longest_run_fuel(const unsigned int fuel,
             }
             _last = _cell;
             std::shared_ptr<List<unsigned int>> _next_l =
-                List<unsigned int>::cons(_m0.d_a0, _m0.d_a1);
+                List<unsigned int>::cons(d_a00, d_a10);
             unsigned int _next_fuel = f;
             _loop_l = std::move(_next_l);
             _loop_fuel = std::move(_next_fuel);
             continue;
           } else {
-            std::shared_ptr<List<unsigned int>> rec_result = longest_run_fuel(
-                f, List<unsigned int>::cons(_m0.d_a0, _m0.d_a1));
+            std::shared_ptr<List<unsigned int>> rec_result =
+                longest_run_fuel(f, List<unsigned int>::cons(d_a00, d_a10));
             if (std::holds_alternative<typename List<unsigned int>::Nil>(
                     rec_result->v())) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::cons(_m.d_a0,
-                                                     List<unsigned int>::nil());
+                    .d_a1 =
+                    List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
               } else {
-                _head = List<unsigned int>::cons(_m.d_a0,
-                                                 List<unsigned int>::nil());
+                _head =
+                    List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
               }
               _continue = false;
             } else {
-              const auto &_m1 = *std::get_if<typename List<unsigned int>::Cons>(
-                  &rec_result->v());
-              if (_m.d_a0 == _m1.d_a0) {
+              const auto &[d_a01, d_a11] =
+                  std::get<typename List<unsigned int>::Cons>(rec_result->v());
+              if (d_a0 == d_a01) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = std::move(rec_result);
@@ -398,7 +394,7 @@ LoopifyHofs::power_set(const std::shared_ptr<List<unsigned int>> &l) {
   };
 
   struct _Call1 {
-    const typename List<unsigned int>::Cons _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -416,14 +412,14 @@ LoopifyHofs::power_set(const std::shared_ptr<List<unsigned int>> &l) {
             List<unsigned int>::nil(),
             List<std::shared_ptr<List<unsigned int>>>::nil());
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-        _stack.emplace_back(_Call1{_m});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
+        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename List<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> sub = _result;
       std::function<std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>(
           std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>)>
@@ -436,10 +432,7 @@ LoopifyHofs::power_set(const std::shared_ptr<List<unsigned int>> &l) {
         };
         struct _Call1 {
           decltype(List<unsigned int>::cons(
-              _m.d_a0,
-              std::declval<
-                  typename List<std::shared_ptr<List<unsigned int>>>::Cons &>()
-                  .d_a0)) _s0;
+              d_a0, std::declval<std::shared_ptr<List<unsigned int>> &>())) _s0;
         };
         using _Frame = std::variant<_Enter, _Call1>;
         std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
@@ -457,12 +450,12 @@ LoopifyHofs::power_set(const std::shared_ptr<List<unsigned int>> &l) {
                     lsts->v())) {
               _result = List<std::shared_ptr<List<unsigned int>>>::nil();
             } else {
-              const auto &_m0 = *std::get_if<
+              const auto &[d_a00, d_a10] = std::get<
                   typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-                  &lsts->v());
+                  lsts->v());
               _stack.emplace_back(
-                  _Call1{List<unsigned int>::cons(_m.d_a0, _m0.d_a0)});
-              _stack.emplace_back(_Enter{_m0.d_a1});
+                  _Call1{List<unsigned int>::cons(d_a0, d_a00)});
+              _stack.emplace_back(_Enter{d_a10});
             }
           } else {
             const auto &_f = std::get<_Call1>(_frame);

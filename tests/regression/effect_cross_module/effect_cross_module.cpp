@@ -44,10 +44,10 @@ void EffectCrossModule::greet_all(
   if (std::holds_alternative<typename List<std::string>::Nil>(names->v())) {
     return;
   } else {
-    const auto &_m =
-        *std::get_if<typename List<std::string>::Cons>(&names->v());
-    Inner::greet(_m.d_a0);
-    greet_all(_m.d_a1);
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<std::string>::Cons>(names->v());
+    Inner::greet(d_a0);
+    greet_all(d_a1);
     return;
   }
 }

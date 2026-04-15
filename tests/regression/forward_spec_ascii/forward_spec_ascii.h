@@ -56,11 +56,11 @@ struct ForwardSpecAscii {
             MapsTo<T1, unsigned int> F1>
   static T1 node_rect(F0 &&f, F1 &&f0, const std::shared_ptr<node> &n) {
     if (std::holds_alternative<typename node::ANode>(n->v())) {
-      const auto &_m = *std::get_if<typename node::ANode>(&n->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename node::ANode>(n->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename node::BNode>(&n->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename node::BNode>(n->v());
+      return f0(d_a0);
     }
   }
 
@@ -68,11 +68,11 @@ struct ForwardSpecAscii {
             MapsTo<T1, unsigned int> F1>
   static T1 node_rec(F0 &&f, F1 &&f0, const std::shared_ptr<node> &n) {
     if (std::holds_alternative<typename node::ANode>(n->v())) {
-      const auto &_m = *std::get_if<typename node::ANode>(&n->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename node::ANode>(n->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename node::BNode>(&n->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename node::BNode>(n->v());
+      return f0(d_a0);
     }
   }
 

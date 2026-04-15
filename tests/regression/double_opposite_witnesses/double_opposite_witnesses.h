@@ -45,13 +45,15 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A projT1() const {
-    const auto &_m = *std::get_if<typename SigT<t_A, t_P>::ExistT>(&this->v());
-    return _m.d_x;
+    const auto &[d_x, d_a1] =
+        std::get<typename SigT<t_A, t_P>::ExistT>(this->v());
+    return d_x;
   }
 
   t_P projT2() const {
-    const auto &_m = *std::get_if<typename SigT<t_A, t_P>::ExistT>(&this->v());
-    return _m.d_a1;
+    const auto &[d_x, d_a1] =
+        std::get<typename SigT<t_A, t_P>::ExistT>(this->v());
+    return d_a1;
   }
 };
 

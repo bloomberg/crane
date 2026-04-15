@@ -138,9 +138,9 @@ Dim10TowerProofChainCase::graded_goodwillie_layers_stabilize(
     _rf.d_x = x;
     return e;
   } else {
-    const auto &_m =
-        *std::get_if<typename SigT<unsigned int, std::any>::ExistT>(&e->v());
-    return SigT<unsigned int, std::any>::existt(_m.d_x, std::any{});
+    const auto &[d_x, d_a1] =
+        std::get<typename SigT<unsigned int, std::any>::ExistT>(e->v());
+    return SigT<unsigned int, std::any>::existt(d_x, std::any{});
   }
 }
 

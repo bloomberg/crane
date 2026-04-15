@@ -88,8 +88,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<t_A>::nil();
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return _m.d_a1->rev()->app(List<t_A>::cons(_m.d_a0, List<t_A>::nil()));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return d_a1->rev()->app(List<t_A>::cons(d_a0, List<t_A>::nil()));
     }
   }
 
@@ -97,8 +97,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return List<t_A>::cons(_m.d_a0, _m.d_a1->app(m));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, d_a1->app(m));
     }
   }
 };
@@ -117,14 +117,15 @@ better_zip(const std::shared_ptr<List<T1>> &la,
     if (std::holds_alternative<typename List<T1>::Nil>(la0->v())) {
       return std::move(acc)->rev();
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&la0->v());
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(la0->v());
       if (std::holds_alternative<typename List<T2>::Nil>(lb0->v())) {
         return std::move(acc)->rev();
       } else {
-        const auto &_m0 = *std::get_if<typename List<T2>::Cons>(&lb0->v());
-        return go(_m.d_a1, _m0.d_a1,
+        const auto &[d_a00, d_a10] =
+            std::get<typename List<T2>::Cons>(lb0->v());
+        return go(d_a1, d_a10,
                   List<std::shared_ptr<Prod<T1, T2>>>::cons(
-                      Prod<T1, T2>::pair(_m.d_a0, _m0.d_a0), acc));
+                      Prod<T1, T2>::pair(d_a0, d_a00), acc));
       }
     }
   };

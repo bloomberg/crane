@@ -23,14 +23,14 @@ ClosureEscapeMatch::make_prepender_opt(
         std::function<std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>(
             std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>)>>();
   } else {
-    const auto &_m = *std::get_if<typename ClosureEscapeMatch::mylist<
+    const auto &[d_a0, d_a1] = std::get<typename ClosureEscapeMatch::mylist<
         std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>>::Mycons>(
-        &l->v());
+        l->v());
     return std::make_optional<
         std::function<std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>(
             std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>)>>(
         [=](const std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>
-                &x) mutable { return app<unsigned int>(_m.d_a0, x); });
+                &x) mutable { return app<unsigned int>(d_a0, x); });
   }
 }
 
@@ -45,13 +45,13 @@ ClosureEscapeMatch::make_pair_fn_opt(
     return std::optional<
         std::function<std::pair<unsigned int, unsigned int>(std::monostate)>>();
   } else {
-    const auto &_m =
-        *std::get_if<typename ClosureEscapeMatch::mylist<unsigned int>::Mycons>(
-            &l->v());
+    const auto &[d_a0, d_a1] =
+        std::get<typename ClosureEscapeMatch::mylist<unsigned int>::Mycons>(
+            l->v());
     return std::make_optional<
         std::function<std::pair<unsigned int, unsigned int>(std::monostate)>>(
         [=](const std::monostate) mutable {
-          return std::make_pair(_m.d_a0, length<unsigned int>(_m.d_a1));
+          return std::make_pair(d_a0, length<unsigned int>(d_a1));
         });
   }
 }
@@ -67,26 +67,26 @@ ClosureEscapeMatch::nested_closure_opt(
             typename ClosureEscapeMatch::mylist<unsigned int>::Mynil>(b->v())) {
       return std::optional<std::function<unsigned int(unsigned int)>>();
     } else {
-      const auto &_m0 = *std::get_if<
-          typename ClosureEscapeMatch::mylist<unsigned int>::Mycons>(&b->v());
+      const auto &[d_a00, d_a10] =
+          std::get<typename ClosureEscapeMatch::mylist<unsigned int>::Mycons>(
+              b->v());
       return std::make_optional<std::function<unsigned int(unsigned int)>>(
-          [=](const unsigned int n) mutable { return (_m0.d_a0 + n); });
+          [=](const unsigned int n) mutable { return (d_a00 + n); });
     }
   } else {
-    const auto &_m =
-        *std::get_if<typename ClosureEscapeMatch::mylist<unsigned int>::Mycons>(
-            &a->v());
+    const auto &[d_a0, d_a1] =
+        std::get<typename ClosureEscapeMatch::mylist<unsigned int>::Mycons>(
+            a->v());
     if (std::holds_alternative<
             typename ClosureEscapeMatch::mylist<unsigned int>::Mynil>(b->v())) {
       return std::make_optional<std::function<unsigned int(unsigned int)>>(
-          [=](const unsigned int n) mutable { return (_m.d_a0 + n); });
+          [=](const unsigned int n) mutable { return (d_a0 + n); });
     } else {
-      const auto &_m0 = *std::get_if<
-          typename ClosureEscapeMatch::mylist<unsigned int>::Mycons>(&b->v());
+      const auto &[d_a00, d_a10] =
+          std::get<typename ClosureEscapeMatch::mylist<unsigned int>::Mycons>(
+              b->v());
       return std::make_optional<std::function<unsigned int(unsigned int)>>(
-          [=](const unsigned int n) mutable {
-            return ((_m.d_a0 + _m0.d_a0) + n);
-          });
+          [=](const unsigned int n) mutable { return ((d_a0 + d_a00) + n); });
     }
   }
 }
@@ -107,12 +107,12 @@ ClosureEscapeMatch::closure_in_pair(
           return x;
         });
   } else {
-    const auto &_m = *std::get_if<typename ClosureEscapeMatch::mylist<
+    const auto &[d_a0, d_a1] = std::get<typename ClosureEscapeMatch::mylist<
         std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>>::Mycons>(
-        &l->v());
+        l->v());
     return std::make_pair(
-        length<unsigned int>(_m.d_a0),
+        length<unsigned int>(d_a0),
         [=](const std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>
-                &x) mutable { return app<unsigned int>(_m.d_a0, x); });
+                &x) mutable { return app<unsigned int>(d_a0, x); });
   }
 }

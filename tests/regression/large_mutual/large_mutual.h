@@ -332,19 +332,19 @@ struct LargeMutual {
   static T1 stmt_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, const T1 f3,
                       const std::shared_ptr<stmt> &s) {
     if (std::holds_alternative<typename stmt::SAssign>(s->v())) {
-      const auto &_m = *std::get_if<typename stmt::SAssign>(&s->v());
-      return f(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename stmt::SAssign>(s->v());
+      return f(d_a0, d_a1);
     } else if (std::holds_alternative<typename stmt::SSeq>(s->v())) {
-      const auto &_m = *std::get_if<typename stmt::SSeq>(&s->v());
-      return f0(_m.d_a0, stmt_rect<T1>(f, f0, f1, f2, f3, _m.d_a0), _m.d_a1,
-                stmt_rect<T1>(f, f0, f1, f2, f3, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename stmt::SSeq>(s->v());
+      return f0(d_a0, stmt_rect<T1>(f, f0, f1, f2, f3, d_a0), d_a1,
+                stmt_rect<T1>(f, f0, f1, f2, f3, d_a1));
     } else if (std::holds_alternative<typename stmt::SIf>(s->v())) {
-      const auto &_m = *std::get_if<typename stmt::SIf>(&s->v());
-      return f1(_m.d_a0, _m.d_a1, stmt_rect<T1>(f, f0, f1, f2, f3, _m.d_a1),
-                _m.d_a2, stmt_rect<T1>(f, f0, f1, f2, f3, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename stmt::SIf>(s->v());
+      return f1(d_a0, d_a1, stmt_rect<T1>(f, f0, f1, f2, f3, d_a1), d_a2,
+                stmt_rect<T1>(f, f0, f1, f2, f3, d_a2));
     } else if (std::holds_alternative<typename stmt::SWhile>(s->v())) {
-      const auto &_m = *std::get_if<typename stmt::SWhile>(&s->v());
-      return f2(_m.d_a0, _m.d_a1, stmt_rect<T1>(f, f0, f1, f2, f3, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename stmt::SWhile>(s->v());
+      return f2(d_a0, d_a1, stmt_rect<T1>(f, f0, f1, f2, f3, d_a1));
     } else {
       return f3;
     }
@@ -359,19 +359,19 @@ struct LargeMutual {
   static T1 stmt_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, const T1 f3,
                      const std::shared_ptr<stmt> &s) {
     if (std::holds_alternative<typename stmt::SAssign>(s->v())) {
-      const auto &_m = *std::get_if<typename stmt::SAssign>(&s->v());
-      return f(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename stmt::SAssign>(s->v());
+      return f(d_a0, d_a1);
     } else if (std::holds_alternative<typename stmt::SSeq>(s->v())) {
-      const auto &_m = *std::get_if<typename stmt::SSeq>(&s->v());
-      return f0(_m.d_a0, stmt_rec<T1>(f, f0, f1, f2, f3, _m.d_a0), _m.d_a1,
-                stmt_rec<T1>(f, f0, f1, f2, f3, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename stmt::SSeq>(s->v());
+      return f0(d_a0, stmt_rec<T1>(f, f0, f1, f2, f3, d_a0), d_a1,
+                stmt_rec<T1>(f, f0, f1, f2, f3, d_a1));
     } else if (std::holds_alternative<typename stmt::SIf>(s->v())) {
-      const auto &_m = *std::get_if<typename stmt::SIf>(&s->v());
-      return f1(_m.d_a0, _m.d_a1, stmt_rec<T1>(f, f0, f1, f2, f3, _m.d_a1),
-                _m.d_a2, stmt_rec<T1>(f, f0, f1, f2, f3, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename stmt::SIf>(s->v());
+      return f1(d_a0, d_a1, stmt_rec<T1>(f, f0, f1, f2, f3, d_a1), d_a2,
+                stmt_rec<T1>(f, f0, f1, f2, f3, d_a2));
     } else if (std::holds_alternative<typename stmt::SWhile>(s->v())) {
-      const auto &_m = *std::get_if<typename stmt::SWhile>(&s->v());
-      return f2(_m.d_a0, _m.d_a1, stmt_rec<T1>(f, f0, f1, f2, f3, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename stmt::SWhile>(s->v());
+      return f2(d_a0, d_a1, stmt_rec<T1>(f, f0, f1, f2, f3, d_a1));
     } else {
       return f3;
     }
@@ -387,23 +387,23 @@ struct LargeMutual {
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                       const std::shared_ptr<expr> &e) {
     if (std::holds_alternative<typename expr::ENum>(e->v())) {
-      const auto &_m = *std::get_if<typename expr::ENum>(&e->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename expr::ENum>(e->v());
+      return f(d_a0);
     } else if (std::holds_alternative<typename expr::EVar>(e->v())) {
-      const auto &_m = *std::get_if<typename expr::EVar>(&e->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename expr::EVar>(e->v());
+      return f0(d_a0);
     } else if (std::holds_alternative<typename expr::EAdd>(e->v())) {
-      const auto &_m = *std::get_if<typename expr::EAdd>(&e->v());
-      return f1(_m.d_a0, expr_rect<T1>(f, f0, f1, f2, f3, _m.d_a0), _m.d_a1,
-                expr_rect<T1>(f, f0, f1, f2, f3, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename expr::EAdd>(e->v());
+      return f1(d_a0, expr_rect<T1>(f, f0, f1, f2, f3, d_a0), d_a1,
+                expr_rect<T1>(f, f0, f1, f2, f3, d_a1));
     } else if (std::holds_alternative<typename expr::EMul>(e->v())) {
-      const auto &_m = *std::get_if<typename expr::EMul>(&e->v());
-      return f2(_m.d_a0, expr_rect<T1>(f, f0, f1, f2, f3, _m.d_a0), _m.d_a1,
-                expr_rect<T1>(f, f0, f1, f2, f3, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename expr::EMul>(e->v());
+      return f2(d_a0, expr_rect<T1>(f, f0, f1, f2, f3, d_a0), d_a1,
+                expr_rect<T1>(f, f0, f1, f2, f3, d_a1));
     } else {
-      const auto &_m = *std::get_if<typename expr::ECond>(&e->v());
-      return f3(_m.d_a0, _m.d_a1, expr_rect<T1>(f, f0, f1, f2, f3, _m.d_a1),
-                _m.d_a2, expr_rect<T1>(f, f0, f1, f2, f3, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename expr::ECond>(e->v());
+      return f3(d_a0, d_a1, expr_rect<T1>(f, f0, f1, f2, f3, d_a1), d_a2,
+                expr_rect<T1>(f, f0, f1, f2, f3, d_a2));
     }
   }
 
@@ -417,23 +417,23 @@ struct LargeMutual {
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                      const std::shared_ptr<expr> &e) {
     if (std::holds_alternative<typename expr::ENum>(e->v())) {
-      const auto &_m = *std::get_if<typename expr::ENum>(&e->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename expr::ENum>(e->v());
+      return f(d_a0);
     } else if (std::holds_alternative<typename expr::EVar>(e->v())) {
-      const auto &_m = *std::get_if<typename expr::EVar>(&e->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename expr::EVar>(e->v());
+      return f0(d_a0);
     } else if (std::holds_alternative<typename expr::EAdd>(e->v())) {
-      const auto &_m = *std::get_if<typename expr::EAdd>(&e->v());
-      return f1(_m.d_a0, expr_rec<T1>(f, f0, f1, f2, f3, _m.d_a0), _m.d_a1,
-                expr_rec<T1>(f, f0, f1, f2, f3, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename expr::EAdd>(e->v());
+      return f1(d_a0, expr_rec<T1>(f, f0, f1, f2, f3, d_a0), d_a1,
+                expr_rec<T1>(f, f0, f1, f2, f3, d_a1));
     } else if (std::holds_alternative<typename expr::EMul>(e->v())) {
-      const auto &_m = *std::get_if<typename expr::EMul>(&e->v());
-      return f2(_m.d_a0, expr_rec<T1>(f, f0, f1, f2, f3, _m.d_a0), _m.d_a1,
-                expr_rec<T1>(f, f0, f1, f2, f3, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename expr::EMul>(e->v());
+      return f2(d_a0, expr_rec<T1>(f, f0, f1, f2, f3, d_a0), d_a1,
+                expr_rec<T1>(f, f0, f1, f2, f3, d_a1));
     } else {
-      const auto &_m = *std::get_if<typename expr::ECond>(&e->v());
-      return f3(_m.d_a0, _m.d_a1, expr_rec<T1>(f, f0, f1, f2, f3, _m.d_a1),
-                _m.d_a2, expr_rec<T1>(f, f0, f1, f2, f3, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename expr::ECond>(e->v());
+      return f3(d_a0, d_a1, expr_rec<T1>(f, f0, f1, f2, f3, d_a1), d_a2,
+                expr_rec<T1>(f, f0, f1, f2, f3, d_a2));
     }
   }
 
@@ -450,22 +450,22 @@ struct LargeMutual {
     } else if (std::holds_alternative<typename bexpr::BFalse>(b->v())) {
       return f0;
     } else if (std::holds_alternative<typename bexpr::BEq>(b->v())) {
-      const auto &_m = *std::get_if<typename bexpr::BEq>(&b->v());
-      return f1(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename bexpr::BEq>(b->v());
+      return f1(d_a0, d_a1);
     } else if (std::holds_alternative<typename bexpr::BLt>(b->v())) {
-      const auto &_m = *std::get_if<typename bexpr::BLt>(&b->v());
-      return f2(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename bexpr::BLt>(b->v());
+      return f2(d_a0, d_a1);
     } else if (std::holds_alternative<typename bexpr::BAnd>(b->v())) {
-      const auto &_m = *std::get_if<typename bexpr::BAnd>(&b->v());
-      return f3(_m.d_a0, bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a0),
-                _m.d_a1, bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename bexpr::BAnd>(b->v());
+      return f3(d_a0, bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_a0), d_a1,
+                bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_a1));
     } else if (std::holds_alternative<typename bexpr::BOr>(b->v())) {
-      const auto &_m = *std::get_if<typename bexpr::BOr>(&b->v());
-      return f4(_m.d_a0, bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a0),
-                _m.d_a1, bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename bexpr::BOr>(b->v());
+      return f4(d_a0, bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_a0), d_a1,
+                bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_a1));
     } else {
-      const auto &_m = *std::get_if<typename bexpr::BNot>(&b->v());
-      return f5(_m.d_a0, bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a0));
+      const auto &[d_a0] = std::get<typename bexpr::BNot>(b->v());
+      return f5(d_a0, bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_a0));
     }
   }
 
@@ -482,22 +482,22 @@ struct LargeMutual {
     } else if (std::holds_alternative<typename bexpr::BFalse>(b->v())) {
       return f0;
     } else if (std::holds_alternative<typename bexpr::BEq>(b->v())) {
-      const auto &_m = *std::get_if<typename bexpr::BEq>(&b->v());
-      return f1(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename bexpr::BEq>(b->v());
+      return f1(d_a0, d_a1);
     } else if (std::holds_alternative<typename bexpr::BLt>(b->v())) {
-      const auto &_m = *std::get_if<typename bexpr::BLt>(&b->v());
-      return f2(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename bexpr::BLt>(b->v());
+      return f2(d_a0, d_a1);
     } else if (std::holds_alternative<typename bexpr::BAnd>(b->v())) {
-      const auto &_m = *std::get_if<typename bexpr::BAnd>(&b->v());
-      return f3(_m.d_a0, bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a0),
-                _m.d_a1, bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename bexpr::BAnd>(b->v());
+      return f3(d_a0, bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_a0), d_a1,
+                bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_a1));
     } else if (std::holds_alternative<typename bexpr::BOr>(b->v())) {
-      const auto &_m = *std::get_if<typename bexpr::BOr>(&b->v());
-      return f4(_m.d_a0, bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a0),
-                _m.d_a1, bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename bexpr::BOr>(b->v());
+      return f4(d_a0, bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_a0), d_a1,
+                bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_a1));
     } else {
-      const auto &_m = *std::get_if<typename bexpr::BNot>(&b->v());
-      return f5(_m.d_a0, bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _m.d_a0));
+      const auto &[d_a0] = std::get<typename bexpr::BNot>(b->v());
+      return f5(d_a0, bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_a0));
     }
   }
 

@@ -68,8 +68,8 @@ struct DeepDestruct {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename mylist<T1>::Mycons &>().d_a1) _s0;
-      decltype(std::declval<typename mylist<T1>::Mycons &>().d_a0) _s1;
+      std::shared_ptr<mylist<T1>> _s0;
+      T1 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -85,9 +85,10 @@ struct DeepDestruct {
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
           _result = f;
         } else {
-          const auto &_m = *std::get_if<typename mylist<T1>::Mycons>(&m->v());
-          _stack.emplace_back(_Call1{_m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] =
+              std::get<typename mylist<T1>::Mycons>(m->v());
+          _stack.emplace_back(_Call1{d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
@@ -106,8 +107,8 @@ struct DeepDestruct {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename mylist<T1>::Mycons &>().d_a1) _s0;
-      decltype(std::declval<typename mylist<T1>::Mycons &>().d_a0) _s1;
+      std::shared_ptr<mylist<T1>> _s0;
+      T1 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -123,9 +124,10 @@ struct DeepDestruct {
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
           _result = f;
         } else {
-          const auto &_m = *std::get_if<typename mylist<T1>::Mycons>(&m->v());
-          _stack.emplace_back(_Call1{_m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          const auto &[d_a0, d_a1] =
+              std::get<typename mylist<T1>::Mycons>(m->v());
+          _stack.emplace_back(_Call1{d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);

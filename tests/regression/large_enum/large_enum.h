@@ -250,8 +250,8 @@ struct LargeEnum {
                      const T1 f8, F10 &&f9, const T1 f10,
                      const std::shared_ptr<tok> &t) {
     if (std::holds_alternative<typename tok::TNum>(t->v())) {
-      const auto &_m = *std::get_if<typename tok::TNum>(&t->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename tok::TNum>(t->v());
+      return f(d_a0);
     } else if (std::holds_alternative<typename tok::TPlus>(t->v())) {
       return f0;
     } else if (std::holds_alternative<typename tok::TMinus>(t->v())) {
@@ -271,8 +271,8 @@ struct LargeEnum {
     } else if (std::holds_alternative<typename tok::TSemicolon>(t->v())) {
       return f8;
     } else if (std::holds_alternative<typename tok::TIdent>(t->v())) {
-      const auto &_m = *std::get_if<typename tok::TIdent>(&t->v());
-      return f9(_m.d_a0);
+      const auto &[d_a0] = std::get<typename tok::TIdent>(t->v());
+      return f9(d_a0);
     } else {
       return f10;
     }
@@ -285,8 +285,8 @@ struct LargeEnum {
                     const T1 f8, F10 &&f9, const T1 f10,
                     const std::shared_ptr<tok> &t) {
     if (std::holds_alternative<typename tok::TNum>(t->v())) {
-      const auto &_m = *std::get_if<typename tok::TNum>(&t->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename tok::TNum>(t->v());
+      return f(d_a0);
     } else if (std::holds_alternative<typename tok::TPlus>(t->v())) {
       return f0;
     } else if (std::holds_alternative<typename tok::TMinus>(t->v())) {
@@ -306,8 +306,8 @@ struct LargeEnum {
     } else if (std::holds_alternative<typename tok::TSemicolon>(t->v())) {
       return f8;
     } else if (std::holds_alternative<typename tok::TIdent>(t->v())) {
-      const auto &_m = *std::get_if<typename tok::TIdent>(&t->v());
-      return f9(_m.d_a0);
+      const auto &[d_a0] = std::get<typename tok::TIdent>(t->v());
+      return f9(d_a0);
     } else {
       return f10;
     }

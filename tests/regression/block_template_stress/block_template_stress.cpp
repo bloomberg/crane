@@ -87,17 +87,17 @@ std::shared_ptr<List<std::string>> BlockTemplateStress::read_files(
   if (std::holds_alternative<typename List<std::string>::Nil>(paths->v())) {
     return List<std::string>::nil();
   } else {
-    const auto &_m =
-        *std::get_if<typename List<std::string>::Cons>(&paths->v());
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<std::string>::Cons>(paths->v());
     std::string content;
     {
-      std::ifstream _f(_m.d_a0);
+      std::ifstream _f(d_a0);
       if (_f.good())
         std::getline(_f, content);
       else
-        content = _m.d_a0;
+        content = d_a0;
     };
-    std::shared_ptr<List<std::string>> rest = read_files(_m.d_a1);
+    std::shared_ptr<List<std::string>> rest = read_files(d_a1);
     return List<std::string>::cons(content, rest);
   }
 }

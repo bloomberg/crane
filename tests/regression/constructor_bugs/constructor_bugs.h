@@ -259,11 +259,11 @@ struct ConstructorBugs {
             MapsTo<T1, unsigned int> F1>
   static T1 MySum_rect(F0 &&f, F1 &&f0, const std::shared_ptr<MySum> &m) {
     if (std::holds_alternative<typename MySum::Left>(m->v())) {
-      const auto &_m = *std::get_if<typename MySum::Left>(&m->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename MySum::Left>(m->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename MySum::Right>(&m->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename MySum::Right>(m->v());
+      return f0(d_a0);
     }
   }
 
@@ -271,11 +271,11 @@ struct ConstructorBugs {
             MapsTo<T1, unsigned int> F1>
   static T1 MySum_rec(F0 &&f, F1 &&f0, const std::shared_ptr<MySum> &m) {
     if (std::holds_alternative<typename MySum::Left>(m->v())) {
-      const auto &_m = *std::get_if<typename MySum::Left>(&m->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename MySum::Left>(m->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename MySum::Right>(&m->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename MySum::Right>(m->v());
+      return f0(d_a0);
     }
   }
 

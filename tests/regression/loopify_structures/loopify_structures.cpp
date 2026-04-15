@@ -20,13 +20,11 @@ __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
   };
 
   struct _Call1 {
-    decltype(std::declval<typename LoopifyStructures::nested::Elem &>()
-                 .d_a0) _s0;
+    unsigned int _s0;
   };
 
   struct _Call2 {
-    decltype(std::declval<typename LoopifyStructures::nested::NList &>()
-                 .d_a0) _s0;
+    std::shared_ptr<List<std::shared_ptr<LoopifyStructures::nested>>> _s0;
     unsigned int _s1;
   };
 
@@ -55,23 +53,20 @@ __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
                 l->v())) {
           _result = 0u;
         } else {
-          const auto &_m = *std::get_if<
+          const auto &[d_a0, d_a1] = std::get<
               typename List<std::shared_ptr<LoopifyStructures::nested>>::Cons>(
-              &l->v());
-          auto &&_sv0 = _m.d_a0;
+              l->v());
           if (std::holds_alternative<typename LoopifyStructures::nested::Elem>(
-                  _sv0->v())) {
-            const auto &_m0 =
-                *std::get_if<typename LoopifyStructures::nested::Elem>(
-                    &_sv0->v());
-            _stack.emplace_back(_Call1{_m0.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1, f});
+                  d_a0->v())) {
+            const auto &[d_a00] =
+                std::get<typename LoopifyStructures::nested::Elem>(d_a0->v());
+            _stack.emplace_back(_Call1{d_a00});
+            _stack.emplace_back(_Enter{d_a1, f});
           } else {
-            const auto &_m0 =
-                *std::get_if<typename LoopifyStructures::nested::NList>(
-                    &_sv0->v());
-            _stack.emplace_back(_Call2{_m0.d_a0, f});
-            _stack.emplace_back(_Enter{_m.d_a1, f});
+            const auto &[d_a00] =
+                std::get<typename LoopifyStructures::nested::NList>(d_a0->v());
+            _stack.emplace_back(_Call2{d_a00, f});
+            _stack.emplace_back(_Enter{d_a1, f});
           }
         }
       }
@@ -103,7 +98,7 @@ __attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
   struct _Call1 {};
 
   struct _Call2 {
-    const typename List<std::shared_ptr<LoopifyStructures::nested>>::Cons _s0;
+    std::shared_ptr<List<std::shared_ptr<LoopifyStructures::nested>>> _s0;
     unsigned int _s1;
   };
 
@@ -132,20 +127,18 @@ __attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
                 l->v())) {
           _result = 0u;
         } else {
-          const auto &_m = *std::get_if<
+          const auto &[d_a0, d_a1] = std::get<
               typename List<std::shared_ptr<LoopifyStructures::nested>>::Cons>(
-              &l->v());
-          auto &&_sv0 = _m.d_a0;
+              l->v());
           if (std::holds_alternative<typename LoopifyStructures::nested::Elem>(
-                  _sv0->v())) {
+                  d_a0->v())) {
             _stack.emplace_back(_Call1{});
-            _stack.emplace_back(_Enter{_m.d_a1, f});
+            _stack.emplace_back(_Enter{d_a1, f});
           } else {
-            const auto &_m0 =
-                *std::get_if<typename LoopifyStructures::nested::NList>(
-                    &_sv0->v());
-            _stack.emplace_back(_Call2{_m, f});
-            _stack.emplace_back(_Enter{_m0.d_a0, f});
+            const auto &[d_a00] =
+                std::get<typename LoopifyStructures::nested::NList>(d_a0->v());
+            _stack.emplace_back(_Call2{d_a1, f});
+            _stack.emplace_back(_Enter{d_a00, f});
           }
         }
       }
@@ -159,12 +152,12 @@ __attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
       }
     } else if (std::holds_alternative<_Call2>(_frame)) {
       const auto &_f = std::get<_Call2>(_frame);
-      const typename List<std::shared_ptr<LoopifyStructures::nested>>::Cons _m =
+      std::shared_ptr<List<std::shared_ptr<LoopifyStructures::nested>>> d_a1 =
           _f._s0;
       unsigned int f = _f._s1;
       unsigned int d = (_result + 1);
       _stack.emplace_back(_Call3{d});
-      _stack.emplace_back(_Enter{_m.d_a1, f});
+      _stack.emplace_back(_Enter{d_a1, f});
     } else {
       const auto &_f = std::get<_Call3>(_frame);
       unsigned int d = _f._s0;
@@ -190,13 +183,11 @@ std::shared_ptr<List<unsigned int>> LoopifyStructures::flatten_nested_list_fuel(
   };
 
   struct _Call1 {
-    decltype(std::declval<typename LoopifyStructures::nested::Elem &>()
-                 .d_a0) _s0;
+    unsigned int _s0;
   };
 
   struct _Call2 {
-    decltype(std::declval<typename LoopifyStructures::nested::NList &>()
-                 .d_a0) _s0;
+    std::shared_ptr<List<std::shared_ptr<LoopifyStructures::nested>>> _s0;
     unsigned int _s1;
   };
 
@@ -225,23 +216,20 @@ std::shared_ptr<List<unsigned int>> LoopifyStructures::flatten_nested_list_fuel(
                 l->v())) {
           _result = List<unsigned int>::nil();
         } else {
-          const auto &_m = *std::get_if<
+          const auto &[d_a0, d_a1] = std::get<
               typename List<std::shared_ptr<LoopifyStructures::nested>>::Cons>(
-              &l->v());
-          auto &&_sv0 = _m.d_a0;
+              l->v());
           if (std::holds_alternative<typename LoopifyStructures::nested::Elem>(
-                  _sv0->v())) {
-            const auto &_m0 =
-                *std::get_if<typename LoopifyStructures::nested::Elem>(
-                    &_sv0->v());
-            _stack.emplace_back(_Call1{_m0.d_a0});
-            _stack.emplace_back(_Enter{_m.d_a1, f});
+                  d_a0->v())) {
+            const auto &[d_a00] =
+                std::get<typename LoopifyStructures::nested::Elem>(d_a0->v());
+            _stack.emplace_back(_Call1{d_a00});
+            _stack.emplace_back(_Enter{d_a1, f});
           } else {
-            const auto &_m0 =
-                *std::get_if<typename LoopifyStructures::nested::NList>(
-                    &_sv0->v());
-            _stack.emplace_back(_Call2{_m0.d_a0, f});
-            _stack.emplace_back(_Enter{_m.d_a1, f});
+            const auto &[d_a00] =
+                std::get<typename LoopifyStructures::nested::NList>(d_a0->v());
+            _stack.emplace_back(_Call2{d_a00, f});
+            _stack.emplace_back(_Enter{d_a1, f});
           }
         }
       }
@@ -273,15 +261,15 @@ LoopifyStructures::find_first_some(
       _result = std::optional<unsigned int>();
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<std::optional<unsigned int>>::Cons>(
-              &_loop_l->v());
-      if (_m.d_a0.has_value()) {
-        const unsigned int &v = *_m.d_a0;
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::optional<unsigned int>>::Cons>(
+              _loop_l->v());
+      if (d_a0.has_value()) {
+        const unsigned int &v = *d_a0;
         _result = std::make_optional<unsigned int>(v);
         _continue = false;
       } else {
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
       }
     }
   }
@@ -298,10 +286,8 @@ LoopifyStructures::ltree_max(std::shared_ptr<LoopifyStructures::ltree> t1,
   };
 
   struct _Call1 {
-    decltype(std::declval<typename LoopifyStructures::ltree::LNode &>()
-                 .d_a1) _s0;
-    decltype(std::declval<typename LoopifyStructures::ltree::LNode &>()
-                 .d_a1) _s1;
+    std::shared_ptr<LoopifyStructures::ltree> _s0;
+    std::shared_ptr<LoopifyStructures::ltree> _s1;
     unsigned int _s2;
   };
 
@@ -323,38 +309,38 @@ LoopifyStructures::ltree_max(std::shared_ptr<LoopifyStructures::ltree> t1,
       std::shared_ptr<LoopifyStructures::ltree> t1 = _f.t1;
       if (std::holds_alternative<typename LoopifyStructures::ltree::LLeaf>(
               t1->v())) {
-        const auto &_m =
-            *std::get_if<typename LoopifyStructures::ltree::LLeaf>(&t1->v());
+        const auto &[d_a0] =
+            std::get<typename LoopifyStructures::ltree::LLeaf>(t1->v());
         if (std::holds_alternative<typename LoopifyStructures::ltree::LLeaf>(
                 t2->v()) &&
             t2.use_count() == 1) {
           auto &_rf = std::get<0>(t2->v_mut());
           unsigned int y = std::move(_rf.d_a0);
           _rf.d_a0 = [&]() -> unsigned int {
-            if (_m.d_a0 <= y) {
+            if (d_a0 <= y) {
               return y;
             } else {
-              return _m.d_a0;
+              return d_a0;
             }
           }();
           _result = t2;
         } else if (std::holds_alternative<
                        typename LoopifyStructures::ltree::LLeaf>(t2->v())) {
-          const auto &_m0 =
-              *std::get_if<typename LoopifyStructures::ltree::LLeaf>(&t2->v());
+          const auto &[d_a00] =
+              std::get<typename LoopifyStructures::ltree::LLeaf>(t2->v());
           _result = ltree::lleaf([&]() -> unsigned int {
-            if (_m.d_a0 <= _m0.d_a0) {
-              return _m0.d_a0;
+            if (d_a0 <= d_a00) {
+              return d_a00;
             } else {
-              return _m.d_a0;
+              return d_a0;
             }
           }());
         } else {
           _result = std::move(t2);
         }
       } else {
-        const auto &_m =
-            *std::get_if<typename LoopifyStructures::ltree::LNode>(&t1->v());
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename LoopifyStructures::ltree::LNode>(t1->v());
         if (std::holds_alternative<typename LoopifyStructures::ltree::LNode>(
                 t2->v()) &&
             t2.use_count() == 1) {
@@ -363,29 +349,29 @@ LoopifyStructures::ltree_max(std::shared_ptr<LoopifyStructures::ltree> t1,
           std::shared_ptr<LoopifyStructures::ltree> l2 = std::move(_rf.d_a1);
           std::shared_ptr<LoopifyStructures::ltree> r2 = std::move(_rf.d_a2);
           unsigned int max_val;
-          if (_m.d_a0 <= y) {
+          if (d_a0 <= y) {
             max_val = y;
           } else {
-            max_val = _m.d_a0;
+            max_val = d_a0;
           }
           _rf.d_a0 = max_val;
-          _rf.d_a1 = ltree_max(_m.d_a1, l2);
-          _rf.d_a2 = ltree_max(std::move(_m.d_a2), r2);
+          _rf.d_a1 = ltree_max(d_a1, l2);
+          _rf.d_a2 = ltree_max(std::move(d_a2), r2);
           _result = t2;
         } else if (std::holds_alternative<
                        typename LoopifyStructures::ltree::LLeaf>(t2->v())) {
           _result = std::move(t1);
         } else {
-          const auto &_m0 =
-              *std::get_if<typename LoopifyStructures::ltree::LNode>(&t2->v());
+          const auto &[d_a00, d_a10, d_a20] =
+              std::get<typename LoopifyStructures::ltree::LNode>(t2->v());
           unsigned int max_val;
-          if (_m.d_a0 <= _m0.d_a0) {
-            max_val = _m0.d_a0;
+          if (d_a0 <= d_a00) {
+            max_val = d_a00;
           } else {
-            max_val = _m.d_a0;
+            max_val = d_a0;
           }
-          _stack.emplace_back(_Call1{_m0.d_a1, _m.d_a1, max_val});
-          _stack.emplace_back(_Enter{_m0.d_a2, _m.d_a2});
+          _stack.emplace_back(_Call1{d_a10, d_a1, max_val});
+          _stack.emplace_back(_Enter{d_a20, d_a2});
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {

@@ -262,11 +262,10 @@ __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_count_leaves(
               typename LoopifyMultiRecursion::quadtree::QLeaf>(t->v())) {
         _result = 1u;
       } else {
-        const auto &_m =
-            *std::get_if<typename LoopifyMultiRecursion::quadtree::QQuad>(
-                &t->v());
-        _stack.emplace_back(_Call1{_m.d_a2, _m.d_a1, _m.d_a0});
-        _stack.emplace_back(_Enter{_m.d_a3});
+        const auto &[d_a0, d_a1, d_a2, d_a3] =
+            std::get<typename LoopifyMultiRecursion::quadtree::QQuad>(t->v());
+        _stack.emplace_back(_Call1{d_a2, d_a1, d_a0});
+        _stack.emplace_back(_Enter{d_a3});
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       const auto &_f = std::get<_Call1>(_frame);
@@ -336,11 +335,10 @@ __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_depth(
               typename LoopifyMultiRecursion::quadtree::QLeaf>(t->v())) {
         _result = 0u;
       } else {
-        const auto &_m =
-            *std::get_if<typename LoopifyMultiRecursion::quadtree::QQuad>(
-                &t->v());
-        _stack.emplace_back(_Call1{_m.d_a2, _m.d_a1, _m.d_a0, 1u});
-        _stack.emplace_back(_Enter{_m.d_a3});
+        const auto &[d_a0, d_a1, d_a2, d_a3] =
+            std::get<typename LoopifyMultiRecursion::quadtree::QQuad>(t->v());
+        _stack.emplace_back(_Call1{d_a2, d_a1, d_a0, 1u});
+        _stack.emplace_back(_Enter{d_a3});
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       const auto &_f = std::get<_Call1>(_frame);

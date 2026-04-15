@@ -185,14 +185,20 @@ and smatch_branch = {
         [std::get] template argument. *)
   smb_var : Id.t option;
     (** Binding variable for [std::get], or [None] when no fields
-        are accessed in the branch body. *)
+        are accessed in the branch body.  Kept for scrutinee-name
+        derivation even when {!smb_field_bindings} is non-empty. *)
+  smb_field_bindings : (Id.t * cpp_type) list;
+    (** Ordered list of [(binding_name, field_cpp_type)] for C++
+        structured bindings ([const auto& [f1, f2] = std::get<T>(…)]).
+        Covers ALL constructor fields in struct-declaration order.
+        Empty when no fields are used or for frame-dispatch branches. *)
   smb_extra_conds : cpp_expr list;
     (** Additional [&&]-joined conditions after the primary check.
         Used for reuse optimization ([use_count() == 1]) and multi-match
         ([holds_alternative] on a second scrutinee). *)
   smb_body : cpp_stmt list;
-    (** Branch body statements. When [smb_var = Some _], field accesses
-        use arrow syntax ([_m->d_field]) since [_m] is a pointer. *)
+    (** Branch body statements.  When {!smb_field_bindings} is non-empty,
+        field accesses use direct [CPPvar binding_name] references. *)
 }
 
 (** C++ expressions. *)
@@ -454,6 +460,8 @@ let map_stmt
             { smb_scrutinee = fe br.smb_scrutinee;
               smb_ctor_type = ft br.smb_ctor_type;
               smb_var = br.smb_var;
+              smb_field_bindings =
+                List.map (fun (id, ty) -> (id, ft ty)) br.smb_field_bindings;
               smb_extra_conds = List.map fe br.smb_extra_conds;
               smb_body = List.map fs br.smb_body })
           branches,

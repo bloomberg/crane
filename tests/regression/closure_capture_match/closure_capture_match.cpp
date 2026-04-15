@@ -14,9 +14,9 @@ ClosureCaptureMatch::box_from_match(
           t->v())) {
     return fn_box::box([](const unsigned int x) { return x; });
   } else {
-    const auto &_m =
-        *std::get_if<typename ClosureCaptureMatch::tree::Node>(&t->v());
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename ClosureCaptureMatch::tree::Node>(t->v());
     return fn_box::box(
-        [=](const unsigned int x) mutable { return (_m.d_a1 + x); });
+        [=](const unsigned int x) mutable { return (d_a1 + x); });
   }
 }

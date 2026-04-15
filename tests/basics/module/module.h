@@ -117,16 +117,17 @@ template <OrderedType K, BaseType V> struct MakeMap {
     if (std::holds_alternative<typename tree::Empty>(m->v())) {
       return tree::node(tree::empty(), k, v, tree::empty());
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&m->v());
-      switch (K::compare(k, _m.d_a1)) {
+      const auto &[d_a0, d_a1, d_a2, d_a3] =
+          std::get<typename tree::Node>(m->v());
+      switch (K::compare(k, d_a1)) {
       case Comparison::e_EQ: {
-        return tree::node(_m.d_a0, k, v, _m.d_a3);
+        return tree::node(d_a0, k, v, d_a3);
       }
       case Comparison::e_LT: {
-        return tree::node(add(k, v, _m.d_a0), _m.d_a1, _m.d_a2, _m.d_a3);
+        return tree::node(add(k, v, d_a0), d_a1, d_a2, d_a3);
       }
       case Comparison::e_GT: {
-        return tree::node(_m.d_a0, _m.d_a1, _m.d_a2, add(k, v, _m.d_a3));
+        return tree::node(d_a0, d_a1, d_a2, add(k, v, d_a3));
       }
       default:
         std::unreachable();
@@ -139,16 +140,17 @@ template <OrderedType K, BaseType V> struct MakeMap {
     if (std::holds_alternative<typename tree::Empty>(m->v())) {
       return std::optional<typename V::t>();
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&m->v());
-      switch (K::compare(k, _m.d_a1)) {
+      const auto &[d_a0, d_a1, d_a2, d_a3] =
+          std::get<typename tree::Node>(m->v());
+      switch (K::compare(k, d_a1)) {
       case Comparison::e_EQ: {
-        return std::make_optional<typename V::t>(_m.d_a2);
+        return std::make_optional<typename V::t>(d_a2);
       }
       case Comparison::e_LT: {
-        return find(k, _m.d_a0);
+        return find(k, d_a0);
       }
       case Comparison::e_GT: {
-        return find(k, _m.d_a3);
+        return find(k, d_a3);
       }
       default:
         std::unreachable();

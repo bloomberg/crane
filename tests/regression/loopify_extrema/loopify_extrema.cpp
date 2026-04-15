@@ -14,7 +14,7 @@ LoopifyExtrema::maximum(const std::shared_ptr<List<unsigned int>> &l) {
   };
 
   struct _Call1 {
-    const typename List<unsigned int>::Cons _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -30,23 +30,22 @@ LoopifyExtrema::maximum(const std::shared_ptr<List<unsigned int>> &l) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
         _result = 0u;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-        auto &&_sv = _m.d_a1;
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _sv->v())) {
-          _result = _m.d_a0;
+                d_a1->v())) {
+          _result = d_a0;
         } else {
-          _stack.emplace_back(_Call1{_m});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         }
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename List<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       unsigned int max_rest = _result;
-      if (max_rest < _m.d_a0) {
-        _result = _m.d_a0;
+      if (max_rest < d_a0) {
+        _result = d_a0;
       } else {
         _result = max_rest;
       }
@@ -62,7 +61,7 @@ LoopifyExtrema::minimum(const std::shared_ptr<List<unsigned int>> &l) {
   };
 
   struct _Call1 {
-    const typename List<unsigned int>::Cons _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -78,23 +77,22 @@ LoopifyExtrema::minimum(const std::shared_ptr<List<unsigned int>> &l) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
         _result = 0u;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-        auto &&_sv = _m.d_a1;
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _sv->v())) {
-          _result = _m.d_a0;
+                d_a1->v())) {
+          _result = d_a0;
         } else {
-          _stack.emplace_back(_Call1{_m});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         }
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename List<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       unsigned int min_rest = _result;
-      if (_m.d_a0 < min_rest) {
-        _result = _m.d_a0;
+      if (d_a0 < min_rest) {
+        _result = d_a0;
       } else {
         _result = min_rest;
       }
@@ -110,7 +108,7 @@ LoopifyExtrema::minmax(const std::shared_ptr<List<unsigned int>> &l) {
   };
 
   struct _Call1 {
-    const typename List<unsigned int>::Cons _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -126,23 +124,22 @@ LoopifyExtrema::minmax(const std::shared_ptr<List<unsigned int>> &l) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
         _result = std::make_pair(0u, 0u);
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-        auto &&_sv = _m.d_a1;
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _sv->v())) {
-          _result = std::make_pair(_m.d_a0, _m.d_a0);
+                d_a1->v())) {
+          _result = std::make_pair(d_a0, d_a0);
         } else {
-          _stack.emplace_back(_Call1{_m});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         }
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename List<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       const unsigned int &lo = _result.first;
       const unsigned int &hi = _result.second;
-      _result = std::make_pair(std::min(_m.d_a0, lo), std::max(_m.d_a0, hi));
+      _result = std::make_pair(std::min(d_a0, lo), std::max(d_a0, hi));
     }
   }
   return _result;
@@ -167,25 +164,25 @@ LoopifyExtrema::lex_compare(const std::shared_ptr<List<unsigned int>> &l1,
         _continue = false;
       }
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l1->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l2->v())) {
         _result = 2u;
         _continue = false;
       } else {
-        const auto &_m0 =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l2->v());
-        if (_m.d_a0 < _m0.d_a0) {
+        const auto &[d_a00, d_a10] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l2->v());
+        if (d_a0 < d_a00) {
           _result = 1u;
           _continue = false;
         } else {
-          if (_m0.d_a0 < _m.d_a0) {
+          if (d_a00 < d_a0) {
             _result = 2u;
             _continue = false;
           } else {
-            std::shared_ptr<List<unsigned int>> _next_l2 = _m0.d_a1;
-            std::shared_ptr<List<unsigned int>> _next_l1 = _m.d_a1;
+            std::shared_ptr<List<unsigned int>> _next_l2 = d_a10;
+            std::shared_ptr<List<unsigned int>> _next_l1 = d_a1;
             _loop_l2 = std::move(_next_l2);
             _loop_l1 = std::move(_next_l1);
           }
@@ -207,17 +204,16 @@ LoopifyExtrema::all_equal(const std::shared_ptr<List<unsigned int>> &l) {
       _result = true;
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-      auto &&_sv0 = _m.d_a1;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0->v())) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
         _result = true;
         _continue = false;
       } else {
-        const auto &_m0 =
-            *std::get_if<typename List<unsigned int>::Cons>(&_sv0->v());
-        if (_m.d_a0 == _m0.d_a0) {
-          _loop_l = _m.d_a1;
+        const auto &[d_a00, d_a10] =
+            std::get<typename List<unsigned int>::Cons>(d_a1->v());
+        if (d_a0 == d_a00) {
+          _loop_l = d_a1;
         } else {
           _result = false;
           _continue = false;
@@ -239,17 +235,16 @@ LoopifyExtrema::is_sorted(const std::shared_ptr<List<unsigned int>> &l) {
       _result = true;
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
-      auto &&_sv0 = _m.d_a1;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0->v())) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
         _result = true;
         _continue = false;
       } else {
-        const auto &_m0 =
-            *std::get_if<typename List<unsigned int>::Cons>(&_sv0->v());
-        if (_m.d_a0 <= _m0.d_a0) {
-          _loop_l = _m.d_a1;
+        const auto &[d_a00, d_a10] =
+            std::get<typename List<unsigned int>::Cons>(d_a1->v());
+        if (d_a0 <= d_a00) {
+          _loop_l = d_a1;
         } else {
           _result = false;
           _continue = false;

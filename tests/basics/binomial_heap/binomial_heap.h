@@ -110,9 +110,9 @@ struct BinomialHeap {
                              F0>
   static T1 tree_rect(F0 &&f, const T1 f0, const std::shared_ptr<tree> &t) {
     if (std::holds_alternative<typename tree::Node>(t->v())) {
-      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
-      return f(_m.d_a0, _m.d_a1, tree_rect<T1>(f, f0, _m.d_a1), _m.d_a2,
-               tree_rect<T1>(f, f0, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f(d_a0, d_a1, tree_rect<T1>(f, f0, d_a1), d_a2,
+               tree_rect<T1>(f, f0, d_a2));
     } else {
       return f0;
     }
@@ -123,9 +123,9 @@ struct BinomialHeap {
                              F0>
   static T1 tree_rec(F0 &&f, const T1 f0, const std::shared_ptr<tree> &t) {
     if (std::holds_alternative<typename tree::Node>(t->v())) {
-      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
-      return f(_m.d_a0, _m.d_a1, tree_rec<T1>(f, f0, _m.d_a1), _m.d_a2,
-               tree_rec<T1>(f, f0, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f(d_a0, d_a1, tree_rec<T1>(f, f0, d_a1), d_a2,
+               tree_rec<T1>(f, f0, d_a2));
     } else {
       return f0;
     }
@@ -152,15 +152,15 @@ struct BinomialHeap {
   __attribute__((pure)) static priqueue unzip(const std::shared_ptr<tree> &t,
                                               F1 &&cont) {
     if (std::holds_alternative<typename tree::Node>(t->v())) {
-      const auto &_m = *std::get_if<typename tree::Node>(&t->v());
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
       std::function<std::shared_ptr<List<std::shared_ptr<tree>>>(
           std::shared_ptr<List<std::shared_ptr<tree>>>)>
           f = [=](const std::shared_ptr<List<std::shared_ptr<tree>>>
                       &q) mutable {
             return List<std::shared_ptr<tree>>::cons(
-                tree::node(_m.d_a0, _m.d_a1, tree::leaf()), cont(q));
+                tree::node(d_a0, d_a1, tree::leaf()), cont(q));
           };
-      return unzip(_m.d_a2, f);
+      return unzip(d_a2, f);
     } else {
       return cont(List<std::shared_ptr<tree>>::nil());
     }

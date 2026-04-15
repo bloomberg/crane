@@ -69,9 +69,9 @@ struct VoidCallback {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(xs->v())) {
       return;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&xs->v());
-      for_each(f, _m.d_a1);
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(xs->v());
+      for_each(f, d_a1);
       return;
     }
   }
@@ -91,10 +91,10 @@ struct VoidCallback {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(xs->v())) {
       return;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&xs->v());
-      f(_m.d_a0);
-      for_each_m(f, _m.d_a1);
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(xs->v());
+      f(d_a0);
+      for_each_m(f, d_a1);
       return;
     }
   }
@@ -111,9 +111,9 @@ struct VoidCallback {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(xs->v())) {
       return 0u;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&xs->v());
-      return (ignore_and_count(f, _m.d_a1) + 1);
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(xs->v());
+      return (ignore_and_count(f, d_a1) + 1);
     }
   }
 

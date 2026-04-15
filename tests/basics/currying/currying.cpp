@@ -23,10 +23,10 @@ Currying::add3_partial2(const unsigned int _x0) {
 
 __attribute__((pure)) unsigned int Currying::pair_add(
     const std::shared_ptr<Currying::pair<unsigned int, unsigned int>> &p) {
-  const auto &_m =
-      *std::get_if<typename Currying::pair<unsigned int, unsigned int>::Pair0>(
-          &p->v());
-  return (_m.d_a0 + _m.d_a1);
+  const auto &[d_a0, d_a1] =
+      std::get<typename Currying::pair<unsigned int, unsigned int>::Pair0>(
+          p->v());
+  return (d_a0 + d_a1);
 }
 
 __attribute__((pure)) unsigned int
@@ -38,15 +38,14 @@ __attribute__((pure)) unsigned int Currying::uncurried_add3(
     const std::shared_ptr<Currying::pair<
         unsigned int,
         std::shared_ptr<Currying::pair<unsigned int, unsigned int>>>> &p) {
-  const auto &_m = *std::get_if<typename Currying::pair<
+  const auto &[d_a0, d_a1] = std::get<typename Currying::pair<
       unsigned int,
       std::shared_ptr<Currying::pair<unsigned int, unsigned int>>>::Pair0>(
-      &p->v());
-  auto &&_sv0 = _m.d_a1;
-  const auto &_m0 =
-      *std::get_if<typename Currying::pair<unsigned int, unsigned int>::Pair0>(
-          &_sv0->v());
-  return add3(_m.d_a0, _m0.d_a0, _m0.d_a1);
+      p->v());
+  const auto &[d_a00, d_a10] =
+      std::get<typename Currying::pair<unsigned int, unsigned int>::Pair0>(
+          d_a1->v());
+  return add3(d_a0, d_a00, d_a10);
 }
 
 __attribute__((pure)) unsigned int Currying::sub(const unsigned int _x0,

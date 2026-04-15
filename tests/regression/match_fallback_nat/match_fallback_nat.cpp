@@ -9,9 +9,9 @@ __attribute__((pure)) unsigned int MatchFallbackNat::fallback(
     const std::shared_ptr<MatchFallbackNat::maybe_nat> &x) {
   if (std::holds_alternative<typename MatchFallbackNat::maybe_nat::SomeNat>(
           x->v())) {
-    const auto &_m =
-        *std::get_if<typename MatchFallbackNat::maybe_nat::SomeNat>(&x->v());
-    return _m.d_a0;
+    const auto &[d_a0] =
+        std::get<typename MatchFallbackNat::maybe_nat::SomeNat>(x->v());
+    return d_a0;
   } else {
     return 0u;
   }

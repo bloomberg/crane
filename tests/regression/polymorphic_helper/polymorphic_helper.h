@@ -54,8 +54,8 @@ public:
     if (std::holds_alternative<typename Nat::O>(this->v())) {
       return m;
     } else {
-      const auto &_m = *std::get_if<typename Nat::S>(&this->v());
-      return Nat::s(_m.d_a0->add(m));
+      const auto &[d_a0] = std::get<typename Nat::S>(this->v());
+      return Nat::s(d_a0->add(m));
     }
   }
 };
@@ -105,8 +105,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return Nat::o();
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return Nat::s(_m.d_a1->length());
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return Nat::s(d_a1->length());
     }
   }
 };
@@ -130,8 +130,8 @@ std::shared_ptr<List<T1>> ListDef::repeat(const T1 x,
   if (std::holds_alternative<typename Nat::O>(n->v())) {
     return List<T1>::nil();
   } else {
-    const auto &_m = *std::get_if<typename Nat::S>(&n->v());
-    return List<T1>::cons(x, ListDef::template repeat<T1>(x, _m.d_a0));
+    const auto &[d_a0] = std::get<typename Nat::S>(n->v());
+    return List<T1>::cons(x, ListDef::template repeat<T1>(x, d_a0));
   }
 }
 

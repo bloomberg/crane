@@ -39,13 +39,15 @@ __attribute__((pure)) unsigned int RecordErasedProofFieldsCase::tag_code(
   if (std::holds_alternative<
           typename RecordErasedProofFieldsCase::StoredTag::TagPrimary>(
           t->v())) {
-    const auto &_m = *std::get_if<
-        typename RecordErasedProofFieldsCase::StoredTag::TagPrimary>(&t->v());
-    return (10u + kind_code(_m.d_a0));
+    const auto &[d_a0] =
+        std::get<typename RecordErasedProofFieldsCase::StoredTag::TagPrimary>(
+            t->v());
+    return (10u + kind_code(d_a0));
   } else {
-    const auto &_m = *std::get_if<
-        typename RecordErasedProofFieldsCase::StoredTag::TagSecondary>(&t->v());
-    return (20u + kind_code(_m.d_a0));
+    const auto &[d_a0] =
+        std::get<typename RecordErasedProofFieldsCase::StoredTag::TagSecondary>(
+            t->v());
+    return (20u + kind_code(d_a0));
   }
 }
 

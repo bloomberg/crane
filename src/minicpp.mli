@@ -187,7 +187,13 @@ and smatch_branch = {
       (** Constructor struct type for the template argument. *)
   smb_var : Id.t option;
       (** Binding variable for [std::get], or [None] when the
-          branch body doesn't use fields. *)
+          branch body doesn't use fields.  Kept for scrutinee-name
+          derivation even when {!smb_field_bindings} is non-empty. *)
+  smb_field_bindings : (Id.t * cpp_type) list;
+      (** Ordered list of [(binding_name, field_cpp_type)] for C++
+          structured bindings ([const auto& [f1, f2] = std::get<T>(…)]).
+          Covers ALL constructor fields in struct-declaration order.
+          Empty when no fields are used or for frame-dispatch branches. *)
   smb_extra_conds : cpp_expr list;
       (** Additional [&&]-joined conditions (reuse, multi-match). *)
   smb_body : cpp_stmt list;

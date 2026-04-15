@@ -60,8 +60,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (_m.d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
     }
   }
 };
@@ -160,11 +160,11 @@ struct DeepPatterns {
             MapsTo<T1, unsigned int> F1>
   static T1 outer_rect(F0 &&f, F1 &&f0, const std::shared_ptr<outer> &o) {
     if (std::holds_alternative<typename outer::OLeft>(o->v())) {
-      const auto &_m = *std::get_if<typename outer::OLeft>(&o->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename outer::OLeft>(o->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename outer::ORight>(&o->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename outer::ORight>(o->v());
+      return f0(d_a0);
     }
   }
 
@@ -172,33 +172,33 @@ struct DeepPatterns {
             MapsTo<T1, unsigned int> F1>
   static T1 outer_rec(F0 &&f, F1 &&f0, const std::shared_ptr<outer> &o) {
     if (std::holds_alternative<typename outer::OLeft>(o->v())) {
-      const auto &_m = *std::get_if<typename outer::OLeft>(&o->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename outer::OLeft>(o->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename outer::ORight>(&o->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename outer::ORight>(o->v());
+      return f0(d_a0);
     }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, bool> F1>
   static T1 inner_rect(F0 &&f, F1 &&f0, const std::shared_ptr<inner> &i) {
     if (std::holds_alternative<typename inner::ILeft>(i->v())) {
-      const auto &_m = *std::get_if<typename inner::ILeft>(&i->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename inner::ILeft>(i->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename inner::IRight>(&i->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename inner::IRight>(i->v());
+      return f0(d_a0);
     }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, bool> F1>
   static T1 inner_rec(F0 &&f, F1 &&f0, const std::shared_ptr<inner> &i) {
     if (std::holds_alternative<typename inner::ILeft>(i->v())) {
-      const auto &_m = *std::get_if<typename inner::ILeft>(&i->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename inner::ILeft>(i->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename inner::IRight>(&i->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename inner::IRight>(i->v());
+      return f0(d_a0);
     }
   }
 
@@ -240,13 +240,15 @@ struct DeepPatterns {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, t_A, t_B> F0> T1 pair_rec(F0 &&f) const {
-      const auto &_m = *std::get_if<typename pair<t_A, t_B>::Pair0>(&this->v());
-      return f(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] =
+          std::get<typename pair<t_A, t_B>::Pair0>(this->v());
+      return f(d_a0, d_a1);
     }
 
     template <typename T1, MapsTo<T1, t_A, t_B> F0> T1 pair_rect(F0 &&f) const {
-      const auto &_m = *std::get_if<typename pair<t_A, t_B>::Pair0>(&this->v());
-      return f(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] =
+          std::get<typename pair<t_A, t_B>::Pair0>(this->v());
+      return f(d_a0, d_a1);
     }
   };
 
@@ -299,8 +301,8 @@ struct DeepPatterns {
     if (std::holds_alternative<typename mylist<T1>::Nil>(m->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename mylist<T1>::Cons>(&m->v());
-      return f0(_m.d_a0, _m.d_a1, mylist_rect<T1, T2>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Cons>(m->v());
+      return f0(d_a0, d_a1, mylist_rect<T1, T2>(f, f0, d_a1));
     }
   }
 
@@ -311,8 +313,8 @@ struct DeepPatterns {
     if (std::holds_alternative<typename mylist<T1>::Nil>(m->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename mylist<T1>::Cons>(&m->v());
-      return f0(_m.d_a0, _m.d_a1, mylist_rec<T1, T2>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Cons>(m->v());
+      return f0(d_a0, d_a1, mylist_rec<T1, T2>(f, f0, d_a1));
     }
   }
 

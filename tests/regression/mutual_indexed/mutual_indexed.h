@@ -105,8 +105,9 @@ struct MutualIndexed {
     if (std::holds_alternative<typename EvenTree::ELeaf>(e->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename EvenTree::ENode>(&e->v());
-      return f0(_m.d_n, _m.d_a1, _m.d_a2);
+      const auto &[d_n, d_a1, d_a2] =
+          std::get<typename EvenTree::ENode>(e->v());
+      return f0(d_n, d_a1, d_a2);
     }
   }
 
@@ -117,8 +118,9 @@ struct MutualIndexed {
     if (std::holds_alternative<typename EvenTree::ELeaf>(e->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename EvenTree::ENode>(&e->v());
-      return f0(_m.d_n, _m.d_a1, _m.d_a2);
+      const auto &[d_n, d_a1, d_a2] =
+          std::get<typename EvenTree::ENode>(e->v());
+      return f0(d_n, d_a1, d_a2);
     }
   }
 
@@ -127,8 +129,8 @@ struct MutualIndexed {
       MapsTo<T1, unsigned int, unsigned int, std::shared_ptr<EvenTree>> F0>
   static T1 OddTree_rect(F0 &&f, const unsigned int,
                          const std::shared_ptr<OddTree> &o) {
-    const auto &_m = *std::get_if<typename OddTree::ONode>(&o->v());
-    return f(_m.d_n, _m.d_a1, _m.d_a2);
+    const auto &[d_n, d_a1, d_a2] = std::get<typename OddTree::ONode>(o->v());
+    return f(d_n, d_a1, d_a2);
   }
 
   template <
@@ -136,8 +138,8 @@ struct MutualIndexed {
       MapsTo<T1, unsigned int, unsigned int, std::shared_ptr<EvenTree>> F0>
   static T1 OddTree_rec(F0 &&f, const unsigned int,
                         const std::shared_ptr<OddTree> &o) {
-    const auto &_m = *std::get_if<typename OddTree::ONode>(&o->v());
-    return f(_m.d_n, _m.d_a1, _m.d_a2);
+    const auto &[d_n, d_a1, d_a2] = std::get<typename OddTree::ONode>(o->v());
+    return f(d_n, d_a1, d_a2);
   }
 
   __attribute__((pure)) static unsigned int

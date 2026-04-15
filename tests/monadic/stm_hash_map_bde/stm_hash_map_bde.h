@@ -157,14 +157,14 @@ template <typename K, typename V> struct CHT {
             xs->v())) {
       return bsl::optional<T2>();
     } else {
-      const auto &_m =
-          *bsl::get_if<typename List<bsl::pair<T1, T2>>::Cons>(&xs->v());
-      T1 k_ = _m.d_a0.first;
-      T2 v = _m.d_a0.second;
+      const auto &[d_a0, d_a1] =
+          bsl::get<typename List<bsl::pair<T1, T2>>::Cons>(xs->v());
+      T1 k_ = d_a0.first;
+      T2 v = d_a0.second;
       if (eqb(k, k_)) {
         return bsl::make_optional<T2>(v);
       } else {
-        return CHT<int, int>::template assoc_lookup<T1, T2>(eqb, k, _m.d_a1);
+        return CHT<int, int>::template assoc_lookup<T1, T2>(eqb, k, d_a1);
       }
     }
   }
@@ -177,17 +177,17 @@ template <typename K, typename V> struct CHT {
       return List<bsl::pair<T1, T2>>::cons(bsl::make_pair(k, v),
                                            List<bsl::pair<T1, T2>>::nil());
     } else {
-      const auto &_m =
-          *bsl::get_if<typename List<bsl::pair<T1, T2>>::Cons>(&xs->v());
-      T1 k_ = _m.d_a0.first;
-      T2 v_ = _m.d_a0.second;
+      const auto &[d_a0, d_a1] =
+          bsl::get<typename List<bsl::pair<T1, T2>>::Cons>(xs->v());
+      T1 k_ = d_a0.first;
+      T2 v_ = d_a0.second;
       if (eqb(k, k_)) {
-        return List<bsl::pair<T1, T2>>::cons(bsl::make_pair(k, v), _m.d_a1);
+        return List<bsl::pair<T1, T2>>::cons(bsl::make_pair(k, v), d_a1);
       } else {
         return List<bsl::pair<T1, T2>>::cons(
             bsl::make_pair(k_, v_),
             CHT<int, int>::template assoc_insert_or_replace<T1, T2>(eqb, k, v,
-                                                                    _m.d_a1));
+                                                                    d_a1));
       }
     }
   }
@@ -200,15 +200,15 @@ template <typename K, typename V> struct CHT {
             xs->v())) {
       return bsl::make_pair(bsl::optional<T2>(), bsl::move(xs));
     } else {
-      const auto &_m =
-          *bsl::get_if<typename List<bsl::pair<T1, T2>>::Cons>(&xs->v());
-      T1 k_ = _m.d_a0.first;
-      T2 v_ = _m.d_a0.second;
+      const auto &[d_a0, d_a1] =
+          bsl::get<typename List<bsl::pair<T1, T2>>::Cons>(xs->v());
+      T1 k_ = d_a0.first;
+      T2 v_ = d_a0.second;
       if (eqb(k, k_)) {
-        return bsl::make_pair(bsl::make_optional<T2>(v_), _m.d_a1);
+        return bsl::make_pair(bsl::make_optional<T2>(v_), d_a1);
       } else {
         bsl::pair<bsl::optional<T2>, bsl::shared_ptr<List<bsl::pair<T1, T2>>>>
-            q = CHT<int, int>::template assoc_remove<T1, T2>(eqb, k, _m.d_a1);
+            q = CHT<int, int>::template assoc_remove<T1, T2>(eqb, k, d_a1);
         return bsl::make_pair(q.first, List<bsl::pair<T1, T2>>::cons(
                                            bsl::make_pair(k_, v_), q.second));
       }

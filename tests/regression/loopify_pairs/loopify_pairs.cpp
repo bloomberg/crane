@@ -44,12 +44,12 @@ LoopifyPairs::unzip(
         _result = std::make_pair(list<unsigned int>::nil(),
                                  list<unsigned int>::nil());
       } else {
-        const auto &_m = *std::get_if<typename LoopifyPairs::list<
-            std::pair<unsigned int, unsigned int>>::Cons>(&l->v());
-        const unsigned int &x = _m.d_a0.first;
-        const unsigned int &y = _m.d_a0.second;
+        const auto &[d_a0, d_a1] = std::get<typename LoopifyPairs::list<
+            std::pair<unsigned int, unsigned int>>::Cons>(l->v());
+        const unsigned int &x = d_a0.first;
+        const unsigned int &y = d_a0.second;
         _stack.emplace_back(_Call1{y, x});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
@@ -80,7 +80,7 @@ LoopifyPairs::partition3(
 
   struct _Call1 {
     const unsigned int _s0;
-    const typename LoopifyPairs::list<unsigned int>::Cons _s1;
+    unsigned int _s1;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -102,16 +102,15 @@ LoopifyPairs::partition3(
                                  std::make_pair(list<unsigned int>::nil(),
                                                 list<unsigned int>::nil()));
       } else {
-        const auto &_m =
-            *std::get_if<typename LoopifyPairs::list<unsigned int>::Cons>(
-                &l->v());
-        _stack.emplace_back(_Call1{pivot, _m});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename LoopifyPairs::list<unsigned int>::Cons>(l->v());
+        _stack.emplace_back(_Call1{pivot, d_a0});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
       const unsigned int pivot = _f._s0;
-      const typename LoopifyPairs::list<unsigned int>::Cons _m = _f._s1;
+      unsigned int d_a0 = _f._s1;
       const std::shared_ptr<LoopifyPairs::list<unsigned int>> &lt =
           _result.first;
       const std::pair<std::shared_ptr<LoopifyPairs::list<unsigned int>>,
@@ -119,16 +118,16 @@ LoopifyPairs::partition3(
           _result.second;
       const std::shared_ptr<LoopifyPairs::list<unsigned int>> &eq = p.first;
       const std::shared_ptr<LoopifyPairs::list<unsigned int>> &gt = p.second;
-      if (_m.d_a0 < pivot) {
-        _result = std::make_pair(list<unsigned int>::cons(_m.d_a0, lt),
+      if (d_a0 < pivot) {
+        _result = std::make_pair(list<unsigned int>::cons(d_a0, lt),
                                  std::make_pair(eq, gt));
       } else {
-        if (_m.d_a0 == pivot) {
+        if (d_a0 == pivot) {
           _result = std::make_pair(
-              lt, std::make_pair(list<unsigned int>::cons(_m.d_a0, eq), gt));
+              lt, std::make_pair(list<unsigned int>::cons(d_a0, eq), gt));
         } else {
           _result = std::make_pair(
-              lt, std::make_pair(eq, list<unsigned int>::cons(_m.d_a0, gt)));
+              lt, std::make_pair(eq, list<unsigned int>::cons(d_a0, gt)));
         }
       }
     }
@@ -145,7 +144,7 @@ LoopifyPairs::min_max(
   };
 
   struct _Call1 {
-    const typename LoopifyPairs::list<unsigned int>::Cons _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -162,34 +161,32 @@ LoopifyPairs::min_max(
               typename LoopifyPairs::list<unsigned int>::Nil>(l->v())) {
         _result = std::make_pair(0u, 0u);
       } else {
-        const auto &_m =
-            *std::get_if<typename LoopifyPairs::list<unsigned int>::Cons>(
-                &l->v());
-        auto &&_sv = _m.d_a1;
+        const auto &[d_a0, d_a1] =
+            std::get<typename LoopifyPairs::list<unsigned int>::Cons>(l->v());
         if (std::holds_alternative<
-                typename LoopifyPairs::list<unsigned int>::Nil>(_sv->v())) {
-          _result = std::make_pair(_m.d_a0, _m.d_a0);
+                typename LoopifyPairs::list<unsigned int>::Nil>(d_a1->v())) {
+          _result = std::make_pair(d_a0, d_a0);
         } else {
-          _stack.emplace_back(_Call1{_m});
-          _stack.emplace_back(_Enter{_m.d_a1});
+          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Enter{d_a1});
         }
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename LoopifyPairs::list<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       const unsigned int &mn = _result.first;
       const unsigned int &mx = _result.second;
       _result = std::make_pair(
           [&]() -> unsigned int {
-            if (_m.d_a0 <= mn) {
-              return _m.d_a0;
+            if (d_a0 <= mn) {
+              return d_a0;
             } else {
               return mn;
             }
           }(),
           [&]() -> unsigned int {
-            if (mx <= _m.d_a0) {
-              return _m.d_a0;
+            if (mx <= d_a0) {
+              return d_a0;
             } else {
               return mx;
             }
@@ -208,7 +205,7 @@ LoopifyPairs::sum_and_count(
   };
 
   struct _Call1 {
-    const typename LoopifyPairs::list<unsigned int>::Cons _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -225,18 +222,17 @@ LoopifyPairs::sum_and_count(
               typename LoopifyPairs::list<unsigned int>::Nil>(l->v())) {
         _result = std::make_pair(0u, 0u);
       } else {
-        const auto &_m =
-            *std::get_if<typename LoopifyPairs::list<unsigned int>::Cons>(
-                &l->v());
-        _stack.emplace_back(_Call1{_m});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename LoopifyPairs::list<unsigned int>::Cons>(l->v());
+        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename LoopifyPairs::list<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       const unsigned int &s = _result.first;
       const unsigned int &c = _result.second;
-      _result = std::make_pair((_m.d_a0 + s), (c + 1));
+      _result = std::make_pair((d_a0 + s), (c + 1));
     }
   }
   return _result;
@@ -252,7 +248,7 @@ LoopifyPairs::sum_prod_count(
   };
 
   struct _Call1 {
-    const typename LoopifyPairs::list<unsigned int>::Cons _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -269,21 +265,19 @@ LoopifyPairs::sum_prod_count(
               typename LoopifyPairs::list<unsigned int>::Nil>(l->v())) {
         _result = std::make_pair(0u, std::make_pair(1u, 0u));
       } else {
-        const auto &_m =
-            *std::get_if<typename LoopifyPairs::list<unsigned int>::Cons>(
-                &l->v());
-        _stack.emplace_back(_Call1{_m});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename LoopifyPairs::list<unsigned int>::Cons>(l->v());
+        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const typename LoopifyPairs::list<unsigned int>::Cons _m = _f._s0;
+      unsigned int d_a0 = _f._s0;
       const unsigned int &s = _result.first;
       const std::pair<unsigned int, unsigned int> &p0 = _result.second;
       const unsigned int &p = p0.first;
       const unsigned int &c = p0.second;
-      _result =
-          std::make_pair((_m.d_a0 + s), std::make_pair((_m.d_a0 * p), (c + 1)));
+      _result = std::make_pair((d_a0 + s), std::make_pair((d_a0 * p), (c + 1)));
     }
   }
   return _result;
@@ -310,10 +304,10 @@ std::shared_ptr<LoopifyPairs::list<unsigned int>> LoopifyPairs::lookup_all(
       }
       _continue = false;
     } else {
-      const auto &_m = *std::get_if<typename LoopifyPairs::list<
-          std::pair<unsigned int, unsigned int>>::Cons>(&_loop_l->v());
-      const unsigned int &k = _m.d_a0.first;
-      const unsigned int &v = _m.d_a0.second;
+      const auto &[d_a0, d_a1] = std::get<typename LoopifyPairs::list<
+          std::pair<unsigned int, unsigned int>>::Cons>(_loop_l->v());
+      const unsigned int &k = d_a0.first;
+      const unsigned int &v = d_a0.second;
       if (k == key) {
         auto _cell = list<unsigned int>::cons(v, nullptr);
         if (_last) {
@@ -323,10 +317,10 @@ std::shared_ptr<LoopifyPairs::list<unsigned int>> LoopifyPairs::lookup_all(
           _head = _cell;
         }
         _last = _cell;
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
         continue;
       } else {
-        _loop_l = _m.d_a1;
+        _loop_l = d_a1;
         continue;
       }
     }
@@ -358,10 +352,10 @@ LoopifyPairs::swap_pairs(
       }
       _continue = false;
     } else {
-      const auto &_m = *std::get_if<typename LoopifyPairs::list<
-          std::pair<unsigned int, unsigned int>>::Cons>(&_loop_l->v());
-      const unsigned int &a = _m.d_a0.first;
-      const unsigned int &b = _m.d_a0.second;
+      const auto &[d_a0, d_a1] = std::get<typename LoopifyPairs::list<
+          std::pair<unsigned int, unsigned int>>::Cons>(_loop_l->v());
+      const unsigned int &a = d_a0.first;
+      const unsigned int &b = d_a0.second;
       auto _cell = list<std::pair<unsigned int, unsigned int>>::cons(
           std::make_pair(b, a), nullptr);
       if (_last) {
@@ -372,7 +366,7 @@ LoopifyPairs::swap_pairs(
         _head = _cell;
       }
       _last = _cell;
-      _loop_l = _m.d_a1;
+      _loop_l = d_a1;
       continue;
     }
   }

@@ -72,8 +72,8 @@ struct LetFix {
       if (std::holds_alternative<typename List<T1>::Nil>(xs->v())) {
         return acc;
       } else {
-        const auto &_m = *std::get_if<typename List<T1>::Cons>(&xs->v());
-        return go(List<T1>::cons(_m.d_a0, acc), _m.d_a1);
+        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(xs->v());
+        return go(List<T1>::cons(d_a0, acc), d_a1);
       }
     };
     return go(List<T1>::nil(), l);
@@ -90,8 +90,8 @@ struct LetFix {
     if (std::holds_alternative<typename List<T1>::Nil>(xs->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&xs->v());
-      return (local_length<T1>(_m.d_a1) + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(xs->v());
+      return (local_length<T1>(d_a1) + 1);
     }
   }
 

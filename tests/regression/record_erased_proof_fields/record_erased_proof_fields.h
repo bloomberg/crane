@@ -60,8 +60,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return _m.d_a1->template fold_left<T1>(f, f(a0, _m.d_a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return d_a1->template fold_left<T1>(f, f(a0, d_a0));
     }
   }
 };
@@ -180,11 +180,11 @@ struct RecordErasedProofFieldsCase {
   static T1 StoredTag_rect(F0 &&f, F1 &&f0,
                            const std::shared_ptr<StoredTag> &s) {
     if (std::holds_alternative<typename StoredTag::TagPrimary>(s->v())) {
-      const auto &_m = *std::get_if<typename StoredTag::TagPrimary>(&s->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename StoredTag::TagPrimary>(s->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename StoredTag::TagSecondary>(&s->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename StoredTag::TagSecondary>(s->v());
+      return f0(d_a0);
     }
   }
 
@@ -192,11 +192,11 @@ struct RecordErasedProofFieldsCase {
   static T1 StoredTag_rec(F0 &&f, F1 &&f0,
                           const std::shared_ptr<StoredTag> &s) {
     if (std::holds_alternative<typename StoredTag::TagPrimary>(s->v())) {
-      const auto &_m = *std::get_if<typename StoredTag::TagPrimary>(&s->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename StoredTag::TagPrimary>(s->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename StoredTag::TagSecondary>(&s->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename StoredTag::TagSecondary>(s->v());
+      return f0(d_a0);
     }
   }
   enum class TraceBucket { e_BUCKETA, e_BUCKETB, e_BUCKETC };

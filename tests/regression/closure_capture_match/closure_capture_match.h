@@ -73,8 +73,9 @@ struct ClosureCaptureMatch {
       if (std::holds_alternative<typename tree::Leaf>(_sv->v())) {
         return 0u;
       } else {
-        const auto &_m = *std::get_if<typename tree::Node>(&_sv->v());
-        return _m.d_a1;
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(_sv->v());
+        return d_a1;
       }
     }
 
@@ -85,18 +86,19 @@ struct ClosureCaptureMatch {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return x;
       } else {
-        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
-        auto &&_sv0 = _m.d_a0;
-        if (std::holds_alternative<typename tree::Leaf>(_sv0->v())) {
-          return (_m.d_a1 + x);
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        if (std::holds_alternative<typename tree::Leaf>(d_a0->v())) {
+          return (d_a1 + x);
         } else {
-          const auto &_m0 = *std::get_if<typename tree::Node>(&_sv0->v());
-          auto &&_sv1 = _m.d_a2;
-          if (std::holds_alternative<typename tree::Leaf>(_sv1->v())) {
-            return (_m0.d_a1 + x);
+          const auto &[d_a00, d_a10, d_a20] =
+              std::get<typename tree::Node>(d_a0->v());
+          if (std::holds_alternative<typename tree::Leaf>(d_a2->v())) {
+            return (d_a10 + x);
           } else {
-            const auto &_m1 = *std::get_if<typename tree::Node>(&_sv1->v());
-            return (((_m0.d_a1 + _m1.d_a1) + _m.d_a1) + x);
+            const auto &[d_a01, d_a11, d_a21] =
+                std::get<typename tree::Node>(d_a2->v());
+            return (((d_a10 + d_a11) + d_a1) + x);
           }
         }
       }
@@ -110,8 +112,9 @@ struct ClosureCaptureMatch {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return tree::node(tree::leaf(), v, tree::leaf());
       } else {
-        const auto &_m = *std::get_if<typename tree::Node>(&this->v());
-        return tree::node(_m.d_a0, v, _m.d_a2);
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return tree::node(d_a0, v, d_a2);
       }
     }
   };
@@ -125,17 +128,17 @@ struct ClosureCaptureMatch {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename tree::Node &>().d_a0) _s0;
-      decltype(std::declval<typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<typename tree::Node &>().d_a0) _s3;
+      std::shared_ptr<tree> _s0;
+      std::shared_ptr<tree> _s1;
+      unsigned int _s2;
+      std::shared_ptr<tree> _s3;
     };
 
     struct _Call2 {
       T1 _s0;
-      decltype(std::declval<typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<typename tree::Node &>().d_a0) _s3;
+      std::shared_ptr<tree> _s1;
+      unsigned int _s2;
+      std::shared_ptr<tree> _s3;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -151,9 +154,10 @@ struct ClosureCaptureMatch {
         if (std::holds_alternative<typename tree::Leaf>(t->v())) {
           _result = f;
         } else {
-          const auto &_m = *std::get_if<typename tree::Node>(&t->v());
-          _stack.emplace_back(_Call1{_m.d_a0, _m.d_a2, _m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a2});
+          const auto &[d_a0, d_a1, d_a2] =
+              std::get<typename tree::Node>(t->v());
+          _stack.emplace_back(_Call1{d_a0, d_a2, d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a2});
         }
       } else if (std::holds_alternative<_Call1>(_frame)) {
         const auto &_f = std::get<_Call1>(_frame);
@@ -176,17 +180,17 @@ struct ClosureCaptureMatch {
     };
 
     struct _Call1 {
-      decltype(std::declval<typename tree::Node &>().d_a0) _s0;
-      decltype(std::declval<typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<typename tree::Node &>().d_a0) _s3;
+      std::shared_ptr<tree> _s0;
+      std::shared_ptr<tree> _s1;
+      unsigned int _s2;
+      std::shared_ptr<tree> _s3;
     };
 
     struct _Call2 {
       T1 _s0;
-      decltype(std::declval<typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<typename tree::Node &>().d_a0) _s3;
+      std::shared_ptr<tree> _s1;
+      unsigned int _s2;
+      std::shared_ptr<tree> _s3;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -202,9 +206,10 @@ struct ClosureCaptureMatch {
         if (std::holds_alternative<typename tree::Leaf>(t->v())) {
           _result = f;
         } else {
-          const auto &_m = *std::get_if<typename tree::Node>(&t->v());
-          _stack.emplace_back(_Call1{_m.d_a0, _m.d_a2, _m.d_a1, _m.d_a0});
-          _stack.emplace_back(_Enter{_m.d_a2});
+          const auto &[d_a0, d_a1, d_a2] =
+              std::get<typename tree::Node>(t->v());
+          _stack.emplace_back(_Call1{d_a0, d_a2, d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a2});
         }
       } else if (std::holds_alternative<_Call1>(_frame)) {
         const auto &_f = std::get<_Call1>(_frame);
@@ -247,22 +252,22 @@ struct ClosureCaptureMatch {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int unbox(const unsigned int x) const {
-      const auto &_m = *std::get_if<typename fn_box::Box>(&this->v());
-      return _m.d_a0(x);
+      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
+      return d_a0(x);
     }
 
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 fn_box_rec(F0 &&f) const {
-      const auto &_m = *std::get_if<typename fn_box::Box>(&this->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
+      return f(d_a0);
     }
 
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 fn_box_rect(F0 &&f) const {
-      const auto &_m = *std::get_if<typename fn_box::Box>(&this->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
+      return f(d_a0);
     }
   };
 

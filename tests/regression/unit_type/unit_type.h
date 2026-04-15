@@ -51,14 +51,14 @@ struct UnitType {
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
   static T3 pair_rect(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
-    const auto &_m = *std::get_if<typename pair<T1, T2>::Pair0>(&p->v());
-    return f(_m.d_a0, _m.d_a1);
+    const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p->v());
+    return f(d_a0, d_a1);
   }
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
   static T3 pair_rec(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
-    const auto &_m = *std::get_if<typename pair<T1, T2>::Pair0>(&p->v());
-    return f(_m.d_a0, _m.d_a1);
+    const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p->v());
+    return f(d_a0, d_a1);
   }
 
   static inline const std::shared_ptr<pair<unsigned int, std::monostate>>

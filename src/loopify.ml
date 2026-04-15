@@ -2211,16 +2211,23 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
       | Smatch (branches, default) ->
         List.concat_map
           (fun br ->
-            (* [_m] is [const T&] (a reference to the constructor struct,
-               obtained by dereferencing [std::get_if]).  Register the type
-               as [const T] so field access can infer the field types. *)
+            (* Register structured-binding field types so that
+               [infer_saved_type] can resolve them for frame structs. *)
+            let field_type_bindings =
+              List.map
+                (fun (bname, ty) -> (bname, ty))
+                br.smb_field_bindings
+            in
+            (* Also register the aggregate binding for frame-dispatch
+               branches (which use [smb_var] without structured bindings). *)
             let var_binding =
               match br.smb_var with
-              | Some id ->
+              | Some id when br.smb_field_bindings = [] ->
                 [(id, Tmod (TMconst, br.smb_ctor_type))]
-              | None -> []
+              | _ -> []
             in
-            var_binding @ collect_type_env br.smb_body )
+            field_type_bindings @ var_binding
+            @ collect_type_env br.smb_body )
           branches
         @ (match default with Some ss -> collect_type_env ss | None -> [])
       | Sblock ss -> collect_type_env ss
@@ -2370,9 +2377,15 @@ and free_vars_stmt = function
         let fv = free_vars_expr br.smb_scrutinee
           @ List.concat_map free_vars_expr br.smb_extra_conds
           @ free_vars_body br.smb_body in
-        match br.smb_var with
-        | Some id -> List.filter (fun v -> not (Id.equal v id)) fv
-        | None -> fv )
+        (* Filter out variables bound by this branch: structured-binding
+           field names and/or the aggregate binding variable. *)
+        let bound_ids =
+          List.map fst br.smb_field_bindings
+          @ (match br.smb_var with Some id -> [id] | None -> [])
+        in
+        List.filter
+          (fun v -> not (List.exists (Id.equal v) bound_ids))
+          fv )
       branches
     @ (match default with Some ss -> free_vars_body ss | None -> [])
   | Sblock ss -> free_vars_body ss
@@ -3685,15 +3698,22 @@ let rec rewrite_enter_lambda_return
             err );
       ] )
   | Smatch (branches, default) ->
-    (* Augment the env with each branch's binding variable type so that
-       [infer_saved_types] resolves [_m.field] correctly per-branch.
-       Without this, all branches would share the first branch's type. *)
+    (* Augment the env with each branch's binding variable types so that
+       [infer_saved_types] resolves field types correctly per-branch. *)
     let rw_branch br =
       let branch_env =
-        match br.smb_var with
-        (* [_m] is [const T&] from [*std::get_if]. *)
-        | Some id -> (id, Tmod (TMconst, br.smb_ctor_type)) :: env
-        | None -> env
+        (* Register structured-binding field types. *)
+        let fb_env =
+          List.map (fun (bname, ty) -> (bname, ty)) br.smb_field_bindings
+        in
+        (* Also register aggregate binding for frame-dispatch branches. *)
+        let var_env =
+          match br.smb_var with
+          | Some id when br.smb_field_bindings = [] ->
+            [(id, Tmod (TMconst, br.smb_ctor_type))]
+          | _ -> []
+        in
+        fb_env @ var_env @ env
       in
       { br with
         smb_body =
@@ -4472,6 +4492,7 @@ let make_frame_branch frame_name body =
   { smb_scrutinee = CPPvar (Id.of_string "_frame");
     smb_ctor_type = Tvar (0, Some (Id.of_string frame_name));
     smb_var = Some (Id.of_string "_f");
+    smb_field_bindings = [];
     smb_extra_conds = [];
     smb_body = body }
 

@@ -77,11 +77,11 @@ struct EmptyMatch {
   static T3 either_rect(F0 &&f, F1 &&f0,
                         const std::shared_ptr<either<T1, T2>> &e) {
     if (std::holds_alternative<typename either<T1, T2>::Left>(e->v())) {
-      const auto &_m = *std::get_if<typename either<T1, T2>::Left>(&e->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename either<T1, T2>::Left>(e->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename either<T1, T2>::Right>(&e->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename either<T1, T2>::Right>(e->v());
+      return f0(d_a0);
     }
   }
 
@@ -90,11 +90,11 @@ struct EmptyMatch {
   static T3 either_rec(F0 &&f, F1 &&f0,
                        const std::shared_ptr<either<T1, T2>> &e) {
     if (std::holds_alternative<typename either<T1, T2>::Left>(e->v())) {
-      const auto &_m = *std::get_if<typename either<T1, T2>::Left>(&e->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename either<T1, T2>::Left>(e->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename either<T1, T2>::Right>(&e->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename either<T1, T2>::Right>(e->v());
+      return f0(d_a0);
     }
   }
 
@@ -103,15 +103,13 @@ struct EmptyMatch {
   handle_left(const std::shared_ptr<either<T1, std::shared_ptr<empty>>> &e) {
     if (std::holds_alternative<
             typename either<T1, std::shared_ptr<empty>>::Left>(e->v())) {
-      const auto &_m =
-          *std::get_if<typename either<T1, std::shared_ptr<empty>>::Left>(
-              &e->v());
-      return _m.d_a0;
+      const auto &[d_a0] =
+          std::get<typename either<T1, std::shared_ptr<empty>>::Left>(e->v());
+      return d_a0;
     } else {
-      const auto &_m =
-          *std::get_if<typename either<T1, std::shared_ptr<empty>>::Right>(
-              &e->v());
-      return absurd<T1>(_m.d_a0);
+      const auto &[d_a0] =
+          std::get<typename either<T1, std::shared_ptr<empty>>::Right>(e->v());
+      return absurd<T1>(d_a0);
     }
   }
 

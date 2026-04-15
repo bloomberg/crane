@@ -19,8 +19,8 @@ SigmaTypes::positive_succ(const unsigned int n) {
 __attribute__((pure)) unsigned int
 SigmaTypes::get_positive(const unsigned int n) {
   auto &&_sv = positive_succ(n);
-  const auto &_m = *std::get_if<typename Sig<unsigned int>::Exist>(&_sv->v());
-  return _m.d_x;
+  const auto &[d_x] = std::get<typename Sig<unsigned int>::Exist>(_sv->v());
+  return d_x;
 }
 
 std::shared_ptr<Sig<unsigned int>>
@@ -28,14 +28,13 @@ SigmaTypes::double_positive(const unsigned int n) {
   std::shared_ptr<Sig<unsigned int>> p = positive_succ(n);
   return Sig<unsigned int>::exist(
       ([&]() {
-        const auto &_m =
-            *std::get_if<typename Sig<unsigned int>::Exist>(&p->v());
-        return _m.d_x;
+        const auto &[d_x] = std::get<typename Sig<unsigned int>::Exist>(p->v());
+        return d_x;
       }() +
        [&]() {
-         const auto &_m0 =
-             *std::get_if<typename Sig<unsigned int>::Exist>(&p->v());
-         return _m0.d_x;
+         const auto &[d_x0] =
+             std::get<typename Sig<unsigned int>::Exist>(p->v());
+         return d_x0;
        }()));
 }
 
@@ -53,9 +52,9 @@ SigmaTypes::positives_up_to(const unsigned int k) {
     return List<unsigned int>::cons(
         [&]() {
           auto &&_sv = positive_succ(k_);
-          const auto &_m =
-              *std::get_if<typename Sig<unsigned int>::Exist>(&_sv->v());
-          return _m.d_x;
+          const auto &[d_x] =
+              std::get<typename Sig<unsigned int>::Exist>(_sv->v());
+          return d_x;
         }(),
         positives_up_to(k_));
   }

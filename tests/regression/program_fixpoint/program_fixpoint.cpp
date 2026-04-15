@@ -25,10 +25,10 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
                     SigT<std::shared_ptr<List<unsigned int>>,
                          std::shared_ptr<List<unsigned int>>>::existt(l3, l4));
         return interleave_func([&]() {
-          const auto &_m = *std::get_if<typename Sig<std::shared_ptr<
+          const auto &[d_x] = std::get<typename Sig<std::shared_ptr<
               SigT<std::shared_ptr<List<unsigned int>>,
-                   std::shared_ptr<List<unsigned int>>>>>::Exist>(&y->v());
-          return _m.d_x;
+                   std::shared_ptr<List<unsigned int>>>>>::Exist>(y->v());
+          return d_x;
         }());
       };
   if (std::holds_alternative<typename List<unsigned int>::Cons>(l1->v()) &&
@@ -43,8 +43,9 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
                  l1->v())) {
     return l2;
   } else {
-    const auto &_m = *std::get_if<typename List<unsigned int>::Cons>(&l1->v());
-    return List<unsigned int>::cons(_m.d_a0, interleave0(l2, _m.d_a1));
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(l1->v());
+    return List<unsigned int>::cons(d_a0, interleave0(l2, d_a1));
   }
 }
 

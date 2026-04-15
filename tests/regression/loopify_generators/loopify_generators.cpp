@@ -83,10 +83,10 @@ LoopifyGenerators::zip_longest_aux(
           }
           _continue = false;
         } else {
-          const auto &_m0 =
-              *std::get_if<typename List<unsigned int>::Cons>(&_loop_l2->v());
+          const auto &[d_a00, d_a10] =
+              std::get<typename List<unsigned int>::Cons>(_loop_l2->v());
           auto _cell = List<std::pair<unsigned int, unsigned int>>::cons(
-              std::make_pair(default0, _m0.d_a0), nullptr);
+              std::make_pair(default0, d_a00), nullptr);
           if (_last) {
             std::get<
                 typename List<std::pair<unsigned int, unsigned int>>::Cons>(
@@ -97,7 +97,7 @@ LoopifyGenerators::zip_longest_aux(
           }
           _last = _cell;
           unsigned int _next_fuel = f;
-          std::shared_ptr<List<unsigned int>> _next_l2 = _m0.d_a1;
+          std::shared_ptr<List<unsigned int>> _next_l2 = d_a10;
           std::shared_ptr<List<unsigned int>> _next_l1 =
               List<unsigned int>::nil();
           _loop_fuel = std::move(_next_fuel);
@@ -106,12 +106,12 @@ LoopifyGenerators::zip_longest_aux(
           continue;
         }
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&_loop_l1->v());
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _loop_l2->v())) {
           auto _cell = List<std::pair<unsigned int, unsigned int>>::cons(
-              std::make_pair(_m.d_a0, default0), nullptr);
+              std::make_pair(d_a0, default0), nullptr);
           if (_last) {
             std::get<
                 typename List<std::pair<unsigned int, unsigned int>>::Cons>(
@@ -124,16 +124,16 @@ LoopifyGenerators::zip_longest_aux(
           unsigned int _next_fuel = f;
           std::shared_ptr<List<unsigned int>> _next_l2 =
               List<unsigned int>::nil();
-          std::shared_ptr<List<unsigned int>> _next_l1 = _m.d_a1;
+          std::shared_ptr<List<unsigned int>> _next_l1 = d_a1;
           _loop_fuel = std::move(_next_fuel);
           _loop_l2 = std::move(_next_l2);
           _loop_l1 = std::move(_next_l1);
           continue;
         } else {
-          const auto &_m0 =
-              *std::get_if<typename List<unsigned int>::Cons>(&_loop_l2->v());
+          const auto &[d_a00, d_a10] =
+              std::get<typename List<unsigned int>::Cons>(_loop_l2->v());
           auto _cell = List<std::pair<unsigned int, unsigned int>>::cons(
-              std::make_pair(_m.d_a0, _m0.d_a0), nullptr);
+              std::make_pair(d_a0, d_a00), nullptr);
           if (_last) {
             std::get<
                 typename List<std::pair<unsigned int, unsigned int>>::Cons>(
@@ -144,8 +144,8 @@ LoopifyGenerators::zip_longest_aux(
           }
           _last = _cell;
           unsigned int _next_fuel = f;
-          std::shared_ptr<List<unsigned int>> _next_l2 = _m0.d_a1;
-          std::shared_ptr<List<unsigned int>> _next_l1 = _m.d_a1;
+          std::shared_ptr<List<unsigned int>> _next_l2 = d_a10;
+          std::shared_ptr<List<unsigned int>> _next_l1 = d_a1;
           _loop_fuel = std::move(_next_fuel);
           _loop_l2 = std::move(_next_l2);
           _loop_l1 = std::move(_next_l1);
@@ -178,10 +178,10 @@ LoopifyGenerators::len_impl(const std::shared_ptr<List<unsigned int>> &l) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
         _result = 0u;
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
         _stack.emplace_back(_Call1{});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
@@ -275,8 +275,8 @@ LoopifyGenerators::take(const unsigned int n,
       }
       _continue = false;
     } else {
-      const auto &_m =
-          *std::get_if<typename List<unsigned int>::Cons>(&_loop_l->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_n == 0u) {
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
@@ -286,7 +286,7 @@ LoopifyGenerators::take(const unsigned int n,
         }
         _continue = false;
       } else {
-        auto _cell = List<unsigned int>::cons(_m.d_a0, nullptr);
+        auto _cell = List<unsigned int>::cons(d_a0, nullptr);
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
               _cell;
@@ -294,7 +294,7 @@ LoopifyGenerators::take(const unsigned int n,
           _head = _cell;
         }
         _last = _cell;
-        std::shared_ptr<List<unsigned int>> _next_l = _m.d_a1;
+        std::shared_ptr<List<unsigned int>> _next_l = d_a1;
         unsigned int _next_n =
             (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
         _loop_l = std::move(_next_l);
@@ -382,9 +382,8 @@ std::shared_ptr<List<unsigned int>> LoopifyGenerators::replicate_each(
   };
 
   struct _Call1 {
-    decltype(replicate_single(
-        std::declval<typename List<unsigned int>::Cons &>().d_a0,
-        std::declval<const unsigned int &>())) _s0;
+    decltype(replicate_single(std::declval<unsigned int &>(),
+                              std::declval<const unsigned int &>())) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -400,10 +399,10 @@ std::shared_ptr<List<unsigned int>> LoopifyGenerators::replicate_each(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
         _result = List<unsigned int>::nil();
       } else {
-        const auto &_m =
-            *std::get_if<typename List<unsigned int>::Cons>(&l->v());
-        _stack.emplace_back(_Call1{replicate_single(_m.d_a0, n)});
-        _stack.emplace_back(_Enter{_m.d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l->v());
+        _stack.emplace_back(_Call1{replicate_single(d_a0, n)});
+        _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);

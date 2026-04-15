@@ -93,8 +93,8 @@ struct TypeApp {
     if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
-      return f0(_m.d_a0, _m.d_a1, list_rect<T1, T2>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+      return f0(d_a0, d_a1, list_rect<T1, T2>(f, f0, d_a1));
     }
   }
 
@@ -104,8 +104,8 @@ struct TypeApp {
     if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
-      return f0(_m.d_a0, _m.d_a1, list_rec<T1, T2>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+      return f0(d_a0, d_a1, list_rec<T1, T2>(f, f0, d_a1));
     }
   }
 
@@ -115,8 +115,8 @@ struct TypeApp {
     if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
       return list<T2>::nil();
     } else {
-      const auto &_m = *std::get_if<typename list<T1>::Cons>(&l->v());
-      return list<T2>::cons(f(_m.d_a0), map<T1, T2>(f, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+      return list<T2>::cons(f(d_a0), map<T1, T2>(f, d_a1));
     }
   }
 

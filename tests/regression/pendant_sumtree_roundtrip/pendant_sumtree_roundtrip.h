@@ -64,8 +64,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
       return true;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons0>(&this->v());
-      return (f(_m.d_a0) && _m.d_a1->forallb(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(this->v());
+      return (f(d_a0) && d_a1->forallb(f));
     }
   }
 
@@ -74,8 +74,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
       return a0;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons0>(&this->v());
-      return f(_m.d_a0, _m.d_a1->template fold_right<T1>(f, a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(this->v());
+      return f(d_a0, d_a1->template fold_right<T1>(f, a0));
     }
   }
 
@@ -84,10 +84,9 @@ public:
             this->v())) {
       return List<T1>::nil0();
     } else {
-      const auto &_m =
-          *std::get_if<typename List<std::shared_ptr<List<T1>>>::Cons0>(
-              &this->v());
-      return _m.d_a0->app(_m.d_a1->template concat<T1>());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::shared_ptr<List<T1>>>::Cons0>(this->v());
+      return d_a0->app(d_a1->template concat<T1>());
     }
   }
 
@@ -96,8 +95,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
       return List<T1>::nil0();
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons0>(&this->v());
-      return List<T1>::cons0(f(_m.d_a0), _m.d_a1->template map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(this->v());
+      return List<T1>::cons0(f(d_a0), d_a1->template map<T1>(f));
     }
   }
 
@@ -105,8 +104,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons0>(&this->v());
-      return (_m.d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(this->v());
+      return (d_a1->length() + 1);
     }
   }
 
@@ -114,8 +113,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
       return m;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons0>(&this->v());
-      return List<t_A>::cons0(_m.d_a0, _m.d_a1->app(m));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(this->v());
+      return List<t_A>::cons0(d_a0, d_a1->app(m));
     }
   }
 };
@@ -265,11 +264,11 @@ public:
     if (std::holds_alternative<typename T::F1>(this->v())) {
       return Sig<unsigned int>::exist(0u);
     } else {
-      const auto &_m = *std::get_if<typename T::FS>(&this->v());
-      auto &&_sv0 = _m.d_a1->to_nat(_m.d_n);
-      const auto &_m0 =
-          *std::get_if<typename Sig<unsigned int>::Exist>(&_sv0->v());
-      return Sig<unsigned int>::exist((_m0.d_x + 1));
+      const auto &[d_n, d_a1] = std::get<typename T::FS>(this->v());
+      auto &&_sv0 = d_a1->to_nat(d_n);
+      const auto &[d_x0] =
+          std::get<typename Sig<unsigned int>::Exist>(_sv0->v());
+      return Sig<unsigned int>::exist((d_x0 + 1));
     }
   }
 };
@@ -515,11 +514,11 @@ struct PendantSumtreeRoundtripCase {
   static T1 SumTree_rect(const unsigned int, F1 &&f, F2 &&f0,
                          const std::shared_ptr<SumTree> &s) {
     if (std::holds_alternative<typename SumTree::SumLeaf>(s->v())) {
-      const auto &_m = *std::get_if<typename SumTree::SumLeaf>(&s->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename SumTree::SumLeaf>(s->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename SumTree::SumNode>(&s->v());
-      return f0(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename SumTree::SumNode>(s->v());
+      return f0(d_a0, d_a1);
     }
   }
 
@@ -530,11 +529,11 @@ struct PendantSumtreeRoundtripCase {
   static T1 SumTree_rec(const unsigned int, F1 &&f, F2 &&f0,
                         const std::shared_ptr<SumTree> &s) {
     if (std::holds_alternative<typename SumTree::SumLeaf>(s->v())) {
-      const auto &_m = *std::get_if<typename SumTree::SumLeaf>(&s->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename SumTree::SumLeaf>(s->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename SumTree::SumNode>(&s->v());
-      return f0(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename SumTree::SumNode>(s->v());
+      return f0(d_a0, d_a1);
     }
   }
 
@@ -704,8 +703,8 @@ std::shared_ptr<List<T1>> Vector::to_list(const unsigned int n,
     if (std::holds_alternative<typename T0<T1>::Nil>(v0->v())) {
       return b;
     } else {
-      const auto &_m = *std::get_if<typename T0<T1>::Cons>(&v0->v());
-      return List<T1>::cons0(_m.d_h, fold_right_fix(_m.d_n, _m.d_a2, b));
+      const auto &[d_h, d_n, d_a2] = std::get<typename T0<T1>::Cons>(v0->v());
+      return List<T1>::cons0(d_h, fold_right_fix(d_n, d_a2, b));
     }
   };
   return fold_right_fix(n, v, List<T1>::nil0());

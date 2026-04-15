@@ -70,16 +70,16 @@ struct RamBadState {
       if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
         return List<T1>::nil();
       } else {
-        const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
-        return List<T1>::cons(x, _m.d_a1);
+        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+        return List<T1>::cons(x, d_a1);
       }
     } else {
       unsigned int n_ = n - 1;
       if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
         return List<T1>::nil();
       } else {
-        const auto &_m0 = *std::get_if<typename List<T1>::Cons>(&l->v());
-        return List<T1>::cons(_m0.d_a0, update_nth<T1>(n_, x, _m0.d_a1));
+        const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
+        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, d_a10));
       }
     }
   }

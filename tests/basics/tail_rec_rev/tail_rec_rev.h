@@ -67,8 +67,8 @@ std::shared_ptr<List<T1>> better_rev(const std::shared_ptr<List<T1>> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l0->v())) {
       return acc;
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l0->v());
-      return go(_m.d_a1, List<T1>::cons(_m.d_a0, acc));
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l0->v());
+      return go(d_a1, List<T1>::cons(d_a0, acc));
     }
   };
   return go(l, List<T1>::nil());

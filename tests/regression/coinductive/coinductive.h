@@ -72,9 +72,9 @@ struct Coinductive {
   template <MapsTo<unsigned int, unsigned int> F0>
   static std::shared_ptr<stream> smap(F0 &&f,
                                       const std::shared_ptr<stream> &s) {
-    const auto &_m = *std::get_if<typename stream::Cons>(&s->v());
+    const auto &[d_a0, d_a1] = std::get<typename stream::Cons>(s->v());
     return stream::lazy_([=]() mutable -> std::shared_ptr<stream> {
-      return stream::cons(f(_m.d_a0), smap(f, _m.d_a1));
+      return stream::cons(f(d_a0), smap(f, d_a1));
     });
   }
 

@@ -99,15 +99,15 @@ struct MutualRecursion {
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f4,
                       const std::shared_ptr<expr> &e) {
     if (std::holds_alternative<typename expr::Val>(e->v())) {
-      const auto &_m = *std::get_if<typename expr::Val>(&e->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename expr::Val>(e->v());
+      return f(d_a0);
     } else if (std::holds_alternative<typename expr::BinOp>(e->v())) {
-      const auto &_m = *std::get_if<typename expr::BinOp>(&e->v());
-      return f0(_m.d_a0, _m.d_a1, expr_rect<T1>(f, f0, f4, _m.d_a1), _m.d_a2,
-                expr_rect<T1>(f, f0, f4, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename expr::BinOp>(e->v());
+      return f0(d_a0, d_a1, expr_rect<T1>(f, f0, f4, d_a1), d_a2,
+                expr_rect<T1>(f, f0, f4, d_a2));
     } else {
-      const auto &_m = *std::get_if<typename expr::UnOp>(&e->v());
-      return f4(_m.d_a0, _m.d_a1, expr_rect<T1>(f, f0, f4, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename expr::UnOp>(e->v());
+      return f4(d_a0, d_a1, expr_rect<T1>(f, f0, f4, d_a1));
     }
   }
 
@@ -118,15 +118,15 @@ struct MutualRecursion {
             MapsTo<T1, unsigned int, std::shared_ptr<expr>, T1> F2>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f4, const std::shared_ptr<expr> &e) {
     if (std::holds_alternative<typename expr::Val>(e->v())) {
-      const auto &_m = *std::get_if<typename expr::Val>(&e->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename expr::Val>(e->v());
+      return f(d_a0);
     } else if (std::holds_alternative<typename expr::BinOp>(e->v())) {
-      const auto &_m = *std::get_if<typename expr::BinOp>(&e->v());
-      return f0(_m.d_a0, _m.d_a1, expr_rec<T1>(f, f0, f4, _m.d_a1), _m.d_a2,
-                expr_rec<T1>(f, f0, f4, _m.d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename expr::BinOp>(e->v());
+      return f0(d_a0, d_a1, expr_rec<T1>(f, f0, f4, d_a1), d_a2,
+                expr_rec<T1>(f, f0, f4, d_a2));
     } else {
-      const auto &_m = *std::get_if<typename expr::UnOp>(&e->v());
-      return f4(_m.d_a0, _m.d_a1, expr_rec<T1>(f, f0, f4, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename expr::UnOp>(e->v());
+      return f4(d_a0, d_a1, expr_rec<T1>(f, f0, f4, d_a1));
     }
   }
 

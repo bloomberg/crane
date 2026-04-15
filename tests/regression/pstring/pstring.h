@@ -106,8 +106,8 @@ struct PString {
     if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
       return "[]";
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
-      return p(_m.d_a0) + "::"s + list_to_string<T1>(p, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      return p(d_a0) + "::"s + list_to_string<T1>(p, d_a1);
     }
   }
 };

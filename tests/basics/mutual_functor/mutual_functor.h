@@ -120,11 +120,11 @@ template <Elem E> struct MutualTree {
             MapsTo<T1, unsigned int, std::shared_ptr<forest>> F1>
   static T1 tree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<tree> &t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0->v())) {
-      const auto &_m = *std::get_if<typename tree::Leaf>(&t0->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename tree::Leaf>(t0->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&t0->v());
-      return f0(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t0->v());
+      return f0(d_a0, d_a1);
     }
   }
 
@@ -132,11 +132,11 @@ template <Elem E> struct MutualTree {
             MapsTo<T1, unsigned int, std::shared_ptr<forest>> F1>
   static T1 tree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<tree> &t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0->v())) {
-      const auto &_m = *std::get_if<typename tree::Leaf>(&t0->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename tree::Leaf>(t0->v());
+      return f(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&t0->v());
-      return f0(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t0->v());
+      return f0(d_a0, d_a1);
     }
   }
 
@@ -147,8 +147,8 @@ template <Elem E> struct MutualTree {
     if (std::holds_alternative<typename forest::FNil>(f1->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename forest::FCons>(&f1->v());
-      return f0(_m.d_a0, _m.d_a1, forest_rect<T1>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename forest::FCons>(f1->v());
+      return f0(d_a0, d_a1, forest_rect<T1>(f, f0, d_a1));
     }
   }
 
@@ -158,8 +158,8 @@ template <Elem E> struct MutualTree {
     if (std::holds_alternative<typename forest::FNil>(f1->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename forest::FCons>(&f1->v());
-      return f0(_m.d_a0, _m.d_a1, forest_rec<T1>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename forest::FCons>(f1->v());
+      return f0(d_a0, d_a1, forest_rec<T1>(f, f0, d_a1));
     }
   }
 
@@ -168,8 +168,8 @@ template <Elem E> struct MutualTree {
     if (std::holds_alternative<typename tree::Leaf>(t0->v())) {
       return 1u;
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&t0->v());
-      return (1u + forest_size(_m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t0->v());
+      return (1u + forest_size(d_a1));
     }
   }
 
@@ -178,19 +178,19 @@ template <Elem E> struct MutualTree {
     if (std::holds_alternative<typename forest::FNil>(f->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename forest::FCons>(&f->v());
-      return (tree_size(_m.d_a0) + forest_size(_m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename forest::FCons>(f->v());
+      return (tree_size(d_a0) + forest_size(d_a1));
     }
   }
 
   __attribute__((pure)) static unsigned int
   tree_sum(const std::shared_ptr<tree> &t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0->v())) {
-      const auto &_m = *std::get_if<typename tree::Leaf>(&t0->v());
-      return _m.d_a0;
+      const auto &[d_a0] = std::get<typename tree::Leaf>(t0->v());
+      return d_a0;
     } else {
-      const auto &_m = *std::get_if<typename tree::Node>(&t0->v());
-      return (_m.d_a0 + forest_sum(_m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t0->v());
+      return (d_a0 + forest_sum(d_a1));
     }
   }
 
@@ -199,8 +199,8 @@ template <Elem E> struct MutualTree {
     if (std::holds_alternative<typename forest::FNil>(f->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename forest::FCons>(&f->v());
-      return (tree_sum(_m.d_a0) + forest_sum(_m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename forest::FCons>(f->v());
+      return (tree_sum(d_a0) + forest_sum(d_a1));
     }
   }
 

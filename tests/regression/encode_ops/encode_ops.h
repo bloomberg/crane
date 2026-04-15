@@ -59,8 +59,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (_m.d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
     }
   }
 };
@@ -190,21 +190,22 @@ struct EncodeOps {
         return std::make_pair(251u, 0u);
       } else if (std::holds_alternative<typename instruction1::FIM>(
                      this->v())) {
-        const auto &_m = *std::get_if<typename instruction1::FIM>(&this->v());
+        const auto &[d_a0, d_a1] =
+            std::get<typename instruction1::FIM>(this->v());
         return std::make_pair(
-            (32u + (((_m.d_a0 - (2u ? _m.d_a0 % 2u : _m.d_a0)) > _m.d_a0
+            (32u + (((d_a0 - (2u ? d_a0 % 2u : d_a0)) > d_a0
                          ? 0
-                         : (_m.d_a0 - (2u ? _m.d_a0 % 2u : _m.d_a0))))),
-            (256u ? _m.d_a1 % 256u : _m.d_a1));
+                         : (d_a0 - (2u ? d_a0 % 2u : d_a0))))),
+            (256u ? d_a1 % 256u : d_a1));
       } else if (std::holds_alternative<typename instruction1::JUN>(
                      this->v())) {
-        const auto &_m = *std::get_if<typename instruction1::JUN>(&this->v());
-        return std::make_pair((64u + (256u ? _m.d_a0 / 256u : 0)),
-                              (256u ? _m.d_a0 % 256u : _m.d_a0));
+        const auto &[d_a0] = std::get<typename instruction1::JUN>(this->v());
+        return std::make_pair((64u + (256u ? d_a0 / 256u : 0)),
+                              (256u ? d_a0 % 256u : d_a0));
       } else if (std::holds_alternative<typename instruction1::LDM1>(
                      this->v())) {
-        const auto &_m = *std::get_if<typename instruction1::LDM1>(&this->v());
-        return std::make_pair((208u + (16u ? _m.d_a0 % 16u : _m.d_a0)), 0u);
+        const auto &[d_a0] = std::get<typename instruction1::LDM1>(this->v());
+        return std::make_pair((208u + (16u ? d_a0 % 16u : d_a0)), 0u);
       } else if (std::holds_alternative<typename instruction1::NOP1>(
                      this->v())) {
         return std::make_pair(0u, 0u);
@@ -236,14 +237,14 @@ struct EncodeOps {
     } else if (std::holds_alternative<typename instruction1::DAA>(i->v())) {
       return f1;
     } else if (std::holds_alternative<typename instruction1::FIM>(i->v())) {
-      const auto &_m = *std::get_if<typename instruction1::FIM>(&i->v());
-      return f2(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename instruction1::FIM>(i->v());
+      return f2(d_a0, d_a1);
     } else if (std::holds_alternative<typename instruction1::JUN>(i->v())) {
-      const auto &_m = *std::get_if<typename instruction1::JUN>(&i->v());
-      return f3(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction1::JUN>(i->v());
+      return f3(d_a0);
     } else if (std::holds_alternative<typename instruction1::LDM1>(i->v())) {
-      const auto &_m = *std::get_if<typename instruction1::LDM1>(&i->v());
-      return f4(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction1::LDM1>(i->v());
+      return f4(d_a0);
     } else if (std::holds_alternative<typename instruction1::NOP1>(i->v())) {
       return f5;
     } else if (std::holds_alternative<typename instruction1::RDM>(i->v())) {
@@ -270,14 +271,14 @@ struct EncodeOps {
     } else if (std::holds_alternative<typename instruction1::DAA>(i->v())) {
       return f1;
     } else if (std::holds_alternative<typename instruction1::FIM>(i->v())) {
-      const auto &_m = *std::get_if<typename instruction1::FIM>(&i->v());
-      return f2(_m.d_a0, _m.d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename instruction1::FIM>(i->v());
+      return f2(d_a0, d_a1);
     } else if (std::holds_alternative<typename instruction1::JUN>(i->v())) {
-      const auto &_m = *std::get_if<typename instruction1::JUN>(&i->v());
-      return f3(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction1::JUN>(i->v());
+      return f3(d_a0);
     } else if (std::holds_alternative<typename instruction1::LDM1>(i->v())) {
-      const auto &_m = *std::get_if<typename instruction1::LDM1>(&i->v());
-      return f4(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction1::LDM1>(i->v());
+      return f4(d_a0);
     } else if (std::holds_alternative<typename instruction1::NOP1>(i->v())) {
       return f5;
     } else if (std::holds_alternative<typename instruction1::RDM>(i->v())) {
@@ -345,8 +346,8 @@ struct EncodeOps {
       if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
         return std::make_pair(0u, 0u);
       } else {
-        const auto &_m = *std::get_if<typename instruction2::LDM2>(&this->v());
-        return std::make_pair(13u, (16u ? _m.d_a0 % 16u : _m.d_a0));
+        const auto &[d_a0] = std::get<typename instruction2::LDM2>(this->v());
+        return std::make_pair(13u, (16u ? d_a0 % 16u : d_a0));
       }
     }
   };
@@ -357,8 +358,8 @@ struct EncodeOps {
     if (std::holds_alternative<typename instruction2::NOP2>(i->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename instruction2::LDM2>(&i->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction2::LDM2>(i->v());
+      return f0(d_a0);
     }
   }
 
@@ -368,8 +369,8 @@ struct EncodeOps {
     if (std::holds_alternative<typename instruction2::NOP2>(i->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename instruction2::LDM2>(&i->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction2::LDM2>(i->v());
+      return f0(d_a0);
     }
   }
 
@@ -424,9 +425,8 @@ struct EncodeOps {
       if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
         return std::make_pair(0u, 0u);
       } else {
-        const auto &_m = *std::get_if<typename instruction3::LDM3>(&this->v());
-        return std::make_pair(((13u * 16u) + (16u ? _m.d_a0 % 16u : _m.d_a0)),
-                              0u);
+        const auto &[d_a0] = std::get<typename instruction3::LDM3>(this->v());
+        return std::make_pair(((13u * 16u) + (16u ? d_a0 % 16u : d_a0)), 0u);
       }
     }
   };
@@ -437,8 +437,8 @@ struct EncodeOps {
     if (std::holds_alternative<typename instruction3::NOP3>(i->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename instruction3::LDM3>(&i->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction3::LDM3>(i->v());
+      return f0(d_a0);
     }
   }
 
@@ -448,8 +448,8 @@ struct EncodeOps {
     if (std::holds_alternative<typename instruction3::NOP3>(i->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename instruction3::LDM3>(&i->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction3::LDM3>(i->v());
+      return f0(d_a0);
     }
   }
 

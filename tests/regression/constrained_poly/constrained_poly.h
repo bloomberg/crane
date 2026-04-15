@@ -72,8 +72,8 @@ struct ConstrainedPoly {
   static T2 UOption_rect(F0 &&f, const T2 f0,
                          const std::shared_ptr<UOption<T1>> &u) {
     if (std::holds_alternative<typename UOption<T1>::USome>(u->v())) {
-      const auto &_m = *std::get_if<typename UOption<T1>::USome>(&u->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename UOption<T1>::USome>(u->v());
+      return f(d_a0);
     } else {
       return f0;
     }
@@ -83,8 +83,8 @@ struct ConstrainedPoly {
   static T2 UOption_rec(F0 &&f, const T2 f0,
                         const std::shared_ptr<UOption<T1>> &u) {
     if (std::holds_alternative<typename UOption<T1>::USome>(u->v())) {
-      const auto &_m = *std::get_if<typename UOption<T1>::USome>(&u->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename UOption<T1>::USome>(u->v());
+      return f(d_a0);
     } else {
       return f0;
     }
@@ -94,8 +94,8 @@ struct ConstrainedPoly {
   static std::shared_ptr<UOption<T2>>
   uoption_map(F0 &&f, const std::shared_ptr<UOption<T1>> &o) {
     if (std::holds_alternative<typename UOption<T1>::USome>(o->v())) {
-      const auto &_m = *std::get_if<typename UOption<T1>::USome>(&o->v());
-      return UOption<T2>::usome(f(_m.d_a0));
+      const auto &[d_a0] = std::get<typename UOption<T1>::USome>(o->v());
+      return UOption<T2>::usome(f(d_a0));
     } else {
       return UOption<T2>::unone();
     }

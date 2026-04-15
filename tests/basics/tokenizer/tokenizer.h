@@ -66,8 +66,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<t_A>::nil();
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return _m.d_a1->rev()->app(List<t_A>::cons(_m.d_a0, List<t_A>::nil()));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return d_a1->rev()->app(List<t_A>::cons(d_a0, List<t_A>::nil()));
     }
   }
 
@@ -75,8 +75,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return List<t_A>::cons(_m.d_a0, _m.d_a1->app(m));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, d_a1->app(m));
     }
   }
 };
@@ -98,12 +98,11 @@ struct ToString {
     if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
       return "";
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
-      auto &&_sv = _m.d_a1;
-      if (std::holds_alternative<typename List<T1>::Nil>(_sv->v())) {
-        return sep + p(_m.d_a0);
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(d_a1->v())) {
+        return sep + p(d_a0);
       } else {
-        return sep + p(_m.d_a0) + intersperse<T1>(p, sep, _m.d_a1);
+        return sep + p(d_a0) + intersperse<T1>(p, sep, d_a1);
       }
     }
   }
@@ -114,12 +113,11 @@ struct ToString {
     if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
       return "[]";
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
-      auto &&_sv = _m.d_a1;
-      if (std::holds_alternative<typename List<T1>::Nil>(_sv->v())) {
-        return "["s + p(_m.d_a0) + "]"s;
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(d_a1->v())) {
+        return "["s + p(d_a0) + "]"s;
       } else {
-        return "["s + p(_m.d_a0) + intersperse<T1>(p, "; ", _m.d_a1) + "]"s;
+        return "["s + p(d_a0) + intersperse<T1>(p, "; ", d_a1) + "]"s;
       }
     }
   }
@@ -141,9 +139,9 @@ struct Tokenizer {
     if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
       return {};
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
-      std::vector<T1> v = list_to_vec_h<T1>(_m.d_a1);
-      v.push_back(_m.d_a0);
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      std::vector<T1> v = list_to_vec_h<T1>(d_a1);
+      v.push_back(d_a0);
       return v;
     }
   }
@@ -159,9 +157,9 @@ struct Tokenizer {
     if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
       return {};
     } else {
-      const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
-      std::vector<T2> v = list_to_vec_map_h<T1, T2>(f, _m.d_a1);
-      v.push_back(f(_m.d_a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      std::vector<T2> v = list_to_vec_map_h<T1, T2>(f, d_a1);
+      v.push_back(f(d_a0));
       return v;
     }
   }

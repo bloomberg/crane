@@ -60,8 +60,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return true;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return (f(_m.d_a0) && _m.d_a1->forallb(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (f(d_a0) && d_a1->forallb(f));
     }
   }
 };
@@ -112,13 +112,14 @@ struct InstructionCycles {
     __attribute__((pure)) unsigned int
     cycles_jcn(const std::shared_ptr<state1> &s) const {
       if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
-        const auto &_m = *std::get_if<typename instruction1::JCN1>(&this->v());
-        unsigned int c1 = (8u ? _m.d_a0 / 8u : 0);
+        const auto &[d_a0, d_a1] =
+            std::get<typename instruction1::JCN1>(this->v());
+        unsigned int c1 = (8u ? d_a0 / 8u : 0);
         unsigned int c2 =
-            (2u ? (4u ? _m.d_a0 / 4u : 0) % 2u : (4u ? _m.d_a0 / 4u : 0));
+            (2u ? (4u ? d_a0 / 4u : 0) % 2u : (4u ? d_a0 / 4u : 0));
         unsigned int c3 =
-            (2u ? (2u ? _m.d_a0 / 2u : 0) % 2u : (2u ? _m.d_a0 / 2u : 0));
-        unsigned int c4 = (2u ? _m.d_a0 % 2u : _m.d_a0);
+            (2u ? (2u ? d_a0 / 2u : 0) % 2u : (2u ? d_a0 / 2u : 0));
+        unsigned int c4 = (2u ? d_a0 % 2u : d_a0);
         bool base_cond =
             ((s->acc1 == 0u && c2 == 1u) ||
              ((s->carry1 && c3 == 1u) || (!(s->test_pin1) && c4 == 1u)));
@@ -141,8 +142,9 @@ struct InstructionCycles {
     template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
     T1 instruction1_rec(F0 &&f, const T1 f0) const {
       if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
-        const auto &_m = *std::get_if<typename instruction1::JCN1>(&this->v());
-        return f(_m.d_a0, _m.d_a1);
+        const auto &[d_a0, d_a1] =
+            std::get<typename instruction1::JCN1>(this->v());
+        return f(d_a0, d_a1);
       } else {
         return f0;
       }
@@ -151,8 +153,9 @@ struct InstructionCycles {
     template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
     T1 instruction1_rect(F0 &&f, const T1 f0) const {
       if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
-        const auto &_m = *std::get_if<typename instruction1::JCN1>(&this->v());
-        return f(_m.d_a0, _m.d_a1);
+        const auto &[d_a0, d_a1] =
+            std::get<typename instruction1::JCN1>(this->v());
+        return f(d_a0, d_a1);
       } else {
         return f0;
       }
@@ -200,8 +203,8 @@ struct InstructionCycles {
     template <typename T1, MapsTo<T1, unsigned int> F0>
     T1 instruction2_rec(F0 &&f, const T1 f0) const {
       if (std::holds_alternative<typename instruction2::JMS2>(this->v())) {
-        const auto &_m = *std::get_if<typename instruction2::JMS2>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instruction2::JMS2>(this->v());
+        return f(d_a0);
       } else {
         return f0;
       }
@@ -210,8 +213,8 @@ struct InstructionCycles {
     template <typename T1, MapsTo<T1, unsigned int> F0>
     T1 instruction2_rect(F0 &&f, const T1 f0) const {
       if (std::holds_alternative<typename instruction2::JMS2>(this->v())) {
-        const auto &_m = *std::get_if<typename instruction2::JMS2>(&this->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename instruction2::JMS2>(this->v());
+        return f(d_a0);
       } else {
         return f0;
       }
@@ -499,12 +502,12 @@ struct InstructionCycles {
     __attribute__((pure)) unsigned int
     cycles_sum(const std::shared_ptr<state5> &s) const {
       if (std::holds_alternative<typename instruction5::JCN5>(this->v())) {
-        const auto &_m = *std::get_if<typename instruction5::JCN5>(&this->v());
-        if ((8u ? _m.d_a0 / 8u : 0) == 1u) {
+        const auto &[d_a0] = std::get<typename instruction5::JCN5>(this->v());
+        if ((8u ? d_a0 / 8u : 0) == 1u) {
           return 16u;
         } else {
-          if ((s->acc5 == 0u && (2u ? (4u ? _m.d_a0 / 4u : 0) % 2u
-                                    : (4u ? _m.d_a0 / 4u : 0)) == 1u)) {
+          if ((s->acc5 == 0u &&
+               (2u ? (4u ? d_a0 / 4u : 0) % 2u : (4u ? d_a0 / 4u : 0)) == 1u)) {
             return 16u;
           } else {
             return 8u;
@@ -523,11 +526,11 @@ struct InstructionCycles {
     if (std::holds_alternative<typename instruction5::NOP5>(i->v())) {
       return f;
     } else if (std::holds_alternative<typename instruction5::JCN5>(i->v())) {
-      const auto &_m = *std::get_if<typename instruction5::JCN5>(&i->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction5::JCN5>(i->v());
+      return f0(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename instruction5::INC5>(&i->v());
-      return f1(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction5::INC5>(i->v());
+      return f1(d_a0);
     }
   }
 
@@ -538,11 +541,11 @@ struct InstructionCycles {
     if (std::holds_alternative<typename instruction5::NOP5>(i->v())) {
       return f;
     } else if (std::holds_alternative<typename instruction5::JCN5>(i->v())) {
-      const auto &_m = *std::get_if<typename instruction5::JCN5>(&i->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction5::JCN5>(i->v());
+      return f0(d_a0);
     } else {
-      const auto &_m = *std::get_if<typename instruction5::INC5>(&i->v());
-      return f1(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction5::INC5>(i->v());
+      return f1(d_a0);
     }
   }
 

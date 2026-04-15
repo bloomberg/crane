@@ -89,21 +89,21 @@ struct Tuple {
 
   template <typename T1, typename T2>
   static T1 fst(const std::shared_ptr<Prod<T1, T2>> &p) {
-    const auto &_m = *std::get_if<typename Prod<T1, T2>::Pair>(&p->v());
-    return _m.d_a0;
+    const auto &[d_a0, d_a1] = std::get<typename Prod<T1, T2>::Pair>(p->v());
+    return d_a0;
   }
 
   template <typename T1, typename T2>
   static T2 snd(const std::shared_ptr<Prod<T1, T2>> &p) {
-    const auto &_m = *std::get_if<typename Prod<T1, T2>::Pair>(&p->v());
-    return _m.d_a1;
+    const auto &[d_a0, d_a1] = std::get<typename Prod<T1, T2>::Pair>(p->v());
+    return d_a1;
   }
 
   template <typename T1, typename T2>
   static std::shared_ptr<Prod<T2, T1>>
   swap(const std::shared_ptr<Prod<T1, T2>> &p) {
-    const auto &_m = *std::get_if<typename Prod<T1, T2>::Pair>(&p->v());
-    return Prod<T2, T1>::pair(_m.d_a1, _m.d_a0);
+    const auto &[d_a0, d_a1] = std::get<typename Prod<T1, T2>::Pair>(p->v());
+    return Prod<T2, T1>::pair(d_a1, d_a0);
   }
 
   static inline const std::shared_ptr<

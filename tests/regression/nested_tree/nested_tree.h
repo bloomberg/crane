@@ -96,8 +96,8 @@ public:
     if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &_m = *std::get_if<typename List<t_A>::Cons>(&this->v());
-      return List<t_A>::cons(_m.d_a0, _m.d_a1->app(m));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, d_a1->app(m));
     }
   }
 };
@@ -150,8 +150,8 @@ struct NestedTree {
     if (std::holds_alternative<typename tree<T2>::Leaf>(t->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename tree<T2>::Node>(&t->v());
-      return f0(_m.d_a0, _m.d_a1, tree_rect<T1, T2>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename tree<T2>::Node>(t->v());
+      return f0(d_a0, d_a1, tree_rect<T1, T2>(f, f0, d_a1));
     }
   }
 
@@ -160,8 +160,8 @@ struct NestedTree {
     if (std::holds_alternative<typename tree<T2>::Leaf>(t->v())) {
       return f;
     } else {
-      const auto &_m = *std::get_if<typename tree<T2>::Node>(&t->v());
-      return f0(_m.d_a0, _m.d_a1, tree_rec<T1, T2>(f, f0, _m.d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename tree<T2>::Node>(t->v());
+      return f0(d_a0, d_a1, tree_rec<T1, T2>(f, f0, d_a1));
     }
   }
 
@@ -218,15 +218,15 @@ _flatten_tree_go(F0 &&f,
           t0->v())) {
     return List<std::shared_ptr<List<T2>>>::nil();
   } else {
-    const auto &_m =
-        *std::get_if<typename NestedTree::template tree<T1>::Node>(&t0->v());
+    const auto &[d_a0, d_a1] =
+        std::get<typename NestedTree::template tree<T1>::Node>(t0->v());
     return List<std::shared_ptr<List<T2>>>::cons(
-        f(_m.d_a0),
+        f(d_a0),
         _flatten_tree_go<T1, T2>(
             [=](std::pair<T1, T1> _x0) mutable -> std::shared_ptr<List<T2>> {
               return NestedTree::template lift<T1, T2>(f, _x0);
             },
-            _m.d_a1));
+            d_a1));
   }
 }
 

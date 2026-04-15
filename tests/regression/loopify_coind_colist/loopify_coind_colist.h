@@ -137,10 +137,11 @@ struct LoopifyCoindColist {
           return colist<T2>::conil();
         });
       } else {
-        const auto &_m = *std::get_if<typename colist<T1>::Cocons>(&l->v());
+        const auto &[d_a0, d_a1] =
+            std::get<typename colist<T1>::Cocons>(l->v());
         _result =
             colist<T2>::lazy_([=]() mutable -> std::shared_ptr<colist<T2>> {
-              return colist<T2>::cocons(f(_m.d_a0), comap<T1, T2>(f, _m.d_a1));
+              return colist<T2>::cocons(f(d_a0), comap<T1, T2>(f, d_a1));
             });
       }
     }
@@ -176,10 +177,11 @@ struct LoopifyCoindColist {
             return colist<T1>::conil();
           });
         } else {
-          const auto &_m = *std::get_if<typename colist<T1>::Cocons>(&l->v());
+          const auto &[d_a0, d_a1] =
+              std::get<typename colist<T1>::Cocons>(l->v());
           _result =
               colist<T1>::lazy_([=]() mutable -> std::shared_ptr<colist<T1>> {
-                return colist<T1>::cocons(_m.d_a0, cotake<T1>(n_, _m.d_a1));
+                return colist<T1>::cocons(d_a0, cotake<T1>(n_, d_a1));
               });
         }
       }
@@ -208,10 +210,10 @@ struct LoopifyCoindColist {
           return colist<T1>::conil();
         });
       } else {
-        const auto &_m = *std::get_if<typename List<T1>::Cons>(&l->v());
+        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
         _result =
             colist<T1>::lazy_([=]() mutable -> std::shared_ptr<colist<T1>> {
-              return colist<T1>::cocons(_m.d_a0, from_list<T1>(_m.d_a1));
+              return colist<T1>::cocons(d_a0, from_list<T1>(d_a1));
             });
       }
     }
@@ -246,16 +248,16 @@ struct LoopifyCoindColist {
           }
           _continue = false;
         } else {
-          const auto &_m =
-              *std::get_if<typename colist<T1>::Cocons>(&_loop_l->v());
-          auto _cell = List<T1>::cons(_m.d_a0, nullptr);
+          const auto &[d_a0, d_a1] =
+              std::get<typename colist<T1>::Cocons>(_loop_l->v());
+          auto _cell = List<T1>::cons(d_a0, nullptr);
           if (_last) {
             std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 = _cell;
           } else {
             _head = _cell;
           }
           _last = _cell;
-          std::shared_ptr<colist<T1>> _next_l = _m.d_a1;
+          std::shared_ptr<colist<T1>> _next_l = d_a1;
           unsigned int _next_fuel = f;
           _loop_l = std::move(_next_l);
           _loop_fuel = std::move(_next_fuel);

@@ -108,11 +108,11 @@ struct ProgramWfProp {
   static T1 instruction_rect(F0 &&f, F1 &&f0, const T1 f1,
                              const std::shared_ptr<instruction> &i) {
     if (std::holds_alternative<typename instruction::JUN>(i->v())) {
-      const auto &_m = *std::get_if<typename instruction::JUN>(&i->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction::JUN>(i->v());
+      return f(d_a0);
     } else if (std::holds_alternative<typename instruction::JMS>(i->v())) {
-      const auto &_m = *std::get_if<typename instruction::JMS>(&i->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction::JMS>(i->v());
+      return f0(d_a0);
     } else {
       return f1;
     }
@@ -123,11 +123,11 @@ struct ProgramWfProp {
   static T1 instruction_rec(F0 &&f, F1 &&f0, const T1 f1,
                             const std::shared_ptr<instruction> &i) {
     if (std::holds_alternative<typename instruction::JUN>(i->v())) {
-      const auto &_m = *std::get_if<typename instruction::JUN>(&i->v());
-      return f(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction::JUN>(i->v());
+      return f(d_a0);
     } else if (std::holds_alternative<typename instruction::JMS>(i->v())) {
-      const auto &_m = *std::get_if<typename instruction::JMS>(&i->v());
-      return f0(_m.d_a0);
+      const auto &[d_a0] = std::get<typename instruction::JMS>(i->v());
+      return f0(d_a0);
     } else {
       return f1;
     }

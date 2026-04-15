@@ -11,16 +11,16 @@ MutualIndexed::even_val(const unsigned int,
   if (std::holds_alternative<typename MutualIndexed::EvenTree::ELeaf>(t->v())) {
     return 0u;
   } else {
-    const auto &_m =
-        *std::get_if<typename MutualIndexed::EvenTree::ENode>(&t->v());
-    return _m.d_a1;
+    const auto &[d_n, d_a1, d_a2] =
+        std::get<typename MutualIndexed::EvenTree::ENode>(t->v());
+    return d_a1;
   }
 }
 
 __attribute__((pure)) unsigned int
 MutualIndexed::odd_val(const unsigned int,
                        const std::shared_ptr<MutualIndexed::OddTree> &t) {
-  const auto &_m =
-      *std::get_if<typename MutualIndexed::OddTree::ONode>(&t->v());
-  return _m.d_a1;
+  const auto &[d_n, d_a1, d_a2] =
+      std::get<typename MutualIndexed::OddTree::ONode>(t->v());
+  return d_a1;
 }

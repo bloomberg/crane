@@ -3906,12 +3906,16 @@ and ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
     Produces an {!smatch_branch} record whose body statements live directly
     in the enclosing if-block.
 
-    Field accesses use dot syntax ([_m.d_field]) because the binding is
-    a [const T&] reference obtained by dereferencing [std::get_if]:
-    [const auto& _m = *std::get_if<T>(&v)].  The reference binding is
+    Field accesses use structured bindings:
+    [const auto& [d_f0, d_f1] = std::get<T>(v)].  The reference binding is
     required so that [[=]]-capturing closures copy the struct value rather
-    than a raw pointer that could dangle after the match scope ends. *)
-and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname scrut_v =
+    than a raw pointer that could dangle after the match scope ends.
+
+    [match_i] is the match-level counter (0 for the outermost match): nested
+    matches use suffixed binding names (e.g. [d_a00], [d_a10]) to avoid
+    shadowing outer bindings. *)
+and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
+    match_i scrut_v =
   let ctor_type = ctor_type_of_match env typ cname in
   let ctor_name = ctor_struct_id_of_ref cname in
   let ctor_struct_name = Id.to_string ctor_name in
@@ -3938,19 +3942,39 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname scrut_
   tctx.match_param_counter <- saved_match_counter;
   tctx.move_dead_after <- saved_dead;
   tctx.move_owned_vars <- saved_owned;
-  (* Substitute pattern variable references with dot field accesses:
-     [var_name] → [_m.d_field].  Dot because [_m] is a [const T&] reference
-     obtained by dereferencing [std::get_if]: [const auto& _m = *get_if<T>(&v)].
-     The reference binding is critical: closures that capture [_m] via [[=]]
-     copy the referenced struct value, not a raw pointer — safe even when the
-     closure escapes the match scope. *)
+  (* Compute structured binding names for ALL constructor fields.
+     For match_i=0 the binding name equals the struct field name (e.g. [d_a0]);
+     for deeper nesting a numeric suffix avoids shadowing outer bindings
+     (e.g. [d_a00] at level 1, [d_a01] at level 2). *)
+  let suffix =
+    if match_i = 0 then "" else string_of_int (match_i - 1)
+  in
+  let tvars = get_current_type_vars () in
   let rev_ids = List.rev ids in
+  let field_bindings =
+    List.mapi
+      (fun i (_var_name, ml_ty) ->
+        let field_id = lookup_ctor_field_name ctor_struct_name i in
+        let binding_name =
+          Id.of_string (Id.to_string field_id ^ suffix)
+        in
+        let cpp_ty =
+          convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty
+        in
+        (binding_name, cpp_ty))
+      rev_ids
+  in
+  (* Substitute pattern variable references with the structured-binding
+     names: [var_name] → [CPPvar binding_name].  The binding name is
+     the struct field name (optionally suffixed for nesting depth).
+     Closures that capture the binding via [[=]] copy the value, keeping
+     the same safety guarantees as the old [const T&] approach. *)
   let body_stmts =
     List.fold_left
       (fun stmts (i, (var_name, _ty)) ->
         if List.nth dummies i then
-          let field_id = lookup_ctor_field_name ctor_struct_name i in
-          let field_expr = CPPget (CPPvar sname, field_id) in
+          let binding_name = fst (List.nth field_bindings i) in
+          let field_expr = CPPvar binding_name in
           List.map (local_var_subst_stmt var_name field_expr) stmts
         else
           stmts )
@@ -3963,6 +3987,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname scrut_
   { smb_scrutinee = scrut_v;
     smb_ctor_type = ctor_type;
     smb_var = (if has_used_fields then Some sname else None);
+    smb_field_bindings = (if has_used_fields then field_bindings else []);
     smb_extra_conds = [];
     smb_body = body_stmts }
 
@@ -4144,7 +4169,8 @@ and gen_cpp_case (typ : ml_type) t env pv =
             ids
         in
         let br =
-          gen_match_branch env' typ rty r ids' dummies body sname scrut_v
+          gen_match_branch env' typ rty r ids' dummies body sname
+            match_i scrut_v
         in
         tctx.env_types <- saved_env_types;
         let rest, wild = gen_branches cs in
@@ -4274,6 +4300,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
           { smb_scrutinee = scrut_v;
             smb_ctor_type = reuse_ctor_type;
             smb_var = None;
+            smb_field_bindings = [];
             smb_extra_conds = [use_count_cond];
             smb_body = reuse_body }
         in

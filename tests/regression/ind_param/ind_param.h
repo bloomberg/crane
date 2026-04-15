@@ -73,11 +73,11 @@ struct IndParam {
               MapsTo<T1, unsigned int> F1>
     static T1 result_rect(F0 &&f, F1 &&f0, const std::shared_ptr<result> &r) {
       if (std::holds_alternative<typename result::Ok>(r->v())) {
-        const auto &_m = *std::get_if<typename result::Ok>(&r->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename result::Ok>(r->v());
+        return f(d_a0);
       } else {
-        const auto &_m = *std::get_if<typename result::Err>(&r->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename result::Err>(r->v());
+        return f0(d_a0);
       }
     }
 
@@ -85,11 +85,11 @@ struct IndParam {
               MapsTo<T1, unsigned int> F1>
     static T1 result_rec(F0 &&f, F1 &&f0, const std::shared_ptr<result> &r) {
       if (std::holds_alternative<typename result::Ok>(r->v())) {
-        const auto &_m = *std::get_if<typename result::Ok>(&r->v());
-        return f(_m.d_a0);
+        const auto &[d_a0] = std::get<typename result::Ok>(r->v());
+        return f(d_a0);
       } else {
-        const auto &_m = *std::get_if<typename result::Err>(&r->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename result::Err>(r->v());
+        return f0(d_a0);
       }
     }
 
@@ -105,8 +105,8 @@ struct IndParam {
     __attribute__((pure)) static unsigned int
     get_size(const std::shared_ptr<result> &r) {
       if (std::holds_alternative<typename result::Ok>(r->v())) {
-        const auto &_m = *std::get_if<typename result::Ok>(&r->v());
-        return C::size(_m.d_a0);
+        const auto &[d_a0] = std::get<typename result::Ok>(r->v());
+        return C::size(d_a0);
       } else {
         return 0u;
       }
@@ -177,11 +177,11 @@ struct IndParam {
       if (std::holds_alternative<typename t::Empty>(t0->v())) {
         return f;
       } else if (std::holds_alternative<typename t::Single>(t0->v())) {
-        const auto &_m = *std::get_if<typename t::Single>(&t0->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename t::Single>(t0->v());
+        return f0(d_a0);
       } else {
-        const auto &_m = *std::get_if<typename t::Pair>(&t0->v());
-        return f1(_m.d_a0, _m.d_a1);
+        const auto &[d_a0, d_a1] = std::get<typename t::Pair>(t0->v());
+        return f1(d_a0, d_a1);
       }
     }
 
@@ -192,11 +192,11 @@ struct IndParam {
       if (std::holds_alternative<typename t::Empty>(t0->v())) {
         return f;
       } else if (std::holds_alternative<typename t::Single>(t0->v())) {
-        const auto &_m = *std::get_if<typename t::Single>(&t0->v());
-        return f0(_m.d_a0);
+        const auto &[d_a0] = std::get<typename t::Single>(t0->v());
+        return f0(d_a0);
       } else {
-        const auto &_m = *std::get_if<typename t::Pair>(&t0->v());
-        return f1(_m.d_a0, _m.d_a1);
+        const auto &[d_a0, d_a1] = std::get<typename t::Pair>(t0->v());
+        return f1(d_a0, d_a1);
       }
     }
 
