@@ -80,3 +80,14 @@
   (action (run ./shared_uptr_escape.t.exe))))
 
 
+
+(subdir name_clash_iife_this
+ (rule
+  (targets name_clash_iife_this.t.exe)
+  (deps NameClashIifeThis.vo name_clash_iife_this.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} name_clash_iife_this.t.exe name_clash_iife_this.cpp name_clash_iife_this.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps name_clash_iife_this.t.exe)
+  (action (run ./name_clash_iife_this.t.exe))))
