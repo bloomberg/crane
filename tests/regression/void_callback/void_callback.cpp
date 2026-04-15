@@ -16,7 +16,7 @@ void VoidCallback::test_for_each_m() {
   for_each_m(
       [](const unsigned int) {
         std::cout << "item"s << '\n';
-        return;
+        return std::monostate{};
       },
       List<unsigned int>::cons(
           1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())));

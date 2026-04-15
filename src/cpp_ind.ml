@@ -260,13 +260,16 @@ let pp_cpp_ind_header kn ind =
       (* First, collect all type aliases (Dtype) defined in the same module.
          These are types like `priqueue := list tree` that become `using`
          declarations. Methods on nested inductives can't reference these
-         (visibility issue). *)
+         (visibility issue).  Inline-custom types (Crane Extract Inlined Constant)
+         also produce Dtype entries but are not real C++ type aliases — exclude
+         them so they don't spuriously block method candidates. *)
       let module_type_aliases = ref [] in
       List.iter
         (fun (_l, se) ->
           match se with
           | SEdecl (Dtype (r, _, _))
-            when ModPath.equal (modpath_of_r r) ind_modpath ->
+            when ModPath.equal (modpath_of_r r) ind_modpath
+              && not (is_any_inline_custom r) ->
             module_type_aliases := r :: !module_type_aliases
           | _ -> () )
         !current_structure_decls;

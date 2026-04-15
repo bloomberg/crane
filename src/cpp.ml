@@ -466,8 +466,14 @@ let rec pp_structure_elem ~is_header f = function
           List.iter
             (fun (_l, se) ->
               match se with
+              (* Collect type aliases from this module for visibility filtering.
+                 Exclude inline-custom types (e.g. Crane Extract Inlined Constant):
+                 they produce Dtype entries but are not real C++ types, so including
+                 them would incorrectly block methods whose signatures reference
+                 the inlined name (e.g. 'Pair' in the skiplist extraction). *)
               | SEdecl (Dtype (r, _, _))
-                when ModPath.equal (modpath_of_r r) epon_modpath ->
+                when ModPath.equal (modpath_of_r r) epon_modpath
+                  && not (is_any_inline_custom r) ->
                 module_type_aliases := r :: !module_type_aliases
               | _ -> () )
             sel;

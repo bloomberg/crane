@@ -73,7 +73,7 @@ void MonadicVoidEdge::test_apply_effect() {
   apply_effect(
       [](const unsigned int) {
         std::cout << "applied"s << '\n';
-        return;
+        return std::monostate{};
       },
       5u);
   return;

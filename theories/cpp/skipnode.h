@@ -7,38 +7,41 @@
 #ifndef SKIPNODE_H
 #define SKIPNODE_H
 
-#include <array>
 #include <memory>
 #include <optional>
-#include <mini_stm.h>
+#include <vector>
+#include <stm_adapter.h>
 
 // Maximum levels must match SkipList.v's maxLevels
 constexpr unsigned int MAX_LEVELS = 16;
 
+/// SkipNode: a single node in the STM-based skip list.
+///
+/// Each node has a key, a transactional value, and a vector of forward pointers
+/// (one per level).  Forward pointers are TVar<NodePtr> so that concurrent
+/// transactions can safely read/write the list structure via the STM adapter.
+///
+/// We use std::vector<TVar<NodePtr>> rather than std::array because crane-stm's
+/// TVar has no default constructor (it requires an initial value).  All
+/// MAX_LEVELS entries are initialized to nullptr so that any level can be
+/// accessed without bounds-checking in the extracted code.
 template <typename K, typename V>
 struct SkipNode {
     using NodePtr = std::shared_ptr<SkipNode<K, V>>;
-    using ForwardPtr = std::shared_ptr<stm::TVar<NodePtr>>;
 
     K key;
-    std::shared_ptr<stm::TVar<V>> value;
-    // Fixed-size array avoids heap allocation for the vector
-    std::array<ForwardPtr, MAX_LEVELS> forward;
+    stm::TVar<V> value;
+    std::vector<stm::TVar<NodePtr>> forward;
     unsigned int level;
 
     SkipNode(K k, V v, unsigned int lvl)
         : key(std::move(k))
-        , value(stm::newTVar<V>(std::move(v)))
-        , forward{}  // Zero-initialize all pointers to nullptr
+        , value(std::move(v))
         , level(lvl)
     {
-        // Create forward pointers for ALL levels (0 to MAX_LEVELS-1).
-        // This is necessary because operations like removeAll may access
-        // any level of a node, expecting a valid TVar (even if it points
-        // to nullptr). Without this, accessing uninitialized levels would
-        // dereference a null TVar pointer and crash.
+        forward.reserve(MAX_LEVELS);
         for (unsigned int i = 0; i < MAX_LEVELS; ++i) {
-            forward[i] = stm::newTVar<NodePtr>(nullptr);
+            forward.emplace_back(stm::TVar<NodePtr>(nullptr));
         }
     }
 

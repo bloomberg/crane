@@ -16,7 +16,7 @@ void EffectHigherOrder::greet_all(
   for_each_str(
       [](const std::string name) {
         std::cout << "Hello, "s + name << '\n';
-        return;
+        return std::monostate{};
       },
       names);
   return;

@@ -659,17 +659,24 @@ let with_escape_analysis body f =
   let saved_owned = tctx.move_owned_vars in
   let saved_nparams = tctx.move_n_params in
   let saved_match_counter = tctx.match_param_counter in
+  let saved_return_type = tctx.current_cpp_return_type in
   tctx.current_letin_depth <- 0;
   tctx.move_dead_after <- Escape.IntSet.empty;
   tctx.move_owned_vars <- Escape.IntSet.empty;
   tctx.move_n_params <- 0;
   tctx.match_param_counter <- 0;
+  (* Prevent void optimization from leaking into IIFE/lambda bodies: when the
+     outer function returns void, gen_stmts generates bare 'return;' for tt,
+     but IIFE bodies return their own type (e.g. monostate), not void. *)
+  ( if tctx.current_cpp_return_type = Some Tvoid then
+      tctx.current_cpp_return_type <- None );
   let result = f () in
   tctx.current_letin_depth <- saved_depth;
   tctx.move_dead_after <- saved_dead;
   tctx.move_owned_vars <- saved_owned;
   tctx.move_n_params <- saved_nparams;
   tctx.match_param_counter <- saved_match_counter;
+  tctx.current_cpp_return_type <- saved_return_type;
   result
 
 (* ============================================================================
@@ -2775,7 +2782,14 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     tctx.in_constructor_expr <- saved_in_ctor_cons;
     cons_result
   | MLcase (typ, t, pv) when is_custom_match pv ->
+    (* Custom match in expression position becomes an IIFE.  Save/restore
+       current_cpp_return_type so the void optimization (bare 'return;')
+       does not leak into the IIFE body, which has its own return type. *)
+    let saved_return_type = tctx.current_cpp_return_type in
+    ( if tctx.current_cpp_return_type = Some Tvoid then
+        tctx.current_cpp_return_type <- None );
     let cexp = gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv in
+    tctx.current_cpp_return_type <- saved_return_type;
     let tvars = get_current_type_vars () in
     let iife_ret =
       let branch_rty =
@@ -4051,7 +4065,13 @@ and gen_cpp_case (typ : ml_type) t env pv =
         let ctor_name =
           Id.of_string (Common.enum_ctor_name (Common.pp_global_name Type r))
         in
+        (* Enum branch body is an IIFE — clear void return type so branches
+           produce 'return <expr>;' rather than bare 'return;'. *)
+        let saved_return_type = tctx.current_cpp_return_type in
+        ( if tctx.current_cpp_return_type = Some Tvoid then
+            tctx.current_cpp_return_type <- None );
         let body_stmts = gen_stmts env' (fun x -> Sreturn (Some x)) body in
+        tctx.current_cpp_return_type <- saved_return_type;
         (ctor_name, body_stmts) :: gen_enum_branches cs
       | Pwild | Prel _ | Ptuple _ -> gen_enum_branches cs
     in
@@ -4062,7 +4082,13 @@ and gen_cpp_case (typ : ml_type) t env pv =
       in
       match wild_br with
       | Some (_, _, _, body) ->
-        Some (gen_stmts env (fun x -> Sreturn (Some x)) body)
+        (* Same void-optimization guard as the enum case branches above. *)
+        let saved_return_type = tctx.current_cpp_return_type in
+        ( if tctx.current_cpp_return_type = Some Tvoid then
+            tctx.current_cpp_return_type <- None );
+        let result = gen_stmts env (fun x -> Sreturn (Some x)) body in
+        tctx.current_cpp_return_type <- saved_return_type;
+        Some result
       | None -> None
     in
     let branches = gen_enum_branches (Array.to_list pv) in
@@ -4141,7 +4167,12 @@ and gen_cpp_case (typ : ml_type) t env pv =
           br :: gen_cases cs
         | Pwild | Prel _ ->
           let tvars = get_current_type_vars () in
+          (* Wildcard branch in a variant match IIFE — guard against void leak. *)
+          let saved_return_type = tctx.current_cpp_return_type in
+          ( if tctx.current_cpp_return_type = Some Tvoid then
+              tctx.current_cpp_return_type <- None );
           let body_stmts = gen_stmts env (fun x -> Sreturn (Some x)) t in
+          tctx.current_cpp_return_type <- saved_return_type;
           let ret = convert_ml_type_to_cpp_type env Refset'.empty tvars rty in
           let ret =
             match ret with
@@ -5104,9 +5135,15 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         let lam_param_ids, lam_env = push_vars' param_ids env in
         tctx.env_types <- saved_env_types;
         push_env_types lam_param_ids;
+        (* Lambda bodies have their own return type; clear the enclosing
+           function's void flag to avoid bare 'return;' inside the lambda. *)
+        let saved_return_type = tctx.current_cpp_return_type in
+        ( if tctx.current_cpp_return_type = Some Tvoid then
+            tctx.current_cpp_return_type <- None );
         let compiled_body =
           gen_stmts lam_env (fun x -> Sreturn (Some x)) body
         in
+        tctx.current_cpp_return_type <- saved_return_type;
         tctx.env_types <- saved_env_types;
         set_current_type_vars saved_tvars;
 

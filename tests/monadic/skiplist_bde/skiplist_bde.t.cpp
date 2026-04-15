@@ -4089,7 +4089,7 @@ public:
   // CREATORS
 
   /// Creator.
-  explicit SimpleScheduler(bslma::Allocator *basicAllocator = 0)
+  explicit SimpleScheduler(bslma::Allocator * /* basicAllocator */ = 0)
       : d_list() // UNIMPLEMENTED: Allocator parameter not supported
         ,
         d_startBarrier(2), d_doneFlag(false) {
@@ -5060,8 +5060,8 @@ inline int ThrashFunctor::dataForKey(int key) {
   return (key & ~k_VALUES_UPDATE_TOGGLE) + 10;
 }
 
-inline int ThrashFunctor::cmpKeyAndData(Obj *list, const Pair *h, int key,
-                                        bool flatten) {
+inline int ThrashFunctor::cmpKeyAndData(Obj * /* list */, const Pair * /* h */, int /* key */,
+                                        bool /* flatten */) {
   // UNIMPLEMENTED: list->key() and list->data() with Pair* not supported
   // Using PairHandle accessors instead
   return -1; // Stub implementation
@@ -5093,7 +5093,7 @@ int ThrashFunctor::addRand() {
   int level;
   int data;
   u::AddMode mode;
-  int oldMaxLevel;
+  int oldMaxLevel [[maybe_unused]];
 
   int ii;
   for (ii = 0; ii < k_LIMIT; ++ii) {
@@ -6206,7 +6206,7 @@ int main(int argc, char *argv[]) {
       cout << "DELIBERATELY LEAK A NODE\n"
               "========================\n";
 
-    bool leak = false;
+    bool leak [[maybe_unused]] = false;
     if (verbose) {
       const bsl::string cmd = argv[2];
       if (cmd == "leak") {
@@ -6290,7 +6290,7 @@ int main(int argc, char *argv[]) {
       P(periods);
     }
 
-    int secondsToRun = 8;
+    int secondsToRun [[maybe_unused]] = 8;
     if (veryVerbose) {
       secondsToRun = bsl::atoi(argv[3]);
     }
@@ -6369,7 +6369,7 @@ int main(int argc, char *argv[]) {
       periods = bsl::atoi(argv[2]);
     }
 
-    int secondsToRun = 8;
+    int secondsToRun [[maybe_unused]] = 8;
     if (veryVerbose) {
       secondsToRun = bsl::atoi(argv[3]);
     }

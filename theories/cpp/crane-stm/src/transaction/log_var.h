@@ -66,7 +66,13 @@ public:
             if constexpr (std::is_same_v<V, stm::detail::Read> ||
                           std::is_same_v<V, stm::detail::Write> ||
                           std::is_same_v<V, ReadWrite>) {
-                result = std::move(v.value);
+                // Copy (not move!) the value: the log entry must retain its
+                // value for subsequent reads within the same transaction and
+                // for the commit consistency check.  Moving here would leave
+                // a null ArcAny, causing a null-dereference on the next read
+                // of the same TVar (e.g. readTVar(pred->forward[0]) called
+                // twice during skip list insert).
+                result = v.value;
             } else if constexpr (std::is_same_v<V, ReadObsoleteWrite>) {
                 result = v.value;
                 // Upgrade to ReadWrite (move value since variant is being replaced)

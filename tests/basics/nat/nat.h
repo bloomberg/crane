@@ -51,16 +51,6 @@ public:
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  /// Convert a Peano nat to a machine int.
-  __attribute__((pure)) int nat_to_int() const {
-    return std::visit(
-        Overloaded{[](const typename Nat::O &) -> int { return 0; },
-                   [](const typename Nat::S &_args) -> int {
-                     return 1 + _args.d_n->nat_to_int();
-                   }},
-        this->v());
-  }
-
   template <typename T1, MapsTo<T1, std::shared_ptr<Nat>, T1> F1>
   T1 nat_rec(const T1 f, F1 &&f0) const {
     return std::visit(
@@ -91,6 +81,16 @@ public:
             [&](const typename Nat::S &_args) -> std::shared_ptr<Nat> {
               return Nat::s(_args.d_n->add(n));
             }},
+        this->v());
+  }
+
+  /// Convert a Peano nat to a machine int.
+  __attribute__((pure)) int nat_to_int() const {
+    return std::visit(
+        Overloaded{[](const typename Nat::O &) -> int { return 0; },
+                   [](const typename Nat::S &_args) -> int {
+                     return 1 + _args.d_n->nat_to_int();
+                   }},
         this->v());
   }
 };

@@ -13,27 +13,6 @@
  (flags (:standard -output-directory ../../tests/wip)))
 
 
-(subdir skiplist_bde
- (rule
-  (targets skiplist_bde.t.exe)
-  (deps SkipList.vo skiplist_bde.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-bde.sh %{project_root} skiplist_bde.t.exe skiplist_bde.cpp skiplist_bde.t.cpp)))
- (rule
-  (alias runtest)
-  (deps skiplist_bde.t.exe)
-  (action (run ./skiplist_bde.t.exe))))
-
-(subdir skiplist
- (rule
-  (targets skiplist.t.exe)
-  (deps SkipList.vo skiplist.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} skiplist.t.exe skiplist.cpp skiplist.t.cpp)))
- (rule
-  (alias runtest)
-  (deps skiplist.t.exe)
-  (action (run ./skiplist.t.exe))))
 
 (subdir z_abs_min
  (rule
@@ -78,5 +57,16 @@
   (alias runtest)
   (deps shared_uptr_escape.t.exe)
   (action (run ./shared_uptr_escape.t.exe))))
+
+(subdir imported_alias_qualification
+ (rule
+  (targets alias_probe.t.exe)
+  (deps AliasProbe.vo alias_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_probe.t.exe alias_probe.cpp alias_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps alias_probe.t.exe)
+  (action (run ./alias_probe.t.exe))))
 
 

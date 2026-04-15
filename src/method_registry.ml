@@ -449,11 +449,15 @@ let register_methods_for_epon
 let register_methods_for_all_inductives tbl cands ind_refs decls =
   (* Collect type aliases (Dtype) defined in this module. Methods on nested
      inductives can't reference these because the type alias may not be
-     visible from inside the inductive's struct definition. *)
+     visible from inside the inductive's struct definition.  Inline-custom
+     types (Crane Extract Inlined Constant) are excluded: they generate Dtype
+     entries but expand to inline C++ code, so they don't create real type
+     aliases that would cause visibility problems. *)
   let module_type_aliases =
     List.filter_map (fun (_l, se) ->
       match se with
-      | SEdecl (Dtype (r, _, _)) -> Some r
+      | SEdecl (Dtype (r, _, _))
+        when not (Table.is_any_inline_custom r) -> Some r
       | _ -> None
     ) decls
   in

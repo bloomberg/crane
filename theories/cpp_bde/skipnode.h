@@ -7,42 +7,46 @@
 #ifndef SKIPNODE_H
 #define SKIPNODE_H
 
-#include <bsl_array.h>
 #include <bsl_memory.h>
 #include <bsl_optional.h>
-#include <mini_stm.h>
+#include <bsl_vector.h>
+#include <stm_adapter.h>
 
 // Maximum levels must match SkipList.v's maxLevels
 constexpr unsigned int MAX_LEVELS = 16;
 
+/// SkipNode: a single node in the STM-based skip list (BDE flavor).
+///
+/// Each node stores a key, a transactional value, and a vector of forward
+/// pointers (one per level, up to MAX_LEVELS).  All forward pointers are
+/// stm::TVar<NodePtr> so concurrent transactions can read/write the list
+/// structure safely through the STM adapter.
+///
+/// bsl::vector is used instead of bsl::array because crane-stm's TVar
+/// requires an initial value and has no default constructor.  All MAX_LEVELS
+/// entries are pre-initialized to nullptr so extracted code can access any
+/// level without bounds-checking.
 template <typename K, typename V>
 struct SkipNode {
     using NodePtr = bsl::shared_ptr<SkipNode<K, V>>;
-    using ForwardPtr = bsl::shared_ptr<stm::TVar<NodePtr>>;
 
     K key;
-    bsl::shared_ptr<stm::TVar<V>> value;
-    // Fixed-size array avoids heap allocation for the vector
-    bsl::array<ForwardPtr, MAX_LEVELS> forward;
+    stm::TVar<V> value;
+    bsl::vector<stm::TVar<NodePtr>> forward;
     unsigned int level;
 
     SkipNode(K k, V v, unsigned int lvl)
         : key(bsl::move(k))
-        , value(stm::newTVar<V>(bsl::move(v)))
-        , forward{}  // Zero-initialize all pointers to nullptr
+        , value(bsl::move(v))
         , level(lvl)
     {
-        // Create forward pointers for ALL levels (0 to MAX_LEVELS-1).
-        // This is necessary because operations like removeAll may access
-        // any level of a node, expecting a valid TVar (even if it points
-        // to nullptr). Without this, accessing uninitialized levels would
-        // dereference a null TVar pointer and crash.
+        forward.reserve(MAX_LEVELS);
         for (unsigned int i = 0; i < MAX_LEVELS; ++i) {
-            forward[i] = stm::newTVar<NodePtr>(nullptr);
+            forward.emplace_back(stm::TVar<NodePtr>(nullptr));
         }
     }
 
-    // Factory method that returns a shared_ptr to a new node
+    /// Factory: returns a heap-allocated node wrapped in bsl::shared_ptr.
     static NodePtr create(K k, V v, unsigned int lvl) {
         return bsl::make_shared<SkipNode<K, V>>(bsl::move(k), bsl::move(v), lvl);
     }

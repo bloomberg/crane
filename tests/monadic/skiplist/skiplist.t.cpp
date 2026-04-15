@@ -11,7 +11,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
-#include <mini_stm.h>
+#include <stm_adapter.h>
 #include <optional>
 #include <random>
 #include <skiplist.h>
@@ -287,7 +287,7 @@ bool test_concurrent_mixed_operations() {
   std::vector<std::thread> threads;
 
   for (int t = 0; t < NUM_THREADS; t++) {
-    threads.emplace_back([&sl, t, &failed]() {
+    threads.emplace_back([&sl, &failed]() {
       for (int i = 0; i < OPS_PER_THREAD; i++) {
         try {
           int op = thread_safe_rand() % 4;
@@ -600,7 +600,7 @@ int main(int argc, char *argv[]) {
       auto start = timer();
       std::vector<std::thread> threads;
       for (int t = 0; t < NUM_THREADS; t++) {
-        threads.emplace_back([&sl, t, ITEMS_PER_THREAD]() {
+        threads.emplace_back([&sl, t]() {
           std::mt19937 rng(t); // Thread-local RNG
           for (int i = 0; i < ITEMS_PER_THREAD; i++) {
             unsigned int key = t * ITEMS_PER_THREAD + i;
@@ -637,7 +637,7 @@ int main(int argc, char *argv[]) {
       auto start = timer();
       std::vector<std::thread> threads;
       for (int t = 0; t < NUM_THREADS; t++) {
-        threads.emplace_back([&sl, OPS_PER_THREAD, SMALL_N]() {
+        threads.emplace_back([&sl]() {
           for (int i = 0; i < OPS_PER_THREAD; i++) {
             stm::atomically([&] {
               sl->lookup(nat_lt, nat_eq, (unsigned int)(i % SMALL_N));
@@ -674,7 +674,7 @@ int main(int argc, char *argv[]) {
 
       // 2 writer threads
       for (int t = 0; t < 2; t++) {
-        threads.emplace_back([&sl, t, OPS_PER_THREAD]() {
+        threads.emplace_back([&sl, t]() {
           std::mt19937 rng(100 + t);
           for (int i = 0; i < OPS_PER_THREAD; i++) {
             unsigned int key = 1000 + t * OPS_PER_THREAD + i;
@@ -687,7 +687,7 @@ int main(int argc, char *argv[]) {
 
       // 2 reader threads
       for (int t = 0; t < 2; t++) {
-        threads.emplace_back([&sl, OPS_PER_THREAD]() {
+        threads.emplace_back([&sl]() {
           for (int i = 0; i < OPS_PER_THREAD; i++) {
             stm::atomically(
                 [&] { sl->member(nat_lt, nat_eq, (unsigned int)(i % 100)); });

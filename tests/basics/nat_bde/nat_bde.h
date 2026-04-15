@@ -52,14 +52,6 @@ public:
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
-  __attribute__((pure)) int nat_to_int() const {
-    return bsl::visit(
-        bdlf::Overloaded{[](const typename Nat::O &) -> int { return 0; },
-                         [](const typename Nat::S &_args) -> int {
-                           return 1 + _args.d_n->nat_to_int();
-                         }},
-        this->v());
-  }
   template <typename T1, MapsTo<T1, bsl::shared_ptr<Nat>, T1> F1>
   T1 nat_rec(const T1 f, F1 &&f0) const {
     return bsl::visit(
@@ -87,6 +79,14 @@ public:
             [&](const typename Nat::S &_args) -> bsl::shared_ptr<Nat> {
               return Nat::s(_args.d_n->add(n));
             }},
+        this->v());
+  }
+  __attribute__((pure)) int nat_to_int() const {
+    return bsl::visit(
+        bdlf::Overloaded{[](const typename Nat::O &) -> int { return 0; },
+                         [](const typename Nat::S &_args) -> int {
+                           return 1 + _args.d_n->nat_to_int();
+                         }},
         this->v());
   }
 };
