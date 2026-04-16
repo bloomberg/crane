@@ -342,7 +342,7 @@ struct LoopifyTrees {
 
     t_A rightmost(const t_A default0) const {
       t_A _result;
-      tree *_loop_self = this;
+      const tree *_loop_self = this;
       bool _continue = true;
       while (_continue) {
         if (std::holds_alternative<typename tree<t_A>::Leaf>(_loop_self->v())) {
@@ -365,7 +365,7 @@ struct LoopifyTrees {
     /// leftmost/rightmost finds edge values.
     t_A leftmost(const t_A default0) const {
       t_A _result;
-      tree *_loop_self = this;
+      const tree *_loop_self = this;
       bool _continue = true;
       while (_continue) {
         if (std::holds_alternative<typename tree<t_A>::Leaf>(_loop_self->v())) {

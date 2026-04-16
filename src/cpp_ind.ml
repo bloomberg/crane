@@ -314,7 +314,10 @@ let pp_cpp_ind_header kn ind =
             if same_module r && not (refs_excluded ty) then (
               match Method_registry.find_epon_arg_pos ind_ref ty with
               | Some (pos, ind_tvar_positions)
-                when Method_registry.body_safe_for_method ~this_pos:pos body ->
+                when Method_registry.body_safe_for_method ~this_pos:pos
+                       ~ret_has_shared_epon:
+                         (Method_registry.ml_return_type_has_ref ind_ref ty)
+                       body ->
                 methods := (r, body, ty, pos) :: !methods;
                 register_method r ind_ref pos ~ind_tvar_positions ();
                 Method_registry.add_candidate
@@ -332,7 +335,10 @@ let pp_cpp_ind_header kn ind =
                   let body = defs.(i) in
                   match Method_registry.find_epon_arg_pos ind_ref ty with
                   | Some (pos, ind_tvar_positions)
-                    when Method_registry.body_safe_for_method ~this_pos:pos body ->
+                    when Method_registry.body_safe_for_method ~this_pos:pos
+                           ~ret_has_shared_epon:
+                             (Method_registry.ml_return_type_has_ref ind_ref ty)
+                           body ->
                     methods := (r, body, ty, pos) :: !methods;
                     register_method r ind_ref pos ~ind_tvar_positions ();
                     Method_registry.add_candidate

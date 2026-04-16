@@ -673,9 +673,14 @@ let rec strip_ref_type = function
 
 (** Strip reference types AND const modifiers from a type. Used for shadow
     variables in tail recursion, which must be mutable to support reassignment
-    in the loop body. *)
+    in the loop body.  However, [const] on a pointer pointee is preserved:
+    [const tree *] stays [const tree *] because the pointer variable itself is
+    mutable (can be reassigned), while the [const] just prevents modification
+    through the pointer — removing it would break [_loop_self = this] when
+    [this] is [const T *] in a const method. *)
 let rec strip_ref_and_const_type = function
   | Tref t -> strip_ref_and_const_type t
+  | Tmod (TMconst, Tptr _) as t -> t
   | Tmod (TMconst, t) -> strip_ref_and_const_type t
   | t -> t
 

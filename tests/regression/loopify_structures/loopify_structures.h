@@ -819,7 +819,7 @@ struct LoopifyStructures {
   find_first_some(const std::shared_ptr<List<std::optional<unsigned int>>> &l);
 
   /// Tree type with values in leaves.
-  struct ltree {
+  struct ltree : public std::enable_shared_from_this<ltree> {
     // TYPES
     struct LLeaf {
       unsigned int d_a0;
@@ -865,6 +865,82 @@ struct LoopifyStructures {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    /// ltree_max t1 t2 element-wise max of two leaf-trees.
+    std::shared_ptr<ltree> ltree_max(std::shared_ptr<ltree> t2) const {
+      const ltree *_self = this;
+
+      struct _Enter {
+        const ltree *_self;
+        std::shared_ptr<ltree> t2;
+      };
+
+      struct _Call1 {
+        ltree *_s0;
+        std::shared_ptr<ltree> _s1;
+        unsigned int _s2;
+      };
+
+      struct _Call2 {
+        std::shared_ptr<ltree> _s0;
+        unsigned int _s1;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      std::shared_ptr<ltree> _result{};
+      std::vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self, t2});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const ltree *_self = _f._self;
+          std::shared_ptr<ltree> t2 = _f.t2;
+          if (std::holds_alternative<typename ltree::LLeaf>(_self->v())) {
+            const auto &[d_a0] = std::get<typename ltree::LLeaf>(_self->v());
+            if (std::holds_alternative<typename ltree::LLeaf>(t2->v())) {
+              const auto &[d_a00] = std::get<typename ltree::LLeaf>(t2->v());
+              _result = ltree::lleaf([&]() -> unsigned int {
+                if (d_a0 <= d_a00) {
+                  return d_a00;
+                } else {
+                  return d_a0;
+                }
+              }());
+            } else {
+              _result = t2;
+            }
+          } else {
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename ltree::LNode>(_self->v());
+            if (std::holds_alternative<typename ltree::LLeaf>(t2->v())) {
+              _result =
+                  std::const_pointer_cast<ltree>(this->shared_from_this());
+            } else {
+              const auto &[d_a00, d_a10, d_a20] =
+                  std::get<typename ltree::LNode>(t2->v());
+              unsigned int max_val;
+              if (d_a0 <= d_a00) {
+                max_val = d_a00;
+              } else {
+                max_val = d_a0;
+              }
+              _stack.emplace_back(_Call1{d_a1.get(), d_a10, max_val});
+              _stack.emplace_back(_Enter{d_a2.get(), d_a20});
+            }
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0, _f._s1});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = ltree::lnode(_f._s1, _result, _f._s0);
+        }
+      }
+      return _result;
+    }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int, std::shared_ptr<ltree>, T1,
@@ -978,10 +1054,6 @@ struct LoopifyStructures {
       return _result;
     }
   };
-
-  /// ltree_max t1 t2 element-wise max of two leaf-trees.
-  static std::shared_ptr<ltree> ltree_max(std::shared_ptr<ltree> t1,
-                                          std::shared_ptr<ltree> t2);
 };
 
 #endif // INCLUDED_LOOPIFY_STRUCTURES

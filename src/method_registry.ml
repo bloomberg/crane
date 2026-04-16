@@ -45,6 +45,31 @@ type t = {
   candidates : (GlobRef.t, method_candidate list) Hashtbl.t;
 }
 
+(** {2 Return type helpers} *)
+
+(** Check if the return type of an ML arrow type contains [ref].
+
+    Used to determine whether [replace_return_this_stmt] will be applied during
+    method generation: when the return type contains the eponymous inductive
+    reference, the C++ return type will contain [shared_ptr], and
+    [replace_return_this_stmt] will convert [return this] to
+    [return shared_from_this()]. *)
+let ml_return_type_has_ref ref ty =
+  let rec get_return = function
+    | Miniml.Tarr (_, rest) -> get_return rest
+    | t -> t
+  in
+  let ret = get_return ty in
+  let rec contains = function
+    | Miniml.Tglob (r, args, _) ->
+      Environ.QGlobRef.equal Environ.empty_env r ref
+      || List.exists contains args
+    | Miniml.Tarr (a, b) -> contains a || contains b
+    | Miniml.Tmeta { contents = Some t } -> contains t
+    | _ -> false
+  in
+  contains ret
+
 (** {2 Body safety check} *)
 
 (** Check if a function body is safe to turn into a method.
@@ -57,6 +82,12 @@ type t = {
     converted back to [std::shared_ptr<T>], causing a compilation error.
 
     This function returns [true] if the body is safe to transform.
+
+    When [~ret_has_shared_epon] is [true], the function is considered safe even
+    if it returns [this] directly, because [replace_return_this_stmt] (in
+    [gen_single_method]) will convert [return this] to
+    [return shared_from_this()].  This flag should be set when the ML return
+    type contains the eponymous inductive wrapped in [shared_ptr].
 
     Note: we only check for DIRECT returns of the first argument. Using the
     first argument for field access (record projection), match dispatch, or
@@ -72,7 +103,7 @@ type t = {
     (common pattern for destructors) — only the branches are checked, not the
     scrutinee itself (which is obviously the first argument but is used for
     dispatch, not returned). *)
-let body_safe_for_method ?(this_pos = 0) body =
+let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
   (* Strip outer lambdas, counting them. The number of lambdas tells us the de
      Bruijn index of the outermost (first) argument: in [fun a b c -> body],
      argument [a] has index 3 inside [body]. *)
@@ -127,6 +158,7 @@ let body_safe_for_method ?(this_pos = 0) body =
            let n_bindings = List.length ids in
            returns_target n_bindings branch_body )
          branches )
+    || ret_has_shared_epon
   | MLfix (fix_idx, _, funs, _) ->
     (* Case 2: Top-level fixpoint (recursive function). Check the body of the
        fixpoint at [fix_idx]. The fixpoint array introduces [n_funs] additional
@@ -143,11 +175,12 @@ let body_safe_for_method ?(this_pos = 0) body =
              let n_bindings = List.length ids in
              returns_target (n_funs + fix_lams + n_bindings) branch_body )
            branches )
-    | _ -> not (returns_target n_funs fix_body) )
+      || ret_has_shared_epon
+    | _ -> not (returns_target n_funs fix_body) || ret_has_shared_epon )
   | _ ->
     (* Case 3: Any other body shape — check if the target appears in any tail
        position. *)
-    not (returns_target 0 inner)
+    not (returns_target 0 inner) || ret_has_shared_epon
 
 (** {2 Eponymous-type helpers} *)
 
@@ -430,7 +463,9 @@ let register_methods_for_epon
           if same_module r && not (refs_forward ty) then (
             match find_epon_arg_pos epon_ref ty with
             | Some (pos, ind_tvar_positions)
-              when body_safe_for_method ~this_pos:pos body ->
+              when body_safe_for_method ~this_pos:pos
+                     ~ret_has_shared_epon:(ml_return_type_has_ref epon_ref ty)
+                     body ->
               add_candidate r body ty pos ind_tvar_positions
             | _ -> () )
         | SEdecl (Dfix (rv, defs, typs)) ->
@@ -440,7 +475,10 @@ let register_methods_for_epon
               if same_module r && not (refs_forward typs.(i)) then
                 match find_epon_arg_pos epon_ref typs.(i) with
                 | Some (pos, ind_tvar_positions)
-                  when body_safe_for_method ~this_pos:pos defs.(i) ->
+                  when body_safe_for_method ~this_pos:pos
+                         ~ret_has_shared_epon:
+                           (ml_return_type_has_ref epon_ref typs.(i))
+                         defs.(i) ->
                   add_candidate r defs.(i) typs.(i) pos ind_tvar_positions
                 | _ -> () )
             rv
@@ -539,7 +577,9 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
       else
         match find_epon_arg_pos best_ref ty with
         | Some (pos, ind_tvar_positions)
-          when body_safe_for_method ~this_pos:pos body ->
+          when body_safe_for_method ~this_pos:pos
+                 ~ret_has_shared_epon:(ml_return_type_has_ref best_ref ty)
+                 body ->
           add_candidate best_ref r body ty pos ind_tvar_positions
         | _ -> ()
   in

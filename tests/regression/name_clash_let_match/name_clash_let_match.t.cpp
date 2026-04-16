@@ -5,9 +5,9 @@
 int main() {
   using NS = NameClashLetMatch;
 
-  // let_shadows_match: method on either
-  assert(NS::either::left(42)->let_shadows_match() == 42u);
-  assert(NS::either::right(5)->let_shadows_match() == 105u);
+  // let_shadows_match: static function
+  assert(NS::let_shadows_match(NS::either::left(42)) == 42u);
+  assert(NS::let_shadows_match(NS::either::right(5)) == 105u);
 
   // match_then_let: method on either
   assert(NS::either::left(10)->match_then_let() == 11u);

@@ -88,6 +88,12 @@ struct SharedUptrEscape {
           std::const_pointer_cast<tree>(this->shared_from_this()));
     }
 
+    /// identity: takes a tree and returns it unchanged.
+    /// The tree enters as owned and leaves as owned.
+    std::shared_ptr<tree> identity() const {
+      return std::const_pointer_cast<tree>(this->shared_from_this());
+    }
+
     __attribute__((pure)) unsigned int tree_sum() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return 0u;
@@ -127,9 +133,6 @@ struct SharedUptrEscape {
     }
   };
 
-  /// identity: takes a tree and returns it unchanged.
-  /// The tree enters as owned and leaves as owned.
-  static std::shared_ptr<tree> identity(std::shared_ptr<tree> t);
   /// BUG: Build a tree, then conditionally either return it once
   /// (unique_ptr sufficient) or duplicate it (needs shared_ptr).
   /// If escape analysis optimistically picks unique_ptr based on

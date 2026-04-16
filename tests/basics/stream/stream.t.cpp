@@ -92,7 +92,7 @@ int main() {
 
   // Test 4: nats_from creates infinite stream that doesn't diverge
   auto stream10 = NatStream::nats_from(int_to_nat(10));
-  auto ten_list = stream10->take(int_to_nat(3));
+  auto ten_list = NatStream::take(int_to_nat(3), stream10);
   auto vec10 = list_to_vec<std::shared_ptr<Nat>>(ten_list);
   ASSERT(vec10.size() == 3);
   ASSERT(nat_to_int(vec10[0]) == 10);
@@ -101,7 +101,7 @@ int main() {
 
   // Test 5: repeat creates infinite constant stream
   auto fives = NatStream::repeat<std::shared_ptr<Nat>>(int_to_nat(5));
-  auto five_list = fives->take(int_to_nat(4));
+  auto five_list = NatStream::take(int_to_nat(4), fives);
   auto vec5 = list_to_vec<std::shared_ptr<Nat>>(five_list);
   ASSERT(vec5.size() == 4);
   for (int i = 0; i < 4; i++) {
@@ -112,7 +112,7 @@ int main() {
   auto evens = NatStream::nats_from(int_to_nat(0));
   auto odds = NatStream::nats_from(int_to_nat(100));
   auto mixed = evens->interleave(odds);
-  auto mixed_list = mixed->take(int_to_nat(6));
+  auto mixed_list = NatStream::take(int_to_nat(6), mixed);
   auto vec_m = list_to_vec<std::shared_ptr<Nat>>(mixed_list);
   ASSERT(vec_m.size() == 6);
   ASSERT(nat_to_int(vec_m[0]) == 0);

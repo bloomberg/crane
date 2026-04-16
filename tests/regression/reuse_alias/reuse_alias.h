@@ -15,16 +15,17 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct ReuseAlias {
-  template <typename t_A> struct mylist {
+  struct tree {
     // TYPES
-    struct Mynil {};
+    struct Leaf {};
 
-    struct Mycons {
-      t_A d_a0;
-      std::shared_ptr<mylist<t_A>> d_a1;
+    struct Node {
+      std::shared_ptr<tree> d_a0;
+      unsigned int d_a1;
+      std::shared_ptr<tree> d_a2;
     };
 
-    using variant_t = std::variant<Mynil, Mycons>;
+    using variant_t = std::variant<Leaf, Node>;
 
   private:
     // DATA
@@ -32,23 +33,25 @@ struct ReuseAlias {
 
   public:
     // CREATORS
-    explicit mylist(Mynil _v) : d_v_(_v) {}
+    explicit tree(Leaf _v) : d_v_(_v) {}
 
-    explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
+    explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<mylist<t_A>> mynil() {
-      return std::make_shared<mylist<t_A>>(Mynil{});
+    static std::shared_ptr<tree> leaf() {
+      return std::make_shared<tree>(Leaf{});
     }
 
-    static std::shared_ptr<mylist<t_A>>
-    mycons(t_A a0, const std::shared_ptr<mylist<t_A>> &a1) {
-      return std::make_shared<mylist<t_A>>(Mycons{std::move(a0), a1});
+    static std::shared_ptr<tree> node(const std::shared_ptr<tree> &a0,
+                                      unsigned int a1,
+                                      const std::shared_ptr<tree> &a2) {
+      return std::make_shared<tree>(Node{a0, std::move(a1), a2});
     }
 
-    static std::shared_ptr<mylist<t_A>>
-    mycons(t_A a0, std::shared_ptr<mylist<t_A>> &&a1) {
-      return std::make_shared<mylist<t_A>>(
-          Mycons{std::move(a0), std::move(a1)});
+    static std::shared_ptr<tree> node(std::shared_ptr<tree> &&a0,
+                                      unsigned int a1,
+                                      std::shared_ptr<tree> &&a2) {
+      return std::make_shared<tree>(
+          Node{std::move(a0), std::move(a1), std::move(a2)});
     }
 
     // MANIPULATORS
@@ -58,67 +61,57 @@ struct ReuseAlias {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
-  static T2 mylist_rect(const T2 f, F1 &&f0,
-                        const std::shared_ptr<mylist<T1>> &m) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
+  template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
+                                std::shared_ptr<tree>, T1>
+                             F1>
+  static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m->v());
-      return f0(d_a0, d_a1, mylist_rect<T1, T2>(f, f0, d_a1));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rect<T1>(f, f0, d_a0), d_a1, d_a2,
+                tree_rect<T1>(f, f0, d_a2));
     }
   }
 
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
-  static T2 mylist_rec(const T2 f, F1 &&f0,
-                       const std::shared_ptr<mylist<T1>> &m) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
+  template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
+                                std::shared_ptr<tree>, T1>
+                             F1>
+  static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m->v());
-      return f0(d_a0, d_a1, mylist_rec<T1, T2>(f, f0, d_a1));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rec<T1>(f, f0, d_a0), d_a1, d_a2,
+                tree_rec<T1>(f, f0, d_a2));
     }
   }
 
-  template <typename T1>
   __attribute__((pure)) static unsigned int
-  length(const std::shared_ptr<mylist<T1>> &l) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(l->v())) {
-      return 0u;
-    } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l->v());
-      return (length<T1>(d_a1) + 1);
-    }
-  }
-
-  /// Increment the head — candidate for reuse optimization when use_count = 1.
-  static std::shared_ptr<mylist<unsigned int>>
-  inc_head(const std::shared_ptr<mylist<unsigned int>> &l);
-  /// Use the same list twice: once through inc_head, once directly.
-  /// If reuse fires on the first call (because evaluation order is
-  /// unspecified), the second use of l sees the already-mutated list.
-  __attribute__((pure)) static std::pair<std::shared_ptr<mylist<unsigned int>>,
-                                         std::shared_ptr<mylist<unsigned int>>>
-  double_use(std::shared_ptr<mylist<unsigned int>> l);
-  /// Pass the same list to two different functions.
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  double_call(const std::shared_ptr<mylist<unsigned int>> &l);
-  /// Alias through let-binding, then use both the alias and the original
-  /// in a match.
-  __attribute__((pure)) static std::pair<std::shared_ptr<mylist<unsigned int>>,
-                                         unsigned int>
-  alias_and_match(std::shared_ptr<mylist<unsigned int>> l);
-  /// Build a result that refers to the scrutinee AND a pattern variable
-  /// from the same match.
-  __attribute__((pure)) static std::pair<std::shared_ptr<mylist<unsigned int>>,
-                                         std::shared_ptr<mylist<unsigned int>>>
-  scrutinee_in_branch(std::shared_ptr<mylist<unsigned int>> l);
-
-  /// Chain inc_head: each call might try to reuse.
-  static std::shared_ptr<mylist<unsigned int>>
-  triple_inc(const std::shared_ptr<mylist<unsigned int>> &l);
+  tree_sum(const std::shared_ptr<tree> &t);
+  static std::shared_ptr<tree> transform_tree(const std::shared_ptr<tree> &t);
+  static inline const unsigned int reuse_fn_bug = []() {
+    std::shared_ptr<tree> t =
+        tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                   tree::node(tree::leaf(), 30u, tree::leaf()));
+    return tree_sum(transform_tree(std::move(t)));
+  }();
+  static std::shared_ptr<tree>
+  nested_match_reuse(const std::shared_ptr<tree> &t, const unsigned int flag);
+  static inline const unsigned int nested_reuse_bug = []() {
+    std::shared_ptr<tree> t =
+        tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                   tree::node(tree::leaf(), 30u, tree::leaf()));
+    return (tree_sum(nested_match_reuse(t, 0u)) +
+            tree_sum(nested_match_reuse(t, 1u)));
+  }();
+  static std::shared_ptr<tree> annotate_sum(const std::shared_ptr<tree> &t);
+  static inline const unsigned int recursive_reuse_bug = []() {
+    std::shared_ptr<tree> t =
+        tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                   tree::node(tree::leaf(), 30u, tree::leaf()));
+    return tree_sum(annotate_sum(std::move(t)));
+  }();
 };
 
 #endif // INCLUDED_REUSE_ALIAS

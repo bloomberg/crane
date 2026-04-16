@@ -62,6 +62,12 @@ struct MoveSafety {
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
+    /// TEST 4: Partial application followed by identity function
+    /// that takes by value (returns its argument).
+    std::shared_ptr<tree> tree_id() const {
+      return std::const_pointer_cast<tree>(this->shared_from_this());
+    }
+
     /// A function that stores its tree argument inside a constructor.
     /// This causes the parameter to be passed by value (it "escapes").
     std::shared_ptr<tree> wrap_tree() const {
@@ -288,9 +294,6 @@ struct MoveSafety {
       return (f(1u) + g(2u));
     }();
   }();
-  /// TEST 4: Partial application followed by identity function
-  /// that takes by value (returns its argument).
-  static std::shared_ptr<tree> tree_id(std::shared_ptr<tree> t);
   static inline const unsigned int bug_partial_then_id = []() {
     return []() {
       std::shared_ptr<tree> t =
@@ -300,7 +303,7 @@ struct MoveSafety {
           [=](unsigned int _x0) mutable -> unsigned int {
         return t->sum_values(_x0);
       };
-      std::shared_ptr<tree> t2 = tree_id(std::move(t));
+      std::shared_ptr<tree> t2 = std::move(t)->tree_id();
       if (std::holds_alternative<typename tree::Leaf>(t2->v())) {
         return f(0u);
       } else {

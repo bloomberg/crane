@@ -15,7 +15,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct DeepPattern {
-  struct tree {
+  struct tree : public std::enable_shared_from_this<tree> {
     // TYPES
     struct Leaf {
       unsigned int d_a0;
@@ -118,6 +118,10 @@ struct DeepPattern {
         const auto &[d_a0, d_a1] = std::get<typename tree::Node>(this->v());
         return (d_a0->has_value(target) || d_a1->has_value(target));
       }
+    }
+
+    std::shared_ptr<tree> as_pattern_test() const {
+      return std::const_pointer_cast<tree>(this->shared_from_this());
     }
 
     __attribute__((pure)) unsigned int wildcard_with_bindings() const {
@@ -382,7 +386,6 @@ struct DeepPattern {
 
   __attribute__((pure)) static unsigned int
   list_deep_match(const std::shared_ptr<list<std::shared_ptr<tree>>> &l);
-  static std::shared_ptr<tree> as_pattern_test(std::shared_ptr<tree> t);
   static inline const unsigned int test1 =
       tree::node(tree::leaf(1u), tree::leaf(2u))->deep_match();
   static inline const unsigned int test2 =

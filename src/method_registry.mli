@@ -172,7 +172,19 @@ val register_method_returns_any : t -> GlobRef.t -> unit
       [std::visit] on [this->v()].
     - Wrapping the argument in a constructor: [MLcons(C, [arg])] produces a new
       value. *)
-val body_safe_for_method : ?this_pos:int -> Miniml.ml_ast -> bool
+val body_safe_for_method :
+  ?this_pos:int -> ?ret_has_shared_epon:bool -> Miniml.ml_ast -> bool
+
+(** Check if the return type of an ML arrow type contains [ref].
+
+    Extracts the return type from a curried [Tarr] chain and recursively checks
+    whether [ref] appears anywhere in it (including inside type arguments).
+
+    Used at method registration call sites to determine whether
+    [replace_return_this_stmt] will convert [return this] to
+    [return shared_from_this()] — when the return type references the eponymous
+    inductive, the C++ return type will contain [shared_ptr]. *)
+val ml_return_type_has_ref : GlobRef.t -> Miniml.ml_type -> bool
 
 (** {2 Eponymous-type helpers}
 

@@ -43,8 +43,8 @@ CpuEmulator::set_pair(const std::shared_ptr<CpuEmulator::state> &s,
 std::shared_ptr<List<unsigned int>>
 CpuEmulator::push_return(const std::shared_ptr<CpuEmulator::state> &s,
                          const unsigned int ret) {
-  return ListDef::template firstn<unsigned int>(
-      2u, List<unsigned int>::cons((4096u ? ret % 4096u : ret), s->ex_stack));
+  return List<unsigned int>::cons((4096u ? ret % 4096u : ret), s->ex_stack)
+      ->firstn(2u);
 }
 
 std::shared_ptr<CpuEmulator::state>
@@ -305,7 +305,6 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
     return std::make_shared<CpuEmulator::state>(
         state{(16u ? d_d % 16u : d_d), s->ex_regs, s->ex_carry,
               ListDef::template nth<unsigned int>(0u, s->ex_stack, 0u),
-              ListDef::template skipn<unsigned int>(1u, s->ex_stack),
-              s->ex_pair_bus, s->ex_ports});
+              s->ex_stack->skipn(1u), s->ex_pair_bus, s->ex_ports});
   }
 }

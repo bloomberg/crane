@@ -506,7 +506,10 @@ let rec pp_structure_elem ~is_header f = function
               if same_module r && not (refs_excluded ty) then (
                 match Method_registry.find_epon_arg_pos epon_ref ty with
                 | Some (pos, ind_tvar_positions)
-                  when Method_registry.body_safe_for_method ~this_pos:pos body ->
+                  when Method_registry.body_safe_for_method ~this_pos:pos
+                         ~ret_has_shared_epon:
+                           (Method_registry.ml_return_type_has_ref epon_ref ty)
+                         body ->
                   method_candidates := (r, body, ty, pos) :: !method_candidates;
                   register_method r epon_ref pos ~ind_tvar_positions ();
                   Method_registry.add_candidate
@@ -522,7 +525,10 @@ let rec pp_structure_elem ~is_header f = function
                     let body = defs.(i) in
                     match Method_registry.find_epon_arg_pos epon_ref ty with
                     | Some (pos, ind_tvar_positions)
-                      when Method_registry.body_safe_for_method ~this_pos:pos body ->
+                      when Method_registry.body_safe_for_method ~this_pos:pos
+                             ~ret_has_shared_epon:
+                               (Method_registry.ml_return_type_has_ref epon_ref ty)
+                             body ->
                       method_candidates :=
                         (r, body, ty, pos) :: !method_candidates;
                       register_method r epon_ref pos ~ind_tvar_positions ();

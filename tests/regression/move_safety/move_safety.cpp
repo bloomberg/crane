@@ -17,10 +17,3 @@ MoveSafety::make_box(std::shared_ptr<MoveSafety::tree> t) {
     return t->sum_values(_x0);
   });
 }
-
-/// TEST 4: Partial application followed by identity function
-/// that takes by value (returns its argument).
-std::shared_ptr<MoveSafety::tree>
-MoveSafety::tree_id(std::shared_ptr<MoveSafety::tree> t) {
-  return t;
-}

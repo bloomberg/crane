@@ -14,7 +14,8 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-template <typename t_A> struct List {
+template <typename t_A>
+struct List : public std::enable_shared_from_this<List<t_A>> {
   // TYPES
   struct Nil {};
 
@@ -54,18 +55,42 @@ public:
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+  std::shared_ptr<List<t_A>> skipn(const unsigned int n) const {
+    if (n <= 0) {
+      return std::const_pointer_cast<List<t_A>>(this->shared_from_this());
+    } else {
+      unsigned int n0 = n - 1;
+      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+        return List<t_A>::nil();
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<t_A>::Cons>(this->v());
+        return d_a1->skipn(n0);
+      }
+    }
+  }
+
+  std::shared_ptr<List<t_A>> firstn(const unsigned int n) const {
+    if (n <= 0) {
+      return List<t_A>::nil();
+    } else {
+      unsigned int n0 = n - 1;
+      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+        return List<t_A>::nil();
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<t_A>::Cons>(this->v());
+        return List<t_A>::cons(d_a0, d_a1->firstn(n0));
+      }
+    }
+  }
 };
 
 struct ListDef {
   template <typename T1>
   static T1 nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
                 const T1 default0);
-  template <typename T1>
-  static std::shared_ptr<List<T1>> firstn(const unsigned int n,
-                                          const std::shared_ptr<List<T1>> &l);
-  template <typename T1>
-  static std::shared_ptr<List<T1>> skipn(const unsigned int n,
-                                         std::shared_ptr<List<T1>> l);
 };
 
 struct GetPairBoundProp {
@@ -651,38 +676,6 @@ T1 ListDef::nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
     } else {
       const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
       return ListDef::template nth<T1>(m, d_a10, default0);
-    }
-  }
-}
-
-template <typename T1>
-std::shared_ptr<List<T1>> ListDef::firstn(const unsigned int n,
-                                          const std::shared_ptr<List<T1>> &l) {
-  if (n <= 0) {
-    return List<T1>::nil();
-  } else {
-    unsigned int n0 = n - 1;
-    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
-      return List<T1>::nil();
-    } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
-      return List<T1>::cons(d_a0, ListDef::template firstn<T1>(n0, d_a1));
-    }
-  }
-}
-
-template <typename T1>
-std::shared_ptr<List<T1>> ListDef::skipn(const unsigned int n,
-                                         std::shared_ptr<List<T1>> l) {
-  if (n <= 0) {
-    return l;
-  } else {
-    unsigned int n0 = n - 1;
-    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
-      return List<T1>::nil();
-    } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
-      return ListDef::template skipn<T1>(n0, d_a1);
     }
   }
 }

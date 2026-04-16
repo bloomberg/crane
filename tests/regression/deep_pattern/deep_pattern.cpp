@@ -101,8 +101,3 @@ __attribute__((pure)) unsigned int DeepPattern::list_deep_match(
     }
   }
 }
-
-std::shared_ptr<DeepPattern::tree>
-DeepPattern::as_pattern_test(std::shared_ptr<DeepPattern::tree> t) {
-  return t;
-}

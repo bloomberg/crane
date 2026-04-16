@@ -28,8 +28,8 @@ int main() {
   ASSERT(LoopifyTrees::tree_sum(tree_val) == 10u);
   ASSERT(tree_val->tree_height() == 2u);
   ASSERT(tree_val->tree_size() == 3u);
-  ASSERT(LoopifyTrees::leftmost(0u, tree_val) == 5u);
-  ASSERT(LoopifyTrees::rightmost(0u, tree_val) == 3u);
+  ASSERT(tree_val->leftmost(0u) == 5u);
+  ASSERT(tree_val->rightmost(0u) == 3u);
   ASSERT(tree_val->count_leaves() == 4u);
   ASSERT(LoopifyTrees::leaf_sum(tree_val) == 8u);
   ASSERT(LoopifyTrees::sum_of_max_branches(tree_val) > 0u);

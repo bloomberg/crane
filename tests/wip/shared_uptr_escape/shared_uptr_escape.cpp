@@ -5,13 +5,6 @@
 #include <utility>
 #include <variant>
 
-/// identity: takes a tree and returns it unchanged.
-/// The tree enters as owned and leaves as owned.
-std::shared_ptr<SharedUptrEscape::tree>
-SharedUptrEscape::identity(std::shared_ptr<SharedUptrEscape::tree> t) {
-  return t;
-}
-
 /// BUG: Build a tree, then conditionally either return it once
 /// (unique_ptr sufficient) or duplicate it (needs shared_ptr).
 /// If escape analysis optimistically picks unique_ptr based on
@@ -22,7 +15,7 @@ SharedUptrEscape::conditional_share(const unsigned int flag) {
       tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                  tree::node(tree::leaf(), 30u, tree::leaf()));
   if (flag <= 0) {
-    return identity(std::move(t))->tree_sum();
+    return std::move(t)->identity()->tree_sum();
   } else {
     unsigned int _x = flag - 1;
     std::pair<std::shared_ptr<SharedUptrEscape::tree>,
