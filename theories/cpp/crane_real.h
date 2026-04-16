@@ -4,6 +4,7 @@
 #define CRANE_REAL_H
 #include <cmath>
 #include <algorithm>
+#include <sstream>
 
 class Real {
   long double v_;
@@ -41,6 +42,15 @@ public:
   friend Real r_min(Real a, Real b) { return a.v_ <= b.v_ ? a : b; }
   friend Real r_pow(Real b, unsigned int e) {
     return Real(std::pow(b.v_, static_cast<long double>(e)));
+  }
+
+  // Exponential & floor
+  friend Real r_exp(Real x) { return Real(std::exp(x.v_)); }
+  friend int64_t r_floor_z(Real x) { return static_cast<int64_t>(std::floor(x.v_)); }
+  friend std::string real_to_string(Real x) {
+    std::ostringstream oss;
+    oss << x.v_;
+    return oss.str();
   }
 
   // Constants & conversions
