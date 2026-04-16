@@ -310,18 +310,14 @@ Definition insert (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : itree s
         (if Nat.ltb curLvl newLevel then
           writeTVar (slLevel sl) newLevel
         else
-          Ret tt) ;;
-        len <- readTVar (slLength sl) ;;
-        writeTVar (slLength sl) (S len)
+          Ret tt)
   | None =>
       newN <- newNode k v newLevel ;;
       linkNode path (slHead sl) newN ;;
       (if Nat.ltb curLvl newLevel then
         writeTVar (slLevel sl) newLevel
       else
-        Ret tt) ;;
-      len <- readTVar (slLength sl) ;;
-      writeTVar (slLength sl) (S len)
+        Ret tt)
   end.
 
 (* ------------------------------------------------------------------------ *)
@@ -355,9 +351,7 @@ Definition remove (k : K) (sl : SkipList K V) : itree stmE unit :=
         curLvl <- readTVar (slLevel sl) ;;
         (* Extend path for the target node's level *)
         extendPath path (slHead sl) (S (getLevel node)) curLvl ;;
-        unlinkNode path node ;;
-        len <- readTVar (slLength sl) ;;
-        writeTVar (slLength sl) (len - 1)
+        unlinkNode path node
       else
         Ret tt
   | None => Ret tt
@@ -412,11 +406,25 @@ Definition member (k : K) (sl : SkipList K V) : itree stmE bool :=
 (* ------------------------------------------------------------------------ *)
 
 Definition isEmpty (sl : SkipList K V) : itree stmE bool :=
-  len <- readTVar (slLength sl) ;;
-  Ret (Nat.eqb len 0).
+  firstOpt <- readNext (slHead sl) 0 ;;
+  Ret (match firstOpt with None => true | Some _ => false end).
+
+(* Walk the list to count elements — O(n) but avoids a shared TVar *)
+Fixpoint length_aux (fuel : nat) (node : option (NodeRef K V)) (acc : nat) : itree stmE nat :=
+  match fuel with
+  | O => Ret acc
+  | S fuel' =>
+      match node with
+      | None => Ret acc
+      | Some n =>
+          nextOpt <- readNext n 0 ;;
+          length_aux fuel' nextOpt (S acc)
+      end
+  end.
 
 Definition length (sl : SkipList K V) : itree stmE nat :=
-  readTVar (slLength sl).
+  firstOpt <- readNext (slHead sl) 0 ;;
+  length_aux findPredFuel firstOpt 0.
 
 (* ------------------------------------------------------------------------ *)
 (*                    exists (BDE naming for member)                         *)
@@ -476,8 +484,6 @@ Definition popFront (sl : SkipList K V) : itree stmE (option (K * V)) :=
   | None => Ret None
   | Some node =>
       unlinkFirstFromHead (slHead sl) node (getLevel node) ;;
-      len <- readTVar (slLength sl) ;;
-      writeTVar (slLength sl) (len - 1) ;;
       v <- readValue node ;;
       Ret (Some (getKey node, v))
   end.
@@ -512,7 +518,6 @@ Fixpoint removeAll_aux (fuel : nat) (head : NodeRef K V) (acc : nat) : itree stm
 
 Definition removeAll (sl : SkipList K V) : itree stmE nat :=
   count <- removeAll_aux findPredFuel (slHead sl) 0 ;;
-  writeTVar (slLength sl) 0 ;;
   writeTVar (slLevel sl) 0 ;;
   Ret count.
 
@@ -537,18 +542,14 @@ Definition add (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : itree stmE
         (if Nat.ltb curLvl newLevel then
           writeTVar (slLevel sl) newLevel
         else
-          Ret tt) ;;
-        len <- readTVar (slLength sl) ;;
-        writeTVar (slLength sl) (S len)
+          Ret tt)
   | None =>
       newN <- newNode k v newLevel ;;
       linkNode path (slHead sl) newN ;;
       (if Nat.ltb curLvl newLevel then
         writeTVar (slLevel sl) newLevel
       else
-        Ret tt) ;;
-      len <- readTVar (slLength sl) ;;
-      writeTVar (slLength sl) (S len)
+        Ret tt)
   end.
 
 (* addUnique - Add only if key doesn't already exist. Returns true on success. *)
@@ -569,8 +570,6 @@ Definition addUnique (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : itre
           writeTVar (slLevel sl) newLevel
         else
           Ret tt) ;;
-        len <- readTVar (slLength sl) ;;
-        writeTVar (slLength sl) (S len) ;;
         Ret true
   | None =>
       newN <- newNode k v newLevel ;;
@@ -579,8 +578,6 @@ Definition addUnique (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : itre
         writeTVar (slLevel sl) newLevel
       else
         Ret tt) ;;
-      len <- readTVar (slLength sl) ;;
-      writeTVar (slLength sl) (S len) ;;
       Ret true
   end.
 
@@ -687,8 +684,6 @@ Definition removePair (pair : Pair K V) (sl : SkipList K V) : itree stmE bool :=
       if eqK (getKey node) k then
         extendPath path (slHead sl) (S (getLevel node)) curLvl ;;
         unlinkNode path node ;;
-        len <- readTVar (slLength sl) ;;
-        writeTVar (slLength sl) (len - 1) ;;
         Ret true
       else
         Ret false
@@ -760,8 +755,6 @@ Definition bde_add (key : K) (data : V) (sl : SkipList K V) (level : nat)
           writeTVar (slLevel sl) level
         else
           Ret tt) ;;
-        len <- readTVar (slLength sl) ;;
-        writeTVar (slLength sl) (S len) ;;
         Ret (newN, isNewFront)
   | None =>
       newN <- newNode key data level ;;
@@ -770,8 +763,6 @@ Definition bde_add (key : K) (data : V) (sl : SkipList K V) (level : nat)
         writeTVar (slLevel sl) level
       else
         Ret tt) ;;
-      len <- readTVar (slLength sl) ;;
-      writeTVar (slLength sl) (S len) ;;
       Ret (newN, isNewFront)
   end.
 
@@ -805,8 +796,6 @@ Definition bde_addUnique (key : K) (data : V) (sl : SkipList K V) (level : nat)
           writeTVar (slLevel sl) level
         else
           Ret tt) ;;
-        len <- readTVar (slLength sl) ;;
-        writeTVar (slLength sl) (S len) ;;
         Ret (e_SUCCESS, Some newN, isNewFront)
   | None =>
       newN <- newNode key data level ;;
@@ -815,8 +804,6 @@ Definition bde_addUnique (key : K) (data : V) (sl : SkipList K V) (level : nat)
         writeTVar (slLevel sl) level
       else
         Ret tt) ;;
-      len <- readTVar (slLength sl) ;;
-      writeTVar (slLength sl) (S len) ;;
       Ret (e_SUCCESS, Some newN, isNewFront)
   end.
 
@@ -874,8 +861,6 @@ Definition bde_popFront (sl : SkipList K V) : itree stmE (nat * option (Pair K V
   | None => Ret (e_NOT_FOUND, None)
   | Some node =>
       unlinkFirstFromHead (slHead sl) node (getLevel node) ;;
-      len <- readTVar (slLength sl) ;;
-      writeTVar (slLength sl) (len - 1) ;;
       Ret (e_SUCCESS, Some node)
   end.
 
