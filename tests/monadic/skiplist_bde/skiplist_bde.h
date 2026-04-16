@@ -82,12 +82,12 @@ template <typename K, typename V> struct SkipList {
             SkipNode<K, V>::create(k, v, newLevel);
         SkipList<int, int>::template linkNode<K, V>(
             path, this->SkipList::slHead, newN);
-        [&]() -> std::monostate {
+        [&]() -> void {
           if (curLvl < newLevel) {
             stm::writeTVar(this->SkipList::slLevel, newLevel);
-            return std::monostate{};
+            return;
           } else {
-            return std::monostate{};
+            return;
           }
         }();
         unsigned int len = stm::readTVar(this->SkipList::slLength);
@@ -99,12 +99,12 @@ template <typename K, typename V> struct SkipList {
           SkipNode<K, V>::create(k, v, newLevel);
       SkipList<int, int>::template linkNode<K, V>(path, this->SkipList::slHead,
                                                   newN);
-      [&]() -> std::monostate {
+      [&]() -> void {
         if (curLvl < newLevel) {
           stm::writeTVar(this->SkipList::slLevel, newLevel);
-          return std::monostate{};
+          return;
         } else {
-          return std::monostate{};
+          return;
         }
       }();
       unsigned int len = stm::readTVar(this->SkipList::slLength);
@@ -232,12 +232,12 @@ template <typename K, typename V> struct SkipList {
             SkipNode<K, V>::create(k, v, newLevel);
         SkipList<int, int>::template linkNode<K, V>(
             path, this->SkipList::slHead, newN);
-        [&]() -> std::monostate {
+        [&]() -> void {
           if (curLvl < newLevel) {
             stm::writeTVar(this->SkipList::slLevel, newLevel);
-            return std::monostate{};
+            return;
           } else {
-            return std::monostate{};
+            return;
           }
         }();
         unsigned int len = stm::readTVar(this->SkipList::slLength);
@@ -249,12 +249,12 @@ template <typename K, typename V> struct SkipList {
           SkipNode<K, V>::create(k, v, newLevel);
       SkipList<int, int>::template linkNode<K, V>(path, this->SkipList::slHead,
                                                   newN);
-      [&]() -> std::monostate {
+      [&]() -> void {
         if (curLvl < newLevel) {
           stm::writeTVar(this->SkipList::slLevel, newLevel);
-          return std::monostate{};
+          return;
         } else {
-          return std::monostate{};
+          return;
         }
       }();
       unsigned int len = stm::readTVar(this->SkipList::slLength);
@@ -281,12 +281,12 @@ template <typename K, typename V> struct SkipList {
             SkipNode<K, V>::create(k, v, newLevel);
         SkipList<int, int>::template linkNode<K, V>(
             path, this->SkipList::slHead, newN);
-        [&]() -> std::monostate {
+        [&]() -> void {
           if (curLvl < newLevel) {
             stm::writeTVar(this->SkipList::slLevel, newLevel);
-            return std::monostate{};
+            return;
           } else {
-            return std::monostate{};
+            return;
           }
         }();
         unsigned int len = stm::readTVar(this->SkipList::slLength);
@@ -298,12 +298,12 @@ template <typename K, typename V> struct SkipList {
           SkipNode<K, V>::create(k, v, newLevel);
       SkipList<int, int>::template linkNode<K, V>(path, this->SkipList::slHead,
                                                   newN);
-      [&]() -> std::monostate {
+      [&]() -> void {
         if (curLvl < newLevel) {
           stm::writeTVar(this->SkipList::slLevel, newLevel);
-          return std::monostate{};
+          return;
         } else {
-          return std::monostate{};
+          return;
         }
       }();
       unsigned int len = stm::readTVar(this->SkipList::slLength);
@@ -437,12 +437,12 @@ template <typename K, typename V> struct SkipList {
             SkipNode<K, V>::create(key0, data0, level);
         SkipList<int, int>::template linkNode<K, V>(
             path, this->SkipList::slHead, newN);
-        [&]() -> std::monostate {
+        [&]() -> void {
           if (curLvl < level) {
             stm::writeTVar(this->SkipList::slLevel, level);
-            return std::monostate{};
+            return;
           } else {
-            return std::monostate{};
+            return;
           }
         }();
         unsigned int len = stm::readTVar(this->SkipList::slLength);
@@ -454,12 +454,12 @@ template <typename K, typename V> struct SkipList {
           SkipNode<K, V>::create(key0, data0, level);
       SkipList<int, int>::template linkNode<K, V>(path, this->SkipList::slHead,
                                                   newN);
-      [&]() -> std::monostate {
+      [&]() -> void {
         if (curLvl < level) {
           stm::writeTVar(this->SkipList::slLevel, level);
-          return std::monostate{};
+          return;
         } else {
-          return std::monostate{};
+          return;
         }
       }();
       unsigned int len = stm::readTVar(this->SkipList::slLength);
@@ -502,12 +502,12 @@ template <typename K, typename V> struct SkipList {
             SkipNode<K, V>::create(key0, data0, level);
         SkipList<int, int>::template linkNode<K, V>(
             path, this->SkipList::slHead, newN);
-        [&]() -> std::monostate {
+        [&]() -> void {
           if (curLvl < level) {
             stm::writeTVar(this->SkipList::slLevel, level);
-            return std::monostate{};
+            return;
           } else {
-            return std::monostate{};
+            return;
           }
         }();
         unsigned int len = stm::readTVar(this->SkipList::slLength);
@@ -523,12 +523,12 @@ template <typename K, typename V> struct SkipList {
           SkipNode<K, V>::create(key0, data0, level);
       SkipList<int, int>::template linkNode<K, V>(path, this->SkipList::slHead,
                                                   newN);
-      [&]() -> std::monostate {
+      [&]() -> void {
         if (curLvl < level) {
           stm::writeTVar(this->SkipList::slLevel, level);
-          return std::monostate{};
+          return;
         } else {
-          return std::monostate{};
+          return;
         }
       }();
       unsigned int len = stm::readTVar(this->SkipList::slLength);
@@ -695,12 +695,10 @@ template <typename K, typename V> struct SkipList {
         if (nextOpt.has_value()) {
           bsl::shared_ptr<SkipNode<T1, T2>> next0 = *nextOpt;
           if (ltK(next0->key, target)) {
-            {
-              bsl::shared_ptr<SkipNode<T1, T2>> _next_curr = next0;
-              unsigned int _next_fuel = fuel_;
-              _loop_curr = bsl::move(_next_curr);
-              _loop_fuel = bsl::move(_next_fuel);
-            }
+            bsl::shared_ptr<SkipNode<T1, T2>> _next_curr = next0;
+            unsigned int _next_fuel = fuel_;
+            _loop_curr = bsl::move(_next_curr);
+            _loop_fuel = bsl::move(_next_fuel);
           } else {
             _result = _loop_curr;
             _continue = false;
@@ -739,12 +737,10 @@ template <typename K, typename V> struct SkipList {
         _continue = false;
       } else {
         unsigned int level_ = _loop_level - 1;
-        {
-          unsigned int _next_level = level_;
-          bsl::shared_ptr<SkipNode<T1, T2>> _next_curr = pred;
-          _loop_level = bsl::move(_next_level);
-          _loop_curr = bsl::move(_next_curr);
-        }
+        unsigned int _next_level = level_;
+        bsl::shared_ptr<SkipNode<T1, T2>> _next_curr = pred;
+        _loop_level = bsl::move(_next_level);
+        _loop_curr = bsl::move(_next_curr);
       }
     }
     return _result;
@@ -889,12 +885,10 @@ template <typename K, typename V> struct SkipList {
         }
       } else {
         unsigned int level_ = _loop_level - 1;
-        {
-          unsigned int _next_level = level_;
-          bsl::shared_ptr<SkipNode<T1, T2>> _next_curr = pred;
-          _loop_level = bsl::move(_next_level);
-          _loop_curr = bsl::move(_next_curr);
-        }
+        unsigned int _next_level = level_;
+        bsl::shared_ptr<SkipNode<T1, T2>> _next_curr = pred;
+        _loop_level = bsl::move(_next_level);
+        _loop_curr = bsl::move(_next_curr);
       }
     }
     return _result;
@@ -919,12 +913,10 @@ template <typename K, typename V> struct SkipList {
                 _loop_curr->forward[0u]));
         if (nextOpt.has_value()) {
           bsl::shared_ptr<SkipNode<T1, T2>> next0 = *nextOpt;
-          {
-            bsl::shared_ptr<SkipNode<T1, T2>> _next_curr = next0;
-            unsigned int _next_fuel = fuel_;
-            _loop_curr = bsl::move(_next_curr);
-            _loop_fuel = bsl::move(_next_fuel);
-          }
+          bsl::shared_ptr<SkipNode<T1, T2>> _next_curr = next0;
+          unsigned int _next_fuel = fuel_;
+          _loop_curr = bsl::move(_next_curr);
+          _loop_fuel = bsl::move(_next_fuel);
         } else {
           _result =
               bsl::make_optional<bsl::shared_ptr<SkipNode<T1, T2>>>(_loop_curr);
@@ -1029,14 +1021,12 @@ template <typename K, typename V> struct SkipList {
                 _loop_curr);
             _continue = false;
           } else {
-            {
-              bsl::shared_ptr<SkipNode<T1, T2>> _next_x = _loop_curr;
-              bsl::shared_ptr<SkipNode<T1, T2>> _next_curr = next0;
-              unsigned int _next_fuel = fuel_;
-              _loop_x = bsl::move(_next_x);
-              _loop_curr = bsl::move(_next_curr);
-              _loop_fuel = bsl::move(_next_fuel);
-            }
+            bsl::shared_ptr<SkipNode<T1, T2>> _next_x = _loop_curr;
+            bsl::shared_ptr<SkipNode<T1, T2>> _next_curr = next0;
+            unsigned int _next_fuel = fuel_;
+            _loop_x = bsl::move(_next_x);
+            _loop_curr = bsl::move(_next_curr);
+            _loop_fuel = bsl::move(_next_fuel);
           }
         } else {
           _result = bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>();
