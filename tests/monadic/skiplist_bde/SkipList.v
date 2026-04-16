@@ -1870,4 +1870,5 @@ Crane Extract Skip Module Verification.
 
 (* Extract SkipList module - contains the TSkipList record and implementation *)
 Set Crane BDE Directory "~/bde_install/".
+Set Crane Loopify.
 Crane Extraction "skiplist_bde" SkipList.

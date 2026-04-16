@@ -1869,4 +1869,5 @@ End Verification.
 Crane Extract Skip Module Verification.
 
 (* Extract both modules - SkipList module contains the TSkipList record, skiplist_test has tests *)
+Set Crane Loopify.
 Crane Extraction "skiplist" SkipList skiplist_test.
