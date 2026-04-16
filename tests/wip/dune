@@ -68,6 +68,17 @@
   (deps z_div_min.t.exe)
   (action (run ./z_div_min.t.exe))))
 
+(subdir unit_monostate_erase
+ (rule
+  (targets unit_monostate_erase.t.exe)
+  (deps UnitMonostateErase.vo unit_monostate_erase.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unit_monostate_erase.t.exe unit_monostate_erase.cpp unit_monostate_erase.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps unit_monostate_erase.t.exe)
+  (action (run ./unit_monostate_erase.t.exe))))
+
 (subdir shared_uptr_escape
  (rule
   (targets shared_uptr_escape.t.exe)
