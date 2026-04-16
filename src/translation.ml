@@ -50,7 +50,7 @@ let factory_name_of_ctor ?(type_name = "") ctor_struct_name =
     + {!compute_and_register_field_names} transforms each binder into a
       C++-safe identifier and registers the mapping in
       {!Common.ctor_field_names}.
-    + Access sites ({!gen_cpp_pat_lambda}, record reuse, {!Loopify.patch_cell_field})
+    + Access sites ({!gen_match_branch}, record reuse, {!Loopify.patch_cell_field})
       call {!Common.lookup_ctor_field_name} to resolve field names. *)
 
 (** Sanitize a Rocq binder name for use as a C++ struct field identifier.
@@ -1151,6 +1151,15 @@ let stmts_reference_var_directly (target : Id.t) (stmts : cpp_stmt list) : bool 
     | Swhile (c, stmts) -> ve c; List.iter vs stmts
     | Sblock stmts -> List.iter vs stmts
     | Sblock_custom (_, _, _, _, args, _) -> List.iter ve args
+    | Smatch (branches, default) ->
+      List.iter (fun br ->
+        ve br.smb_scrutinee;
+        List.iter ve br.smb_extra_conds;
+        ( match br.smb_reuse with
+        | Some (cond, _, stmts) -> ve cond; List.iter vs stmts
+        | None -> () );
+        List.iter vs br.smb_body) branches;
+      Option.iter (List.iter vs) default
   in
   try List.iter vs stmts; false
   with Found -> true
@@ -1292,7 +1301,7 @@ let make_subst_extra_tvars num_ind_vars extra_tvar_map =
 (** Replace all unnamed Tvars with Tany (for type erasure in indexed
     inductives). Used when a type has Tvars that don't correspond to any
     template parameters. This is defined early so it can be used in
-    gen_cpp_pat_lambda and gen_ind_header_v2. *)
+    gen_match_branch and gen_ind_header_v2. *)
 let rec tvar_erase_type (ty : cpp_type) : cpp_type =
   match ty with
   | Tvar (_, None) -> Tany
@@ -2782,14 +2791,6 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     tctx.in_constructor_expr <- saved_in_ctor_cons;
     cons_result
   | MLcase (typ, t, pv) when is_custom_match pv ->
-    (* Custom match in expression position becomes an IIFE.  Save/restore
-       current_cpp_return_type so the void optimization (bare 'return;')
-       does not leak into the IIFE body, which has its own return type. *)
-    let saved_return_type = tctx.current_cpp_return_type in
-    ( if tctx.current_cpp_return_type = Some Tvoid then
-        tctx.current_cpp_return_type <- None );
-    let cexp = gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv in
-    tctx.current_cpp_return_type <- saved_return_type;
     let tvars = get_current_type_vars () in
     let iife_ret =
       let branch_rty =
@@ -2798,8 +2799,15 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
         | [] -> typ
       in
       let r = convert_ml_type_to_cpp_type env Refset'.empty tvars branch_rty in
-      if is_cpp_unit_type r then Tvoid else r
+      if is_cpp_unit_type r
+         || ml_type_is_unit (ml_result_type branch_rty)
+      then Tvoid else r
     in
+    let saved_ret = tctx.current_cpp_return_type in
+    if iife_ret = Tvoid then
+      tctx.current_cpp_return_type <- Some Tvoid;
+    let cexp = gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv in
+    tctx.current_cpp_return_type <- saved_ret;
     CPPfun_call (CPPlambda ([], Some iife_ret, [cexp], false), [])
   | MLcase (typ, t, pv)
     when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
@@ -3877,68 +3885,61 @@ and eta_fun env f args =
     else
       CPPfun_call (gen_expr env f, List.rev args)
 
-(** Generate a pattern-matching lambda for a single match branch. Wraps the
-    branch body in a lambda capturing pattern variables, used by gen_cpp_case
-    for std::visit. *)
-and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body sname =
-  (* Get type variables in scope from enclosing function's template
-     parameters *)
+(** Build the qualified constructor struct type for a pattern match branch.
+
+    For [list<int>::Cons], this produces
+    [Tqualified(Tnamespace(r, Tglob(r, temps, \[\])), ctor_name)].
+    Local inductives omit the namespace wrapper to avoid double qualification. *)
+and ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
   let tvars = get_current_type_vars () in
-  (* Get the constructor name as a simple Id *)
   let ctor_name = ctor_struct_id_of_ref cname in
-  (* Build path: typename InductiveType<temps>::ConstructorName *)
-  let constr =
-    match typ with
-    | Tglob (r, tys, _) ->
-      let tys = List.map type_simpl tys in
-      (* Filter out index type args - only keep parameters *)
-      let tys =
-        match r with
-        | GlobRef.IndRef (kn, _) ->
-          ( match Table.get_ind_num_param_vars_opt kn with
-          | Some num_param_vars -> safe_firstn num_param_vars tys
-          | None -> tys )
-        | _ -> tys
-      in
-      let temps = build_template_params env tvars tys in
-      (* The constructor struct is nested inside the inductive type *)
-      (* Generate: typename list<unsigned int>::nil *)
-      (* Build the full inductive type first, then qualify with the constructor name *)
-      (* For local inductives (defined in current module), don't wrap in Tnamespace
-       to avoid double qualification like tree::tree::Empty *)
-      let is_local_ind =
-        List.exists
-          (Environ.QGlobRef.equal Environ.empty_env r)
-          (get_local_inductives ())
-      in
-      let ind_type =
-        if is_local_ind then
-          Tglob (r, temps, [])
-        else
-          Tnamespace (r, Tglob (r, temps, []))
-      in
-      Tqualified (ind_type, ctor_name)
-    | _ -> Tid (ctor_name, [])
-  in
-  let ret = convert_ml_type_to_cpp_type env Refset'.empty tvars rty in
-  (* For pattern matching lambdas, use 'auto' when the return type can't be
-     expressed as a valid C++ type annotation: - Unnamed Tvar (T1, T2 not in
-     template params): unresolvable - Tfun (std::function<...>): often contains
-     dependent types like T1(...) that cause parsing ambiguities in lambda
-     trailing return types *)
-  let ret =
-    match ret with
-    | Minicpp.Tvar (_, None) -> Minicpp.Ttodo (* Ttodo prints as 'auto' *)
-    | Minicpp.Tfun _ -> Minicpp.Ttodo (* C++ can deduce the return type *)
-    | _ -> ret
-  in
-  (* Pattern variables are field accesses from the const lambda parameter, not
-     owned local variables. Don't add them to move_owned_vars — moving from a
-     const parameter's fields is invalid. *)
+  match typ with
+  | Tglob (r, tys, _) ->
+    let tys = List.map type_simpl tys in
+    let tys =
+      match r with
+      | GlobRef.IndRef (kn, _) ->
+        ( match Table.get_ind_num_param_vars_opt kn with
+        | Some num_param_vars -> safe_firstn num_param_vars tys
+        | None -> tys )
+      | _ -> tys
+    in
+    let temps = build_template_params env tvars tys in
+    let is_local_ind =
+      List.exists
+        (Environ.QGlobRef.equal Environ.empty_env r)
+        (get_local_inductives ())
+    in
+    let ind_type =
+      if is_local_ind then Tglob (r, temps, [])
+      else Tnamespace (r, Tglob (r, temps, []))
+    in
+    Tqualified (ind_type, ctor_name)
+  | _ -> Tid (ctor_name, [])
+
+(** Generate a single branch of an {!Smatch} if/else-if pattern match chain.
+
+    Produces an {!smatch_branch} record whose body statements live directly
+    in the enclosing if-block.
+
+    Field accesses use structured bindings:
+    [const auto& [d_f0, d_f1] = std::get<T>(v)].  The reference binding is
+    required so that [[=]]-capturing closures copy the struct value rather
+    than a raw pointer that could dangle after the match scope ends.
+
+    [match_i] is the match-level counter (0 for the outermost match): nested
+    matches use suffixed binding names (e.g. [d_a00], [d_a10]) to avoid
+    shadowing outer bindings. *)
+and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
+    match_i scrut_v =
+  let ctor_type = ctor_type_of_match env typ cname in
+  let ctor_name = ctor_struct_id_of_ref cname in
+  let ctor_struct_name = Id.to_string ctor_name in
+  (* Pattern variables are field accesses from a std::get reference, not owned
+     local variables.  Don't add them to move_owned_vars. *)
   let saved_dead = tctx.move_dead_after in
   let saved_owned = tctx.move_owned_vars in
   let n_pat_vars = List.length ids in
-  (* Shift existing owned vars by n_pat_vars (pattern vars add binders) *)
   let shifted_outer =
     Escape.IntSet.map (fun i -> i + n_pat_vars) tctx.move_owned_vars
   in
@@ -3946,11 +3947,10 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body sname =
   tctx.move_dead_after <- Escape.IntSet.empty;
   let saved_match_counter = tctx.match_param_counter in
   let saved_return_type = tctx.current_cpp_return_type in
-  (* Prevent void optimization from leaking into pattern lambdas: when the
-     outer function returns void, gen_stmts generates bare 'return;' for tt,
-     but the pattern lambda returns monostate (not void). Clear the return
-     type to stop this. Don't set to Some ret, as ret may be Ttodo/auto and
-     would break template argument deduction in calls inside the body. *)
+  (* Prevent void optimisation from leaking into match branches: the branch
+     body lives inside an IIFE that returns the match result type, not the
+     enclosing function's void.  Clear return type to stop gen_stmts from
+     emitting bare [return;] for unit values. *)
   ( if tctx.current_cpp_return_type = Some Tvoid then
       tctx.current_cpp_return_type <- None );
   let body_stmts = gen_stmts env (fun x -> Sreturn (Some x)) body in
@@ -3958,25 +3958,56 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body sname =
   tctx.match_param_counter <- saved_match_counter;
   tctx.move_dead_after <- saved_dead;
   tctx.move_owned_vars <- saved_owned;
-  (* Substitute pattern variable references with direct field accesses: var_name
-     → _args.<field_name> *)
-  let ctor_struct_name = Id.to_string ctor_name in
+  (* Compute structured binding names for ALL constructor fields.
+     For match_i=0 the binding name equals the struct field name (e.g. [d_a0]);
+     for deeper nesting a numeric suffix avoids shadowing outer bindings
+     (e.g. [d_a00] at level 1, [d_a01] at level 2). *)
+  let suffix =
+    if match_i = 0 then "" else string_of_int (match_i - 1)
+  in
+  let tvars = get_current_type_vars () in
   let rev_ids = List.rev ids in
+  let field_bindings =
+    List.mapi
+      (fun i (_var_name, ml_ty) ->
+        let field_id = lookup_ctor_field_name ctor_struct_name i in
+        let binding_name =
+          Id.of_string (Id.to_string field_id ^ suffix)
+        in
+        let cpp_ty =
+          convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty
+        in
+        let used = List.nth dummies i in
+        (binding_name, cpp_ty, used))
+      rev_ids
+  in
+  (* Substitute pattern variable references with the structured-binding
+     names: [var_name] → [CPPvar binding_name].  The binding name is
+     the struct field name (optionally suffixed for nesting depth).
+     Closures that capture the binding via [[=]] copy the value, keeping
+     the same safety guarantees as the old [const T&] approach. *)
   let body_stmts =
     List.fold_left
       (fun stmts (i, (var_name, _ty)) ->
         if List.nth dummies i then
-          let field_id =
-            lookup_ctor_field_name ctor_struct_name i
-          in
-          let field_expr = CPPget (CPPvar sname, field_id) in
+          let binding_name = let (n, _, _) = List.nth field_bindings i in n in
+          let field_expr = CPPvar binding_name in
           List.map (local_var_subst_stmt var_name field_expr) stmts
         else
           stmts )
       body_stmts
       (List.mapi (fun i x -> (i, x)) rev_ids)
   in
-  CPPlambda ([(Tref (Tmod (TMconst, constr)), Some sname)], Some ret, body_stmts, false)
+  (* Use std::get (smb_var = Some) when any constructor field is actually used;
+     otherwise use holds_alternative only (smb_var = None). *)
+  let has_used_fields = List.exists Fun.id dummies in
+  { smb_scrutinee = scrut_v;
+    smb_ctor_type = ctor_type;
+    smb_var = (if has_used_fields then Some sname else None);
+    smb_field_bindings = (if has_used_fields then field_bindings else []);
+    smb_extra_conds = [];
+    smb_reuse = None;
+    smb_body = body_stmts }
 
 (** Generate std::visit-based pattern matching with expression reuse
     optimization. Detects common subexpressions across branches and hoists them
@@ -4065,13 +4096,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
         let ctor_name =
           Id.of_string (Common.enum_ctor_name (Common.pp_global_name Type r))
         in
-        (* Enum branch body is an IIFE — clear void return type so branches
-           produce 'return <expr>;' rather than bare 'return;'. *)
-        let saved_return_type = tctx.current_cpp_return_type in
-        ( if tctx.current_cpp_return_type = Some Tvoid then
-            tctx.current_cpp_return_type <- None );
         let body_stmts = gen_stmts env' (fun x -> Sreturn (Some x)) body in
-        tctx.current_cpp_return_type <- saved_return_type;
         (ctor_name, body_stmts) :: gen_enum_branches cs
       | Pwild | Prel _ | Ptuple _ -> gen_enum_branches cs
     in
@@ -4082,34 +4107,35 @@ and gen_cpp_case (typ : ml_type) t env pv =
       in
       match wild_br with
       | Some (_, _, _, body) ->
-        (* Same void-optimization guard as the enum case branches above. *)
-        let saved_return_type = tctx.current_cpp_return_type in
-        ( if tctx.current_cpp_return_type = Some Tvoid then
-            tctx.current_cpp_return_type <- None );
-        let result = gen_stmts env (fun x -> Sreturn (Some x)) body in
-        tctx.current_cpp_return_type <- saved_return_type;
-        Some result
+        Some (gen_stmts env (fun x -> Sreturn (Some x)) body)
       | None -> None
     in
-    let branches = gen_enum_branches (Array.to_list pv) in
-    let default = gen_default_stmts () in
     let tvars = get_current_type_vars () in
-    let iife_ret =
+    let iife_ret_opt =
       let branch_rty =
         match Array.to_list pv with
         | (_, rty, _, _) :: _ -> rty
         | [] -> typ
       in
       let r = convert_ml_type_to_cpp_type env Refset'.empty tvars branch_rty in
-      if is_cpp_unit_type r then Tvoid else r
+      if is_cpp_unit_type r
+         || ml_type_is_unit (ml_result_type branch_rty)
+      then Some Tvoid else None
     in
+    let saved_ret = tctx.current_cpp_return_type in
+    if iife_ret_opt = Some Tvoid then
+      tctx.current_cpp_return_type <- Some Tvoid;
+    let branches = gen_enum_branches (Array.to_list pv) in
+    let default = gen_default_stmts () in
+    tctx.current_cpp_return_type <- saved_ret;
     CPPfun_call
-      (CPPlambda ([], Some iife_ret, [Sswitch (scrutinee, ind_ref, branches, default)], false), [])
+      (CPPlambda ([], iife_ret_opt, [Sswitch (scrutinee, ind_ref, branches, default)], false), [])
   else
-    (* Phase 3: Check for reuse opportunities (reset/reuse). If the scrutinee is
-       an owned shared_ptr variable and there are reuse candidates (branches
-       that construct same-type, same-arity values), generate a dual-path: reuse
-       when use_count()==1, normal std::visit otherwise. *)
+    (* Generate if/else-if pattern matching using [std::holds_alternative]
+       and [std::get].  Produces an {!Smatch} node wrapped in
+       an IIFE.  When the scrutinee is an owned [shared_ptr] with reuse
+       candidates, a reuse branch is prepended with a
+       [use_count() == 1] guard. *)
     let reuse_candidates = Escape.find_reuse_candidates typ pv in
     let scrut_db =
       match t with
@@ -4122,274 +4148,212 @@ and gen_cpp_case (typ : ml_type) t env pv =
       | Some i -> Escape.IntSet.mem i tctx.move_owned_vars
       | None -> false
     in
-    (* Helper: generate the normal std::visit path *)
-    let gen_normal_visit_expr () =
-      let outer cases x =
-        CPPfun_call
-          ( CPPvisit,
-            CPPmethod_call (x, Id.of_string "v", []) :: [CPPoverloaded cases] )
-      in
-      (* Allocate a unique _args name for this match level. All branches of the
-         same match share the same name; nested matches get the next name. *)
-      let match_i = tctx.match_param_counter in
-      tctx.match_param_counter <- match_i + 1;
-      let sname =
-        Id.of_string
-          ( if match_i = 0 then
-              "_args"
-            else
-              "_args" ^ string_of_int (match_i - 1) )
-      in
-      let rec gen_cases = function
-        | [] -> []
-        | (ids, rty, p, t) :: cs ->
-        match p with
-        | Pusual r | Pcons (r, _) ->
-          let ids', env' =
-            push_vars'
-              (List.rev_map
-                 (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
-                 ids )
-              env
-          in
-          let saved_env_types = tctx.env_types in
-          push_env_types ids';
-          let dummies =
-            List.map
-              (fun (x, _) ->
-                match x with
-                | Dummy -> false
-                | _ -> true )
-              ids
-          in
-          let br = gen_cpp_pat_lambda env' typ rty r ids' dummies t sname in
-          tctx.env_types <- saved_env_types;
-          br :: gen_cases cs
-        | Pwild | Prel _ ->
-          let tvars = get_current_type_vars () in
-          (* Wildcard branch in a variant match IIFE — guard against void leak. *)
-          let saved_return_type = tctx.current_cpp_return_type in
-          ( if tctx.current_cpp_return_type = Some Tvoid then
-              tctx.current_cpp_return_type <- None );
-          let body_stmts = gen_stmts env (fun x -> Sreturn (Some x)) t in
-          tctx.current_cpp_return_type <- saved_return_type;
-          let ret = convert_ml_type_to_cpp_type env Refset'.empty tvars rty in
-          let ret =
-            match ret with
-            | Minicpp.Tvar (_, None) -> Minicpp.Ttodo
-            | Minicpp.Tfun _ -> Minicpp.Ttodo
-            | _ -> ret
-          in
-          let wildcard_lambda =
-            CPPlambda ([(Tref (Tmod (TMconst, Tauto)), Some sname)], Some ret, body_stmts, false)
-          in
-          [wildcard_lambda]  (* terminal — no more branches after wildcard *)
-        | Ptuple _ -> gen_cases cs
-      in
-      (* Defense-in-depth: clear move_dead_after when generating std::visit
-         scrutinee to prevent std::move(x)->v() use-after-move. The scrutinee
-         expression is used to call ->v(), so it cannot be moved. *)
-      let saved_dead_visit = tctx.move_dead_after in
-      tctx.move_dead_after <- Escape.IntSet.empty;
-      let normal_visit_result = outer (gen_cases (Array.to_list pv)) (gen_expr env t) in
-      tctx.move_dead_after <- saved_dead_visit;
-      normal_visit_result
-    in
-    (* Also exclude coinductive types — they use lazy evaluation and don't have
-       v_mut(). *)
     let is_coinductive = is_coinductive_type typ in
-    if reuse_candidates <> [] && scrut_is_owned && not is_coinductive then (
-      (* Generate dual-path code wrapped in IIFE: if (scrut.use_count() == 1 &&
-         scrut->v().index() == N) { // reuse path: mutate in place } else { //
-         normal std::visit path } *)
-      let saved_dead_reuse = tctx.move_dead_after in
-      tctx.move_dead_after <- Escape.IntSet.empty;
-      let scrut_expr = gen_expr env t in
-      tctx.move_dead_after <- saved_dead_reuse;
-      let tvars = get_current_type_vars () in
-      (* For now, handle the first reuse candidate only. *)
-      let pv_idx, variant_idx, matched_ctor, arity, _tail_ctor, tail_args =
-        List.hd reuse_candidates
-      in
-      let reuse_ctor_struct_name =
-        ctor_struct_name_of_ref matched_ctor
-      in
-      let ids, _rty, _pat, body = pv.(pv_idx) in
-      let n_fields = arity in
-      (* Build the condition: scrut.use_count() == 1 && scrut->v().index() == N
-         Using proper AST nodes (CPPbinop, CPPmember, CPPmethod_call) so that
-         variable substitution (e.g., l -> this for methods) works correctly. *)
-      let use_count_call =
-        CPPfun_call (CPPmember (scrut_expr, Id.of_string "use_count"), [])
-      in
-      let index_call =
-        CPPfun_call
-          ( CPPmember
-              ( CPPmethod_call (scrut_expr, Id.of_string "v", []),
-                Id.of_string "index" ),
-            [] )
-      in
-      let cond =
-        CPPbinop
-          ( "&&",
-            CPPbinop ("==", use_count_call, CPPint 1),
-            CPPbinop ("==", index_call, CPPint variant_idx) )
-      in
-      (* Build the reuse body *)
-      (* 1. Get mutable reference to the variant alternative:
-          auto& _rf = std::get<N>(scrut->v_mut()); *)
-      let rf_var = Id.of_string "_rf" in
-      let get_field_ref =
-        Sasgn
-          ( rf_var,
-            Some (Tref Ttodo),
-            CPPfun_call
-              ( CPPraw ("std::get<" ^ string_of_int variant_idx ^ ">"),
-                [CPPmethod_call (scrut_expr, Id.of_string "v_mut", [])] ) )
-      in
-      (* 2. Push pattern variables into the environment, same as normal path *)
-      let ids', env' =
-        push_vars'
-          (List.rev_map
-             (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
-             ids )
-          env
-      in
-      let saved_env_types = tctx.env_types in
-      push_env_types ids';
-      (* 3. Extract fields into local variables: auto var_name =
-         std::move(_rf._aN); Use ids' (renamed, same order as
-         gen_cpp_pat_lambda) so that: - Variable names match what
-         gen_expr/body_env expects (renamed names) - Field indices match
-         constructor field order after List.rev *)
-      let dummies =
-        List.map
-          (fun (x, _) ->
-            match x with
-            | Dummy -> false
-            | _ -> true )
-          ids
-      in
-      let rev_ids' = List.rev ids' in
-      let extract_stmts =
-        List.mapi
-          (fun i (var_name, ml_ty) ->
-            let cpp_ty =
-              convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty
-            in
-            if List.nth dummies i then
-              let field_id =
-                lookup_ctor_field_name reuse_ctor_struct_name i
-              in
-              Some
-                (Sasgn
-                   ( var_name,
-                     Some cpp_ty,
-                     CPPmove
-                       (CPPmember (CPPvar (Id.of_string "_rf"), field_id)
-                       ) ) )
-            else
-              None )
-          rev_ids'
-      in
-      let extract_stmts = List.filter_map Fun.id extract_stmts in
-      (* 4. Generate intermediate let bindings from the body, if any. Walk
-         through MLletin/MLmagic to reach the tail MLcons, generating statements
-         for each intermediate binding. *)
-      let rec gen_prefix_and_tail env' body =
-        match body with
-        | MLcons (_, _, _) ->
-          (* Reached the tail constructor — no more prefix *)
-          ([], env')
-        | MLmagic a -> gen_prefix_and_tail env' a
-        | MLletin (x, t, a, b) ->
-          let x' = remove_prime_id (id_of_mlid x) in
-          let _, env'' = push_vars' [(x', t)] env' in
-          let afun v = Sasgn (x', None, v) in
-          let asgn = gen_stmts env' afun a in
-          (* Push env_types AFTER generating the value expression [a]. *)
-          push_env_types [(x', t)];
-          let letin_stmt =
-            match asgn with
-            | [Sasgn (x', None, e)] ->
-              [
-                Sasgn
-                  ( x',
-                    Some (convert_ml_type_to_cpp_type env Refset'.empty tvars t),
-                    e );
-              ]
-            | _ ->
-              Sdecl (x', convert_ml_type_to_cpp_type env Refset'.empty tvars t)
-              :: asgn
-          in
-          let rest, final_env = gen_prefix_and_tail env'' b in
-          (letin_stmt @ rest, final_env)
-        | _ -> ([], env')
-        (* shouldn't happen for reuse candidates *)
-      in
-      let prefix_stmts, body_env = gen_prefix_and_tail env' body in
-      (* 5. Compute new field values and assign them back:
-             [_rf.d_aN = <new_value>;]
-
-         Erased proof/type fields ([MLdummy]) are skipped: their value is
-         semantically irrelevant (the C++ type is [std::any]) and the field
-         already holds a valid [std::any] from the original construction.
-         Calling [gen_expr] on [MLdummy] would produce [CPPabort] which
-         throws at runtime — incorrect for reuse paths that ARE executed.
-         [MLmagic(MLdummy _)] is also caught since the extraction
-         sometimes wraps dummy values in [MLmagic] for type coercion. *)
-      let assign_stmts =
-        List.filter_map
-          (fun (i, tail_arg) ->
-            match tail_arg with
-            | MLdummy _ -> None
-            | MLmagic (MLdummy _) -> None
-            | _ ->
-              let field_id =
-                lookup_ctor_field_name reuse_ctor_struct_name i
-              in
-              let new_val = gen_expr body_env tail_arg in
-              Some
-                (Sassign_field
-                   (CPPvar (Id.of_string "_rf"), field_id, new_val) ) )
-          (List.mapi (fun i a -> (i, a)) tail_args)
-      in
-      (* 6. Return the original scrutinee (reusing the memory cell) *)
-      let return_scrut = Sreturn (Some scrut_expr) in
-      (* Only emit _rf when there are field assignments that use it.
-         If assign_stmts is empty (reuse branch just returns the object
-         unchanged), _rf is a dead store and triggers Infer DEAD_STORE. *)
-      let rf_stmts =
-        if assign_stmts = [] then []
-        else [get_field_ref]
-      in
-      let reuse_stmts =
-        rf_stmts
-        @ extract_stmts
-        @ prefix_stmts
-        @ assign_stmts
-        @ [return_scrut]
-      in
-      (* Build the else branch: normal std::visit *)
-      let normal_visit = Sreturn (Some (gen_normal_visit_expr ())) in
-      (* Generate IIFE with if-else *)
-      let _ = n_fields in
-      tctx.env_types <- saved_env_types;
-      let tvars = get_current_type_vars () in
-      let iife_ret =
-        let branch_rty =
-          match Array.to_list pv with
-          | (_, rty, _, _) :: _ -> rty
-          | [] -> typ
+    (* Allocate a unique [_m] name for this match level.  All branches of
+       the same match reuse this name (each [if (auto* _m = ...)] creates
+       its own scope); nested matches get the next name ([_m0], [_m1]). *)
+    let match_i = tctx.match_param_counter in
+    tctx.match_param_counter <- match_i + 1;
+    let sname =
+      Id.of_string
+        ( if match_i = 0 then "_m"
+          else "_m" ^ string_of_int (match_i - 1) )
+    in
+    (* Generate scrutinee expression.  Clear [move_dead_after] to prevent
+       [std::move(x)->v()] use-after-move — the scrutinee is referenced
+       across all branches. *)
+    let saved_dead_visit = tctx.move_dead_after in
+    tctx.move_dead_after <- Escape.IntSet.empty;
+    let scrut_expr = gen_expr env t in
+    tctx.move_dead_after <- saved_dead_visit;
+    (* Build variant accessor: [scrut->v()] for shared_ptr, [scrut.v()]
+       for value types.  The expression is shared by all branches. *)
+    let scrut_v =
+      CPPmethod_call (scrut_expr, Id.of_string "v", [])
+    in
+    (* Generate one {!smatch_branch} per constructor pattern, collecting
+       a wildcard body from [Pwild] / [Prel]. *)
+    let rec gen_branches = function
+      | [] -> ([], None)
+      | (ids, rty, p, body) :: cs ->
+      match p with
+      | Pusual r | Pcons (r, _) ->
+        let ids', env' =
+          push_vars'
+            (List.rev_map
+               (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
+               ids )
+            env
         in
-        let r = convert_ml_type_to_cpp_type env Refset'.empty tvars branch_rty in
-        if is_cpp_unit_type r then Tvoid else r
+        let saved_env_types = tctx.env_types in
+        push_env_types ids';
+        let dummies =
+          List.map
+            (fun (x, _) -> match x with Dummy -> false | _ -> true)
+            ids
+        in
+        let br =
+          gen_match_branch env' typ rty r ids' dummies body sname
+            match_i scrut_v
+        in
+        tctx.env_types <- saved_env_types;
+        let rest, wild = gen_branches cs in
+        (br :: rest, wild)
+      | Pwild | Prel _ ->
+        let body_stmts =
+          gen_stmts env (fun x -> Sreturn (Some x)) body
+        in
+        ([], Some body_stmts)
+      | Ptuple _ -> gen_branches cs
+    in
+    let branches, wildcard = gen_branches (Array.to_list pv) in
+    (* Prepend a reuse branch when the scrutinee is an owned [shared_ptr]
+       with reuse candidates.  The branch checks
+       [holds_alternative<Ctor>(scrut->v()) && scrut.use_count() == 1],
+       then mutates the variant storage in place and returns the original
+       pointer — avoiding a fresh allocation. *)
+    let branches =
+      if reuse_candidates <> [] && scrut_is_owned && not is_coinductive then
+        let tvars = get_current_type_vars () in
+        let pv_idx, variant_idx, matched_ctor, _arity, _tail_ctor, tail_args =
+          List.hd reuse_candidates
+        in
+        let reuse_ctor_struct_name = ctor_struct_name_of_ref matched_ctor in
+        let ids, _rty, _pat, body = pv.(pv_idx) in
+        (* use_count() == 1 guard *)
+        let use_count_cond =
+          CPPbinop ("==",
+            CPPfun_call (CPPmember (scrut_expr, Id.of_string "use_count"), []),
+            CPPint 1)
+        in
+        (* Push pattern variables into the environment *)
+        let ids', env' =
+          push_vars'
+            (List.rev_map
+               (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
+               ids )
+            env
+        in
+        let saved_env_types = tctx.env_types in
+        push_env_types ids';
+        (* Extract fields into local variables via [std::move(_rf.d_field)] *)
+        let dummies =
+          List.map
+            (fun (x, _) -> match x with Dummy -> false | _ -> true)
+            ids
+        in
+        let rf_var = Id.of_string "_rf" in
+        let rev_ids' = List.rev ids' in
+        let extract_stmts =
+          List.filter_map Fun.id
+            (List.mapi
+               (fun i (var_name, ml_ty) ->
+                 let cpp_ty =
+                   convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty
+                 in
+                 if List.nth dummies i then
+                   let field_id =
+                     lookup_ctor_field_name reuse_ctor_struct_name i
+                   in
+                   Some
+                     (Sasgn
+                        ( var_name, Some cpp_ty,
+                          CPPmove (CPPmember (CPPvar rf_var, field_id)) ))
+                 else None )
+               rev_ids')
+        in
+        (* Walk through MLletin/MLmagic to reach the tail MLcons, generating
+           statements for each intermediate binding. *)
+        let rec gen_prefix_and_tail env' body =
+          match body with
+          | MLcons (_, _, _) -> ([], env')
+          | MLmagic a -> gen_prefix_and_tail env' a
+          | MLletin (x, t, a, b) ->
+            let x' = remove_prime_id (id_of_mlid x) in
+            let _, env'' = push_vars' [(x', t)] env' in
+            let afun v = Sasgn (x', None, v) in
+            let asgn = gen_stmts env' afun a in
+            push_env_types [(x', t)];
+            let letin_stmt =
+              match asgn with
+              | [Sasgn (x', None, e)] ->
+                [Sasgn (x', Some (convert_ml_type_to_cpp_type env
+                   Refset'.empty tvars t), e)]
+              | _ ->
+                Sdecl (x', convert_ml_type_to_cpp_type env Refset'.empty tvars t)
+                :: asgn
+            in
+            let rest, final_env = gen_prefix_and_tail env'' b in
+            (letin_stmt @ rest, final_env)
+          | _ -> ([], env')
+        in
+        let prefix_stmts, body_env = gen_prefix_and_tail env' body in
+        (* Assign new field values back.  Skip erased proof/type fields
+           ([MLdummy]) — their value is semantically irrelevant (the C++
+           type is [std::any]) and the field already holds a valid value
+           from the original construction. *)
+        let assign_stmts =
+          List.filter_map
+            (fun (i, tail_arg) ->
+              match tail_arg with
+              | MLdummy _ | MLmagic (MLdummy _) -> None
+              | _ ->
+                let field_id =
+                  lookup_ctor_field_name reuse_ctor_struct_name i
+                in
+                Some (Sassign_field (CPPvar rf_var, field_id,
+                        gen_expr body_env tail_arg)))
+            (List.mapi (fun i a -> (i, a)) tail_args)
+        in
+        tctx.env_types <- saved_env_types;
+        (* Build reuse body: extract fields, prefix lets,
+           assign new values, return original pointer.
+           The [auto& _rf = std::get<Type>(scrut->v_mut())] binding is
+           emitted at print time using [smb_ctor_type], not baked into
+           the stmt list. *)
+        (* Skip reuse when there are no field assignments — the tail
+           constructor has the same fields as the matched one (typically a
+           zero-field constructor like Nil→Nil).  The use_count check would
+           be pure overhead since we're not actually mutating anything. *)
+        if assign_stmts = [] && extract_stmts = [] && prefix_stmts = [] then
+          branches
+        else
+          let needs_rf = assign_stmts <> [] in
+          let reuse_body =
+            extract_stmts @ prefix_stmts @ assign_stmts
+            @ [Sreturn (Some scrut_expr)]
+          in
+          List.mapi (fun i br ->
+            if i = pv_idx then
+              { br with smb_reuse = Some (use_count_cond,
+                  (if needs_rf then Some rf_var else None),
+                  reuse_body) }
+            else br
+          ) branches
+      else
+        branches
+    in
+    (* Compute IIFE return type.  For void (unit-typed) returns, specify
+       [-> void] explicitly since the lambda may have no return statement.
+       For non-void, let the C++ compiler deduce the type — this avoids
+       leaking unresolved type variables (e.g. [T1]) from the ML type
+       annotation into non-template contexts. *)
+    let tvars = get_current_type_vars () in
+    let iife_ret_opt =
+      let branch_rty =
+        match Array.to_list pv with
+        | (_, rty, _, _) :: _ -> rty
+        | [] -> typ
       in
-      CPPfun_call
-        ( CPPlambda ([], Some iife_ret, [Sif (cond, reuse_stmts, [normal_visit])], false),
-          [] ) )
-    else
-      gen_normal_visit_expr ()
+      let r = convert_ml_type_to_cpp_type env Refset'.empty tvars branch_rty in
+      if is_cpp_unit_type r
+         || ml_type_is_unit (ml_result_type branch_rty)
+      then Some Tvoid else None
+    in
+    CPPfun_call
+      ( CPPlambda ([], iife_ret_opt,
+          [Smatch (branches, wildcard)], false),
+        [] )
 
 (** Generate a custom match body using user-provided custom extraction syntax.
     Wraps the body in a lambda with pattern-bound variables for std::visit. *)
@@ -4586,6 +4550,24 @@ and inline_iife (k : cpp_expr -> cpp_stmt) = function
         | Some branches' ->
           Some [Scustom_case (ty, scrut, tyargs, branches', cmatch)]
         | None -> None )
+      | [Smatch (branches, default)] ->
+        let default' =
+          match default with
+          | Some stmts -> ( match replace_last_return stmts with
+            | Some stmts' -> Some (Some stmts')
+            | None -> None )
+          | None -> Some None
+        in
+        ( match (try_all_branches
+            (fun br ->
+              match replace_last_return br.smb_body with
+              | Some body' -> Some { br with smb_body = body' }
+              | None -> None )
+            branches, default')
+        with
+        | Some branches', Some default' ->
+          Some [Smatch (branches', default')]
+        | _ -> None )
       | stmt :: rest when rest <> [] ->
         ( match replace_last_return rest with
         | Some rest' -> Some (stmt :: rest')
@@ -8245,6 +8227,13 @@ let gen_dfun n b cty ty temps =
               Sif (c, List.map void_return_to_zero t,
                       List.map void_return_to_zero e)
             | Sblock ss -> Sblock (List.map void_return_to_zero ss)
+            | Smatch (branches, default) ->
+              Smatch
+                ( List.map
+                    (fun br ->
+                      { br with smb_body = List.map void_return_to_zero br.smb_body })
+                    branches,
+                  Option.map (List.map void_return_to_zero) default )
             | s -> s
           in
           ( match inner with
@@ -9064,6 +9053,16 @@ and replace_return_this_stmt inner_ty = function
             (ctor, List.map (replace_return_this_stmt inner_ty) stmts) )
           brs,
         Option.map (List.map (replace_return_this_stmt inner_ty)) default )
+  | Smatch (branches, default) ->
+    Smatch
+      ( List.map
+          (fun br ->
+            { br with
+              smb_body =
+                List.map (replace_return_this_stmt inner_ty) br.smb_body
+            })
+          branches,
+        Option.map (List.map (replace_return_this_stmt inner_ty)) default )
   | Sexpr e -> Sexpr (replace_return_this_expr inner_ty e)
   | s -> s
 
@@ -9100,6 +9099,11 @@ and stmt_has_shared_from_this = function
     List.exists
       (fun (_, stmts) -> List.exists stmt_has_shared_from_this stmts)
       brs
+    || (match default with Some stmts -> List.exists stmt_has_shared_from_this stmts | None -> false)
+  | Smatch (branches, default) ->
+    List.exists
+      (fun br -> List.exists stmt_has_shared_from_this br.smb_body)
+      branches
     || (match default with Some stmts -> List.exists stmt_has_shared_from_this stmts | None -> false)
   | _ -> false
 

@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct ReuseScrutinee {
   struct tree {
     // TYPES
@@ -65,28 +60,26 @@ struct ReuseScrutinee {
                                 std::shared_ptr<tree>, T1>
                              F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, _args.d_a2,
-                               tree_rect<T1>(f, f0, _args.d_a2));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return f;
+    } else {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rect<T1>(f, f0, d_a0), d_a1, d_a2,
+                tree_rect<T1>(f, f0, d_a2));
+    }
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
                                 std::shared_ptr<tree>, T1>
                              F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, _args.d_a2,
-                               tree_rec<T1>(f, f0, _args.d_a2));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return f;
+    } else {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rec<T1>(f, f0, d_a0), d_a1, d_a2,
+                tree_rec<T1>(f, f0, d_a2));
+    }
   }
 
   /// Extract the value from the left subtree.
@@ -107,40 +100,27 @@ struct ReuseScrutinee {
   /// 2. New values are computed: subtree_sum(t) accesses t's subtrees
   /// → t's d_a0 is null → left_val dereferences null → CRASH
   static inline const unsigned int reuse_bug = []() {
-    return []() {
-      std::shared_ptr<tree> t =
-          tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                     tree::node(tree::leaf(), 30u, tree::leaf()));
-      return std::visit(
-          Overloaded{
-              [](const typename tree::Leaf &) -> unsigned int { return 0u; },
-              [&](const typename tree::Node &) -> unsigned int {
-                return subtree_sum(std::move(t));
-              }},
-          t->v());
-    }();
+    std::shared_ptr<tree> t =
+        tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                   tree::node(tree::leaf(), 30u, tree::leaf()));
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return 0u;
+    } else {
+      return subtree_sum(std::move(t));
+    }
   }();
   /// Direct version: the result directly uses the scrutinee in a
   /// tail constructor that could trigger reuse.
   static inline const std::shared_ptr<tree> reuse_direct = []() {
-    return []() {
-      std::shared_ptr<tree> t =
-          tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                     tree::node(tree::leaf(), 30u, tree::leaf()));
-      if (t.use_count() == 1 && t->v().index() == 0) {
-        return t;
-      } else {
-        return std::visit(
-            Overloaded{
-                [](const typename tree::Leaf &) -> std::shared_ptr<tree> {
-                  return tree::leaf();
-                },
-                [&](const typename tree::Node &_args) -> std::shared_ptr<tree> {
-                  return tree::node(tree::leaf(), subtree_sum(t), _args.d_a2);
-                }},
-            t->v());
-      }
-    }();
+    std::shared_ptr<tree> t =
+        tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                   tree::node(tree::leaf(), 30u, tree::leaf()));
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return tree::leaf();
+    } else {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return tree::node(tree::leaf(), subtree_sum(t), d_a2);
+    }
   }();
   /// Expected: subtree_sum on Node(Node(Leaf,10,Leaf), 20, Node(Leaf,30,Leaf))
   /// = left_val + right_val = 10 + 30 = 40

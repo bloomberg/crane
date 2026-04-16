@@ -8,18 +8,17 @@
 
 __attribute__((pure)) std::optional<unsigned int> ProgramWfProp::jump_target(
     const std::shared_ptr<ProgramWfProp::instruction> &i) {
-  return std::visit(
-      Overloaded{[](const typename ProgramWfProp::instruction::JUN &_args)
-                     -> std::optional<unsigned int> {
-                   return std::make_optional<unsigned int>(_args.d_a0);
-                 },
-                 [](const typename ProgramWfProp::instruction::JMS &_args)
-                     -> std::optional<unsigned int> {
-                   return std::make_optional<unsigned int>(_args.d_a0);
-                 },
-                 [](const typename ProgramWfProp::instruction::NOP &)
-                     -> std::optional<unsigned int> {
-                   return std::optional<unsigned int>();
-                 }},
-      i->v());
+  if (std::holds_alternative<typename ProgramWfProp::instruction::JUN>(
+          i->v())) {
+    const auto &[d_a0] =
+        std::get<typename ProgramWfProp::instruction::JUN>(i->v());
+    return std::make_optional<unsigned int>(d_a0);
+  } else if (std::holds_alternative<typename ProgramWfProp::instruction::JMS>(
+                 i->v())) {
+    const auto &[d_a0] =
+        std::get<typename ProgramWfProp::instruction::JMS>(i->v());
+    return std::make_optional<unsigned int>(d_a0);
+  } else {
+    return std::optional<unsigned int>();
+  }
 }

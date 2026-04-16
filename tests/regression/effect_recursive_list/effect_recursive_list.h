@@ -14,11 +14,6 @@ using namespace std::string_literals;
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -68,16 +63,13 @@ struct EffectRecursiveList {
   /// 2. Map a function over a list with effects
   template <MapsTo<void, std::string> F0>
   static void map_effect(F0 &&f, const std::shared_ptr<List<std::string>> &xs) {
-    {
-      std::visit(Overloaded{[](const typename List<std::string>::Nil &)
-                                -> std::monostate { return std::monostate{}; },
-                            [&](const typename List<std::string>::Cons &_args)
-                                -> std::monostate {
-                              f(_args.d_a0);
-                              map_effect(f, _args.d_a1);
-                              return std::monostate{};
-                            }},
-                 xs->v());
+    if (std::holds_alternative<typename List<std::string>::Nil>(xs->v())) {
+      return;
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::string>::Cons>(xs->v());
+      f(d_a0);
+      map_effect(f, d_a1);
       return;
     }
   }

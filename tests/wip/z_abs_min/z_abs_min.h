@@ -8,11 +8,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct ZAbsMin {
   /// In Rocq, Z.abs is total: Z.abs z is always non-negative.
   /// ZInt maps Z.abs to std::abs(%a0) (from <cstdlib>).

@@ -11,11 +11,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct MoveSafety {
   struct tree : public std::enable_shared_from_this<tree> {
     // TYPES
@@ -62,6 +57,12 @@ struct MoveSafety {
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
+    /// TEST 4: Partial application followed by identity function
+    /// that takes by value (returns its argument).
+    std::shared_ptr<tree> tree_id() const {
+      return std::const_pointer_cast<tree>(this->shared_from_this());
+    }
+
     /// A function that stores its tree argument inside a constructor.
     /// This causes the parameter to be passed by value (it "escapes").
     std::shared_ptr<tree> wrap_tree() const {
@@ -70,149 +71,135 @@ struct MoveSafety {
     }
 
     __attribute__((pure)) unsigned int sum_values(const unsigned int x) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename tree::Leaf &) -> unsigned int { return x; },
-              [&](const typename tree::Node &_args) -> unsigned int {
-                return std::visit(
-                    Overloaded{
-                        [&](const typename tree::Leaf &) -> unsigned int {
-                          return (_args.d_a1 + x);
-                        },
-                        [&](const typename tree::Node &_args0) -> unsigned int {
-                          return std::visit(
-                              Overloaded{[&](const typename tree::Leaf &)
-                                             -> unsigned int {
-                                           return (_args0.d_a1 + x);
-                                         },
-                                         [&](const typename tree::Node &_args1)
-                                             -> unsigned int {
-                                           return (
-                                               ((_args0.d_a1 + _args1.d_a1) +
-                                                _args.d_a1) +
-                                               x);
-                                         }},
-                              _args.d_a2->v());
-                        }},
-                    _args.d_a0->v());
-              }},
-          this->v());
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        return x;
+      } else {
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        if (std::holds_alternative<typename tree::Leaf>(d_a0->v())) {
+          return (d_a1 + x);
+        } else {
+          const auto &[d_a00, d_a10, d_a20] =
+              std::get<typename tree::Node>(d_a0->v());
+          if (std::holds_alternative<typename tree::Leaf>(d_a2->v())) {
+            return (d_a10 + x);
+          } else {
+            const auto &[d_a01, d_a11, d_a21] =
+                std::get<typename tree::Node>(d_a2->v());
+            return (((d_a10 + d_a11) + d_a1) + x);
+          }
+        }
+      }
+    }
+
+    template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
+                                  std::shared_ptr<tree>, T1>
+                               F1>
+    T1 tree_rec(const T1 f, F1 &&f0) const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+      };
+
+      struct _Call1 {
+        tree *_s0;
+        std::shared_ptr<tree> _s1;
+        unsigned int _s2;
+        std::shared_ptr<tree> _s3;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        std::shared_ptr<tree> _s1;
+        unsigned int _s2;
+        std::shared_ptr<tree> _s3;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const tree *_self = _f._self;
+          if (std::holds_alternative<typename tree::Leaf>(_self->v())) {
+            _result = f;
+          } else {
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename tree::Node>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), d_a2, d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a2.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+        }
+      }
+      return _result;
+    }
+
+    template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
+                                  std::shared_ptr<tree>, T1>
+                               F1>
+    T1 tree_rect(const T1 f, F1 &&f0) const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+      };
+
+      struct _Call1 {
+        tree *_s0;
+        std::shared_ptr<tree> _s1;
+        unsigned int _s2;
+        std::shared_ptr<tree> _s3;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        std::shared_ptr<tree> _s1;
+        unsigned int _s2;
+        std::shared_ptr<tree> _s3;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const tree *_self = _f._self;
+          if (std::holds_alternative<typename tree::Leaf>(_self->v())) {
+            _result = f;
+          } else {
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename tree::Node>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), d_a2, d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a2.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+        }
+      }
+      return _result;
     }
   };
-
-  template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                std::shared_ptr<tree>, T1>
-                             F1>
-  static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    struct _Enter {
-      const std::shared_ptr<tree> t;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s0;
-      decltype(std::declval<const typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s3;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      decltype(std::declval<const typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s3;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree> t = _f.t;
-                std::visit(
-                    Overloaded{[&](const typename tree::Leaf &) -> void {
-                                 _result = f;
-                               },
-                               [&](const typename tree::Node &_args) -> void {
-                                 _stack.emplace_back(
-                                     _Call1{_args.d_a0, _args.d_a2, _args.d_a1,
-                                            _args.d_a0});
-                                 _stack.emplace_back(_Enter{_args.d_a2});
-                               }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.emplace_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                std::shared_ptr<tree>, T1>
-                             F1>
-  static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    struct _Enter {
-      const std::shared_ptr<tree> t;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s0;
-      decltype(std::declval<const typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s3;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      decltype(std::declval<const typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s3;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree> t = _f.t;
-                std::visit(
-                    Overloaded{[&](const typename tree::Leaf &) -> void {
-                                 _result = f;
-                               },
-                               [&](const typename tree::Node &_args) -> void {
-                                 _stack.emplace_back(
-                                     _Call1{_args.d_a0, _args.d_a2, _args.d_a1,
-                                            _args.d_a0});
-                                 _stack.emplace_back(_Enter{_args.d_a2});
-                               }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.emplace_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
 
   /// A wrapper for closures.
   struct fn_box {
@@ -243,31 +230,22 @@ struct MoveSafety {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int apply_box(const unsigned int x) const {
-      return std::visit(
-          Overloaded{[&](const typename fn_box::Box &_args) -> unsigned int {
-            return _args.d_a0(x);
-          }},
-          this->v());
+      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
+      return d_a0(x);
     }
 
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 fn_box_rec(F0 &&f) const {
-      return std::visit(
-          Overloaded{[&](const typename fn_box::Box &_args) -> T1 {
-            return f(_args.d_a0);
-          }},
-          this->v());
+      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
+      return f(d_a0);
     }
 
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 fn_box_rect(F0 &&f) const {
-      return std::visit(
-          Overloaded{[&](const typename fn_box::Box &_args) -> T1 {
-            return f(_args.d_a0);
-          }},
-          this->v());
+      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
+      return f(d_a0);
     }
   };
 
@@ -311,9 +289,6 @@ struct MoveSafety {
       return (f(1u) + g(2u));
     }();
   }();
-  /// TEST 4: Partial application followed by identity function
-  /// that takes by value (returns its argument).
-  static std::shared_ptr<tree> tree_id(std::shared_ptr<tree> t);
   static inline const unsigned int bug_partial_then_id = []() {
     return []() {
       std::shared_ptr<tree> t =
@@ -323,15 +298,13 @@ struct MoveSafety {
           [=](unsigned int _x0) mutable -> unsigned int {
         return t->sum_values(_x0);
       };
-      std::shared_ptr<tree> t2 = tree_id(std::move(t));
-      return std::visit(
-          Overloaded{[&](const typename tree::Leaf &) -> unsigned int {
-                       return f(0u);
-                     },
-                     [&](const typename tree::Node &_args) -> unsigned int {
-                       return f(_args.d_a1);
-                     }},
-          t2->v());
+      std::shared_ptr<tree> t2 = std::move(t)->tree_id();
+      if (std::holds_alternative<typename tree::Leaf>(t2->v())) {
+        return f(0u);
+      } else {
+        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t2->v());
+        return f(d_a1);
+      }
     }();
   }();
 };

@@ -130,21 +130,9 @@ Dim10TowerProofChainCase::graded_goodwillie_layers_stabilize(
     const unsigned int base_dim) {
   std::shared_ptr<SigT<unsigned int, std::any>> e =
       D_n_measure_eventually_zero(base_dim);
-  if (e.use_count() == 1 && e->v().index() == 0) {
-    auto &_rf = std::get<0>(e->v_mut());
-    unsigned int x = std::move(_rf.d_x);
-    _rf.d_x = x;
-    return e;
-  } else {
-    return std::visit(
-        Overloaded{
-            [](const typename SigT<unsigned int, std::any>::ExistT &_args)
-                -> std::shared_ptr<SigT<unsigned int, std::any>> {
-              return SigT<unsigned int, std::any>::existt(_args.d_x,
-                                                          std::any{});
-            }},
-        e->v());
-  }
+  const auto &[d_x, d_a1] =
+      std::get<typename SigT<unsigned int, std::any>::ExistT>(e->v());
+  return SigT<unsigned int, std::any>::existt(d_x, std::any{});
 }
 
 std::shared_ptr<SigT<unsigned int, std::any>>

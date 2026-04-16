@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -122,23 +117,23 @@ struct PageOps {
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 instruction_rect(const T1 f, F1 &&f0,
                              const std::shared_ptr<instruction> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instruction::NOP &) -> T1 { return f; },
-                   [&](const typename instruction::LDM &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        i->v());
+    if (std::holds_alternative<typename instruction::NOP>(i->v())) {
+      return f;
+    } else {
+      const auto &[d_a0] = std::get<typename instruction::LDM>(i->v());
+      return f0(d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 instruction_rec(const T1 f, F1 &&f0,
                             const std::shared_ptr<instruction> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instruction::NOP &) -> T1 { return f; },
-                   [&](const typename instruction::LDM &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        i->v());
+    if (std::holds_alternative<typename instruction::NOP>(i->v())) {
+      return f;
+    } else {
+      const auto &[d_a0] = std::get<typename instruction::LDM>(i->v());
+      return f0(d_a0);
+    }
   }
 
   static std::shared_ptr<instruction> decode(const unsigned int b1,
@@ -151,18 +146,11 @@ struct PageOps {
       return l;
     } else {
       unsigned int n_ = n - 1;
-      if (l.use_count() == 1 && l->v().index() == 0) {
-        return l;
+      if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+        return List<T1>::nil();
       } else {
-        return std::visit(Overloaded{[](const typename List<T1>::Nil &)
-                                         -> std::shared_ptr<List<T1>> {
-                                       return List<T1>::nil();
-                                     },
-                                     [&](const typename List<T1>::Cons &_args)
-                                         -> std::shared_ptr<List<T1>> {
-                                       return drop<T1>(n_, _args.d_a1);
-                                     }},
-                          l->v());
+        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+        return drop<T1>(n_, d_a1);
       }
     }
   }

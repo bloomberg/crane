@@ -12,10 +12,12 @@ CountLoopTestTarget::count_loop_test(const unsigned int loop_addr) {
 
 __attribute__((pure)) unsigned int CountLoopTestTarget::target_of(
     const std::shared_ptr<CountLoopTestTarget::instruction> &i) {
-  return std::visit(
-      Overloaded{[](const typename CountLoopTestTarget::instruction::ISZ &_args)
-                     -> unsigned int { return _args.d_a1; },
-                 [](const typename CountLoopTestTarget::instruction::NOP &)
-                     -> unsigned int { return 0u; }},
-      i->v());
+  if (std::holds_alternative<typename CountLoopTestTarget::instruction::ISZ>(
+          i->v())) {
+    const auto &[d_a0, d_a1] =
+        std::get<typename CountLoopTestTarget::instruction::ISZ>(i->v());
+    return d_a1;
+  } else {
+    return 0u;
+  }
 }

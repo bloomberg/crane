@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -57,13 +52,12 @@ public:
 
   template <typename T1, MapsTo<T1, T1, t_A> F0>
   T1 fold_left(F0 &&f, const T1 a0) const {
-    return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil &) -> T1 { return a0; },
-                   [&](const typename List<t_A>::Cons &_args) -> T1 {
-                     return _args.d_a1->template fold_left<T1>(
-                         f, f(a0, _args.d_a0));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return a0;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return d_a1->template fold_left<T1>(f, f(a0, d_a0));
+    }
   }
 };
 
@@ -180,27 +174,25 @@ struct RecordErasedProofFieldsCase {
   template <typename T1, MapsTo<T1, ItemKind> F0, MapsTo<T1, ItemKind> F1>
   static T1 StoredTag_rect(F0 &&f, F1 &&f0,
                            const std::shared_ptr<StoredTag> &s) {
-    return std::visit(
-        Overloaded{[&](const typename StoredTag::TagPrimary &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename StoredTag::TagSecondary &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        s->v());
+    if (std::holds_alternative<typename StoredTag::TagPrimary>(s->v())) {
+      const auto &[d_a0] = std::get<typename StoredTag::TagPrimary>(s->v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0] = std::get<typename StoredTag::TagSecondary>(s->v());
+      return f0(d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, ItemKind> F0, MapsTo<T1, ItemKind> F1>
   static T1 StoredTag_rec(F0 &&f, F1 &&f0,
                           const std::shared_ptr<StoredTag> &s) {
-    return std::visit(
-        Overloaded{[&](const typename StoredTag::TagPrimary &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename StoredTag::TagSecondary &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        s->v());
+    if (std::holds_alternative<typename StoredTag::TagPrimary>(s->v())) {
+      const auto &[d_a0] = std::get<typename StoredTag::TagPrimary>(s->v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0] = std::get<typename StoredTag::TagSecondary>(s->v());
+      return f0(d_a0);
+    }
   }
   enum class TraceBucket { e_BUCKETA, e_BUCKETB, e_BUCKETC };
 

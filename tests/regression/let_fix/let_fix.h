@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -69,14 +64,12 @@ struct LetFix {
         go;
     go = [&](std::shared_ptr<List<T1>> acc,
              std::shared_ptr<List<T1>> xs) -> std::shared_ptr<List<T1>> {
-      return std::visit(
-          Overloaded{[&](const typename List<T1>::Nil &)
-                         -> std::shared_ptr<List<T1>> { return acc; },
-                     [&](const typename List<T1>::Cons &_args)
-                         -> std::shared_ptr<List<T1>> {
-                       return go(List<T1>::cons(_args.d_a0, acc), _args.d_a1);
-                     }},
-          xs->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(xs->v())) {
+        return acc;
+      } else {
+        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(xs->v());
+        return go(List<T1>::cons(d_a0, acc), d_a1);
+      }
     };
     return go(List<T1>::nil(), l);
   }
@@ -89,13 +82,12 @@ struct LetFix {
   template <typename T1>
   __attribute__((pure)) static unsigned int
   local_length(const std::shared_ptr<List<T1>> &xs) {
-    return std::visit(
-        Overloaded{
-            [](const typename List<T1>::Nil &) -> unsigned int { return 0u; },
-            [](const typename List<T1>::Cons &_args) -> unsigned int {
-              return (local_length<T1>(_args.d_a1) + 1);
-            }},
-        xs->v());
+    if (std::holds_alternative<typename List<T1>::Nil>(xs->v())) {
+      return 0u;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(xs->v());
+      return (local_length<T1>(d_a1) + 1);
+    }
   }
 
   static inline const unsigned int test_sum =

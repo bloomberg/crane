@@ -15,11 +15,6 @@ using namespace std::string_literals;
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -90,13 +85,13 @@ struct EffectPoly {
 
   template <typename T1, typename T2, typename F0>
   static T1 fold_m(F0 &&f, const T1 init, const std::shared_ptr<List<T2>> &xs) {
-    return std::visit(
-        Overloaded{[&](const typename List<T2>::Nil &) -> T1 { return init; },
-                   [&](const typename List<T2>::Cons &_args) -> T1 {
-                     T1 acc = f(init, _args.d_a0);
-                     return fold_m<T1, T2>(f, acc, _args.d_a1);
-                   }},
-        xs->v());
+    if (std::holds_alternative<typename List<T2>::Nil>(xs->v())) {
+      return init;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<T2>::Cons>(xs->v());
+      T1 acc = f(init, d_a0);
+      return fold_m<T1, T2>(f, acc, d_a1);
+    }
   }
 
   static unsigned int sum_with_logging(const unsigned int acc,

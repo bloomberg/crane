@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct Nat {
   // TYPES
   struct O {};
@@ -89,30 +84,21 @@ struct Tuple {
 
   template <typename T1, typename T2>
   static T1 fst(const std::shared_ptr<Prod<T1, T2>> &p) {
-    return std::visit(
-        Overloaded{[](const typename Prod<T1, T2>::Pair &_args) -> T1 {
-          return _args.d_a0;
-        }},
-        p->v());
+    const auto &[d_a0, d_a1] = std::get<typename Prod<T1, T2>::Pair>(p->v());
+    return d_a0;
   }
 
   template <typename T1, typename T2>
   static T2 snd(const std::shared_ptr<Prod<T1, T2>> &p) {
-    return std::visit(
-        Overloaded{[](const typename Prod<T1, T2>::Pair &_args) -> T2 {
-          return _args.d_a1;
-        }},
-        p->v());
+    const auto &[d_a0, d_a1] = std::get<typename Prod<T1, T2>::Pair>(p->v());
+    return d_a1;
   }
 
   template <typename T1, typename T2>
   static std::shared_ptr<Prod<T2, T1>>
   swap(const std::shared_ptr<Prod<T1, T2>> &p) {
-    return std::visit(Overloaded{[](const typename Prod<T1, T2>::Pair &_args)
-                                     -> std::shared_ptr<Prod<T2, T1>> {
-                        return Prod<T2, T1>::pair(_args.d_a1, _args.d_a0);
-                      }},
-                      p->v());
+    const auto &[d_a0, d_a1] = std::get<typename Prod<T1, T2>::Pair>(p->v());
+    return Prod<T2, T1>::pair(d_a1, d_a0);
   }
 
   static inline const std::shared_ptr<

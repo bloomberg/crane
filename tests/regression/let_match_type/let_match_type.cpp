@@ -110,7 +110,7 @@ std::string LetMatchType::let_match_monadic(const bool b) {
 
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
 LetMatchType::direction_offset(const LetMatchType::Direction d) {
-  unsigned int dx = [&]() -> unsigned int {
+  unsigned int dx = [&]() {
     switch (d) {
     case Direction::e_EAST: {
       return 1u;
@@ -123,7 +123,7 @@ LetMatchType::direction_offset(const LetMatchType::Direction d) {
     }
     }
   }();
-  unsigned int dy = [&]() -> unsigned int {
+  unsigned int dy = [&]() {
     switch (d) {
     case Direction::e_NORTH: {
       return 1u;

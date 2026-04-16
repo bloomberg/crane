@@ -7,10 +7,12 @@
 
 __attribute__((pure)) unsigned int MatchFallbackNat::fallback(
     const std::shared_ptr<MatchFallbackNat::maybe_nat> &x) {
-  return std::visit(
-      Overloaded{[](const typename MatchFallbackNat::maybe_nat::SomeNat &_args)
-                     -> unsigned int { return _args.d_a0; },
-                 [](const typename MatchFallbackNat::maybe_nat::NoneNat &)
-                     -> unsigned int { return 0u; }},
-      x->v());
+  if (std::holds_alternative<typename MatchFallbackNat::maybe_nat::SomeNat>(
+          x->v())) {
+    const auto &[d_a0] =
+        std::get<typename MatchFallbackNat::maybe_nat::SomeNat>(x->v());
+    return d_a0;
+  } else {
+    return 0u;
+  }
 }

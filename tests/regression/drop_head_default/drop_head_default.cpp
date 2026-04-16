@@ -8,11 +8,12 @@
 __attribute__((pure)) unsigned int
 DropHeadDefault::head_after_drop(const std::shared_ptr<List<unsigned int>> &rom,
                                  const unsigned int addr) {
-  return std::visit(
-      Overloaded{[](const typename List<unsigned int>::Nil &) -> unsigned int {
-                   return 0u;
-                 },
-                 [](const typename List<unsigned int>::Cons &_args)
-                     -> unsigned int { return _args.d_a0; }},
-      drop<unsigned int>(addr, rom)->v());
+  auto &&_sv = drop<unsigned int>(addr, rom);
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv->v())) {
+    return 0u;
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(_sv->v());
+    return d_a0;
+  }
 }

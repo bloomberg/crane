@@ -16,32 +16,18 @@ DecodeList::decode(const unsigned int b1, const unsigned int b2) {
 
 std::shared_ptr<List<std::shared_ptr<DecodeList::instruction>>>
 DecodeList::decode_list(const std::shared_ptr<List<unsigned int>> &bytes) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<unsigned int>::Nil &)
-              -> std::shared_ptr<
-                  List<std::shared_ptr<DecodeList::instruction>>> {
-            return List<std::shared_ptr<DecodeList::instruction>>::nil();
-          },
-          [](const typename List<unsigned int>::Cons &_args)
-              -> std::shared_ptr<
-                  List<std::shared_ptr<DecodeList::instruction>>> {
-            return std::visit(
-                Overloaded{
-                    [](const typename List<unsigned int>::Nil &)
-                        -> std::shared_ptr<
-                            List<std::shared_ptr<DecodeList::instruction>>> {
-                      return List<
-                          std::shared_ptr<DecodeList::instruction>>::nil();
-                    },
-                    [&](const typename List<unsigned int>::Cons &_args0)
-                        -> std::shared_ptr<
-                            List<std::shared_ptr<DecodeList::instruction>>> {
-                      return List<std::shared_ptr<DecodeList::instruction>>::
-                          cons(decode(_args.d_a0, _args0.d_a0),
-                               decode_list(_args0.d_a1));
-                    }},
-                _args.d_a1->v());
-          }},
-      bytes->v());
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(bytes->v())) {
+    return List<std::shared_ptr<DecodeList::instruction>>::nil();
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(bytes->v());
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
+      return List<std::shared_ptr<DecodeList::instruction>>::nil();
+    } else {
+      const auto &[d_a00, d_a10] =
+          std::get<typename List<unsigned int>::Cons>(d_a1->v());
+      return List<std::shared_ptr<DecodeList::instruction>>::cons(
+          decode(d_a0, d_a00), decode_list(d_a10));
+    }
+  }
 }

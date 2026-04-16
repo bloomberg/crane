@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -57,13 +52,12 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons &_args) -> unsigned int {
-              return (_args.d_a1->length() + 1);
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return 0u;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
+    }
   }
 };
 
@@ -154,48 +148,42 @@ struct CPS {
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, std::shared_ptr<tree>, T1, std::shared_ptr<tree>, T1> F1>
   static T1 tree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, tree_rect<T1>(f, f0, _args.d_a1));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      const auto &[d_a0] = std::get<typename tree::Leaf>(t->v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rect<T1>(f, f0, d_a0), d_a1,
+                tree_rect<T1>(f, f0, d_a1));
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, std::shared_ptr<tree>, T1, std::shared_ptr<tree>, T1> F1>
   static T1 tree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, tree_rec<T1>(f, f0, _args.d_a1));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      const auto &[d_a0] = std::get<typename tree::Leaf>(t->v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rec<T1>(f, f0, d_a0), d_a1,
+                tree_rec<T1>(f, f0, d_a1));
+    }
   }
 
   __attribute__((pure)) static unsigned int
   tree_sum_cps(const std::shared_ptr<tree> &t,
                const std::function<unsigned int(unsigned int)> k) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &_args) -> unsigned int {
-                     return k(_args.d_a0);
-                   },
-                   [&](const typename tree::Node &_args) -> unsigned int {
-                     return tree_sum_cps(
-                         _args.d_a0, [=](const unsigned int sl) mutable {
-                           return tree_sum_cps(
-                               _args.d_a1, [=](const unsigned int sr) mutable {
-                                 return k((sl + sr));
-                               });
-                         });
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      const auto &[d_a0] = std::get<typename tree::Leaf>(t->v());
+      return k(d_a0);
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t->v());
+      return tree_sum_cps(d_a0, [=](const unsigned int sl) mutable {
+        return tree_sum_cps(
+            d_a1, [=](const unsigned int sr) mutable { return k((sl + sr)); });
+      });
+    }
   }
 
   __attribute__((pure)) static unsigned int
@@ -204,18 +192,14 @@ struct CPS {
   __attribute__((pure)) static unsigned int
   sum_cps(const std::shared_ptr<List<unsigned int>> &l,
           const std::function<unsigned int(unsigned int)> k) {
-    return std::visit(
-        Overloaded{
-            [&](const typename List<unsigned int>::Nil &) -> unsigned int {
-              return k(0u);
-            },
-            [&](const typename List<unsigned int>::Cons &_args)
-                -> unsigned int {
-              return sum_cps(_args.d_a1, [=](const unsigned int r) mutable {
-                return k((_args.d_a0 + r));
-              });
-            }},
-        l->v());
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+      return k(0u);
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l->v());
+      return sum_cps(
+          d_a1, [=](const unsigned int r) mutable { return k((d_a0 + r)); });
+    }
   }
 
   __attribute__((pure)) static unsigned int
@@ -227,25 +211,22 @@ struct CPS {
       const std::function<unsigned int(std::shared_ptr<List<unsigned int>>,
                                        std::shared_ptr<List<unsigned int>>)>
           k) {
-    return std::visit(
-        Overloaded{
-            [&](const typename List<unsigned int>::Nil &) -> unsigned int {
-              return k(List<unsigned int>::nil(), List<unsigned int>::nil());
-            },
-            [&](const typename List<unsigned int>::Cons &_args)
-                -> unsigned int {
-              return partition_cps(
-                  p, _args.d_a1,
-                  [=](std::shared_ptr<List<unsigned int>> yes,
-                      std::shared_ptr<List<unsigned int>> no) mutable {
-                    if (p(_args.d_a0)) {
-                      return k(List<unsigned int>::cons(_args.d_a0, yes), no);
-                    } else {
-                      return k(yes, List<unsigned int>::cons(_args.d_a0, no));
-                    }
-                  });
-            }},
-        l->v());
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+      return k(List<unsigned int>::nil(), List<unsigned int>::nil());
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l->v());
+      return partition_cps(
+          p, d_a1,
+          [=](std::shared_ptr<List<unsigned int>> yes,
+              std::shared_ptr<List<unsigned int>> no) mutable {
+            if (p(d_a0)) {
+              return k(List<unsigned int>::cons(d_a0, yes), no);
+            } else {
+              return k(yes, List<unsigned int>::cons(d_a0, no));
+            }
+          });
+    }
   }
 
   __attribute__((pure)) static unsigned int

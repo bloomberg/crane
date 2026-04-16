@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct AxiomTypes {
   using MysteryType = std::any /* AXIOM TO BE REALIZED */;
   static MysteryType mystery_value();
@@ -70,28 +65,26 @@ struct AxiomTypes {
             MapsTo<T1, MysteryType> F1>
   static T1 AxiomInductive_rect(F0 &&f, F1 &&f0,
                                 const std::shared_ptr<AxiomInductive> &a) {
-    return std::visit(
-        Overloaded{[&](const typename AxiomInductive::AxConstr1 &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename AxiomInductive::AxConstr2 &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        a->v());
+    if (std::holds_alternative<typename AxiomInductive::AxConstr1>(a->v())) {
+      const auto &[d_a0] = std::get<typename AxiomInductive::AxConstr1>(a->v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0] = std::get<typename AxiomInductive::AxConstr2>(a->v());
+      return f0(d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, MysteryType> F1>
   static T1 AxiomInductive_rec(F0 &&f, F1 &&f0,
                                const std::shared_ptr<AxiomInductive> &a) {
-    return std::visit(
-        Overloaded{[&](const typename AxiomInductive::AxConstr1 &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename AxiomInductive::AxConstr2 &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        a->v());
+    if (std::holds_alternative<typename AxiomInductive::AxConstr1>(a->v())) {
+      const auto &[d_a0] = std::get<typename AxiomInductive::AxConstr1>(a->v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0] = std::get<typename AxiomInductive::AxConstr2>(a->v());
+      return f0(d_a0);
+    }
   }
 
   static std::shared_ptr<AxiomInductive>
@@ -139,31 +132,29 @@ struct AxiomTypes {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, t_A, std::shared_ptr<list<t_A>>, T1> F1>
+    T1 list_rec(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename list<t_A>::Nil>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<t_A>::Cons>(this->v());
+        return f0(d_a0, d_a1, d_a1->template list_rec<T1>(f, f0));
+      }
+    }
+
+    template <typename T1, MapsTo<T1, t_A, std::shared_ptr<list<t_A>>, T1> F1>
+    T1 list_rect(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename list<t_A>::Nil>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<t_A>::Cons>(this->v());
+        return f0(d_a0, d_a1, d_a1->template list_rect<T1>(f, f0));
+      }
+    }
   };
-
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<list<T1>>, T2> F1>
-  static T2 list_rect(const T2 f, F1 &&f0, const std::shared_ptr<list<T1>> &l) {
-    return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil &) -> T2 { return f; },
-                   [&](const typename list<T1>::Cons &_args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               list_rect<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        l->v());
-  }
-
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<list<T1>>, T2> F1>
-  static T2 list_rec(const T2 f, F1 &&f0, const std::shared_ptr<list<T1>> &l) {
-    return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil &) -> T2 { return f; },
-                   [&](const typename list<T1>::Cons &_args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               list_rec<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        l->v());
-  }
 
   static std::shared_ptr<list<MysteryType>> axiom_list(const std::monostate _x);
 

@@ -11,11 +11,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct Coinductive {
   struct stream {
     // TYPES
@@ -72,13 +67,9 @@ struct Coinductive {
   template <MapsTo<unsigned int, unsigned int> F0>
   static std::shared_ptr<stream> smap(F0 &&f,
                                       const std::shared_ptr<stream> &s) {
+    const auto &[d_a0, d_a1] = std::get<typename stream::Cons>(s->v());
     return stream::lazy_([=]() mutable -> std::shared_ptr<stream> {
-      return std::visit(Overloaded{[&](const typename stream::Cons &_args)
-                                       -> std::shared_ptr<stream> {
-                          return stream::cons(f(_args.d_a0),
-                                              smap(f, _args.d_a1));
-                        }},
-                        s->v());
+      return stream::cons(f(d_a0), smap(f, d_a1));
     });
   }
 

@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -64,14 +59,12 @@ std::shared_ptr<List<T1>> better_rev(const std::shared_ptr<List<T1>> &l) {
       go;
   go = [&](std::shared_ptr<List<T1>> l0,
            std::shared_ptr<List<T1>> acc) -> std::shared_ptr<List<T1>> {
-    return std::visit(
-        Overloaded{[&](const typename List<T1>::Nil &)
-                       -> std::shared_ptr<List<T1>> { return acc; },
-                   [&](const typename List<T1>::Cons &_args)
-                       -> std::shared_ptr<List<T1>> {
-                     return go(_args.d_a1, List<T1>::cons(_args.d_a0, acc));
-                   }},
-        l0->v());
+    if (std::holds_alternative<typename List<T1>::Nil>(l0->v())) {
+      return acc;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l0->v());
+      return go(d_a1, List<T1>::cons(d_a0, acc));
+    }
   };
   return go(l, List<T1>::nil());
 }

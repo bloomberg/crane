@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -168,31 +163,27 @@ struct Matcher {
   static T1 regexp_rect(const T1 f, F1 &&f0, const T1 f1, F3 &&f2, F4 &&f3,
                         const T1 f4, F6 &&f5,
                         const std::shared_ptr<regexp> &r) {
-    return std::visit(
-        Overloaded{
-            [&](const typename regexp::Any &) -> T1 { return f; },
-            [&](const typename regexp::Char &_args) -> T1 {
-              return f0(_args.d_c);
-            },
-            [&](const typename regexp::Eps &) -> T1 { return f1; },
-            [&](const typename regexp::Cat &_args) -> T1 {
-              return f2(_args.d_r1,
-                        regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r1),
-                        _args.d_r2,
-                        regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r2));
-            },
-            [&](const typename regexp::Alt &_args) -> T1 {
-              return f3(_args.d_r1,
-                        regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r1),
-                        _args.d_r2,
-                        regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r2));
-            },
-            [&](const typename regexp::Zero &) -> T1 { return f4; },
-            [&](const typename regexp::Star &_args) -> T1 {
-              return f5(_args.d_r,
-                        regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r));
-            }},
-        r->v());
+    if (std::holds_alternative<typename regexp::Any>(r->v())) {
+      return f;
+    } else if (std::holds_alternative<typename regexp::Char>(r->v())) {
+      const auto &[d_c] = std::get<typename regexp::Char>(r->v());
+      return f0(d_c);
+    } else if (std::holds_alternative<typename regexp::Eps>(r->v())) {
+      return f1;
+    } else if (std::holds_alternative<typename regexp::Cat>(r->v())) {
+      const auto &[d_r1, d_r2] = std::get<typename regexp::Cat>(r->v());
+      return f2(d_r1, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_r1), d_r2,
+                regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_r2));
+    } else if (std::holds_alternative<typename regexp::Alt>(r->v())) {
+      const auto &[d_r1, d_r2] = std::get<typename regexp::Alt>(r->v());
+      return f3(d_r1, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_r1), d_r2,
+                regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_r2));
+    } else if (std::holds_alternative<typename regexp::Zero>(r->v())) {
+      return f4;
+    } else {
+      const auto &[d_r] = std::get<typename regexp::Star>(r->v());
+      return f5(d_r, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_r));
+    }
   }
 
   template <
@@ -202,31 +193,27 @@ struct Matcher {
       MapsTo<T1, std::shared_ptr<regexp>, T1> F6>
   static T1 regexp_rec(const T1 f, F1 &&f0, const T1 f1, F3 &&f2, F4 &&f3,
                        const T1 f4, F6 &&f5, const std::shared_ptr<regexp> &r) {
-    return std::visit(
-        Overloaded{
-            [&](const typename regexp::Any &) -> T1 { return f; },
-            [&](const typename regexp::Char &_args) -> T1 {
-              return f0(_args.d_c);
-            },
-            [&](const typename regexp::Eps &) -> T1 { return f1; },
-            [&](const typename regexp::Cat &_args) -> T1 {
-              return f2(_args.d_r1,
-                        regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r1),
-                        _args.d_r2,
-                        regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r2));
-            },
-            [&](const typename regexp::Alt &_args) -> T1 {
-              return f3(_args.d_r1,
-                        regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r1),
-                        _args.d_r2,
-                        regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r2));
-            },
-            [&](const typename regexp::Zero &) -> T1 { return f4; },
-            [&](const typename regexp::Star &_args) -> T1 {
-              return f5(_args.d_r,
-                        regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r));
-            }},
-        r->v());
+    if (std::holds_alternative<typename regexp::Any>(r->v())) {
+      return f;
+    } else if (std::holds_alternative<typename regexp::Char>(r->v())) {
+      const auto &[d_c] = std::get<typename regexp::Char>(r->v());
+      return f0(d_c);
+    } else if (std::holds_alternative<typename regexp::Eps>(r->v())) {
+      return f1;
+    } else if (std::holds_alternative<typename regexp::Cat>(r->v())) {
+      const auto &[d_r1, d_r2] = std::get<typename regexp::Cat>(r->v());
+      return f2(d_r1, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_r1), d_r2,
+                regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_r2));
+    } else if (std::holds_alternative<typename regexp::Alt>(r->v())) {
+      const auto &[d_r1, d_r2] = std::get<typename regexp::Alt>(r->v());
+      return f3(d_r1, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_r1), d_r2,
+                regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_r2));
+    } else if (std::holds_alternative<typename regexp::Zero>(r->v())) {
+      return f4;
+    } else {
+      const auto &[d_r] = std::get<typename regexp::Star>(r->v());
+      return f5(d_r, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_r));
+    }
   }
 
   __attribute__((pure)) static bool regexp_eq(const std::shared_ptr<regexp> &r,

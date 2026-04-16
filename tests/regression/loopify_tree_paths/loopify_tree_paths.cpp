@@ -17,36 +17,34 @@ LoopifyTreePaths::map_cons(
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _loop_ll = ll;
   bool _continue = true;
   while (_continue) {
-    std::visit(
-        Overloaded{
-            [&](const typename List<std::shared_ptr<List<unsigned int>>>::Nil
-                    &) {
-              if (_last) {
-                std::get<
-                    typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-                    _last->v_mut())
-                    .d_a1 = List<std::shared_ptr<List<unsigned int>>>::nil();
-              } else {
-                _head = List<std::shared_ptr<List<unsigned int>>>::nil();
-              }
-              _continue = false;
-            },
-            [&](const typename List<std::shared_ptr<List<unsigned int>>>::Cons
-                    &_args) {
-              auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
-                  List<unsigned int>::cons(x, _args.d_a0), nullptr);
-              if (_last) {
-                std::get<
-                    typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-                    _last->v_mut())
-                    .d_a1 = _cell;
-              } else {
-                _head = _cell;
-              }
-              _last = _cell;
-              _loop_ll = _args.d_a1;
-            }},
-        _loop_ll->v());
+    if (std::holds_alternative<
+            typename List<std::shared_ptr<List<unsigned int>>>::Nil>(
+            _loop_ll->v())) {
+      if (_last) {
+        std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+            _last->v_mut())
+            .d_a1 = List<std::shared_ptr<List<unsigned int>>>::nil();
+      } else {
+        _head = List<std::shared_ptr<List<unsigned int>>>::nil();
+      }
+      _continue = false;
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+              _loop_ll->v());
+      auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
+          List<unsigned int>::cons(x, d_a0), nullptr);
+      if (_last) {
+        std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+            _last->v_mut())
+            .d_a1 = _cell;
+      } else {
+        _head = _cell;
+      }
+      _last = _cell;
+      _loop_ll = d_a1;
+      continue;
+    }
   }
   return _head;
 }

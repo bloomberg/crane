@@ -8,7 +8,7 @@
 __attribute__((pure)) unsigned int WrmThenRdmReadsBack::get_reg(
     const std::shared_ptr<WrmThenRdmReadsBack::state> &s,
     const unsigned int r) {
-  return s->regs->nth(r, 0u);
+  return ListDef::template nth<unsigned int>(r, s->regs, 0u);
 }
 
 __attribute__((pure)) unsigned int WrmThenRdmReadsBack::get_reg_pair(
@@ -36,6 +36,7 @@ std::shared_ptr<WrmThenRdmReadsBack::state> WrmThenRdmReadsBack::execute_wrm(
 
 std::shared_ptr<WrmThenRdmReadsBack::state> WrmThenRdmReadsBack::execute_rdm(
     const std::shared_ptr<WrmThenRdmReadsBack::state> &s) {
-  return std::make_shared<WrmThenRdmReadsBack::state>(
-      state{s->regs, s->ram->nth(s->sel_char, 0u), s->ram, s->sel_char});
+  return std::make_shared<WrmThenRdmReadsBack::state>(state{
+      s->regs, ListDef::template nth<unsigned int>(s->sel_char, s->ram, 0u),
+      s->ram, s->sel_char});
 }

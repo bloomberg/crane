@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -55,36 +50,20 @@ public:
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  t_A nth(const unsigned int n, const t_A default0) const {
-    if (n <= 0) {
-      return std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
-              [](const typename List<t_A>::Cons &_args) -> t_A {
-                return _args.d_a0;
-              }},
-          this->v());
+  __attribute__((pure)) unsigned int length() const {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return 0u;
     } else {
-      unsigned int m = n - 1;
-      return std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
-              [&](const typename List<t_A>::Cons &_args0) -> t_A {
-                return _args0.d_a1->nth(m, default0);
-              }},
-          this->v());
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
     }
   }
+};
 
-  __attribute__((pure)) unsigned int length() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons &_args) -> unsigned int {
-              return (_args.d_a1->length() + 1);
-            }},
-        this->v());
-  }
+struct ListDef {
+  template <typename T1>
+  static T1 nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
+                const T1 default0);
 };
 
 struct ResetState {
@@ -123,8 +102,10 @@ struct ResetState {
         List<unsigned int>::cons(
             10u, List<unsigned int>::cons(11u, List<unsigned int>::nil()))});
     std::shared_ptr<state_full> s_ = reset_state_full(std::move(s));
-    return (((s_->acc + s_->ram_sys->nth(1u, 0u)) + s_->rom->nth(0u, 0u)) +
-            s_->stack->length());
+    return (
+        ((s_->acc + ListDef::template nth<unsigned int>(1u, s_->ram_sys, 0u)) +
+         ListDef::template nth<unsigned int>(0u, s_->rom, 0u)) +
+        s_->stack->length());
   }();
   static std::shared_ptr<state_minimal>
   reset_state_minimal(const std::shared_ptr<state_minimal> &s);
@@ -142,5 +123,26 @@ struct ResetState {
   static inline const std::pair<unsigned int, unsigned int> t =
       std::make_pair(memory_preserve_test, pc_clear_test);
 };
+
+template <typename T1>
+T1 ListDef::nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
+                const T1 default0) {
+  if (n <= 0) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      return d_a0;
+    }
+  } else {
+    unsigned int m = n - 1;
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
+      return ListDef::template nth<T1>(m, d_a10, default0);
+    }
+  }
+}
 
 #endif // INCLUDED_RESET_STATE

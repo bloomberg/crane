@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -107,30 +102,30 @@ struct ProgramWfProp {
             MapsTo<T1, unsigned int> F1>
   static T1 instruction_rect(F0 &&f, F1 &&f0, const T1 f1,
                              const std::shared_ptr<instruction> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instruction::JUN &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename instruction::JMS &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename instruction::NOP &) -> T1 { return f1; }},
-        i->v());
+    if (std::holds_alternative<typename instruction::JUN>(i->v())) {
+      const auto &[d_a0] = std::get<typename instruction::JUN>(i->v());
+      return f(d_a0);
+    } else if (std::holds_alternative<typename instruction::JMS>(i->v())) {
+      const auto &[d_a0] = std::get<typename instruction::JMS>(i->v());
+      return f0(d_a0);
+    } else {
+      return f1;
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int> F1>
   static T1 instruction_rec(F0 &&f, F1 &&f0, const T1 f1,
                             const std::shared_ptr<instruction> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instruction::JUN &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename instruction::JMS &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename instruction::NOP &) -> T1 { return f1; }},
-        i->v());
+    if (std::holds_alternative<typename instruction::JUN>(i->v())) {
+      const auto &[d_a0] = std::get<typename instruction::JUN>(i->v());
+      return f(d_a0);
+    } else if (std::holds_alternative<typename instruction::JMS>(i->v())) {
+      const auto &[d_a0] = std::get<typename instruction::JMS>(i->v());
+      return f0(d_a0);
+    } else {
+      return f1;
+    }
   }
 
   struct layout {

@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -57,13 +52,12 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons &_args) -> unsigned int {
-              return (_args.d_a1->length() + 1);
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return 0u;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
+    }
   }
 };
 
@@ -160,51 +154,47 @@ struct DeepPatterns {
   template <typename T1, MapsTo<T1, std::shared_ptr<inner>> F0,
             MapsTo<T1, unsigned int> F1>
   static T1 outer_rect(F0 &&f, F1 &&f0, const std::shared_ptr<outer> &o) {
-    return std::visit(
-        Overloaded{[&](const typename outer::OLeft &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename outer::ORight &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        o->v());
+    if (std::holds_alternative<typename outer::OLeft>(o->v())) {
+      const auto &[d_a0] = std::get<typename outer::OLeft>(o->v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0] = std::get<typename outer::ORight>(o->v());
+      return f0(d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<inner>> F0,
             MapsTo<T1, unsigned int> F1>
   static T1 outer_rec(F0 &&f, F1 &&f0, const std::shared_ptr<outer> &o) {
-    return std::visit(
-        Overloaded{[&](const typename outer::OLeft &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename outer::ORight &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        o->v());
+    if (std::holds_alternative<typename outer::OLeft>(o->v())) {
+      const auto &[d_a0] = std::get<typename outer::OLeft>(o->v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0] = std::get<typename outer::ORight>(o->v());
+      return f0(d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, bool> F1>
   static T1 inner_rect(F0 &&f, F1 &&f0, const std::shared_ptr<inner> &i) {
-    return std::visit(
-        Overloaded{[&](const typename inner::ILeft &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename inner::IRight &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        i->v());
+    if (std::holds_alternative<typename inner::ILeft>(i->v())) {
+      const auto &[d_a0] = std::get<typename inner::ILeft>(i->v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0] = std::get<typename inner::IRight>(i->v());
+      return f0(d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, bool> F1>
   static T1 inner_rec(F0 &&f, F1 &&f0, const std::shared_ptr<inner> &i) {
-    return std::visit(
-        Overloaded{[&](const typename inner::ILeft &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename inner::IRight &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        i->v());
+    if (std::holds_alternative<typename inner::ILeft>(i->v())) {
+      const auto &[d_a0] = std::get<typename inner::ILeft>(i->v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0] = std::get<typename inner::IRight>(i->v());
+      return f0(d_a0);
+    }
   }
 
   __attribute__((pure)) static unsigned int
@@ -245,19 +235,15 @@ struct DeepPatterns {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, t_A, t_B> F0> T1 pair_rec(F0 &&f) const {
-      return std::visit(
-          Overloaded{[&](const typename pair<t_A, t_B>::Pair0 &_args) -> T1 {
-            return f(_args.d_a0, _args.d_a1);
-          }},
-          this->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename pair<t_A, t_B>::Pair0>(this->v());
+      return f(d_a0, d_a1);
     }
 
     template <typename T1, MapsTo<T1, t_A, t_B> F0> T1 pair_rect(F0 &&f) const {
-      return std::visit(
-          Overloaded{[&](const typename pair<t_A, t_B>::Pair0 &_args) -> T1 {
-            return f(_args.d_a0, _args.d_a1);
-          }},
-          this->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename pair<t_A, t_B>::Pair0>(this->v());
+      return f(d_a0, d_a1);
     }
   };
 
@@ -301,33 +287,29 @@ struct DeepPatterns {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, t_A, std::shared_ptr<mylist<t_A>>, T1> F1>
+    T1 mylist_rec(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename mylist<t_A>::Nil>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename mylist<t_A>::Cons>(this->v());
+        return f0(d_a0, d_a1, d_a1->template mylist_rec<T1>(f, f0));
+      }
+    }
+
+    template <typename T1, MapsTo<T1, t_A, std::shared_ptr<mylist<t_A>>, T1> F1>
+    T1 mylist_rect(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename mylist<t_A>::Nil>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename mylist<t_A>::Cons>(this->v());
+        return f0(d_a0, d_a1, d_a1->template mylist_rect<T1>(f, f0));
+      }
+    }
   };
-
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
-  static T2 mylist_rect(const T2 f, F1 &&f0,
-                        const std::shared_ptr<mylist<T1>> &m) {
-    return std::visit(
-        Overloaded{[&](const typename mylist<T1>::Nil &) -> T2 { return f; },
-                   [&](const typename mylist<T1>::Cons &_args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               mylist_rect<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        m->v());
-  }
-
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
-  static T2 mylist_rec(const T2 f, F1 &&f0,
-                       const std::shared_ptr<mylist<T1>> &m) {
-    return std::visit(
-        Overloaded{[&](const typename mylist<T1>::Nil &) -> T2 { return f; },
-                   [&](const typename mylist<T1>::Cons &_args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               mylist_rec<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        m->v());
-  }
 
   __attribute__((pure)) static unsigned int match_pair_list(
       const std::shared_ptr<

@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -86,12 +81,10 @@ struct LoopifyNumericSequences {
         _continue = false;
       } else {
         unsigned int n_ = _loop_n - 1;
-        {
-          unsigned int _next_x = f(_loop_x);
-          unsigned int _next_n = n_;
-          _loop_x = std::move(_next_x);
-          _loop_n = std::move(_next_n);
-        }
+        unsigned int _next_x = f(_loop_x);
+        unsigned int _next_n = n_;
+        _loop_x = std::move(_next_x);
+        _loop_n = std::move(_next_n);
       }
     }
     return _result;

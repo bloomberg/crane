@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct Nat {
   // TYPES
   struct O {};
@@ -51,13 +46,12 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   std::shared_ptr<Nat> add(std::shared_ptr<Nat> m) const {
-    return std::visit(
-        Overloaded{
-            [&](const typename Nat::O &) -> std::shared_ptr<Nat> { return m; },
-            [&](const typename Nat::S &_args) -> std::shared_ptr<Nat> {
-              return Nat::s(_args.d_a0->add(m));
-            }},
-        this->v());
+    if (std::holds_alternative<typename Nat::O>(this->v())) {
+      return m;
+    } else {
+      const auto &[d_a0] = std::get<typename Nat::S>(this->v());
+      return Nat::s(d_a0->add(m));
+    }
   }
 };
 
@@ -103,15 +97,12 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   std::shared_ptr<Nat> length() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> std::shared_ptr<Nat> {
-              return Nat::o();
-            },
-            [](const typename List<t_A>::Cons &_args) -> std::shared_ptr<Nat> {
-              return Nat::s(_args.d_a1->length());
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return Nat::o();
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return Nat::s(d_a1->length());
+    }
   }
 };
 
@@ -131,16 +122,12 @@ std::shared_ptr<Nat> foo(std::shared_ptr<Nat> n, const bool b);
 template <typename T1>
 std::shared_ptr<List<T1>> ListDef::repeat(const T1 x,
                                           const std::shared_ptr<Nat> &n) {
-  return std::visit(
-      Overloaded{
-          [](const typename Nat::O &) -> std::shared_ptr<List<T1>> {
-            return List<T1>::nil();
-          },
-          [&](const typename Nat::S &_args) -> std::shared_ptr<List<T1>> {
-            return List<T1>::cons(x,
-                                  ListDef::template repeat<T1>(x, _args.d_a0));
-          }},
-      n->v());
+  if (std::holds_alternative<typename Nat::O>(n->v())) {
+    return List<T1>::nil();
+  } else {
+    const auto &[d_a0] = std::get<typename Nat::S>(n->v());
+    return List<T1>::cons(x, ListDef::template repeat<T1>(x, d_a0));
+  }
 }
 
 #endif // INCLUDED_POLYMORPHIC_HELPER

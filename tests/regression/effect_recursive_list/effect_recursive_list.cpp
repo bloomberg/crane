@@ -27,16 +27,14 @@ EffectRecursiveList::read_n_lines(const unsigned int n) {
 std::string
 EffectRecursiveList::fold_effect(const std::shared_ptr<List<std::string>> &xs,
                                  const std::string acc) {
-  return std::visit(
-      Overloaded{
-          [&](const typename List<std::string>::Nil &) -> std::string {
-            return acc;
-          },
-          [&](const typename List<std::string>::Cons &_args) -> std::string {
-            std::cout << _args.d_a0 << '\n';
-            return fold_effect(_args.d_a1, acc + " "s + _args.d_a0);
-          }},
-      xs->v());
+  if (std::holds_alternative<typename List<std::string>::Nil>(xs->v())) {
+    return acc;
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<std::string>::Cons>(xs->v());
+    std::cout << d_a0 << '\n';
+    return fold_effect(d_a1, acc + " "s + d_a0);
+  }
 }
 
 /// 4. Read lines and store each in env with index
@@ -58,24 +56,18 @@ unsigned int EffectRecursiveList::store_lines(const std::string prefix,
 std::shared_ptr<List<std::optional<std::string>>>
 EffectRecursiveList::collect_envs(
     const std::shared_ptr<List<std::string>> &names) {
-  return std::visit(
-      Overloaded{[](const typename List<std::string>::Nil &)
-                     -> std::shared_ptr<List<std::optional<std::string>>> {
-                   return List<std::optional<std::string>>::nil();
-                 },
-                 [](const typename List<std::string>::Cons &_args)
-                     -> std::shared_ptr<List<std::optional<std::string>>> {
-                   std::optional<std::string> val =
-                       [&]() -> std::optional<std::string> {
-                     auto *v = std::getenv(_args.d_a0.c_str());
-                     return v ? std::optional<std::string>(v)
-                              : std::optional<std::string>();
-                   }();
-                   std::shared_ptr<List<std::optional<std::string>>> vals =
-                       collect_envs(_args.d_a1);
-                   return List<std::optional<std::string>>::cons(val, vals);
-                 }},
-      names->v());
+  if (std::holds_alternative<typename List<std::string>::Nil>(names->v())) {
+    return List<std::optional<std::string>>::nil();
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<std::string>::Cons>(names->v());
+    std::optional<std::string> val = [&]() -> std::optional<std::string> {
+      auto *v = std::getenv(d_a0.c_str());
+      return v ? std::optional<std::string>(v) : std::optional<std::string>();
+    }();
+    std::shared_ptr<List<std::optional<std::string>>> vals = collect_envs(d_a1);
+    return List<std::optional<std::string>>::cons(val, vals);
+  }
 }
 
 /// 6. Read a line and prepend to existing list

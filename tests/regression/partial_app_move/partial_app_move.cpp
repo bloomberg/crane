@@ -13,34 +13,27 @@
 __attribute__((pure)) unsigned int
 PartialAppMove::sum_values(const std::shared_ptr<PartialAppMove::tree> &t,
                            const unsigned int x) {
-  return std::visit(
-      Overloaded{
-          [&](const typename PartialAppMove::tree::Leaf &) -> auto {
-            return x;
-          },
-          [&](const typename PartialAppMove::tree::Node &_args) -> auto {
-            return std::visit(
-                Overloaded{
-                    [&](const typename PartialAppMove::tree::Leaf &) -> auto {
-                      return (_args.d_a1 + x);
-                    },
-                    [&](const typename PartialAppMove::tree::Node &_args0)
-                        -> auto {
-                      return std::visit(
-                          Overloaded{
-                              [&](const typename PartialAppMove::tree::Leaf &)
-                                  -> auto { return (_args0.d_a1 + x); },
-                              [&](const typename PartialAppMove::tree::Node
-                                      &_args1) -> auto {
-                                return (
-                                    ((_args0.d_a1 + _args1.d_a1) + _args.d_a1) +
-                                    x);
-                              }},
-                          _args.d_a2->v());
-                    }},
-                _args.d_a0->v());
-          }},
-      t->v());
+  if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(t->v())) {
+    return x;
+  } else {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename PartialAppMove::tree::Node>(t->v());
+    if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(
+            d_a0->v())) {
+      return (d_a1 + x);
+    } else {
+      const auto &[d_a00, d_a10, d_a20] =
+          std::get<typename PartialAppMove::tree::Node>(d_a0->v());
+      if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(
+              d_a2->v())) {
+        return (d_a10 + x);
+      } else {
+        const auto &[d_a01, d_a11, d_a21] =
+            std::get<typename PartialAppMove::tree::Node>(d_a2->v());
+        return (((d_a10 + d_a11) + d_a1) + x);
+      }
+    }
+  }
 }
 
 /// Wrap a tree inside another Node.
@@ -61,9 +54,9 @@ PartialAppMove::trigger_bug(std::shared_ptr<PartialAppMove::tree> t) {
     return sum_values(t, _x0);
   };
   std::shared_ptr<PartialAppMove::tree> w = wrap(std::move(t));
-  return std::visit(Overloaded{[&](const typename PartialAppMove::tree::Leaf &)
-                                   -> unsigned int { return f(0u); },
-                               [&](const typename PartialAppMove::tree::Node &)
-                                   -> unsigned int { return f(99u); }},
-                    w->v());
+  if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(w->v())) {
+    return f(0u);
+  } else {
+    return f(99u);
+  }
 }

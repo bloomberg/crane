@@ -16,22 +16,16 @@ FunctorComp::Stack::push(const unsigned int x,
 __attribute__((pure))
 std::optional<std::pair<unsigned int, FunctorComp::Stack::t>>
 FunctorComp::Stack::pop(const std::shared_ptr<List<unsigned int>> &s) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<unsigned int>::Nil &)
-              -> std::optional<std::pair<unsigned int,
-                                         std::shared_ptr<List<unsigned int>>>> {
-            return std::optional<
-                std::pair<unsigned int, std::shared_ptr<List<unsigned int>>>>();
-          },
-          [](const typename List<unsigned int>::Cons &_args)
-              -> std::optional<std::pair<unsigned int,
-                                         std::shared_ptr<List<unsigned int>>>> {
-            return std::make_optional<
-                std::pair<unsigned int, std::shared_ptr<List<unsigned int>>>>(
-                std::make_pair(_args.d_a0, _args.d_a1));
-          }},
-      s->v());
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(s->v())) {
+    return std::optional<
+        std::pair<unsigned int, std::shared_ptr<List<unsigned int>>>>();
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(s->v());
+    return std::make_optional<
+        std::pair<unsigned int, std::shared_ptr<List<unsigned int>>>>(
+        std::make_pair(d_a0, d_a1));
+  }
 }
 
 __attribute__((pure)) unsigned int
@@ -56,52 +50,29 @@ FunctorComp::Queue::pop(const std::pair<std::shared_ptr<List<unsigned int>>,
                             q) {
   const std::shared_ptr<List<unsigned int>> &front = q.first;
   const std::shared_ptr<List<unsigned int>> &back = q.second;
-  return std::visit(
-      Overloaded{
-          [&](const typename List<unsigned int>::Nil &)
-              -> std::optional<
-                  std::pair<unsigned int,
-                            std::pair<std::shared_ptr<List<unsigned int>>,
-                                      std::shared_ptr<List<unsigned int>>>>> {
-            return std::visit(
-                Overloaded{
-                    [](const typename List<unsigned int>::Nil &)
-                        -> std::optional<std::pair<
-                            unsigned int,
-                            std::pair<std::shared_ptr<List<unsigned int>>,
-                                      std::shared_ptr<List<unsigned int>>>>> {
-                      return std::optional<std::pair<
-                          unsigned int,
-                          std::pair<std::shared_ptr<List<unsigned int>>,
-                                    std::shared_ptr<List<unsigned int>>>>>();
-                    },
-                    [](const typename List<unsigned int>::Cons &_args0)
-                        -> std::optional<std::pair<
-                            unsigned int,
-                            std::pair<std::shared_ptr<List<unsigned int>>,
-                                      std::shared_ptr<List<unsigned int>>>>> {
-                      return std::make_optional<std::pair<
-                          unsigned int,
-                          std::pair<std::shared_ptr<List<unsigned int>>,
-                                    std::shared_ptr<List<unsigned int>>>>>(
-                          std::make_pair(
-                              _args0.d_a0,
-                              std::make_pair(_args0.d_a1,
-                                             List<unsigned int>::nil())));
-                    }},
-                back->rev()->v());
-          },
-          [&](const typename List<unsigned int>::Cons &_args)
-              -> std::optional<
-                  std::pair<unsigned int,
-                            std::pair<std::shared_ptr<List<unsigned int>>,
-                                      std::shared_ptr<List<unsigned int>>>>> {
-            return std::make_optional<std::pair<
-                unsigned int, std::pair<std::shared_ptr<List<unsigned int>>,
-                                        std::shared_ptr<List<unsigned int>>>>>(
-                std::make_pair(_args.d_a0, std::make_pair(_args.d_a1, back)));
-          }},
-      front->v());
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(front->v())) {
+    auto &&_sv0 = back->rev();
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0->v())) {
+      return std::optional<std::pair<
+          unsigned int, std::pair<std::shared_ptr<List<unsigned int>>,
+                                  std::shared_ptr<List<unsigned int>>>>>();
+    } else {
+      const auto &[d_a00, d_a10] =
+          std::get<typename List<unsigned int>::Cons>(_sv0->v());
+      return std::make_optional<std::pair<
+          unsigned int, std::pair<std::shared_ptr<List<unsigned int>>,
+                                  std::shared_ptr<List<unsigned int>>>>>(
+          std::make_pair(d_a00,
+                         std::make_pair(d_a10, List<unsigned int>::nil())));
+    }
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(front->v());
+    return std::make_optional<std::pair<
+        unsigned int, std::pair<std::shared_ptr<List<unsigned int>>,
+                                std::shared_ptr<List<unsigned int>>>>>(
+        std::make_pair(d_a0, std::make_pair(d_a1, back)));
+  }
 }
 
 __attribute__((pure)) unsigned int

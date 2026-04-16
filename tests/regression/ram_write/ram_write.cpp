@@ -8,7 +8,7 @@
 __attribute__((pure)) unsigned int
 RamWrite::get_main(const std::shared_ptr<RamWrite::ram_reg> &rg,
                    const unsigned int i) {
-  return rg->reg_main->nth(i, 0u);
+  return ListDef::template nth<unsigned int>(i, rg->reg_main, 0u);
 }
 
 std::shared_ptr<RamWrite::ram_reg>
@@ -30,7 +30,8 @@ RamWrite::upd_stat_in_reg(const std::shared_ptr<RamWrite::ram_reg> &rg,
 std::shared_ptr<RamWrite::ram_reg>
 RamWrite::get_regRAM(const std::shared_ptr<RamWrite::ram_chip> &ch,
                      const unsigned int r) {
-  return ch->chip_regs->nth(r, empty_reg);
+  return ListDef::template nth<std::shared_ptr<RamWrite::ram_reg>>(
+      r, ch->chip_regs, empty_reg);
 }
 
 std::shared_ptr<RamWrite::ram_chip>
@@ -45,7 +46,8 @@ RamWrite::upd_reg_in_chip(const std::shared_ptr<RamWrite::ram_chip> &ch,
 std::shared_ptr<RamWrite::ram_chip>
 RamWrite::get_chip(const std::shared_ptr<RamWrite::ram_bank> &bk,
                    const unsigned int c) {
-  return bk->bank_chips->nth(c, empty_chip);
+  return ListDef::template nth<std::shared_ptr<RamWrite::ram_chip>>(
+      c, bk->bank_chips, empty_chip);
 }
 
 std::shared_ptr<RamWrite::ram_bank>
@@ -59,7 +61,8 @@ RamWrite::upd_chip_in_bank(const std::shared_ptr<RamWrite::ram_bank> &bk,
 std::shared_ptr<RamWrite::ram_bank> RamWrite::get_bank_from_sys(
     const std::shared_ptr<List<std::shared_ptr<RamWrite::ram_bank>>> &sys,
     const unsigned int b) {
-  return sys->nth(b, empty_bank);
+  return ListDef::template nth<std::shared_ptr<RamWrite::ram_bank>>(b, sys,
+                                                                    empty_bank);
 }
 
 std::shared_ptr<List<std::shared_ptr<RamWrite::ram_bank>>>

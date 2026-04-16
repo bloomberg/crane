@@ -7,6 +7,11 @@
 #include <variant>
 #include <vector>
 
+template <class... Ts> struct Overloaded : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
+
 // ============================================================================
 //                     STANDARD BDE ASSERT TEST FUNCTION
 // ----------------------------------------------------------------------------
@@ -76,7 +81,7 @@ int main() {
   // Test 2: nats creates an infinite stream that doesn't diverge
   auto stream = NatColist::nats(Nat::o());
   // Converting 5 elements should work without stack overflow
-  auto five = stream->list_of_colist(int_to_nat(5));
+  auto five = NatColist::list_of_colist(int_to_nat(5), stream);
   auto vec5 = list_to_vec<std::shared_ptr<Nat>>(five);
   ASSERT(vec5.size() == 5);
   ASSERT(nat_to_int(vec5[0]) == 0);
@@ -87,7 +92,7 @@ int main() {
 
   // Test 3: nats starting from a non-zero value
   auto stream5 = NatColist::nats(int_to_nat(5));
-  auto three = stream5->list_of_colist(int_to_nat(3));
+  auto three = NatColist::list_of_colist(int_to_nat(3), stream5);
   auto vec3 = list_to_vec<std::shared_ptr<Nat>>(three);
   ASSERT(vec3.size() == 3);
   ASSERT(nat_to_int(vec3[0]) == 5);

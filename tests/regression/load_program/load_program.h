@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -55,36 +50,20 @@ public:
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  t_A nth(const unsigned int n, const t_A default0) const {
-    if (n <= 0) {
-      return std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
-              [](const typename List<t_A>::Cons &_args) -> t_A {
-                return _args.d_a0;
-              }},
-          this->v());
+  __attribute__((pure)) unsigned int length() const {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return 0u;
     } else {
-      unsigned int m = n - 1;
-      return std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
-              [&](const typename List<t_A>::Cons &_args0) -> t_A {
-                return _args0.d_a1->nth(m, default0);
-              }},
-          this->v());
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
     }
   }
+};
 
-  __attribute__((pure)) unsigned int length() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons &_args) -> unsigned int {
-              return (_args.d_a1->length() + 1);
-            }},
-        this->v());
-  }
+struct ListDef {
+  template <typename T1>
+  static T1 nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
+                const T1 default0);
 };
 
 struct LoadProgram {
@@ -93,29 +72,20 @@ struct LoadProgram {
   update_nth(const unsigned int n, const T1 x,
              const std::shared_ptr<List<T1>> &l) {
     if (n <= 0) {
-      return std::visit(
-          Overloaded{
-              [](const typename List<T1>::Nil &) -> std::shared_ptr<List<T1>> {
-                return List<T1>::nil();
-              },
-              [&](const typename List<T1>::Cons &_args)
-                  -> std::shared_ptr<List<T1>> {
-                return List<T1>::cons(x, _args.d_a1);
-              }},
-          l->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+        return List<T1>::nil();
+      } else {
+        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+        return List<T1>::cons(x, d_a1);
+      }
     } else {
       unsigned int n_ = n - 1;
-      return std::visit(
-          Overloaded{
-              [](const typename List<T1>::Nil &) -> std::shared_ptr<List<T1>> {
-                return List<T1>::nil();
-              },
-              [&](const typename List<T1>::Cons &_args0)
-                  -> std::shared_ptr<List<T1>> {
-                return List<T1>::cons(_args0.d_a0,
-                                      update_nth<T1>(n_, x, _args0.d_a1));
-              }},
-          l->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+        return List<T1>::nil();
+      } else {
+        const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
+        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, d_a10));
+      }
     }
   }
 
@@ -170,10 +140,10 @@ struct LoadProgram {
               0u, 0u, false});
     std::shared_ptr<state> after =
         load_program(std::move(sample), 1u, List<unsigned int>::nil());
-    return (
-        after->rom->nth(0u, 0u) == 10u &&
-        (after->rom->nth(1u, 0u) == 11u &&
-         (after->rom->nth(2u, 0u) == 12u && after->rom->nth(3u, 0u) == 13u)));
+    return (ListDef::template nth<unsigned int>(0u, after->rom, 0u) == 10u &&
+            (ListDef::template nth<unsigned int>(1u, after->rom, 0u) == 11u &&
+             (ListDef::template nth<unsigned int>(2u, after->rom, 0u) == 12u &&
+              ListDef::template nth<unsigned int>(3u, after->rom, 0u) == 13u)));
   }();
   static inline const bool test_load_program_cons_rom = []() {
     std::shared_ptr<state> sample = std::make_shared<state>(
@@ -187,10 +157,10 @@ struct LoadProgram {
         std::move(sample), 1u,
         List<unsigned int>::cons(
             99u, List<unsigned int>::cons(88u, List<unsigned int>::nil())));
-    return (
-        after->rom->nth(0u, 0u) == 10u &&
-        (after->rom->nth(1u, 0u) == 99u &&
-         (after->rom->nth(2u, 0u) == 88u && after->rom->nth(3u, 0u) == 13u)));
+    return (ListDef::template nth<unsigned int>(0u, after->rom, 0u) == 10u &&
+            (ListDef::template nth<unsigned int>(1u, after->rom, 0u) == 99u &&
+             (ListDef::template nth<unsigned int>(2u, after->rom, 0u) == 88u &&
+              ListDef::template nth<unsigned int>(3u, after->rom, 0u) == 13u)));
   }();
   static inline const bool test_load_preserves_rom_length = []() {
     std::shared_ptr<state> sample = std::make_shared<state>(
@@ -246,7 +216,8 @@ struct LoadProgram {
               0u, 0u, false});
     std::shared_ptr<state> after =
         execute_wpm(set_prom_params(std::move(sample), 1u, 99u, true));
-    return std::move(after)->rom->nth(1u, 0u) == 99u;
+    return ListDef::template nth<unsigned int>(1u, std::move(after)->rom, 0u) ==
+           99u;
   }();
   static inline const unsigned int test_sequential_program_load = []() {
     std::shared_ptr<state_simple> sample =
@@ -259,13 +230,16 @@ struct LoadProgram {
                                     0u, List<unsigned int>::cons(
                                             0u, List<unsigned int>::nil()))))),
             1u});
-    return load_program_simple(
-               std::move(sample),
-               List<unsigned int>::cons(
-                   5u, List<unsigned int>::cons(
-                           6u, List<unsigned int>::cons(
-                                   7u, List<unsigned int>::nil()))))
-        ->rom_->nth(2u, 0u);
+    return ListDef::template nth<unsigned int>(
+        2u,
+        load_program_simple(
+            std::move(sample),
+            List<unsigned int>::cons(
+                5u, List<unsigned int>::cons(
+                        6u, List<unsigned int>::cons(
+                                7u, List<unsigned int>::nil()))))
+            ->rom_,
+        0u);
   }();
   static inline const std::pair<
       std::pair<
@@ -285,5 +259,26 @@ struct LoadProgram {
               test_load_program_step_writes_at_base),
           test_sequential_program_load);
 };
+
+template <typename T1>
+T1 ListDef::nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
+                const T1 default0) {
+  if (n <= 0) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      return d_a0;
+    }
+  } else {
+    unsigned int m = n - 1;
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
+      return ListDef::template nth<T1>(m, d_a10, default0);
+    }
+  }
+}
 
 #endif // INCLUDED_LOAD_PROGRAM

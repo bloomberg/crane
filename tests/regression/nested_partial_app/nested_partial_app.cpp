@@ -8,16 +8,13 @@
 
 __attribute__((pure)) unsigned int
 NestedPartialApp::tree_sum(const std::shared_ptr<NestedPartialApp::tree> &t) {
-  return std::visit(
-      Overloaded{
-          [](const typename NestedPartialApp::tree::Leaf &) -> unsigned int {
-            return 0u;
-          },
-          [](const typename NestedPartialApp::tree::Node &_args)
-              -> unsigned int {
-            return ((tree_sum(_args.d_a0) + _args.d_a1) + tree_sum(_args.d_a2));
-          }},
-      t->v());
+  if (std::holds_alternative<typename NestedPartialApp::tree::Leaf>(t->v())) {
+    return 0u;
+  } else {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename NestedPartialApp::tree::Node>(t->v());
+    return ((tree_sum(d_a0) + d_a1) + tree_sum(d_a2));
+  }
 }
 
 /// 3-argument function: builds Node(t1, n, t2).

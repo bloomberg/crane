@@ -60,39 +60,24 @@ __attribute__((pure))
 std::optional<std::pair<std::shared_ptr<PageOps::instruction>, unsigned int>>
 PageOps::disassemble(const std::shared_ptr<List<unsigned int>> &rom,
                      const unsigned int addr) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<unsigned int>::Nil &)
-              -> std::optional<std::pair<std::shared_ptr<PageOps::instruction>,
-                                         unsigned int>> {
-            return std::optional<std::pair<
-                std::shared_ptr<PageOps::instruction>, unsigned int>>();
-          },
-          [&](const typename List<unsigned int>::Cons &_args)
-              -> std::optional<std::pair<std::shared_ptr<PageOps::instruction>,
-                                         unsigned int>> {
-            return std::visit(
-                Overloaded{
-                    [](const typename List<unsigned int>::Nil &)
-                        -> std::optional<
-                            std::pair<std::shared_ptr<PageOps::instruction>,
-                                      unsigned int>> {
-                      return std::optional<
-                          std::pair<std::shared_ptr<PageOps::instruction>,
-                                    unsigned int>>();
-                    },
-                    [&](const typename List<unsigned int>::Cons &_args0)
-                        -> std::optional<
-                            std::pair<std::shared_ptr<PageOps::instruction>,
-                                      unsigned int>> {
-                      return std::make_optional<std::pair<
-                          std::shared_ptr<PageOps::instruction>, unsigned int>>(
-                          std::make_pair(decode(_args.d_a0, _args0.d_a0),
-                                         (addr + 2u)));
-                    }},
-                _args.d_a1->v());
-          }},
-      drop<unsigned int>(addr, rom)->v());
+  auto &&_sv = drop<unsigned int>(addr, rom);
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv->v())) {
+    return std::optional<
+        std::pair<std::shared_ptr<PageOps::instruction>, unsigned int>>();
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(_sv->v());
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
+      return std::optional<
+          std::pair<std::shared_ptr<PageOps::instruction>, unsigned int>>();
+    } else {
+      const auto &[d_a00, d_a10] =
+          std::get<typename List<unsigned int>::Cons>(d_a1->v());
+      return std::make_optional<
+          std::pair<std::shared_ptr<PageOps::instruction>, unsigned int>>(
+          std::make_pair(decode(d_a0, d_a00), (addr + 2u)));
+    }
+  }
 }
 
 __attribute__((pure)) unsigned int Nat::pow(const unsigned int n,

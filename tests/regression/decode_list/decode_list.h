@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -56,13 +51,12 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons &_args) -> unsigned int {
-              return (_args.d_a1->length() + 1);
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return 0u;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
+    }
   }
 };
 
@@ -105,23 +99,23 @@ struct DecodeList {
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 instruction_rect(const T1 f, F1 &&f0,
                              const std::shared_ptr<instruction> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instruction::NOP &) -> T1 { return f; },
-                   [&](const typename instruction::LDM &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        i->v());
+    if (std::holds_alternative<typename instruction::NOP>(i->v())) {
+      return f;
+    } else {
+      const auto &[d_a0] = std::get<typename instruction::LDM>(i->v());
+      return f0(d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 instruction_rec(const T1 f, F1 &&f0,
                             const std::shared_ptr<instruction> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instruction::NOP &) -> T1 { return f; },
-                   [&](const typename instruction::LDM &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        i->v());
+    if (std::holds_alternative<typename instruction::NOP>(i->v())) {
+      return f;
+    } else {
+      const auto &[d_a0] = std::get<typename instruction::LDM>(i->v());
+      return f0(d_a0);
+    }
   }
 
   static std::shared_ptr<instruction> decode(const unsigned int b1,
@@ -131,35 +125,28 @@ struct DecodeList {
   static inline const unsigned int t_empty =
       decode_list(List<unsigned int>::nil())->length();
   static inline const unsigned int t_odd_tail = []() {
-    return std::visit(
-        Overloaded{
-            [](const typename List<std::shared_ptr<instruction>>::Nil &)
-                -> unsigned int { return 0u; },
-            [](const typename List<std::shared_ptr<instruction>>::Cons &_args0)
-                -> unsigned int {
-              return std::visit(
-                  Overloaded{
-                      [&](const typename instruction::NOP &) -> unsigned int {
-                        return std::visit(
-                            Overloaded{
-                                [](const typename List<
-                                    std::shared_ptr<instruction>>::Nil &)
-                                    -> unsigned int { return 1u; },
-                                [](const typename List<
-                                    std::shared_ptr<instruction>>::Cons &)
-                                    -> unsigned int { return 0u; }},
-                            _args0.d_a1->v());
-                      },
-                      [](const typename instruction::LDM &) -> unsigned int {
-                        return 0u;
-                      }},
-                  _args0.d_a0->v());
-            }},
-        decode_list(List<unsigned int>::cons(
-                        0u, List<unsigned int>::cons(
-                                99u, List<unsigned int>::cons(
-                                         42u, List<unsigned int>::nil()))))
-            ->v());
+    auto &&_sv0 = decode_list(List<unsigned int>::cons(
+        0u,
+        List<unsigned int>::cons(
+            99u, List<unsigned int>::cons(42u, List<unsigned int>::nil()))));
+    if (std::holds_alternative<
+            typename List<std::shared_ptr<instruction>>::Nil>(_sv0->v())) {
+      return 0u;
+    } else {
+      const auto &[d_a00, d_a10] =
+          std::get<typename List<std::shared_ptr<instruction>>::Cons>(
+              _sv0->v());
+      if (std::holds_alternative<typename instruction::NOP>(d_a00->v())) {
+        if (std::holds_alternative<
+                typename List<std::shared_ptr<instruction>>::Nil>(d_a10->v())) {
+          return 1u;
+        } else {
+          return 0u;
+        }
+      } else {
+        return 0u;
+      }
+    }
   }();
   static inline const unsigned int t_pair_count =
       decode_list(List<unsigned int>::cons(

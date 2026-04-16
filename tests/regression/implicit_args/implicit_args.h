@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct ImplicitArgs {
   template <typename T1> static T1 id(const T1 x) { return x; }
 
@@ -79,40 +74,35 @@ struct ImplicitArgs {
             MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
   static T2 mylist_rect(const T2 f, F1 &&f0,
                         const std::shared_ptr<mylist<T1>> &m) {
-    return std::visit(
-        Overloaded{[&](const typename mylist<T1>::Mynil &) -> T2 { return f; },
-                   [&](const typename mylist<T1>::Mycons &_args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               mylist_rect<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        m->v());
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
+      return f;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m->v());
+      return f0(d_a0, d_a1, mylist_rect<T1, T2>(f, f0, d_a1));
+    }
   }
 
   template <typename T1, typename T2,
             MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
   static T2 mylist_rec(const T2 f, F1 &&f0,
                        const std::shared_ptr<mylist<T1>> &m) {
-    return std::visit(
-        Overloaded{[&](const typename mylist<T1>::Mynil &) -> T2 { return f; },
-                   [&](const typename mylist<T1>::Mycons &_args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               mylist_rec<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        m->v());
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
+      return f;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m->v());
+      return f0(d_a0, d_a1, mylist_rec<T1, T2>(f, f0, d_a1));
+    }
   }
 
   template <typename T1>
   __attribute__((pure)) static unsigned int
   length(const std::shared_ptr<mylist<T1>> &l) {
-    return std::visit(
-        Overloaded{
-            [](const typename mylist<T1>::Mynil &) -> unsigned int {
-              return 0u;
-            },
-            [](const typename mylist<T1>::Mycons &_args) -> unsigned int {
-              return (1u + length<T1>(_args.d_a1));
-            }},
-        l->v());
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(l->v())) {
+      return 0u;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l->v());
+      return (1u + length<T1>(d_a1));
+    }
   }
 
   static inline const unsigned int explicit_id = id<unsigned int>(5u);
@@ -147,13 +137,12 @@ struct ImplicitArgs {
 
   template <typename T1>
   static T1 head_or(const T1 default0, const std::shared_ptr<mylist<T1>> &l) {
-    return std::visit(
-        Overloaded{
-            [&](const typename mylist<T1>::Mynil &) -> T1 { return default0; },
-            [](const typename mylist<T1>::Mycons &_args) -> T1 {
-              return _args.d_a0;
-            }},
-        l->v());
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l->v());
+      return d_a0;
+    }
   }
 
   static inline const unsigned int use_head_empty =

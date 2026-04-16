@@ -29,31 +29,33 @@ LoopifyNumericSequences::collatz_length_fuel(const unsigned int fuel,
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(Overloaded{[&](_Enter _f) {
-                            const unsigned int n = _f.n;
-                            const unsigned int fuel = _f.fuel;
-                            if (fuel <= 0) {
-                              _result = 0u;
-                            } else {
-                              unsigned int fuel_ = fuel - 1;
-                              if (n <= 1u) {
-                                _result = 0u;
-                              } else {
-                                if ((2u ? n % 2u : n) == 0u) {
-                                  _stack.emplace_back(_Call1{1u});
-                                  _stack.emplace_back(
-                                      _Enter{(2u ? n / 2u : 0), fuel_});
-                                } else {
-                                  _stack.emplace_back(_Call2{1u});
-                                  _stack.emplace_back(
-                                      _Enter{((3u * n) + 1u), fuel_});
-                                }
-                              }
-                            }
-                          },
-                          [&](_Call1 _f) { _result = (_f._s0 + _result); },
-                          [&](_Call2 _f) { _result = (_f._s0 + _result); }},
-               _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const unsigned int n = _f.n;
+      const unsigned int fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = 0u;
+      } else {
+        unsigned int fuel_ = fuel - 1;
+        if (n <= 1u) {
+          _result = 0u;
+        } else {
+          if ((2u ? n % 2u : n) == 0u) {
+            _stack.emplace_back(_Call1{1u});
+            _stack.emplace_back(_Enter{(2u ? n / 2u : 0), fuel_});
+          } else {
+            _stack.emplace_back(_Call2{1u});
+            _stack.emplace_back(_Enter{((3u * n) + 1u), fuel_});
+          }
+        }
+      }
+    } else if (std::holds_alternative<_Call1>(_frame)) {
+      const auto &_f = std::get<_Call1>(_frame);
+      _result = (_f._s0 + _result);
+    } else {
+      const auto &_f = std::get<_Call2>(_frame);
+      _result = (_f._s0 + _result);
+    }
   }
   return _result;
 }
@@ -73,60 +75,52 @@ LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int fuel,
   bool _continue = true;
   while (_continue) {
     if (_loop_fuel <= 0) {
-      {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::nil();
-        } else {
-          _head = List<unsigned int>::nil();
-        }
-        _continue = false;
+      if (_last) {
+        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+            List<unsigned int>::nil();
+      } else {
+        _head = List<unsigned int>::nil();
       }
+      _continue = false;
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       if (_loop_n <= 1u) {
-        {
-          if (_last) {
-            std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                List<unsigned int>::cons(1u, List<unsigned int>::nil());
-          } else {
-            _head = List<unsigned int>::cons(1u, List<unsigned int>::nil());
-          }
-          _continue = false;
+        if (_last) {
+          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+              List<unsigned int>::cons(1u, List<unsigned int>::nil());
+        } else {
+          _head = List<unsigned int>::cons(1u, List<unsigned int>::nil());
         }
+        _continue = false;
       } else {
         if ((2u ? _loop_n % 2u : _loop_n) == 0u) {
-          {
-            auto _cell = List<unsigned int>::cons(_loop_n, nullptr);
-            if (_last) {
-              std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                  _cell;
-            } else {
-              _head = _cell;
-            }
-            _last = _cell;
-            unsigned int _next_n = (2u ? _loop_n / 2u : 0);
-            unsigned int _next_fuel = fuel_;
-            _loop_n = std::move(_next_n);
-            _loop_fuel = std::move(_next_fuel);
-            continue;
+          auto _cell = List<unsigned int>::cons(_loop_n, nullptr);
+          if (_last) {
+            std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+                _cell;
+          } else {
+            _head = _cell;
           }
+          _last = _cell;
+          unsigned int _next_n = (2u ? _loop_n / 2u : 0);
+          unsigned int _next_fuel = fuel_;
+          _loop_n = std::move(_next_n);
+          _loop_fuel = std::move(_next_fuel);
+          continue;
         } else {
-          {
-            auto _cell = List<unsigned int>::cons(_loop_n, nullptr);
-            if (_last) {
-              std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                  _cell;
-            } else {
-              _head = _cell;
-            }
-            _last = _cell;
-            unsigned int _next_n = ((3u * _loop_n) + 1u);
-            unsigned int _next_fuel = fuel_;
-            _loop_n = std::move(_next_n);
-            _loop_fuel = std::move(_next_fuel);
-            continue;
+          auto _cell = List<unsigned int>::cons(_loop_n, nullptr);
+          if (_last) {
+            std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+                _cell;
+          } else {
+            _head = _cell;
           }
+          _last = _cell;
+          unsigned int _next_n = ((3u * _loop_n) + 1u);
+          unsigned int _next_fuel = fuel_;
+          _loop_n = std::move(_next_n);
+          _loop_fuel = std::move(_next_fuel);
+          continue;
         }
       }
     }
@@ -172,43 +166,44 @@ LoopifyNumericSequences::tribonacci_fuel(const unsigned int fuel,
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(
-        Overloaded{[&](_Enter _f) {
-                     const unsigned int n = _f.n;
-                     const unsigned int fuel = _f.fuel;
-                     if (fuel <= 0) {
-                       _result = 0u;
-                     } else {
-                       unsigned int fuel_ = fuel - 1;
-                       if (n <= 0u) {
-                         _result = 0u;
-                       } else {
-                         if (n == 1u) {
-                           _result = 0u;
-                         } else {
-                           if (n == 2u) {
-                             _result = 1u;
-                           } else {
-                             _stack.emplace_back(_Call1{
-                                 (((n - 2u) > n ? 0 : (n - 2u))), fuel_,
-                                 (((n - 1u) > n ? 0 : (n - 1u))), fuel_});
-                             _stack.emplace_back(_Enter{
-                                 (((n - 3u) > n ? 0 : (n - 3u))), fuel_});
-                           }
-                         }
-                       }
-                     }
-                   },
-                   [&](_Call1 _f) {
-                     _stack.emplace_back(_Call2{_result, _f._s2, _f._s3});
-                     _stack.emplace_back(_Enter{_f._s0, _f._s1});
-                   },
-                   [&](_Call2 _f) {
-                     _stack.emplace_back(_Call3{_f._s0, _result});
-                     _stack.emplace_back(_Enter{_f._s1, _f._s2});
-                   },
-                   [&](_Call3 _f) { _result = ((_result + _f._s1) + _f._s0); }},
-        _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const unsigned int n = _f.n;
+      const unsigned int fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = 0u;
+      } else {
+        unsigned int fuel_ = fuel - 1;
+        if (n <= 0u) {
+          _result = 0u;
+        } else {
+          if (n == 1u) {
+            _result = 0u;
+          } else {
+            if (n == 2u) {
+              _result = 1u;
+            } else {
+              _stack.emplace_back(_Call1{(((n - 2u) > n ? 0 : (n - 2u))), fuel_,
+                                         (((n - 1u) > n ? 0 : (n - 1u))),
+                                         fuel_});
+              _stack.emplace_back(
+                  _Enter{(((n - 3u) > n ? 0 : (n - 3u))), fuel_});
+            }
+          }
+        }
+      }
+    } else if (std::holds_alternative<_Call1>(_frame)) {
+      const auto &_f = std::get<_Call1>(_frame);
+      _stack.emplace_back(_Call2{_result, _f._s2, _f._s3});
+      _stack.emplace_back(_Enter{_f._s0, _f._s1});
+    } else if (std::holds_alternative<_Call2>(_frame)) {
+      const auto &_f = std::get<_Call2>(_frame);
+      _stack.emplace_back(_Call3{_f._s0, _result});
+      _stack.emplace_back(_Enter{_f._s1, _f._s2});
+    } else {
+      const auto &_f = std::get<_Call3>(_frame);
+      _result = ((_result + _f._s1) + _f._s0);
+    }
   }
   return _result;
 }
@@ -251,39 +246,38 @@ LoopifyNumericSequences::staircase_fuel(const unsigned int fuel,
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(
-        Overloaded{[&](_Enter _f) {
-                     const unsigned int n = _f.n;
-                     const unsigned int fuel = _f.fuel;
-                     if (fuel <= 0) {
-                       _result = 1u;
-                     } else {
-                       unsigned int fuel_ = fuel - 1;
-                       if (n <= 0u) {
-                         _result = 1u;
-                       } else {
-                         if (n == 1u) {
-                           _result = 1u;
-                         } else {
-                           _stack.emplace_back(
-                               _Call1{(((n - 2u) > n ? 0 : (n - 2u))), fuel_,
-                                      (((n - 1u) > n ? 0 : (n - 1u))), fuel_});
-                           _stack.emplace_back(
-                               _Enter{(((n - 3u) > n ? 0 : (n - 3u))), fuel_});
-                         }
-                       }
-                     }
-                   },
-                   [&](_Call1 _f) {
-                     _stack.emplace_back(_Call2{_result, _f._s2, _f._s3});
-                     _stack.emplace_back(_Enter{_f._s0, _f._s1});
-                   },
-                   [&](_Call2 _f) {
-                     _stack.emplace_back(_Call3{_f._s0, _result});
-                     _stack.emplace_back(_Enter{_f._s1, _f._s2});
-                   },
-                   [&](_Call3 _f) { _result = ((_result + _f._s1) + _f._s0); }},
-        _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const unsigned int n = _f.n;
+      const unsigned int fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = 1u;
+      } else {
+        unsigned int fuel_ = fuel - 1;
+        if (n <= 0u) {
+          _result = 1u;
+        } else {
+          if (n == 1u) {
+            _result = 1u;
+          } else {
+            _stack.emplace_back(_Call1{(((n - 2u) > n ? 0 : (n - 2u))), fuel_,
+                                       (((n - 1u) > n ? 0 : (n - 1u))), fuel_});
+            _stack.emplace_back(_Enter{(((n - 3u) > n ? 0 : (n - 3u))), fuel_});
+          }
+        }
+      }
+    } else if (std::holds_alternative<_Call1>(_frame)) {
+      const auto &_f = std::get<_Call1>(_frame);
+      _stack.emplace_back(_Call2{_result, _f._s2, _f._s3});
+      _stack.emplace_back(_Enter{_f._s0, _f._s1});
+    } else if (std::holds_alternative<_Call2>(_frame)) {
+      const auto &_f = std::get<_Call2>(_frame);
+      _stack.emplace_back(_Call3{_f._s0, _result});
+      _stack.emplace_back(_Enter{_f._s1, _f._s2});
+    } else {
+      const auto &_f = std::get<_Call3>(_frame);
+      _result = ((_result + _f._s1) + _f._s0);
+    }
   }
   return _result;
 }
@@ -313,25 +307,25 @@ LoopifyNumericSequences::digitsum_fuel(const unsigned int fuel,
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(Overloaded{[&](_Enter _f) {
-                            const unsigned int n = _f.n;
-                            const unsigned int fuel = _f.fuel;
-                            if (fuel <= 0) {
-                              _result = 0u;
-                            } else {
-                              unsigned int fuel_ = fuel - 1;
-                              if (n <= 0u) {
-                                _result = 0u;
-                              } else {
-                                _stack.emplace_back(
-                                    _Call1{(10u ? n % 10u : n)});
-                                _stack.emplace_back(
-                                    _Enter{(10u ? n / 10u : 0), fuel_});
-                              }
-                            }
-                          },
-                          [&](_Call1 _f) { _result = (_f._s0 + _result); }},
-               _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const unsigned int n = _f.n;
+      const unsigned int fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = 0u;
+      } else {
+        unsigned int fuel_ = fuel - 1;
+        if (n <= 0u) {
+          _result = 0u;
+        } else {
+          _stack.emplace_back(_Call1{(10u ? n % 10u : n)});
+          _stack.emplace_back(_Enter{(10u ? n / 10u : 0), fuel_});
+        }
+      }
+    } else {
+      const auto &_f = std::get<_Call1>(_frame);
+      _result = (_f._s0 + _result);
+    }
   }
   return _result;
 }
@@ -362,24 +356,25 @@ LoopifyNumericSequences::dec_to_bin_fuel(const unsigned int fuel,
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(
-        Overloaded{[&](_Enter _f) {
-                     const unsigned int n = _f.n;
-                     const unsigned int fuel = _f.fuel;
-                     if (fuel <= 0) {
-                       _result = 0u;
-                     } else {
-                       unsigned int fuel_ = fuel - 1;
-                       if (n <= 0u) {
-                         _result = 0u;
-                       } else {
-                         _stack.emplace_back(_Call1{(2u ? n % 2u : n), 10u});
-                         _stack.emplace_back(_Enter{(2u ? n / 2u : 0), fuel_});
-                       }
-                     }
-                   },
-                   [&](_Call1 _f) { _result = (_f._s0 + (_f._s1 * _result)); }},
-        _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const unsigned int n = _f.n;
+      const unsigned int fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = 0u;
+      } else {
+        unsigned int fuel_ = fuel - 1;
+        if (n <= 0u) {
+          _result = 0u;
+        } else {
+          _stack.emplace_back(_Call1{(2u ? n % 2u : n), 10u});
+          _stack.emplace_back(_Enter{(2u ? n / 2u : 0), fuel_});
+        }
+      }
+    } else {
+      const auto &_f = std::get<_Call1>(_frame);
+      _result = (_f._s0 + (_f._s1 * _result));
+    }
   }
   return _result;
 }
@@ -398,43 +393,39 @@ __attribute__((pure)) unsigned int LoopifyNumericSequences::alternate_sum(
   bool _loop_sign = sign;
   bool _continue = true;
   while (_continue) {
-    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil &) {
-                            _result = _loop_acc;
-                            _continue = false;
-                          },
-                          [&](const typename List<unsigned int>::Cons &_args) {
-                            if (_loop_sign) {
-                              std::shared_ptr<List<unsigned int>> _next_l =
-                                  _args.d_a1;
-                              unsigned int _next_acc = (_loop_acc + _args.d_a0);
-                              bool _next_sign = false;
-                              _loop_l = std::move(_next_l);
-                              _loop_acc = std::move(_next_acc);
-                              _loop_sign = std::move(_next_sign);
-                            } else {
-                              if (_args.d_a0 <= _loop_acc) {
-                                std::shared_ptr<List<unsigned int>> _next_l =
-                                    _args.d_a1;
-                                unsigned int _next_acc =
-                                    (((_loop_acc - _args.d_a0) > _loop_acc
-                                          ? 0
-                                          : (_loop_acc - _args.d_a0)));
-                                bool _next_sign = true;
-                                _loop_l = std::move(_next_l);
-                                _loop_acc = std::move(_next_acc);
-                                _loop_sign = std::move(_next_sign);
-                              } else {
-                                std::shared_ptr<List<unsigned int>> _next_l =
-                                    _args.d_a1;
-                                unsigned int _next_acc = 0u;
-                                bool _next_sign = true;
-                                _loop_l = std::move(_next_l);
-                                _loop_acc = std::move(_next_acc);
-                                _loop_sign = std::move(_next_sign);
-                              }
-                            }
-                          }},
-               _loop_l->v());
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
+      _result = _loop_acc;
+      _continue = false;
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      if (_loop_sign) {
+        std::shared_ptr<List<unsigned int>> _next_l = d_a1;
+        unsigned int _next_acc = (_loop_acc + d_a0);
+        bool _next_sign = false;
+        _loop_l = std::move(_next_l);
+        _loop_acc = std::move(_next_acc);
+        _loop_sign = std::move(_next_sign);
+      } else {
+        if (d_a0 <= _loop_acc) {
+          std::shared_ptr<List<unsigned int>> _next_l = d_a1;
+          unsigned int _next_acc =
+              (((_loop_acc - d_a0) > _loop_acc ? 0 : (_loop_acc - d_a0)));
+          bool _next_sign = true;
+          _loop_l = std::move(_next_l);
+          _loop_acc = std::move(_next_acc);
+          _loop_sign = std::move(_next_sign);
+        } else {
+          std::shared_ptr<List<unsigned int>> _next_l = d_a1;
+          unsigned int _next_acc = 0u;
+          bool _next_sign = true;
+          _loop_l = std::move(_next_l);
+          _loop_acc = std::move(_next_acc);
+          _loop_sign = std::move(_next_sign);
+        }
+      }
+    }
   }
   return _result;
 }
@@ -457,22 +448,24 @@ LoopifyNumericSequences::sum_divisors_aux(const unsigned int n,
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(Overloaded{[&](_Enter _f) {
-                            const unsigned int d = _f.d;
-                            if (d <= 0) {
-                              _result = 0u;
-                            } else {
-                              unsigned int d_ = d - 1;
-                              if ((d ? n % d : n) == 0u) {
-                                _stack.emplace_back(_Call1{d});
-                                _stack.emplace_back(_Enter{d_});
-                              } else {
-                                _stack.emplace_back(_Enter{d_});
-                              }
-                            }
-                          },
-                          [&](_Call1 _f) { _result = (_f._s0 + _result); }},
-               _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const unsigned int d = _f.d;
+      if (d <= 0) {
+        _result = 0u;
+      } else {
+        unsigned int d_ = d - 1;
+        if ((d ? n % d : n) == 0u) {
+          _stack.emplace_back(_Call1{d});
+          _stack.emplace_back(_Enter{d_});
+        } else {
+          _stack.emplace_back(_Enter{d_});
+        }
+      }
+    } else {
+      const auto &_f = std::get<_Call1>(_frame);
+      _result = (_f._s0 + _result);
+    }
   }
   return _result;
 }

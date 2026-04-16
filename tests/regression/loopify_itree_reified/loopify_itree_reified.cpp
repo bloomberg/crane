@@ -28,39 +28,39 @@ LoopifyItreeReified::count_taus(const unsigned int fuel,
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(
-        Overloaded{
-            [&](_Enter _f) {
-              const std::shared_ptr<ITree<unsigned int>> t = _f.t;
-              const unsigned int fuel = _f.fuel;
-              if (fuel <= 0) {
-                _result = 0u;
-              } else {
-                unsigned int fuel_ = fuel - 1;
-                return std::visit(
-                    Overloaded{
-                        [&](const typename ITree<unsigned int>::Ret &_itf)
-                            -> decltype(auto) {
-                          auto _x = _itf.value;
-                          _result = 0u;
-                        },
-                        [&](const typename ITree<unsigned int>::Tau &_itf)
-                            -> decltype(auto) {
-                          auto t_ = _itf.next;
-                          _stack.emplace_back(_Call1{});
-                          _stack.emplace_back(_Enter{t_, fuel_});
-                        },
-                        [&](const typename ITree<unsigned int>::Vis &_itf)
-                            -> decltype(auto) {
-                          auto _x = _itf.effect;
-                          auto _x0 = _itf.cont;
-                          _result = 0u;
-                        }},
-                    t->observe());
-              }
-            },
-            [&](_Call1) { _result = (_result + 1); }},
-        _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const std::shared_ptr<ITree<unsigned int>> t = _f.t;
+      const unsigned int fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = 0u;
+      } else {
+        unsigned int fuel_ = fuel - 1;
+        auto _cs = t->observe();
+        if (std::holds_alternative<typename ITree<unsigned int>::Ret>(_cs)) {
+          const auto &_itf =
+              *std::get_if<typename ITree<unsigned int>::Ret>(&_cs);
+          auto _x = _itf.value;
+          _result = 0u;
+        } else if (std::holds_alternative<typename ITree<unsigned int>::Tau>(
+                       _cs)) {
+          const auto &_itf =
+              *std::get_if<typename ITree<unsigned int>::Tau>(&_cs);
+          auto t_ = _itf.next;
+          _stack.emplace_back(_Call1{});
+          _stack.emplace_back(_Enter{t_, fuel_});
+        } else {
+          const auto &_itf =
+              *std::get_if<typename ITree<unsigned int>::Vis>(&_cs);
+          auto _x = _itf.effect;
+          auto _x0 = _itf.cont;
+          _result = 0u;
+        }
+      }
+    } else {
+      const auto &_f = std::get<_Call1>(_frame);
+      _result = (_result + 1);
+    }
   }
   return _result;
 }

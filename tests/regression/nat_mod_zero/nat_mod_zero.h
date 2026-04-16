@@ -7,11 +7,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct NatModZero {
   /// In Rocq, Nat.modulo n 0 = n — perfectly defined.
   /// But NatIntStd maps Nat.modulo to (%a0 % %a1) with

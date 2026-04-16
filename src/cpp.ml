@@ -509,34 +509,32 @@ let rec pp_structure_elem ~is_header f = function
           let process_decl (_l, se) =
             match se with
             | SEdecl (Dterm (r, body, ty)) ->
-              if
-                same_module r
-                && (not (refs_excluded ty))
-                && Method_registry.body_safe_for_method body
-              then (
-                match
-                  Method_registry.find_epon_arg_pos epon_ref ty
-                with
-                | Some (pos, ind_tvar_positions) ->
+              if same_module r && not (refs_excluded ty) then (
+                match Method_registry.find_epon_arg_pos epon_ref ty with
+                | Some (pos, ind_tvar_positions)
+                  when Method_registry.body_safe_for_method ~this_pos:pos
+                         ~ret_has_shared_epon:
+                           (Method_registry.ml_return_type_has_ref epon_ref ty)
+                         body ->
                   method_candidates := (r, body, ty, pos) :: !method_candidates;
                   register_method r epon_ref pos ~ind_tvar_positions ();
                   Method_registry.add_candidate
                     (get_method_registry ())
                     epon_ref
                     (r, body, ty, pos)
-                | None -> () )
+                | _ -> () )
             | SEdecl (Dfix (rv, defs, typs)) ->
               Array.iteri
                 (fun i r ->
-                  if
-                    same_module r
-                    && (not (refs_excluded typs.(i)))
-                    && Method_registry.body_safe_for_method defs.(i)
-                  then
+                  if same_module r && not (refs_excluded typs.(i)) then
                     let ty = typs.(i) in
                     let body = defs.(i) in
                     match Method_registry.find_epon_arg_pos epon_ref ty with
-                    | Some (pos, ind_tvar_positions) ->
+                    | Some (pos, ind_tvar_positions)
+                      when Method_registry.body_safe_for_method ~this_pos:pos
+                             ~ret_has_shared_epon:
+                               (Method_registry.ml_return_type_has_ref epon_ref ty)
+                             body ->
                       method_candidates :=
                         (r, body, ty, pos) :: !method_candidates;
                       register_method r epon_ref pos ~ind_tvar_positions ();
@@ -544,7 +542,7 @@ let rec pp_structure_elem ~is_header f = function
                         (get_method_registry ())
                         epon_ref
                         (r, body, ty, pos)
-                    | None -> () )
+                    | _ -> () )
                 rv
             | _ -> ()
           in

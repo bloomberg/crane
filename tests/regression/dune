@@ -3602,3 +3602,113 @@
   (alias runtest)
   (deps count_down.t.exe)
   (action (run ./count_down.t.exe))))
+
+(subdir name_clash_ctor_field
+ (rule
+  (targets name_clash_ctor_field.t.exe)
+  (deps NameClashCtorField.vo name_clash_ctor_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} name_clash_ctor_field.t.exe name_clash_ctor_field.cpp name_clash_ctor_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps name_clash_ctor_field.t.exe)
+  (action (run ./name_clash_ctor_field.t.exe))))
+
+(subdir name_clash_let_match
+ (rule
+  (targets name_clash_let_match.t.exe)
+  (deps NameClashLetMatch.vo name_clash_let_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} name_clash_let_match.t.exe name_clash_let_match.cpp name_clash_let_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps name_clash_let_match.t.exe)
+  (action (run ./name_clash_let_match.t.exe))))
+
+(subdir name_clash_match_match
+ (rule
+  (targets name_clash_match_match.t.exe)
+  (deps NameClashMatchMatch.vo name_clash_match_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} name_clash_match_match.t.exe name_clash_match_match.cpp name_clash_match_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps name_clash_match_match.t.exe)
+  (action (run ./name_clash_match_match.t.exe))))
+
+(subdir name_clash_nested_deep
+ (rule
+  (targets name_clash_nested_deep.t.exe)
+  (deps NameClashNestedDeep.vo name_clash_nested_deep.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} name_clash_nested_deep.t.exe name_clash_nested_deep.cpp name_clash_nested_deep.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps name_clash_nested_deep.t.exe)
+  (action (run ./name_clash_nested_deep.t.exe))))
+
+(subdir name_clash_scrutinee
+ (rule
+  (targets name_clash_scrutinee.t.exe)
+  (deps NameClashScrutinee.vo name_clash_scrutinee.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} name_clash_scrutinee.t.exe name_clash_scrutinee.cpp name_clash_scrutinee.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps name_clash_scrutinee.t.exe)
+  (action (run ./name_clash_scrutinee.t.exe))))
+
+(subdir name_clash_binding_reuse
+ (rule
+  (targets name_clash_binding_reuse.t.exe)
+  (deps NameClashBindingReuse.vo name_clash_binding_reuse.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} name_clash_binding_reuse.t.exe name_clash_binding_reuse.cpp name_clash_binding_reuse.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps name_clash_binding_reuse.t.exe)
+  (action (run ./name_clash_binding_reuse.t.exe))))
+
+(subdir name_clash_return_this
+ (rule
+  (targets name_clash_return_this.t.exe)
+  (deps NameClashReturnThis.vo name_clash_return_this.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} name_clash_return_this.t.exe name_clash_return_this.cpp name_clash_return_this.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps name_clash_return_this.t.exe)
+  (action (run ./name_clash_return_this.t.exe))))
+
+(subdir name_clash_scope_leak
+ (rule
+  (targets name_clash_scope_leak.t.exe)
+  (deps NameClashScopeLeak.vo name_clash_scope_leak.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} name_clash_scope_leak.t.exe name_clash_scope_leak.cpp name_clash_scope_leak.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps name_clash_scope_leak.t.exe)
+  (action (run ./name_clash_scope_leak.t.exe))))
+
+(subdir name_clash_iife_this
+ (rule
+  (targets name_clash_iife_this.t.exe)
+  (deps NameClashIifeThis.vo name_clash_iife_this.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} name_clash_iife_this.t.exe name_clash_iife_this.cpp name_clash_iife_this.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps name_clash_iife_this.t.exe)
+  (action (run ./name_clash_iife_this.t.exe))))
+
+(subdir unit_monostate_erase
+ (rule
+  (targets unit_monostate_erase.t.exe)
+  (deps UnitMonostateErase.vo unit_monostate_erase.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unit_monostate_erase.t.exe unit_monostate_erase.cpp unit_monostate_erase.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps unit_monostate_erase.t.exe)
+  (action (run ./unit_monostate_erase.t.exe))))

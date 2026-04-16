@@ -11,11 +11,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct LoopifyOption {
   template <typename t_A> struct list {
     // TYPES
@@ -67,8 +62,8 @@ struct LoopifyOption {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename list<T1>::Cons &>().d_a1) _s0;
-      decltype(std::declval<const typename list<T1>::Cons &>().d_a0) _s1;
+      std::shared_ptr<list<T1>> _s0;
+      T1 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -78,23 +73,20 @@ struct LoopifyOption {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<list<T1>> l = _f.l;
-                std::visit(
-                    Overloaded{
-                        [&](const typename list<T1>::Nil &) -> void {
-                          _result = f;
-                        },
-                        [&](const typename list<T1>::Cons &_args) -> void {
-                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0});
-                          _stack.emplace_back(_Enter{_args.d_a1});
-                        }},
-                    l->v());
-              },
-              [&](_Call1 _f) { _result = f0(_f._s1, _f._s0, _result); }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<list<T1>> l = _f.l;
+        if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+          _result = f;
+        } else {
+          const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+          _stack.emplace_back(_Call1{d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
+        }
+      } else {
+        const auto &_f = std::get<_Call1>(_frame);
+        _result = f0(_f._s1, _f._s0, _result);
+      }
     }
     return _result;
   }
@@ -107,8 +99,8 @@ struct LoopifyOption {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename list<T1>::Cons &>().d_a1) _s0;
-      decltype(std::declval<const typename list<T1>::Cons &>().d_a0) _s1;
+      std::shared_ptr<list<T1>> _s0;
+      T1 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -118,23 +110,20 @@ struct LoopifyOption {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<list<T1>> l = _f.l;
-                std::visit(
-                    Overloaded{
-                        [&](const typename list<T1>::Nil &) -> void {
-                          _result = f;
-                        },
-                        [&](const typename list<T1>::Cons &_args) -> void {
-                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0});
-                          _stack.emplace_back(_Enter{_args.d_a1});
-                        }},
-                    l->v());
-              },
-              [&](_Call1 _f) { _result = f0(_f._s1, _f._s0, _result); }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<list<T1>> l = _f.l;
+        if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+          _result = f;
+        } else {
+          const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+          _stack.emplace_back(_Call1{d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
+        }
+      } else {
+        const auto &_f = std::get<_Call1>(_frame);
+        _result = f0(_f._s1, _f._s0, _result);
+      }
     }
     return _result;
   }
@@ -147,19 +136,19 @@ struct LoopifyOption {
     std::shared_ptr<list<T1>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename list<T1>::Nil &) {
-                              _result = std::optional<T1>();
-                              _continue = false;
-                            },
-                            [&](const typename list<T1>::Cons &_args) {
-                              if (p(_args.d_a0)) {
-                                _result = std::make_optional<T1>(_args.d_a0);
-                                _continue = false;
-                              } else {
-                                _loop_l = _args.d_a1;
-                              }
-                            }},
-                 _loop_l->v());
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
+        _result = std::optional<T1>();
+        _continue = false;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        if (p(d_a0)) {
+          _result = std::make_optional<T1>(d_a0);
+          _continue = false;
+        } else {
+          _loop_l = d_a1;
+        }
+      }
     }
     return _result;
   }
@@ -172,24 +161,19 @@ struct LoopifyOption {
     std::shared_ptr<list<T1>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(
-          Overloaded{[&](const typename list<T1>::Nil &) {
-                       _result = std::optional<T1>();
-                       _continue = false;
-                     },
-                     [&](const typename list<T1>::Cons &_args) {
-                       std::visit(
-                           Overloaded{[&](const typename list<T1>::Nil &) {
-                                        _result =
-                                            std::make_optional<T1>(_args.d_a0);
-                                        _continue = false;
-                                      },
-                                      [&](const typename list<T1>::Cons &) {
-                                        _loop_l = _args.d_a1;
-                                      }},
-                           _args.d_a1->v());
-                     }},
-          _loop_l->v());
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
+        _result = std::optional<T1>();
+        _continue = false;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        if (std::holds_alternative<typename list<T1>::Nil>(d_a1->v())) {
+          _result = std::make_optional<T1>(d_a0);
+          _continue = false;
+        } else {
+          _loop_l = d_a1;
+        }
+      }
     }
     return _result;
   }
@@ -203,24 +187,23 @@ struct LoopifyOption {
     unsigned int _loop_n = n;
     bool _continue = true;
     while (_continue) {
-      std::visit(
-          Overloaded{[&](const typename list<T1>::Nil &) {
-                       _result = std::optional<T1>();
-                       _continue = false;
-                     },
-                     [&](const typename list<T1>::Cons &_args) {
-                       if (_loop_n == 0u) {
-                         _result = std::make_optional<T1>(_args.d_a0);
-                         _continue = false;
-                       } else {
-                         std::shared_ptr<list<T1>> _next_l = _args.d_a1;
-                         unsigned int _next_n =
-                             (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-                         _loop_l = std::move(_next_l);
-                         _loop_n = std::move(_next_n);
-                       }
-                     }},
-          _loop_l->v());
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
+        _result = std::optional<T1>();
+        _continue = false;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        if (_loop_n == 0u) {
+          _result = std::make_optional<T1>(d_a0);
+          _continue = false;
+        } else {
+          std::shared_ptr<list<T1>> _next_l = d_a1;
+          unsigned int _next_n =
+              (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
+          _loop_l = std::move(_next_l);
+          _loop_n = std::move(_next_n);
+        }
+      }
     }
     return _result;
   }
@@ -239,35 +222,34 @@ struct LoopifyOption {
     std::shared_ptr<list<T1>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(
-          Overloaded{
-              [&](const typename list<T1>::Nil &) {
-                if (_last) {
-                  std::get<typename list<T2>::Cons>(_last->v_mut()).d_a1 =
-                      list<T2>::nil();
-                } else {
-                  _head = list<T2>::nil();
-                }
-                _continue = false;
-              },
-              [&](const typename list<T1>::Cons &_args) {
-                auto _cs = f(_args.d_a0);
-                if (_cs.has_value()) {
-                  const T2 &y = *_cs;
-                  auto _cell = list<T2>::cons(y, nullptr);
-                  if (_last) {
-                    std::get<typename list<T2>::Cons>(_last->v_mut()).d_a1 =
-                        _cell;
-                  } else {
-                    _head = _cell;
-                  }
-                  _last = _cell;
-                  _loop_l = _args.d_a1;
-                } else {
-                  _loop_l = _args.d_a1;
-                }
-              }},
-          _loop_l->v());
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
+        if (_last) {
+          std::get<typename list<T2>::Cons>(_last->v_mut()).d_a1 =
+              list<T2>::nil();
+        } else {
+          _head = list<T2>::nil();
+        }
+        _continue = false;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        auto _cs = f(d_a0);
+        if (_cs.has_value()) {
+          const T2 &y = *_cs;
+          auto _cell = list<T2>::cons(y, nullptr);
+          if (_last) {
+            std::get<typename list<T2>::Cons>(_last->v_mut()).d_a1 = _cell;
+          } else {
+            _head = _cell;
+          }
+          _last = _cell;
+          _loop_l = d_a1;
+          continue;
+        } else {
+          _loop_l = d_a1;
+          continue;
+        }
+      }
     }
     return _head;
   }
@@ -282,23 +264,22 @@ struct LoopifyOption {
     std::shared_ptr<list<T1>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename list<T1>::Nil &) {
-                              _result = std::optional<unsigned int>();
-                              _continue = false;
-                            },
-                            [&](const typename list<T1>::Cons &_args) {
-                              if (p(_args.d_a0)) {
-                                _result =
-                                    std::make_optional<unsigned int>(_loop_i);
-                                _continue = false;
-                              } else {
-                                unsigned int _next_i = (_loop_i + 1);
-                                std::shared_ptr<list<T1>> _next_l = _args.d_a1;
-                                _loop_i = std::move(_next_i);
-                                _loop_l = std::move(_next_l);
-                              }
-                            }},
-                 _loop_l->v());
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
+        _result = std::optional<unsigned int>();
+        _continue = false;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        if (p(d_a0)) {
+          _result = std::make_optional<unsigned int>(_loop_i);
+          _continue = false;
+        } else {
+          unsigned int _next_i = (_loop_i + 1);
+          std::shared_ptr<list<T1>> _next_l = d_a1;
+          _loop_i = std::move(_next_i);
+          _loop_l = std::move(_next_l);
+        }
+      }
     }
     return _result;
   }

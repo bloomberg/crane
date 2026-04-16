@@ -8,15 +8,13 @@
 
 __attribute__((pure)) unsigned int
 ClosureChain::tree_sum(const std::shared_ptr<ClosureChain::tree> &t) {
-  return std::visit(
-      Overloaded{
-          [](const typename ClosureChain::tree::Leaf &) -> unsigned int {
-            return 0u;
-          },
-          [](const typename ClosureChain::tree::Node &_args) -> unsigned int {
-            return ((tree_sum(_args.d_a0) + _args.d_a1) + tree_sum(_args.d_a2));
-          }},
-      t->v());
+  if (std::holds_alternative<typename ClosureChain::tree::Leaf>(t->v())) {
+    return 0u;
+  } else {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename ClosureChain::tree::Node>(t->v());
+    return ((tree_sum(d_a0) + d_a1) + tree_sum(d_a2));
+  }
 }
 
 /// Build a chain of closures via recursion.

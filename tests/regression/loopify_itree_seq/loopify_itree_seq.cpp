@@ -23,12 +23,10 @@ unsigned int LoopifyItreeSeq::count_down(const unsigned int n) {
         _continue = false;
       } else {
         unsigned int k_ = _loop_k - 1;
-        {
-          unsigned int _next_acc = (_loop_acc + 1u);
-          unsigned int _next_k = k_;
-          _loop_acc = std::move(_next_acc);
-          _loop_k = std::move(_next_k);
-        }
+        unsigned int _next_acc = (_loop_acc + 1u);
+        unsigned int _next_k = k_;
+        _loop_acc = std::move(_next_acc);
+        _loop_k = std::move(_next_k);
       }
     }
     return _result;
@@ -50,12 +48,10 @@ unsigned int LoopifyItreeSeq::sum_to(const unsigned int n) {
         _continue = false;
       } else {
         unsigned int k_ = _loop_k - 1;
-        {
-          unsigned int _next_acc = (_loop_acc + _loop_k);
-          unsigned int _next_k = k_;
-          _loop_acc = std::move(_next_acc);
-          _loop_k = std::move(_next_k);
-        }
+        unsigned int _next_acc = (_loop_acc + _loop_k);
+        unsigned int _next_k = k_;
+        _loop_acc = std::move(_next_acc);
+        _loop_k = std::move(_next_k);
       }
     }
     return _result;
@@ -81,23 +77,22 @@ LoopifyItreeSeq::countdown_list(const unsigned int n) {
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(Overloaded{[&](_Enter _f) {
-                            const unsigned int n = _f.n;
-                            if (n <= 0) {
-                              _result = List<unsigned int>::cons(
-                                  0u, List<unsigned int>::nil());
-                            } else {
-                              unsigned int n_ = n - 1;
-                              _stack.emplace_back(_Call1{n});
-                              _stack.emplace_back(_Enter{n_});
-                            }
-                          },
-                          [&](_Call1 _f) {
-                            const unsigned int n = _f._s0;
-                            std::shared_ptr<List<unsigned int>> rest = _result;
-                            _result = List<unsigned int>::cons(n, rest);
-                          }},
-               _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const unsigned int n = _f.n;
+      if (n <= 0) {
+        _result = List<unsigned int>::cons(0u, List<unsigned int>::nil());
+      } else {
+        unsigned int n_ = n - 1;
+        _stack.emplace_back(_Call1{n});
+        _stack.emplace_back(_Enter{n_});
+      }
+    } else {
+      const auto &_f = std::get<_Call1>(_frame);
+      const unsigned int n = _f._s0;
+      std::shared_ptr<List<unsigned int>> rest = _result;
+      _result = List<unsigned int>::cons(n, rest);
+    }
   }
   return _result;
 }

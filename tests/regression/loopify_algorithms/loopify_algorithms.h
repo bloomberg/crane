@@ -11,11 +11,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -63,28 +58,26 @@ public:
     const List *_loop_self = this;
     bool _continue = true;
     while (_continue) {
-      std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) {
-                if (_last) {
-                  std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
-                } else {
-                  _head = m;
-                }
-                _continue = false;
-              },
-              [&](const typename List<t_A>::Cons &_args) {
-                auto _cell = List<t_A>::cons(_args.d_a0, nullptr);
-                if (_last) {
-                  std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
-                      _cell;
-                } else {
-                  _head = _cell;
-                }
-                _last = _cell;
-                _loop_self = _args.d_a1.get();
-              }},
-          _loop_self->v());
+      if (std::holds_alternative<typename List<t_A>::Nil>(_loop_self->v())) {
+        if (_last) {
+          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
+        } else {
+          _head = m;
+        }
+        _continue = false;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<t_A>::Cons>(_loop_self->v());
+        auto _cell = List<t_A>::cons(d_a0, nullptr);
+        if (_last) {
+          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = _cell;
+        } else {
+          _head = _cell;
+        }
+        _last = _cell;
+        _loop_self = d_a1.get();
+        continue;
+      }
     }
     return _head;
   }

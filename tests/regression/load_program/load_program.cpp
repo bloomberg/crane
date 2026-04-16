@@ -29,18 +29,16 @@ std::shared_ptr<LoadProgram::state>
 LoadProgram::load_program(std::shared_ptr<LoadProgram::state> s,
                           const unsigned int base,
                           const std::shared_ptr<List<unsigned int>> &bytes) {
-  return std::visit(
-      Overloaded{[&](const typename List<unsigned int>::Nil &)
-                     -> std::shared_ptr<LoadProgram::state> { return s; },
-                 [&](const typename List<unsigned int>::Cons &_args)
-                     -> std::shared_ptr<LoadProgram::state> {
-                   std::shared_ptr<LoadProgram::state> s_ =
-                       set_prom_params(std::move(s), base, _args.d_a0, true);
-                   std::shared_ptr<LoadProgram::state> s__ =
-                       execute_wpm(std::move(s_));
-                   return load_program(std::move(s__), (base + 1u), _args.d_a1);
-                 }},
-      bytes->v());
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(bytes->v())) {
+    return s;
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(bytes->v());
+    std::shared_ptr<LoadProgram::state> s_ =
+        set_prom_params(std::move(s), base, d_a0, true);
+    std::shared_ptr<LoadProgram::state> s__ = execute_wpm(std::move(s_));
+    return load_program(std::move(s__), (base + 1u), d_a1);
+  }
 }
 
 std::shared_ptr<LoadProgram::state_extended> LoadProgram::set_prom_params_ext(
@@ -74,14 +72,11 @@ LoadProgram::write_byte(const std::shared_ptr<LoadProgram::state_simple> &s,
 std::shared_ptr<LoadProgram::state_simple> LoadProgram::load_program_simple(
     std::shared_ptr<LoadProgram::state_simple> s,
     const std::shared_ptr<List<unsigned int>> &bytes) {
-  return std::visit(
-      Overloaded{
-          [&](const typename List<unsigned int>::Nil &)
-              -> std::shared_ptr<LoadProgram::state_simple> { return s; },
-          [&](const typename List<unsigned int>::Cons &_args)
-              -> std::shared_ptr<LoadProgram::state_simple> {
-            return load_program_simple(write_byte(std::move(s), _args.d_a0),
-                                       _args.d_a1);
-          }},
-      bytes->v());
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(bytes->v())) {
+    return s;
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(bytes->v());
+    return load_program_simple(write_byte(std::move(s), d_a0), d_a1);
+  }
 }

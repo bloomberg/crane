@@ -49,15 +49,14 @@ ImplicitArgs::from_ten(const unsigned int _x0) {
 __attribute__((pure)) unsigned int ImplicitArgs::sum_with_init(
     const unsigned int init,
     const std::shared_ptr<ImplicitArgs::mylist<unsigned int>> &l) {
-  return std::visit(
-      Overloaded{
-          [&](const typename ImplicitArgs::mylist<unsigned int>::Mynil &)
-              -> unsigned int { return init; },
-          [&](const typename ImplicitArgs::mylist<unsigned int>::Mycons &_args)
-              -> unsigned int {
-            return (_args.d_a0 + sum_with_init(init, _args.d_a1));
-          }},
-      l->v());
+  if (std::holds_alternative<
+          typename ImplicitArgs::mylist<unsigned int>::Mynil>(l->v())) {
+    return init;
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename ImplicitArgs::mylist<unsigned int>::Mycons>(l->v());
+    return (d_a0 + sum_with_init(init, d_a1));
+  }
 }
 
 __attribute__((pure)) unsigned int

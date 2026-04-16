@@ -11,11 +11,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct Nat {
   // TYPES
   struct O {};
@@ -147,45 +142,36 @@ public:
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_lazyV_.force(); }
 
-  std::shared_ptr<List<t_A>>
-  list_of_colist(const std::shared_ptr<Nat> &fuel) const {
-    return std::visit(
-        Overloaded{
-            [](const typename Nat::O &) -> std::shared_ptr<List<t_A>> {
-              return List<t_A>::nil();
-            },
-            [&](const typename Nat::S &_args) -> std::shared_ptr<List<t_A>> {
-              return std::visit(
-                  Overloaded{[](const typename Colist<t_A>::Conil &)
-                                 -> std::shared_ptr<List<t_A>> {
-                               return List<t_A>::nil();
-                             },
-                             [&](const typename Colist<t_A>::Cocons &_args0)
-                                 -> std::shared_ptr<List<t_A>> {
-                               return List<t_A>::cons(
-                                   _args0.d_a0,
-                                   _args0.d_a1->list_of_colist(_args.d_a0));
-                             }},
-                  this->v());
-            }},
-        fuel->v());
-  }
-
   template <typename T1, MapsTo<T1, t_A> F0>
   std::shared_ptr<Colist<T1>> comap(F0 &&f) const {
-    return Colist<T1>::lazy_([=, this]() -> std::shared_ptr<Colist<T1>> {
-      return std::visit(
-          Overloaded{[](const typename Colist<t_A>::Conil &)
-                         -> std::shared_ptr<Colist<T1>> {
-                       return Colist<T1>::conil();
-                     },
-                     [&](const typename Colist<t_A>::Cocons &_args)
-                         -> std::shared_ptr<Colist<T1>> {
-                       return Colist<T1>::cocons(
-                           f(_args.d_a0), _args.d_a1->template comap<T1>(f));
-                     }},
-          this->v());
-    });
+    if (std::holds_alternative<typename Colist<t_A>::Conil>(this->v())) {
+      return Colist<T1>::lazy_(
+          []() -> std::shared_ptr<Colist<T1>> { return Colist<T1>::conil(); });
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename Colist<t_A>::Cocons>(this->v());
+      return Colist<T1>::lazy_([=]() mutable -> std::shared_ptr<Colist<T1>> {
+        return Colist<T1>::cocons(f(d_a0), d_a1->template comap<T1>(f));
+      });
+    }
+  }
+
+  template <typename T1>
+  static std::shared_ptr<List<T1>>
+  list_of_colist(const std::shared_ptr<Nat> &fuel,
+                 const std::shared_ptr<Colist<T1>> &l) {
+    if (std::holds_alternative<typename Nat::O>(fuel->v())) {
+      return List<T1>::nil();
+    } else {
+      const auto &[d_a0] = std::get<typename Nat::S>(fuel->v());
+      if (std::holds_alternative<typename Colist<T1>::Conil>(l->v())) {
+        return List<T1>::nil();
+      } else {
+        const auto &[d_a00, d_a10] =
+            std::get<typename Colist<T1>::Cocons>(l->v());
+        return List<T1>::cons(d_a00, list_of_colist<T1>(d_a0, d_a10));
+      }
+    }
   }
 
   static std::shared_ptr<Colist<std::shared_ptr<Nat>>>
@@ -198,7 +184,8 @@ public:
 
   static const std::shared_ptr<List<std::shared_ptr<Nat>>> &first_three() {
     static const std::shared_ptr<List<std::shared_ptr<Nat>>> v =
-        nats(Nat::o())->list_of_colist(Nat::s(Nat::s(Nat::s(Nat::o()))));
+        list_of_colist<std::shared_ptr<Nat>>(Nat::s(Nat::s(Nat::s(Nat::o()))),
+                                             nats(Nat::o()));
     return v;
   }
 };

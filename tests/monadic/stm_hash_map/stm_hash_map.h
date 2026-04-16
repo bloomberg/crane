@@ -17,11 +17,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -165,49 +160,44 @@ template <typename K, typename V> struct CHT {
   __attribute__((pure)) static std::optional<T2>
   assoc_lookup(F0 &&eqb, const T1 k,
                const std::shared_ptr<List<std::pair<T1, T2>>> &xs) {
-    return std::visit(
-        Overloaded{[](const typename List<std::pair<T1, T2>>::Nil &)
-                       -> std::optional<T2> { return std::optional<T2>(); },
-                   [&](const typename List<std::pair<T1, T2>>::Cons &_args)
-                       -> std::optional<T2> {
-                     const T1 &k_ = _args.d_a0.first;
-                     const T2 &v = _args.d_a0.second;
-                     if (eqb(k, k_)) {
-                       return std::make_optional<T2>(v);
-                     } else {
-                       return CHT<int, int>::template assoc_lookup<T1, T2>(
-                           eqb, k, _args.d_a1);
-                     }
-                   }},
-        xs->v());
+    if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(
+            xs->v())) {
+      return std::optional<T2>();
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::pair<T1, T2>>::Cons>(xs->v());
+      const T1 &k_ = d_a0.first;
+      const T2 &v = d_a0.second;
+      if (eqb(k, k_)) {
+        return std::make_optional<T2>(v);
+      } else {
+        return CHT<int, int>::template assoc_lookup<T1, T2>(eqb, k, d_a1);
+      }
+    }
   }
 
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
   static std::shared_ptr<List<std::pair<T1, T2>>>
   assoc_insert_or_replace(F0 &&eqb, const T1 k, const T2 v,
                           const std::shared_ptr<List<std::pair<T1, T2>>> &xs) {
-    return std::visit(
-        Overloaded{
-            [&](const typename List<std::pair<T1, T2>>::Nil &)
-                -> std::shared_ptr<List<std::pair<T1, T2>>> {
-              return List<std::pair<T1, T2>>::cons(
-                  std::make_pair(k, v), List<std::pair<T1, T2>>::nil());
-            },
-            [&](const typename List<std::pair<T1, T2>>::Cons &_args)
-                -> std::shared_ptr<List<std::pair<T1, T2>>> {
-              const T1 &k_ = _args.d_a0.first;
-              const T2 &v_ = _args.d_a0.second;
-              if (eqb(k, k_)) {
-                return List<std::pair<T1, T2>>::cons(std::make_pair(k, v),
-                                                     _args.d_a1);
-              } else {
-                return List<std::pair<T1, T2>>::cons(
-                    std::make_pair(k_, v_),
-                    CHT<int, int>::template assoc_insert_or_replace<T1, T2>(
-                        eqb, k, v, _args.d_a1));
-              }
-            }},
-        xs->v());
+    if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(
+            xs->v())) {
+      return List<std::pair<T1, T2>>::cons(std::make_pair(k, v),
+                                           List<std::pair<T1, T2>>::nil());
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::pair<T1, T2>>::Cons>(xs->v());
+      const T1 &k_ = d_a0.first;
+      const T2 &v_ = d_a0.second;
+      if (eqb(k, k_)) {
+        return List<std::pair<T1, T2>>::cons(std::make_pair(k, v), d_a1);
+      } else {
+        return List<std::pair<T1, T2>>::cons(
+            std::make_pair(k_, v_),
+            CHT<int, int>::template assoc_insert_or_replace<T1, T2>(eqb, k, v,
+                                                                    d_a1));
+      }
+    }
   }
 
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
@@ -215,31 +205,23 @@ template <typename K, typename V> struct CHT {
       std::optional<T2>, std::shared_ptr<List<std::pair<T1, T2>>>>
   assoc_remove(F0 &&eqb, const T1 k,
                std::shared_ptr<List<std::pair<T1, T2>>> xs) {
-    return std::visit(
-        Overloaded{[&](const typename List<std::pair<T1, T2>>::Nil &)
-                       -> std::pair<std::optional<T2>,
-                                    std::shared_ptr<List<std::pair<T1, T2>>>> {
-                     return std::make_pair(std::optional<T2>(), std::move(xs));
-                   },
-                   [&](const typename List<std::pair<T1, T2>>::Cons &_args)
-                       -> std::pair<std::optional<T2>,
-                                    std::shared_ptr<List<std::pair<T1, T2>>>> {
-                     const T1 &k_ = _args.d_a0.first;
-                     const T2 &v_ = _args.d_a0.second;
-                     if (eqb(k, k_)) {
-                       return std::make_pair(std::make_optional<T2>(v_),
-                                             _args.d_a1);
-                     } else {
-                       std::pair<std::optional<T2>,
-                                 std::shared_ptr<List<std::pair<T1, T2>>>>
-                           q = CHT<int, int>::template assoc_remove<T1, T2>(
-                               eqb, k, _args.d_a1);
-                       return std::make_pair(
-                           q.first, List<std::pair<T1, T2>>::cons(
-                                        std::make_pair(k_, v_), q.second));
-                     }
-                   }},
-        xs->v());
+    if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(
+            xs->v())) {
+      return std::make_pair(std::optional<T2>(), std::move(xs));
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::pair<T1, T2>>::Cons>(xs->v());
+      const T1 &k_ = d_a0.first;
+      const T2 &v_ = d_a0.second;
+      if (eqb(k, k_)) {
+        return std::make_pair(std::make_optional<T2>(v_), d_a1);
+      } else {
+        std::pair<std::optional<T2>, std::shared_ptr<List<std::pair<T1, T2>>>>
+            q = CHT<int, int>::template assoc_remove<T1, T2>(eqb, k, d_a1);
+        return std::make_pair(q.first, List<std::pair<T1, T2>>::cons(
+                                           std::make_pair(k_, v_), q.second));
+      }
+    }
   }
 
   template <typename T1, typename T2>

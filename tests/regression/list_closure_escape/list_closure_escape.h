@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct ListClosureEscape {
   struct tree {
     // TYPES
@@ -62,63 +57,55 @@ struct ListClosureEscape {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int sum_values(const unsigned int x) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename tree::Leaf &) -> unsigned int { return x; },
-              [&](const typename tree::Node &_args) -> unsigned int {
-                return std::visit(
-                    Overloaded{
-                        [&](const typename tree::Leaf &) -> unsigned int {
-                          return (_args.d_a1 + x);
-                        },
-                        [&](const typename tree::Node &_args0) -> unsigned int {
-                          return std::visit(
-                              Overloaded{[&](const typename tree::Leaf &)
-                                             -> unsigned int {
-                                           return (_args0.d_a1 + x);
-                                         },
-                                         [&](const typename tree::Node &_args1)
-                                             -> unsigned int {
-                                           return (
-                                               ((_args0.d_a1 + _args1.d_a1) +
-                                                _args.d_a1) +
-                                               x);
-                                         }},
-                              _args.d_a2->v());
-                        }},
-                    _args.d_a0->v());
-              }},
-          this->v());
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        return x;
+      } else {
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        if (std::holds_alternative<typename tree::Leaf>(d_a0->v())) {
+          return (d_a1 + x);
+        } else {
+          const auto &[d_a00, d_a10, d_a20] =
+              std::get<typename tree::Node>(d_a0->v());
+          if (std::holds_alternative<typename tree::Leaf>(d_a2->v())) {
+            return (d_a10 + x);
+          } else {
+            const auto &[d_a01, d_a11, d_a21] =
+                std::get<typename tree::Node>(d_a2->v());
+            return (((d_a10 + d_a11) + d_a1) + x);
+          }
+        }
+      }
+    }
+
+    template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
+                                  std::shared_ptr<tree>, T1>
+                               F1>
+    T1 tree_rec(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return f0(d_a0, d_a0->template tree_rec<T1>(f, f0), d_a1, d_a2,
+                  d_a2->template tree_rec<T1>(f, f0));
+      }
+    }
+
+    template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
+                                  std::shared_ptr<tree>, T1>
+                               F1>
+    T1 tree_rect(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return f0(d_a0, d_a0->template tree_rect<T1>(f, f0), d_a1, d_a2,
+                  d_a2->template tree_rect<T1>(f, f0));
+      }
     }
   };
-
-  template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                std::shared_ptr<tree>, T1>
-                             F1>
-  static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, _args.d_a2,
-                               tree_rect<T1>(f, f0, _args.d_a2));
-                   }},
-        t->v());
-  }
-
-  template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                std::shared_ptr<tree>, T1>
-                             F1>
-  static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, _args.d_a2,
-                               tree_rec<T1>(f, f0, _args.d_a2));
-                   }},
-        t->v());
-  }
 
   /// A simple list of closures.
   struct fn_list {
@@ -165,43 +152,38 @@ struct ListClosureEscape {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int apply_first(const unsigned int x) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename fn_list::FNil &) -> unsigned int { return x; },
-              [&](const typename fn_list::FCons &_args) -> unsigned int {
-                return _args.d_a0(x);
-              }},
-          this->v());
+      if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
+        return x;
+      } else {
+        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(this->v());
+        return d_a0(x);
+      }
+    }
+
+    template <typename T1, MapsTo<T1, std::function<unsigned int(unsigned int)>,
+                                  std::shared_ptr<fn_list>, T1>
+                               F1>
+    T1 fn_list_rec(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(this->v());
+        return f0(d_a0, d_a1, d_a1->template fn_list_rec<T1>(f, f0));
+      }
+    }
+
+    template <typename T1, MapsTo<T1, std::function<unsigned int(unsigned int)>,
+                                  std::shared_ptr<fn_list>, T1>
+                               F1>
+    T1 fn_list_rect(const T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
+        return f;
+      } else {
+        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(this->v());
+        return f0(d_a0, d_a1, d_a1->template fn_list_rect<T1>(f, f0));
+      }
     }
   };
-
-  template <typename T1, MapsTo<T1, std::function<unsigned int(unsigned int)>,
-                                std::shared_ptr<fn_list>, T1>
-                             F1>
-  static T1 fn_list_rect(const T1 f, F1 &&f0,
-                         const std::shared_ptr<fn_list> &f1) {
-    return std::visit(
-        Overloaded{[&](const typename fn_list::FNil &) -> T1 { return f; },
-                   [&](const typename fn_list::FCons &_args) -> T1 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               fn_list_rect<T1>(f, f0, _args.d_a1));
-                   }},
-        f1->v());
-  }
-
-  template <typename T1, MapsTo<T1, std::function<unsigned int(unsigned int)>,
-                                std::shared_ptr<fn_list>, T1>
-                             F1>
-  static T1 fn_list_rec(const T1 f, F1 &&f0,
-                        const std::shared_ptr<fn_list> &f1) {
-    return std::visit(
-        Overloaded{[&](const typename fn_list::FNil &) -> T1 { return f; },
-                   [&](const typename fn_list::FCons &_args) -> T1 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               fn_list_rec<T1>(f, f0, _args.d_a1));
-                   }},
-        f1->v());
-  }
 
   /// BUG: partial applications stored in a custom list via FCons.
   /// Each lambda for (sum_values t_i) captures t_i by &.

@@ -13,11 +13,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -60,14 +55,12 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
-    return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil &)
-                       -> std::shared_ptr<List<t_A>> { return m; },
-                   [&](const typename List<t_A>::Cons &_args)
-                       -> std::shared_ptr<List<t_A>> {
-                     return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return m;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, d_a1->app(m));
+    }
   }
 };
 

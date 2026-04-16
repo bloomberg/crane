@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -57,13 +52,12 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons &_args) -> unsigned int {
-              return (_args.d_a1->length() + 1);
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return 0u;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
+    }
   }
 };
 
@@ -114,54 +108,55 @@ struct JumpTargets {
 
     __attribute__((pure)) std::optional<unsigned int>
     jump_target_collection() const {
-      return std::visit(
-          Overloaded{[](const typename instr_collection::JUN_coll &_args)
-                         -> std::optional<unsigned int> {
-                       return std::make_optional<unsigned int>(_args.d_a0);
-                     },
-                     [](const typename instr_collection::JMS_coll &_args)
-                         -> std::optional<unsigned int> {
-                       return std::make_optional<unsigned int>(_args.d_a0);
-                     },
-                     [](const typename instr_collection::NOP_coll &)
-                         -> std::optional<unsigned int> {
-                       return std::optional<unsigned int>();
-                     }},
-          this->v());
+      if (std::holds_alternative<typename instr_collection::JUN_coll>(
+              this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_collection::JUN_coll>(this->v());
+        return std::make_optional<unsigned int>(d_a0);
+      } else if (std::holds_alternative<typename instr_collection::JMS_coll>(
+                     this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_collection::JMS_coll>(this->v());
+        return std::make_optional<unsigned int>(d_a0);
+      } else {
+        return std::optional<unsigned int>();
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int> F1>
     T1 instr_collection_rec(F0 &&f, F1 &&f0, const T1 f1) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instr_collection::JUN_coll &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename instr_collection::JMS_coll &_args) -> T1 {
-                return f0(_args.d_a0);
-              },
-              [&](const typename instr_collection::NOP_coll &) -> T1 {
-                return f1;
-              }},
-          this->v());
+      if (std::holds_alternative<typename instr_collection::JUN_coll>(
+              this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_collection::JUN_coll>(this->v());
+        return f(d_a0);
+      } else if (std::holds_alternative<typename instr_collection::JMS_coll>(
+                     this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_collection::JMS_coll>(this->v());
+        return f0(d_a0);
+      } else {
+        return f1;
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int> F1>
     T1 instr_collection_rect(F0 &&f, F1 &&f0, const T1 f1) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instr_collection::JUN_coll &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename instr_collection::JMS_coll &_args) -> T1 {
-                return f0(_args.d_a0);
-              },
-              [&](const typename instr_collection::NOP_coll &) -> T1 {
-                return f1;
-              }},
-          this->v());
+      if (std::holds_alternative<typename instr_collection::JUN_coll>(
+              this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_collection::JUN_coll>(this->v());
+        return f(d_a0);
+      } else if (std::holds_alternative<typename instr_collection::JMS_coll>(
+                     this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_collection::JMS_coll>(this->v());
+        return f0(d_a0);
+      } else {
+        return f1;
+      }
     }
   };
 
@@ -226,50 +221,52 @@ struct JumpTargets {
 
     __attribute__((pure)) std::optional<unsigned int>
     jump_target_region() const {
-      return std::visit(
-          Overloaded{[](const typename instr_region::JUN_reg &_args)
-                         -> std::optional<unsigned int> {
-                       return std::make_optional<unsigned int>(_args.d_a0);
-                     },
-                     [](const typename instr_region::JMS_reg &_args)
-                         -> std::optional<unsigned int> {
-                       return std::make_optional<unsigned int>(_args.d_a0);
-                     },
-                     [](const typename instr_region::NOP_reg &)
-                         -> std::optional<unsigned int> {
-                       return std::optional<unsigned int>();
-                     }},
-          this->v());
+      if (std::holds_alternative<typename instr_region::JUN_reg>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_region::JUN_reg>(this->v());
+        return std::make_optional<unsigned int>(d_a0);
+      } else if (std::holds_alternative<typename instr_region::JMS_reg>(
+                     this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_region::JMS_reg>(this->v());
+        return std::make_optional<unsigned int>(d_a0);
+      } else {
+        return std::optional<unsigned int>();
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int> F1>
     T1 instr_region_rec(F0 &&f, F1 &&f0, const T1 f1) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instr_region::JUN_reg &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename instr_region::JMS_reg &_args) -> T1 {
-                return f0(_args.d_a0);
-              },
-              [&](const typename instr_region::NOP_reg &) -> T1 { return f1; }},
-          this->v());
+      if (std::holds_alternative<typename instr_region::JUN_reg>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_region::JUN_reg>(this->v());
+        return f(d_a0);
+      } else if (std::holds_alternative<typename instr_region::JMS_reg>(
+                     this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_region::JMS_reg>(this->v());
+        return f0(d_a0);
+      } else {
+        return f1;
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int> F1>
     T1 instr_region_rect(F0 &&f, F1 &&f0, const T1 f1) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instr_region::JUN_reg &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename instr_region::JMS_reg &_args) -> T1 {
-                return f0(_args.d_a0);
-              },
-              [&](const typename instr_region::NOP_reg &) -> T1 { return f1; }},
-          this->v());
+      if (std::holds_alternative<typename instr_region::JUN_reg>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_region::JUN_reg>(this->v());
+        return f(d_a0);
+      } else if (std::holds_alternative<typename instr_region::JMS_reg>(
+                     this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_region::JMS_reg>(this->v());
+        return f0(d_a0);
+      } else {
+        return f1;
+      }
     }
   };
 
@@ -331,50 +328,46 @@ struct JumpTargets {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) std::optional<unsigned int> jump_target_jms() const {
-      return std::visit(
-          Overloaded{[](const typename instr_jms::JUN_jms &_args)
-                         -> std::optional<unsigned int> {
-                       return std::make_optional<unsigned int>(_args.d_a0);
-                     },
-                     [](const typename instr_jms::JMS_jms &_args)
-                         -> std::optional<unsigned int> {
-                       return std::make_optional<unsigned int>(_args.d_a0);
-                     },
-                     [](const typename instr_jms::NOP_jms &)
-                         -> std::optional<unsigned int> {
-                       return std::optional<unsigned int>();
-                     }},
-          this->v());
+      if (std::holds_alternative<typename instr_jms::JUN_jms>(this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jms::JUN_jms>(this->v());
+        return std::make_optional<unsigned int>(d_a0);
+      } else if (std::holds_alternative<typename instr_jms::JMS_jms>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jms::JMS_jms>(this->v());
+        return std::make_optional<unsigned int>(d_a0);
+      } else {
+        return std::optional<unsigned int>();
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int> F1>
     T1 instr_jms_rec(F0 &&f, F1 &&f0, const T1 f1) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instr_jms::JUN_jms &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename instr_jms::JMS_jms &_args) -> T1 {
-                return f0(_args.d_a0);
-              },
-              [&](const typename instr_jms::NOP_jms &) -> T1 { return f1; }},
-          this->v());
+      if (std::holds_alternative<typename instr_jms::JUN_jms>(this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jms::JUN_jms>(this->v());
+        return f(d_a0);
+      } else if (std::holds_alternative<typename instr_jms::JMS_jms>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jms::JMS_jms>(this->v());
+        return f0(d_a0);
+      } else {
+        return f1;
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int> F1>
     T1 instr_jms_rect(F0 &&f, F1 &&f0, const T1 f1) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instr_jms::JUN_jms &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename instr_jms::JMS_jms &_args) -> T1 {
-                return f0(_args.d_a0);
-              },
-              [&](const typename instr_jms::NOP_jms &) -> T1 { return f1; }},
-          this->v());
+      if (std::holds_alternative<typename instr_jms::JUN_jms>(this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jms::JUN_jms>(this->v());
+        return f(d_a0);
+      } else if (std::holds_alternative<typename instr_jms::JMS_jms>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jms::JMS_jms>(this->v());
+        return f0(d_a0);
+      } else {
+        return f1;
+      }
     }
   };
 
@@ -428,50 +421,46 @@ struct JumpTargets {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) std::optional<unsigned int> jump_target_jun() const {
-      return std::visit(
-          Overloaded{[](const typename instr_jun::JUN_jun &_args)
-                         -> std::optional<unsigned int> {
-                       return std::make_optional<unsigned int>(_args.d_a0);
-                     },
-                     [](const typename instr_jun::JMS_jun &_args)
-                         -> std::optional<unsigned int> {
-                       return std::make_optional<unsigned int>(_args.d_a0);
-                     },
-                     [](const typename instr_jun::NOP_jun &)
-                         -> std::optional<unsigned int> {
-                       return std::optional<unsigned int>();
-                     }},
-          this->v());
+      if (std::holds_alternative<typename instr_jun::JUN_jun>(this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jun::JUN_jun>(this->v());
+        return std::make_optional<unsigned int>(d_a0);
+      } else if (std::holds_alternative<typename instr_jun::JMS_jun>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jun::JMS_jun>(this->v());
+        return std::make_optional<unsigned int>(d_a0);
+      } else {
+        return std::optional<unsigned int>();
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int> F1>
     T1 instr_jun_rec(F0 &&f, F1 &&f0, const T1 f1) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instr_jun::JUN_jun &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename instr_jun::JMS_jun &_args) -> T1 {
-                return f0(_args.d_a0);
-              },
-              [&](const typename instr_jun::NOP_jun &) -> T1 { return f1; }},
-          this->v());
+      if (std::holds_alternative<typename instr_jun::JUN_jun>(this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jun::JUN_jun>(this->v());
+        return f(d_a0);
+      } else if (std::holds_alternative<typename instr_jun::JMS_jun>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jun::JMS_jun>(this->v());
+        return f0(d_a0);
+      } else {
+        return f1;
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int> F1>
     T1 instr_jun_rect(F0 &&f, F1 &&f0, const T1 f1) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename instr_jun::JUN_jun &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename instr_jun::JMS_jun &_args) -> T1 {
-                return f0(_args.d_a0);
-              },
-              [&](const typename instr_jun::NOP_jun &) -> T1 { return f1; }},
-          this->v());
+      if (std::holds_alternative<typename instr_jun::JUN_jun>(this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jun::JUN_jun>(this->v());
+        return f(d_a0);
+      } else if (std::holds_alternative<typename instr_jun::JMS_jun>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jun::JMS_jun>(this->v());
+        return f0(d_a0);
+      } else {
+        return f1;
+      }
     }
   };
 

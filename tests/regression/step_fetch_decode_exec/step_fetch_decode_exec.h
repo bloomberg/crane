@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -54,27 +49,12 @@ public:
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
+};
 
-  t_A nth(const unsigned int n, const t_A default0) const {
-    if (n <= 0) {
-      return std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
-              [](const typename List<t_A>::Cons &_args) -> t_A {
-                return _args.d_a0;
-              }},
-          this->v());
-    } else {
-      unsigned int m = n - 1;
-      return std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
-              [&](const typename List<t_A>::Cons &_args0) -> t_A {
-                return _args0.d_a1->nth(m, default0);
-              }},
-          this->v());
-    }
-  }
+struct ListDef {
+  template <typename T1>
+  static T1 nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
+                const T1 default0);
 };
 
 struct StepFetchDecodeExec {
@@ -116,23 +96,23 @@ struct StepFetchDecodeExec {
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 instruction_rect(const T1 f, F1 &&f0,
                              const std::shared_ptr<instruction> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instruction::NOP &) -> T1 { return f; },
-                   [&](const typename instruction::ADD_ACC &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        i->v());
+    if (std::holds_alternative<typename instruction::NOP>(i->v())) {
+      return f;
+    } else {
+      const auto &[d_a0] = std::get<typename instruction::ADD_ACC>(i->v());
+      return f0(d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 instruction_rec(const T1 f, F1 &&f0,
                             const std::shared_ptr<instruction> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instruction::NOP &) -> T1 { return f; },
-                   [&](const typename instruction::ADD_ACC &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        i->v());
+    if (std::holds_alternative<typename instruction::NOP>(i->v())) {
+      return f;
+    } else {
+      const auto &[d_a0] = std::get<typename instruction::ADD_ACC>(i->v());
+      return f0(d_a0);
+    }
   }
 
   struct state {
@@ -158,5 +138,26 @@ struct StepFetchDecodeExec {
     return (s1->acc + s1->pc);
   }();
 };
+
+template <typename T1>
+T1 ListDef::nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
+                const T1 default0) {
+  if (n <= 0) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      return d_a0;
+    }
+  } else {
+    unsigned int m = n - 1;
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
+      return ListDef::template nth<T1>(m, d_a10, default0);
+    }
+  }
+}
 
 #endif // INCLUDED_STEP_FETCH_DECODE_EXEC

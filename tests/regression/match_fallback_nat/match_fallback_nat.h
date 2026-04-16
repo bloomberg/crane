@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct MatchFallbackNat {
   struct maybe_nat {
     // TYPES
@@ -53,25 +48,23 @@ struct MatchFallbackNat {
   template <typename T1, MapsTo<T1, unsigned int> F0>
   static T1 maybe_nat_rect(F0 &&f, const T1 f0,
                            const std::shared_ptr<maybe_nat> &m) {
-    return std::visit(
-        Overloaded{
-            [&](const typename maybe_nat::SomeNat &_args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename maybe_nat::NoneNat &) -> T1 { return f0; }},
-        m->v());
+    if (std::holds_alternative<typename maybe_nat::SomeNat>(m->v())) {
+      const auto &[d_a0] = std::get<typename maybe_nat::SomeNat>(m->v());
+      return f(d_a0);
+    } else {
+      return f0;
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0>
   static T1 maybe_nat_rec(F0 &&f, const T1 f0,
                           const std::shared_ptr<maybe_nat> &m) {
-    return std::visit(
-        Overloaded{
-            [&](const typename maybe_nat::SomeNat &_args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename maybe_nat::NoneNat &) -> T1 { return f0; }},
-        m->v());
+    if (std::holds_alternative<typename maybe_nat::SomeNat>(m->v())) {
+      const auto &[d_a0] = std::get<typename maybe_nat::SomeNat>(m->v());
+      return f(d_a0);
+    } else {
+      return f0;
+    }
   }
 
   __attribute__((pure)) static unsigned int

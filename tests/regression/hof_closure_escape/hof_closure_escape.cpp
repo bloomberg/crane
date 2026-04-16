@@ -10,34 +10,27 @@
 __attribute__((pure)) unsigned int
 HofClosureEscape::sum_values(const std::shared_ptr<HofClosureEscape::tree> &t,
                              const unsigned int x) {
-  return std::visit(
-      Overloaded{
-          [&](const typename HofClosureEscape::tree::Leaf &) -> unsigned int {
-            return x;
-          },
-          [&](const typename HofClosureEscape::tree::Node &_args)
-              -> unsigned int {
-            return std::visit(
-                Overloaded{
-                    [&](const typename HofClosureEscape::tree::Leaf &)
-                        -> unsigned int { return (_args.d_a1 + x); },
-                    [&](const typename HofClosureEscape::tree::Node &_args0)
-                        -> unsigned int {
-                      return std::visit(
-                          Overloaded{
-                              [&](const typename HofClosureEscape::tree::Leaf &)
-                                  -> unsigned int { return (_args0.d_a1 + x); },
-                              [&](const typename HofClosureEscape::tree::Node
-                                      &_args1) -> unsigned int {
-                                return (
-                                    ((_args0.d_a1 + _args1.d_a1) + _args.d_a1) +
-                                    x);
-                              }},
-                          _args.d_a2->v());
-                    }},
-                _args.d_a0->v());
-          }},
-      t->v());
+  if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(t->v())) {
+    return x;
+  } else {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename HofClosureEscape::tree::Node>(t->v());
+    if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(
+            d_a0->v())) {
+      return (d_a1 + x);
+    } else {
+      const auto &[d_a00, d_a10, d_a20] =
+          std::get<typename HofClosureEscape::tree::Node>(d_a0->v());
+      if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(
+              d_a2->v())) {
+        return (d_a10 + x);
+      } else {
+        const auto &[d_a01, d_a11, d_a21] =
+            std::get<typename HofClosureEscape::tree::Node>(d_a2->v());
+        return (((d_a10 + d_a11) + d_a1) + x);
+      }
+    }
+  }
 }
 
 /// BUG: The partial application sum_values t creates a & lambda.

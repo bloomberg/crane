@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct LoopifyTreeVariants {
   struct ternary {
     // TYPES
@@ -96,34 +91,29 @@ struct LoopifyTreeVariants {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const ternary *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename ternary::TLeaf &) -> void {
-                            _result = 0u;
-                          },
-                          [&](const typename ternary::TNode &_args) -> void {
-                            _stack.emplace_back(
-                                _Call1{_args.d_a2.get(), _args.d_a0.get(), 1u});
-                            _stack.emplace_back(_Enter{_args.d_a3.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _stack.emplace_back(_Call3{_f._s0, _result, _f._s2});
-                  _stack.emplace_back(_Enter{_f._s1});
-                },
-                [&](_Call3 _f) {
-                  _result = (((_f._s2 + _result) + _f._s1) + _f._s0);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const ternary *_self = _f._self;
+          if (std::holds_alternative<typename ternary::TLeaf>(_self->v())) {
+            _result = 0u;
+          } else {
+            const auto &[d_a0, d_a1, d_a2, d_a3] =
+                std::get<typename ternary::TNode>(_self->v());
+            _stack.emplace_back(_Call1{d_a2.get(), d_a0.get(), 1u});
+            _stack.emplace_back(_Enter{d_a3.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else if (std::holds_alternative<_Call2>(_frame)) {
+          const auto &_f = std::get<_Call2>(_frame);
+          _stack.emplace_back(_Call3{_f._s0, _result, _f._s2});
+          _stack.emplace_back(_Enter{_f._s1});
+        } else {
+          const auto &_f = std::get<_Call3>(_frame);
+          _result = (((_f._s2 + _result) + _f._s1) + _f._s0);
+        }
       }
       return _result;
     }
@@ -138,19 +128,19 @@ struct LoopifyTreeVariants {
       struct _Call1 {
         const ternary *_s0;
         const ternary *_s1;
-        decltype(std::declval<const typename ternary::TNode &>().d_a1) _s2;
+        unsigned int _s2;
       };
 
       struct _Call2 {
         unsigned int _s0;
         const ternary *_s1;
-        decltype(std::declval<const typename ternary::TNode &>().d_a1) _s2;
+        unsigned int _s2;
       };
 
       struct _Call3 {
         unsigned int _s0;
         unsigned int _s1;
-        decltype(std::declval<const typename ternary::TNode &>().d_a1) _s2;
+        unsigned int _s2;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
@@ -160,199 +150,183 @@ struct LoopifyTreeVariants {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const ternary *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename ternary::TLeaf &) -> void {
-                            _result = 0u;
-                          },
-                          [&](const typename ternary::TNode &_args) -> void {
-                            _stack.emplace_back(_Call1{_args.d_a2.get(),
-                                                       _args.d_a0.get(),
-                                                       _args.d_a1});
-                            _stack.emplace_back(_Enter{_args.d_a3.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _stack.emplace_back(_Call3{_f._s0, _result, _f._s2});
-                  _stack.emplace_back(_Enter{_f._s1});
-                },
-                [&](_Call3 _f) {
-                  _result = (((_result + _f._s2) + _f._s1) + _f._s0);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const ternary *_self = _f._self;
+          if (std::holds_alternative<typename ternary::TLeaf>(_self->v())) {
+            _result = 0u;
+          } else {
+            const auto &[d_a0, d_a1, d_a2, d_a3] =
+                std::get<typename ternary::TNode>(_self->v());
+            _stack.emplace_back(_Call1{d_a2.get(), d_a0.get(), d_a1});
+            _stack.emplace_back(_Enter{d_a3.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else if (std::holds_alternative<_Call2>(_frame)) {
+          const auto &_f = std::get<_Call2>(_frame);
+          _stack.emplace_back(_Call3{_f._s0, _result, _f._s2});
+          _stack.emplace_back(_Enter{_f._s1});
+        } else {
+          const auto &_f = std::get<_Call3>(_frame);
+          _result = (((_result + _f._s2) + _f._s1) + _f._s0);
+        }
+      }
+      return _result;
+    }
+
+    template <typename T1,
+              MapsTo<T1, std::shared_ptr<ternary>, T1, unsigned int,
+                     std::shared_ptr<ternary>, T1, std::shared_ptr<ternary>, T1>
+                  F1>
+    T1 ternary_rec(const T1 f, F1 &&f0) const {
+      const ternary *_self = this;
+
+      struct _Enter {
+        const ternary *_self;
+      };
+
+      struct _Call1 {
+        const ternary *_s0;
+        const ternary *_s1;
+        std::shared_ptr<ternary> _s2;
+        std::shared_ptr<ternary> _s3;
+        unsigned int _s4;
+        std::shared_ptr<ternary> _s5;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        const ternary *_s1;
+        std::shared_ptr<ternary> _s2;
+        std::shared_ptr<ternary> _s3;
+        unsigned int _s4;
+        std::shared_ptr<ternary> _s5;
+      };
+
+      struct _Call3 {
+        T1 _s0;
+        T1 _s1;
+        std::shared_ptr<ternary> _s2;
+        std::shared_ptr<ternary> _s3;
+        unsigned int _s4;
+        std::shared_ptr<ternary> _s5;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const ternary *_self = _f._self;
+          if (std::holds_alternative<typename ternary::TLeaf>(_self->v())) {
+            _result = f;
+          } else {
+            const auto &[d_a0, d_a1, d_a2, d_a3] =
+                std::get<typename ternary::TNode>(_self->v());
+            _stack.emplace_back(
+                _Call1{d_a2.get(), d_a0.get(), d_a3, d_a2, d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a3.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(
+              _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else if (std::holds_alternative<_Call2>(_frame)) {
+          const auto &_f = std::get<_Call2>(_frame);
+          _stack.emplace_back(
+              _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5});
+          _stack.emplace_back(_Enter{_f._s1});
+        } else {
+          const auto &_f = std::get<_Call3>(_frame);
+          _result = f0(_f._s5, _result, _f._s4, _f._s3, _f._s1, _f._s2, _f._s0);
+        }
+      }
+      return _result;
+    }
+
+    template <typename T1,
+              MapsTo<T1, std::shared_ptr<ternary>, T1, unsigned int,
+                     std::shared_ptr<ternary>, T1, std::shared_ptr<ternary>, T1>
+                  F1>
+    T1 ternary_rect(const T1 f, F1 &&f0) const {
+      const ternary *_self = this;
+
+      struct _Enter {
+        const ternary *_self;
+      };
+
+      struct _Call1 {
+        const ternary *_s0;
+        const ternary *_s1;
+        std::shared_ptr<ternary> _s2;
+        std::shared_ptr<ternary> _s3;
+        unsigned int _s4;
+        std::shared_ptr<ternary> _s5;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        const ternary *_s1;
+        std::shared_ptr<ternary> _s2;
+        std::shared_ptr<ternary> _s3;
+        unsigned int _s4;
+        std::shared_ptr<ternary> _s5;
+      };
+
+      struct _Call3 {
+        T1 _s0;
+        T1 _s1;
+        std::shared_ptr<ternary> _s2;
+        std::shared_ptr<ternary> _s3;
+        unsigned int _s4;
+        std::shared_ptr<ternary> _s5;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const ternary *_self = _f._self;
+          if (std::holds_alternative<typename ternary::TLeaf>(_self->v())) {
+            _result = f;
+          } else {
+            const auto &[d_a0, d_a1, d_a2, d_a3] =
+                std::get<typename ternary::TNode>(_self->v());
+            _stack.emplace_back(
+                _Call1{d_a2.get(), d_a0.get(), d_a3, d_a2, d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a3.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(
+              _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else if (std::holds_alternative<_Call2>(_frame)) {
+          const auto &_f = std::get<_Call2>(_frame);
+          _stack.emplace_back(
+              _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5});
+          _stack.emplace_back(_Enter{_f._s1});
+        } else {
+          const auto &_f = std::get<_Call3>(_frame);
+          _result = f0(_f._s5, _result, _f._s4, _f._s3, _f._s1, _f._s2, _f._s0);
+        }
       }
       return _result;
     }
   };
-
-  template <typename T1,
-            MapsTo<T1, std::shared_ptr<ternary>, T1, unsigned int,
-                   std::shared_ptr<ternary>, T1, std::shared_ptr<ternary>, T1>
-                F1>
-  static T1 ternary_rect(const T1 f, F1 &&f0,
-                         const std::shared_ptr<ternary> &t) {
-    struct _Enter {
-      const std::shared_ptr<ternary> t;
-    };
-
-    struct _Call1 {
-      const std::shared_ptr<ternary> _s0;
-      const std::shared_ptr<ternary> _s1;
-      decltype(std::declval<const typename ternary::TNode &>().d_a3) _s2;
-      decltype(std::declval<const typename ternary::TNode &>().d_a2) _s3;
-      decltype(std::declval<const typename ternary::TNode &>().d_a1) _s4;
-      decltype(std::declval<const typename ternary::TNode &>().d_a0) _s5;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      const std::shared_ptr<ternary> _s1;
-      decltype(std::declval<const typename ternary::TNode &>().d_a3) _s2;
-      decltype(std::declval<const typename ternary::TNode &>().d_a2) _s3;
-      decltype(std::declval<const typename ternary::TNode &>().d_a1) _s4;
-      decltype(std::declval<const typename ternary::TNode &>().d_a0) _s5;
-    };
-
-    struct _Call3 {
-      T1 _s0;
-      T1 _s1;
-      decltype(std::declval<const typename ternary::TNode &>().d_a3) _s2;
-      decltype(std::declval<const typename ternary::TNode &>().d_a2) _s3;
-      decltype(std::declval<const typename ternary::TNode &>().d_a1) _s4;
-      decltype(std::declval<const typename ternary::TNode &>().d_a0) _s5;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<ternary> t = _f.t;
-                std::visit(
-                    Overloaded{
-                        [&](const typename ternary::TLeaf &) -> void {
-                          _result = f;
-                        },
-                        [&](const typename ternary::TNode &_args) -> void {
-                          _stack.emplace_back(_Call1{_args.d_a2, _args.d_a0,
-                                                     _args.d_a3, _args.d_a2,
-                                                     _args.d_a1, _args.d_a0});
-                          _stack.emplace_back(_Enter{_args.d_a3});
-                        }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.emplace_back(
-                    _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5});
-                _stack.emplace_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _stack.emplace_back(
-                    _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5});
-                _stack.emplace_back(_Enter{_f._s1});
-              },
-              [&](_Call3 _f) {
-                _result =
-                    f0(_f._s5, _result, _f._s4, _f._s3, _f._s1, _f._s2, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  template <typename T1,
-            MapsTo<T1, std::shared_ptr<ternary>, T1, unsigned int,
-                   std::shared_ptr<ternary>, T1, std::shared_ptr<ternary>, T1>
-                F1>
-  static T1 ternary_rec(const T1 f, F1 &&f0,
-                        const std::shared_ptr<ternary> &t) {
-    struct _Enter {
-      const std::shared_ptr<ternary> t;
-    };
-
-    struct _Call1 {
-      const std::shared_ptr<ternary> _s0;
-      const std::shared_ptr<ternary> _s1;
-      decltype(std::declval<const typename ternary::TNode &>().d_a3) _s2;
-      decltype(std::declval<const typename ternary::TNode &>().d_a2) _s3;
-      decltype(std::declval<const typename ternary::TNode &>().d_a1) _s4;
-      decltype(std::declval<const typename ternary::TNode &>().d_a0) _s5;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      const std::shared_ptr<ternary> _s1;
-      decltype(std::declval<const typename ternary::TNode &>().d_a3) _s2;
-      decltype(std::declval<const typename ternary::TNode &>().d_a2) _s3;
-      decltype(std::declval<const typename ternary::TNode &>().d_a1) _s4;
-      decltype(std::declval<const typename ternary::TNode &>().d_a0) _s5;
-    };
-
-    struct _Call3 {
-      T1 _s0;
-      T1 _s1;
-      decltype(std::declval<const typename ternary::TNode &>().d_a3) _s2;
-      decltype(std::declval<const typename ternary::TNode &>().d_a2) _s3;
-      decltype(std::declval<const typename ternary::TNode &>().d_a1) _s4;
-      decltype(std::declval<const typename ternary::TNode &>().d_a0) _s5;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<ternary> t = _f.t;
-                std::visit(
-                    Overloaded{
-                        [&](const typename ternary::TLeaf &) -> void {
-                          _result = f;
-                        },
-                        [&](const typename ternary::TNode &_args) -> void {
-                          _stack.emplace_back(_Call1{_args.d_a2, _args.d_a0,
-                                                     _args.d_a3, _args.d_a2,
-                                                     _args.d_a1, _args.d_a0});
-                          _stack.emplace_back(_Enter{_args.d_a3});
-                        }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.emplace_back(
-                    _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5});
-                _stack.emplace_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _stack.emplace_back(
-                    _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5});
-                _stack.emplace_back(_Enter{_f._s1});
-              },
-              [&](_Call3 _f) {
-                _result =
-                    f0(_f._s5, _result, _f._s4, _f._s3, _f._s1, _f._s2, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
 
   struct quadtree {
     // TYPES
@@ -442,39 +416,34 @@ struct LoopifyTreeVariants {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const quadtree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename quadtree::QLeaf &_args) -> void {
-                            _result = _args.d_a0;
-                          },
-                          [&](const typename quadtree::Quad &_args) -> void {
-                            _stack.emplace_back(_Call1{_args.d_a2.get(),
-                                                       _args.d_a1.get(),
-                                                       _args.d_a0.get()});
-                            _stack.emplace_back(_Enter{_args.d_a3.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _stack.emplace_back(_Call3{_f._s0, _result, _f._s2});
-                  _stack.emplace_back(_Enter{_f._s1});
-                },
-                [&](_Call3 _f) {
-                  _stack.emplace_back(_Call4{_f._s0, _f._s1, _result});
-                  _stack.emplace_back(_Enter{_f._s2});
-                },
-                [&](_Call4 _f) {
-                  _result = (((_result + _f._s2) + _f._s1) + _f._s0);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const quadtree *_self = _f._self;
+          if (std::holds_alternative<typename quadtree::QLeaf>(_self->v())) {
+            const auto &[d_a0] = std::get<typename quadtree::QLeaf>(_self->v());
+            _result = d_a0;
+          } else {
+            const auto &[d_a0, d_a1, d_a2, d_a3] =
+                std::get<typename quadtree::Quad>(_self->v());
+            _stack.emplace_back(_Call1{d_a2.get(), d_a1.get(), d_a0.get()});
+            _stack.emplace_back(_Enter{d_a3.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else if (std::holds_alternative<_Call2>(_frame)) {
+          const auto &_f = std::get<_Call2>(_frame);
+          _stack.emplace_back(_Call3{_f._s0, _result, _f._s2});
+          _stack.emplace_back(_Enter{_f._s1});
+        } else if (std::holds_alternative<_Call3>(_frame)) {
+          const auto &_f = std::get<_Call3>(_frame);
+          _stack.emplace_back(_Call4{_f._s0, _f._s1, _result});
+          _stack.emplace_back(_Enter{_f._s2});
+        } else {
+          const auto &_f = std::get<_Call4>(_frame);
+          _result = (((_result + _f._s2) + _f._s1) + _f._s0);
+        }
       }
       return _result;
     }
@@ -495,40 +464,40 @@ struct LoopifyTreeVariants {
         const quadtree *_s0;
         const quadtree *_s1;
         const quadtree *_s2;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+        std::shared_ptr<quadtree> _s3;
+        std::shared_ptr<quadtree> _s4;
+        std::shared_ptr<quadtree> _s5;
+        std::shared_ptr<quadtree> _s6;
       };
 
       struct _Call2 {
         T1 _s0;
         const quadtree *_s1;
         const quadtree *_s2;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+        std::shared_ptr<quadtree> _s3;
+        std::shared_ptr<quadtree> _s4;
+        std::shared_ptr<quadtree> _s5;
+        std::shared_ptr<quadtree> _s6;
       };
 
       struct _Call3 {
         T1 _s0;
         T1 _s1;
         const quadtree *_s2;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+        std::shared_ptr<quadtree> _s3;
+        std::shared_ptr<quadtree> _s4;
+        std::shared_ptr<quadtree> _s5;
+        std::shared_ptr<quadtree> _s6;
       };
 
       struct _Call4 {
         T1 _s0;
         T1 _s1;
         T1 _s2;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+        std::shared_ptr<quadtree> _s3;
+        std::shared_ptr<quadtree> _s4;
+        std::shared_ptr<quadtree> _s5;
+        std::shared_ptr<quadtree> _s6;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
@@ -538,44 +507,39 @@ struct LoopifyTreeVariants {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const quadtree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename quadtree::QLeaf &_args) -> void {
-                            _result = f(_args.d_a0);
-                          },
-                          [&](const typename quadtree::Quad &_args) -> void {
-                            _stack.emplace_back(
-                                _Call1{_args.d_a2.get(), _args.d_a1.get(),
-                                       _args.d_a0.get(), _args.d_a3, _args.d_a2,
-                                       _args.d_a1, _args.d_a0});
-                            _stack.emplace_back(_Enter{_args.d_a3.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
-                                             _f._s4, _f._s5, _f._s6});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _stack.emplace_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
-                                             _f._s4, _f._s5, _f._s6});
-                  _stack.emplace_back(_Enter{_f._s1});
-                },
-                [&](_Call3 _f) {
-                  _stack.emplace_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
-                                             _f._s4, _f._s5, _f._s6});
-                  _stack.emplace_back(_Enter{_f._s2});
-                },
-                [&](_Call4 _f) {
-                  _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
-                               _f._s3, _f._s0);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const quadtree *_self = _f._self;
+          if (std::holds_alternative<typename quadtree::QLeaf>(_self->v())) {
+            const auto &[d_a0] = std::get<typename quadtree::QLeaf>(_self->v());
+            _result = f(d_a0);
+          } else {
+            const auto &[d_a0, d_a1, d_a2, d_a3] =
+                std::get<typename quadtree::Quad>(_self->v());
+            _stack.emplace_back(_Call1{d_a2.get(), d_a1.get(), d_a0.get(), d_a3,
+                                       d_a2, d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a3.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(
+              _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else if (std::holds_alternative<_Call2>(_frame)) {
+          const auto &_f = std::get<_Call2>(_frame);
+          _stack.emplace_back(
+              _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Enter{_f._s1});
+        } else if (std::holds_alternative<_Call3>(_frame)) {
+          const auto &_f = std::get<_Call3>(_frame);
+          _stack.emplace_back(
+              _Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Enter{_f._s2});
+        } else {
+          const auto &_f = std::get<_Call4>(_frame);
+          _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1, _f._s3,
+                       _f._s0);
+        }
       }
       return _result;
     }
@@ -596,40 +560,40 @@ struct LoopifyTreeVariants {
         const quadtree *_s0;
         const quadtree *_s1;
         const quadtree *_s2;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+        std::shared_ptr<quadtree> _s3;
+        std::shared_ptr<quadtree> _s4;
+        std::shared_ptr<quadtree> _s5;
+        std::shared_ptr<quadtree> _s6;
       };
 
       struct _Call2 {
         T1 _s0;
         const quadtree *_s1;
         const quadtree *_s2;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+        std::shared_ptr<quadtree> _s3;
+        std::shared_ptr<quadtree> _s4;
+        std::shared_ptr<quadtree> _s5;
+        std::shared_ptr<quadtree> _s6;
       };
 
       struct _Call3 {
         T1 _s0;
         T1 _s1;
         const quadtree *_s2;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+        std::shared_ptr<quadtree> _s3;
+        std::shared_ptr<quadtree> _s4;
+        std::shared_ptr<quadtree> _s5;
+        std::shared_ptr<quadtree> _s6;
       };
 
       struct _Call4 {
         T1 _s0;
         T1 _s1;
         T1 _s2;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+        std::shared_ptr<quadtree> _s3;
+        std::shared_ptr<quadtree> _s4;
+        std::shared_ptr<quadtree> _s5;
+        std::shared_ptr<quadtree> _s6;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
@@ -639,44 +603,39 @@ struct LoopifyTreeVariants {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const quadtree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename quadtree::QLeaf &_args) -> void {
-                            _result = f(_args.d_a0);
-                          },
-                          [&](const typename quadtree::Quad &_args) -> void {
-                            _stack.emplace_back(
-                                _Call1{_args.d_a2.get(), _args.d_a1.get(),
-                                       _args.d_a0.get(), _args.d_a3, _args.d_a2,
-                                       _args.d_a1, _args.d_a0});
-                            _stack.emplace_back(_Enter{_args.d_a3.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
-                                             _f._s4, _f._s5, _f._s6});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _stack.emplace_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
-                                             _f._s4, _f._s5, _f._s6});
-                  _stack.emplace_back(_Enter{_f._s1});
-                },
-                [&](_Call3 _f) {
-                  _stack.emplace_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
-                                             _f._s4, _f._s5, _f._s6});
-                  _stack.emplace_back(_Enter{_f._s2});
-                },
-                [&](_Call4 _f) {
-                  _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
-                               _f._s3, _f._s0);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const quadtree *_self = _f._self;
+          if (std::holds_alternative<typename quadtree::QLeaf>(_self->v())) {
+            const auto &[d_a0] = std::get<typename quadtree::QLeaf>(_self->v());
+            _result = f(d_a0);
+          } else {
+            const auto &[d_a0, d_a1, d_a2, d_a3] =
+                std::get<typename quadtree::Quad>(_self->v());
+            _stack.emplace_back(_Call1{d_a2.get(), d_a1.get(), d_a0.get(), d_a3,
+                                       d_a2, d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a3.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(
+              _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else if (std::holds_alternative<_Call2>(_frame)) {
+          const auto &_f = std::get<_Call2>(_frame);
+          _stack.emplace_back(
+              _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Enter{_f._s1});
+        } else if (std::holds_alternative<_Call3>(_frame)) {
+          const auto &_f = std::get<_Call3>(_frame);
+          _stack.emplace_back(
+              _Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Enter{_f._s2});
+        } else {
+          const auto &_f = std::get<_Call4>(_frame);
+          _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1, _f._s3,
+                       _f._s0);
+        }
       }
       return _result;
     }
@@ -734,7 +693,7 @@ struct LoopifyTreeVariants {
       };
 
       struct _Call1 {
-        const typename leaf_tree::LNode _s0;
+        std::shared_ptr<leaf_tree> _s0;
       };
 
       struct _Call2 {
@@ -748,37 +707,35 @@ struct LoopifyTreeVariants {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const leaf_tree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename leaf_tree::LLeaf &_args) -> void {
-                            _result = _args.d_a0;
-                          },
-                          [&](const typename leaf_tree::LNode &_args) -> void {
-                            _stack.emplace_back(_Call1{_args});
-                            _stack.emplace_back(_Enter{_args.d_a0.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  const typename leaf_tree::LNode _args = _f._s0;
-                  unsigned int lmax = _result;
-                  _stack.emplace_back(_Call2{lmax});
-                  _stack.emplace_back(_Enter{_args.d_a1.get()});
-                },
-                [&](_Call2 _f) {
-                  unsigned int lmax = _f._s0;
-                  unsigned int rmax = _result;
-                  if (lmax < rmax) {
-                    _result = rmax;
-                  } else {
-                    _result = lmax;
-                  }
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const leaf_tree *_self = _f._self;
+          if (std::holds_alternative<typename leaf_tree::LLeaf>(_self->v())) {
+            const auto &[d_a0] =
+                std::get<typename leaf_tree::LLeaf>(_self->v());
+            _result = d_a0;
+          } else {
+            const auto &[d_a0, d_a1] =
+                std::get<typename leaf_tree::LNode>(_self->v());
+            _stack.emplace_back(_Call1{d_a1});
+            _stack.emplace_back(_Enter{d_a0.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          std::shared_ptr<leaf_tree> d_a1 = _f._s0;
+          unsigned int lmax = _result;
+          _stack.emplace_back(_Call2{lmax});
+          _stack.emplace_back(_Enter{d_a1.get()});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          unsigned int lmax = _f._s0;
+          unsigned int rmax = _result;
+          if (lmax < rmax) {
+            _result = rmax;
+          } else {
+            _result = lmax;
+          }
+        }
       }
       return _result;
     }
@@ -791,8 +748,7 @@ struct LoopifyTreeVariants {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename leaf_tree::LNode &>()
-                     .d_a0.get()) _s0;
+        leaf_tree *_s0;
       };
 
       struct _Call2 {
@@ -806,27 +762,27 @@ struct LoopifyTreeVariants {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const leaf_tree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename leaf_tree::LLeaf &_args) -> void {
-                            _result = _args.d_a0;
-                          },
-                          [&](const typename leaf_tree::LNode &_args) -> void {
-                            _stack.emplace_back(_Call1{_args.d_a0.get()});
-                            _stack.emplace_back(_Enter{_args.d_a1.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) { _result = (_result + _f._s0); }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const leaf_tree *_self = _f._self;
+          if (std::holds_alternative<typename leaf_tree::LLeaf>(_self->v())) {
+            const auto &[d_a0] =
+                std::get<typename leaf_tree::LLeaf>(_self->v());
+            _result = d_a0;
+          } else {
+            const auto &[d_a0, d_a1] =
+                std::get<typename leaf_tree::LNode>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a1.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = (_result + _f._s0);
+        }
       }
       return _result;
     }
@@ -843,16 +799,15 @@ struct LoopifyTreeVariants {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename leaf_tree::LNode &>()
-                     .d_a0.get()) _s0;
-        decltype(std::declval<const typename leaf_tree::LNode &>().d_a1) _s1;
-        decltype(std::declval<const typename leaf_tree::LNode &>().d_a0) _s2;
+        leaf_tree *_s0;
+        std::shared_ptr<leaf_tree> _s1;
+        std::shared_ptr<leaf_tree> _s2;
       };
 
       struct _Call2 {
         T1 _s0;
-        decltype(std::declval<const typename leaf_tree::LNode &>().d_a1) _s1;
-        decltype(std::declval<const typename leaf_tree::LNode &>().d_a0) _s2;
+        std::shared_ptr<leaf_tree> _s1;
+        std::shared_ptr<leaf_tree> _s2;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -862,30 +817,27 @@ struct LoopifyTreeVariants {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const leaf_tree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename leaf_tree::LLeaf &_args) -> void {
-                            _result = f(_args.d_a0);
-                          },
-                          [&](const typename leaf_tree::LNode &_args) -> void {
-                            _stack.emplace_back(_Call1{_args.d_a0.get(),
-                                                       _args.d_a1, _args.d_a0});
-                            _stack.emplace_back(_Enter{_args.d_a1.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _result = f0(_f._s2, _result, _f._s1, _f._s0);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const leaf_tree *_self = _f._self;
+          if (std::holds_alternative<typename leaf_tree::LLeaf>(_self->v())) {
+            const auto &[d_a0] =
+                std::get<typename leaf_tree::LLeaf>(_self->v());
+            _result = f(d_a0);
+          } else {
+            const auto &[d_a0, d_a1] =
+                std::get<typename leaf_tree::LNode>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = f0(_f._s2, _result, _f._s1, _f._s0);
+        }
       }
       return _result;
     }
@@ -902,16 +854,15 @@ struct LoopifyTreeVariants {
       };
 
       struct _Call1 {
-        decltype(std::declval<const typename leaf_tree::LNode &>()
-                     .d_a0.get()) _s0;
-        decltype(std::declval<const typename leaf_tree::LNode &>().d_a1) _s1;
-        decltype(std::declval<const typename leaf_tree::LNode &>().d_a0) _s2;
+        leaf_tree *_s0;
+        std::shared_ptr<leaf_tree> _s1;
+        std::shared_ptr<leaf_tree> _s2;
       };
 
       struct _Call2 {
         T1 _s0;
-        decltype(std::declval<const typename leaf_tree::LNode &>().d_a1) _s1;
-        decltype(std::declval<const typename leaf_tree::LNode &>().d_a0) _s2;
+        std::shared_ptr<leaf_tree> _s1;
+        std::shared_ptr<leaf_tree> _s2;
       };
 
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -921,30 +872,27 @@ struct LoopifyTreeVariants {
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
-        std::visit(
-            Overloaded{
-                [&](_Enter _f) {
-                  const leaf_tree *_self = _f._self;
-                  std::visit(
-                      Overloaded{
-                          [&](const typename leaf_tree::LLeaf &_args) -> void {
-                            _result = f(_args.d_a0);
-                          },
-                          [&](const typename leaf_tree::LNode &_args) -> void {
-                            _stack.emplace_back(_Call1{_args.d_a0.get(),
-                                                       _args.d_a1, _args.d_a0});
-                            _stack.emplace_back(_Enter{_args.d_a1.get()});
-                          }},
-                      _self->v());
-                },
-                [&](_Call1 _f) {
-                  _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
-                  _stack.emplace_back(_Enter{_f._s0});
-                },
-                [&](_Call2 _f) {
-                  _result = f0(_f._s2, _result, _f._s1, _f._s0);
-                }},
-            _frame);
+        if (std::holds_alternative<_Enter>(_frame)) {
+          const auto &_f = std::get<_Enter>(_frame);
+          const leaf_tree *_self = _f._self;
+          if (std::holds_alternative<typename leaf_tree::LLeaf>(_self->v())) {
+            const auto &[d_a0] =
+                std::get<typename leaf_tree::LLeaf>(_self->v());
+            _result = f(d_a0);
+          } else {
+            const auto &[d_a0, d_a1] =
+                std::get<typename leaf_tree::LNode>(_self->v());
+            _stack.emplace_back(_Call1{d_a0.get(), d_a1, d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
+          }
+        } else if (std::holds_alternative<_Call1>(_frame)) {
+          const auto &_f = std::get<_Call1>(_frame);
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
+        } else {
+          const auto &_f = std::get<_Call2>(_frame);
+          _result = f0(_f._s2, _result, _f._s1, _f._s0);
+        }
       }
       return _result;
     }

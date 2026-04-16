@@ -11,11 +11,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -58,13 +53,12 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons &_args) -> unsigned int {
-              return (_args.d_a1->length() + 1);
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return 0u;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
+    }
   }
 };
 
@@ -109,28 +103,20 @@ struct FoldSequenceStateTraceCase {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     std::shared_ptr<Line> fold_line() const {
-      return std::visit(
-          Overloaded{[](const typename Fold::Fold_line_ctor &_args)
-                         -> std::shared_ptr<Line> { return _args.d_a0; }},
-          this->v());
+      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(this->v());
+      return d_a0;
     }
 
     template <typename T1, MapsTo<T1, std::shared_ptr<Line>> F0>
     T1 Fold_rec(F0 &&f) const {
-      return std::visit(
-          Overloaded{[&](const typename Fold::Fold_line_ctor &_args) -> T1 {
-            return f(_args.d_a0);
-          }},
-          this->v());
+      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(this->v());
+      return f(d_a0);
     }
 
     template <typename T1, MapsTo<T1, std::shared_ptr<Line>> F0>
     T1 Fold_rect(F0 &&f) const {
-      return std::visit(
-          Overloaded{[&](const typename Fold::Fold_line_ctor &_args) -> T1 {
-            return f(_args.d_a0);
-          }},
-          this->v());
+      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(this->v());
+      return f(d_a0);
     }
   };
 
@@ -215,20 +201,19 @@ struct FoldSequenceStateTraceCase {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     std::shared_ptr<Line> execute_fold_step() const {
-      return std::visit(
-          Overloaded{[](const typename FoldStep::FS_O1 &_args)
-                         -> std::shared_ptr<Line> {
-                       return fold_O1(_args.d_a0, _args.d_a1)->fold_line();
-                     },
-                     [](const typename FoldStep::FS_O2 &_args)
-                         -> std::shared_ptr<Line> {
-                       return fold_O2(_args.d_a0, _args.d_a1)->fold_line();
-                     },
-                     [](const typename FoldStep::FS_O4 &_args)
-                         -> std::shared_ptr<Line> {
-                       return fold_O4(_args.d_a0, _args.d_a1)->fold_line();
-                     }},
-          this->v());
+      if (std::holds_alternative<typename FoldStep::FS_O1>(this->v())) {
+        const auto &[d_a0, d_a1] =
+            std::get<typename FoldStep::FS_O1>(this->v());
+        return fold_O1(d_a0, d_a1)->fold_line();
+      } else if (std::holds_alternative<typename FoldStep::FS_O2>(this->v())) {
+        const auto &[d_a0, d_a1] =
+            std::get<typename FoldStep::FS_O2>(this->v());
+        return fold_O2(d_a0, d_a1)->fold_line();
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename FoldStep::FS_O4>(this->v());
+        return fold_O4(d_a0, d_a1)->fold_line();
+      }
     }
   };
 
@@ -238,17 +223,16 @@ struct FoldSequenceStateTraceCase {
             MapsTo<T1, std::pair<Real, Real>, std::shared_ptr<Line>> F2>
   static T1 FoldStep_rect(F0 &&f, F1 &&f0, F2 &&f1,
                           const std::shared_ptr<FoldStep> &f2) {
-    return std::visit(
-        Overloaded{[&](const typename FoldStep::FS_O1 &_args) -> T1 {
-                     return f(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename FoldStep::FS_O2 &_args) -> T1 {
-                     return f0(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename FoldStep::FS_O4 &_args) -> T1 {
-                     return f1(_args.d_a0, _args.d_a1);
-                   }},
-        f2->v());
+    if (std::holds_alternative<typename FoldStep::FS_O1>(f2->v())) {
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O1>(f2->v());
+      return f(d_a0, d_a1);
+    } else if (std::holds_alternative<typename FoldStep::FS_O2>(f2->v())) {
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O2>(f2->v());
+      return f0(d_a0, d_a1);
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O4>(f2->v());
+      return f1(d_a0, d_a1);
+    }
   }
 
   template <typename T1,
@@ -257,17 +241,16 @@ struct FoldSequenceStateTraceCase {
             MapsTo<T1, std::pair<Real, Real>, std::shared_ptr<Line>> F2>
   static T1 FoldStep_rec(F0 &&f, F1 &&f0, F2 &&f1,
                          const std::shared_ptr<FoldStep> &f2) {
-    return std::visit(
-        Overloaded{[&](const typename FoldStep::FS_O1 &_args) -> T1 {
-                     return f(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename FoldStep::FS_O2 &_args) -> T1 {
-                     return f0(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename FoldStep::FS_O4 &_args) -> T1 {
-                     return f1(_args.d_a0, _args.d_a1);
-                   }},
-        f2->v());
+    if (std::holds_alternative<typename FoldStep::FS_O1>(f2->v())) {
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O1>(f2->v());
+      return f(d_a0, d_a1);
+    } else if (std::holds_alternative<typename FoldStep::FS_O2>(f2->v())) {
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O2>(f2->v());
+      return f0(d_a0, d_a1);
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O4>(f2->v());
+      return f1(d_a0, d_a1);
+    }
   }
 
   using FoldSequence = std::shared_ptr<List<std::shared_ptr<FoldStep>>>;

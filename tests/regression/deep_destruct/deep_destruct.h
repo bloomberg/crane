@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct DeepDestruct {
   template <typename t_A> struct mylist {
     // TYPES
@@ -68,8 +63,8 @@ struct DeepDestruct {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename mylist<T1>::Mycons &>().d_a1) _s0;
-      decltype(std::declval<const typename mylist<T1>::Mycons &>().d_a0) _s1;
+      std::shared_ptr<mylist<T1>> _s0;
+      T1 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -79,23 +74,21 @@ struct DeepDestruct {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<mylist<T1>> m = _f.m;
-                std::visit(
-                    Overloaded{
-                        [&](const typename mylist<T1>::Mynil &) -> void {
-                          _result = f;
-                        },
-                        [&](const typename mylist<T1>::Mycons &_args) -> void {
-                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0});
-                          _stack.emplace_back(_Enter{_args.d_a1});
-                        }},
-                    m->v());
-              },
-              [&](_Call1 _f) { _result = f0(_f._s1, _f._s0, _result); }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<mylist<T1>> m = _f.m;
+        if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
+          _result = f;
+        } else {
+          const auto &[d_a0, d_a1] =
+              std::get<typename mylist<T1>::Mycons>(m->v());
+          _stack.emplace_back(_Call1{d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
+        }
+      } else {
+        const auto &_f = std::get<_Call1>(_frame);
+        _result = f0(_f._s1, _f._s0, _result);
+      }
     }
     return _result;
   }
@@ -109,8 +102,8 @@ struct DeepDestruct {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename mylist<T1>::Mycons &>().d_a1) _s0;
-      decltype(std::declval<const typename mylist<T1>::Mycons &>().d_a0) _s1;
+      std::shared_ptr<mylist<T1>> _s0;
+      T1 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -120,23 +113,21 @@ struct DeepDestruct {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<mylist<T1>> m = _f.m;
-                std::visit(
-                    Overloaded{
-                        [&](const typename mylist<T1>::Mynil &) -> void {
-                          _result = f;
-                        },
-                        [&](const typename mylist<T1>::Mycons &_args) -> void {
-                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0});
-                          _stack.emplace_back(_Enter{_args.d_a1});
-                        }},
-                    m->v());
-              },
-              [&](_Call1 _f) { _result = f0(_f._s1, _f._s0, _result); }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<mylist<T1>> m = _f.m;
+        if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
+          _result = f;
+        } else {
+          const auto &[d_a0, d_a1] =
+              std::get<typename mylist<T1>::Mycons>(m->v());
+          _stack.emplace_back(_Call1{d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
+        }
+      } else {
+        const auto &_f = std::get<_Call1>(_frame);
+        _result = f0(_f._s1, _f._s0, _result);
+      }
     }
     return _result;
   }

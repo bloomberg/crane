@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -54,27 +49,12 @@ public:
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
+};
 
-  t_A nth(const unsigned int n, const t_A default0) const {
-    if (n <= 0) {
-      return std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
-              [](const typename List<t_A>::Cons &_args) -> t_A {
-                return _args.d_a0;
-              }},
-          this->v());
-    } else {
-      unsigned int m = n - 1;
-      return std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
-              [&](const typename List<t_A>::Cons &_args0) -> t_A {
-                return _args0.d_a1->nth(m, default0);
-              }},
-          this->v());
-    }
-  }
+struct ListDef {
+  template <typename T1>
+  static T1 nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
+                const T1 default0);
 };
 
 struct WpmOps {
@@ -83,29 +63,20 @@ struct WpmOps {
   update_nth(const unsigned int n, const T1 x,
              const std::shared_ptr<List<T1>> &l) {
     if (n <= 0) {
-      return std::visit(
-          Overloaded{
-              [](const typename List<T1>::Nil &) -> std::shared_ptr<List<T1>> {
-                return List<T1>::nil();
-              },
-              [&](const typename List<T1>::Cons &_args)
-                  -> std::shared_ptr<List<T1>> {
-                return List<T1>::cons(x, _args.d_a1);
-              }},
-          l->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+        return List<T1>::nil();
+      } else {
+        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+        return List<T1>::cons(x, d_a1);
+      }
     } else {
       unsigned int n_ = n - 1;
-      return std::visit(
-          Overloaded{
-              [](const typename List<T1>::Nil &) -> std::shared_ptr<List<T1>> {
-                return List<T1>::nil();
-              },
-              [&](const typename List<T1>::Cons &_args0)
-                  -> std::shared_ptr<List<T1>> {
-                return List<T1>::cons(_args0.d_a0,
-                                      update_nth<T1>(n_, x, _args0.d_a1));
-              }},
-          l->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+        return List<T1>::nil();
+      } else {
+        const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
+        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, d_a10));
+      }
     }
   }
 
@@ -131,10 +102,10 @@ struct WpmOps {
           2u, 99u, false});
   static inline const std::shared_ptr<state1> after1 = execute_wpm1(sample1);
   static inline const bool test_wpm_disabled_is_nop =
-      (after1->rom1->nth(0u, 0u) == 10u &&
-       (after1->rom1->nth(1u, 0u) == 11u &&
-        (after1->rom1->nth(2u, 0u) == 12u &&
-         after1->rom1->nth(3u, 0u) == 13u)));
+      (ListDef::template nth<unsigned int>(0u, after1->rom1, 0u) == 10u &&
+       (ListDef::template nth<unsigned int>(1u, after1->rom1, 0u) == 11u &&
+        (ListDef::template nth<unsigned int>(2u, after1->rom1, 0u) == 12u &&
+         ListDef::template nth<unsigned int>(3u, after1->rom1, 0u) == 13u)));
 
   struct state2 {
     std::shared_ptr<List<unsigned int>> ram_sys2;
@@ -198,7 +169,7 @@ struct WpmOps {
                 11u, List<unsigned int>::cons(12u, List<unsigned int>::nil()))),
         1u, 99u, true});
     std::shared_ptr<state4> s_ = execute_wpm4(std::move(s));
-    return std::move(s_)->rom4->nth(1u, 0u);
+    return ListDef::template nth<unsigned int>(1u, std::move(s_)->rom4, 0u);
   }();
 
   struct state5 {
@@ -218,7 +189,8 @@ struct WpmOps {
                                          13u, List<unsigned int>::nil())))),
           2u, 99u, true});
   static inline const bool test_wpm_updates_rom_at_addr =
-      execute_wpm5(sample5)->rom5->nth(2u, 0u) == 99u;
+      ListDef::template nth<unsigned int>(2u, execute_wpm5(sample5)->rom5,
+                                          0u) == 99u;
 
   struct state6 {
     std::shared_ptr<List<unsigned int>> rom6;
@@ -238,10 +210,10 @@ struct WpmOps {
           2u, 99u, true});
   static inline const std::shared_ptr<state6> after6 = execute_wpm6(sample6);
   static inline const bool test_wpm_writes_exactly_once =
-      (after6->rom6->nth(2u, 0u) == 99u &&
-       (after6->rom6->nth(0u, 0u) == 10u &&
-        (after6->rom6->nth(1u, 0u) == 11u &&
-         after6->rom6->nth(3u, 0u) == 13u)));
+      (ListDef::template nth<unsigned int>(2u, after6->rom6, 0u) == 99u &&
+       (ListDef::template nth<unsigned int>(0u, after6->rom6, 0u) == 10u &&
+        (ListDef::template nth<unsigned int>(1u, after6->rom6, 0u) == 11u &&
+         ListDef::template nth<unsigned int>(3u, after6->rom6, 0u) == 13u)));
   static inline const std::pair<
       std::pair<std::pair<std::pair<std::pair<bool, bool>, bool>, unsigned int>,
                 bool>,
@@ -256,5 +228,26 @@ struct WpmOps {
               test_wpm_updates_rom_at_addr),
           test_wpm_writes_exactly_once);
 };
+
+template <typename T1>
+T1 ListDef::nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
+                const T1 default0) {
+  if (n <= 0) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      return d_a0;
+    }
+  } else {
+    unsigned int m = n - 1;
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
+      return ListDef::template nth<T1>(m, d_a10, default0);
+    }
+  }
+}
 
 #endif // INCLUDED_WPM_OPS

@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct Nat {
   // TYPES
   struct O {};
@@ -95,20 +90,16 @@ public:
 
   template <MapsTo<bool, t_A> F0>
   std::shared_ptr<List<t_A>> filter(F0 &&f) const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> std::shared_ptr<List<t_A>> {
-              return List<t_A>::nil();
-            },
-            [&](const typename List<t_A>::Cons &_args)
-                -> std::shared_ptr<List<t_A>> {
-              if (f(_args.d_a0)) {
-                return List<t_A>::cons(_args.d_a0, _args.d_a1->filter(f));
-              } else {
-                return _args.d_a1->filter(f);
-              }
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return List<t_A>::nil();
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      if (f(d_a0)) {
+        return List<t_A>::cons(d_a0, d_a1->filter(f));
+      } else {
+        return d_a1->filter(f);
+      }
+    }
   }
 };
 

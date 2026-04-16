@@ -16,13 +16,13 @@ RamStateOps::reset_state(const std::shared_ptr<RamStateOps::state> &s) {
 __attribute__((pure)) unsigned int
 RamStateOps::get_main(const std::shared_ptr<RamStateOps::ram_reg> &rg,
                       const unsigned int i) {
-  return rg->reg_main->nth(i, 0u);
+  return ListDef::template nth<unsigned int>(i, rg->reg_main, 0u);
 }
 
 __attribute__((pure)) unsigned int
 RamStateOps::get_stat(const std::shared_ptr<RamStateOps::ram_reg> &rg,
                       const unsigned int i) {
-  return rg->reg_status->nth(i, 0u);
+  return ListDef::template nth<unsigned int>(i, rg->reg_status, 0u);
 }
 
 std::shared_ptr<RamStateOps::ram_reg>
@@ -44,7 +44,8 @@ RamStateOps::upd_stat_in_reg(const std::shared_ptr<RamStateOps::ram_reg> &rg,
 std::shared_ptr<RamStateOps::ram_reg>
 RamStateOps::get_regRAM(const std::shared_ptr<RamStateOps::ram_chip> &ch,
                         const unsigned int r) {
-  return ch->chip_regs->nth(r, empty_reg);
+  return ListDef::template nth<std::shared_ptr<RamStateOps::ram_reg>>(
+      r, ch->chip_regs, empty_reg);
 }
 
 std::shared_ptr<RamStateOps::ram_chip>
@@ -66,7 +67,8 @@ RamStateOps::upd_port_in_chip(const std::shared_ptr<RamStateOps::ram_chip> &ch,
 std::shared_ptr<RamStateOps::ram_chip>
 RamStateOps::get_chip(const std::shared_ptr<RamStateOps::ram_bank> &bk,
                       const unsigned int c) {
-  return bk->bank_chips->nth(c, empty_chip);
+  return ListDef::template nth<std::shared_ptr<RamStateOps::ram_chip>>(
+      c, bk->bank_chips, empty_chip);
 }
 
 std::shared_ptr<RamStateOps::ram_bank> RamStateOps::upd_chip_in_bank(
@@ -80,7 +82,8 @@ std::shared_ptr<RamStateOps::ram_bank> RamStateOps::upd_chip_in_bank(
 std::shared_ptr<RamStateOps::ram_bank> RamStateOps::get_bank_from_sys(
     const std::shared_ptr<List<std::shared_ptr<RamStateOps::ram_bank>>> &sys,
     const unsigned int b) {
-  return sys->nth(b, empty_bank);
+  return ListDef::template nth<std::shared_ptr<RamStateOps::ram_bank>>(
+      b, sys, empty_bank);
 }
 
 std::shared_ptr<List<std::shared_ptr<RamStateOps::ram_bank>>>
@@ -145,21 +148,16 @@ RamStateOps::ram_write_status_sys(const std::shared_ptr<RamStateOps::state> &s,
 __attribute__((pure))
 std::pair<std::optional<unsigned int>, std::shared_ptr<RamStateOps::state>>
 RamStateOps::pop_stack(std::shared_ptr<RamStateOps::state> s) {
-  return std::visit(
-      Overloaded{
-          [&](const typename List<unsigned int>::Nil &)
-              -> std::pair<std::optional<unsigned int>,
-                           std::shared_ptr<RamStateOps::state>> {
-            return std::make_pair(std::optional<unsigned int>(), std::move(s));
-          },
-          [&](const typename List<unsigned int>::Cons &_args)
-              -> std::pair<std::optional<unsigned int>,
-                           std::shared_ptr<RamStateOps::state>> {
-            return std::make_pair(
-                std::make_optional<unsigned int>(_args.d_a0),
-                std::make_shared<RamStateOps::state>(state{
-                    s->state_regs, s->state_acc, s->state_carry, s->state_pc,
-                    _args.d_a1, s->state_ram, s->state_sel, s->state_rom}));
-          }},
-      s->state_stack->v());
+  auto &&_sv = s->state_stack;
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv->v())) {
+    return std::make_pair(std::optional<unsigned int>(), std::move(s));
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(_sv->v());
+    return std::make_pair(
+        std::make_optional<unsigned int>(d_a0),
+        std::make_shared<RamStateOps::state>(
+            state{s->state_regs, s->state_acc, s->state_carry, s->state_pc,
+                  d_a1, s->state_ram, s->state_sel, s->state_rom}));
+  }
 }

@@ -26,42 +26,41 @@ __attribute__((pure)) unsigned int LoopifyExpr::sum_shapes(
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(
-        Overloaded{
-            [&](_Enter _f) {
-              const std::shared_ptr<List<std::shared_ptr<LoopifyExpr::shape>>>
-                  l = _f.l;
-              std::visit(
-                  Overloaded{
-                      [&](const typename List<
-                          std::shared_ptr<LoopifyExpr::shape>>::Nil &) -> void {
-                        _result = 0u;
-                      },
-                      [&](const typename List<
-                          std::shared_ptr<LoopifyExpr::shape>>::Cons &_args)
-                          -> void {
-                        unsigned int val = std::visit(
-                            Overloaded{
-                                [](const typename LoopifyExpr::shape::Circle
-                                       &_args0) -> unsigned int {
-                                  return _args0.d_a0;
-                                },
-                                [](const typename LoopifyExpr::shape::Square
-                                       &_args0) -> unsigned int {
-                                  return _args0.d_a0;
-                                },
-                                [](const typename LoopifyExpr::shape::Triangle
-                                       &_args0) -> unsigned int {
-                                  return _args0.d_a0;
-                                }},
-                            _args.d_a0->v());
-                        _stack.emplace_back(_Call1{val});
-                        _stack.emplace_back(_Enter{_args.d_a1});
-                      }},
-                  l->v());
-            },
-            [&](_Call1 _f) { _result = (_f._s0 + _result); }},
-        _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const std::shared_ptr<List<std::shared_ptr<LoopifyExpr::shape>>> l = _f.l;
+      if (std::holds_alternative<
+              typename List<std::shared_ptr<LoopifyExpr::shape>>::Nil>(
+              l->v())) {
+        _result = 0u;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<std::shared_ptr<LoopifyExpr::shape>>::Cons>(
+                l->v());
+        unsigned int val = [&]() {
+          if (std::holds_alternative<typename LoopifyExpr::shape::Circle>(
+                  d_a0->v())) {
+            const auto &[d_a00] =
+                std::get<typename LoopifyExpr::shape::Circle>(d_a0->v());
+            return d_a00;
+          } else if (std::holds_alternative<
+                         typename LoopifyExpr::shape::Square>(d_a0->v())) {
+            const auto &[d_a00] =
+                std::get<typename LoopifyExpr::shape::Square>(d_a0->v());
+            return d_a00;
+          } else {
+            const auto &[d_a00] =
+                std::get<typename LoopifyExpr::shape::Triangle>(d_a0->v());
+            return d_a00;
+          }
+        }();
+        _stack.emplace_back(_Call1{val});
+        _stack.emplace_back(_Enter{d_a1});
+      }
+    } else {
+      const auto &_f = std::get<_Call1>(_frame);
+      _result = (_f._s0 + _result);
+    }
   }
   return _result;
 }
@@ -76,7 +75,7 @@ LoopifyExpr::count_by_shape(
   };
 
   struct _Call1 {
-    const typename List<std::shared_ptr<LoopifyExpr::shape>>::Cons _s0;
+    std::shared_ptr<LoopifyExpr::shape> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -86,52 +85,37 @@ LoopifyExpr::count_by_shape(
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(
-        Overloaded{
-            [&](_Enter _f) {
-              const std::shared_ptr<List<std::shared_ptr<LoopifyExpr::shape>>>
-                  l = _f.l;
-              std::visit(
-                  Overloaded{
-                      [&](const typename List<
-                          std::shared_ptr<LoopifyExpr::shape>>::Nil &) -> void {
-                        _result = std::make_pair(std::make_pair(0u, 0u), 0u);
-                      },
-                      [&](const typename List<
-                          std::shared_ptr<LoopifyExpr::shape>>::Cons &_args)
-                          -> void {
-                        _stack.emplace_back(_Call1{_args});
-                        _stack.emplace_back(_Enter{_args.d_a1});
-                      }},
-                  l->v());
-            },
-            [&](_Call1 _f) {
-              const typename List<std::shared_ptr<LoopifyExpr::shape>>::Cons
-                  _args = _f._s0;
-              const std::pair<unsigned int, unsigned int> &p = _result.first;
-              const unsigned int &t = _result.second;
-              const unsigned int &c = p.first;
-              const unsigned int &sq = p.second;
-              _result = std::visit(
-                  Overloaded{
-                      [&](const typename LoopifyExpr::shape::Circle &)
-                          -> std::pair<std::pair<unsigned int, unsigned int>,
-                                       unsigned int> {
-                        return std::make_pair(std::make_pair((c + 1), sq), t);
-                      },
-                      [&](const typename LoopifyExpr::shape::Square &)
-                          -> std::pair<std::pair<unsigned int, unsigned int>,
-                                       unsigned int> {
-                        return std::make_pair(std::make_pair(c, (sq + 1)), t);
-                      },
-                      [&](const typename LoopifyExpr::shape::Triangle &)
-                          -> std::pair<std::pair<unsigned int, unsigned int>,
-                                       unsigned int> {
-                        return std::make_pair(std::make_pair(c, sq), (t + 1));
-                      }},
-                  _args.d_a0->v());
-            }},
-        _frame);
+    if (std::holds_alternative<_Enter>(_frame)) {
+      const auto &_f = std::get<_Enter>(_frame);
+      const std::shared_ptr<List<std::shared_ptr<LoopifyExpr::shape>>> l = _f.l;
+      if (std::holds_alternative<
+              typename List<std::shared_ptr<LoopifyExpr::shape>>::Nil>(
+              l->v())) {
+        _result = std::make_pair(std::make_pair(0u, 0u), 0u);
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<std::shared_ptr<LoopifyExpr::shape>>::Cons>(
+                l->v());
+        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Enter{d_a1});
+      }
+    } else {
+      const auto &_f = std::get<_Call1>(_frame);
+      std::shared_ptr<LoopifyExpr::shape> d_a0 = _f._s0;
+      const std::pair<unsigned int, unsigned int> &p = _result.first;
+      const unsigned int &t = _result.second;
+      const unsigned int &c = p.first;
+      const unsigned int &sq = p.second;
+      if (std::holds_alternative<typename LoopifyExpr::shape::Circle>(
+              d_a0->v())) {
+        _result = std::make_pair(std::make_pair((c + 1), sq), t);
+      } else if (std::holds_alternative<typename LoopifyExpr::shape::Square>(
+                     d_a0->v())) {
+        _result = std::make_pair(std::make_pair(c, (sq + 1)), t);
+      } else {
+        _result = std::make_pair(std::make_pair(c, sq), (t + 1));
+      }
+    }
   }
   return _result;
 }

@@ -25,24 +25,26 @@ __attribute__((pure)) bool MutualRecursion::is_odd(const unsigned int n) {
 
 __attribute__((pure)) unsigned int MutualRecursion::tree_sum(
     const std::shared_ptr<MutualRecursion::tree<unsigned int>> &t) {
-  return std::visit(
-      Overloaded{
-          [](const typename MutualRecursion::tree<unsigned int>::Leaf &_args)
-              -> unsigned int { return _args.d_a0; },
-          [](const typename MutualRecursion::tree<unsigned int>::Node &_args)
-              -> unsigned int { return forest_sum(_args.d_a0); }},
-      t->v());
+  if (std::holds_alternative<
+          typename MutualRecursion::tree<unsigned int>::Leaf>(t->v())) {
+    const auto &[d_a0] =
+        std::get<typename MutualRecursion::tree<unsigned int>::Leaf>(t->v());
+    return d_a0;
+  } else {
+    const auto &[d_a0] =
+        std::get<typename MutualRecursion::tree<unsigned int>::Node>(t->v());
+    return forest_sum(d_a0);
+  }
 }
 
 __attribute__((pure)) unsigned int MutualRecursion::forest_sum(
     const std::shared_ptr<MutualRecursion::forest<unsigned int>> &f) {
-  return std::visit(
-      Overloaded{
-          [](const typename MutualRecursion::forest<unsigned int>::Empty &)
-              -> unsigned int { return 0u; },
-          [](const typename MutualRecursion::forest<unsigned int>::Trees &_args)
-              -> unsigned int {
-            return (tree_sum(_args.d_a0) + forest_sum(_args.d_a1));
-          }},
-      f->v());
+  if (std::holds_alternative<
+          typename MutualRecursion::forest<unsigned int>::Empty>(f->v())) {
+    return 0u;
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename MutualRecursion::forest<unsigned int>::Trees>(f->v());
+    return (tree_sum(d_a0) + forest_sum(d_a1));
+  }
 }

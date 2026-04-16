@@ -8,5 +8,6 @@
 std::shared_ptr<BankLookupDefault::ram_bank>
 BankLookupDefault::get_bank(const std::shared_ptr<BankLookupDefault::state> &s,
                             const unsigned int b) {
-  return s->ram_sys->nth(b, empty_bank);
+  return ListDef::template nth<std::shared_ptr<BankLookupDefault::ram_bank>>(
+      b, s->ram_sys, empty_bank);
 }

@@ -84,25 +84,22 @@ void BlockTemplateStress::block_result_as_arg() {
 /// 9. Block template with %a0 inside a fixpoint
 std::shared_ptr<List<std::string>> BlockTemplateStress::read_files(
     const std::shared_ptr<List<std::string>> &paths) {
-  return std::visit(Overloaded{[](const typename List<std::string>::Nil &)
-                                   -> std::shared_ptr<List<std::string>> {
-                                 return List<std::string>::nil();
-                               },
-                               [](const typename List<std::string>::Cons &_args)
-                                   -> std::shared_ptr<List<std::string>> {
-                                 std::string content;
-                                 {
-                                   std::ifstream _f(_args.d_a0);
-                                   if (_f.good())
-                                     std::getline(_f, content);
-                                   else
-                                     content = _args.d_a0;
-                                 };
-                                 std::shared_ptr<List<std::string>> rest =
-                                     read_files(_args.d_a1);
-                                 return List<std::string>::cons(content, rest);
-                               }},
-                    paths->v());
+  if (std::holds_alternative<typename List<std::string>::Nil>(paths->v())) {
+    return List<std::string>::nil();
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<std::string>::Cons>(paths->v());
+    std::string content;
+    {
+      std::ifstream _f(d_a0);
+      if (_f.good())
+        std::getline(_f, content);
+      else
+        content = d_a0;
+    };
+    std::shared_ptr<List<std::string>> rest = read_files(d_a1);
+    return List<std::string>::cons(content, rest);
+  }
 }
 
 /// 10. Block template interleaved with void calls

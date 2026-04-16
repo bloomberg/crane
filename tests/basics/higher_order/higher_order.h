@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct HigherOrder {
   /// A simple polymorphic list type.
   template <typename t_A> struct list {
@@ -61,68 +56,61 @@ struct HigherOrder {
   template <typename T1, typename T2,
             MapsTo<T2, T1, std::shared_ptr<list<T1>>, T2> F1>
   static T2 list_rect(const T2 f, F1 &&f0, const std::shared_ptr<list<T1>> &l) {
-    return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil &) -> T2 { return f; },
-                   [&](const typename list<T1>::Cons &_args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               list_rect<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        l->v());
+    if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+      return f;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+      return f0(d_a0, d_a1, list_rect<T1, T2>(f, f0, d_a1));
+    }
   }
 
   template <typename T1, typename T2,
             MapsTo<T2, T1, std::shared_ptr<list<T1>>, T2> F1>
   static T2 list_rec(const T2 f, F1 &&f0, const std::shared_ptr<list<T1>> &l) {
-    return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil &) -> T2 { return f; },
-                   [&](const typename list<T1>::Cons &_args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               list_rec<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        l->v());
+    if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+      return f;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+      return f0(d_a0, d_a1, list_rec<T1, T2>(f, f0, d_a1));
+    }
   }
 
   /// map f l applies f to each element of l, producing a new list.
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
   static std::shared_ptr<list<T2>> map(F0 &&f,
                                        const std::shared_ptr<list<T1>> &l) {
-    return std::visit(
-        Overloaded{
-            [](const typename list<T1>::Nil &) -> std::shared_ptr<list<T2>> {
-              return list<T2>::nil();
-            },
-            [&](const typename list<T1>::Cons &_args)
-                -> std::shared_ptr<list<T2>> {
-              return list<T2>::cons(f(_args.d_a0), map<T1, T2>(f, _args.d_a1));
-            }},
-        l->v());
+    if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+      return list<T2>::nil();
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+      return list<T2>::cons(f(d_a0), map<T1, T2>(f, d_a1));
+    }
   }
 
   /// foldr f z l folds l from the right using f with initial
   /// accumulator z.
   template <typename T1, typename T2, MapsTo<T2, T1, T2> F0>
   static T2 foldr(F0 &&f, const T2 z, const std::shared_ptr<list<T1>> &l) {
-    return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil &) -> T2 { return z; },
-                   [&](const typename list<T1>::Cons &_args) -> T2 {
-                     return f(_args.d_a0, foldr<T1, T2>(f, z, _args.d_a1));
-                   }},
-        l->v());
+    if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+      return z;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+      return f(d_a0, foldr<T1, T2>(f, z, d_a1));
+    }
   }
 
   /// foldl f z l folds l from the left using f with initial
   /// accumulator z. This is tail-recursive.
   template <typename T1, typename T2, MapsTo<T2, T2, T1> F0>
   static T2 foldl(F0 &&f, const T2 z, const std::shared_ptr<list<T1>> &l) {
-    return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil &) -> T2 { return z; },
-                   [&](const typename list<T1>::Cons &_args) -> T2 {
-                     return foldl<T1, T2>(f, f(z, _args.d_a0), _args.d_a1);
-                   }},
-        l->v());
-  }
+    if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+      return z;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+      return foldl<T1, T2>(f, f(z, d_a0), d_a1);
+    }
+  } /// compose g f returns the composition of g after f.
 
-  /// compose g f returns the composition of g after f.
   template <typename T1, typename T2 = void, typename T3, typename F0,
             typename F1>
   static T3 compose(F0 &&g, F1 &&f, const T1 x) {

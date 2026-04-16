@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -58,13 +53,12 @@ public:
 
   template <typename T1, MapsTo<T1, t_A, T1> F0>
   T1 fold_right(F0 &&f, const T1 a0) const {
-    return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil &) -> T1 { return a0; },
-                   [&](const typename List<t_A>::Cons &_args) -> T1 {
-                     return f(_args.d_a0,
-                              _args.d_a1->template fold_right<T1>(f, a0));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return a0;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return f(d_a0, d_a1->template fold_right<T1>(f, a0));
+    }
   }
 };
 
@@ -119,28 +113,26 @@ struct FoldClosureAccum {
                                 std::shared_ptr<tree>, T1>
                              F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, _args.d_a2,
-                               tree_rect<T1>(f, f0, _args.d_a2));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return f;
+    } else {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rect<T1>(f, f0, d_a0), d_a1, d_a2,
+                tree_rect<T1>(f, f0, d_a2));
+    }
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
                                 std::shared_ptr<tree>, T1>
                              F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, _args.d_a2,
-                               tree_rec<T1>(f, f0, _args.d_a2));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return f;
+    } else {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rec<T1>(f, f0, d_a0), d_a1, d_a2,
+                tree_rec<T1>(f, f0, d_a2));
+    }
   }
 
   /// Sum all values in a tree.

@@ -11,11 +11,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct PartialAppMove {
   struct tree {
     // TYPES
@@ -72,17 +67,17 @@ struct PartialAppMove {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s0;
-      decltype(std::declval<const typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s3;
+      std::shared_ptr<tree> _s0;
+      std::shared_ptr<tree> _s1;
+      unsigned int _s2;
+      std::shared_ptr<tree> _s3;
     };
 
     struct _Call2 {
       T1 _s0;
-      decltype(std::declval<const typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s3;
+      std::shared_ptr<tree> _s1;
+      unsigned int _s2;
+      std::shared_ptr<tree> _s3;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -92,30 +87,25 @@ struct PartialAppMove {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree> t = _f.t;
-                std::visit(
-                    Overloaded{[&](const typename tree::Leaf &) -> void {
-                                 _result = f;
-                               },
-                               [&](const typename tree::Node &_args) -> void {
-                                 _stack.emplace_back(
-                                     _Call1{_args.d_a0, _args.d_a2, _args.d_a1,
-                                            _args.d_a0});
-                                 _stack.emplace_back(_Enter{_args.d_a2});
-                               }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.emplace_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<tree> t = _f.t;
+        if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+          _result = f;
+        } else {
+          const auto &[d_a0, d_a1, d_a2] =
+              std::get<typename tree::Node>(t->v());
+          _stack.emplace_back(_Call1{d_a0, d_a2, d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a2});
+        }
+      } else if (std::holds_alternative<_Call1>(_frame)) {
+        const auto &_f = std::get<_Call1>(_frame);
+        _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+        _stack.emplace_back(_Enter{_f._s0});
+      } else {
+        const auto &_f = std::get<_Call2>(_frame);
+        _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+      }
     }
     return _result;
   }
@@ -129,17 +119,17 @@ struct PartialAppMove {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s0;
-      decltype(std::declval<const typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s3;
+      std::shared_ptr<tree> _s0;
+      std::shared_ptr<tree> _s1;
+      unsigned int _s2;
+      std::shared_ptr<tree> _s3;
     };
 
     struct _Call2 {
       T1 _s0;
-      decltype(std::declval<const typename tree::Node &>().d_a2) _s1;
-      decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
-      decltype(std::declval<const typename tree::Node &>().d_a0) _s3;
+      std::shared_ptr<tree> _s1;
+      unsigned int _s2;
+      std::shared_ptr<tree> _s3;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -149,30 +139,25 @@ struct PartialAppMove {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree> t = _f.t;
-                std::visit(
-                    Overloaded{[&](const typename tree::Leaf &) -> void {
-                                 _result = f;
-                               },
-                               [&](const typename tree::Node &_args) -> void {
-                                 _stack.emplace_back(
-                                     _Call1{_args.d_a0, _args.d_a2, _args.d_a1,
-                                            _args.d_a0});
-                                 _stack.emplace_back(_Enter{_args.d_a2});
-                               }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.emplace_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-              }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<tree> t = _f.t;
+        if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+          _result = f;
+        } else {
+          const auto &[d_a0, d_a1, d_a2] =
+              std::get<typename tree::Node>(t->v());
+          _stack.emplace_back(_Call1{d_a0, d_a2, d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a2});
+        }
+      } else if (std::holds_alternative<_Call1>(_frame)) {
+        const auto &_f = std::get<_Call1>(_frame);
+        _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+        _stack.emplace_back(_Enter{_f._s0});
+      } else {
+        const auto &_f = std::get<_Call2>(_frame);
+        _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+      }
     }
     return _result;
   }
@@ -207,14 +192,11 @@ struct PartialAppMove {
         return sum_values(t, _x0);
       };
       std::shared_ptr<tree> w = tree::node(t, 42u, tree::leaf());
-      return std::visit(
-          Overloaded{[&](const typename tree::Leaf &) -> unsigned int {
-                       return f(0u);
-                     },
-                     [&](const typename tree::Node &) -> unsigned int {
-                       return f(99u);
-                     }},
-          w->v());
+      if (std::holds_alternative<typename tree::Leaf>(w->v())) {
+        return f(0u);
+      } else {
+        return f(99u);
+      }
     }();
   }();
   /// Same but using wrap function.
@@ -228,14 +210,11 @@ struct PartialAppMove {
         return sum_values(t, _x0);
       };
       std::shared_ptr<tree> w = wrap(std::move(t));
-      return std::visit(
-          Overloaded{[&](const typename tree::Leaf &) -> unsigned int {
-                       return f(0u);
-                     },
-                     [&](const typename tree::Node &) -> unsigned int {
-                       return f(99u);
-                     }},
-          w->v());
+      if (std::holds_alternative<typename tree::Leaf>(w->v())) {
+        return f(0u);
+      } else {
+        return f(99u);
+      }
     }();
   }();
 };

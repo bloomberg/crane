@@ -12,11 +12,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -107,21 +102,15 @@ struct LoopifyCoindStream {
   };
 
   template <typename T1> static T1 hd(const std::shared_ptr<stream<T1>> &s) {
-    return std::visit(
-        Overloaded{[](const typename stream<T1>::Scons &_args) -> T1 {
-          return _args.d_a0;
-        }},
-        s->v());
+    const auto &[d_a0, d_a1] = std::get<typename stream<T1>::Scons>(s->v());
+    return d_a0;
   }
 
   template <typename T1>
   static std::shared_ptr<stream<T1>> tl(const std::shared_ptr<stream<T1>> &s) {
-    return stream<T1>::lazy_([=]() mutable -> std::shared_ptr<stream<T1>> {
-      return std::visit(
-          Overloaded{[](const typename stream<T1>::Scons &_args)
-                         -> std::shared_ptr<stream<T1>> { return _args.d_a1; }},
-          s->v());
-    });
+    const auto &[d_a0, d_a1] = std::get<typename stream<T1>::Scons>(s->v());
+    return stream<T1>::lazy_(
+        [=]() mutable -> std::shared_ptr<stream<T1>> { return d_a1; });
   }
 
   template <typename T1>
@@ -134,31 +123,27 @@ struct LoopifyCoindStream {
     bool _continue = true;
     while (_continue) {
       if (_loop_n <= 0) {
-        {
-          if (_last) {
-            std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
-                List<T1>::nil();
-          } else {
-            _head = List<T1>::nil();
-          }
-          _continue = false;
+        if (_last) {
+          std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
+              List<T1>::nil();
+        } else {
+          _head = List<T1>::nil();
         }
+        _continue = false;
       } else {
         unsigned int n_ = _loop_n - 1;
-        {
-          auto _cell = List<T1>::cons(hd<T1>(_loop_s), nullptr);
-          if (_last) {
-            std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 = _cell;
-          } else {
-            _head = _cell;
-          }
-          _last = _cell;
-          std::shared_ptr<stream<T1>> _next_s = tl<T1>(_loop_s);
-          unsigned int _next_n = n_;
-          _loop_s = std::move(_next_s);
-          _loop_n = std::move(_next_n);
-          continue;
+        auto _cell = List<T1>::cons(hd<T1>(_loop_s), nullptr);
+        if (_last) {
+          std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 = _cell;
+        } else {
+          _head = _cell;
         }
+        _last = _cell;
+        std::shared_ptr<stream<T1>> _next_s = tl<T1>(_loop_s);
+        unsigned int _next_n = n_;
+        _loop_s = std::move(_next_s);
+        _loop_n = std::move(_next_n);
+        continue;
       }
     }
     return _head;
@@ -202,17 +187,14 @@ struct LoopifyCoindStream {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(Overloaded{[&](_Enter _f) {
-                   const T2 seed = _f.seed;
-                   auto _cs = f(seed);
-                   const T1 &a = _cs.first;
-                   const T2 &s_ = _cs.second;
-                   _result = stream<T1>::lazy_(
-                       [=]() mutable -> std::shared_ptr<stream<T1>> {
-                         return stream<T1>::scons(a, unfold<T1, T2>(f, s_));
-                       });
-                 }},
-                 _frame);
+      const auto &_f = std::get<_Enter>(_frame);
+      const T2 seed = _f.seed;
+      auto _cs = f(seed);
+      const T1 &a = _cs.first;
+      const T2 &s_ = _cs.second;
+      _result = stream<T1>::lazy_([=]() mutable -> std::shared_ptr<stream<T1>> {
+        return stream<T1>::scons(a, unfold<T1, T2>(f, s_));
+      });
     }
     return _result;
   }

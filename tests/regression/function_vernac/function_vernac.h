@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -171,19 +166,18 @@ struct FunctionVernac {
                   F2>
     T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int,
                   const unsigned int) const {
-      return std::visit(
-          Overloaded{[&](const typename R_div2::R_div2_0 &_args) -> T1 {
-                       return f(_args.d_n);
-                     },
-                     [&](const typename R_div2::R_div2_1 &_args) -> T1 {
-                       return f0(_args.d_n);
-                     },
-                     [&](const typename R_div2::R_div2_2 &_args) -> T1 {
-                       return f1(_args.d_n, _args.d_p, _args.d_a2, _args.d__res,
-                                 _args.d__res->template R_div2_rec<T1>(
-                                     f, f0, f1, _args.d_p, _args.d_a2));
-                     }},
-          this->v());
+      if (std::holds_alternative<typename R_div2::R_div2_0>(this->v())) {
+        const auto &[d_n] = std::get<typename R_div2::R_div2_0>(this->v());
+        return f(d_n);
+      } else if (std::holds_alternative<typename R_div2::R_div2_1>(this->v())) {
+        const auto &[d_n] = std::get<typename R_div2::R_div2_1>(this->v());
+        return f0(d_n);
+      } else {
+        const auto &[d_n, d_p, d_a2, d__res] =
+            std::get<typename R_div2::R_div2_2>(this->v());
+        return f1(d_n, d_p, d_a2, d__res,
+                  d__res->template R_div2_rec<T1>(f, f0, f1, d_p, d_a2));
+      }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -193,19 +187,18 @@ struct FunctionVernac {
                   F2>
     T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int,
                    const unsigned int) const {
-      return std::visit(
-          Overloaded{[&](const typename R_div2::R_div2_0 &_args) -> T1 {
-                       return f(_args.d_n);
-                     },
-                     [&](const typename R_div2::R_div2_1 &_args) -> T1 {
-                       return f0(_args.d_n);
-                     },
-                     [&](const typename R_div2::R_div2_2 &_args) -> T1 {
-                       return f1(_args.d_n, _args.d_p, _args.d_a2, _args.d__res,
-                                 _args.d__res->template R_div2_rect<T1>(
-                                     f, f0, f1, _args.d_p, _args.d_a2));
-                     }},
-          this->v());
+      if (std::holds_alternative<typename R_div2::R_div2_0>(this->v())) {
+        const auto &[d_n] = std::get<typename R_div2::R_div2_0>(this->v());
+        return f(d_n);
+      } else if (std::holds_alternative<typename R_div2::R_div2_1>(this->v())) {
+        const auto &[d_n] = std::get<typename R_div2::R_div2_1>(this->v());
+        return f0(d_n);
+      } else {
+        const auto &[d_n, d_p, d_a2, d__res] =
+            std::get<typename R_div2::R_div2_2>(this->v());
+        return f1(d_n, d_p, d_a2, d__res,
+                  d__res->template R_div2_rect<T1>(f, f0, f1, d_p, d_a2));
+      }
     }
   };
 
@@ -247,14 +240,13 @@ struct FunctionVernac {
   template <MapsTo<unsigned int, std::shared_ptr<List<unsigned int>>> F0>
   __attribute__((pure)) static unsigned int
   list_sum_F(F0 &&list_sum0, const std::shared_ptr<List<unsigned int>> &l) {
-    return std::visit(
-        Overloaded{[](const typename List<unsigned int>::Nil &)
-                       -> unsigned int { return 0u; },
-                   [&](const typename List<unsigned int>::Cons &_args)
-                       -> unsigned int {
-                     return (_args.d_a0 + list_sum0(_args.d_a1));
-                   }},
-        l->v());
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+      return 0u;
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l->v());
+      return (d_a0 + list_sum0(d_a1));
+    }
   }
 
   static std::shared_ptr<Sig<unsigned int>>
@@ -329,17 +321,17 @@ struct FunctionVernac {
     T1 R_list_sum_rec(F0 &&f, F1 &&f0,
                       const std::shared_ptr<List<unsigned int>> &,
                       const unsigned int) const {
-      return std::visit(
-          Overloaded{[&](const typename R_list_sum::R_list_sum_0 &_args) -> T1 {
-                       return f(_args.d_l);
-                     },
-                     [&](const typename R_list_sum::R_list_sum_1 &_args) -> T1 {
-                       return f0(_args.d_l, _args.d_x, _args.d_xs, _args.d_a3,
-                                 _args.d__res,
-                                 _args.d__res->template R_list_sum_rec<T1>(
-                                     f, f0, _args.d_xs, _args.d_a3));
-                     }},
-          this->v());
+      if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(
+              this->v())) {
+        const auto &[d_l] =
+            std::get<typename R_list_sum::R_list_sum_0>(this->v());
+        return f(d_l);
+      } else {
+        const auto &[d_l, d_x, d_xs, d_a3, d__res] =
+            std::get<typename R_list_sum::R_list_sum_1>(this->v());
+        return f0(d_l, d_x, d_xs, d_a3, d__res,
+                  d__res->template R_list_sum_rec<T1>(f, f0, d_xs, d_a3));
+      }
     }
 
     template <typename T1, MapsTo<T1, std::shared_ptr<List<unsigned int>>> F0,
@@ -350,17 +342,17 @@ struct FunctionVernac {
     T1 R_list_sum_rect(F0 &&f, F1 &&f0,
                        const std::shared_ptr<List<unsigned int>> &,
                        const unsigned int) const {
-      return std::visit(
-          Overloaded{[&](const typename R_list_sum::R_list_sum_0 &_args) -> T1 {
-                       return f(_args.d_l);
-                     },
-                     [&](const typename R_list_sum::R_list_sum_1 &_args) -> T1 {
-                       return f0(_args.d_l, _args.d_x, _args.d_xs, _args.d_a3,
-                                 _args.d__res,
-                                 _args.d__res->template R_list_sum_rect<T1>(
-                                     f, f0, _args.d_xs, _args.d_a3));
-                     }},
-          this->v());
+      if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(
+              this->v())) {
+        const auto &[d_l] =
+            std::get<typename R_list_sum::R_list_sum_0>(this->v());
+        return f(d_l);
+      } else {
+        const auto &[d_l, d_x, d_xs, d_a3, d__res] =
+            std::get<typename R_list_sum::R_list_sum_1>(this->v());
+        return f0(d_l, d_x, d_xs, d_a3, d__res,
+                  d__res->template R_list_sum_rect<T1>(f, f0, d_xs, d_a3));
+      }
     }
   };
 
@@ -374,18 +366,17 @@ struct FunctionVernac {
         f1 = [=](unsigned int _pa0, std::shared_ptr<List<unsigned int>> _pa1,
                  T1 _pa2) mutable { return f0(l, _pa0, _pa1, _pa2); };
     T1 f2 = f(l);
-    return std::visit(
-        Overloaded{[&](const typename List<unsigned int>::Nil &) -> auto {
-                     return f2;
-                   },
-                   [&](const typename List<unsigned int>::Cons &_args) -> auto {
-                     std::function<T1(T1)> f3 = [=](T1 _pa0) mutable {
-                       return f1(_args.d_a0, _args.d_a1, _pa0);
-                     };
-                     T1 hrec = list_sum_rect<T1>(f, f0, _args.d_a1);
-                     return f3(hrec);
-                   }},
-        l->v());
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+      return f2;
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l->v());
+      std::function<T1(T1)> f3 = [=](T1 _pa0) mutable {
+        return f1(d_a0, d_a1, _pa0);
+      };
+      T1 hrec = list_sum_rect<T1>(f, f0, d_a1);
+      return f3(hrec);
+    }
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<List<unsigned int>>> F0,

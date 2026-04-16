@@ -11,11 +11,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -106,15 +101,12 @@ struct Typeclasses {
     to_nat(std::shared_ptr<List<T1>> a0) {
       std::function<unsigned int(std::shared_ptr<List<T1>>)> sum;
       sum = [&](std::shared_ptr<List<T1>> l) -> unsigned int {
-        return std::visit(
-            Overloaded{
-                [](const typename List<T1>::Nil &) -> unsigned int {
-                  return 0u;
-                },
-                [&](const typename List<T1>::Cons &_args) -> unsigned int {
-                  return (_tcI0::to_nat(_args.d_a0) + sum(_args.d_a1));
-                }},
-            l->v());
+        if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+          return 0u;
+        } else {
+          const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+          return (_tcI0::to_nat(d_a0) + sum(d_a1));
+        }
       };
       return sum(a0);
     }

@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct Currying {
   __attribute__((pure)) static unsigned int
   add3(const unsigned int a, const unsigned int b, const unsigned int c);
@@ -53,20 +48,14 @@ struct Currying {
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
   static T3 pair_rect(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
-    return std::visit(
-        Overloaded{[&](const typename pair<T1, T2>::Pair0 &_args) -> T3 {
-          return f(_args.d_a0, _args.d_a1);
-        }},
-        p->v());
+    const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p->v());
+    return f(d_a0, d_a1);
   }
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
   static T3 pair_rec(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
-    return std::visit(
-        Overloaded{[&](const typename pair<T1, T2>::Pair0 &_args) -> T3 {
-          return f(_args.d_a0, _args.d_a1);
-        }},
-        p->v());
+    const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p->v());
+    return f(d_a0, d_a1);
   }
 
   template <typename T1, typename T2, typename T3,
@@ -77,11 +66,8 @@ struct Currying {
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
   static T3 uncurry(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
-    return std::visit(
-        Overloaded{[&](const typename pair<T1, T2>::Pair0 &_args) -> T3 {
-          return f(_args.d_a0, _args.d_a1);
-        }},
-        p->v());
+    const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p->v());
+    return f(d_a0, d_a1);
   }
 
   __attribute__((pure)) static unsigned int

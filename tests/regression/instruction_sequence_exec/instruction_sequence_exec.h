@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -108,27 +103,27 @@ struct InstructionSequenceExec {
   template <typename T1, MapsTo<T1, unsigned int> F2>
   static T1 instruction_rect(const T1 f, const T1 f0, F2 &&f1,
                              const std::shared_ptr<instruction> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename instruction::NOP_ &) -> T1 { return f; },
-            [&](const typename instruction::INC_PC &) -> T1 { return f0; },
-            [&](const typename instruction::ADD_ACC &_args) -> T1 {
-              return f1(_args.d_a0);
-            }},
-        i->v());
+    if (std::holds_alternative<typename instruction::NOP_>(i->v())) {
+      return f;
+    } else if (std::holds_alternative<typename instruction::INC_PC>(i->v())) {
+      return f0;
+    } else {
+      const auto &[d_a0] = std::get<typename instruction::ADD_ACC>(i->v());
+      return f1(d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F2>
   static T1 instruction_rec(const T1 f, const T1 f0, F2 &&f1,
                             const std::shared_ptr<instruction> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename instruction::NOP_ &) -> T1 { return f; },
-            [&](const typename instruction::INC_PC &) -> T1 { return f0; },
-            [&](const typename instruction::ADD_ACC &_args) -> T1 {
-              return f1(_args.d_a0);
-            }},
-        i->v());
+    if (std::holds_alternative<typename instruction::NOP_>(i->v())) {
+      return f;
+    } else if (std::holds_alternative<typename instruction::INC_PC>(i->v())) {
+      return f0;
+    } else {
+      const auto &[d_a0] = std::get<typename instruction::ADD_ACC>(i->v());
+      return f1(d_a0);
+    }
   }
 
   static std::shared_ptr<state> execute(std::shared_ptr<state> s,

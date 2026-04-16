@@ -16,21 +16,17 @@ FunctionVernac::div2_terminate(const unsigned int n) {
       return Sig<unsigned int>::exist(0u);
     } else {
       unsigned int n1 = n0 - 1;
-      return std::visit(
-          Overloaded{
-              [](const typename Sig<unsigned int>::Exist &_args) -> auto {
-                return Sig<unsigned int>::exist((_args.d_x + 1));
-              }},
-          div2_terminate(n1)->v());
+      auto &&_sv = div2_terminate(n1);
+      const auto &[d_x] = std::get<typename Sig<unsigned int>::Exist>(_sv->v());
+      return Sig<unsigned int>::exist((d_x + 1));
     }
   }
 }
 
 __attribute__((pure)) unsigned int FunctionVernac::div2(const unsigned int n) {
-  return std::visit(
-      Overloaded{[](const typename Sig<unsigned int>::Exist &_args)
-                     -> unsigned int { return _args.d_x; }},
-      div2_terminate(n)->v());
+  auto &&_sv = div2_terminate(n);
+  const auto &[d_x] = std::get<typename Sig<unsigned int>::Exist>(_sv->v());
+  return d_x;
 }
 
 std::shared_ptr<FunctionVernac::R_div2>
@@ -62,30 +58,22 @@ FunctionVernac::R_div2_correct(const unsigned int n, const unsigned int _res) {
 
 std::shared_ptr<Sig<unsigned int>> FunctionVernac::list_sum_terminate(
     const std::shared_ptr<List<unsigned int>> &l) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<unsigned int>::Nil &)
-              -> std::shared_ptr<Sig<unsigned int>> {
-            return Sig<unsigned int>::exist(0u);
-          },
-          [](const typename List<unsigned int>::Cons &_args)
-              -> std::shared_ptr<Sig<unsigned int>> {
-            return std::visit(
-                Overloaded{[&](const typename Sig<unsigned int>::Exist &_args0)
-                               -> auto {
-                  return Sig<unsigned int>::exist((_args.d_a0 + _args0.d_x));
-                }},
-                list_sum_terminate(_args.d_a1)->v());
-          }},
-      l->v());
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+    return Sig<unsigned int>::exist(0u);
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(l->v());
+    auto &&_sv0 = list_sum_terminate(d_a1);
+    const auto &[d_x0] = std::get<typename Sig<unsigned int>::Exist>(_sv0->v());
+    return Sig<unsigned int>::exist((d_a0 + d_x0));
+  }
 }
 
 __attribute__((pure)) unsigned int
 FunctionVernac::list_sum(const std::shared_ptr<List<unsigned int>> &l) {
-  return std::visit(
-      Overloaded{[](const typename Sig<unsigned int>::Exist &_args)
-                     -> unsigned int { return _args.d_x; }},
-      list_sum_terminate(l)->v());
+  auto &&_sv = list_sum_terminate(l);
+  const auto &[d_x] = std::get<typename Sig<unsigned int>::Exist>(_sv->v());
+  return d_x;
 }
 
 std::shared_ptr<FunctionVernac::R_list_sum>

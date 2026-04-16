@@ -9,39 +9,39 @@
 /// This accesses the Node's d_a0 field (left subtree).
 __attribute__((pure)) unsigned int
 ReuseScrutinee::left_val(const std::shared_ptr<ReuseScrutinee::tree> &t) {
-  return std::visit(
-      Overloaded{
-          [](const typename ReuseScrutinee::tree::Leaf &) -> unsigned int {
-            return 0u;
-          },
-          [](const typename ReuseScrutinee::tree::Node &_args) -> unsigned int {
-            return std::visit(
-                Overloaded{[](const typename ReuseScrutinee::tree::Leaf &)
-                               -> unsigned int { return 0u; },
-                           [](const typename ReuseScrutinee::tree::Node &_args0)
-                               -> unsigned int { return _args0.d_a1; }},
-                _args.d_a0->v());
-          }},
-      t->v());
+  if (std::holds_alternative<typename ReuseScrutinee::tree::Leaf>(t->v())) {
+    return 0u;
+  } else {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename ReuseScrutinee::tree::Node>(t->v());
+    if (std::holds_alternative<typename ReuseScrutinee::tree::Leaf>(
+            d_a0->v())) {
+      return 0u;
+    } else {
+      const auto &[d_a00, d_a10, d_a20] =
+          std::get<typename ReuseScrutinee::tree::Node>(d_a0->v());
+      return d_a10;
+    }
+  }
 }
 
 /// Extract the value from the right subtree.
 __attribute__((pure)) unsigned int
 ReuseScrutinee::right_val(const std::shared_ptr<ReuseScrutinee::tree> &t) {
-  return std::visit(
-      Overloaded{
-          [](const typename ReuseScrutinee::tree::Leaf &) -> unsigned int {
-            return 0u;
-          },
-          [](const typename ReuseScrutinee::tree::Node &_args) -> unsigned int {
-            return std::visit(
-                Overloaded{[](const typename ReuseScrutinee::tree::Leaf &)
-                               -> unsigned int { return 0u; },
-                           [](const typename ReuseScrutinee::tree::Node &_args0)
-                               -> unsigned int { return _args0.d_a1; }},
-                _args.d_a2->v());
-          }},
-      t->v());
+  if (std::holds_alternative<typename ReuseScrutinee::tree::Leaf>(t->v())) {
+    return 0u;
+  } else {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename ReuseScrutinee::tree::Node>(t->v());
+    if (std::holds_alternative<typename ReuseScrutinee::tree::Leaf>(
+            d_a2->v())) {
+      return 0u;
+    } else {
+      const auto &[d_a00, d_a10, d_a20] =
+          std::get<typename ReuseScrutinee::tree::Node>(d_a2->v());
+      return d_a10;
+    }
+  }
 }
 
 /// Sum of left and right subtree values.

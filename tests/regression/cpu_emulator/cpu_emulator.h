@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A>
 struct List : public std::enable_shared_from_this<List<t_A>> {
   // TYPES
@@ -61,15 +56,13 @@ public:
       return std::const_pointer_cast<List<t_A>>(this->shared_from_this());
     } else {
       unsigned int n0 = n - 1;
-      return std::visit(Overloaded{[](const typename List<t_A>::Nil &)
-                                       -> std::shared_ptr<List<t_A>> {
-                                     return List<t_A>::nil();
-                                   },
-                                   [&](const typename List<t_A>::Cons &_args)
-                                       -> std::shared_ptr<List<t_A>> {
-                                     return _args.d_a1->skipn(n0);
-                                   }},
-                        this->v());
+      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+        return List<t_A>::nil();
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<t_A>::Cons>(this->v());
+        return d_a1->skipn(n0);
+      }
     }
   }
 
@@ -78,38 +71,21 @@ public:
       return List<t_A>::nil();
     } else {
       unsigned int n0 = n - 1;
-      return std::visit(
-          Overloaded{
-              [](const typename List<t_A>::Nil &)
-                  -> std::shared_ptr<List<t_A>> { return List<t_A>::nil(); },
-              [&](const typename List<t_A>::Cons &_args)
-                  -> std::shared_ptr<List<t_A>> {
-                return List<t_A>::cons(_args.d_a0, _args.d_a1->firstn(n0));
-              }},
-          this->v());
+      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+        return List<t_A>::nil();
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<t_A>::Cons>(this->v());
+        return List<t_A>::cons(d_a0, d_a1->firstn(n0));
+      }
     }
   }
+};
 
-  t_A nth(const unsigned int n, const t_A default0) const {
-    if (n <= 0) {
-      return std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
-              [](const typename List<t_A>::Cons &_args) -> t_A {
-                return _args.d_a0;
-              }},
-          this->v());
-    } else {
-      unsigned int m = n - 1;
-      return std::visit(
-          Overloaded{
-              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
-              [&](const typename List<t_A>::Cons &_args0) -> t_A {
-                return _args0.d_a1->nth(m, default0);
-              }},
-          this->v());
-    }
-  }
+struct ListDef {
+  template <typename T1>
+  static T1 nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
+                const T1 default0);
 };
 
 struct CpuEmulator {
@@ -118,29 +94,20 @@ struct CpuEmulator {
   update_nth(const unsigned int n, const T1 x,
              const std::shared_ptr<List<T1>> &l) {
     if (n <= 0) {
-      return std::visit(
-          Overloaded{
-              [](const typename List<T1>::Nil &) -> std::shared_ptr<List<T1>> {
-                return List<T1>::nil();
-              },
-              [&](const typename List<T1>::Cons &_args)
-                  -> std::shared_ptr<List<T1>> {
-                return List<T1>::cons(x, _args.d_a1);
-              }},
-          l->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+        return List<T1>::nil();
+      } else {
+        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+        return List<T1>::cons(x, d_a1);
+      }
     } else {
       unsigned int n_ = n - 1;
-      return std::visit(
-          Overloaded{
-              [](const typename List<T1>::Nil &) -> std::shared_ptr<List<T1>> {
-                return List<T1>::nil();
-              },
-              [&](const typename List<T1>::Cons &_args0)
-                  -> std::shared_ptr<List<T1>> {
-                return List<T1>::cons(_args0.d_a0,
-                                      update_nth<T1>(n_, x, _args0.d_a1));
-              }},
-          l->v());
+      if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+        return List<T1>::nil();
+      } else {
+        const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
+        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, d_a10));
+      }
     }
   }
 
@@ -469,67 +436,80 @@ struct CpuEmulator {
                        const T1 f17, const T1 f18, F20 &&f19, F21 &&f20,
                        F22 &&f21, F23 &&f22, F24 &&f23, F25 &&f24, F26 &&f25,
                        F27 &&f26, F28 &&f27, const std::shared_ptr<instr> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instr::NOP &) -> T1 { return f; },
-                   [&](const typename instr::LDM &_args) -> T1 {
-                     return f0(_args.d_n);
-                   },
-                   [&](const typename instr::LD &_args) -> T1 {
-                     return f1(_args.d_r);
-                   },
-                   [&](const typename instr::XCH &_args) -> T1 {
-                     return f2(_args.d_r);
-                   },
-                   [&](const typename instr::INC &_args) -> T1 {
-                     return f3(_args.d_r);
-                   },
-                   [&](const typename instr::ADD &_args) -> T1 {
-                     return f4(_args.d_r);
-                   },
-                   [&](const typename instr::SUB &_args) -> T1 {
-                     return f5(_args.d_r);
-                   },
-                   [&](const typename instr::IAC &) -> T1 { return f6; },
-                   [&](const typename instr::DAC &) -> T1 { return f7; },
-                   [&](const typename instr::CLC &) -> T1 { return f8; },
-                   [&](const typename instr::STC &) -> T1 { return f9; },
-                   [&](const typename instr::CMC &) -> T1 { return f10; },
-                   [&](const typename instr::CMA &) -> T1 { return f11; },
-                   [&](const typename instr::CLB &) -> T1 { return f12; },
-                   [&](const typename instr::RAL &) -> T1 { return f13; },
-                   [&](const typename instr::RAR &) -> T1 { return f14; },
-                   [&](const typename instr::TCC &) -> T1 { return f15; },
-                   [&](const typename instr::TCS &) -> T1 { return f16; },
-                   [&](const typename instr::DAA &) -> T1 { return f17; },
-                   [&](const typename instr::KBP &) -> T1 { return f18; },
-                   [&](const typename instr::JUN &_args) -> T1 {
-                     return f19(_args.d_a);
-                   },
-                   [&](const typename instr::JMS &_args) -> T1 {
-                     return f20(_args.d_a);
-                   },
-                   [&](const typename instr::JCN &_args) -> T1 {
-                     return f21(_args.d_c, _args.d_a);
-                   },
-                   [&](const typename instr::FIM &_args) -> T1 {
-                     return f22(_args.d_r, _args.d_d);
-                   },
-                   [&](const typename instr::SRC &_args) -> T1 {
-                     return f23(_args.d_r);
-                   },
-                   [&](const typename instr::FIN &_args) -> T1 {
-                     return f24(_args.d_r);
-                   },
-                   [&](const typename instr::JIN &_args) -> T1 {
-                     return f25(_args.d_r);
-                   },
-                   [&](const typename instr::ISZ &_args) -> T1 {
-                     return f26(_args.d_r, _args.d_a);
-                   },
-                   [&](const typename instr::BBL &_args) -> T1 {
-                     return f27(_args.d_d);
-                   }},
-        i->v());
+    if (std::holds_alternative<typename instr::NOP>(i->v())) {
+      return f;
+    } else if (std::holds_alternative<typename instr::LDM>(i->v())) {
+      const auto &[d_n] = std::get<typename instr::LDM>(i->v());
+      return f0(d_n);
+    } else if (std::holds_alternative<typename instr::LD>(i->v())) {
+      const auto &[d_r] = std::get<typename instr::LD>(i->v());
+      return f1(d_r);
+    } else if (std::holds_alternative<typename instr::XCH>(i->v())) {
+      const auto &[d_r] = std::get<typename instr::XCH>(i->v());
+      return f2(d_r);
+    } else if (std::holds_alternative<typename instr::INC>(i->v())) {
+      const auto &[d_r] = std::get<typename instr::INC>(i->v());
+      return f3(d_r);
+    } else if (std::holds_alternative<typename instr::ADD>(i->v())) {
+      const auto &[d_r] = std::get<typename instr::ADD>(i->v());
+      return f4(d_r);
+    } else if (std::holds_alternative<typename instr::SUB>(i->v())) {
+      const auto &[d_r] = std::get<typename instr::SUB>(i->v());
+      return f5(d_r);
+    } else if (std::holds_alternative<typename instr::IAC>(i->v())) {
+      return f6;
+    } else if (std::holds_alternative<typename instr::DAC>(i->v())) {
+      return f7;
+    } else if (std::holds_alternative<typename instr::CLC>(i->v())) {
+      return f8;
+    } else if (std::holds_alternative<typename instr::STC>(i->v())) {
+      return f9;
+    } else if (std::holds_alternative<typename instr::CMC>(i->v())) {
+      return f10;
+    } else if (std::holds_alternative<typename instr::CMA>(i->v())) {
+      return f11;
+    } else if (std::holds_alternative<typename instr::CLB>(i->v())) {
+      return f12;
+    } else if (std::holds_alternative<typename instr::RAL>(i->v())) {
+      return f13;
+    } else if (std::holds_alternative<typename instr::RAR>(i->v())) {
+      return f14;
+    } else if (std::holds_alternative<typename instr::TCC>(i->v())) {
+      return f15;
+    } else if (std::holds_alternative<typename instr::TCS>(i->v())) {
+      return f16;
+    } else if (std::holds_alternative<typename instr::DAA>(i->v())) {
+      return f17;
+    } else if (std::holds_alternative<typename instr::KBP>(i->v())) {
+      return f18;
+    } else if (std::holds_alternative<typename instr::JUN>(i->v())) {
+      const auto &[d_a] = std::get<typename instr::JUN>(i->v());
+      return f19(d_a);
+    } else if (std::holds_alternative<typename instr::JMS>(i->v())) {
+      const auto &[d_a] = std::get<typename instr::JMS>(i->v());
+      return f20(d_a);
+    } else if (std::holds_alternative<typename instr::JCN>(i->v())) {
+      const auto &[d_c, d_a] = std::get<typename instr::JCN>(i->v());
+      return f21(d_c, d_a);
+    } else if (std::holds_alternative<typename instr::FIM>(i->v())) {
+      const auto &[d_r, d_d] = std::get<typename instr::FIM>(i->v());
+      return f22(d_r, d_d);
+    } else if (std::holds_alternative<typename instr::SRC>(i->v())) {
+      const auto &[d_r] = std::get<typename instr::SRC>(i->v());
+      return f23(d_r);
+    } else if (std::holds_alternative<typename instr::FIN>(i->v())) {
+      const auto &[d_r] = std::get<typename instr::FIN>(i->v());
+      return f24(d_r);
+    } else if (std::holds_alternative<typename instr::JIN>(i->v())) {
+      const auto &[d_r] = std::get<typename instr::JIN>(i->v());
+      return f25(d_r);
+    } else if (std::holds_alternative<typename instr::ISZ>(i->v())) {
+      const auto &[d_r, d_a] = std::get<typename instr::ISZ>(i->v());
+      return f26(d_r, d_a);
+    } else {
+      const auto &[d_d] = std::get<typename instr::BBL>(i->v());
+      return f27(d_d);
+    }
   }
 
   template <
@@ -548,67 +528,80 @@ struct CpuEmulator {
                       const T1 f17, const T1 f18, F20 &&f19, F21 &&f20,
                       F22 &&f21, F23 &&f22, F24 &&f23, F25 &&f24, F26 &&f25,
                       F27 &&f26, F28 &&f27, const std::shared_ptr<instr> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instr::NOP &) -> T1 { return f; },
-                   [&](const typename instr::LDM &_args) -> T1 {
-                     return f0(_args.d_n);
-                   },
-                   [&](const typename instr::LD &_args) -> T1 {
-                     return f1(_args.d_r);
-                   },
-                   [&](const typename instr::XCH &_args) -> T1 {
-                     return f2(_args.d_r);
-                   },
-                   [&](const typename instr::INC &_args) -> T1 {
-                     return f3(_args.d_r);
-                   },
-                   [&](const typename instr::ADD &_args) -> T1 {
-                     return f4(_args.d_r);
-                   },
-                   [&](const typename instr::SUB &_args) -> T1 {
-                     return f5(_args.d_r);
-                   },
-                   [&](const typename instr::IAC &) -> T1 { return f6; },
-                   [&](const typename instr::DAC &) -> T1 { return f7; },
-                   [&](const typename instr::CLC &) -> T1 { return f8; },
-                   [&](const typename instr::STC &) -> T1 { return f9; },
-                   [&](const typename instr::CMC &) -> T1 { return f10; },
-                   [&](const typename instr::CMA &) -> T1 { return f11; },
-                   [&](const typename instr::CLB &) -> T1 { return f12; },
-                   [&](const typename instr::RAL &) -> T1 { return f13; },
-                   [&](const typename instr::RAR &) -> T1 { return f14; },
-                   [&](const typename instr::TCC &) -> T1 { return f15; },
-                   [&](const typename instr::TCS &) -> T1 { return f16; },
-                   [&](const typename instr::DAA &) -> T1 { return f17; },
-                   [&](const typename instr::KBP &) -> T1 { return f18; },
-                   [&](const typename instr::JUN &_args) -> T1 {
-                     return f19(_args.d_a);
-                   },
-                   [&](const typename instr::JMS &_args) -> T1 {
-                     return f20(_args.d_a);
-                   },
-                   [&](const typename instr::JCN &_args) -> T1 {
-                     return f21(_args.d_c, _args.d_a);
-                   },
-                   [&](const typename instr::FIM &_args) -> T1 {
-                     return f22(_args.d_r, _args.d_d);
-                   },
-                   [&](const typename instr::SRC &_args) -> T1 {
-                     return f23(_args.d_r);
-                   },
-                   [&](const typename instr::FIN &_args) -> T1 {
-                     return f24(_args.d_r);
-                   },
-                   [&](const typename instr::JIN &_args) -> T1 {
-                     return f25(_args.d_r);
-                   },
-                   [&](const typename instr::ISZ &_args) -> T1 {
-                     return f26(_args.d_r, _args.d_a);
-                   },
-                   [&](const typename instr::BBL &_args) -> T1 {
-                     return f27(_args.d_d);
-                   }},
-        i->v());
+    if (std::holds_alternative<typename instr::NOP>(i->v())) {
+      return f;
+    } else if (std::holds_alternative<typename instr::LDM>(i->v())) {
+      const auto &[d_n] = std::get<typename instr::LDM>(i->v());
+      return f0(d_n);
+    } else if (std::holds_alternative<typename instr::LD>(i->v())) {
+      const auto &[d_r] = std::get<typename instr::LD>(i->v());
+      return f1(d_r);
+    } else if (std::holds_alternative<typename instr::XCH>(i->v())) {
+      const auto &[d_r] = std::get<typename instr::XCH>(i->v());
+      return f2(d_r);
+    } else if (std::holds_alternative<typename instr::INC>(i->v())) {
+      const auto &[d_r] = std::get<typename instr::INC>(i->v());
+      return f3(d_r);
+    } else if (std::holds_alternative<typename instr::ADD>(i->v())) {
+      const auto &[d_r] = std::get<typename instr::ADD>(i->v());
+      return f4(d_r);
+    } else if (std::holds_alternative<typename instr::SUB>(i->v())) {
+      const auto &[d_r] = std::get<typename instr::SUB>(i->v());
+      return f5(d_r);
+    } else if (std::holds_alternative<typename instr::IAC>(i->v())) {
+      return f6;
+    } else if (std::holds_alternative<typename instr::DAC>(i->v())) {
+      return f7;
+    } else if (std::holds_alternative<typename instr::CLC>(i->v())) {
+      return f8;
+    } else if (std::holds_alternative<typename instr::STC>(i->v())) {
+      return f9;
+    } else if (std::holds_alternative<typename instr::CMC>(i->v())) {
+      return f10;
+    } else if (std::holds_alternative<typename instr::CMA>(i->v())) {
+      return f11;
+    } else if (std::holds_alternative<typename instr::CLB>(i->v())) {
+      return f12;
+    } else if (std::holds_alternative<typename instr::RAL>(i->v())) {
+      return f13;
+    } else if (std::holds_alternative<typename instr::RAR>(i->v())) {
+      return f14;
+    } else if (std::holds_alternative<typename instr::TCC>(i->v())) {
+      return f15;
+    } else if (std::holds_alternative<typename instr::TCS>(i->v())) {
+      return f16;
+    } else if (std::holds_alternative<typename instr::DAA>(i->v())) {
+      return f17;
+    } else if (std::holds_alternative<typename instr::KBP>(i->v())) {
+      return f18;
+    } else if (std::holds_alternative<typename instr::JUN>(i->v())) {
+      const auto &[d_a] = std::get<typename instr::JUN>(i->v());
+      return f19(d_a);
+    } else if (std::holds_alternative<typename instr::JMS>(i->v())) {
+      const auto &[d_a] = std::get<typename instr::JMS>(i->v());
+      return f20(d_a);
+    } else if (std::holds_alternative<typename instr::JCN>(i->v())) {
+      const auto &[d_c, d_a] = std::get<typename instr::JCN>(i->v());
+      return f21(d_c, d_a);
+    } else if (std::holds_alternative<typename instr::FIM>(i->v())) {
+      const auto &[d_r, d_d] = std::get<typename instr::FIM>(i->v());
+      return f22(d_r, d_d);
+    } else if (std::holds_alternative<typename instr::SRC>(i->v())) {
+      const auto &[d_r] = std::get<typename instr::SRC>(i->v());
+      return f23(d_r);
+    } else if (std::holds_alternative<typename instr::FIN>(i->v())) {
+      const auto &[d_r] = std::get<typename instr::FIN>(i->v());
+      return f24(d_r);
+    } else if (std::holds_alternative<typename instr::JIN>(i->v())) {
+      const auto &[d_r] = std::get<typename instr::JIN>(i->v());
+      return f25(d_r);
+    } else if (std::holds_alternative<typename instr::ISZ>(i->v())) {
+      const auto &[d_r, d_a] = std::get<typename instr::ISZ>(i->v());
+      return f26(d_r, d_a);
+    } else {
+      const auto &[d_d] = std::get<typename instr::BBL>(i->v());
+      return f27(d_d);
+    }
   }
 
   static std::shared_ptr<state> execute(const std::shared_ptr<state> &s,
@@ -668,5 +661,26 @@ struct CpuEmulator {
   static inline const unsigned int jun_pc =
       execute(sample, instr::jun(1024u))->ex_pc;
 };
+
+template <typename T1>
+T1 ListDef::nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
+                const T1 default0) {
+  if (n <= 0) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      return d_a0;
+    }
+  } else {
+    unsigned int m = n - 1;
+    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      return default0;
+    } else {
+      const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
+      return ListDef::template nth<T1>(m, d_a10, default0);
+    }
+  }
+}
 
 #endif // INCLUDED_CPU_EMULATOR

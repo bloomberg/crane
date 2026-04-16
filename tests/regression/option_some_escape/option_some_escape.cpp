@@ -10,34 +10,27 @@
 __attribute__((pure)) unsigned int
 OptionSomeEscape::sum_values(const std::shared_ptr<OptionSomeEscape::tree> &t,
                              const unsigned int x) {
-  return std::visit(
-      Overloaded{
-          [&](const typename OptionSomeEscape::tree::Leaf &) -> unsigned int {
-            return x;
-          },
-          [&](const typename OptionSomeEscape::tree::Node &_args)
-              -> unsigned int {
-            return std::visit(
-                Overloaded{
-                    [&](const typename OptionSomeEscape::tree::Leaf &)
-                        -> unsigned int { return (_args.d_a1 + x); },
-                    [&](const typename OptionSomeEscape::tree::Node &_args0)
-                        -> unsigned int {
-                      return std::visit(
-                          Overloaded{
-                              [&](const typename OptionSomeEscape::tree::Leaf &)
-                                  -> unsigned int { return (_args0.d_a1 + x); },
-                              [&](const typename OptionSomeEscape::tree::Node
-                                      &_args1) -> unsigned int {
-                                return (
-                                    ((_args0.d_a1 + _args1.d_a1) + _args.d_a1) +
-                                    x);
-                              }},
-                          _args.d_a2->v());
-                    }},
-                _args.d_a0->v());
-          }},
-      t->v());
+  if (std::holds_alternative<typename OptionSomeEscape::tree::Leaf>(t->v())) {
+    return x;
+  } else {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename OptionSomeEscape::tree::Node>(t->v());
+    if (std::holds_alternative<typename OptionSomeEscape::tree::Leaf>(
+            d_a0->v())) {
+      return (d_a1 + x);
+    } else {
+      const auto &[d_a00, d_a10, d_a20] =
+          std::get<typename OptionSomeEscape::tree::Node>(d_a0->v());
+      if (std::holds_alternative<typename OptionSomeEscape::tree::Leaf>(
+              d_a2->v())) {
+        return (d_a10 + x);
+      } else {
+        const auto &[d_a01, d_a11, d_a21] =
+            std::get<typename OptionSomeEscape::tree::Node>(d_a2->v());
+        return (((d_a10 + d_a11) + d_a1) + x);
+      }
+    }
+  }
 }
 
 /// BUG: Partial application stored in Some (std::make_optional).

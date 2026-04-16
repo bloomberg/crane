@@ -7,66 +7,72 @@
 
 __attribute__((pure)) unsigned int
 LargeMutual::expr_size(const std::shared_ptr<LargeMutual::expr> &e) {
-  return std::visit(
-      Overloaded{
-          [](const typename LargeMutual::expr::EAdd &_args) -> unsigned int {
-            return ((expr_size(_args.d_a0) + expr_size(_args.d_a1)) + 1);
-          },
-          [](const typename LargeMutual::expr::EMul &_args) -> unsigned int {
-            return ((expr_size(_args.d_a0) + expr_size(_args.d_a1)) + 1);
-          },
-          [](const typename LargeMutual::expr::ECond &_args) -> unsigned int {
-            return (((bexpr_size(_args.d_a0) + expr_size(_args.d_a1)) +
-                     expr_size(_args.d_a2)) +
-                    1);
-          },
-          [](const auto &) -> unsigned int { return 1u; }},
-      e->v());
+  if (std::holds_alternative<typename LargeMutual::expr::EAdd>(e->v())) {
+    const auto &[d_a0, d_a1] =
+        std::get<typename LargeMutual::expr::EAdd>(e->v());
+    return ((expr_size(d_a0) + expr_size(d_a1)) + 1);
+  } else if (std::holds_alternative<typename LargeMutual::expr::EMul>(e->v())) {
+    const auto &[d_a0, d_a1] =
+        std::get<typename LargeMutual::expr::EMul>(e->v());
+    return ((expr_size(d_a0) + expr_size(d_a1)) + 1);
+  } else if (std::holds_alternative<typename LargeMutual::expr::ECond>(
+                 e->v())) {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename LargeMutual::expr::ECond>(e->v());
+    return (((bexpr_size(d_a0) + expr_size(d_a1)) + expr_size(d_a2)) + 1);
+  } else {
+    return 1u;
+  }
 }
 
 __attribute__((pure)) unsigned int
 LargeMutual::bexpr_size(const std::shared_ptr<LargeMutual::bexpr> &b) {
-  return std::visit(
-      Overloaded{
-          [](const typename LargeMutual::bexpr::BEq &_args) -> unsigned int {
-            return ((expr_size(_args.d_a0) + expr_size(_args.d_a1)) + 1);
-          },
-          [](const typename LargeMutual::bexpr::BLt &_args) -> unsigned int {
-            return ((expr_size(_args.d_a0) + expr_size(_args.d_a1)) + 1);
-          },
-          [](const typename LargeMutual::bexpr::BAnd &_args) -> unsigned int {
-            return ((bexpr_size(_args.d_a0) + bexpr_size(_args.d_a1)) + 1);
-          },
-          [](const typename LargeMutual::bexpr::BOr &_args) -> unsigned int {
-            return ((bexpr_size(_args.d_a0) + bexpr_size(_args.d_a1)) + 1);
-          },
-          [](const typename LargeMutual::bexpr::BNot &_args) -> unsigned int {
-            return (bexpr_size(_args.d_a0) + 1);
-          },
-          [](const auto &) -> unsigned int { return 1u; }},
-      b->v());
+  if (std::holds_alternative<typename LargeMutual::bexpr::BEq>(b->v())) {
+    const auto &[d_a0, d_a1] =
+        std::get<typename LargeMutual::bexpr::BEq>(b->v());
+    return ((expr_size(d_a0) + expr_size(d_a1)) + 1);
+  } else if (std::holds_alternative<typename LargeMutual::bexpr::BLt>(b->v())) {
+    const auto &[d_a0, d_a1] =
+        std::get<typename LargeMutual::bexpr::BLt>(b->v());
+    return ((expr_size(d_a0) + expr_size(d_a1)) + 1);
+  } else if (std::holds_alternative<typename LargeMutual::bexpr::BAnd>(
+                 b->v())) {
+    const auto &[d_a0, d_a1] =
+        std::get<typename LargeMutual::bexpr::BAnd>(b->v());
+    return ((bexpr_size(d_a0) + bexpr_size(d_a1)) + 1);
+  } else if (std::holds_alternative<typename LargeMutual::bexpr::BOr>(b->v())) {
+    const auto &[d_a0, d_a1] =
+        std::get<typename LargeMutual::bexpr::BOr>(b->v());
+    return ((bexpr_size(d_a0) + bexpr_size(d_a1)) + 1);
+  } else if (std::holds_alternative<typename LargeMutual::bexpr::BNot>(
+                 b->v())) {
+    const auto &[d_a0] = std::get<typename LargeMutual::bexpr::BNot>(b->v());
+    return (bexpr_size(d_a0) + 1);
+  } else {
+    return 1u;
+  }
 }
 
 __attribute__((pure)) unsigned int
 LargeMutual::stmt_size(const std::shared_ptr<LargeMutual::stmt> &s) {
-  return std::visit(
-      Overloaded{
-          [](const typename LargeMutual::stmt::SAssign &_args) -> unsigned int {
-            return (expr_size(_args.d_a1) + 1);
-          },
-          [](const typename LargeMutual::stmt::SSeq &_args) -> unsigned int {
-            return ((stmt_size(_args.d_a0) + stmt_size(_args.d_a1)) + 1);
-          },
-          [](const typename LargeMutual::stmt::SIf &_args) -> unsigned int {
-            return (((bexpr_size(_args.d_a0) + stmt_size(_args.d_a1)) +
-                     stmt_size(_args.d_a2)) +
-                    1);
-          },
-          [](const typename LargeMutual::stmt::SWhile &_args) -> unsigned int {
-            return ((bexpr_size(_args.d_a0) + stmt_size(_args.d_a1)) + 1);
-          },
-          [](const typename LargeMutual::stmt::SSkip &) -> unsigned int {
-            return 1u;
-          }},
-      s->v());
+  if (std::holds_alternative<typename LargeMutual::stmt::SAssign>(s->v())) {
+    const auto &[d_a0, d_a1] =
+        std::get<typename LargeMutual::stmt::SAssign>(s->v());
+    return (expr_size(d_a1) + 1);
+  } else if (std::holds_alternative<typename LargeMutual::stmt::SSeq>(s->v())) {
+    const auto &[d_a0, d_a1] =
+        std::get<typename LargeMutual::stmt::SSeq>(s->v());
+    return ((stmt_size(d_a0) + stmt_size(d_a1)) + 1);
+  } else if (std::holds_alternative<typename LargeMutual::stmt::SIf>(s->v())) {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename LargeMutual::stmt::SIf>(s->v());
+    return (((bexpr_size(d_a0) + stmt_size(d_a1)) + stmt_size(d_a2)) + 1);
+  } else if (std::holds_alternative<typename LargeMutual::stmt::SWhile>(
+                 s->v())) {
+    const auto &[d_a0, d_a1] =
+        std::get<typename LargeMutual::stmt::SWhile>(s->v());
+    return ((bexpr_size(d_a0) + stmt_size(d_a1)) + 1);
+  } else {
+    return 1u;
+  }
 }

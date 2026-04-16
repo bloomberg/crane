@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 enum class Ty { e_TNAT, e_TBOOL };
 
 struct Expr {
@@ -110,32 +105,29 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   std::any eval(const Ty) const {
-    return std::visit(
-        Overloaded{
-            [](const typename Expr::ENat &_args) -> std::any {
-              return _args.d_a0;
-            },
-            [](const typename Expr::EBool &_args) -> std::any {
-              return _args.d_a0;
-            },
-            [](const typename Expr::EAdd &_args) -> std::any {
-              return (
-                  std::any_cast<unsigned int>(_args.d_a0->eval(Ty::e_TNAT)) +
-                  std::any_cast<unsigned int>(_args.d_a1->eval(Ty::e_TNAT)));
-            },
-            [](const typename Expr::EEq &_args) -> std::any {
-              return std::any_cast<unsigned int>(
-                         _args.d_a0->eval(Ty::e_TNAT)) ==
-                     std::any_cast<unsigned int>(_args.d_a1->eval(Ty::e_TNAT));
-            },
-            [](const typename Expr::EIf &_args) -> std::any {
-              if (std::any_cast<bool>(_args.d_a1->eval(Ty::e_TBOOL))) {
-                return _args.d_a2->eval(_args.d_t);
-              } else {
-                return _args.d_a3->eval(_args.d_t);
-              }
-            }},
-        this->v());
+    if (std::holds_alternative<typename Expr::ENat>(this->v())) {
+      const auto &[d_a0] = std::get<typename Expr::ENat>(this->v());
+      return d_a0;
+    } else if (std::holds_alternative<typename Expr::EBool>(this->v())) {
+      const auto &[d_a0] = std::get<typename Expr::EBool>(this->v());
+      return d_a0;
+    } else if (std::holds_alternative<typename Expr::EAdd>(this->v())) {
+      const auto &[d_a0, d_a1] = std::get<typename Expr::EAdd>(this->v());
+      return (std::any_cast<unsigned int>(d_a0->eval(Ty::e_TNAT)) +
+              std::any_cast<unsigned int>(d_a1->eval(Ty::e_TNAT)));
+    } else if (std::holds_alternative<typename Expr::EEq>(this->v())) {
+      const auto &[d_a0, d_a1] = std::get<typename Expr::EEq>(this->v());
+      return std::any_cast<unsigned int>(d_a0->eval(Ty::e_TNAT)) ==
+             std::any_cast<unsigned int>(d_a1->eval(Ty::e_TNAT));
+    } else {
+      const auto &[d_t, d_a1, d_a2, d_a3] =
+          std::get<typename Expr::EIf>(this->v());
+      if (std::any_cast<bool>(d_a1->eval(Ty::e_TBOOL))) {
+        return d_a2->eval(d_t);
+      } else {
+        return d_a3->eval(d_t);
+      }
+    }
   }
 };
 

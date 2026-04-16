@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct ForwardSpecAscii {
   struct node {
     // TYPES
@@ -55,25 +50,25 @@ struct ForwardSpecAscii {
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int> F1>
   static T1 node_rect(F0 &&f, F1 &&f0, const std::shared_ptr<node> &n) {
-    return std::visit(Overloaded{[&](const typename node::ANode &_args) -> T1 {
-                                   return f(_args.d_a0);
-                                 },
-                                 [&](const typename node::BNode &_args) -> T1 {
-                                   return f0(_args.d_a0);
-                                 }},
-                      n->v());
+    if (std::holds_alternative<typename node::ANode>(n->v())) {
+      const auto &[d_a0] = std::get<typename node::ANode>(n->v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0] = std::get<typename node::BNode>(n->v());
+      return f0(d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int> F1>
   static T1 node_rec(F0 &&f, F1 &&f0, const std::shared_ptr<node> &n) {
-    return std::visit(Overloaded{[&](const typename node::ANode &_args) -> T1 {
-                                   return f(_args.d_a0);
-                                 },
-                                 [&](const typename node::BNode &_args) -> T1 {
-                                   return f0(_args.d_a0);
-                                 }},
-                      n->v());
+    if (std::holds_alternative<typename node::ANode>(n->v())) {
+      const auto &[d_a0] = std::get<typename node::ANode>(n->v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0] = std::get<typename node::BNode>(n->v());
+      return f0(d_a0);
+    }
   }
 
   __attribute__((pure)) static unsigned int helper_nat(const unsigned int n);

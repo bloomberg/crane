@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct Sum {
   template <typename t_A, typename t_B> struct either {
     // TYPES
@@ -53,65 +48,62 @@ struct Sum {
 
     template <typename T1, MapsTo<T1, t_B> F0>
     std::shared_ptr<either<t_A, T1>> map_right(F0 &&f) const {
-      return std::visit(
-          Overloaded{[](const typename either<t_A, t_B>::Left &_args)
-                         -> std::shared_ptr<either<t_A, T1>> {
-                       return either<t_A, T1>::left(_args.d_a0);
-                     },
-                     [&](const typename either<t_A, t_B>::Right &_args)
-                         -> std::shared_ptr<either<t_A, T1>> {
-                       return either<t_A, T1>::right(f(_args.d_a0));
-                     }},
-          this->v());
+      if (std::holds_alternative<typename either<t_A, t_B>::Left>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename either<t_A, t_B>::Left>(this->v());
+        return either<t_A, T1>::left(d_a0);
+      } else {
+        const auto &[d_a0] =
+            std::get<typename either<t_A, t_B>::Right>(this->v());
+        return either<t_A, T1>::right(f(d_a0));
+      }
     }
 
     template <typename T1, MapsTo<T1, t_A> F0>
     std::shared_ptr<either<T1, t_B>> map_left(F0 &&f) const {
-      return std::visit(
-          Overloaded{[&](const typename either<t_A, t_B>::Left &_args)
-                         -> std::shared_ptr<either<T1, t_B>> {
-                       return either<T1, t_B>::left(f(_args.d_a0));
-                     },
-                     [](const typename either<t_A, t_B>::Right &_args)
-                         -> std::shared_ptr<either<T1, t_B>> {
-                       return either<T1, t_B>::right(_args.d_a0);
-                     }},
-          this->v());
+      if (std::holds_alternative<typename either<t_A, t_B>::Left>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename either<t_A, t_B>::Left>(this->v());
+        return either<T1, t_B>::left(f(d_a0));
+      } else {
+        const auto &[d_a0] =
+            std::get<typename either<t_A, t_B>::Right>(this->v());
+        return either<T1, t_B>::right(d_a0);
+      }
     }
 
     __attribute__((pure)) bool is_left() const {
-      return std::visit(
-          Overloaded{[](const typename either<t_A, t_B>::Left &) -> bool {
-                       return true;
-                     },
-                     [](const typename either<t_A, t_B>::Right &) -> bool {
-                       return false;
-                     }},
-          this->v());
+      if (std::holds_alternative<typename either<t_A, t_B>::Left>(this->v())) {
+        return true;
+      } else {
+        return false;
+      }
     }
 
     template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1>
     T1 either_rec(F0 &&f, F1 &&f0) const {
-      return std::visit(
-          Overloaded{[&](const typename either<t_A, t_B>::Left &_args) -> T1 {
-                       return f(_args.d_a0);
-                     },
-                     [&](const typename either<t_A, t_B>::Right &_args) -> T1 {
-                       return f0(_args.d_a0);
-                     }},
-          this->v());
+      if (std::holds_alternative<typename either<t_A, t_B>::Left>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename either<t_A, t_B>::Left>(this->v());
+        return f(d_a0);
+      } else {
+        const auto &[d_a0] =
+            std::get<typename either<t_A, t_B>::Right>(this->v());
+        return f0(d_a0);
+      }
     }
 
     template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1>
     T1 either_rect(F0 &&f, F1 &&f0) const {
-      return std::visit(
-          Overloaded{[&](const typename either<t_A, t_B>::Left &_args) -> T1 {
-                       return f(_args.d_a0);
-                     },
-                     [&](const typename either<t_A, t_B>::Right &_args) -> T1 {
-                       return f0(_args.d_a0);
-                     }},
-          this->v());
+      if (std::holds_alternative<typename either<t_A, t_B>::Left>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename either<t_A, t_B>::Left>(this->v());
+        return f(d_a0);
+      } else {
+        const auto &[d_a0] =
+            std::get<typename either<t_A, t_B>::Right>(this->v());
+        return f0(d_a0);
+      }
     }
   };
 
@@ -171,35 +163,41 @@ struct Sum {
     template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1,
               MapsTo<T1, t_C> F2>
     T1 triple_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename triple<t_A, t_B, t_C>::First &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename triple<t_A, t_B, t_C>::Second &_args) -> T1 {
-                return f0(_args.d_a0);
-              },
-              [&](const typename triple<t_A, t_B, t_C>::Third &_args) -> T1 {
-                return f1(_args.d_a0);
-              }},
-          this->v());
+      if (std::holds_alternative<typename triple<t_A, t_B, t_C>::First>(
+              this->v())) {
+        const auto &[d_a0] =
+            std::get<typename triple<t_A, t_B, t_C>::First>(this->v());
+        return f(d_a0);
+      } else if (std::holds_alternative<typename triple<t_A, t_B, t_C>::Second>(
+                     this->v())) {
+        const auto &[d_a0] =
+            std::get<typename triple<t_A, t_B, t_C>::Second>(this->v());
+        return f0(d_a0);
+      } else {
+        const auto &[d_a0] =
+            std::get<typename triple<t_A, t_B, t_C>::Third>(this->v());
+        return f1(d_a0);
+      }
     }
 
     template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1,
               MapsTo<T1, t_C> F2>
     T1 triple_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
-      return std::visit(
-          Overloaded{
-              [&](const typename triple<t_A, t_B, t_C>::First &_args) -> T1 {
-                return f(_args.d_a0);
-              },
-              [&](const typename triple<t_A, t_B, t_C>::Second &_args) -> T1 {
-                return f0(_args.d_a0);
-              },
-              [&](const typename triple<t_A, t_B, t_C>::Third &_args) -> T1 {
-                return f1(_args.d_a0);
-              }},
-          this->v());
+      if (std::holds_alternative<typename triple<t_A, t_B, t_C>::First>(
+              this->v())) {
+        const auto &[d_a0] =
+            std::get<typename triple<t_A, t_B, t_C>::First>(this->v());
+        return f(d_a0);
+      } else if (std::holds_alternative<typename triple<t_A, t_B, t_C>::Second>(
+                     this->v())) {
+        const auto &[d_a0] =
+            std::get<typename triple<t_A, t_B, t_C>::Second>(this->v());
+        return f0(d_a0);
+      } else {
+        const auto &[d_a0] =
+            std::get<typename triple<t_A, t_B, t_C>::Third>(this->v());
+        return f1(d_a0);
+      }
     }
   };
 

@@ -98,20 +98,15 @@ FoldSequenceStateTraceCase::execute_sequence(
     std::shared_ptr<FoldSequenceStateTraceCase::ConstructionState> st,
     const std::shared_ptr<
         List<std::shared_ptr<FoldSequenceStateTraceCase::FoldStep>>> &seq) {
-  return std::visit(
-      Overloaded{
-          [&](const typename List<
-              std::shared_ptr<FoldSequenceStateTraceCase::FoldStep>>::Nil &)
-              -> std::shared_ptr<
-                  FoldSequenceStateTraceCase::ConstructionState> { return st; },
-          [&](const typename List<std::shared_ptr<
-                  FoldSequenceStateTraceCase::FoldStep>>::Cons &_args)
-              -> std::shared_ptr<
-                  FoldSequenceStateTraceCase::ConstructionState> {
-            return execute_sequence(
-                add_fold_to_state(std::move(st), _args.d_a0), _args.d_a1);
-          }},
-      seq->v());
+  if (std::holds_alternative<typename List<
+          std::shared_ptr<FoldSequenceStateTraceCase::FoldStep>>::Nil>(
+          seq->v())) {
+    return st;
+  } else {
+    const auto &[d_a0, d_a1] = std::get<typename List<
+        std::shared_ptr<FoldSequenceStateTraceCase::FoldStep>>::Cons>(seq->v());
+    return execute_sequence(add_fold_to_state(std::move(st), d_a0), d_a1);
+  }
 }
 
 __attribute__((pure)) unsigned int

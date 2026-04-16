@@ -765,11 +765,6 @@ let spec_header si () =
     ++ string_lit_directive
     ++ str fun_concept
     ++ fnl2 ()
-    ++ str
-         "template<class... Ts> struct Overloaded : Ts... { using \
-          Ts::operator()...; };\n\
-          template<class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;"
-    ++ fnl2 ()
 
 (** Generate include guard closing for header files. *)
 let spec_footer si () =
@@ -1024,7 +1019,7 @@ let print_structure_to_file (fn, si, mo) dry struc =
   set_phase Pre;
   ignore (d.pp_struct struc);
   ignore (d.pp_hstruct struc);
-  (* The MapsTo concept / Overloaded boilerplate always emitted by spec_header
+  (* The MapsTo concept boilerplate always emitted by spec_header
      uses std::is_invocable_r_v, which requires <type_traits>. *)
   if Table.std_lib () <> "BDE" then
     Cpp_state.require_header "type_traits";

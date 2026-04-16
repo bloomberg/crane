@@ -8,31 +8,23 @@
 __attribute__((pure)) bool
 PromOps::nat_list_eqb(const std::shared_ptr<List<unsigned int>> &xs,
                       const std::shared_ptr<List<unsigned int>> &ys) {
-  return std::visit(
-      Overloaded{
-          [&](const typename List<unsigned int>::Nil &) -> bool {
-            return std::visit(
-                Overloaded{
-                    [](const typename List<unsigned int>::Nil &) -> bool {
-                      return true;
-                    },
-                    [](const typename List<unsigned int>::Cons &) -> bool {
-                      return false;
-                    }},
-                ys->v());
-          },
-          [&](const typename List<unsigned int>::Cons &_args) -> bool {
-            return std::visit(
-                Overloaded{[](const typename List<unsigned int>::Nil &)
-                               -> bool { return false; },
-                           [&](const typename List<unsigned int>::Cons &_args0)
-                               -> bool {
-                             return (_args.d_a0 == _args0.d_a0 &&
-                                     nat_list_eqb(_args.d_a1, _args0.d_a1));
-                           }},
-                ys->v());
-          }},
-      xs->v());
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(xs->v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(ys->v())) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(xs->v());
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(ys->v())) {
+      return false;
+    } else {
+      const auto &[d_a00, d_a10] =
+          std::get<typename List<unsigned int>::Cons>(ys->v());
+      return (d_a0 == d_a00 && nat_list_eqb(d_a1, d_a10));
+    }
+  }
 }
 
 __attribute__((pure)) unsigned int

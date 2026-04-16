@@ -8,11 +8,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct ZIntTest {
   __attribute__((pure)) static int64_t add_test(const int64_t _x0,
                                                 const int64_t _x1);

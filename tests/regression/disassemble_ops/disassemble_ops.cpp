@@ -22,19 +22,12 @@ DisassembleOps::drop_(const unsigned int n,
     return l;
   } else {
     unsigned int n_ = n - 1;
-    if (l.use_count() == 1 && l->v().index() == 0) {
-      return l;
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+      return List<unsigned int>::nil();
     } else {
-      return std::visit(
-          Overloaded{[](const typename List<unsigned int>::Nil &)
-                         -> std::shared_ptr<List<unsigned int>> {
-                       return List<unsigned int>::nil();
-                     },
-                     [&](const typename List<unsigned int>::Cons &_args)
-                         -> std::shared_ptr<List<unsigned int>> {
-                       return drop_(n_, _args.d_a1);
-                     }},
-          l->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l->v());
+      return drop_(n_, d_a1);
     }
   }
 }
@@ -43,40 +36,24 @@ __attribute__((pure)) std::optional<
     std::pair<std::shared_ptr<DisassembleOps::instruction>, unsigned int>>
 DisassembleOps::disassemble1(const std::shared_ptr<List<unsigned int>> &rom0,
                              const unsigned int addr) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<unsigned int>::Nil &)
-              -> std::optional<std::pair<
-                  std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
-            return std::optional<std::pair<
-                std::shared_ptr<DisassembleOps::instruction>, unsigned int>>();
-          },
-          [&](const typename List<unsigned int>::Cons &_args)
-              -> std::optional<std::pair<
-                  std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
-            return std::visit(
-                Overloaded{[](const typename List<unsigned int>::Nil &)
-                               -> std::optional<std::pair<
-                                   std::shared_ptr<DisassembleOps::instruction>,
-                                   unsigned int>> {
-                             return std::optional<std::pair<
-                                 std::shared_ptr<DisassembleOps::instruction>,
-                                 unsigned int>>();
-                           },
-                           [&](const typename List<unsigned int>::Cons &_args0)
-                               -> std::optional<std::pair<
-                                   std::shared_ptr<DisassembleOps::instruction>,
-                                   unsigned int>> {
-                             return std::make_optional<std::pair<
-                                 std::shared_ptr<DisassembleOps::instruction>,
-                                 unsigned int>>(
-                                 std::make_pair(
-                                     decode1(_args.d_a0, _args0.d_a0),
-                                     (addr + 2u)));
-                           }},
-                _args.d_a1->v());
-          }},
-      drop_(addr, rom0)->v());
+  auto &&_sv = drop_(addr, rom0);
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv->v())) {
+    return std::optional<std::pair<std::shared_ptr<DisassembleOps::instruction>,
+                                   unsigned int>>();
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(_sv->v());
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
+      return std::optional<std::pair<
+          std::shared_ptr<DisassembleOps::instruction>, unsigned int>>();
+    } else {
+      const auto &[d_a00, d_a10] =
+          std::get<typename List<unsigned int>::Cons>(d_a1->v());
+      return std::make_optional<std::pair<
+          std::shared_ptr<DisassembleOps::instruction>, unsigned int>>(
+          std::make_pair(decode1(d_a0, d_a00), (addr + 2u)));
+    }
+  }
 }
 
 std::shared_ptr<DisassembleOps::instruction>
@@ -92,40 +69,24 @@ __attribute__((pure)) std::optional<
     std::pair<std::shared_ptr<DisassembleOps::instruction>, unsigned int>>
 DisassembleOps::disassemble2(const std::shared_ptr<List<unsigned int>> &rom0,
                              const unsigned int addr) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<unsigned int>::Nil &)
-              -> std::optional<std::pair<
-                  std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
-            return std::optional<std::pair<
-                std::shared_ptr<DisassembleOps::instruction>, unsigned int>>();
-          },
-          [&](const typename List<unsigned int>::Cons &_args)
-              -> std::optional<std::pair<
-                  std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
-            return std::visit(
-                Overloaded{[](const typename List<unsigned int>::Nil &)
-                               -> std::optional<std::pair<
-                                   std::shared_ptr<DisassembleOps::instruction>,
-                                   unsigned int>> {
-                             return std::optional<std::pair<
-                                 std::shared_ptr<DisassembleOps::instruction>,
-                                 unsigned int>>();
-                           },
-                           [&](const typename List<unsigned int>::Cons &_args0)
-                               -> std::optional<std::pair<
-                                   std::shared_ptr<DisassembleOps::instruction>,
-                                   unsigned int>> {
-                             return std::make_optional<std::pair<
-                                 std::shared_ptr<DisassembleOps::instruction>,
-                                 unsigned int>>(
-                                 std::make_pair(
-                                     decode2(_args.d_a0, _args0.d_a0),
-                                     (addr + 2u)));
-                           }},
-                _args.d_a1->v());
-          }},
-      drop<unsigned int>(addr, rom0)->v());
+  auto &&_sv = drop<unsigned int>(addr, rom0);
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv->v())) {
+    return std::optional<std::pair<std::shared_ptr<DisassembleOps::instruction>,
+                                   unsigned int>>();
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(_sv->v());
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
+      return std::optional<std::pair<
+          std::shared_ptr<DisassembleOps::instruction>, unsigned int>>();
+    } else {
+      const auto &[d_a00, d_a10] =
+          std::get<typename List<unsigned int>::Cons>(d_a1->v());
+      return std::make_optional<std::pair<
+          std::shared_ptr<DisassembleOps::instruction>, unsigned int>>(
+          std::make_pair(decode2(d_a0, d_a00), (addr + 2u)));
+    }
+  }
 }
 
 std::shared_ptr<DisassembleOps::instruction>
@@ -141,40 +102,24 @@ __attribute__((pure)) std::optional<
     std::pair<std::shared_ptr<DisassembleOps::instruction>, unsigned int>>
 DisassembleOps::disassemble3(const std::shared_ptr<List<unsigned int>> &rom0,
                              const unsigned int addr) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<unsigned int>::Nil &)
-              -> std::optional<std::pair<
-                  std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
-            return std::optional<std::pair<
-                std::shared_ptr<DisassembleOps::instruction>, unsigned int>>();
-          },
-          [&](const typename List<unsigned int>::Cons &_args)
-              -> std::optional<std::pair<
-                  std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
-            return std::visit(
-                Overloaded{[](const typename List<unsigned int>::Nil &)
-                               -> std::optional<std::pair<
-                                   std::shared_ptr<DisassembleOps::instruction>,
-                                   unsigned int>> {
-                             return std::optional<std::pair<
-                                 std::shared_ptr<DisassembleOps::instruction>,
-                                 unsigned int>>();
-                           },
-                           [&](const typename List<unsigned int>::Cons &_args0)
-                               -> std::optional<std::pair<
-                                   std::shared_ptr<DisassembleOps::instruction>,
-                                   unsigned int>> {
-                             return std::make_optional<std::pair<
-                                 std::shared_ptr<DisassembleOps::instruction>,
-                                 unsigned int>>(
-                                 std::make_pair(
-                                     decode3(_args.d_a0, _args0.d_a0),
-                                     (addr + 2u)));
-                           }},
-                _args.d_a1->v());
-          }},
-      drop<unsigned int>(addr, rom0)->v());
+  auto &&_sv = drop<unsigned int>(addr, rom0);
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv->v())) {
+    return std::optional<std::pair<std::shared_ptr<DisassembleOps::instruction>,
+                                   unsigned int>>();
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(_sv->v());
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
+      return std::optional<std::pair<
+          std::shared_ptr<DisassembleOps::instruction>, unsigned int>>();
+    } else {
+      const auto &[d_a00, d_a10] =
+          std::get<typename List<unsigned int>::Cons>(d_a1->v());
+      return std::make_optional<std::pair<
+          std::shared_ptr<DisassembleOps::instruction>, unsigned int>>(
+          std::make_pair(decode3(d_a0, d_a00), (addr + 2u)));
+    }
+  }
 }
 
 std::shared_ptr<DisassembleOps::instruction>
@@ -190,38 +135,22 @@ __attribute__((pure)) std::optional<
     std::pair<std::shared_ptr<DisassembleOps::instruction>, unsigned int>>
 DisassembleOps::disassemble4(const std::shared_ptr<List<unsigned int>> &rom0,
                              const unsigned int addr) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<unsigned int>::Nil &)
-              -> std::optional<std::pair<
-                  std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
-            return std::optional<std::pair<
-                std::shared_ptr<DisassembleOps::instruction>, unsigned int>>();
-          },
-          [&](const typename List<unsigned int>::Cons &_args)
-              -> std::optional<std::pair<
-                  std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
-            return std::visit(
-                Overloaded{[](const typename List<unsigned int>::Nil &)
-                               -> std::optional<std::pair<
-                                   std::shared_ptr<DisassembleOps::instruction>,
-                                   unsigned int>> {
-                             return std::optional<std::pair<
-                                 std::shared_ptr<DisassembleOps::instruction>,
-                                 unsigned int>>();
-                           },
-                           [&](const typename List<unsigned int>::Cons &_args0)
-                               -> std::optional<std::pair<
-                                   std::shared_ptr<DisassembleOps::instruction>,
-                                   unsigned int>> {
-                             return std::make_optional<std::pair<
-                                 std::shared_ptr<DisassembleOps::instruction>,
-                                 unsigned int>>(
-                                 std::make_pair(
-                                     decode4(_args.d_a0, _args0.d_a0),
-                                     (addr + 2u)));
-                           }},
-                _args.d_a1->v());
-          }},
-      drop<unsigned int>(addr, rom0)->v());
+  auto &&_sv = drop<unsigned int>(addr, rom0);
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv->v())) {
+    return std::optional<std::pair<std::shared_ptr<DisassembleOps::instruction>,
+                                   unsigned int>>();
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(_sv->v());
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
+      return std::optional<std::pair<
+          std::shared_ptr<DisassembleOps::instruction>, unsigned int>>();
+    } else {
+      const auto &[d_a00, d_a10] =
+          std::get<typename List<unsigned int>::Cons>(d_a1->v());
+      return std::make_optional<std::pair<
+          std::shared_ptr<DisassembleOps::instruction>, unsigned int>>(
+          std::make_pair(decode4(d_a0, d_a00), (addr + 2u)));
+    }
+  }
 }

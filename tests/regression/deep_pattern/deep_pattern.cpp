@@ -8,205 +8,96 @@
 __attribute__((pure)) unsigned int DeepPattern::list_deep_match(
     const std::shared_ptr<DeepPattern::list<std::shared_ptr<DeepPattern::tree>>>
         &l) {
-  return std::visit(
-      Overloaded{
-          [](const typename DeepPattern::list<
-              std::shared_ptr<DeepPattern::tree>>::Nil &) -> unsigned int {
+  if (std::holds_alternative<
+          typename DeepPattern::list<std::shared_ptr<DeepPattern::tree>>::Nil>(
+          l->v())) {
+    return 0u;
+  } else {
+    const auto &[d_a0, d_a1] = std::get<
+        typename DeepPattern::list<std::shared_ptr<DeepPattern::tree>>::Cons>(
+        l->v());
+    if (std::holds_alternative<typename DeepPattern::tree::Leaf>(d_a0->v())) {
+      const auto &[d_a00] =
+          std::get<typename DeepPattern::tree::Leaf>(d_a0->v());
+      if (std::holds_alternative<typename DeepPattern::list<
+              std::shared_ptr<DeepPattern::tree>>::Nil>(d_a1->v())) {
+        return d_a00;
+      } else {
+        const auto &[d_a01, d_a11] = std::get<typename DeepPattern::list<
+            std::shared_ptr<DeepPattern::tree>>::Cons>(d_a1->v());
+        if (std::holds_alternative<typename DeepPattern::tree::Leaf>(
+                d_a01->v())) {
+          const auto &[d_a02] =
+              std::get<typename DeepPattern::tree::Leaf>(d_a01->v());
+          if (std::holds_alternative<typename DeepPattern::list<
+                  std::shared_ptr<DeepPattern::tree>>::Nil>(d_a11->v())) {
+            return (d_a00 + d_a02);
+          } else {
             return 0u;
-          },
-          [](const typename DeepPattern::list<
-              std::shared_ptr<DeepPattern::tree>>::Cons &_args)
-              -> unsigned int {
-            return std::visit(
-                Overloaded{
-                    [&](const typename DeepPattern::tree::Leaf &_args0)
-                        -> unsigned int {
-                      return std::visit(
-                          Overloaded{
-                              [&](const typename DeepPattern::list<
-                                  std::shared_ptr<DeepPattern::tree>>::Nil &)
-                                  -> unsigned int { return _args0.d_a0; },
-                              [&](const typename DeepPattern::list<
-                                  std::shared_ptr<DeepPattern::tree>>::Cons
-                                      &_args1) -> unsigned int {
-                                return std::visit(
-                                    Overloaded{
-                                        [&](const typename DeepPattern::tree::
-                                                Leaf &_args2) -> unsigned int {
-                                          return std::visit(
-                                              Overloaded{
-                                                  [&](const typename DeepPattern::
-                                                          list<std::shared_ptr<
-                                                              DeepPattern::
-                                                                  tree>>::Nil &)
-                                                      -> unsigned int {
-                                                    return (_args0.d_a0 +
-                                                            _args2.d_a0);
-                                                  },
-                                                  [](const typename DeepPattern::
-                                                         list<std::shared_ptr<
-                                                             DeepPattern::
-                                                                 tree>>::Cons &)
-                                                      -> unsigned int {
-                                                    return 0u;
-                                                  }},
-                                              _args1.d_a1->v());
-                                        },
-                                        [](const typename DeepPattern::tree::
-                                               Node &) -> unsigned int {
-                                          return 0u;
-                                        }},
-                                    _args1.d_a0->v());
-                              }},
-                          _args.d_a1->v());
-                    },
-                    [&](const typename DeepPattern::tree::Node &_args0)
-                        -> unsigned int {
-                      return std::visit(
-                          Overloaded{[&](const typename DeepPattern::tree::Leaf
-                                             &_args1) -> unsigned int {
-                                       return std::visit(Overloaded{[&](const typename DeepPattern::
-                                                                            tree::Leaf
-                                                                                &_args2)
-                                                                        -> unsigned int {
-                                                                      return std::
-                                                                          visit(
-                                                                              Overloaded{[](const typename DeepPattern::list<
-                                                                                             std::shared_ptr<
-                                                                                                 DeepPattern::
-                                                                                                     tree>>::
-                                                                                                Nil &)
-                                                                                             -> unsigned int {
-                                                                                           return 0u;
-                                                                                         },
-                                                                                         [&](const typename DeepPattern::list<
-                                                                                             std::shared_ptr<
-                                                                                                 DeepPattern::
-                                                                                                     tree>>::
-                                                                                                 Cons &
-                                                                                                     _args3)
-                                                                                             -> unsigned int {
-                                                                                           return std::
-                                                                                               visit(
-                                                                                                   Overloaded{[&](const typename DeepPattern::tree::Leaf &_args4) -> unsigned int {
-                                                                                                                return std::visit(Overloaded{[&](const typename DeepPattern::list<std::
-                                                                                                                                                                                      shared_ptr<
-                                                                                                                                                                                          DeepPattern::
-                                                                                                                                                                                              tree>>::Nil &) -> unsigned int {
-                                                                                                                                               return (
-                                                                                                                                                   (_args1
-                                                                                                                                                        .d_a0 +
-                                                                                                                                                    _args2
-                                                                                                                                                        .d_a0) +
-                                                                                                                                                   _args4
-                                                                                                                                                       .d_a0);
-                                                                                                                                             },
-                                                                                                                                             [](const typename DeepPattern::list<
-                                                                                                                                                 std::shared_ptr<
-                                                                                                                                                     DeepPattern::
-                                                                                                                                                         tree>>::
-                                                                                                                                                    Cons
-                                                                                                                                                        &)
-                                                                                                                                                 -> unsigned int {
-                                                                                                                                               return 0u;
-                                                                                                                                             }},
-                                                                                                                                  _args3
-                                                                                                                                      .d_a1
-                                                                                                                                      ->v());
-                                                                                                              },
-                                                                                                              [&](const typename DeepPattern::
-                                                                                                                      tree::Node
-                                                                                                                          &_args4)
-                                                                                                                  -> unsigned int {
-                                                                                                                return std::
-                                                                                                                    visit(Overloaded{
-                                                                                                                              [&](const typename DeepPattern::
-                                                                                                                                      tree::Leaf
-                                                                                                                                          &
-                                                                                                                                              _args5) -> unsigned int {
-                                                                                                                                return std::visit(
-                                                                                                                                    Overloaded{
-                                                                                                                                        [&](const typename DeepPattern::
-                                                                                                                                                tree::Leaf
-                                                                                                                                                    &_args6)
-                                                                                                                                            -> unsigned int {
-                                                                                                                                          return std::visit(
-                                                                                                                                              Overloaded{
-                                                                                                                                                  [&](const typename DeepPattern::list<
-                                                                                                                                                      std::shared_ptr<
-                                                                                                                                                          DeepPattern::
-                                                                                                                                                              tree>>::
-                                                                                                                                                          Nil &)
-                                                                                                                                                      -> unsigned int {
-                                                                                                                                                    return (
-                                                                                                                                                        ((_args1
-                                                                                                                                                              .d_a0 +
-                                                                                                                                                          _args2
-                                                                                                                                                              .d_a0) +
-                                                                                                                                                         _args5
-                                                                                                                                                             .d_a0) +
-                                                                                                                                                        _args6
-                                                                                                                                                            .d_a0);
-                                                                                                                                                  },
-                                                                                                                                                  [](const typename DeepPattern::list<
-                                                                                                                                                      std::shared_ptr<
-                                                                                                                                                          DeepPattern::
-                                                                                                                                                              tree>>::
-                                                                                                                                                         Cons
-                                                                                                                                                             &)
-                                                                                                                                                      -> unsigned int {
-                                                                                                                                                    return 0u;
-                                                                                                                                                  }},
-                                                                                                                                              _args3
-                                                                                                                                                  .d_a1
-                                                                                                                                                  ->v());
-                                                                                                                                        },
-                                                                                                                                        [](const typename DeepPattern::
-                                                                                                                                               tree::Node
-                                                                                                                                                   &)
-                                                                                                                                            -> unsigned int {
-                                                                                                                                          return 0u;
-                                                                                                                                        }},
-                                                                                                                                    _args4
-                                                                                                                                        .d_a1
-                                                                                                                                        ->v());
-                                                                                                                              },
-                                                                                                                              [](const typename DeepPattern::
-                                                                                                                                     tree::Node
-                                                                                                                                         &)
-                                                                                                                                  -> unsigned int {
-                                                                                                                                return 0u;
-                                                                                                                              }},
-                                                                                                                          _args4
-                                                                                                                              .d_a0
-                                                                                                                              ->v());
-                                                                                                              }},
-                                                                                                   _args3
-                                                                                                       .d_a0
-                                                                                                       ->v());
-                                                                                         }},
-                                                                              _args
-                                                                                  .d_a1
-                                                                                  ->v());
-                                                                    },
-                                                                    [](const typename DeepPattern::
-                                                                           tree::Node
-                                                                               &)
-                                                                        -> unsigned int {
-                                                                      return 0u;
-                                                                    }},
-                                                         _args0.d_a1->v());
-                                     },
-                                     [](const typename DeepPattern::tree::Node
-                                            &) -> unsigned int { return 0u; }},
-                          _args0.d_a0->v());
-                    }},
-                _args.d_a0->v());
-          }},
-      l->v());
-}
-
-std::shared_ptr<DeepPattern::tree>
-DeepPattern::as_pattern_test(std::shared_ptr<DeepPattern::tree> t) {
-  return t;
+          }
+        } else {
+          return 0u;
+        }
+      }
+    } else {
+      const auto &[d_a00, d_a10] =
+          std::get<typename DeepPattern::tree::Node>(d_a0->v());
+      if (std::holds_alternative<typename DeepPattern::tree::Leaf>(
+              d_a00->v())) {
+        const auto &[d_a01] =
+            std::get<typename DeepPattern::tree::Leaf>(d_a00->v());
+        if (std::holds_alternative<typename DeepPattern::tree::Leaf>(
+                d_a10->v())) {
+          const auto &[d_a02] =
+              std::get<typename DeepPattern::tree::Leaf>(d_a10->v());
+          if (std::holds_alternative<typename DeepPattern::list<
+                  std::shared_ptr<DeepPattern::tree>>::Nil>(d_a1->v())) {
+            return 0u;
+          } else {
+            const auto &[d_a03, d_a13] = std::get<typename DeepPattern::list<
+                std::shared_ptr<DeepPattern::tree>>::Cons>(d_a1->v());
+            if (std::holds_alternative<typename DeepPattern::tree::Leaf>(
+                    d_a03->v())) {
+              const auto &[d_a04] =
+                  std::get<typename DeepPattern::tree::Leaf>(d_a03->v());
+              if (std::holds_alternative<typename DeepPattern::list<
+                      std::shared_ptr<DeepPattern::tree>>::Nil>(d_a13->v())) {
+                return ((d_a01 + d_a02) + d_a04);
+              } else {
+                return 0u;
+              }
+            } else {
+              const auto &[d_a04, d_a14] =
+                  std::get<typename DeepPattern::tree::Node>(d_a03->v());
+              if (std::holds_alternative<typename DeepPattern::tree::Leaf>(
+                      d_a04->v())) {
+                const auto &[d_a05] =
+                    std::get<typename DeepPattern::tree::Leaf>(d_a04->v());
+                if (std::holds_alternative<typename DeepPattern::tree::Leaf>(
+                        d_a14->v())) {
+                  const auto &[d_a06] =
+                      std::get<typename DeepPattern::tree::Leaf>(d_a14->v());
+                  if (std::holds_alternative<typename DeepPattern::list<
+                          std::shared_ptr<DeepPattern::tree>>::Nil>(
+                          d_a13->v())) {
+                    return (((d_a01 + d_a02) + d_a05) + d_a06);
+                  } else {
+                    return 0u;
+                  }
+                } else {
+                  return 0u;
+                }
+              } else {
+                return 0u;
+              }
+            }
+          }
+        } else {
+          return 0u;
+        }
+      } else {
+        return 0u;
+      }
+    }
+  }
 }

@@ -4,6 +4,11 @@
 #include <iostream>
 #include <loopify_tmc.h>
 
+template <class... Ts> struct Overloaded : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
+
 namespace {
 int testStatus = 0;
 void aSsErT(bool condition, const char *message, int line) {

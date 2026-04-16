@@ -8,11 +8,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct PrimArrayOps {
   static inline const persistent_array<int64_t> test1 =
       persistent_array<int64_t>(int64_t(5), int64_t(12));

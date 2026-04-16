@@ -36,17 +36,19 @@ __attribute__((pure)) unsigned int RecordErasedProofFieldsCase::kind_code(
 
 __attribute__((pure)) unsigned int RecordErasedProofFieldsCase::tag_code(
     const std::shared_ptr<RecordErasedProofFieldsCase::StoredTag> &t) {
-  return std::visit(
-      Overloaded{
-          [](const typename RecordErasedProofFieldsCase::StoredTag::TagPrimary
-                 &_args) -> unsigned int {
-            return (10u + kind_code(_args.d_a0));
-          },
-          [](const typename RecordErasedProofFieldsCase::StoredTag::TagSecondary
-                 &_args) -> unsigned int {
-            return (20u + kind_code(_args.d_a0));
-          }},
-      t->v());
+  if (std::holds_alternative<
+          typename RecordErasedProofFieldsCase::StoredTag::TagPrimary>(
+          t->v())) {
+    const auto &[d_a0] =
+        std::get<typename RecordErasedProofFieldsCase::StoredTag::TagPrimary>(
+            t->v());
+    return (10u + kind_code(d_a0));
+  } else {
+    const auto &[d_a0] =
+        std::get<typename RecordErasedProofFieldsCase::StoredTag::TagSecondary>(
+            t->v());
+    return (20u + kind_code(d_a0));
+  }
 }
 
 __attribute__((pure)) unsigned int RecordErasedProofFieldsCase::bucket_code(

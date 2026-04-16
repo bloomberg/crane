@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct LetIn {
   static inline const unsigned int simple_let = 5u;
   static inline const unsigned int nested_let = 3u;
@@ -60,30 +55,22 @@ struct LetIn {
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
   static T3 pair_rect(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
-    return std::visit(
-        Overloaded{[&](const typename pair<T1, T2>::Pair0 &_args) -> T3 {
-          return f(_args.d_a0, _args.d_a1);
-        }},
-        p->v());
+    const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p->v());
+    return f(d_a0, d_a1);
   }
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
   static T3 pair_rec(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
-    return std::visit(
-        Overloaded{[&](const typename pair<T1, T2>::Pair0 &_args) -> T3 {
-          return f(_args.d_a0, _args.d_a1);
-        }},
-        p->v());
+    const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p->v());
+    return f(d_a0, d_a1);
   }
 
   static inline const unsigned int let_destruct = []() {
     std::shared_ptr<pair<unsigned int, unsigned int>> p =
         pair<unsigned int, unsigned int>::pair0(3u, 4u);
-    return std::visit(
-        Overloaded{
-            [](const typename pair<unsigned int, unsigned int>::Pair0 &_args)
-                -> unsigned int { return _args.d_a0; }},
-        p->v());
+    const auto &[d_a0, d_a1] =
+        std::get<typename pair<unsigned int, unsigned int>::Pair0>(p->v());
+    return d_a0;
   }();
   static inline const unsigned int multi_let = []() {
     unsigned int a = 1u;

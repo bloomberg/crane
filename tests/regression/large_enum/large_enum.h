@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct LargeEnum {
   enum class Color {
     e_RED,
@@ -249,24 +244,33 @@ struct LargeEnum {
                      const T1 f4, const T1 f5, const T1 f6, const T1 f7,
                      const T1 f8, F10 &&f9, const T1 f10,
                      const std::shared_ptr<tok> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tok::TNum &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename tok::TPlus &) -> T1 { return f0; },
-                   [&](const typename tok::TMinus &) -> T1 { return f1; },
-                   [&](const typename tok::TStar &) -> T1 { return f2; },
-                   [&](const typename tok::TSlash &) -> T1 { return f3; },
-                   [&](const typename tok::TLParen &) -> T1 { return f4; },
-                   [&](const typename tok::TRParen &) -> T1 { return f5; },
-                   [&](const typename tok::TEq &) -> T1 { return f6; },
-                   [&](const typename tok::TBang &) -> T1 { return f7; },
-                   [&](const typename tok::TSemicolon &) -> T1 { return f8; },
-                   [&](const typename tok::TIdent &_args) -> T1 {
-                     return f9(_args.d_a0);
-                   },
-                   [&](const typename tok::TEOF &) -> T1 { return f10; }},
-        t->v());
+    if (std::holds_alternative<typename tok::TNum>(t->v())) {
+      const auto &[d_a0] = std::get<typename tok::TNum>(t->v());
+      return f(d_a0);
+    } else if (std::holds_alternative<typename tok::TPlus>(t->v())) {
+      return f0;
+    } else if (std::holds_alternative<typename tok::TMinus>(t->v())) {
+      return f1;
+    } else if (std::holds_alternative<typename tok::TStar>(t->v())) {
+      return f2;
+    } else if (std::holds_alternative<typename tok::TSlash>(t->v())) {
+      return f3;
+    } else if (std::holds_alternative<typename tok::TLParen>(t->v())) {
+      return f4;
+    } else if (std::holds_alternative<typename tok::TRParen>(t->v())) {
+      return f5;
+    } else if (std::holds_alternative<typename tok::TEq>(t->v())) {
+      return f6;
+    } else if (std::holds_alternative<typename tok::TBang>(t->v())) {
+      return f7;
+    } else if (std::holds_alternative<typename tok::TSemicolon>(t->v())) {
+      return f8;
+    } else if (std::holds_alternative<typename tok::TIdent>(t->v())) {
+      const auto &[d_a0] = std::get<typename tok::TIdent>(t->v());
+      return f9(d_a0);
+    } else {
+      return f10;
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -275,24 +279,33 @@ struct LargeEnum {
                     const T1 f4, const T1 f5, const T1 f6, const T1 f7,
                     const T1 f8, F10 &&f9, const T1 f10,
                     const std::shared_ptr<tok> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tok::TNum &_args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename tok::TPlus &) -> T1 { return f0; },
-                   [&](const typename tok::TMinus &) -> T1 { return f1; },
-                   [&](const typename tok::TStar &) -> T1 { return f2; },
-                   [&](const typename tok::TSlash &) -> T1 { return f3; },
-                   [&](const typename tok::TLParen &) -> T1 { return f4; },
-                   [&](const typename tok::TRParen &) -> T1 { return f5; },
-                   [&](const typename tok::TEq &) -> T1 { return f6; },
-                   [&](const typename tok::TBang &) -> T1 { return f7; },
-                   [&](const typename tok::TSemicolon &) -> T1 { return f8; },
-                   [&](const typename tok::TIdent &_args) -> T1 {
-                     return f9(_args.d_a0);
-                   },
-                   [&](const typename tok::TEOF &) -> T1 { return f10; }},
-        t->v());
+    if (std::holds_alternative<typename tok::TNum>(t->v())) {
+      const auto &[d_a0] = std::get<typename tok::TNum>(t->v());
+      return f(d_a0);
+    } else if (std::holds_alternative<typename tok::TPlus>(t->v())) {
+      return f0;
+    } else if (std::holds_alternative<typename tok::TMinus>(t->v())) {
+      return f1;
+    } else if (std::holds_alternative<typename tok::TStar>(t->v())) {
+      return f2;
+    } else if (std::holds_alternative<typename tok::TSlash>(t->v())) {
+      return f3;
+    } else if (std::holds_alternative<typename tok::TLParen>(t->v())) {
+      return f4;
+    } else if (std::holds_alternative<typename tok::TRParen>(t->v())) {
+      return f5;
+    } else if (std::holds_alternative<typename tok::TEq>(t->v())) {
+      return f6;
+    } else if (std::holds_alternative<typename tok::TBang>(t->v())) {
+      return f7;
+    } else if (std::holds_alternative<typename tok::TSemicolon>(t->v())) {
+      return f8;
+    } else if (std::holds_alternative<typename tok::TIdent>(t->v())) {
+      const auto &[d_a0] = std::get<typename tok::TIdent>(t->v());
+      return f9(d_a0);
+    } else {
+      return f10;
+    }
   }
 
   __attribute__((pure)) static unsigned int

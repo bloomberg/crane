@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -183,15 +178,15 @@ struct Pos {
 
   template <typename T1, MapsTo<T1, T1, T1> F0>
   static T1 iter_op(F0 &&op, const std::shared_ptr<Positive> &p, const T1 a) {
-    return std::visit(
-        Overloaded{[&](const typename Positive::XI &_args) -> T1 {
-                     return op(a, iter_op<T1>(op, _args.d_a0, op(a, a)));
-                   },
-                   [&](const typename Positive::XO &_args) -> T1 {
-                     return iter_op<T1>(op, _args.d_a0, op(a, a));
-                   },
-                   [&](const typename Positive::XH &) -> T1 { return a; }},
-        p->v());
+    if (std::holds_alternative<typename Positive::XI>(p->v())) {
+      const auto &[d_a0] = std::get<typename Positive::XI>(p->v());
+      return op(a, iter_op<T1>(op, d_a0, op(a, a)));
+    } else if (std::holds_alternative<typename Positive::XO>(p->v())) {
+      const auto &[d_a0] = std::get<typename Positive::XO>(p->v());
+      return iter_op<T1>(op, d_a0, op(a, a));
+    } else {
+      return a;
+    }
   }
 
   __attribute__((pure)) static unsigned int

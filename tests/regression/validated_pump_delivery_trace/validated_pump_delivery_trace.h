@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -58,33 +53,31 @@ public:
 
   template <MapsTo<bool, t_A> F0>
   __attribute__((pure)) bool forallb(F0 &&f) const {
-    return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil &) -> bool { return true; },
-                   [&](const typename List<t_A>::Cons &_args) -> bool {
-                     return (f(_args.d_a0) && _args.d_a1->forallb(f));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return true;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (f(d_a0) && d_a1->forallb(f));
+    }
   }
 
   template <typename T1, MapsTo<T1, T1, t_A> F0>
   T1 fold_left(F0 &&f, const T1 a0) const {
-    return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil &) -> T1 { return a0; },
-                   [&](const typename List<t_A>::Cons &_args) -> T1 {
-                     return _args.d_a1->template fold_left<T1>(
-                         f, f(a0, _args.d_a0));
-                   }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return a0;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return d_a1->template fold_left<T1>(f, f(a0, d_a0));
+    }
   }
 
   __attribute__((pure)) unsigned int length() const {
-    return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons &_args) -> unsigned int {
-              return (_args.d_a1->length() + 1);
-            }},
-        this->v());
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+      return 0u;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (d_a1->length() + 1);
+    }
   }
 };
 
@@ -731,62 +724,63 @@ struct ValidatedPumpDeliveryTraceCase {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) bool fault_blocks_bolus() const {
-      return std::visit(
-          Overloaded{[](const typename FaultStatus::Fault_None &) -> bool {
-                       return false;
-                     },
-                     [](const typename FaultStatus::Fault_LowReservoir &_args)
-                         -> bool { return _args.d_a0 < 10u; },
-                     [](const typename FaultStatus::Fault_BatteryLow &)
-                         -> bool { return false; },
-                     [](const auto &) -> bool { return true; }},
-          this->v());
+      if (std::holds_alternative<typename FaultStatus::Fault_None>(this->v())) {
+        return false;
+      } else if (std::holds_alternative<
+                     typename FaultStatus::Fault_LowReservoir>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename FaultStatus::Fault_LowReservoir>(this->v());
+        return d_a0 < 10u;
+      } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
+                     this->v())) {
+        return false;
+      } else {
+        return true;
+      }
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F2>
+    T1 FaultStatus_rec(const T1 f, const T1 f0, F2 &&f1, const T1 f2,
+                       const T1 f3) const {
+      if (std::holds_alternative<typename FaultStatus::Fault_None>(this->v())) {
+        return f;
+      } else if (std::holds_alternative<typename FaultStatus::Fault_Occlusion>(
+                     this->v())) {
+        return f0;
+      } else if (std::holds_alternative<
+                     typename FaultStatus::Fault_LowReservoir>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename FaultStatus::Fault_LowReservoir>(this->v());
+        return f1(d_a0);
+      } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
+                     this->v())) {
+        return f2;
+      } else {
+        return f3;
+      }
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F2>
+    T1 FaultStatus_rect(const T1 f, const T1 f0, F2 &&f1, const T1 f2,
+                        const T1 f3) const {
+      if (std::holds_alternative<typename FaultStatus::Fault_None>(this->v())) {
+        return f;
+      } else if (std::holds_alternative<typename FaultStatus::Fault_Occlusion>(
+                     this->v())) {
+        return f0;
+      } else if (std::holds_alternative<
+                     typename FaultStatus::Fault_LowReservoir>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename FaultStatus::Fault_LowReservoir>(this->v());
+        return f1(d_a0);
+      } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
+                     this->v())) {
+        return f2;
+      } else {
+        return f3;
+      }
     }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int> F2>
-  static T1 FaultStatus_rect(const T1 f, const T1 f0, F2 &&f1, const T1 f2,
-                             const T1 f3,
-                             const std::shared_ptr<FaultStatus> &f4) {
-    return std::visit(
-        Overloaded{
-            [&](const typename FaultStatus::Fault_None &) -> T1 { return f; },
-            [&](const typename FaultStatus::Fault_Occlusion &) -> T1 {
-              return f0;
-            },
-            [&](const typename FaultStatus::Fault_LowReservoir &_args) -> T1 {
-              return f1(_args.d_a0);
-            },
-            [&](const typename FaultStatus::Fault_BatteryLow &) -> T1 {
-              return f2;
-            },
-            [&](const typename FaultStatus::Fault_Unknown &) -> T1 {
-              return f3;
-            }},
-        f4->v());
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F2>
-  static T1 FaultStatus_rec(const T1 f, const T1 f0, F2 &&f1, const T1 f2,
-                            const T1 f3,
-                            const std::shared_ptr<FaultStatus> &f4) {
-    return std::visit(
-        Overloaded{
-            [&](const typename FaultStatus::Fault_None &) -> T1 { return f; },
-            [&](const typename FaultStatus::Fault_Occlusion &) -> T1 {
-              return f0;
-            },
-            [&](const typename FaultStatus::Fault_LowReservoir &_args) -> T1 {
-              return f1(_args.d_a0);
-            },
-            [&](const typename FaultStatus::Fault_BatteryLow &) -> T1 {
-              return f2;
-            },
-            [&](const typename FaultStatus::Fault_Unknown &) -> T1 {
-              return f3;
-            }},
-        f4->v());
-  }
   enum class InsulinType {
     e_INSULIN_HUMALOG,
     e_INSULIN_ASPART,
@@ -929,35 +923,33 @@ struct ValidatedPumpDeliveryTraceCase {
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 SuspendDecision_rect(const T1 f, F1 &&f0, const T1 f1,
                                  const std::shared_ptr<SuspendDecision> &s) {
-    return std::visit(
-        Overloaded{
-            [&](const typename SuspendDecision::Suspend_None &) -> T1 {
-              return f;
-            },
-            [&](const typename SuspendDecision::Suspend_Reduce &_args) -> T1 {
-              return f0(_args.d_a0);
-            },
-            [&](const typename SuspendDecision::Suspend_Withhold &) -> T1 {
-              return f1;
-            }},
-        s->v());
+    if (std::holds_alternative<typename SuspendDecision::Suspend_None>(
+            s->v())) {
+      return f;
+    } else if (std::holds_alternative<typename SuspendDecision::Suspend_Reduce>(
+                   s->v())) {
+      const auto &[d_a0] =
+          std::get<typename SuspendDecision::Suspend_Reduce>(s->v());
+      return f0(d_a0);
+    } else {
+      return f1;
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 SuspendDecision_rec(const T1 f, F1 &&f0, const T1 f1,
                                 const std::shared_ptr<SuspendDecision> &s) {
-    return std::visit(
-        Overloaded{
-            [&](const typename SuspendDecision::Suspend_None &) -> T1 {
-              return f;
-            },
-            [&](const typename SuspendDecision::Suspend_Reduce &_args) -> T1 {
-              return f0(_args.d_a0);
-            },
-            [&](const typename SuspendDecision::Suspend_Withhold &) -> T1 {
-              return f1;
-            }},
-        s->v());
+    if (std::holds_alternative<typename SuspendDecision::Suspend_None>(
+            s->v())) {
+      return f;
+    } else if (std::holds_alternative<typename SuspendDecision::Suspend_Reduce>(
+                   s->v())) {
+      const auto &[d_a0] =
+          std::get<typename SuspendDecision::Suspend_Reduce>(s->v());
+      return f0(d_a0);
+    } else {
+      return f1;
+    }
   }
 
   __attribute__((pure)) static unsigned int
@@ -1061,23 +1053,23 @@ struct ValidatedPumpDeliveryTraceCase {
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) bool result_modified() const {
-      return std::visit(
-          Overloaded{[](const typename PrecisionResult::PrecOK &_args) -> bool {
-                       return _args.d_a1;
-                     },
-                     [](const typename PrecisionResult::PrecError &) -> bool {
-                       return false;
-                     }},
-          this->v());
+      if (std::holds_alternative<typename PrecisionResult::PrecOK>(this->v())) {
+        const auto &[d_a0, d_a1] =
+            std::get<typename PrecisionResult::PrecOK>(this->v());
+        return d_a1;
+      } else {
+        return false;
+      }
     }
 
     __attribute__((pure)) unsigned int precision_result_code() const {
-      return std::visit(
-          Overloaded{[](const typename PrecisionResult::PrecOK &)
-                         -> unsigned int { return 0u; },
-                     [](const typename PrecisionResult::PrecError &_args)
-                         -> unsigned int { return _args.d_a0; }},
-          this->v());
+      if (std::holds_alternative<typename PrecisionResult::PrecOK>(this->v())) {
+        return 0u;
+      } else {
+        const auto &[d_a0] =
+            std::get<typename PrecisionResult::PrecError>(this->v());
+        return d_a0;
+      }
     }
   };
 
@@ -1085,28 +1077,30 @@ struct ValidatedPumpDeliveryTraceCase {
             MapsTo<T1, unsigned int> F1>
   static T1 PrecisionResult_rect(F0 &&f, F1 &&f0,
                                  const std::shared_ptr<PrecisionResult> &p) {
-    return std::visit(
-        Overloaded{[&](const typename PrecisionResult::PrecOK &_args) -> T1 {
-                     return f(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename PrecisionResult::PrecError &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        p->v());
+    if (std::holds_alternative<typename PrecisionResult::PrecOK>(p->v())) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename PrecisionResult::PrecOK>(p->v());
+      return f(d_a0, d_a1);
+    } else {
+      const auto &[d_a0] =
+          std::get<typename PrecisionResult::PrecError>(p->v());
+      return f0(d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int, bool> F0,
             MapsTo<T1, unsigned int> F1>
   static T1 PrecisionResult_rec(F0 &&f, F1 &&f0,
                                 const std::shared_ptr<PrecisionResult> &p) {
-    return std::visit(
-        Overloaded{[&](const typename PrecisionResult::PrecOK &_args) -> T1 {
-                     return f(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename PrecisionResult::PrecError &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        p->v());
+    if (std::holds_alternative<typename PrecisionResult::PrecOK>(p->v())) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename PrecisionResult::PrecOK>(p->v());
+      return f(d_a0, d_a1);
+    } else {
+      const auto &[d_a0] =
+          std::get<typename PrecisionResult::PrecError>(p->v());
+      return f0(d_a0);
+    }
   }
 
   static inline const unsigned int prec_error_invalid_params = 1u;

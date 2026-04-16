@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename M>
 concept Elem = requires {
   typename M::t;
@@ -64,22 +59,22 @@ template <Elem E> struct Container {
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 maybe_rect(const T1 f, F1 &&f0, const std::shared_ptr<maybe> &m) {
-    return std::visit(
-        Overloaded{[&](const typename maybe::Nothing &) -> T1 { return f; },
-                   [&](const typename maybe::Just &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        m->v());
+    if (std::holds_alternative<typename maybe::Nothing>(m->v())) {
+      return f;
+    } else {
+      const auto &[d_a0] = std::get<typename maybe::Just>(m->v());
+      return f0(d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 maybe_rec(const T1 f, F1 &&f0, const std::shared_ptr<maybe> &m) {
-    return std::visit(
-        Overloaded{[&](const typename maybe::Nothing &) -> T1 { return f; },
-                   [&](const typename maybe::Just &_args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        m->v());
+    if (std::holds_alternative<typename maybe::Nothing>(m->v())) {
+      return f;
+    } else {
+      const auto &[d_a0] = std::get<typename maybe::Just>(m->v());
+      return f0(d_a0);
+    }
   }
 
   struct mlist {
@@ -127,25 +122,23 @@ template <Elem E> struct Container {
   template <typename T1,
             MapsTo<T1, std::shared_ptr<maybe>, std::shared_ptr<mlist>, T1> F1>
   static T1 mlist_rect(const T1 f, F1 &&f0, const std::shared_ptr<mlist> &m) {
-    return std::visit(
-        Overloaded{[&](const typename mlist::MNil &) -> T1 { return f; },
-                   [&](const typename mlist::MCons &_args) -> T1 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               mlist_rect<T1>(f, f0, _args.d_a1));
-                   }},
-        m->v());
+    if (std::holds_alternative<typename mlist::MNil>(m->v())) {
+      return f;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename mlist::MCons>(m->v());
+      return f0(d_a0, d_a1, mlist_rect<T1>(f, f0, d_a1));
+    }
   }
 
   template <typename T1,
             MapsTo<T1, std::shared_ptr<maybe>, std::shared_ptr<mlist>, T1> F1>
   static T1 mlist_rec(const T1 f, F1 &&f0, const std::shared_ptr<mlist> &m) {
-    return std::visit(
-        Overloaded{[&](const typename mlist::MNil &) -> T1 { return f; },
-                   [&](const typename mlist::MCons &_args) -> T1 {
-                     return f0(_args.d_a0, _args.d_a1,
-                               mlist_rec<T1>(f, f0, _args.d_a1));
-                   }},
-        m->v());
+    if (std::holds_alternative<typename mlist::MNil>(m->v())) {
+      return f;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename mlist::MCons>(m->v());
+      return f0(d_a0, d_a1, mlist_rec<T1>(f, f0, d_a1));
+    }
   }
 
   struct mtree {
@@ -196,60 +189,59 @@ template <Elem E> struct Container {
   template <typename T1, MapsTo<T1, std::shared_ptr<maybe>> F0,
             MapsTo<T1, std::shared_ptr<mlist>> F1>
   static T1 mtree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<mtree> &m) {
-    return std::visit(Overloaded{[&](const typename mtree::Leaf &_args) -> T1 {
-                                   return f(_args.d_a0);
-                                 },
-                                 [&](const typename mtree::Node &_args) -> T1 {
-                                   return f0(_args.d_a0);
-                                 }},
-                      m->v());
+    if (std::holds_alternative<typename mtree::Leaf>(m->v())) {
+      const auto &[d_a0] = std::get<typename mtree::Leaf>(m->v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0] = std::get<typename mtree::Node>(m->v());
+      return f0(d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<maybe>> F0,
             MapsTo<T1, std::shared_ptr<mlist>> F1>
   static T1 mtree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<mtree> &m) {
-    return std::visit(Overloaded{[&](const typename mtree::Leaf &_args) -> T1 {
-                                   return f(_args.d_a0);
-                                 },
-                                 [&](const typename mtree::Node &_args) -> T1 {
-                                   return f0(_args.d_a0);
-                                 }},
-                      m->v());
+    if (std::holds_alternative<typename mtree::Leaf>(m->v())) {
+      const auto &[d_a0] = std::get<typename mtree::Leaf>(m->v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0] = std::get<typename mtree::Node>(m->v());
+      return f0(d_a0);
+    }
   }
 
   __attribute__((pure)) static bool
   is_nothing(const std::shared_ptr<maybe> &m) {
-    return std::visit(
-        Overloaded{[](const typename maybe::Nothing &) -> bool { return true; },
-                   [](const typename maybe::Just &) -> bool { return false; }},
-        m->v());
+    if (std::holds_alternative<typename maybe::Nothing>(m->v())) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   __attribute__((pure)) static unsigned int
   mlist_length(const std::shared_ptr<mlist> &l) {
-    return std::visit(
-        Overloaded{
-            [](const typename mlist::MNil &) -> unsigned int { return 0u; },
-            [](const typename mlist::MCons &_args) -> unsigned int {
-              return (mlist_length(_args.d_a1) + 1);
-            }},
-        l->v());
+    if (std::holds_alternative<typename mlist::MNil>(l->v())) {
+      return 0u;
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename mlist::MCons>(l->v());
+      return (mlist_length(d_a1) + 1);
+    }
   }
 
   __attribute__((pure)) static unsigned int
   tree_size(const std::shared_ptr<mtree> &t0) {
-    return std::visit(
-        Overloaded{[](const typename mtree::Leaf &_args) -> unsigned int {
-                     if (is_nothing(_args.d_a0)) {
-                       return 0u;
-                     } else {
-                       return 1u;
-                     }
-                   },
-                   [](const typename mtree::Node &_args) -> unsigned int {
-                     return mlist_length(_args.d_a0);
-                   }},
-        t0->v());
+    if (std::holds_alternative<typename mtree::Leaf>(t0->v())) {
+      const auto &[d_a0] = std::get<typename mtree::Leaf>(t0->v());
+      if (is_nothing(d_a0)) {
+        return 0u;
+      } else {
+        return 1u;
+      }
+    } else {
+      const auto &[d_a0] = std::get<typename mtree::Node>(t0->v());
+      return mlist_length(d_a0);
+    }
   }
 
   static const std::shared_ptr<maybe> &empty_maybe() {

@@ -7,11 +7,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct PageAddress {
   __attribute__((pure)) static unsigned int addr12_of_nat(const unsigned int n);
   __attribute__((pure)) static unsigned int page_of(const unsigned int p);

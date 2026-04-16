@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct LoopifyTail {
   template <typename t_A> struct list {
     // TYPES
@@ -66,8 +61,8 @@ struct LoopifyTail {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename list<T1>::Cons &>().d_a1) _s0;
-      decltype(std::declval<const typename list<T1>::Cons &>().d_a0) _s1;
+      std::shared_ptr<list<T1>> _s0;
+      T1 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -77,23 +72,20 @@ struct LoopifyTail {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<list<T1>> l = _f.l;
-                std::visit(
-                    Overloaded{
-                        [&](const typename list<T1>::Nil &) -> void {
-                          _result = f;
-                        },
-                        [&](const typename list<T1>::Cons &_args) -> void {
-                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0});
-                          _stack.emplace_back(_Enter{_args.d_a1});
-                        }},
-                    l->v());
-              },
-              [&](_Call1 _f) { _result = f0(_f._s1, _f._s0, _result); }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<list<T1>> l = _f.l;
+        if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+          _result = f;
+        } else {
+          const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+          _stack.emplace_back(_Call1{d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
+        }
+      } else {
+        const auto &_f = std::get<_Call1>(_frame);
+        _result = f0(_f._s1, _f._s0, _result);
+      }
     }
     return _result;
   }
@@ -106,8 +98,8 @@ struct LoopifyTail {
     };
 
     struct _Call1 {
-      decltype(std::declval<const typename list<T1>::Cons &>().d_a1) _s0;
-      decltype(std::declval<const typename list<T1>::Cons &>().d_a0) _s1;
+      std::shared_ptr<list<T1>> _s0;
+      T1 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -117,23 +109,20 @@ struct LoopifyTail {
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<list<T1>> l = _f.l;
-                std::visit(
-                    Overloaded{
-                        [&](const typename list<T1>::Nil &) -> void {
-                          _result = f;
-                        },
-                        [&](const typename list<T1>::Cons &_args) -> void {
-                          _stack.emplace_back(_Call1{_args.d_a1, _args.d_a0});
-                          _stack.emplace_back(_Enter{_args.d_a1});
-                        }},
-                    l->v());
-              },
-              [&](_Call1 _f) { _result = f0(_f._s1, _f._s0, _result); }},
-          _frame);
+      if (std::holds_alternative<_Enter>(_frame)) {
+        const auto &_f = std::get<_Enter>(_frame);
+        const std::shared_ptr<list<T1>> l = _f.l;
+        if (std::holds_alternative<typename list<T1>::Nil>(l->v())) {
+          _result = f;
+        } else {
+          const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
+          _stack.emplace_back(_Call1{d_a1, d_a0});
+          _stack.emplace_back(_Enter{d_a1});
+        }
+      } else {
+        const auto &_f = std::get<_Call1>(_frame);
+        _result = f0(_f._s1, _f._s0, _result);
+      }
     }
     return _result;
   } /// Tail-recursive: last element of a list
@@ -145,17 +134,17 @@ struct LoopifyTail {
     T1 _loop_x = x;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename list<T1>::Nil &) {
-                              _result = _loop_x;
-                              _continue = false;
-                            },
-                            [&](const typename list<T1>::Cons &_args) {
-                              std::shared_ptr<list<T1>> _next_l = _args.d_a1;
-                              T1 _next_x = _args.d_a0;
-                              _loop_l = std::move(_next_l);
-                              _loop_x = std::move(_next_x);
-                            }},
-                 _loop_l->v());
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
+        _result = _loop_x;
+        _continue = false;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        std::shared_ptr<list<T1>> _next_l = d_a1;
+        T1 _next_x = d_a0;
+        _loop_l = std::move(_next_l);
+        _loop_x = std::move(_next_x);
+      }
     }
     return _result;
   } /// Tail-recursive: length with accumulator
@@ -168,17 +157,17 @@ struct LoopifyTail {
     unsigned int _loop_acc = acc;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename list<T1>::Nil &) {
-                              _result = _loop_acc;
-                              _continue = false;
-                            },
-                            [&](const typename list<T1>::Cons &_args) {
-                              std::shared_ptr<list<T1>> _next_l = _args.d_a1;
-                              unsigned int _next_acc = (_loop_acc + 1);
-                              _loop_l = std::move(_next_l);
-                              _loop_acc = std::move(_next_acc);
-                            }},
-                 _loop_l->v());
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
+        _result = _loop_acc;
+        _continue = false;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        std::shared_ptr<list<T1>> _next_l = d_a1;
+        unsigned int _next_acc = (_loop_acc + 1);
+        _loop_l = std::move(_next_l);
+        _loop_acc = std::move(_next_acc);
+      }
     }
     return _result;
   }
@@ -206,17 +195,17 @@ struct LoopifyTail {
     T2 _loop_acc = acc;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename list<T1>::Nil &) {
-                              _result = _loop_acc;
-                              _continue = false;
-                            },
-                            [&](const typename list<T1>::Cons &_args) {
-                              std::shared_ptr<list<T1>> _next_l = _args.d_a1;
-                              T2 _next_acc = f(_loop_acc, _args.d_a0);
-                              _loop_l = std::move(_next_l);
-                              _loop_acc = std::move(_next_acc);
-                            }},
-                 _loop_l->v());
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
+        _result = _loop_acc;
+        _continue = false;
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        std::shared_ptr<list<T1>> _next_l = d_a1;
+        T2 _next_acc = f(_loop_acc, d_a0);
+        _loop_l = std::move(_next_l);
+        _loop_acc = std::move(_next_acc);
+      }
     }
     return _result;
   }

@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct IifeNameClash {
   struct wrapper {
     // TYPES
@@ -53,23 +48,23 @@ struct IifeNameClash {
   template <typename T1, MapsTo<T1, unsigned int> F0>
   static T1 wrapper_rect(F0 &&f, const T1 f0,
                          const std::shared_ptr<wrapper> &w) {
-    return std::visit(
-        Overloaded{[&](const typename wrapper::Wrap &_args) -> T1 {
-                     return f(_args.d_n);
-                   },
-                   [&](const typename wrapper::Empty &) -> T1 { return f0; }},
-        w->v());
+    if (std::holds_alternative<typename wrapper::Wrap>(w->v())) {
+      const auto &[d_n] = std::get<typename wrapper::Wrap>(w->v());
+      return f(d_n);
+    } else {
+      return f0;
+    }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0>
   static T1 wrapper_rec(F0 &&f, const T1 f0,
                         const std::shared_ptr<wrapper> &w) {
-    return std::visit(
-        Overloaded{[&](const typename wrapper::Wrap &_args) -> T1 {
-                     return f(_args.d_n);
-                   },
-                   [&](const typename wrapper::Empty &) -> T1 { return f0; }},
-        w->v());
+    if (std::holds_alternative<typename wrapper::Wrap>(w->v())) {
+      const auto &[d_n] = std::get<typename wrapper::Wrap>(w->v());
+      return f(d_n);
+    } else {
+      return f0;
+    }
   }
 
   __attribute__((pure)) static unsigned int

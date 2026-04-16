@@ -12,11 +12,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 enum class Unit { e_TT };
 
 struct FreeMonad {
@@ -87,39 +82,41 @@ struct FreeMonad {
   template <typename T1, typename F0, typename F1, MapsTo<T1, std::string> F3>
   static T1 IO_rect(F0 &&f, F1 &&f0, const T1 f1, F3 &&f2,
                     const std::shared_ptr<IO> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename IO::Pure &_args) -> T1 { return f(_args.d_a); },
-            [&](const typename IO::Bind &_args) -> T1 {
-              return f0(_args.d_a, IO_rect<T1>(f, f0, f1, f2, _args.d_a),
-                        _args.d_b, [=](const std::any a) mutable {
-                          return IO_rect<T1>(f, f0, f1, f2, _args.d_b(a));
-                        });
-            },
-            [&](const typename IO::Get_line &) -> T1 { return f1; },
-            [&](const typename IO::Print &_args) -> T1 {
-              return f2(_args.d_a0);
-            }},
-        i->v());
+    if (std::holds_alternative<typename IO::Pure>(i->v())) {
+      const auto &[d_a] = std::get<typename IO::Pure>(i->v());
+      return f(d_a);
+    } else if (std::holds_alternative<typename IO::Bind>(i->v())) {
+      const auto &[d_a, d_b] = std::get<typename IO::Bind>(i->v());
+      return f0(d_a, IO_rect<T1>(f, f0, f1, f2, d_a), d_b,
+                [=](const std::any a) mutable {
+                  return IO_rect<T1>(f, f0, f1, f2, d_b(a));
+                });
+    } else if (std::holds_alternative<typename IO::Get_line>(i->v())) {
+      return f1;
+    } else {
+      const auto &[d_a0] = std::get<typename IO::Print>(i->v());
+      return f2(d_a0);
+    }
   }
 
   template <typename T1, typename F0, typename F1, MapsTo<T1, std::string> F3>
   static T1 IO_rec(F0 &&f, F1 &&f0, const T1 f1, F3 &&f2,
                    const std::shared_ptr<IO> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename IO::Pure &_args) -> T1 { return f(_args.d_a); },
-            [&](const typename IO::Bind &_args) -> T1 {
-              return f0(_args.d_a, IO_rec<T1>(f, f0, f1, f2, _args.d_a),
-                        _args.d_b, [=](const std::any a) mutable {
-                          return IO_rec<T1>(f, f0, f1, f2, _args.d_b(a));
-                        });
-            },
-            [&](const typename IO::Get_line &) -> T1 { return f1; },
-            [&](const typename IO::Print &_args) -> T1 {
-              return f2(_args.d_a0);
-            }},
-        i->v());
+    if (std::holds_alternative<typename IO::Pure>(i->v())) {
+      const auto &[d_a] = std::get<typename IO::Pure>(i->v());
+      return f(d_a);
+    } else if (std::holds_alternative<typename IO::Bind>(i->v())) {
+      const auto &[d_a, d_b] = std::get<typename IO::Bind>(i->v());
+      return f0(d_a, IO_rec<T1>(f, f0, f1, f2, d_a), d_b,
+                [=](const std::any a) mutable {
+                  return IO_rec<T1>(f, f0, f1, f2, d_b(a));
+                });
+    } else if (std::holds_alternative<typename IO::Get_line>(i->v())) {
+      return f1;
+    } else {
+      const auto &[d_a0] = std::get<typename IO::Print>(i->v());
+      return f2(d_a0);
+    }
   }
 
   static inline const std::shared_ptr<IO> test = IO::pure(Unit::e_TT);

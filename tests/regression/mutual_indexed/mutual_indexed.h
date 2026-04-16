@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct MutualIndexed {
   struct EvenTree;
   struct OddTree;
@@ -102,24 +97,26 @@ struct MutualIndexed {
             MapsTo<T1, unsigned int, unsigned int, std::shared_ptr<OddTree>> F1>
   static T1 EvenTree_rect(const T1 f, F1 &&f0, const unsigned int,
                           const std::shared_ptr<EvenTree> &e) {
-    return std::visit(
-        Overloaded{[&](const typename EvenTree::ELeaf &) -> T1 { return f; },
-                   [&](const typename EvenTree::ENode &_args) -> T1 {
-                     return f0(_args.d_n, _args.d_a1, _args.d_a2);
-                   }},
-        e->v());
+    if (std::holds_alternative<typename EvenTree::ELeaf>(e->v())) {
+      return f;
+    } else {
+      const auto &[d_n, d_a1, d_a2] =
+          std::get<typename EvenTree::ENode>(e->v());
+      return f0(d_n, d_a1, d_a2);
+    }
   }
 
   template <typename T1,
             MapsTo<T1, unsigned int, unsigned int, std::shared_ptr<OddTree>> F1>
   static T1 EvenTree_rec(const T1 f, F1 &&f0, const unsigned int,
                          const std::shared_ptr<EvenTree> &e) {
-    return std::visit(
-        Overloaded{[&](const typename EvenTree::ELeaf &) -> T1 { return f; },
-                   [&](const typename EvenTree::ENode &_args) -> T1 {
-                     return f0(_args.d_n, _args.d_a1, _args.d_a2);
-                   }},
-        e->v());
+    if (std::holds_alternative<typename EvenTree::ELeaf>(e->v())) {
+      return f;
+    } else {
+      const auto &[d_n, d_a1, d_a2] =
+          std::get<typename EvenTree::ENode>(e->v());
+      return f0(d_n, d_a1, d_a2);
+    }
   }
 
   template <
@@ -127,11 +124,8 @@ struct MutualIndexed {
       MapsTo<T1, unsigned int, unsigned int, std::shared_ptr<EvenTree>> F0>
   static T1 OddTree_rect(F0 &&f, const unsigned int,
                          const std::shared_ptr<OddTree> &o) {
-    return std::visit(
-        Overloaded{[&](const typename OddTree::ONode &_args) -> T1 {
-          return f(_args.d_n, _args.d_a1, _args.d_a2);
-        }},
-        o->v());
+    const auto &[d_n, d_a1, d_a2] = std::get<typename OddTree::ONode>(o->v());
+    return f(d_n, d_a1, d_a2);
   }
 
   template <
@@ -139,11 +133,8 @@ struct MutualIndexed {
       MapsTo<T1, unsigned int, unsigned int, std::shared_ptr<EvenTree>> F0>
   static T1 OddTree_rec(F0 &&f, const unsigned int,
                         const std::shared_ptr<OddTree> &o) {
-    return std::visit(
-        Overloaded{[&](const typename OddTree::ONode &_args) -> T1 {
-          return f(_args.d_n, _args.d_a1, _args.d_a2);
-        }},
-        o->v());
+    const auto &[d_n, d_a1, d_a2] = std::get<typename OddTree::ONode>(o->v());
+    return f(d_n, d_a1, d_a2);
   }
 
   __attribute__((pure)) static unsigned int

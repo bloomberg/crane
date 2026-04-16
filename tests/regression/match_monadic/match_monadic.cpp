@@ -79,18 +79,16 @@ unsigned int MatchMonadic::handle_option(const std::optional<unsigned int> o) {
 /// 5. Recursive function matching on tree
 unsigned int
 MatchMonadic::tree_sum(const std::shared_ptr<Tree<unsigned int>> &t) {
-  return std::visit(
-      Overloaded{
-          [](const typename Tree<unsigned int>::Leaf &) -> unsigned int {
-            return 0u;
-          },
-          [](const typename Tree<unsigned int>::Node &_args) -> unsigned int {
-            std::cout << "visiting"s << '\n';
-            unsigned int sl = tree_sum(_args.d_a0);
-            unsigned int sr = tree_sum(_args.d_a2);
-            return ((sl + _args.d_a1) + sr);
-          }},
-      t->v());
+  if (std::holds_alternative<typename Tree<unsigned int>::Leaf>(t->v())) {
+    return 0u;
+  } else {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename Tree<unsigned int>::Node>(t->v());
+    std::cout << "visiting"s << '\n';
+    unsigned int sl = tree_sum(d_a0);
+    unsigned int sr = tree_sum(d_a2);
+    return ((sl + d_a1) + sr);
+  }
 }
 
 /// 6. Match result used in bind

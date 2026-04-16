@@ -11,11 +11,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -258,25 +253,25 @@ struct ConstructorBugs {
   template <typename T1, MapsTo<T1, std::shared_ptr<Inner>> F0,
             MapsTo<T1, unsigned int> F1>
   static T1 MySum_rect(F0 &&f, F1 &&f0, const std::shared_ptr<MySum> &m) {
-    return std::visit(Overloaded{[&](const typename MySum::Left &_args) -> T1 {
-                                   return f(_args.d_a0);
-                                 },
-                                 [&](const typename MySum::Right &_args) -> T1 {
-                                   return f0(_args.d_a0);
-                                 }},
-                      m->v());
+    if (std::holds_alternative<typename MySum::Left>(m->v())) {
+      const auto &[d_a0] = std::get<typename MySum::Left>(m->v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0] = std::get<typename MySum::Right>(m->v());
+      return f0(d_a0);
+    }
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<Inner>> F0,
             MapsTo<T1, unsigned int> F1>
   static T1 MySum_rec(F0 &&f, F1 &&f0, const std::shared_ptr<MySum> &m) {
-    return std::visit(Overloaded{[&](const typename MySum::Left &_args) -> T1 {
-                                   return f(_args.d_a0);
-                                 },
-                                 [&](const typename MySum::Right &_args) -> T1 {
-                                   return f0(_args.d_a0);
-                                 }},
-                      m->v());
+    if (std::holds_alternative<typename MySum::Left>(m->v())) {
+      const auto &[d_a0] = std::get<typename MySum::Left>(m->v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0] = std::get<typename MySum::Right>(m->v());
+      return f0(d_a0);
+    }
   }
 
   __attribute__((pure)) static std::pair<std::shared_ptr<Inner>, unsigned int>

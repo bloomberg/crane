@@ -8,35 +8,28 @@
 
 __attribute__((pure)) unsigned int OptionClosureEscape::sum_values(
     const std::shared_ptr<OptionClosureEscape::tree> &t, const unsigned int x) {
-  return std::visit(
-      Overloaded{
-          [&](const typename OptionClosureEscape::tree::Leaf &)
-              -> unsigned int { return x; },
-          [&](const typename OptionClosureEscape::tree::Node &_args)
-              -> unsigned int {
-            return std::visit(
-                Overloaded{
-                    [&](const typename OptionClosureEscape::tree::Leaf &)
-                        -> unsigned int { return (_args.d_a1 + x); },
-                    [&](const typename OptionClosureEscape::tree::Node &_args0)
-                        -> unsigned int {
-                      return std::visit(
-                          Overloaded{
-                              [&](const typename OptionClosureEscape::tree::Leaf
-                                      &) -> unsigned int {
-                                return (_args0.d_a1 + x);
-                              },
-                              [&](const typename OptionClosureEscape::tree::Node
-                                      &_args1) -> unsigned int {
-                                return (
-                                    ((_args0.d_a1 + _args1.d_a1) + _args.d_a1) +
-                                    x);
-                              }},
-                          _args.d_a2->v());
-                    }},
-                _args.d_a0->v());
-          }},
-      t->v());
+  if (std::holds_alternative<typename OptionClosureEscape::tree::Leaf>(
+          t->v())) {
+    return x;
+  } else {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename OptionClosureEscape::tree::Node>(t->v());
+    if (std::holds_alternative<typename OptionClosureEscape::tree::Leaf>(
+            d_a0->v())) {
+      return (d_a1 + x);
+    } else {
+      const auto &[d_a00, d_a10, d_a20] =
+          std::get<typename OptionClosureEscape::tree::Node>(d_a0->v());
+      if (std::holds_alternative<typename OptionClosureEscape::tree::Leaf>(
+              d_a2->v())) {
+        return (d_a10 + x);
+      } else {
+        const auto &[d_a01, d_a11, d_a21] =
+            std::get<typename OptionClosureEscape::tree::Node>(d_a2->v());
+        return (((d_a10 + d_a11) + d_a1) + x);
+      }
+    }
+  }
 }
 
 /// BUG: pair_escape stores a & lambda in a pair.
@@ -57,21 +50,16 @@ __attribute__((pure))
 std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
 OptionClosureEscape::match_pair(
     const std::shared_ptr<OptionClosureEscape::tree> &t) {
-  return std::visit(
-      Overloaded{[](const typename OptionClosureEscape::tree::Leaf &)
-                     -> std::pair<std::function<unsigned int(unsigned int)>,
-                                  unsigned int> {
-                   return std::make_pair([](const unsigned int x) { return x; },
-                                         0u);
-                 },
-                 [](const typename OptionClosureEscape::tree::Node &_args)
-                     -> std::pair<std::function<unsigned int(unsigned int)>,
-                                  unsigned int> {
-                   return std::make_pair(
-                       [=](unsigned int _x0) mutable -> unsigned int {
-                         return sum_values(_args.d_a0, _x0);
-                       },
-                       _args.d_a1);
-                 }},
-      t->v());
+  if (std::holds_alternative<typename OptionClosureEscape::tree::Leaf>(
+          t->v())) {
+    return std::make_pair([](const unsigned int x) { return x; }, 0u);
+  } else {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename OptionClosureEscape::tree::Node>(t->v());
+    return std::make_pair(
+        [=](unsigned int _x0) mutable -> unsigned int {
+          return sum_values(d_a0, _x0);
+        },
+        d_a1);
+  }
 }

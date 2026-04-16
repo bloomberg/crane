@@ -11,11 +11,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -106,21 +101,15 @@ struct CoindGuard {
   };
 
   template <typename T1> static T1 hd(const std::shared_ptr<Stream<T1>> &s) {
-    return std::visit(
-        Overloaded{[](const typename Stream<T1>::Cons &_args) -> T1 {
-          return _args.d_a0;
-        }},
-        s->v());
+    const auto &[d_a0, d_a1] = std::get<typename Stream<T1>::Cons>(s->v());
+    return d_a0;
   }
 
   template <typename T1>
   static std::shared_ptr<Stream<T1>> tl(const std::shared_ptr<Stream<T1>> &s) {
-    return Stream<T1>::lazy_([=]() mutable -> std::shared_ptr<Stream<T1>> {
-      return std::visit(
-          Overloaded{[](const typename Stream<T1>::Cons &_args)
-                         -> std::shared_ptr<Stream<T1>> { return _args.d_a1; }},
-          s->v());
-    });
+    const auto &[d_a0, d_a1] = std::get<typename Stream<T1>::Cons>(s->v());
+    return Stream<T1>::lazy_(
+        [=]() mutable -> std::shared_ptr<Stream<T1>> { return d_a1; });
   }
 
   template <typename T1, MapsTo<T1, T1> F0>

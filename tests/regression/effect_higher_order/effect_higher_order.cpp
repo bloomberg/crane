@@ -43,18 +43,15 @@ std::string EffectHigherOrder::lookup_or_ask(const std::string name) {
 /// 7. Chain of lookups
 std::shared_ptr<List<std::string>>
 EffectHigherOrder::lookup_all(const std::shared_ptr<List<std::string>> &names) {
-  return std::visit(Overloaded{[](const typename List<std::string>::Nil &)
-                                   -> std::shared_ptr<List<std::string>> {
-                                 return List<std::string>::nil();
-                               },
-                               [](const typename List<std::string>::Cons &_args)
-                                   -> std::shared_ptr<List<std::string>> {
-                                 std::string v = lookup_or_ask(_args.d_a0);
-                                 std::shared_ptr<List<std::string>> vs =
-                                     lookup_all(_args.d_a1);
-                                 return List<std::string>::cons(v, vs);
-                               }},
-                    names->v());
+  if (std::holds_alternative<typename List<std::string>::Nil>(names->v())) {
+    return List<std::string>::nil();
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<std::string>::Cons>(names->v());
+    std::string v = lookup_or_ask(d_a0);
+    std::shared_ptr<List<std::string>> vs = lookup_all(d_a1);
+    return List<std::string>::cons(v, vs);
+  }
 }
 
 /// 8. Effect in let-bound function

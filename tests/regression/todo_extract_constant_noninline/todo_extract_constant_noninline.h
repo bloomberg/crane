@@ -7,11 +7,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct TodoExtractConstantNoninline {
   __attribute__((pure)) static unsigned int foreign_inc(const unsigned int _x0);
   static inline const unsigned int test_value = foreign_inc(4u);

@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct PairClosureEscape {
   struct tree {
     // TYPES
@@ -66,28 +61,26 @@ struct PairClosureEscape {
                                 std::shared_ptr<tree>, T1>
                              F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, _args.d_a2,
-                               tree_rect<T1>(f, f0, _args.d_a2));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return f;
+    } else {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rect<T1>(f, f0, d_a0), d_a1, d_a2,
+                tree_rect<T1>(f, f0, d_a2));
+    }
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
                                 std::shared_ptr<tree>, T1>
                              F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(
-        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
-                   [&](const typename tree::Node &_args) -> T1 {
-                     return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
-                               _args.d_a1, _args.d_a2,
-                               tree_rec<T1>(f, f0, _args.d_a2));
-                   }},
-        t->v());
+    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+      return f;
+    } else {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      return f0(d_a0, tree_rec<T1>(f, f0, d_a0), d_a1, d_a2,
+                tree_rec<T1>(f, f0, d_a2));
+    }
   }
 
   __attribute__((pure)) static unsigned int
