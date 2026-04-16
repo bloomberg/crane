@@ -458,24 +458,15 @@ Definition back (sl : SkipList K V) : itree stmE (option (Pair K V)) :=
 (*                              popFront                                     *)
 (* ------------------------------------------------------------------------ *)
 
-(* Helper to unlink first node from head at all levels *)
-Fixpoint unlinkFirstFromHead (head node : NodeRef K V) (nodeLevel : nat) (lvl : nat) : itree stmE unit :=
+(* Helper to unlink first node from head at levels 0..lvl.
+   Since the front node is always head's direct successor at every level it
+   occupies, we can skip the conditional check and just splice at each level. *)
+Fixpoint unlinkFirstFromHead (head node : NodeRef K V) (lvl : nat) : itree stmE unit :=
+  nodeNext <- readNext node lvl ;;
+  writeNext head lvl nodeNext ;;
   match lvl with
-  | O =>
-      nodeNext <- readNext node 0 ;;
-      writeNext head 0 nodeNext
-  | S lvl' =>
-      headNext <- readNext head lvl ;;
-      (match headNext with
-      | Some _ =>
-          if Nat.leb lvl nodeLevel then
-            nodeNext <- readNext node lvl ;;
-            writeNext head lvl nodeNext
-          else
-            Ret tt
-      | None => Ret tt
-      end) ;;
-      unlinkFirstFromHead head node nodeLevel lvl'
+  | O => Ret tt
+  | S lvl' => unlinkFirstFromHead head node lvl'
   end.
 
 (* Remove and return the first item from the list *)
@@ -484,7 +475,7 @@ Definition popFront (sl : SkipList K V) : itree stmE (option (K * V)) :=
   match firstOpt with
   | None => Ret None
   | Some node =>
-      unlinkFirstFromHead (slHead sl) node (getLevel node) (maxLevels - 1) ;;
+      unlinkFirstFromHead (slHead sl) node (getLevel node) ;;
       len <- readTVar (slLength sl) ;;
       writeTVar (slLength sl) (len - 1) ;;
       v <- readValue node ;;
@@ -495,22 +486,18 @@ Definition popFront (sl : SkipList K V) : itree stmE (option (K * V)) :=
 (*                              removeAll                                    *)
 (* ------------------------------------------------------------------------ *)
 
-(* Helper to unlink a node at all levels from head *)
+(* Helper to unlink a node at levels 0..lvl from head.
+   Only iterates through the node's actual levels. *)
 Fixpoint unlinkNodeAtAllLevels (head node : NodeRef K V) (lvl : nat) : itree stmE unit :=
-  headNext <- readNext head lvl ;;
-  (match headNext with
-  | Some _ =>
-      nodeNext <- readNext node lvl ;;
-      writeNext head lvl nodeNext
-  | None => Ret tt
-  end) ;;
+  nodeNext <- readNext node lvl ;;
+  writeNext head lvl nodeNext ;;
   match lvl with
   | O => Ret tt
   | S lvl' => unlinkNodeAtAllLevels head node lvl'
   end.
 
 (* Remove all items from the list - uses accumulator for tail-call optimization *)
-Fixpoint removeAll_aux (fuel : nat) (head : NodeRef K V) (maxLvl : nat) (acc : nat) : itree stmE nat :=
+Fixpoint removeAll_aux (fuel : nat) (head : NodeRef K V) (acc : nat) : itree stmE nat :=
   match fuel with
   | O => Ret acc
   | S fuel' =>
@@ -518,13 +505,13 @@ Fixpoint removeAll_aux (fuel : nat) (head : NodeRef K V) (maxLvl : nat) (acc : n
       match firstOpt with
       | None => Ret acc
       | Some node =>
-          unlinkNodeAtAllLevels head node maxLvl ;;
-          removeAll_aux fuel' head maxLvl (S acc)  (* Tail call with accumulated count *)
+          unlinkNodeAtAllLevels head node (getLevel node) ;;
+          removeAll_aux fuel' head (S acc)
       end
   end.
 
 Definition removeAll (sl : SkipList K V) : itree stmE nat :=
-  count <- removeAll_aux findPredFuel (slHead sl) (maxLevels - 1) 0 ;;
+  count <- removeAll_aux findPredFuel (slHead sl) 0 ;;
   writeTVar (slLength sl) 0 ;;
   writeTVar (slLevel sl) 0 ;;
   Ret count.
@@ -886,7 +873,7 @@ Definition bde_popFront (sl : SkipList K V) : itree stmE (nat * option (Pair K V
   match firstOpt with
   | None => Ret (e_NOT_FOUND, None)
   | Some node =>
-      unlinkFirstFromHead (slHead sl) node (getLevel node) (maxLevels - 1) ;;
+      unlinkFirstFromHead (slHead sl) node (getLevel node) ;;
       len <- readTVar (slLength sl) ;;
       writeTVar (slLength sl) (len - 1) ;;
       Ret (e_SUCCESS, Some node)
