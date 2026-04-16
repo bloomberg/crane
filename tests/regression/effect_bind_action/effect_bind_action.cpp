@@ -90,9 +90,9 @@ std::string EffectBindAction::echo_if(const bool flag) {
   [&]() -> void {
     if (flag) {
       std::cout << line << '\n';
-      return std::monostate{};
+      return;
     } else {
-      return std::monostate{};
+      return;
     }
   }();
   return line;
@@ -132,9 +132,9 @@ unsigned int EffectBindAction::discard_conditional(const bool flag) {
   [&]() -> void {
     if (flag) {
       std::cout << "flagged"s << '\n';
-      return std::monostate{};
+      return;
     } else {
-      return std::monostate{};
+      return;
     }
   }();
   return 42u;

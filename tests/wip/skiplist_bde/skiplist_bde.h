@@ -85,9 +85,9 @@ template <typename K, typename V> struct SkipList {
         [&]() -> void {
           if (curLvl < newLevel) {
             stm::writeTVar(this->SkipList::slLevel, newLevel);
-            return std::monostate{};
+            return;
           } else {
-            return std::monostate{};
+            return;
           }
         }();
         unsigned int len = stm::readTVar(this->SkipList::slLength);
@@ -102,9 +102,9 @@ template <typename K, typename V> struct SkipList {
       [&]() -> void {
         if (curLvl < newLevel) {
           stm::writeTVar(this->SkipList::slLevel, newLevel);
-          return std::monostate{};
+          return;
         } else {
-          return std::monostate{};
+          return;
         }
       }();
       unsigned int len = stm::readTVar(this->SkipList::slLength);
@@ -222,9 +222,9 @@ template <typename K, typename V> struct SkipList {
         [&]() -> void {
           if (curLvl < newLevel) {
             stm::writeTVar(this->SkipList::slLevel, newLevel);
-            return std::monostate{};
+            return;
           } else {
-            return std::monostate{};
+            return;
           }
         }();
         unsigned int len = stm::readTVar(this->SkipList::slLength);
@@ -239,9 +239,9 @@ template <typename K, typename V> struct SkipList {
       [&]() -> void {
         if (curLvl < newLevel) {
           stm::writeTVar(this->SkipList::slLevel, newLevel);
-          return std::monostate{};
+          return;
         } else {
-          return std::monostate{};
+          return;
         }
       }();
       unsigned int len = stm::readTVar(this->SkipList::slLength);
@@ -271,9 +271,9 @@ template <typename K, typename V> struct SkipList {
         [&]() -> void {
           if (curLvl < newLevel) {
             stm::writeTVar(this->SkipList::slLevel, newLevel);
-            return std::monostate{};
+            return;
           } else {
-            return std::monostate{};
+            return;
           }
         }();
         unsigned int len = stm::readTVar(this->SkipList::slLength);
@@ -288,9 +288,9 @@ template <typename K, typename V> struct SkipList {
       [&]() -> void {
         if (curLvl < newLevel) {
           stm::writeTVar(this->SkipList::slLevel, newLevel);
-          return std::monostate{};
+          return;
         } else {
-          return std::monostate{};
+          return;
         }
       }();
       unsigned int len = stm::readTVar(this->SkipList::slLength);

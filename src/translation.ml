@@ -2784,7 +2784,6 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     tctx.in_constructor_expr <- saved_in_ctor_cons;
     cons_result
   | MLcase (typ, t, pv) when is_custom_match pv ->
-    let cexp = gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv in
     let tvars = get_current_type_vars () in
     let iife_ret =
       let branch_rty =
@@ -2797,6 +2796,11 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
          || ml_type_is_unit (ml_result_type branch_rty)
       then Tvoid else r
     in
+    let saved_ret = tctx.current_cpp_return_type in
+    if iife_ret = Tvoid then
+      tctx.current_cpp_return_type <- Some Tvoid;
+    let cexp = gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv in
+    tctx.current_cpp_return_type <- saved_ret;
     CPPfun_call (CPPlambda ([], Some iife_ret, [cexp], false), [])
   | MLcase (typ, t, pv)
     when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
@@ -4099,8 +4103,6 @@ and gen_cpp_case (typ : ml_type) t env pv =
         Some (gen_stmts env (fun x -> Sreturn (Some x)) body)
       | None -> None
     in
-    let branches = gen_enum_branches (Array.to_list pv) in
-    let default = gen_default_stmts () in
     let tvars = get_current_type_vars () in
     let iife_ret_opt =
       let branch_rty =
@@ -4113,6 +4115,12 @@ and gen_cpp_case (typ : ml_type) t env pv =
          || ml_type_is_unit (ml_result_type branch_rty)
       then Some Tvoid else None
     in
+    let saved_ret = tctx.current_cpp_return_type in
+    if iife_ret_opt = Some Tvoid then
+      tctx.current_cpp_return_type <- Some Tvoid;
+    let branches = gen_enum_branches (Array.to_list pv) in
+    let default = gen_default_stmts () in
+    tctx.current_cpp_return_type <- saved_ret;
     CPPfun_call
       (CPPlambda ([], iife_ret_opt, [Sswitch (scrutinee, ind_ref, branches, default)], false), [])
   else
