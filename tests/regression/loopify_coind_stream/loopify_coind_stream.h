@@ -117,28 +117,18 @@ struct LoopifyCoindStream {
   static std::shared_ptr<List<T1>> take(const unsigned int n,
                                         const std::shared_ptr<stream<T1>> &s) {
     std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> _last{};
+    std::shared_ptr<List<T1>> *_write = &_head;
     std::shared_ptr<stream<T1>> _loop_s = s;
     unsigned int _loop_n = n;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (_loop_n <= 0) {
-        if (_last) {
-          std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
-              List<T1>::nil();
-        } else {
-          _head = List<T1>::nil();
-        }
-        _continue = false;
+        *_write = List<T1>::nil();
+        break;
       } else {
         unsigned int n_ = _loop_n - 1;
         auto _cell = List<T1>::cons(hd<T1>(_loop_s), nullptr);
-        if (_last) {
-          std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 = _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write = &std::get<typename List<T1>::Cons>(_cell->v_mut()).d_a1;
         std::shared_ptr<stream<T1>> _next_s = tl<T1>(_loop_s);
         unsigned int _next_n = n_;
         _loop_s = std::move(_next_s);
@@ -183,6 +173,7 @@ struct LoopifyCoindStream {
     using _Frame = std::variant<_Enter>;
     std::shared_ptr<stream<T1>> _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{seed});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());

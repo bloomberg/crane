@@ -54,27 +54,18 @@ public:
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     std::shared_ptr<List<t_A>> _head{};
-    std::shared_ptr<List<t_A>> _last{};
+    std::shared_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<t_A>::Nil>(_loop_self->v())) {
-        if (_last) {
-          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
-        } else {
-          _head = m;
-        }
-        _continue = false;
+        *_write = m;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<t_A>::Cons>(_loop_self->v());
         auto _cell = List<t_A>::cons(d_a0, nullptr);
-        if (_last) {
-          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write = &std::get<typename List<t_A>::Cons>(_cell->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
@@ -286,6 +277,7 @@ struct LoopifyStructures {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
       std::shared_ptr<quadtree> _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -357,6 +349,7 @@ struct LoopifyStructures {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -469,6 +462,7 @@ struct LoopifyStructures {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -560,6 +554,7 @@ struct LoopifyStructures {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -656,6 +651,7 @@ struct LoopifyStructures {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -704,18 +700,17 @@ struct LoopifyStructures {
   find_opt(F0 &&p, const std::shared_ptr<List<unsigned int>> &l) {
     std::optional<unsigned int> _result;
     std::shared_ptr<List<unsigned int>> _loop_l = l;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
         _result = std::optional<unsigned int>();
-        _continue = false;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (p(d_a0)) {
           _result = std::make_optional<unsigned int>(d_a0);
-          _continue = false;
+          break;
         } else {
           _loop_l = d_a1;
         }
@@ -729,19 +724,13 @@ struct LoopifyStructures {
   static std::shared_ptr<List<unsigned int>>
   map_opt(F0 &&f, const std::shared_ptr<List<unsigned int>> &l) {
     std::shared_ptr<List<unsigned int>> _head{};
-    std::shared_ptr<List<unsigned int>> _last{};
+    std::shared_ptr<List<unsigned int>> *_write = &_head;
     std::shared_ptr<List<unsigned int>> _loop_l = l;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::nil();
-        } else {
-          _head = List<unsigned int>::nil();
-        }
-        _continue = false;
+        *_write = List<unsigned int>::nil();
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
@@ -749,13 +738,9 @@ struct LoopifyStructures {
         if (_cs.has_value()) {
           const unsigned int &y = *_cs;
           auto _cell = List<unsigned int>::cons(y, nullptr);
-          if (_last) {
-            std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                _cell;
-          } else {
-            _head = _cell;
-          }
-          _last = _cell;
+          *_write = _cell;
+          _write =
+              &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
           _loop_l = d_a1;
           continue;
         } else {
@@ -773,31 +758,21 @@ struct LoopifyStructures {
   static std::shared_ptr<List<unsigned int>>
   filter_map(F0 &&p, F1 &&f, const std::shared_ptr<List<unsigned int>> &l) {
     std::shared_ptr<List<unsigned int>> _head{};
-    std::shared_ptr<List<unsigned int>> _last{};
+    std::shared_ptr<List<unsigned int>> *_write = &_head;
     std::shared_ptr<List<unsigned int>> _loop_l = l;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::nil();
-        } else {
-          _head = List<unsigned int>::nil();
-        }
-        _continue = false;
+        *_write = List<unsigned int>::nil();
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (p(d_a0)) {
           auto _cell = List<unsigned int>::cons(f(d_a0), nullptr);
-          if (_last) {
-            std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                _cell;
-          } else {
-            _head = _cell;
-          }
-          _last = _cell;
+          *_write = _cell;
+          _write =
+              &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
           _loop_l = d_a1;
           continue;
         } else {
@@ -884,6 +859,7 @@ struct LoopifyStructures {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       std::shared_ptr<ltree> _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self, t2});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -965,6 +941,7 @@ struct LoopifyStructures {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1021,6 +998,7 @@ struct LoopifyStructures {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());

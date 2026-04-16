@@ -70,6 +70,7 @@ struct DeepApp {
     using _Frame = std::variant<_Enter, _Call1>;
     T2 _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{m});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -109,6 +110,7 @@ struct DeepApp {
     using _Frame = std::variant<_Enter, _Call1>;
     T2 _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{m});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -143,28 +145,18 @@ struct DeepApp {
   static std::shared_ptr<mylist<T1>> app(const std::shared_ptr<mylist<T1>> &l1,
                                          std::shared_ptr<mylist<T1>> l2) {
     std::shared_ptr<mylist<T1>> _head{};
-    std::shared_ptr<mylist<T1>> _last{};
+    std::shared_ptr<mylist<T1>> *_write = &_head;
     std::shared_ptr<mylist<T1>> _loop_l1 = l1;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l1->v())) {
-        if (_last) {
-          std::get<typename mylist<T1>::Mycons>(_last->v_mut()).d_a1 =
-              std::move(l2);
-        } else {
-          _head = std::move(l2);
-        }
-        _continue = false;
+        *_write = std::move(l2);
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<T1>::Mycons>(_loop_l1->v());
         auto _cell = mylist<T1>::mycons(d_a0, nullptr);
-        if (_last) {
-          std::get<typename mylist<T1>::Mycons>(_last->v_mut()).d_a1 = _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write = &std::get<typename mylist<T1>::Mycons>(_cell->v_mut()).d_a1;
         _loop_l1 = d_a1;
         continue;
       }
@@ -176,28 +168,18 @@ struct DeepApp {
   static std::shared_ptr<mylist<T2>> map(F0 &&f,
                                          const std::shared_ptr<mylist<T1>> &l) {
     std::shared_ptr<mylist<T2>> _head{};
-    std::shared_ptr<mylist<T2>> _last{};
+    std::shared_ptr<mylist<T2>> *_write = &_head;
     std::shared_ptr<mylist<T1>> _loop_l = l;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l->v())) {
-        if (_last) {
-          std::get<typename mylist<T2>::Mycons>(_last->v_mut()).d_a1 =
-              mylist<T2>::mynil();
-        } else {
-          _head = mylist<T2>::mynil();
-        }
-        _continue = false;
+        *_write = mylist<T2>::mynil();
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<T1>::Mycons>(_loop_l->v());
         auto _cell = mylist<T2>::mycons(f(d_a0), nullptr);
-        if (_last) {
-          std::get<typename mylist<T2>::Mycons>(_last->v_mut()).d_a1 = _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write = &std::get<typename mylist<T2>::Mycons>(_cell->v_mut()).d_a1;
         _loop_l = d_a1;
         continue;
       }
@@ -227,6 +209,7 @@ struct DeepApp {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());

@@ -11,39 +11,24 @@ std::shared_ptr<List<unsigned int>>
 LoopifySorting::insert(const unsigned int x,
                        std::shared_ptr<List<unsigned int>> l) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
-  std::shared_ptr<List<unsigned int>> _loop_l = l;
-  bool _continue = true;
-  while (_continue) {
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
+  std::shared_ptr<List<unsigned int>> _loop_l = std::move(l);
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            List<unsigned int>::cons(x, List<unsigned int>::nil());
-      } else {
-        _head = List<unsigned int>::cons(x, List<unsigned int>::nil());
-      }
-      _continue = false;
+      *_write = List<unsigned int>::cons(x, List<unsigned int>::nil());
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (x <= d_a0) {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::cons(x, _loop_l);
-        } else {
-          _head = List<unsigned int>::cons(x, _loop_l);
-        }
-        _continue = false;
+        *_write = List<unsigned int>::cons(x, _loop_l);
+        break;
       } else {
         auto _cell = List<unsigned int>::cons(d_a0, nullptr);
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write =
+            &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
         _loop_l = d_a1;
         continue;
       }
@@ -65,6 +50,7 @@ LoopifySorting::insertion_sort(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -93,55 +79,36 @@ LoopifySorting::merge_fuel(const unsigned int fuel,
                            std::shared_ptr<List<unsigned int>> l1,
                            std::shared_ptr<List<unsigned int>> l2) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
-  std::shared_ptr<List<unsigned int>> _loop_l2 = l2;
-  std::shared_ptr<List<unsigned int>> _loop_l1 = l1;
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
+  std::shared_ptr<List<unsigned int>> _loop_l2 = std::move(l2);
+  std::shared_ptr<List<unsigned int>> _loop_l1 = std::move(l1);
   unsigned int _loop_fuel = fuel;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_fuel <= 0) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            List<unsigned int>::nil();
-      } else {
-        _head = List<unsigned int>::nil();
-      }
-      _continue = false;
+      *_write = List<unsigned int>::nil();
+      break;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l1->v())) {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              std::move(_loop_l2);
-        } else {
-          _head = std::move(_loop_l2);
-        }
-        _continue = false;
+        *_write = std::move(_loop_l2);
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _loop_l2->v())) {
-          if (_last) {
-            std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                std::move(_loop_l1);
-          } else {
-            _head = std::move(_loop_l1);
-          }
-          _continue = false;
+          *_write = std::move(_loop_l1);
+          break;
         } else {
           const auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(_loop_l2->v());
           if (d_a0 <= d_a00) {
             auto _cell = List<unsigned int>::cons(d_a0, nullptr);
-            if (_last) {
-              std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                  _cell;
-            } else {
-              _head = _cell;
-            }
-            _last = _cell;
+            *_write = _cell;
+            _write =
+                &std::get<typename List<unsigned int>::Cons>(_cell->v_mut())
+                     .d_a1;
             std::shared_ptr<List<unsigned int>> _next_l1 = d_a1;
             unsigned int _next_fuel = f;
             _loop_l1 = std::move(_next_l1);
@@ -149,13 +116,10 @@ LoopifySorting::merge_fuel(const unsigned int fuel,
             continue;
           } else {
             auto _cell = List<unsigned int>::cons(d_a00, nullptr);
-            if (_last) {
-              std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                  _cell;
-            } else {
-              _head = _cell;
-            }
-            _last = _cell;
+            *_write = _cell;
+            _write =
+                &std::get<typename List<unsigned int>::Cons>(_cell->v_mut())
+                     .d_a1;
             std::shared_ptr<List<unsigned int>> _next_l2 = d_a10;
             unsigned int _next_fuel = f;
             _loop_l2 = std::move(_next_l2);
@@ -196,6 +160,7 @@ LoopifySorting::merge_sort_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -260,6 +225,7 @@ LoopifySorting::partition(const unsigned int pivot,
             std::shared_ptr<List<unsigned int>>>
       _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -314,6 +280,7 @@ LoopifySorting::quicksort_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -361,12 +328,11 @@ LoopifySorting::is_sorted_aux(const unsigned int prev,
   bool _result;
   std::shared_ptr<List<unsigned int>> _loop_l = l;
   unsigned int _loop_prev = prev;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
       _result = true;
-      _continue = false;
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
@@ -377,7 +343,7 @@ LoopifySorting::is_sorted_aux(const unsigned int prev,
         _loop_prev = std::move(_next_prev);
       } else {
         _result = false;
-        _continue = false;
+        break;
       }
     }
   }
@@ -399,30 +365,19 @@ LoopifySorting::is_sorted(const std::shared_ptr<List<unsigned int>> &l) {
 std::shared_ptr<List<unsigned int>> LoopifySorting::remove_duplicates(
     const std::shared_ptr<List<unsigned int>> &l) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            List<unsigned int>::nil();
-      } else {
-        _head = List<unsigned int>::nil();
-      }
-      _continue = false;
+      *_write = List<unsigned int>::nil();
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
-        } else {
-          _head = List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
-        }
-        _continue = false;
+        *_write = List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
+        break;
       } else {
         const auto &[d_a00, d_a10] =
             std::get<typename List<unsigned int>::Cons>(d_a1->v());
@@ -431,13 +386,9 @@ std::shared_ptr<List<unsigned int>> LoopifySorting::remove_duplicates(
           continue;
         } else {
           auto _cell = List<unsigned int>::cons(d_a0, nullptr);
-          if (_last) {
-            std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                _cell;
-          } else {
-            _head = _cell;
-          }
-          _last = _cell;
+          *_write = _cell;
+          _write =
+              &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
           _loop_l = d_a1;
           continue;
         }
@@ -452,21 +403,15 @@ std::shared_ptr<List<unsigned int>>
 LoopifySorting::uniq_sorted_aux(const unsigned int prev, const bool seen,
                                 const std::shared_ptr<List<unsigned int>> &l) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
   std::shared_ptr<List<unsigned int>> _loop_l = l;
   bool _loop_seen = seen;
   unsigned int _loop_prev = prev;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            List<unsigned int>::nil();
-      } else {
-        _head = List<unsigned int>::nil();
-      }
-      _continue = false;
+      *_write = List<unsigned int>::nil();
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
@@ -481,13 +426,9 @@ LoopifySorting::uniq_sorted_aux(const unsigned int prev, const bool seen,
           continue;
         } else {
           auto _cell = List<unsigned int>::cons(d_a0, nullptr);
-          if (_last) {
-            std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                _cell;
-          } else {
-            _head = _cell;
-          }
-          _last = _cell;
+          *_write = _cell;
+          _write =
+              &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
           std::shared_ptr<List<unsigned int>> _next_l = d_a1;
           bool _next_seen = true;
           unsigned int _next_prev = d_a0;
@@ -498,13 +439,9 @@ LoopifySorting::uniq_sorted_aux(const unsigned int prev, const bool seen,
         }
       } else {
         auto _cell = List<unsigned int>::cons(d_a0, nullptr);
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write =
+            &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
         std::shared_ptr<List<unsigned int>> _next_l = d_a1;
         bool _next_seen = true;
         unsigned int _next_prev = d_a0;

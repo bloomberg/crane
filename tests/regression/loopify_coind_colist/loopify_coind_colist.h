@@ -121,6 +121,7 @@ struct LoopifyCoindColist {
     using _Frame = std::variant<_Enter>;
     std::shared_ptr<colist<T2>> _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -154,6 +155,7 @@ struct LoopifyCoindColist {
     using _Frame = std::variant<_Enter>;
     std::shared_ptr<colist<T1>> _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l, n});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -194,6 +196,7 @@ struct LoopifyCoindColist {
     using _Frame = std::variant<_Enter>;
     std::shared_ptr<colist<T1>> _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -219,39 +222,24 @@ struct LoopifyCoindColist {
   static std::shared_ptr<List<T1>>
   to_list(const unsigned int fuel, const std::shared_ptr<colist<T1>> &l) {
     std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> _last{};
+    std::shared_ptr<List<T1>> *_write = &_head;
     std::shared_ptr<colist<T1>> _loop_l = l;
     unsigned int _loop_fuel = fuel;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (_loop_fuel <= 0) {
-        if (_last) {
-          std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
-              List<T1>::nil();
-        } else {
-          _head = List<T1>::nil();
-        }
-        _continue = false;
+        *_write = List<T1>::nil();
+        break;
       } else {
         unsigned int f = _loop_fuel - 1;
         if (std::holds_alternative<typename colist<T1>::Conil>(_loop_l->v())) {
-          if (_last) {
-            std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
-                List<T1>::nil();
-          } else {
-            _head = List<T1>::nil();
-          }
-          _continue = false;
+          *_write = List<T1>::nil();
+          break;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename colist<T1>::Cocons>(_loop_l->v());
           auto _cell = List<T1>::cons(d_a0, nullptr);
-          if (_last) {
-            std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 = _cell;
-          } else {
-            _head = _cell;
-          }
-          _last = _cell;
+          *_write = _cell;
+          _write = &std::get<typename List<T1>::Cons>(_cell->v_mut()).d_a1;
           std::shared_ptr<colist<T1>> _next_l = d_a1;
           unsigned int _next_fuel = f;
           _loop_l = std::move(_next_l);

@@ -36,6 +36,7 @@ LoopifyMultiRecursion::mixed_arith_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -113,6 +114,7 @@ __attribute__((pure)) bool LoopifyMultiRecursion::bool_or_chain_fuel(
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   bool _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -178,6 +180,7 @@ LoopifyMultiRecursion::bool_and_chain_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   bool _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -251,6 +254,7 @@ __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_count_leaves(
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{t});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -324,6 +328,7 @@ __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_depth(
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{t});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -397,6 +402,7 @@ LoopifyMultiRecursion::hofstadter_q_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());

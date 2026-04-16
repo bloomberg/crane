@@ -181,6 +181,7 @@ struct LoopifyExpr {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
       std::shared_ptr<expr> _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -641,6 +642,7 @@ struct LoopifyExpr {
                                   _Call5, _Call6, _Call7, _Call8>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -744,6 +746,7 @@ struct LoopifyExpr {
                                   _Call5, _Call6, _Call7>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -845,6 +848,7 @@ struct LoopifyExpr {
                                   _Call5, _Call6, _Call7, _Call8>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -940,6 +944,7 @@ struct LoopifyExpr {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5, _Call6>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1071,6 +1076,7 @@ struct LoopifyExpr {
                                   _Call5, _Call6, _Call7, _Call8>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1204,6 +1210,7 @@ struct LoopifyExpr {
                                   _Call5, _Call6, _Call7, _Call8>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1369,6 +1376,7 @@ struct LoopifyExpr {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1437,6 +1445,7 @@ struct LoopifyExpr {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1537,6 +1546,7 @@ struct LoopifyExpr {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1639,6 +1649,7 @@ struct LoopifyExpr {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1877,6 +1888,7 @@ struct LoopifyExpr {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1945,6 +1957,7 @@ struct LoopifyExpr {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -2044,6 +2057,7 @@ struct LoopifyExpr {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -2145,6 +2159,7 @@ struct LoopifyExpr {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());

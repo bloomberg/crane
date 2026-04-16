@@ -24,6 +24,7 @@ LoopifyItreeReified::count_taus(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{t, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());

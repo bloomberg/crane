@@ -12,13 +12,12 @@ std::shared_ptr<DeepMap::tree<unsigned int>>
 DeepMap::build_right(const unsigned int n,
                      std::shared_ptr<DeepMap::tree<unsigned int>> acc) {
   std::shared_ptr<DeepMap::tree<unsigned int>> _result;
-  std::shared_ptr<DeepMap::tree<unsigned int>> _loop_acc = acc;
+  std::shared_ptr<DeepMap::tree<unsigned int>> _loop_acc = std::move(acc);
   unsigned int _loop_n = n;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_n <= 0) {
       _result = std::move(_loop_acc);
-      _continue = false;
+      break;
     } else {
       unsigned int n_ = _loop_n - 1;
       std::shared_ptr<DeepMap::tree<unsigned int>> _next_acc =

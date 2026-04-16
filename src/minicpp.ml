@@ -160,6 +160,8 @@ and cpp_stmt =
     (* { stmts } — scoped block for local declarations *)
   | Scontinue
     (* continue; — used in loopified while loops *)
+  | Sbreak
+    (* break; — used in loopified while loops *)
   | Sblock_custom of
       GlobRef.t
       * string (* template string containing %result *)
@@ -458,6 +460,7 @@ let map_stmt
   | Swhile (cond, body) -> Swhile (fe cond, List.map fs body)
   | Sblock stmts -> Sblock (List.map fs stmts)
   | Scontinue -> s
+  | Sbreak -> s
   | Sblock_custom (r, tmpl, id, ty, args, tys) ->
     Sblock_custom (r, tmpl, id, ft ty, List.map fe args, List.map ft tys)
   | Smatch (branches, default) ->

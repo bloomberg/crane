@@ -64,6 +64,7 @@ public:
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{_self});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -89,27 +90,18 @@ public:
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     std::shared_ptr<List<t_A>> _head{};
-    std::shared_ptr<List<t_A>> _last{};
+    std::shared_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<t_A>::Nil>(_loop_self->v())) {
-        if (_last) {
-          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
-        } else {
-          _head = m;
-        }
-        _continue = false;
+        *_write = m;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<t_A>::Cons>(_loop_self->v());
         auto _cell = List<t_A>::cons(d_a0, nullptr);
-        if (_last) {
-          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write = &std::get<typename List<t_A>::Cons>(_cell->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
@@ -141,6 +133,7 @@ struct LoopifySequences {
     using _Frame = std::variant<_Enter, _Call1>;
     std::shared_ptr<List<T1>> _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{lists});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -191,6 +184,7 @@ struct LoopifySequences {
         using _Frame = std::variant<_Enter, _Call1>;
         std::shared_ptr<List<T1>> _result{};
         std::vector<_Frame> _stack;
+        _stack.reserve(16);
         _stack.emplace_back(_Enter{rest});
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
@@ -222,20 +216,13 @@ struct LoopifySequences {
   transpose_fuel(const unsigned int fuel,
                  const std::shared_ptr<List<std::shared_ptr<List<T1>>>> &ll) {
     std::shared_ptr<List<std::shared_ptr<List<T1>>>> _head{};
-    std::shared_ptr<List<std::shared_ptr<List<T1>>>> _last{};
+    std::shared_ptr<List<std::shared_ptr<List<T1>>>> *_write = &_head;
     std::shared_ptr<List<std::shared_ptr<List<T1>>>> _loop_ll = ll;
     unsigned int _loop_fuel = fuel;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (_loop_fuel <= 0) {
-        if (_last) {
-          std::get<typename List<std::shared_ptr<List<T1>>>::Cons>(
-              _last->v_mut())
-              .d_a1 = List<std::shared_ptr<List<T1>>>::nil();
-        } else {
-          _head = List<std::shared_ptr<List<T1>>>::nil();
-        }
-        _continue = false;
+        *_write = List<std::shared_ptr<List<T1>>>::nil();
+        break;
       } else {
         unsigned int f = _loop_fuel - 1;
         std::function<bool(std::shared_ptr<List<std::shared_ptr<List<T1>>>>)>
@@ -243,14 +230,14 @@ struct LoopifySequences {
         all_nil =
             [](std::shared_ptr<List<std::shared_ptr<List<T1>>>> l) -> bool {
           bool _result;
-          std::shared_ptr<List<std::shared_ptr<List<T1>>>> _loop_l = l;
-          bool _continue = true;
-          while (_continue) {
+          std::shared_ptr<List<std::shared_ptr<List<T1>>>> _loop_l =
+              std::move(l);
+          while (true) {
             if (std::holds_alternative<
                     typename List<std::shared_ptr<List<T1>>>::Nil>(
                     _loop_l->v())) {
               _result = true;
-              _continue = false;
+              break;
             } else {
               const auto &[d_a0, d_a1] =
                   std::get<typename List<std::shared_ptr<List<T1>>>::Cons>(
@@ -259,21 +246,15 @@ struct LoopifySequences {
                 _loop_l = d_a1;
               } else {
                 _result = false;
-                _continue = false;
+                break;
               }
             }
           }
           return _result;
         };
         if (all_nil(_loop_ll)) {
-          if (_last) {
-            std::get<typename List<std::shared_ptr<List<T1>>>::Cons>(
-                _last->v_mut())
-                .d_a1 = List<std::shared_ptr<List<T1>>>::nil();
-          } else {
-            _head = List<std::shared_ptr<List<T1>>>::nil();
-          }
-          _continue = false;
+          *_write = List<std::shared_ptr<List<T1>>>::nil();
+          break;
         } else {
           std::function<std::shared_ptr<List<T1>>(
               std::shared_ptr<List<std::shared_ptr<List<T1>>>>)>
@@ -289,6 +270,7 @@ struct LoopifySequences {
             using _Frame = std::variant<_Enter, _Call1>;
             std::shared_ptr<List<T1>> _result{};
             std::vector<_Frame> _stack;
+            _stack.reserve(16);
             _stack.emplace_back(_Enter{l});
             while (!_stack.empty()) {
               _Frame _frame = std::move(_stack.back());
@@ -335,6 +317,7 @@ struct LoopifySequences {
             using _Frame = std::variant<_Enter, _Call1>;
             std::shared_ptr<List<std::shared_ptr<List<T1>>>> _result{};
             std::vector<_Frame> _stack;
+            _stack.reserve(16);
             _stack.emplace_back(_Enter{l});
             while (!_stack.empty()) {
               _Frame _frame = std::move(_stack.back());
@@ -370,14 +353,10 @@ struct LoopifySequences {
           };
           auto _cell =
               List<std::shared_ptr<List<T1>>>::cons(heads(_loop_ll), nullptr);
-          if (_last) {
-            std::get<typename List<std::shared_ptr<List<T1>>>::Cons>(
-                _last->v_mut())
-                .d_a1 = _cell;
-          } else {
-            _head = _cell;
-          }
-          _last = _cell;
+          *_write = _cell;
+          _write = &std::get<typename List<std::shared_ptr<List<T1>>>::Cons>(
+                        _cell->v_mut())
+                        .d_a1;
           std::shared_ptr<List<std::shared_ptr<List<T1>>>> _next_ll =
               tails(_loop_ll);
           unsigned int _next_fuel = f;
@@ -419,29 +398,19 @@ struct LoopifySequences {
   static std::shared_ptr<List<unsigned int>>
   iterate(F0 &&f, const unsigned int n, const unsigned int x) {
     std::shared_ptr<List<unsigned int>> _head{};
-    std::shared_ptr<List<unsigned int>> _last{};
+    std::shared_ptr<List<unsigned int>> *_write = &_head;
     unsigned int _loop_x = x;
     unsigned int _loop_n = n;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (_loop_n <= 0) {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::nil();
-        } else {
-          _head = List<unsigned int>::nil();
-        }
-        _continue = false;
+        *_write = List<unsigned int>::nil();
+        break;
       } else {
         unsigned int m = _loop_n - 1;
         auto _cell = List<unsigned int>::cons(_loop_x, nullptr);
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write =
+            &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
         unsigned int _next_x = f(_loop_x);
         unsigned int _next_n = m;
         _loop_x = std::move(_next_x);
@@ -531,41 +500,26 @@ struct LoopifySequences {
   static std::shared_ptr<List<unsigned int>>
   take_while(F0 &&p, const std::shared_ptr<List<unsigned int>> &l) {
     std::shared_ptr<List<unsigned int>> _head{};
-    std::shared_ptr<List<unsigned int>> _last{};
+    std::shared_ptr<List<unsigned int>> *_write = &_head;
     std::shared_ptr<List<unsigned int>> _loop_l = l;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::nil();
-        } else {
-          _head = List<unsigned int>::nil();
-        }
-        _continue = false;
+        *_write = List<unsigned int>::nil();
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (p(d_a0)) {
           auto _cell = List<unsigned int>::cons(d_a0, nullptr);
-          if (_last) {
-            std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                _cell;
-          } else {
-            _head = _cell;
-          }
-          _last = _cell;
+          *_write = _cell;
+          _write =
+              &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
           _loop_l = d_a1;
           continue;
         } else {
-          if (_last) {
-            std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                List<unsigned int>::nil();
-          } else {
-            _head = List<unsigned int>::nil();
-          }
-          _continue = false;
+          *_write = List<unsigned int>::nil();
+          break;
         }
       }
     }
@@ -578,12 +532,11 @@ struct LoopifySequences {
   drop_while(F0 &&p, const std::shared_ptr<List<unsigned int>> &l) {
     std::shared_ptr<List<unsigned int>> _result;
     std::shared_ptr<List<unsigned int>> _loop_l = l;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
         _result = List<unsigned int>::nil();
-        _continue = false;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
@@ -591,7 +544,7 @@ struct LoopifySequences {
           _loop_l = d_a1;
         } else {
           _result = List<unsigned int>::cons(d_a0, d_a1);
-          _continue = false;
+          break;
         }
       }
     }
@@ -639,6 +592,7 @@ struct LoopifySequences {
     using _Frame = std::variant<_Enter, _Call1>;
     bool _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());

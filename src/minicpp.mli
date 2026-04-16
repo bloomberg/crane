@@ -164,6 +164,7 @@ and cpp_stmt =
       (** While loop: condition and body (used by loopify pass) *)
   | Sblock of cpp_stmt list  (** Scoped block for local declarations *)
   | Scontinue  (** Continue statement for loopified while loops *)
+  | Sbreak  (** Break statement for loopified while loops *)
   | Sblock_custom of
       GlobRef.t
       * string

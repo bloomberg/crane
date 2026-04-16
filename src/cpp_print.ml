@@ -79,7 +79,7 @@ let stmts_reference_id target_id body =
   and check_stmt = function
     | Sreturn (Some e) | Sexpr e -> check_expr e
     | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _
-    | Sstruct_def _ | Susing _ | Sdecl_init _ | Scontinue -> ()
+    | Sstruct_def _ | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> ()
     | Sasgn (_, _, e) -> check_expr e
     | Sif (c, t, f) ->
       check_expr c; List.iter check_stmt t; List.iter check_stmt f
@@ -294,7 +294,7 @@ let[@warning "-39"] rec lambda_needs_capture
       | Some stmts -> List.fold_left collect_from_stmt acc stmts
       | None -> acc )
     | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _ | Sdecl_init _
-    | Scontinue -> (refs, decls)
+    | Scontinue | Sbreak -> (refs, decls)
   in
   let all_refs, local_decls =
     List.fold_left collect_from_stmt (IdSet.empty, IdSet.empty) body
@@ -388,7 +388,7 @@ and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
       || any br.smb_body) branches
     || (match default with Some stmts -> any stmts | None -> false)
   | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _
-  | Sdecl_init _ | Scontinue -> false
+  | Sdecl_init _ | Scontinue | Sbreak -> false
 
 (** {2 Pretty-printing C++ syntax.} *)
 
@@ -1534,6 +1534,7 @@ and pp_cpp_stmt env args = function
     ++ fnl ()
     ++ str "}"
   | Scontinue -> str "continue;"
+  | Sbreak -> str "break;"
   | Sassign_field (obj, field, e) ->
     pp_cpp_expr env args obj
     ++ str "."

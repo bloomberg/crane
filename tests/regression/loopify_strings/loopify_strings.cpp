@@ -10,30 +10,20 @@ std::shared_ptr<List<unsigned int>>
 LoopifyStrings::append(const std::shared_ptr<List<unsigned int>> &l1,
                        std::shared_ptr<List<unsigned int>> l2) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
   std::shared_ptr<List<unsigned int>> _loop_l1 = l1;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l1->v())) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            std::move(l2);
-      } else {
-        _head = std::move(l2);
-      }
-      _continue = false;
+      *_write = std::move(l2);
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       auto _cell = List<unsigned int>::cons(d_a0, nullptr);
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            _cell;
-      } else {
-        _head = _cell;
-      }
-      _last = _cell;
+      *_write = _cell;
+      _write =
+          &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
       _loop_l1 = d_a1;
       continue;
     }
@@ -45,42 +35,27 @@ std::shared_ptr<List<unsigned int>>
 LoopifyStrings::join_with(const unsigned int sep,
                           const std::shared_ptr<List<unsigned int>> &l) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            List<unsigned int>::nil();
-      } else {
-        _head = List<unsigned int>::nil();
-      }
-      _continue = false;
+      *_write = List<unsigned int>::nil();
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
-        } else {
-          _head = List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
-        }
-        _continue = false;
+        *_write = List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
+        break;
       } else {
         auto _cell = List<unsigned int>::cons(d_a0, nullptr);
         auto _cell1 = List<unsigned int>::cons(sep, nullptr);
         std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1 =
             _cell1;
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell1;
+        *_write = _cell;
+        _write =
+            &std::get<typename List<unsigned int>::Cons>(_cell1->v_mut()).d_a1;
         _loop_l = d_a1;
         continue;
       }
@@ -103,6 +78,7 @@ LoopifyStrings::repeat_string(const std::shared_ptr<List<unsigned int>> &s,
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -141,6 +117,7 @@ LoopifyStrings::repeat_with_sep(std::shared_ptr<List<unsigned int>> s,
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -186,6 +163,7 @@ std::shared_ptr<List<unsigned int>> LoopifyStrings::string_chain_fuel(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -234,6 +212,7 @@ LoopifyStrings::reverse(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -274,6 +253,7 @@ LoopifyStrings::list_eq(const std::shared_ptr<List<unsigned int>> &l1,
   using _Frame = std::variant<_Enter, _Call1>;
   bool _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l2, l1});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -317,42 +297,27 @@ std::shared_ptr<List<unsigned int>>
 LoopifyStrings::intersperse(const unsigned int sep,
                             const std::shared_ptr<List<unsigned int>> &l) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            List<unsigned int>::nil();
-      } else {
-        _head = List<unsigned int>::nil();
-      }
-      _continue = false;
+      *_write = List<unsigned int>::nil();
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
-        } else {
-          _head = List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
-        }
-        _continue = false;
+        *_write = List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
+        break;
       } else {
         auto _cell = List<unsigned int>::cons(d_a0, nullptr);
         auto _cell1 = List<unsigned int>::cons(sep, nullptr);
         std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1 =
             _cell1;
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell1;
+        *_write = _cell;
+        _write =
+            &std::get<typename List<unsigned int>::Cons>(_cell1->v_mut()).d_a1;
         _loop_l = d_a1;
         continue;
       }
@@ -376,6 +341,7 @@ std::shared_ptr<List<unsigned int>> LoopifyStrings::intercalate(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -412,28 +378,18 @@ std::shared_ptr<List<unsigned int>> LoopifyStrings::intercalate(
 std::shared_ptr<List<unsigned int>>
 LoopifyStrings::replicate(const unsigned int n, const unsigned int x) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_n = n;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_n <= 0) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            List<unsigned int>::nil();
-      } else {
-        _head = List<unsigned int>::nil();
-      }
-      _continue = false;
+      *_write = List<unsigned int>::nil();
+      break;
     } else {
       unsigned int n_ = _loop_n - 1;
       auto _cell = List<unsigned int>::cons(x, nullptr);
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            _cell;
-      } else {
-        _head = _cell;
-      }
-      _last = _cell;
+      *_write = _cell;
+      _write =
+          &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
       _loop_n = n_;
       continue;
     }
@@ -446,36 +402,21 @@ LoopifyStrings::run_length_aux(const unsigned int current,
                                const unsigned int count,
                                const std::shared_ptr<List<unsigned int>> &l) {
   std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
-  std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> _last{};
+  std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;
   std::shared_ptr<List<unsigned int>> _loop_l = l;
   unsigned int _loop_count = count;
   unsigned int _loop_current = current;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
       if (_loop_count == 0u) {
-        if (_last) {
-          std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-              _last->v_mut())
-              .d_a1 = List<std::pair<unsigned int, unsigned int>>::nil();
-        } else {
-          _head = List<std::pair<unsigned int, unsigned int>>::nil();
-        }
-        _continue = false;
+        *_write = List<std::pair<unsigned int, unsigned int>>::nil();
+        break;
       } else {
-        if (_last) {
-          std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-              _last->v_mut())
-              .d_a1 = List<std::pair<unsigned int, unsigned int>>::cons(
-              std::make_pair(_loop_current, _loop_count),
-              List<std::pair<unsigned int, unsigned int>>::nil());
-        } else {
-          _head = List<std::pair<unsigned int, unsigned int>>::cons(
-              std::make_pair(_loop_current, _loop_count),
-              List<std::pair<unsigned int, unsigned int>>::nil());
-        }
-        _continue = false;
+        *_write = List<std::pair<unsigned int, unsigned int>>::cons(
+            std::make_pair(_loop_current, _loop_count),
+            List<std::pair<unsigned int, unsigned int>>::nil());
+        break;
       }
     } else {
       const auto &[d_a0, d_a1] =
@@ -498,15 +439,12 @@ LoopifyStrings::run_length_aux(const unsigned int current,
         } else {
           auto _cell = List<std::pair<unsigned int, unsigned int>>::cons(
               std::make_pair(_loop_current, _loop_count), nullptr);
-          if (_last) {
-            std::get<
-                typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-                _last->v_mut())
-                .d_a1 = _cell;
-          } else {
-            _head = _cell;
-          }
-          _last = _cell;
+          *_write = _cell;
+          _write =
+              &std::get<
+                   typename List<std::pair<unsigned int, unsigned int>>::Cons>(
+                   _cell->v_mut())
+                   .d_a1;
           std::shared_ptr<List<unsigned int>> _next_l = d_a1;
           unsigned int _next_count = 1u;
           unsigned int _next_current = d_a0;

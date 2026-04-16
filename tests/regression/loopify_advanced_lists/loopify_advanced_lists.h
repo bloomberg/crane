@@ -54,27 +54,18 @@ public:
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     std::shared_ptr<List<t_A>> _head{};
-    std::shared_ptr<List<t_A>> _last{};
+    std::shared_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<t_A>::Nil>(_loop_self->v())) {
-        if (_last) {
-          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
-        } else {
-          _head = m;
-        }
-        _continue = false;
+        *_write = m;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<t_A>::Cons>(_loop_self->v());
         auto _cell = List<t_A>::cons(d_a0, nullptr);
-        if (_last) {
-          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write = &std::get<typename List<t_A>::Cons>(_cell->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
@@ -112,6 +103,7 @@ struct LoopifyAdvancedLists {
     using _Frame = std::variant<_Enter, _Call1>;
     std::shared_ptr<List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -149,6 +141,7 @@ struct LoopifyAdvancedLists {
     using _Frame = std::variant<_Enter, _Call1>;
     bool _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -186,6 +179,7 @@ struct LoopifyAdvancedLists {
     using _Frame = std::variant<_Enter, _Call1>;
     bool _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -214,18 +208,17 @@ struct LoopifyAdvancedLists {
   find_first(F0 &&p, const std::shared_ptr<List<unsigned int>> &l) {
     std::optional<unsigned int> _result;
     std::shared_ptr<List<unsigned int>> _loop_l = l;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
         _result = std::optional<unsigned int>();
-        _continue = false;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (p(d_a0)) {
           _result = std::make_optional<unsigned int>(d_a0);
-          _continue = false;
+          break;
         } else {
           _loop_l = d_a1;
         }

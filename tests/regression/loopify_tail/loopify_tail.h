@@ -68,6 +68,7 @@ struct LoopifyTail {
     using _Frame = std::variant<_Enter, _Call1>;
     T2 _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -105,6 +106,7 @@ struct LoopifyTail {
     using _Frame = std::variant<_Enter, _Call1>;
     T2 _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -132,11 +134,10 @@ struct LoopifyTail {
     T1 _result;
     std::shared_ptr<list<T1>> _loop_l = l;
     T1 _loop_x = x;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = _loop_x;
-        _continue = false;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l->v());
@@ -155,11 +156,10 @@ struct LoopifyTail {
     unsigned int _result;
     std::shared_ptr<list<T1>> _loop_l = l;
     unsigned int _loop_acc = acc;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = _loop_acc;
-        _continue = false;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l->v());
@@ -193,11 +193,10 @@ struct LoopifyTail {
     T2 _result;
     std::shared_ptr<list<T1>> _loop_l = l;
     T2 _loop_acc = acc;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = _loop_acc;
-        _continue = false;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l->v());

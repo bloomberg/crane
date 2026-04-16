@@ -69,6 +69,7 @@ struct LoopifyOption {
     using _Frame = std::variant<_Enter, _Call1>;
     T2 _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -106,6 +107,7 @@ struct LoopifyOption {
     using _Frame = std::variant<_Enter, _Call1>;
     T2 _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -134,17 +136,16 @@ struct LoopifyOption {
   find_opt(F0 &&p, const std::shared_ptr<list<T1>> &l) {
     std::optional<T1> _result;
     std::shared_ptr<list<T1>> _loop_l = l;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = std::optional<T1>();
-        _continue = false;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l->v());
         if (p(d_a0)) {
           _result = std::make_optional<T1>(d_a0);
-          _continue = false;
+          break;
         } else {
           _loop_l = d_a1;
         }
@@ -159,17 +160,16 @@ struct LoopifyOption {
   last_opt(const std::shared_ptr<list<T1>> &l) {
     std::optional<T1> _result;
     std::shared_ptr<list<T1>> _loop_l = l;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = std::optional<T1>();
-        _continue = false;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l->v());
         if (std::holds_alternative<typename list<T1>::Nil>(d_a1->v())) {
           _result = std::make_optional<T1>(d_a0);
-          _continue = false;
+          break;
         } else {
           _loop_l = d_a1;
         }
@@ -185,17 +185,16 @@ struct LoopifyOption {
     std::optional<T1> _result;
     std::shared_ptr<list<T1>> _loop_l = l;
     unsigned int _loop_n = n;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = std::optional<T1>();
-        _continue = false;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l->v());
         if (_loop_n == 0u) {
           _result = std::make_optional<T1>(d_a0);
-          _continue = false;
+          break;
         } else {
           std::shared_ptr<list<T1>> _next_l = d_a1;
           unsigned int _next_n =
@@ -218,18 +217,12 @@ struct LoopifyOption {
   static std::shared_ptr<list<T2>> map_opt(F0 &&f,
                                            const std::shared_ptr<list<T1>> &l) {
     std::shared_ptr<list<T2>> _head{};
-    std::shared_ptr<list<T2>> _last{};
+    std::shared_ptr<list<T2>> *_write = &_head;
     std::shared_ptr<list<T1>> _loop_l = l;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        if (_last) {
-          std::get<typename list<T2>::Cons>(_last->v_mut()).d_a1 =
-              list<T2>::nil();
-        } else {
-          _head = list<T2>::nil();
-        }
-        _continue = false;
+        *_write = list<T2>::nil();
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l->v());
@@ -237,12 +230,8 @@ struct LoopifyOption {
         if (_cs.has_value()) {
           const T2 &y = *_cs;
           auto _cell = list<T2>::cons(y, nullptr);
-          if (_last) {
-            std::get<typename list<T2>::Cons>(_last->v_mut()).d_a1 = _cell;
-          } else {
-            _head = _cell;
-          }
-          _last = _cell;
+          *_write = _cell;
+          _write = &std::get<typename list<T2>::Cons>(_cell->v_mut()).d_a1;
           _loop_l = d_a1;
           continue;
         } else {
@@ -262,17 +251,16 @@ struct LoopifyOption {
     std::optional<unsigned int> _result;
     unsigned int _loop_i = i;
     std::shared_ptr<list<T1>> _loop_l = l;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = std::optional<unsigned int>();
-        _continue = false;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l->v());
         if (p(d_a0)) {
           _result = std::make_optional<unsigned int>(_loop_i);
-          _continue = false;
+          break;
         } else {
           unsigned int _next_i = (_loop_i + 1);
           std::shared_ptr<list<T1>> _next_l = d_a1;

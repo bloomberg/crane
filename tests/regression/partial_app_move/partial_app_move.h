@@ -83,6 +83,7 @@ struct PartialAppMove {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     T1 _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{t});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -135,6 +136,7 @@ struct PartialAppMove {
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
     T1 _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{t});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());

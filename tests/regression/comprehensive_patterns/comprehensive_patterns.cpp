@@ -142,37 +142,24 @@ ComprehensivePatterns::make_list(const unsigned int n,
       _head{};
   std::shared_ptr<
       List<std::pair<std::shared_ptr<ComprehensivePatterns::S>, unsigned int>>>
-      _last{};
+      *_write = &_head;
   unsigned int _loop_n = n;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_n <= 0) {
-      if (_last) {
-        std::get<typename List<std::pair<
-            std::shared_ptr<ComprehensivePatterns::S>, unsigned int>>::Cons>(
-            _last->v_mut())
-            .d_a1 = List<std::pair<std::shared_ptr<ComprehensivePatterns::S>,
-                                   unsigned int>>::nil();
-      } else {
-        _head = List<std::pair<std::shared_ptr<ComprehensivePatterns::S>,
+      *_write = List<std::pair<std::shared_ptr<ComprehensivePatterns::S>,
                                unsigned int>>::nil();
-      }
-      _continue = false;
+      break;
     } else {
       unsigned int m = _loop_n - 1;
       auto _cell =
           List<std::pair<std::shared_ptr<ComprehensivePatterns::S>,
                          unsigned int>>::cons(std::make_pair(s, s->s_a),
                                               nullptr);
-      if (_last) {
-        std::get<typename List<std::pair<
-            std::shared_ptr<ComprehensivePatterns::S>, unsigned int>>::Cons>(
-            _last->v_mut())
-            .d_a1 = _cell;
-      } else {
-        _head = _cell;
-      }
-      _last = _cell;
+      *_write = _cell;
+      _write = &std::get<typename List<std::pair<
+          std::shared_ptr<ComprehensivePatterns::S>, unsigned int>>::Cons>(
+                    _cell->v_mut())
+                    .d_a1;
       _loop_n = m;
       continue;
     }
@@ -412,40 +399,25 @@ ComprehensivePatterns::repeat_r2(
       _head{};
   std::shared_ptr<List<std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
                                  std::shared_ptr<ComprehensivePatterns::R1>>>>
-      _last{};
+      *_write = &_head;
   unsigned int _loop_n = n;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_n <= 0) {
-      if (_last) {
-        std::get<typename List<
-            std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
-                      std::shared_ptr<ComprehensivePatterns::R1>>>::Cons>(
-            _last->v_mut())
-            .d_a1 =
-            List<std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
-                           std::shared_ptr<ComprehensivePatterns::R1>>>::nil();
-      } else {
-        _head =
-            List<std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
-                           std::shared_ptr<ComprehensivePatterns::R1>>>::nil();
-      }
-      _continue = false;
+      *_write =
+          List<std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
+                         std::shared_ptr<ComprehensivePatterns::R1>>>::nil();
+      break;
     } else {
       unsigned int m = _loop_n - 1;
       auto _cell = List<std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
                                   std::shared_ptr<ComprehensivePatterns::R1>>>::
           cons(std::make_pair(r2, r2->r2_inner), nullptr);
-      if (_last) {
-        std::get<typename List<
-            std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
-                      std::shared_ptr<ComprehensivePatterns::R1>>>::Cons>(
-            _last->v_mut())
-            .d_a1 = _cell;
-      } else {
-        _head = _cell;
-      }
-      _last = _cell;
+      *_write = _cell;
+      _write = &std::get<typename List<
+          std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
+                    std::shared_ptr<ComprehensivePatterns::R1>>>::Cons>(
+                    _cell->v_mut())
+                    .d_a1;
       _loop_n = m;
       continue;
     }
@@ -627,37 +599,24 @@ ComprehensivePatterns::repeat_pair(
       _head{};
   std::shared_ptr<
       List<std::pair<std::shared_ptr<ComprehensivePatterns::R>, unsigned int>>>
-      _last{};
+      *_write = &_head;
   unsigned int _loop_n = n;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_n <= 0) {
-      if (_last) {
-        std::get<typename List<std::pair<
-            std::shared_ptr<ComprehensivePatterns::R>, unsigned int>>::Cons>(
-            _last->v_mut())
-            .d_a1 = List<std::pair<std::shared_ptr<ComprehensivePatterns::R>,
-                                   unsigned int>>::nil();
-      } else {
-        _head = List<std::pair<std::shared_ptr<ComprehensivePatterns::R>,
+      *_write = List<std::pair<std::shared_ptr<ComprehensivePatterns::R>,
                                unsigned int>>::nil();
-      }
-      _continue = false;
+      break;
     } else {
       unsigned int m = _loop_n - 1;
       auto _cell =
           List<std::pair<std::shared_ptr<ComprehensivePatterns::R>,
                          unsigned int>>::cons(std::make_pair(r, r->val),
                                               nullptr);
-      if (_last) {
-        std::get<typename List<std::pair<
-            std::shared_ptr<ComprehensivePatterns::R>, unsigned int>>::Cons>(
-            _last->v_mut())
-            .d_a1 = _cell;
-      } else {
-        _head = _cell;
-      }
-      _last = _cell;
+      *_write = _cell;
+      _write = &std::get<typename List<std::pair<
+          std::shared_ptr<ComprehensivePatterns::R>, unsigned int>>::Cons>(
+                    _cell->v_mut())
+                    .d_a1;
       _loop_n = m;
       continue;
     }
@@ -798,6 +757,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::count_down(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -894,6 +854,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::sum_proj(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1161,6 +1122,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::sum_values(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1228,6 +1190,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::sum_with_state(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1288,6 +1251,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::accum_with_state(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());

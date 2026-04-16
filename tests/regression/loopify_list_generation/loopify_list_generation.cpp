@@ -9,28 +9,18 @@
 std::shared_ptr<List<unsigned int>>
 LoopifyListGeneration::replicate(const unsigned int n, const unsigned int x) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_n = n;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_n <= 0) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            List<unsigned int>::nil();
-      } else {
-        _head = List<unsigned int>::nil();
-      }
-      _continue = false;
+      *_write = List<unsigned int>::nil();
+      break;
     } else {
       unsigned int n_ = _loop_n - 1;
       auto _cell = List<unsigned int>::cons(x, nullptr);
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            _cell;
-      } else {
-        _head = _cell;
-      }
-      _last = _cell;
+      *_write = _cell;
+      _write =
+          &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
       _loop_n = n_;
       continue;
     }
@@ -41,32 +31,22 @@ LoopifyListGeneration::replicate(const unsigned int n, const unsigned int x) {
 std::shared_ptr<List<unsigned int>>
 LoopifyListGeneration::stutter(const std::shared_ptr<List<unsigned int>> &l) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            List<unsigned int>::nil();
-      } else {
-        _head = List<unsigned int>::nil();
-      }
-      _continue = false;
+      *_write = List<unsigned int>::nil();
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       auto _cell = List<unsigned int>::cons(d_a0, nullptr);
       auto _cell1 = List<unsigned int>::cons(d_a0, nullptr);
       std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1 = _cell1;
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            _cell;
-      } else {
-        _head = _cell;
-      }
-      _last = _cell1;
+      *_write = _cell;
+      _write =
+          &std::get<typename List<unsigned int>::Cons>(_cell1->v_mut()).d_a1;
       _loop_l = d_a1;
       continue;
     }
@@ -88,6 +68,7 @@ LoopifyListGeneration::cycle(const unsigned int n,
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -113,29 +94,19 @@ LoopifyListGeneration::cycle(const unsigned int n,
 std::shared_ptr<List<unsigned int>>
 LoopifyListGeneration::iterate(const unsigned int n, const unsigned int x) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_x = x;
   unsigned int _loop_n = n;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_n <= 0) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            List<unsigned int>::nil();
-      } else {
-        _head = List<unsigned int>::nil();
-      }
-      _continue = false;
+      *_write = List<unsigned int>::nil();
+      break;
     } else {
       unsigned int n_ = _loop_n - 1;
       auto _cell = List<unsigned int>::cons(_loop_x, nullptr);
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            _cell;
-      } else {
-        _head = _cell;
-      }
-      _last = _cell;
+      *_write = _cell;
+      _write =
+          &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
       unsigned int _next_x = (_loop_x + 1u);
       unsigned int _next_n = n_;
       _loop_x = std::move(_next_x);
@@ -159,6 +130,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListGeneration::replicate_list(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -191,41 +163,26 @@ std::shared_ptr<List<unsigned int>> LoopifyListGeneration::replicate_list(
 std::shared_ptr<List<unsigned int>> LoopifyListGeneration::repeat_with_sep(
     const unsigned int sep, const unsigned int n, const unsigned int x) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_n = n;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_n <= 0) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            List<unsigned int>::nil();
-      } else {
-        _head = List<unsigned int>::nil();
-      }
-      _continue = false;
+      *_write = List<unsigned int>::nil();
+      break;
     } else {
       unsigned int n_ = _loop_n - 1;
       if (n_ <= 0) {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::cons(x, List<unsigned int>::nil());
-        } else {
-          _head = List<unsigned int>::cons(x, List<unsigned int>::nil());
-        }
-        _continue = false;
+        *_write = List<unsigned int>::cons(x, List<unsigned int>::nil());
+        break;
       } else {
         unsigned int _x = n_ - 1;
         auto _cell = List<unsigned int>::cons(x, nullptr);
         auto _cell1 = List<unsigned int>::cons(sep, nullptr);
         std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1 =
             _cell1;
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell1;
+        *_write = _cell;
+        _write =
+            &std::get<typename List<unsigned int>::Cons>(_cell1->v_mut()).d_a1;
         _loop_n = n_;
         continue;
       }
@@ -237,29 +194,19 @@ std::shared_ptr<List<unsigned int>> LoopifyListGeneration::repeat_with_sep(
 std::shared_ptr<List<unsigned int>>
 LoopifyListGeneration::range(const unsigned int start, const unsigned int len) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_len = len;
   unsigned int _loop_start = start;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_len <= 0) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            List<unsigned int>::nil();
-      } else {
-        _head = List<unsigned int>::nil();
-      }
-      _continue = false;
+      *_write = List<unsigned int>::nil();
+      break;
     } else {
       unsigned int len_ = _loop_len - 1;
       auto _cell = List<unsigned int>::cons(_loop_start, nullptr);
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            _cell;
-      } else {
-        _head = _cell;
-      }
-      _last = _cell;
+      *_write = _cell;
+      _write =
+          &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
       unsigned int _next_len = len_;
       unsigned int _next_start = (_loop_start + 1u);
       _loop_len = std::move(_next_len);

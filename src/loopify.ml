@@ -437,7 +437,7 @@ and collect_stmt check ~in_visitor = function
       | Some stmts -> collect_stmts check ~in_visitor stmts
       | None -> [] )
   | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _
-  | Sdecl_init _ | Scontinue -> []
+  | Sdecl_init _ | Scontinue | Sbreak -> []
 
 (** Count recursive calls in an expression (not descending into lambdas). *)
 let rec count_calls_expr (check : call_checker) expr =
@@ -684,6 +684,15 @@ let rec strip_ref_and_const_type = function
   | Tmod (TMconst, t) -> strip_ref_and_const_type t
   | t -> t
 
+(** Return [true] when a parameter type can be safely moved into a shadow
+    variable.  References cannot be moved from; const values would trigger
+    a pessimizing-move warning since the move constructor receives [const T&&]
+    and falls back to copy anyway. *)
+let is_moveable_param_type = function
+  | Tref _ -> false
+  | Tmod (TMconst, _) -> false
+  | _ -> true
+
 (** Assign [expr] to the [_result] accumulator variable.
     Generates the statement list [[\[_result = expr;\]]]. *)
 let assign_result expr =
@@ -693,7 +702,7 @@ let assign_result expr =
     the tail-recursion while loop.  Used only in tail-recursion rewriting. *)
 let assign_result_and_stop expr =
   [ Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_result"), expr));
-    Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_continue"), CPPbool false)) ]
+    Sbreak ]
 
 (** Generate temp-based parameter updates to avoid read-after-write hazards. For
     a recursive call like [f b (a mod b)], we must evaluate all argument
@@ -1076,7 +1085,9 @@ let transform_tail ?(param_inits = []) check _pp_type params ret_ty body =
         let init_expr =
           match List.assoc_opt orig_id param_inits with
           | Some custom -> custom
-          | None -> CPPvar orig_id
+          | None ->
+            if is_moveable_param_type ty then CPPmove (CPPvar orig_id)
+            else CPPvar orig_id
         in
         Sasgn (shadow_id, Some (strip_ref_and_const_type ty), init_expr) )
       varying_params
@@ -1090,24 +1101,16 @@ let transform_tail ?(param_inits = []) check _pp_type params ret_ty body =
     rewrite_visit_stmts check varying shadow_params body'
   in
   let body'' = strip_unnecessary_blocks body'' in
-  let continue_decl =
-    Sasgn (Id.of_string "_continue",
-           Some (Tvar (0, Some (Id.of_string "bool"))),
-           CPPbool true)
-  in
   (* Assemble the loop body.
-     - Non-void: [T _result; ... bool _continue = true; while (_continue) { ... } return _result;]
+     - Non-void: [T _result; ... while (true) { ... break; } return _result;]
      - Void:     [... while (true) { ... } return;]
-     Void functions never assign [_result] or set [_continue = false] — their
-     base cases exit via [Sreturn None] (plain [return;]), so both variables
-     are unnecessary.  Using [while (true)] makes the infinite-loop intent
-     explicit (e.g. for cofixpoints like [spin] and [forever]). *)
+     Non-void base cases exit via [Sbreak] (from [assign_result_and_stop]).
+     Void base cases exit via [Sreturn None] (plain [return;]).
+     Both use [while (true)] for the loop condition. *)
   (if is_void then [] else [Sdecl (Id.of_string "_result", ret_ty)])
   @ shadow_decls
-  @ (if is_void then [] else [continue_decl])
   @ [
-      Swhile ((if is_void then CPPbool true
-               else CPPvar (Id.of_string "_continue")), body'');
+      Swhile (CPPbool true, body'');
       (if is_void then Sreturn None else
        Sreturn (Some (CPPvar (Id.of_string "_result"))));
     ]
@@ -1232,16 +1235,11 @@ type tmc_branch_info = {
 
 (** Summary of TMC analysis for a whole function.  All TMC branches must use the
     same constructor and recursive field.  Computed by {!try_tmc_classify}. *)
-type tmc_info = {
-  ti_ctor_name : string;
-      (** Constructor name shared by all TMC branches *)
-  ti_rec_field_idx : int;
-      (** Recursive field index shared by all TMC branches *)
-  ti_type_expr : cpp_expr;
-      (** Type expression for [std::get<typename Type::Ctor>] *)
-  ti_n_args : int;
-      (** Total number of constructor arguments *)
-}
+(** Summary of TMC analysis for a whole function.  The type is a unit-like
+    marker: [Some ()] signals that all TMC branches are eligible and use the
+    same constructor and recursive field.  The per-branch details are carried
+    directly in the [tmc_cell_alloc] records inside each [tmc_branch]. *)
+type tmc_info = unit [@@warning "-34"]
 
 (** Try to decompose an expression with exactly one recursive call. Returns
     [Some decomposed] if successful, [None] otherwise.
@@ -1834,14 +1832,7 @@ let try_tmc_classify check body =
           && i.tca_rec_field_idx = first_inner.tca_rec_field_idx )
         branches
     in
-    if all_same then
-      Some
-        {
-          ti_ctor_name = first_inner.tca_ctor_name;
-          ti_rec_field_idx = first_inner.tca_rec_field_idx;
-          ti_type_expr = first_inner.tca_type_expr;
-          ti_n_args = first_inner.tca_n_args;
-        }
+    if all_same then Some ()
     else None
 
 (** {3 TMC transformation}
@@ -1903,17 +1894,13 @@ let patch_cell_field pp_expr ~type_expr ~ctor_name ~n_args ~rec_field_idx
         _head = val;
       \}
     ]} *)
-let patch_tmc_dest pp_expr ti val_expr =
-  let tmc_last = CPPvar (Id.of_string "_last") in
-  let tmc_head = Id.of_string "_head" in
-  let patch_field =
-    patch_cell_field pp_expr
-      ~type_expr:ti.ti_type_expr ~ctor_name:ti.ti_ctor_name
-      ~n_args:ti.ti_n_args ~rec_field_idx:ti.ti_rec_field_idx
-      tmc_last val_expr
-  in
-  let assign_head = Sexpr (CPPbinop ("=", CPPvar tmc_head, val_expr)) in
-  [Sif (tmc_last, [patch_field], [assign_head])]
+let patch_tmc_dest _pp_expr _ti val_expr =
+  (* Write-pointer technique: *_write = val.
+     _write always points to where the next value should go — initially
+     &_head, then the recursive field of the most recently allocated cell.
+     No branch needed: the pointer handles both the first-element and
+     subsequent-element cases uniformly. *)
+  [Sexpr (CPPbinop ("=", CPPderef (CPPvar (Id.of_string "_write")), val_expr))]
 
 (** Build a constructor factory call with [nullptr] at the recursive argument
     position.
@@ -1973,18 +1960,30 @@ let build_tmc_branch_stmts pp_expr ti br varying shadow_params =
     | _ -> []
   in
   let link_stmts = link_cells br.tmc_cells cell_names in
-  (* 3. Patch destination with outermost cell *)
+  (* 3. Patch destination with outermost cell via write pointer *)
   let patch = patch_tmc_dest pp_expr ti (CPPvar (List.hd cell_names)) in
-  (* 4. Update _last to innermost cell *)
-  let update_last =
-    Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_last"),
-                     CPPvar (List.rev cell_names |> List.hd)))
+  (* 4. Advance _write to the recursive field of the innermost cell.
+        Generates: _write = &std::get<typename Type::Ctor>(inner->v_mut()).field; *)
+  let innermost_name = List.rev cell_names |> List.hd in
+  let innermost_cell = CPPvar innermost_name in
+  let inner_ti = List.rev br.tmc_cells |> List.hd in
+  let field_idx = inner_ti.tca_n_args - 1 - inner_ti.tca_rec_field_idx in
+  let field_id = Common.lookup_ctor_field_name inner_ti.tca_ctor_name field_idx in
+  let type_str = pp_expr inner_ti.tca_type_expr in
+  let get_expr =
+    CPPraw ("std::get<typename " ^ type_str ^ "::" ^ inner_ti.tca_ctor_name ^ ">")
+  in
+  let v_mut = CPPmethod_call (innermost_cell, Id.of_string "v_mut", []) in
+  let update_write =
+    Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_write"),
+                     CPPunop ("&", CPPget (CPPfun_call (get_expr, [v_mut]),
+                                           field_id))))
   in
   (* 5. Shadow variable updates *)
   let shadow_updates =
     make_shadow_updates shadow_params (filter_by_mask varying br.tmc_rec_args)
   in
-  cell_decls @ link_stmts @ patch @ [update_last] @ shadow_updates
+  cell_decls @ link_stmts @ patch @ [update_write] @ shadow_updates
 
 (** Rewrite return statements inside a TMC visitor lambda body.
 
@@ -2022,9 +2021,7 @@ let rec rewrite_tmc_lambda_return check pp_expr ti varying shadow_params =
       let n = count_calls_expr check e in
       if n = 0 then
         (* Base case — patch destination and stop *)
-        patch_tmc_dest pp_expr ti e
-        @ [Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_continue"),
-                             CPPbool false))]
+        patch_tmc_dest pp_expr ti e @ [Sbreak]
       else
         (* TMC branch — allocate cell(s) with holes, patch, continue *)
         match try_tmc_decompose check e with
@@ -2097,10 +2094,7 @@ let rec rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params = function
       (* Direct base return *)
       let n = count_calls_expr check e in
       if n = 0 then
-        Sblock
-          (patch_tmc_dest pp_expr ti e
-           @ [Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_continue"),
-                                CPPbool false))])
+        Sblock (patch_tmc_dest pp_expr ti e @ [Sbreak])
       else
         (* TMC branch at top level *)
         match try_tmc_decompose check e with
@@ -2167,9 +2161,14 @@ let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
   let subs =
     List.map2 (fun (id, _) (sid, _) -> (id, sid)) varying_params shadow_params
   in
-  (* Declare _head and _last with the return type, value-initialized *)
+  (* Declare _head (value-initialized) and _write (raw pointer into the chain).
+     _write starts pointing at &_head; each TMC iteration advances it to the
+     recursive-field address of the most recently allocated cell. *)
   let head_decl = Sdecl_init (Id.of_string "_head", ret_ty) in
-  let last_decl = Sdecl_init (Id.of_string "_last", ret_ty) in
+  let write_decl =
+    Sasgn (Id.of_string "_write", Some (Tptr ret_ty),
+           CPPunop ("&", CPPvar (Id.of_string "_head")))
+  in
   (* Shadow variable declarations.
      For pointer params with custom inits (e.g., _self = this in methods), only
      strip references but keep const — const T* must stay const to match this.
@@ -2182,7 +2181,10 @@ let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
         let init_expr =
           match List.assoc_opt orig_id param_inits with
           | Some custom -> custom
-          | None -> CPPvar orig_id
+          | None ->
+            if (not has_custom_init) && is_moveable_param_type ty
+            then CPPmove (CPPvar orig_id)
+            else CPPvar orig_id
         in
         let shadow_ty =
           if has_custom_init then strip_ref_type ty
@@ -2201,17 +2203,10 @@ let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
       body'
     |> strip_unnecessary_blocks
   in
-  let continue_decl =
-    Sasgn
-      ( Id.of_string "_continue",
-        Some (Tvar (0, Some (Id.of_string "bool"))),
-        CPPbool true )
-  in
-  [head_decl; last_decl]
+  [head_decl; write_decl]
   @ shadow_decls
   @ [
-      continue_decl;
-      Swhile (CPPvar (Id.of_string "_continue"), body'');
+      Swhile (CPPbool true, body'');
       Sreturn (Some (CPPvar (Id.of_string "_head")));
     ]
 
@@ -4569,7 +4564,7 @@ let make_loop_and_return struct_defs ret_ty init_push branches =
   (* Use Tvar with Some name to avoid struct-name qualification that Tid adds *)
   let frame_ty = Tvar (0, Some (Id.of_string "_Frame")) in
   (* std::vector<_Frame> has no AST representation — keep as Sraw *)
-  let stack_decl = Sraw "std::vector<_Frame> _stack;" in
+  let stack_decl = Sraw "std::vector<_Frame> _stack;\n  _stack.reserve(16);" in
   (* [Smatch (branches, None)] = exhaustive if/else-if chain; no wildcard needed
      since the variant can only hold the listed frame types. *)
   let dispatch_stmt = Smatch (branches, None) in
@@ -4886,7 +4881,7 @@ and stmt_has_expr pred = function
       || body_has_expr pred br.smb_body) branches
     || (match default with Some s -> body_has_expr pred s | None -> false)
   | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _ | Sdecl_init _
-  | Scontinue -> false
+  | Scontinue | Sbreak -> false
 
 (** Check if an expression or any of its sub-expressions satisfies [pred].
     Expression-level companion of {!body_has_expr}. *)

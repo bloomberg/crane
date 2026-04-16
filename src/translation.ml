@@ -1137,7 +1137,7 @@ let stmts_reference_var_directly (target : Id.t) (stmts : cpp_stmt list) : bool 
   and vs = function
     | Sreturn (Some e) | Sexpr e -> ve e
     | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _
-    | Susing _ | Sdecl_init _ | Scontinue -> ()
+    | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> ()
     | Sasgn (_, _, e) -> ve e
     | Sif (c, t, f) -> ve c; List.iter vs t; List.iter vs f
     | Sswitch (e, _, branches, def) ->

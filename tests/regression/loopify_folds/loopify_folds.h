@@ -63,6 +63,7 @@ public:
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{_self});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -95,12 +96,11 @@ struct LoopifyFolds {
     unsigned int _result;
     std::shared_ptr<List<unsigned int>> _loop_l = l;
     unsigned int _loop_acc = acc;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
         _result = _loop_acc;
-        _continue = false;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
@@ -128,6 +128,7 @@ struct LoopifyFolds {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -156,32 +157,22 @@ struct LoopifyFolds {
   scanl(F0 &&f, const unsigned int acc,
         const std::shared_ptr<List<unsigned int>> &l) {
     std::shared_ptr<List<unsigned int>> _head{};
-    std::shared_ptr<List<unsigned int>> _last{};
+    std::shared_ptr<List<unsigned int>> *_write = &_head;
     std::shared_ptr<List<unsigned int>> _loop_l = l;
     unsigned int _loop_acc = acc;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::cons(_loop_acc, List<unsigned int>::nil());
-        } else {
-          _head =
-              List<unsigned int>::cons(_loop_acc, List<unsigned int>::nil());
-        }
-        _continue = false;
+        *_write =
+            List<unsigned int>::cons(_loop_acc, List<unsigned int>::nil());
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         auto _cell = List<unsigned int>::cons(_loop_acc, nullptr);
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write =
+            &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
         std::shared_ptr<List<unsigned int>> _next_l = d_a1;
         unsigned int _next_acc = f(_loop_acc, d_a0);
         _loop_l = std::move(_next_l);
@@ -203,6 +194,7 @@ struct LoopifyFolds {
     using _Frame = std::variant<_Enter>;
     std::shared_ptr<List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -235,24 +227,23 @@ struct LoopifyFolds {
     unsigned int _result;
     std::shared_ptr<List<unsigned int>> _loop_l = l;
     unsigned int _loop_fuel = fuel;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (_loop_fuel <= 0) {
         _result = 0u;
-        _continue = false;
+        break;
       } else {
         unsigned int fuel_ = _loop_fuel - 1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _loop_l->v())) {
           _result = 0u;
-          _continue = false;
+          break;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(_loop_l->v());
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   d_a1->v())) {
             _result = d_a0;
-            _continue = false;
+            break;
           } else {
             const auto &[d_a00, d_a10] =
                 std::get<typename List<unsigned int>::Cons>(d_a1->v());
@@ -288,6 +279,7 @@ struct LoopifyFolds {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -335,6 +327,7 @@ struct LoopifyFolds {
     using _Frame = std::variant<_Enter, _Call1>;
     std::pair<unsigned int, std::shared_ptr<List<unsigned int>>> _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l, acc});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -369,29 +362,19 @@ struct LoopifyFolds {
   static std::shared_ptr<List<unsigned int>>
   iterate_accum(F0 &&f, const unsigned int n, const unsigned int x) {
     std::shared_ptr<List<unsigned int>> _head{};
-    std::shared_ptr<List<unsigned int>> _last{};
+    std::shared_ptr<List<unsigned int>> *_write = &_head;
     unsigned int _loop_x = x;
     unsigned int _loop_n = n;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (_loop_n <= 0) {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::nil();
-        } else {
-          _head = List<unsigned int>::nil();
-        }
-        _continue = false;
+        *_write = List<unsigned int>::nil();
+        break;
       } else {
         unsigned int n_ = _loop_n - 1;
         auto _cell = List<unsigned int>::cons(_loop_x, nullptr);
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write =
+            &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
         unsigned int _next_x = f(_loop_x);
         unsigned int _next_n = n_;
         _loop_x = std::move(_next_x);
@@ -406,32 +389,22 @@ struct LoopifyFolds {
   static std::shared_ptr<List<unsigned int>>
   unfold_fuel(const unsigned int fuel, F1 &&f, const unsigned int seed) {
     std::shared_ptr<List<unsigned int>> _head{};
-    std::shared_ptr<List<unsigned int>> _last{};
+    std::shared_ptr<List<unsigned int>> *_write = &_head;
     unsigned int _loop_seed = seed;
     unsigned int _loop_fuel = fuel;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (_loop_fuel <= 0) {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::nil();
-        } else {
-          _head = List<unsigned int>::nil();
-        }
-        _continue = false;
+        *_write = List<unsigned int>::nil();
+        break;
       } else {
         unsigned int fuel_ = _loop_fuel - 1;
         auto _cs = f(_loop_seed);
         const unsigned int &x = _cs.first;
         const unsigned int &next_seed = _cs.second;
         auto _cell = List<unsigned int>::cons(x, nullptr);
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write =
+            &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
         unsigned int _next_seed = next_seed;
         unsigned int _next_fuel = fuel_;
         _loop_seed = std::move(_next_seed);

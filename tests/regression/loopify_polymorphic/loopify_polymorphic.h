@@ -54,27 +54,18 @@ public:
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     std::shared_ptr<List<t_A>> _head{};
-    std::shared_ptr<List<t_A>> _last{};
+    std::shared_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<t_A>::Nil>(_loop_self->v())) {
-        if (_last) {
-          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
-        } else {
-          _head = m;
-        }
-        _continue = false;
+        *_write = m;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<t_A>::Cons>(_loop_self->v());
         auto _cell = List<t_A>::cons(d_a0, nullptr);
-        if (_last) {
-          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write = &std::get<typename List<t_A>::Cons>(_cell->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
@@ -98,6 +89,7 @@ struct LoopifyPolymorphic {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -134,6 +126,7 @@ struct LoopifyPolymorphic {
     using _Frame = std::variant<_Enter, _Call1>;
     std::shared_ptr<List<T1>> _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -161,28 +154,18 @@ struct LoopifyPolymorphic {
   poly_append(const std::shared_ptr<List<T1>> &l1,
               std::shared_ptr<List<T1>> l2) {
     std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> _last{};
+    std::shared_ptr<List<T1>> *_write = &_head;
     std::shared_ptr<List<T1>> _loop_l1 = l1;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l1->v())) {
-        if (_last) {
-          std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
-              std::move(l2);
-        } else {
-          _head = std::move(l2);
-        }
-        _continue = false;
+        *_write = std::move(l2);
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<T1>::Cons>(_loop_l1->v());
         auto _cell = List<T1>::cons(d_a0, nullptr);
-        if (_last) {
-          std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 = _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write = &std::get<typename List<T1>::Cons>(_cell->v_mut()).d_a1;
         _loop_l1 = d_a1;
         continue;
       }
@@ -195,17 +178,16 @@ struct LoopifyPolymorphic {
   poly_last(const std::shared_ptr<List<T1>> &l) {
     std::optional<T1> _result;
     std::shared_ptr<List<T1>> _loop_l = l;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
         _result = std::optional<T1>();
-        _continue = false;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<T1>::Cons>(_loop_l->v());
         if (std::holds_alternative<typename List<T1>::Nil>(d_a1->v())) {
           _result = std::make_optional<T1>(d_a0);
-          _continue = false;
+          break;
         } else {
           _loop_l = d_a1;
         }
@@ -218,39 +200,24 @@ struct LoopifyPolymorphic {
   static std::shared_ptr<List<T1>>
   poly_take(const unsigned int n, const std::shared_ptr<List<T1>> &l) {
     std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> _last{};
+    std::shared_ptr<List<T1>> *_write = &_head;
     std::shared_ptr<List<T1>> _loop_l = l;
     unsigned int _loop_n = n;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (_loop_n <= 0) {
-        if (_last) {
-          std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
-              List<T1>::nil();
-        } else {
-          _head = List<T1>::nil();
-        }
-        _continue = false;
+        *_write = List<T1>::nil();
+        break;
       } else {
         unsigned int n_ = _loop_n - 1;
         if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
-          if (_last) {
-            std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
-                List<T1>::nil();
-          } else {
-            _head = List<T1>::nil();
-          }
-          _continue = false;
+          *_write = List<T1>::nil();
+          break;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<T1>::Cons>(_loop_l->v());
           auto _cell = List<T1>::cons(d_a0, nullptr);
-          if (_last) {
-            std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 = _cell;
-          } else {
-            _head = _cell;
-          }
-          _last = _cell;
+          *_write = _cell;
+          _write = &std::get<typename List<T1>::Cons>(_cell->v_mut()).d_a1;
           std::shared_ptr<List<T1>> _next_l = d_a1;
           unsigned int _next_n = n_;
           _loop_l = std::move(_next_l);
@@ -266,18 +233,17 @@ struct LoopifyPolymorphic {
   static std::shared_ptr<List<T1>> poly_drop(const unsigned int n,
                                              std::shared_ptr<List<T1>> l) {
     std::shared_ptr<List<T1>> _result;
-    std::shared_ptr<List<T1>> _loop_l = l;
+    std::shared_ptr<List<T1>> _loop_l = std::move(l);
     unsigned int _loop_n = n;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (_loop_n <= 0) {
         _result = std::move(_loop_l);
-        _continue = false;
+        break;
       } else {
         unsigned int n_ = _loop_n - 1;
         if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
           _result = List<T1>::nil();
-          _continue = false;
+          break;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<T1>::Cons>(_loop_l->v());
@@ -297,17 +263,16 @@ struct LoopifyPolymorphic {
     std::optional<T1> _result;
     std::shared_ptr<List<T1>> _loop_l = l;
     unsigned int _loop_n = n;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
         _result = std::optional<T1>();
-        _continue = false;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<T1>::Cons>(_loop_l->v());
         if (_loop_n == 0u) {
           _result = std::make_optional<T1>(d_a0);
-          _continue = false;
+          break;
         } else {
           std::shared_ptr<List<T1>> _next_l = d_a1;
           unsigned int _next_n =
@@ -324,29 +289,19 @@ struct LoopifyPolymorphic {
   static std::shared_ptr<List<T1>>
   poly_filter(F0 &&p, const std::shared_ptr<List<T1>> &l) {
     std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> _last{};
+    std::shared_ptr<List<T1>> *_write = &_head;
     std::shared_ptr<List<T1>> _loop_l = l;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
-        if (_last) {
-          std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
-              List<T1>::nil();
-        } else {
-          _head = List<T1>::nil();
-        }
-        _continue = false;
+        *_write = List<T1>::nil();
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<T1>::Cons>(_loop_l->v());
         if (p(d_a0)) {
           auto _cell = List<T1>::cons(d_a0, nullptr);
-          if (_last) {
-            std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 = _cell;
-          } else {
-            _head = _cell;
-          }
-          _last = _cell;
+          *_write = _cell;
+          _write = &std::get<typename List<T1>::Cons>(_cell->v_mut()).d_a1;
           _loop_l = d_a1;
           continue;
         } else {
@@ -362,28 +317,18 @@ struct LoopifyPolymorphic {
   static std::shared_ptr<List<T2>>
   poly_map(F0 &&f, const std::shared_ptr<List<T1>> &l) {
     std::shared_ptr<List<T2>> _head{};
-    std::shared_ptr<List<T2>> _last{};
+    std::shared_ptr<List<T2>> *_write = &_head;
     std::shared_ptr<List<T1>> _loop_l = l;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
-        if (_last) {
-          std::get<typename List<T2>::Cons>(_last->v_mut()).d_a1 =
-              List<T2>::nil();
-        } else {
-          _head = List<T2>::nil();
-        }
-        _continue = false;
+        *_write = List<T2>::nil();
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<T1>::Cons>(_loop_l->v());
         auto _cell = List<T2>::cons(f(d_a0), nullptr);
-        if (_last) {
-          std::get<typename List<T2>::Cons>(_last->v_mut()).d_a1 = _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write = &std::get<typename List<T2>::Cons>(_cell->v_mut()).d_a1;
         _loop_l = d_a1;
         continue;
       }
@@ -396,42 +341,28 @@ struct LoopifyPolymorphic {
   poly_zip(const std::shared_ptr<List<T1>> &l1,
            const std::shared_ptr<List<T2>> &l2) {
     std::shared_ptr<List<std::pair<T1, T2>>> _head{};
-    std::shared_ptr<List<std::pair<T1, T2>>> _last{};
+    std::shared_ptr<List<std::pair<T1, T2>>> *_write = &_head;
     std::shared_ptr<List<T2>> _loop_l2 = l2;
     std::shared_ptr<List<T1>> _loop_l1 = l1;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l1->v())) {
-        if (_last) {
-          std::get<typename List<std::pair<T1, T2>>::Cons>(_last->v_mut())
-              .d_a1 = List<std::pair<T1, T2>>::nil();
-        } else {
-          _head = List<std::pair<T1, T2>>::nil();
-        }
-        _continue = false;
+        *_write = List<std::pair<T1, T2>>::nil();
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<T1>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename List<T2>::Nil>(_loop_l2->v())) {
-          if (_last) {
-            std::get<typename List<std::pair<T1, T2>>::Cons>(_last->v_mut())
-                .d_a1 = List<std::pair<T1, T2>>::nil();
-          } else {
-            _head = List<std::pair<T1, T2>>::nil();
-          }
-          _continue = false;
+          *_write = List<std::pair<T1, T2>>::nil();
+          break;
         } else {
           const auto &[d_a00, d_a10] =
               std::get<typename List<T2>::Cons>(_loop_l2->v());
           auto _cell = List<std::pair<T1, T2>>::cons(
               std::make_pair(d_a0, d_a00), nullptr);
-          if (_last) {
-            std::get<typename List<std::pair<T1, T2>>::Cons>(_last->v_mut())
-                .d_a1 = _cell;
-          } else {
-            _head = _cell;
-          }
-          _last = _cell;
+          *_write = _cell;
+          _write =
+              &std::get<typename List<std::pair<T1, T2>>::Cons>(_cell->v_mut())
+                   .d_a1;
           std::shared_ptr<List<T2>> _next_l2 = d_a10;
           std::shared_ptr<List<T1>> _next_l1 = d_a1;
           _loop_l2 = std::move(_next_l2);
@@ -459,6 +390,7 @@ struct LoopifyPolymorphic {
     using _Frame = std::variant<_Enter, _Call1>;
     std::pair<std::shared_ptr<List<T1>>, std::shared_ptr<List<T2>>> _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -505,6 +437,7 @@ struct LoopifyPolymorphic {
     using _Frame = std::variant<_Enter, _Call1>;
     std::pair<std::shared_ptr<List<T1>>, std::shared_ptr<List<T1>>> _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -540,17 +473,16 @@ struct LoopifyPolymorphic {
   poly_member(F0 &&eq, const T1 x, const std::shared_ptr<List<T1>> &l) {
     bool _result;
     std::shared_ptr<List<T1>> _loop_l = l;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
         _result = false;
-        _continue = false;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<T1>::Cons>(_loop_l->v());
         if (eq(x, d_a0)) {
           _result = true;
-          _continue = false;
+          break;
         } else {
           _loop_l = d_a1;
         }
@@ -563,27 +495,17 @@ struct LoopifyPolymorphic {
   static std::shared_ptr<List<T1>> poly_replicate(const unsigned int n,
                                                   const T1 x) {
     std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> _last{};
+    std::shared_ptr<List<T1>> *_write = &_head;
     unsigned int _loop_n = n;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (_loop_n <= 0) {
-        if (_last) {
-          std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
-              List<T1>::nil();
-        } else {
-          _head = List<T1>::nil();
-        }
-        _continue = false;
+        *_write = List<T1>::nil();
+        break;
       } else {
         unsigned int n_ = _loop_n - 1;
         auto _cell = List<T1>::cons(x, nullptr);
-        if (_last) {
-          std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 = _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write = &std::get<typename List<T1>::Cons>(_cell->v_mut()).d_a1;
         _loop_n = n_;
         continue;
       }

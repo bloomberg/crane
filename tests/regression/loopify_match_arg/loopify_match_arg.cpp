@@ -21,6 +21,7 @@ __attribute__((pure)) unsigned int LoopifyMatchArg::count_dots(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{xs});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -67,6 +68,7 @@ __attribute__((pure)) unsigned int LoopifyMatchArg::my_length(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{xs});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());

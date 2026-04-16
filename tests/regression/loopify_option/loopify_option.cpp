@@ -15,18 +15,17 @@ __attribute__((pure)) std::optional<unsigned int> LoopifyOption::lookup_opt(
   std::optional<unsigned int> _result;
   std::shared_ptr<LoopifyOption::list<std::pair<unsigned int, unsigned int>>>
       _loop_l = l;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename LoopifyOption::list<
             std::pair<unsigned int, unsigned int>>::Nil>(_loop_l->v())) {
       _result = std::optional<unsigned int>();
-      _continue = false;
+      break;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename LoopifyOption::list<
           std::pair<unsigned int, unsigned int>>::Cons>(_loop_l->v());
       if (d_a0.first == key) {
         _result = std::make_optional<unsigned int>(d_a0.second);
-        _continue = false;
+        break;
       } else {
         _loop_l = d_a1;
       }

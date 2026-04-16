@@ -21,6 +21,7 @@ LoopifyDecltype::count_true(const std::shared_ptr<List<bool>> &xs) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{xs});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -62,6 +63,7 @@ __attribute__((pure)) unsigned int LoopifyDecltype::sum_flagged(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{xs});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());

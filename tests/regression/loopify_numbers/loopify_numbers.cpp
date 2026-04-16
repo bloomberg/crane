@@ -21,6 +21,7 @@ LoopifyNumbers::factorial(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -59,6 +60,7 @@ __attribute__((pure)) unsigned int LoopifyNumbers::fib(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -118,6 +120,7 @@ LoopifyNumbers::tribonacci_fuel(const unsigned int fuel, const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -176,16 +179,15 @@ LoopifyNumbers::gcd_fuel(const unsigned int fuel, const unsigned int a,
   unsigned int _loop_b = b;
   unsigned int _loop_a = a;
   unsigned int _loop_fuel = fuel;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_fuel <= 0) {
       _result = _loop_a;
-      _continue = false;
+      break;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_b <= 0) {
         _result = _loop_a;
-        _continue = false;
+        break;
       } else {
         unsigned int _x = _loop_b - 1;
         unsigned int _next_b = (_loop_b ? _loop_a % _loop_b : _loop_a);
@@ -224,6 +226,7 @@ LoopifyNumbers::binomial(const unsigned int n, const unsigned int k) {
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{k, n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -280,6 +283,7 @@ LoopifyNumbers::pascal(const unsigned int row, const unsigned int col) {
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{col, row});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -329,6 +333,7 @@ LoopifyNumbers::ackermann_fuel(const unsigned int fuel, const unsigned int m,
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n, m, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -383,6 +388,7 @@ LoopifyNumbers::collatz_length_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -438,6 +444,7 @@ LoopifyNumbers::digitsum_fuel(const unsigned int fuel, const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -485,6 +492,7 @@ LoopifyNumbers::dec_to_bin_fuel(const unsigned int fuel, const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -534,6 +542,7 @@ LoopifyNumbers::sum_to(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -570,6 +579,7 @@ LoopifyNumbers::sum_squares(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -599,11 +609,10 @@ LoopifyNumbers::alternating_sum(const bool sign, const unsigned int acc,
   unsigned int _loop_n = n;
   unsigned int _loop_acc = acc;
   bool _loop_sign = sign;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_n <= 0) {
       _result = _loop_acc;
-      _continue = false;
+      break;
     } else {
       unsigned int m = _loop_n - 1;
       unsigned int new_acc;
@@ -652,6 +661,7 @@ LoopifyNumbers::staircase_fuel(const unsigned int fuel, const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -735,6 +745,7 @@ LoopifyNumbers::sum_while_positive(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -772,6 +783,7 @@ LoopifyNumbers::count_down_by_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -839,6 +851,7 @@ LoopifyNumbers::mixed_arith_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -904,28 +917,27 @@ __attribute__((pure)) bool LoopifyNumbers::is_even_fuel(const unsigned int fuel,
   bool _result;
   unsigned int _loop_n = n;
   unsigned int _loop_fuel = fuel;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_fuel <= 0) {
       _result = true;
-      _continue = false;
+      break;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_n == 0u) {
         _result = true;
-        _continue = false;
+        break;
       } else {
         const unsigned int _inl_n =
             (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
         const unsigned int _inl_fuel = f;
         if (_inl_fuel <= 0) {
           _result = false;
-          _continue = false;
+          break;
         } else {
           unsigned int f = _inl_fuel - 1;
           if (_inl_n == 0u) {
             _result = false;
-            _continue = false;
+            break;
           } else {
             unsigned int _next_n =
                 (((_inl_n - 1u) > _inl_n ? 0 : (_inl_n - 1u)));
@@ -945,28 +957,27 @@ __attribute__((pure)) bool LoopifyNumbers::is_odd_fuel(const unsigned int fuel,
   bool _result;
   unsigned int _loop_n = n;
   unsigned int _loop_fuel = fuel;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_fuel <= 0) {
       _result = false;
-      _continue = false;
+      break;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_n == 0u) {
         _result = false;
-        _continue = false;
+        break;
       } else {
         const unsigned int _inl_n =
             (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
         const unsigned int _inl_fuel = f;
         if (_inl_fuel <= 0) {
           _result = true;
-          _continue = false;
+          break;
         } else {
           unsigned int f = _inl_fuel - 1;
           if (_inl_n == 0u) {
             _result = true;
-            _continue = false;
+            break;
           } else {
             unsigned int _next_n =
                 (((_inl_n - 1u) > _inl_n ? 0 : (_inl_n - 1u)));
@@ -1003,6 +1014,7 @@ __attribute__((pure)) unsigned int LoopifyNumbers::power(const unsigned int b,
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{e});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1046,6 +1058,7 @@ LoopifyNumbers::power_mod_fuel(const unsigned int fuel, const unsigned int b,
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{e, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1106,6 +1119,7 @@ LoopifyNumbers::sum_divisors_aux(const unsigned int n, const unsigned int k) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{k});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1186,6 +1200,7 @@ __attribute__((pure)) unsigned int LoopifyNumbers::sum_even_indices_fuel(
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1244,39 +1259,24 @@ std::shared_ptr<List<unsigned int>>
 LoopifyNumbers::collatz_list_fuel(const unsigned int fuel,
                                   const unsigned int n) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_n = n;
   unsigned int _loop_fuel = fuel;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_fuel <= 0) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            List<unsigned int>::nil();
-      } else {
-        _head = List<unsigned int>::nil();
-      }
-      _continue = false;
+      *_write = List<unsigned int>::nil();
+      break;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_n == 1u) {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::cons(1u, List<unsigned int>::nil());
-        } else {
-          _head = List<unsigned int>::cons(1u, List<unsigned int>::nil());
-        }
-        _continue = false;
+        *_write = List<unsigned int>::cons(1u, List<unsigned int>::nil());
+        break;
       } else {
         if ((2u ? _loop_n % 2u : _loop_n) == 0u) {
           auto _cell = List<unsigned int>::cons(_loop_n, nullptr);
-          if (_last) {
-            std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                _cell;
-          } else {
-            _head = _cell;
-          }
-          _last = _cell;
+          *_write = _cell;
+          _write =
+              &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
           unsigned int _next_n = (2u ? _loop_n / 2u : 0);
           unsigned int _next_fuel = f;
           _loop_n = std::move(_next_n);
@@ -1285,13 +1285,10 @@ LoopifyNumbers::collatz_list_fuel(const unsigned int fuel,
         } else {
           if ((3u ? _loop_n % 3u : _loop_n) == 0u) {
             auto _cell = List<unsigned int>::cons(_loop_n, nullptr);
-            if (_last) {
-              std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                  _cell;
-            } else {
-              _head = _cell;
-            }
-            _last = _cell;
+            *_write = _cell;
+            _write =
+                &std::get<typename List<unsigned int>::Cons>(_cell->v_mut())
+                     .d_a1;
             unsigned int _next_n = (3u ? _loop_n / 3u : 0);
             unsigned int _next_fuel = f;
             _loop_n = std::move(_next_n);
@@ -1299,13 +1296,10 @@ LoopifyNumbers::collatz_list_fuel(const unsigned int fuel,
             continue;
           } else {
             auto _cell = List<unsigned int>::cons(_loop_n, nullptr);
-            if (_last) {
-              std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                  _cell;
-            } else {
-              _head = _cell;
-            }
-            _last = _cell;
+            *_write = _cell;
+            _write =
+                &std::get<typename List<unsigned int>::Cons>(_cell->v_mut())
+                     .d_a1;
             unsigned int _next_n = ((3u * _loop_n) + 1u);
             unsigned int _next_fuel = f;
             _loop_n = std::move(_next_n);
@@ -1338,6 +1332,7 @@ LoopifyNumbers::sum_divisible_by(const unsigned int k, const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());

@@ -12,18 +12,17 @@ LoopifyListAccess::nth(const unsigned int n,
   unsigned int _result;
   std::shared_ptr<List<unsigned int>> _loop_l = l;
   unsigned int _loop_n = n;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
       _result = 0u;
-      _continue = false;
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_n == 0u) {
         _result = d_a0;
-        _continue = false;
+        break;
       } else {
         std::shared_ptr<List<unsigned int>> _next_l = d_a1;
         unsigned int _next_n =
@@ -40,18 +39,17 @@ __attribute__((pure)) unsigned int
 LoopifyListAccess::last(const std::shared_ptr<List<unsigned int>> &l) {
   unsigned int _result;
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
       _result = 0u;
-      _continue = false;
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
         _result = d_a0;
-        _continue = false;
+        break;
       } else {
         _loop_l = d_a1;
       }
@@ -67,18 +65,17 @@ LoopifyListAccess::index_of_aux(const unsigned int x,
   unsigned int _result;
   unsigned int _loop_idx = idx;
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
       _result = 0u;
-      _continue = false;
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (x == d_a0) {
         _result = _loop_idx;
-        _continue = false;
+        break;
       } else {
         unsigned int _next_idx = (_loop_idx + 1u);
         std::shared_ptr<List<unsigned int>> _next_l = d_a1;
@@ -101,18 +98,17 @@ LoopifyListAccess::member(const unsigned int x,
                           const std::shared_ptr<List<unsigned int>> &l) {
   bool _result;
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
       _result = false;
-      _continue = false;
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (x == d_a0) {
         _result = true;
-        _continue = false;
+        break;
       } else {
         _loop_l = d_a1;
       }
@@ -126,13 +122,12 @@ __attribute__((pure)) unsigned int LoopifyListAccess::lookup(
     const std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> &l) {
   unsigned int _result;
   std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> _loop_l = l;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<
             typename List<std::pair<unsigned int, unsigned int>>::Nil>(
             _loop_l->v())) {
       _result = 0u;
-      _continue = false;
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
@@ -141,7 +136,7 @@ __attribute__((pure)) unsigned int LoopifyListAccess::lookup(
       const unsigned int &v = d_a0.second;
       if (k == key) {
         _result = v;
-        _continue = false;
+        break;
       } else {
         _loop_l = d_a1;
       }
@@ -154,20 +149,14 @@ std::shared_ptr<List<unsigned int>> LoopifyListAccess::lookup_all(
     const unsigned int key,
     const std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> &l) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
   std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> _loop_l = l;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<
             typename List<std::pair<unsigned int, unsigned int>>::Nil>(
             _loop_l->v())) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            List<unsigned int>::nil();
-      } else {
-        _head = List<unsigned int>::nil();
-      }
-      _continue = false;
+      *_write = List<unsigned int>::nil();
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
@@ -176,13 +165,9 @@ std::shared_ptr<List<unsigned int>> LoopifyListAccess::lookup_all(
       const unsigned int &v = d_a0.second;
       if (k == key) {
         auto _cell = List<unsigned int>::cons(v, nullptr);
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write =
+            &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
         _loop_l = d_a1;
         continue;
       } else {
@@ -208,6 +193,7 @@ LoopifyListAccess::count(const unsigned int x,
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -241,18 +227,17 @@ LoopifyListAccess::elem_at_eq(const unsigned int idx, const unsigned int val,
   bool _result;
   std::shared_ptr<List<unsigned int>> _loop_l = l;
   unsigned int _loop_idx = idx;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
       _result = false;
-      _continue = false;
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_idx == 0u) {
         _result = d_a0 == val;
-        _continue = false;
+        break;
       } else {
         std::shared_ptr<List<unsigned int>> _next_l = d_a1;
         unsigned int _next_idx =
@@ -272,18 +257,17 @@ LoopifyListAccess::nth_default(const unsigned int n,
   unsigned int _result;
   std::shared_ptr<List<unsigned int>> _loop_l = l;
   unsigned int _loop_n = n;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
       _result = default0;
-      _continue = false;
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_n == 0u) {
         _result = d_a0;
-        _continue = false;
+        break;
       } else {
         std::shared_ptr<List<unsigned int>> _next_l = d_a1;
         unsigned int _next_n =

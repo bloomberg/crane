@@ -63,6 +63,7 @@ public:
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{_self});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -136,11 +137,10 @@ struct LoopifyNumbers {
     unsigned int _result;
     unsigned int _loop_x = x;
     unsigned int _loop_n = n;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (_loop_n <= 0) {
         _result = _loop_x;
-        _continue = false;
+        break;
       } else {
         unsigned int m = _loop_n - 1;
         unsigned int _next_x = f(_loop_x);
@@ -170,6 +170,7 @@ struct LoopifyNumbers {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{n});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());

@@ -12,19 +12,18 @@ LoopifyTail::member(const unsigned int x,
                     const std::shared_ptr<LoopifyTail::list<unsigned int>> &l) {
   bool _result;
   std::shared_ptr<LoopifyTail::list<unsigned int>> _loop_l = l;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename LoopifyTail::list<unsigned int>::Nil>(
             _loop_l->v())) {
       _result = false;
-      _continue = false;
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename LoopifyTail::list<unsigned int>::Cons>(
               _loop_l->v());
       if (x == d_a0) {
         _result = true;
-        _continue = false;
+        break;
       } else {
         _loop_l = d_a1;
       }
@@ -41,19 +40,18 @@ LoopifyTail::nth(const unsigned int n,
   unsigned int _result;
   std::shared_ptr<LoopifyTail::list<unsigned int>> _loop_l = l;
   unsigned int _loop_n = n;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename LoopifyTail::list<unsigned int>::Nil>(
             _loop_l->v())) {
       _result = default0;
-      _continue = false;
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename LoopifyTail::list<unsigned int>::Cons>(
               _loop_l->v());
       if (_loop_n == 0u) {
         _result = d_a0;
-        _continue = false;
+        break;
       } else {
         std::shared_ptr<LoopifyTail::list<unsigned int>> _next_l = d_a1;
         unsigned int _next_n =
@@ -74,18 +72,17 @@ __attribute__((pure)) unsigned int LoopifyTail::lookup(
   unsigned int _result;
   std::shared_ptr<LoopifyTail::list<std::pair<unsigned int, unsigned int>>>
       _loop_l = l;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename LoopifyTail::list<
             std::pair<unsigned int, unsigned int>>::Nil>(_loop_l->v())) {
       _result = 0u;
-      _continue = false;
+      break;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename LoopifyTail::list<
           std::pair<unsigned int, unsigned int>>::Cons>(_loop_l->v());
       if (d_a0.first == key) {
         _result = d_a0.second;
-        _continue = false;
+        break;
       } else {
         _loop_l = d_a1;
       }

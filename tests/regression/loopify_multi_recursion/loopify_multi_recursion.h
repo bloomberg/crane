@@ -130,6 +130,7 @@ struct LoopifyMultiRecursion {
     using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
     T1 _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{q});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -223,6 +224,7 @@ struct LoopifyMultiRecursion {
     using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
     T1 _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{q});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());

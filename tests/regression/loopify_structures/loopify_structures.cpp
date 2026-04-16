@@ -35,6 +35,7 @@ __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -109,6 +110,7 @@ __attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -198,6 +200,7 @@ std::shared_ptr<List<unsigned int>> LoopifyStructures::flatten_nested_list_fuel(
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -254,12 +257,11 @@ LoopifyStructures::find_first_some(
     const std::shared_ptr<List<std::optional<unsigned int>>> &l) {
   std::optional<unsigned int> _result;
   std::shared_ptr<List<std::optional<unsigned int>>> _loop_l = l;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<std::optional<unsigned int>>::Nil>(
             _loop_l->v())) {
       _result = std::optional<unsigned int>();
-      _continue = false;
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<std::optional<unsigned int>>::Cons>(
@@ -267,7 +269,7 @@ LoopifyStructures::find_first_some(
       if (d_a0.has_value()) {
         const unsigned int &v = *d_a0;
         _result = std::make_optional<unsigned int>(v);
-        _continue = false;
+        break;
       } else {
         _loop_l = d_a1;
       }

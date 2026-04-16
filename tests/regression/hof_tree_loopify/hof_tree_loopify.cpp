@@ -9,29 +9,19 @@
 std::shared_ptr<HofTreeLoopify::tree<unsigned int>>
 HofTreeLoopify::depth_tree(const unsigned int n) {
   std::shared_ptr<HofTreeLoopify::tree<unsigned int>> _head{};
-  std::shared_ptr<HofTreeLoopify::tree<unsigned int>> _last{};
+  std::shared_ptr<HofTreeLoopify::tree<unsigned int>> *_write = &_head;
   unsigned int _loop_n = n;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_n <= 0) {
-      if (_last) {
-        std::get<typename tree<unsigned int>::Node>(_last->v_mut()).d_a0 =
-            tree<unsigned int>::leaf();
-      } else {
-        _head = tree<unsigned int>::leaf();
-      }
-      _continue = false;
+      *_write = tree<unsigned int>::leaf();
+      break;
     } else {
       unsigned int m = _loop_n - 1;
       auto _cell = tree<unsigned int>::node(nullptr, _loop_n,
                                             tree<unsigned int>::leaf());
-      if (_last) {
-        std::get<typename tree<unsigned int>::Node>(_last->v_mut()).d_a0 =
-            _cell;
-      } else {
-        _head = _cell;
-      }
-      _last = _cell;
+      *_write = _cell;
+      _write =
+          &std::get<typename tree<unsigned int>::Node>(_cell->v_mut()).d_a0;
       _loop_n = m;
       continue;
     }
@@ -44,11 +34,10 @@ __attribute__((pure)) unsigned int Nat::tail_add(const unsigned int n,
   unsigned int _result;
   unsigned int _loop_m = m;
   unsigned int _loop_n = n;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_n <= 0) {
       _result = _loop_m;
-      _continue = false;
+      break;
     } else {
       unsigned int n0 = _loop_n - 1;
       unsigned int _next_m = (_loop_m + 1);
@@ -66,11 +55,10 @@ __attribute__((pure)) unsigned int Nat::tail_addmul(const unsigned int r,
   unsigned int _result;
   unsigned int _loop_n = n;
   unsigned int _loop_r = r;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_n <= 0) {
       _result = _loop_r;
-      _continue = false;
+      break;
     } else {
       unsigned int n0 = _loop_n - 1;
       unsigned int _next_n = n0;
@@ -92,11 +80,10 @@ Nat::of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc) {
   unsigned int _result;
   unsigned int _loop_acc = acc;
   std::shared_ptr<Uint> _loop_d = d;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename Uint::Nil>(_loop_d->v())) {
       _result = _loop_acc;
-      _continue = false;
+      break;
     } else if (std::holds_alternative<typename Uint::D0>(_loop_d->v())) {
       const auto &[d_a0] = std::get<typename Uint::D0>(_loop_d->v());
       unsigned int _next_acc = Nat::tail_mul(10u, _loop_acc);
@@ -184,11 +171,10 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
   unsigned int _result;
   unsigned int _loop_acc = acc;
   std::shared_ptr<Uint0> _loop_d = d;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename Uint0::Nil0>(_loop_d->v())) {
       _result = _loop_acc;
-      _continue = false;
+      break;
     } else if (std::holds_alternative<typename Uint0::D10>(_loop_d->v())) {
       const auto &[d_a0] = std::get<typename Uint0::D10>(_loop_d->v());
       unsigned int _next_acc = Nat::tail_mul(16u, _loop_acc);

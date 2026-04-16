@@ -13,39 +13,24 @@ std::shared_ptr<List<unsigned int>>
 LoopifyCombinatorics::remove(const unsigned int x,
                              const std::shared_ptr<List<unsigned int>> &l) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            List<unsigned int>::nil();
-      } else {
-        _head = List<unsigned int>::nil();
-      }
-      _continue = false;
+      *_write = List<unsigned int>::nil();
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (x == d_a0) {
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              d_a1;
-        } else {
-          _head = d_a1;
-        }
-        _continue = false;
+        *_write = d_a1;
+        break;
       } else {
         auto _cell = List<unsigned int>::cons(d_a0, nullptr);
-        if (_last) {
-          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write =
+            &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
         _loop_l = d_a1;
         continue;
       }
@@ -60,35 +45,25 @@ LoopifyCombinatorics::map_cons(
     const unsigned int x,
     const std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> &lsts) {
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _head{};
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _last{};
+  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> *_write = &_head;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _loop_lsts = lsts;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<
             typename List<std::shared_ptr<List<unsigned int>>>::Nil>(
             _loop_lsts->v())) {
-      if (_last) {
-        std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-            _last->v_mut())
-            .d_a1 = List<std::shared_ptr<List<unsigned int>>>::nil();
-      } else {
-        _head = List<std::shared_ptr<List<unsigned int>>>::nil();
-      }
-      _continue = false;
+      *_write = List<std::shared_ptr<List<unsigned int>>>::nil();
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
               _loop_lsts->v());
       auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
           List<unsigned int>::cons(x, d_a0), nullptr);
-      if (_last) {
-        std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-            _last->v_mut())
-            .d_a1 = _cell;
-      } else {
-        _head = _cell;
-      }
-      _last = _cell;
+      *_write = _cell;
+      _write =
+          &std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+               _cell->v_mut())
+               .d_a1;
       _loop_lsts = d_a1;
       continue;
     }
@@ -134,6 +109,7 @@ LoopifyCombinatorics::perms_choices_fuel(
   using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{orig, choices, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -206,6 +182,7 @@ LoopifyCombinatorics::len_list(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -242,6 +219,7 @@ LoopifyCombinatorics::factorial_impl(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -285,6 +263,7 @@ LoopifyCombinatorics::subsequences(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -322,6 +301,7 @@ LoopifyCombinatorics::subsequences(
         using _Frame = std::variant<_Enter, _Call1>;
         std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
         std::vector<_Frame> _stack;
+        _stack.reserve(16);
         _stack.emplace_back(_Enter{lst});
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
@@ -361,33 +341,23 @@ std::shared_ptr<List<std::pair<unsigned int, unsigned int>>>
 LoopifyCombinatorics::map_pairs(const unsigned int y,
                                 const std::shared_ptr<List<unsigned int>> &l) {
   std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
-  std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> _last{};
+  std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      if (_last) {
-        std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-            _last->v_mut())
-            .d_a1 = List<std::pair<unsigned int, unsigned int>>::nil();
-      } else {
-        _head = List<std::pair<unsigned int, unsigned int>>::nil();
-      }
-      _continue = false;
+      *_write = List<std::pair<unsigned int, unsigned int>>::nil();
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       auto _cell = List<std::pair<unsigned int, unsigned int>>::cons(
           std::make_pair(d_a0, y), nullptr);
-      if (_last) {
-        std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-            _last->v_mut())
-            .d_a1 = _cell;
-      } else {
-        _head = _cell;
-      }
-      _last = _cell;
+      *_write = _cell;
+      _write =
+          &std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
+               _cell->v_mut())
+               .d_a1;
       _loop_l = d_a1;
       continue;
     }
@@ -412,6 +382,7 @@ LoopifyCombinatorics::cartesian(const std::shared_ptr<List<unsigned int>> &l1,
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l2});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -449,6 +420,7 @@ LoopifyCombinatorics::power_set(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -486,6 +458,7 @@ LoopifyCombinatorics::power_set(const std::shared_ptr<List<unsigned int>> &l) {
         using _Frame = std::variant<_Enter, _Call1>;
         std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
         std::vector<_Frame> _stack;
+        _stack.reserve(16);
         _stack.emplace_back(_Enter{lst});
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
@@ -537,6 +510,7 @@ LoopifyCombinatorics::insert_everywhere(const unsigned int x,
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -576,6 +550,7 @@ LoopifyCombinatorics::insert_everywhere(const unsigned int x,
         using _Frame = std::variant<_Enter, _Call1>;
         std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
         std::vector<_Frame> _stack;
+        _stack.reserve(16);
         _stack.emplace_back(_Enter{lsts});
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
@@ -627,6 +602,7 @@ LoopifyCombinatorics::elem(const unsigned int x,
   using _Frame = std::variant<_Enter, _Call1>;
   bool _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -662,6 +638,7 @@ LoopifyCombinatorics::len_impl(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -701,6 +678,7 @@ LoopifyCombinatorics::dedup_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());

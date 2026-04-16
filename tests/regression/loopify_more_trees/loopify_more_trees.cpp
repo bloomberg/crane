@@ -26,6 +26,7 @@ LoopifyMoreTrees::mirror(const std::shared_ptr<LoopifyMoreTrees::tree> &t) {
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<LoopifyMoreTrees::tree> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{t});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -74,6 +75,7 @@ __attribute__((pure)) bool LoopifyMoreTrees::same_shape(
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   bool _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{t2, t1});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -136,6 +138,7 @@ std::shared_ptr<List<unsigned int>> LoopifyMoreTrees::tree_to_list(
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{t});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -189,6 +192,7 @@ __attribute__((pure)) unsigned int LoopifyMoreTrees::count_nodes(
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{t});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -241,6 +245,7 @@ LoopifyMoreTrees::tree_max(std::shared_ptr<LoopifyMoreTrees::tree> t1,
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<LoopifyMoreTrees::tree> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{t2, t1});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -296,6 +301,7 @@ __attribute__((pure)) unsigned int LoopifyMoreTrees::sum_of_max_branches(
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{t});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -344,6 +350,7 @@ LoopifyMoreTrees::insert_bst(const unsigned int x,
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
   std::shared_ptr<LoopifyMoreTrees::tree> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{t});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -389,6 +396,7 @@ LoopifyMoreTrees::build_bst(const std::shared_ptr<List<unsigned int>> &l) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<LoopifyMoreTrees::tree> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -416,30 +424,20 @@ std::shared_ptr<List<unsigned int>>
 LoopifyMoreTrees::append_lists(const std::shared_ptr<List<unsigned int>> &l1,
                                std::shared_ptr<List<unsigned int>> l2) {
   std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<unsigned int>> *_write = &_head;
   std::shared_ptr<List<unsigned int>> _loop_l1 = l1;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l1->v())) {
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            std::move(l2);
-      } else {
-        _head = std::move(l2);
-      }
-      _continue = false;
+      *_write = std::move(l2);
+      break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       auto _cell = List<unsigned int>::cons(d_a0, nullptr);
-      if (_last) {
-        std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-            _cell;
-      } else {
-        _head = _cell;
-      }
-      _last = _cell;
+      *_write = _cell;
+      _write =
+          &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
       _loop_l1 = d_a1;
       continue;
     }
@@ -460,6 +458,7 @@ std::shared_ptr<List<unsigned int>> LoopifyMoreTrees::flatten(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -491,35 +490,25 @@ std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
 LoopifyMoreTrees::map_tree_to_list(
     const std::shared_ptr<List<std::shared_ptr<LoopifyMoreTrees::tree>>> &lt) {
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _head{};
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _last{};
+  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> *_write = &_head;
   std::shared_ptr<List<std::shared_ptr<LoopifyMoreTrees::tree>>> _loop_lt = lt;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<
             typename List<std::shared_ptr<LoopifyMoreTrees::tree>>::Nil>(
             _loop_lt->v())) {
-      if (_last) {
-        std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-            _last->v_mut())
-            .d_a1 = List<std::shared_ptr<List<unsigned int>>>::nil();
-      } else {
-        _head = List<std::shared_ptr<List<unsigned int>>>::nil();
-      }
-      _continue = false;
+      *_write = List<std::shared_ptr<List<unsigned int>>>::nil();
+      break;
     } else {
       const auto &[d_a0, d_a1] = std::get<
           typename List<std::shared_ptr<LoopifyMoreTrees::tree>>::Cons>(
           _loop_lt->v());
       auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
           tree_to_list(d_a0), nullptr);
-      if (_last) {
-        std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-            _last->v_mut())
-            .d_a1 = _cell;
-      } else {
-        _head = _cell;
-      }
-      _last = _cell;
+      *_write = _cell;
+      _write =
+          &std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+               _cell->v_mut())
+               .d_a1;
       _loop_lt = d_a1;
       continue;
     }
@@ -546,35 +535,27 @@ LoopifyMoreTrees::append_trees(
     const std::shared_ptr<List<std::shared_ptr<LoopifyMoreTrees::tree>>> &l1,
     std::shared_ptr<List<std::shared_ptr<LoopifyMoreTrees::tree>>> l2) {
   std::shared_ptr<List<std::shared_ptr<LoopifyMoreTrees::tree>>> _head{};
-  std::shared_ptr<List<std::shared_ptr<LoopifyMoreTrees::tree>>> _last{};
+  std::shared_ptr<List<std::shared_ptr<LoopifyMoreTrees::tree>>> *_write =
+      &_head;
   std::shared_ptr<List<std::shared_ptr<LoopifyMoreTrees::tree>>> _loop_l1 = l1;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (std::holds_alternative<
             typename List<std::shared_ptr<LoopifyMoreTrees::tree>>::Nil>(
             _loop_l1->v())) {
-      if (_last) {
-        std::get<typename List<std::shared_ptr<LoopifyMoreTrees::tree>>::Cons>(
-            _last->v_mut())
-            .d_a1 = std::move(l2);
-      } else {
-        _head = std::move(l2);
-      }
-      _continue = false;
+      *_write = std::move(l2);
+      break;
     } else {
       const auto &[d_a0, d_a1] = std::get<
           typename List<std::shared_ptr<LoopifyMoreTrees::tree>>::Cons>(
           _loop_l1->v());
       auto _cell =
           List<std::shared_ptr<LoopifyMoreTrees::tree>>::cons(d_a0, nullptr);
-      if (_last) {
-        std::get<typename List<std::shared_ptr<LoopifyMoreTrees::tree>>::Cons>(
-            _last->v_mut())
-            .d_a1 = _cell;
-      } else {
-        _head = _cell;
-      }
-      _last = _cell;
+      *_write = _cell;
+      _write =
+          &std::get<
+               typename List<std::shared_ptr<LoopifyMoreTrees::tree>>::Cons>(
+               _cell->v_mut())
+               .d_a1;
       _loop_l1 = d_a1;
       continue;
     }
@@ -597,6 +578,7 @@ LoopifyMoreTrees::concat_map_children(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::shared_ptr<LoopifyMoreTrees::tree>>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{lt});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -630,34 +612,21 @@ LoopifyMoreTrees::tree_levels_fuel(
     const std::shared_ptr<List<std::shared_ptr<LoopifyMoreTrees::tree>>>
         &level) {
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _head{};
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _last{};
+  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> *_write = &_head;
   std::shared_ptr<List<std::shared_ptr<LoopifyMoreTrees::tree>>> _loop_level =
       level;
   unsigned int _loop_fuel = fuel;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_fuel <= 0) {
-      if (_last) {
-        std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-            _last->v_mut())
-            .d_a1 = List<std::shared_ptr<List<unsigned int>>>::nil();
-      } else {
-        _head = List<std::shared_ptr<List<unsigned int>>>::nil();
-      }
-      _continue = false;
+      *_write = List<std::shared_ptr<List<unsigned int>>>::nil();
+      break;
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<
               typename List<std::shared_ptr<LoopifyMoreTrees::tree>>::Nil>(
               _loop_level->v())) {
-        if (_last) {
-          std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-              _last->v_mut())
-              .d_a1 = List<std::shared_ptr<List<unsigned int>>>::nil();
-        } else {
-          _head = List<std::shared_ptr<List<unsigned int>>>::nil();
-        }
-        _continue = false;
+        *_write = List<std::shared_ptr<List<unsigned int>>>::nil();
+        break;
       } else {
         std::shared_ptr<List<unsigned int>> values =
             flatten(map_tree_to_list(_loop_level));
@@ -665,14 +634,11 @@ LoopifyMoreTrees::tree_levels_fuel(
             concat_map_children(_loop_level);
         auto _cell =
             List<std::shared_ptr<List<unsigned int>>>::cons(values, nullptr);
-        if (_last) {
-          std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-              _last->v_mut())
-              .d_a1 = _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write =
+            &std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+                 _cell->v_mut())
+                 .d_a1;
         std::shared_ptr<List<std::shared_ptr<LoopifyMoreTrees::tree>>>
             _next_level = next;
         unsigned int _next_fuel = fuel_;

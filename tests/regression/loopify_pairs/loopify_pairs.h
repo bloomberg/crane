@@ -69,6 +69,7 @@ struct LoopifyPairs {
     using _Frame = std::variant<_Enter, _Call1>;
     T2 _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -106,6 +107,7 @@ struct LoopifyPairs {
     using _Frame = std::variant<_Enter, _Call1>;
     T2 _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -145,6 +147,7 @@ struct LoopifyPairs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::pair<std::shared_ptr<list<T1>>, std::shared_ptr<list<T1>>> _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -186,42 +189,28 @@ struct LoopifyPairs {
   zip(const std::shared_ptr<list<T1>> &l1,
       const std::shared_ptr<list<T2>> &l2) {
     std::shared_ptr<list<std::pair<T1, T2>>> _head{};
-    std::shared_ptr<list<std::pair<T1, T2>>> _last{};
+    std::shared_ptr<list<std::pair<T1, T2>>> *_write = &_head;
     std::shared_ptr<list<T2>> _loop_l2 = l2;
     std::shared_ptr<list<T1>> _loop_l1 = l1;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1->v())) {
-        if (_last) {
-          std::get<typename list<std::pair<T1, T2>>::Cons>(_last->v_mut())
-              .d_a1 = list<std::pair<T1, T2>>::nil();
-        } else {
-          _head = list<std::pair<T1, T2>>::nil();
-        }
-        _continue = false;
+        *_write = list<std::pair<T1, T2>>::nil();
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename list<T2>::Nil>(_loop_l2->v())) {
-          if (_last) {
-            std::get<typename list<std::pair<T1, T2>>::Cons>(_last->v_mut())
-                .d_a1 = list<std::pair<T1, T2>>::nil();
-          } else {
-            _head = list<std::pair<T1, T2>>::nil();
-          }
-          _continue = false;
+          *_write = list<std::pair<T1, T2>>::nil();
+          break;
         } else {
           const auto &[d_a00, d_a10] =
               std::get<typename list<T2>::Cons>(_loop_l2->v());
           auto _cell = list<std::pair<T1, T2>>::cons(
               std::make_pair(d_a0, d_a00), nullptr);
-          if (_last) {
-            std::get<typename list<std::pair<T1, T2>>::Cons>(_last->v_mut())
-                .d_a1 = _cell;
-          } else {
-            _head = _cell;
-          }
-          _last = _cell;
+          *_write = _cell;
+          _write =
+              &std::get<typename list<std::pair<T1, T2>>::Cons>(_cell->v_mut())
+                   .d_a1;
           std::shared_ptr<list<T2>> _next_l2 = d_a10;
           std::shared_ptr<list<T1>> _next_l1 = d_a1;
           _loop_l2 = std::move(_next_l2);
@@ -238,58 +227,37 @@ struct LoopifyPairs {
   zip3(const std::shared_ptr<list<T1>> &l1, const std::shared_ptr<list<T2>> &l2,
        const std::shared_ptr<list<T3>> &l3) {
     std::shared_ptr<list<std::pair<T1, std::pair<T2, T3>>>> _head{};
-    std::shared_ptr<list<std::pair<T1, std::pair<T2, T3>>>> _last{};
+    std::shared_ptr<list<std::pair<T1, std::pair<T2, T3>>>> *_write = &_head;
     std::shared_ptr<list<T3>> _loop_l3 = l3;
     std::shared_ptr<list<T2>> _loop_l2 = l2;
     std::shared_ptr<list<T1>> _loop_l1 = l1;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1->v())) {
-        if (_last) {
-          std::get<typename list<std::pair<T1, std::pair<T2, T3>>>::Cons>(
-              _last->v_mut())
-              .d_a1 = list<std::pair<T1, std::pair<T2, T3>>>::nil();
-        } else {
-          _head = list<std::pair<T1, std::pair<T2, T3>>>::nil();
-        }
-        _continue = false;
+        *_write = list<std::pair<T1, std::pair<T2, T3>>>::nil();
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename list<T2>::Nil>(_loop_l2->v())) {
-          if (_last) {
-            std::get<typename list<std::pair<T1, std::pair<T2, T3>>>::Cons>(
-                _last->v_mut())
-                .d_a1 = list<std::pair<T1, std::pair<T2, T3>>>::nil();
-          } else {
-            _head = list<std::pair<T1, std::pair<T2, T3>>>::nil();
-          }
-          _continue = false;
+          *_write = list<std::pair<T1, std::pair<T2, T3>>>::nil();
+          break;
         } else {
           const auto &[d_a00, d_a10] =
               std::get<typename list<T2>::Cons>(_loop_l2->v());
           if (std::holds_alternative<typename list<T3>::Nil>(_loop_l3->v())) {
-            if (_last) {
-              std::get<typename list<std::pair<T1, std::pair<T2, T3>>>::Cons>(
-                  _last->v_mut())
-                  .d_a1 = list<std::pair<T1, std::pair<T2, T3>>>::nil();
-            } else {
-              _head = list<std::pair<T1, std::pair<T2, T3>>>::nil();
-            }
-            _continue = false;
+            *_write = list<std::pair<T1, std::pair<T2, T3>>>::nil();
+            break;
           } else {
             const auto &[d_a01, d_a11] =
                 std::get<typename list<T3>::Cons>(_loop_l3->v());
             auto _cell = list<std::pair<T1, std::pair<T2, T3>>>::cons(
                 std::make_pair(d_a0, std::make_pair(d_a00, d_a01)), nullptr);
-            if (_last) {
-              std::get<typename list<std::pair<T1, std::pair<T2, T3>>>::Cons>(
-                  _last->v_mut())
-                  .d_a1 = _cell;
-            } else {
-              _head = _cell;
-            }
-            _last = _cell;
+            *_write = _cell;
+            _write =
+                &std::get<
+                     typename list<std::pair<T1, std::pair<T2, T3>>>::Cons>(
+                     _cell->v_mut())
+                     .d_a1;
             std::shared_ptr<list<T3>> _next_l3 = d_a11;
             std::shared_ptr<list<T2>> _next_l2 = d_a10;
             std::shared_ptr<list<T1>> _next_l1 = d_a1;
@@ -320,6 +288,7 @@ struct LoopifyPairs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::pair<std::shared_ptr<list<T1>>, std::shared_ptr<list<T1>>> _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l, n});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -369,6 +338,7 @@ struct LoopifyPairs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::pair<std::shared_ptr<list<T1>>, std::shared_ptr<list<T1>>> _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -419,6 +389,7 @@ struct LoopifyPairs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::pair<std::shared_ptr<list<T1>>, std::shared_ptr<list<T1>>> _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -487,6 +458,7 @@ struct LoopifyPairs {
     using _Frame = std::variant<_Enter, _Call1>;
     std::pair<unsigned int, std::shared_ptr<list<unsigned int>>> _result{};
     std::vector<_Frame> _stack;
+    _stack.reserve(16);
     _stack.emplace_back(_Enter{l, acc});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());

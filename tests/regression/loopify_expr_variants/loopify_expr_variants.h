@@ -53,27 +53,18 @@ public:
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     std::shared_ptr<List<t_A>> _head{};
-    std::shared_ptr<List<t_A>> _last{};
+    std::shared_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<t_A>::Nil>(_loop_self->v())) {
-        if (_last) {
-          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
-        } else {
-          _head = m;
-        }
-        _continue = false;
+        *_write = m;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<t_A>::Cons>(_loop_self->v());
         auto _cell = List<t_A>::cons(d_a0, nullptr);
-        if (_last) {
-          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write = &std::get<typename List<t_A>::Cons>(_cell->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
@@ -193,6 +184,7 @@ struct LoopifyExprVariants {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -260,6 +252,7 @@ struct LoopifyExprVariants {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -359,6 +352,7 @@ struct LoopifyExprVariants {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -460,6 +454,7 @@ struct LoopifyExprVariants {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -628,6 +623,7 @@ struct LoopifyExprVariants {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5, _Call6>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -716,6 +712,7 @@ struct LoopifyExprVariants {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5, _Call6>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -834,6 +831,7 @@ struct LoopifyExprVariants {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5, _Call6>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -946,6 +944,7 @@ struct LoopifyExprVariants {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5, _Call6>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1095,6 +1094,7 @@ struct LoopifyExprVariants {
       using _Frame = std::variant<_Enter>;
       std::shared_ptr<bool_expr> _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1376,6 +1376,7 @@ struct LoopifyExprVariants {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       bool _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1474,6 +1475,7 @@ struct LoopifyExprVariants {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1573,6 +1575,7 @@ struct LoopifyExprVariants {
           std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1721,6 +1724,7 @@ struct LoopifyExprVariants {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1779,6 +1783,7 @@ struct LoopifyExprVariants {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
       std::shared_ptr<List<unsigned int>> _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1853,6 +1858,7 @@ struct LoopifyExprVariants {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1927,6 +1933,7 @@ struct LoopifyExprVariants {
       using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1973,27 +1980,17 @@ struct LoopifyExprVariants {
 template <typename T1>
 std::shared_ptr<List<T1>> ListDef::repeat(const T1 x, const unsigned int n) {
   std::shared_ptr<List<T1>> _head{};
-  std::shared_ptr<List<T1>> _last{};
+  std::shared_ptr<List<T1>> *_write = &_head;
   unsigned int _loop_n = n;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_n <= 0) {
-      if (_last) {
-        std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
-            List<T1>::nil();
-      } else {
-        _head = List<T1>::nil();
-      }
-      _continue = false;
+      *_write = List<T1>::nil();
+      break;
     } else {
       unsigned int k = _loop_n - 1;
       auto _cell = List<T1>::cons(x, nullptr);
-      if (_last) {
-        std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 = _cell;
-      } else {
-        _head = _cell;
-      }
-      _last = _cell;
+      *_write = _cell;
+      _write = &std::get<typename List<T1>::Cons>(_cell->v_mut()).d_a1;
       _loop_n = k;
       continue;
     }

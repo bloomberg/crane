@@ -14,13 +14,12 @@ unsigned int LoopifyItreeSeq::count_down(const unsigned int n) {
   std::function<unsigned int(unsigned int, unsigned int)> go;
   go = [](unsigned int k, unsigned int acc) -> unsigned int {
     unsigned int _result;
-    unsigned int _loop_acc = acc;
-    unsigned int _loop_k = k;
-    bool _continue = true;
-    while (_continue) {
+    unsigned int _loop_acc = std::move(acc);
+    unsigned int _loop_k = std::move(k);
+    while (true) {
       if (_loop_k <= 0) {
         _result = _loop_acc;
-        _continue = false;
+        break;
       } else {
         unsigned int k_ = _loop_k - 1;
         unsigned int _next_acc = (_loop_acc + 1u);
@@ -39,13 +38,12 @@ unsigned int LoopifyItreeSeq::sum_to(const unsigned int n) {
   std::function<unsigned int(unsigned int, unsigned int)> go;
   go = [](unsigned int k, unsigned int acc) -> unsigned int {
     unsigned int _result;
-    unsigned int _loop_acc = acc;
-    unsigned int _loop_k = k;
-    bool _continue = true;
-    while (_continue) {
+    unsigned int _loop_acc = std::move(acc);
+    unsigned int _loop_k = std::move(k);
+    while (true) {
       if (_loop_k <= 0) {
         _result = _loop_acc;
-        _continue = false;
+        break;
       } else {
         unsigned int k_ = _loop_k - 1;
         unsigned int _next_acc = (_loop_acc + _loop_k);
@@ -73,6 +71,7 @@ LoopifyItreeSeq::countdown_list(const unsigned int n) {
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
+  _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -101,11 +100,10 @@ unsigned int LoopifyItreeSeq::delay_ret(const unsigned int n,
                                         const unsigned int v) {
   unsigned int _result;
   unsigned int _loop_n = n;
-  bool _continue = true;
-  while (_continue) {
+  while (true) {
     if (_loop_n <= 0) {
       _result = v;
-      _continue = false;
+      break;
     } else {
       unsigned int n_ = _loop_n - 1;
       _loop_n = n_;

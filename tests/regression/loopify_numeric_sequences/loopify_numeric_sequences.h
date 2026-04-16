@@ -74,11 +74,10 @@ struct LoopifyNumericSequences {
     unsigned int _result;
     unsigned int _loop_x = x;
     unsigned int _loop_n = n;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (_loop_n <= 0) {
         _result = _loop_x;
-        _continue = false;
+        break;
       } else {
         unsigned int n_ = _loop_n - 1;
         unsigned int _next_x = f(_loop_x);

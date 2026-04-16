@@ -55,27 +55,18 @@ public:
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     std::shared_ptr<List<t_A>> _head{};
-    std::shared_ptr<List<t_A>> _last{};
+    std::shared_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (std::holds_alternative<typename List<t_A>::Nil>(_loop_self->v())) {
-        if (_last) {
-          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
-        } else {
-          _head = m;
-        }
-        _continue = false;
+        *_write = m;
+        break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<t_A>::Cons>(_loop_self->v());
         auto _cell = List<t_A>::cons(d_a0, nullptr);
-        if (_last) {
-          std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = _cell;
-        } else {
-          _head = _cell;
-        }
-        _last = _cell;
+        *_write = _cell;
+        _write = &std::get<typename List<t_A>::Cons>(_cell->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
@@ -150,6 +141,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       std::shared_ptr<List<unsigned int>> _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -197,6 +189,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -247,6 +240,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       std::optional<std::shared_ptr<List<unsigned int>>> _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self, acc});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -325,6 +319,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self, acc});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -380,6 +375,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -436,6 +432,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -490,6 +487,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -585,6 +583,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       bool _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -633,6 +632,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       bool _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -688,6 +688,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -743,6 +744,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _Call1, _Call2>;
       T1 _result{};
       std::vector<_Frame> _stack;
+      _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
