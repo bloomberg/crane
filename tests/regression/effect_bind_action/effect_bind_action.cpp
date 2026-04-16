@@ -87,7 +87,7 @@ EffectBindAction::timed_if_needed(const bool measure) {
 std::string EffectBindAction::echo_if(const bool flag) {
   std::string line;
   std::getline(std::cin, line);
-  [&]() -> std::monostate {
+  [&]() -> void {
     if (flag) {
       std::cout << line << '\n';
       return std::monostate{};
@@ -129,7 +129,7 @@ std::string EffectBindAction::let_match_then_effect(const unsigned int n) {
 
 /// 8. Discard result of conditional effect
 unsigned int EffectBindAction::discard_conditional(const bool flag) {
-  [&]() -> std::monostate {
+  [&]() -> void {
     if (flag) {
       std::cout << "flagged"s << '\n';
       return std::monostate{};

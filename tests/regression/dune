@@ -3701,3 +3701,14 @@
   (alias runtest)
   (deps name_clash_iife_this.t.exe)
   (action (run ./name_clash_iife_this.t.exe))))
+
+(subdir unit_monostate_erase
+ (rule
+  (targets unit_monostate_erase.t.exe)
+  (deps UnitMonostateErase.vo unit_monostate_erase.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unit_monostate_erase.t.exe unit_monostate_erase.cpp unit_monostate_erase.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps unit_monostate_erase.t.exe)
+  (action (run ./unit_monostate_erase.t.exe))))

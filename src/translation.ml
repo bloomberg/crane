@@ -2793,7 +2793,9 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
         | [] -> typ
       in
       let r = convert_ml_type_to_cpp_type env Refset'.empty tvars branch_rty in
-      if is_cpp_unit_type r then Tvoid else r
+      if is_cpp_unit_type r
+         || ml_type_is_unit (ml_result_type branch_rty)
+      then Tvoid else r
     in
     CPPfun_call (CPPlambda ([], Some iife_ret, [cexp], false), [])
   | MLcase (typ, t, pv)
@@ -4107,7 +4109,9 @@ and gen_cpp_case (typ : ml_type) t env pv =
         | [] -> typ
       in
       let r = convert_ml_type_to_cpp_type env Refset'.empty tvars branch_rty in
-      if is_cpp_unit_type r then Some Tvoid else None
+      if is_cpp_unit_type r
+         || ml_type_is_unit (ml_result_type branch_rty)
+      then Some Tvoid else None
     in
     CPPfun_call
       (CPPlambda ([], iife_ret_opt, [Sswitch (scrutinee, ind_ref, branches, default)], false), [])
@@ -4327,7 +4331,9 @@ and gen_cpp_case (typ : ml_type) t env pv =
         | [] -> typ
       in
       let r = convert_ml_type_to_cpp_type env Refset'.empty tvars branch_rty in
-      if is_cpp_unit_type r then Some Tvoid else None
+      if is_cpp_unit_type r
+         || ml_type_is_unit (ml_result_type branch_rty)
+      then Some Tvoid else None
     in
     CPPfun_call
       ( CPPlambda ([], iife_ret_opt,

@@ -13,7 +13,7 @@
 /// The if result has type itree ioE unit, but its value is discarded
 /// by ;;.  Crane should lower this to plain if control flow.
 void UnitMonostateErase::seq_if(const bool b) {
-  [&]() -> std::monostate {
+  [&]() -> void {
     if (b) {
       std::cout << "yes"s << '\n';
       return;
@@ -29,7 +29,7 @@ void UnitMonostateErase::seq_if(const bool b) {
 ///
 /// Both branches produce itree ioE unit.  Should be a plain if.
 void UnitMonostateErase::seq_if_both(const bool b) {
-  [&]() -> std::monostate {
+  [&]() -> void {
     if (b) {
       std::cout << "A"s << '\n';
       return;
@@ -44,7 +44,7 @@ void UnitMonostateErase::seq_if_both(const bool b) {
 
 void UnitMonostateErase::match_unit_tail(const UnitMonostateErase::Color c) {
   {
-    [&]() {
+    [&]() -> void {
       switch (c) {
       case Color::e_RED: {
         return;
@@ -67,7 +67,7 @@ void UnitMonostateErase::match_unit_tail(const UnitMonostateErase::Color c) {
 
 /// --- Example 4: match inside bind ---
 void UnitMonostateErase::match_then_next(const UnitMonostateErase::Color c) {
-  [&]() {
+  [&]() -> void {
     switch (c) {
     case Color::e_RED: {
       return;
@@ -90,7 +90,7 @@ void UnitMonostateErase::match_then_next(const UnitMonostateErase::Color c) {
 
 /// --- Example 5: chained sequenced ifs ---
 void UnitMonostateErase::chained_ifs(const bool b1, const bool b2) {
-  [&]() -> std::monostate {
+  [&]() -> void {
     if (b1) {
       std::cout << "b1"s << '\n';
       return;
@@ -98,7 +98,7 @@ void UnitMonostateErase::chained_ifs(const bool b1, const bool b2) {
       return;
     }
   }();
-  [&]() -> std::monostate {
+  [&]() -> void {
     if (b2) {
       std::cout << "b2"s << '\n';
       return;
@@ -113,10 +113,10 @@ void UnitMonostateErase::chained_ifs(const bool b1, const bool b2) {
 /// --- Example 6: nested match-in-match ---
 void UnitMonostateErase::nested_matches(const UnitMonostateErase::Color c1,
                                         const UnitMonostateErase::Color c2) {
-  [&]() {
+  [&]() -> void {
     switch (c1) {
     case Color::e_RED: {
-      return [&]() {
+      return [&]() -> void {
         switch (c2) {
         case Color::e_RED: {
           std::cout << "RR"s << '\n';
