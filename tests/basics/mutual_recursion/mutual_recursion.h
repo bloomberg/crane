@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct MutualRecursion {
   __attribute__((pure)) static bool is_even(const unsigned int n);
   __attribute__((pure)) static bool is_odd(const unsigned int n);

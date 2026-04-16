@@ -3,6 +3,11 @@
 #include <cassert>
 #include <iostream>
 
+template <class... Ts> struct Overloaded : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
+
 int main() {
   using RS = ReuseScrutinee;
 

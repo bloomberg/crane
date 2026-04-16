@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct NameClashBindingReuse {
   /// Test: structured binding names (d_a0 etc.) reused across matches.
   /// Particularly tricky when matches are NOT wrapped in IIFEs

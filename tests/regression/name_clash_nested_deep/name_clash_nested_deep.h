@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct NameClashNestedDeep {
   /// Deep nesting of pattern matches to stress name generation.
   /// Each level creates d_a0, d_a00, d_a01, etc.

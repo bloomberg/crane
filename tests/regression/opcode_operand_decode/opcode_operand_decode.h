@@ -7,11 +7,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct OpcodeOperandDecode {
   enum class Instruction { e_NOP_, e_WRM_, e_WRR_, e_RDM_, e_DCL_ };
 

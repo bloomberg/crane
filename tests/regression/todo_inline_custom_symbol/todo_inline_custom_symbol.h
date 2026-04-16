@@ -7,11 +7,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct TodoInlineCustomSymbol {
   __attribute__((pure)) static unsigned int alias(const unsigned int _x0);
   __attribute__((pure)) static unsigned int twice(const unsigned int n);

@@ -10,11 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 /// Tests for Tail Modulo Cons (TMC) loopification optimization.
 /// Functions where the recursive call is wrapped in a single constructor
 /// should be optimized to use O(1) extra space via destination-passing style.

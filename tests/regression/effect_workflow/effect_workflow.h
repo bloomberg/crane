@@ -18,11 +18,6 @@ using namespace std::string_literals;
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct EffectWorkflow {
   /// 1. Use 5 different effect types in one function
   static std::string full_workflow(const std::string prefix);

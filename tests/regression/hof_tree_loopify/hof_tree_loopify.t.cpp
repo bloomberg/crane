@@ -21,6 +21,11 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+template <class... Ts> struct Overloaded : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
+
 using Tree = HofTreeLoopify::tree<unsigned int>;
 
 // Helper: extract root value (non-recursive, safe for deep trees)

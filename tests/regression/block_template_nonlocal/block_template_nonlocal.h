@@ -7,11 +7,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct BlockTemplateNonlocal {
   /// Block template in pure let binding — compiled to static inline initializer
   /// with an expression-position IIFE.

@@ -4,6 +4,11 @@
 
 #include "todo_monadic_global_alias.h"
 
+template <class... Ts> struct Overloaded : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
+
 namespace {
 
 unsigned int nat_to_uint(const std::shared_ptr<Nat> &n) {

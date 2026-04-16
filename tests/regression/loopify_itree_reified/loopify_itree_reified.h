@@ -12,11 +12,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct LoopifyItreeReified {
   /// Consumer fixpoint: traverses an ITree with fuel. This is a regular
   /// fixpoint with recursion on fuel that processes reified ITrees. Should

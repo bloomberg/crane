@@ -9,11 +9,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 struct NameClashReturnThis {
   /// Test: match-as-expression where one branch returns the scrutinee itself.
   /// When methodified, this becomes `return this` which is a raw pointer,
