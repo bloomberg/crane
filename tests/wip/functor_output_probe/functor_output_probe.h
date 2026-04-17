@@ -1,6 +1,7 @@
 #ifndef INCLUDED_FUNCTOR_OUTPUT_PROBE
 #define INCLUDED_FUNCTOR_OUTPUT_PROBE
 
+#include <concepts>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

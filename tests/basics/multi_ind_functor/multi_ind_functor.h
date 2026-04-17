@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MULTI_IND_FUNCTOR
 #define INCLUDED_MULTI_IND_FUNCTOR
 
+#include <concepts>
 #include <memory>
 #include <type_traits>
 #include <utility>

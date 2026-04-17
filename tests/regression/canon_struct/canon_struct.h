@@ -2,6 +2,7 @@
 #define INCLUDED_CANON_STRUCT
 
 #include <any>
+#include <concepts>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

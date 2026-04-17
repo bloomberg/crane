@@ -1,6 +1,7 @@
 #ifndef INCLUDED_EQ_ORD_SHOW
 #define INCLUDED_EQ_ORD_SHOW
 
+#include <concepts>
 #include <string>
 #include <type_traits>
 

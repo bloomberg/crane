@@ -1,5 +1,6 @@
 #include <sections_modules.h>
 
+#include <concepts>
 #include <type_traits>
 
 __attribute__((pure)) unsigned int

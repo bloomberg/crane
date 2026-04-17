@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MODULE
 #define INCLUDED_MODULE
 
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <type_traits>

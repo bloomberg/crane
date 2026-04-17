@@ -1,6 +1,7 @@
 #include <record_field_patterns.h>
 
 #include <any>
+#include <concepts>
 #include <memory>
 #include <type_traits>
 #include <utility>

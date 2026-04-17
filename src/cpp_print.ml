@@ -1364,6 +1364,7 @@ and pp_cpp_expr env args t =
     ++ str ")"
   | CPPqualified (e, id) -> pp_cpp_expr env args e ++ str "::" ++ Id.print id
   | CPPconvertible_to ty ->
+    require_header "concepts";
     str "std::convertible_to<" ++ pp_cpp_type false [] ty ++ str ">"
   | CPPabort msg ->
     str "([]() -> std::any { throw "

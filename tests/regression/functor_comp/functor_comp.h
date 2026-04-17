@@ -1,6 +1,7 @@
 #ifndef INCLUDED_FUNCTOR_COMP
 #define INCLUDED_FUNCTOR_COMP
 
+#include <concepts>
 #include <functional>
 #include <memory>
 #include <optional>

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TYPE_APP
 #define INCLUDED_TYPE_APP
 
+#include <concepts>
 #include <memory>
 #include <type_traits>
 #include <utility>

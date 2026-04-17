@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DEPENDENT_TYPENAME
 #define INCLUDED_DEPENDENT_TYPENAME
 
+#include <concepts>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

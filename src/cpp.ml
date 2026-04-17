@@ -146,6 +146,7 @@ and pp_spec_as_requirement modtype_refs = function
     let same_as = (sn ()).same_as in
     let declval = (sn ()).declval in
     let convertible_to = (sn ()).convertible_to in
+    require_header "concepts";
     let rec qualify_type = function
       | Tglob (r, [], _) when not (is_custom r) ->
         str "typename M::" ++ pp_global Type r

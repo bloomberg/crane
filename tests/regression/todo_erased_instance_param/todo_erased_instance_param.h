@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TODO_ERASED_INSTANCE_PARAM
 #define INCLUDED_TODO_ERASED_INSTANCE_PARAM
 
+#include <concepts>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

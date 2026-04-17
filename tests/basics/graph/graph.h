@@ -2,6 +2,7 @@
 #define INCLUDED_GRAPH
 
 #include <any>
+#include <concepts>
 #include <memory>
 #include <type_traits>
 #include <utility>

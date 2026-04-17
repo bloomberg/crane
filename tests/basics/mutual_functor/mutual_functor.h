@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MUTUAL_FUNCTOR
 #define INCLUDED_MUTUAL_FUNCTOR
 
+#include <concepts>
 #include <memory>
 #include <type_traits>
 #include <utility>

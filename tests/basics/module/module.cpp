@@ -1,5 +1,6 @@
 #include <module.h>
 
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <type_traits>

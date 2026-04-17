@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SECTIONS_MODULES
 #define INCLUDED_SECTIONS_MODULES
 
+#include <concepts>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

@@ -2,6 +2,7 @@
 #define INCLUDED_TODO_TYPE_SUBST_PACK_ALIAS
 
 #include <any>
+#include <concepts>
 #include <functional>
 #include <type_traits>
 #include <utility>

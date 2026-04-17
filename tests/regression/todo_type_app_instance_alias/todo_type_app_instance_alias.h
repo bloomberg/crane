@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TODO_TYPE_APP_INSTANCE_ALIAS
 #define INCLUDED_TODO_TYPE_APP_INSTANCE_ALIAS
 
+#include <concepts>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_IND_PARAM
 #define INCLUDED_IND_PARAM
 
+#include <concepts>
 #include <memory>
 #include <type_traits>
 #include <utility>

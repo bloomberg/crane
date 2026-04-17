@@ -2,6 +2,7 @@
 #define INCLUDED_RECORD_FIELD_PATTERNS
 
 #include <any>
+#include <concepts>
 #include <memory>
 #include <type_traits>
 #include <utility>

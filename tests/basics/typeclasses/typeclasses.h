@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TYPECLASSES
 #define INCLUDED_TYPECLASSES
 
+#include <concepts>
 #include <functional>
 #include <memory>
 #include <optional>

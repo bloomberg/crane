@@ -2,6 +2,7 @@
 #define INCLUDED_DOUBLE_OPPOSITE_WITNESSES
 
 #include <any>
+#include <concepts>
 #include <functional>
 #include <memory>
 #include <type_traits>

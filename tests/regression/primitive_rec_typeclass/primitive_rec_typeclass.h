@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PRIMITIVE_REC_TYPECLASS
 #define INCLUDED_PRIMITIVE_REC_TYPECLASS
 
+#include <concepts>
 #include <memory>
 #include <type_traits>
 
