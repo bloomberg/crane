@@ -12,8 +12,9 @@ int main() {
   //
   // If this compiles and runs, the bug is fixed.
   auto r = RecordFunctionFieldStdlibProbe::sample;
-  std::cout << "sample = " << r << std::endl;
-  assert(r == false);
+  // negb(true) = false
+  std::cout << "sample = " << (r == Bool0::e_FALSE0 ? "false" : "true") << std::endl;
+  assert(r == Bool0::e_FALSE0);
 
   return 0;
 }

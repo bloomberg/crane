@@ -11,8 +11,9 @@ int main() {
   //
   // If this compiles and runs, the bug is fixed.
   auto r = TypeclassFunctionFieldProbe::sample;
-  std::cout << "sample = " << r << std::endl;
-  assert(r == false);
+  // use applies endo twice: negb(negb(true)) = true
+  std::cout << "sample = " << (r == Bool0::e_TRUE0 ? "true" : "false") << std::endl;
+  assert(r == Bool0::e_TRUE0);
 
   return 0;
 }

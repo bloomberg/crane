@@ -256,6 +256,12 @@ let pp_cpp_ind_header kn ind =
        `heap_delete_max : tree -> priqueue` becoming a method on `tree`, where
        `priqueue` is a type alias not visible from inside `tree`. *)
     let find_methods_for_inductive ind_ref =
+      (* Enum inductives are rendered as [enum class] in C++, which cannot have
+         member functions. Skip method registration entirely so that functions
+         like [negb : bool -> bool] are not registered as methods of [Bool0],
+         which would produce invalid [a0->negb()] or [this->negb()] calls. *)
+      if Table.is_enum_inductive ind_ref then []
+      else
       let ind_modpath = modpath_of_r ind_ref in
       let module_type_aliases =
         ref (Method_registry.collect_module_type_aliases
