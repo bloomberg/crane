@@ -130,16 +130,16 @@ struct DepRecord {
   }
 
   static inline const unsigned int test_fold_add =
-      mfold<nat_monoid>(List<unsigned int>::cons(
+      std::any_cast<unsigned int>(mfold<nat_monoid>(List<unsigned int>::cons(
           1u, List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(
                           3u, List<unsigned int>::cons(
-                                  4u, List<unsigned int>::nil())))));
-  static inline const unsigned int test_fold_mul =
+                                  4u, List<unsigned int>::nil()))))));
+  static inline const unsigned int test_fold_mul = std::any_cast<unsigned int>(
       mfold<nat_mul_monoid>(List<unsigned int>::cons(
           2u,
           List<unsigned int>::cons(
-              3u, List<unsigned int>::cons(4u, List<unsigned int>::nil()))));
+              3u, List<unsigned int>::cons(4u, List<unsigned int>::nil())))));
   enum class Tag { e_TNAT, e_TBOOL };
 
   template <typename T1>

@@ -1475,6 +1475,15 @@ let rec ml_body_returns_erased_field = function
     | None -> false )
   | _ -> false
 
+(** Check if the head of an ML application has an [MLmagic] wrapper.
+    The optimization pass transforms [MLmagic(MLapp(f, args))] into
+    [MLapp(MLmagic(f), args)], so a top-level check for [MLmagic] misses
+    these.  This follows application heads recursively. *)
+let rec ml_head_has_magic = function
+  | Miniml.MLmagic _ -> true
+  | MLapp (f, _) -> ml_head_has_magic f
+  | _ -> false
+
 (** Convert ML type to C++ type. Handles custom types, inductives, type
     variables, and erased parameters. env: variable environment; ns: set of
     local references; tvars: type variable names *)
@@ -8719,6 +8728,12 @@ let gen_spec n b ty =
       match b with
       | MLmagic inner -> (true, inner)
       | _ -> (false, b)
+    in
+    (* The optimization pass (simpl) transforms MLmagic(MLapp(f, args)) into
+       MLapp(MLmagic(f), args), pushing the magic inside the application head.
+       Detect this so we still insert std::any_cast for the result. *)
+    let has_magic =
+      has_magic || ml_head_has_magic b
     in
     let b_expr = gen_expr (empty_env ()) inner_body in
     tctx.current_cpp_return_type <- saved_return_type;

@@ -14,10 +14,11 @@ enum class Bool0 { e_TRUE0, e_FALSE0 };
 struct DependentReturnUnitProbe {
   static std::any dep(const Bool0 b);
   static inline const Unit sample_unit = []() {
-    dep(Bool0::e_TRUE0);
+    std::any_cast<Unit>(dep(Bool0::e_TRUE0));
     return Unit::e_TT;
   }();
-  static inline const Bool0 sample_bool = dep(Bool0::e_FALSE0);
+  static inline const Bool0 sample_bool =
+      std::any_cast<Bool0>(dep(Bool0::e_FALSE0));
 };
 
 #endif // INCLUDED_DEPENDENT_RETURN_UNIT_PROBE

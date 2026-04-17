@@ -239,7 +239,15 @@ struct DoubleOppositeWitnessesCase {
                                          Path<unsigned int>>(unsigned int)>,
                                      std::function<std::shared_ptr<
                                          Path<unsigned int>>(unsigned int)>>>>>>
-      toy_duality_involution = duality_involution<toy_prestable>();
+      toy_duality_involution = std::any_cast<std::shared_ptr<
+          SigT<std::shared_ptr<Functor>,
+               std::shared_ptr<SigT<
+                   std::shared_ptr<Functor>,
+                   std::pair<std::function<std::shared_ptr<Path<unsigned int>>(
+                                 unsigned int)>,
+                             std::function<std::shared_ptr<Path<unsigned int>>(
+                                 unsigned int)>>>>>>>(
+          duality_involution<toy_prestable>());
   static inline const std::shared_ptr<Functor> forward_functor =
       toy_duality_involution->projT1();
   static inline const std::shared_ptr<SigT<
