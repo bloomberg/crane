@@ -115,8 +115,7 @@ Crane Extract Inlined Constant snd => "%a0.second" From "utility".
 
 ## `Crane Extraction`
 
-Perform C++ extraction of a Rocq definition.
-The extracted code will include all mappings currently in scope.
+Extract a Rocq definition to the currently selected target language (C++ by default, Go if `Crane Extraction Language Go` has been set). The extracted code will include all mappings currently in scope.
 
 ### Syntax 1
 
@@ -125,7 +124,9 @@ Crane Extraction "<output path>" <Rocq definition name>.
 ```
 
 * **`"<output path>"`**
-  The file path (relative or absolute) for the generated C++ files. If the path ends with `.cpp`, Crane will strip the extension. The command generates both `.h` and `.cpp` files at the specified location.
+  The file path (relative or absolute) for the generated files. Crane strips a known extension if present.
+  - **C++**: generates `<name>.h` and `<name>.cpp`.
+  - **Go**: generates a single `<name>.go` file (no header).
 
 * **`<Rocq definition name>`**
   The name of the Rocq definition to extract (e.g., a function, module, or type).
@@ -150,6 +151,37 @@ Crane Extraction <Rocq definition name>.
 ```coq
 Crane Extraction Tokenizer.
 ```
+
+---
+
+## `Crane Extraction Language`
+
+Select the target language for extraction. Must be set before any `Crane Extraction` command is issued, typically by importing a mapping module (e.g., `Crane.Mapping.GoStd`) which sets it automatically.
+
+### Syntax
+
+```coq
+Crane Extraction Language <language>.
+```
+
+### Options
+
+| Language | Generated files       | Notes                                      |
+| -------- | --------------------- | ------------------------------------------ |
+| `C++`    | `<name>.cpp`, `<name>.h` | Default. Requires Clang 19+.            |
+| `Go`     | `<name>.go`           | Produces a single file. Requires Go 1.21+. |
+
+### Example
+
+```coq
+Crane Extraction Language Go.
+```
+
+This command is issued automatically when you import `From Crane.Mapping Require GoStd`. You do not normally need to write it by hand.
+
+### Effect on `Crane Extract` commands
+
+Extraction mappings (`Crane Extract Inductive`, `Crane Extract Inlined Constant`, etc.) are language-specific and should be set up after the language is chosen. The template placeholders (`%t0`, `%a0`, `%scrut`, `%br0`, `%b0a0`, …) have the same meaning regardless of target language, but the template bodies must be valid expressions in the chosen language.
 
 ---
 

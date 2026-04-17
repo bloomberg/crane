@@ -455,7 +455,7 @@ let rec extract_structure access env mp reso ~all = function
     Handles MEident, MEapply, and expands module expressions as needed. *)
 and extract_mexpr access env mp = function
   | MEwith _ -> assert false (* no 'with' syntax for modules *)
-  | me when lang () != Cpp ->
+  | me when (lang () != Cpp && lang () != Go) ->
     (* In Haskell/Scheme, we expand everything. For now, we also extract
        everything, dead code will be removed later (see
        [Modutil.optimize_struct]. *)
@@ -598,6 +598,7 @@ let mono_environment ~opaque_access refs mpl =
 let descr () =
   match lang () with
   | Cpp -> Cpp.cpp_descr
+  | Go  -> Go.go_descr
 
 (* From a filename string "foo.cpp" or "foo", builds "foo.cpp" and "foo.h" Works
    similarly for the other languages. *)
@@ -764,6 +765,11 @@ let spec_header si () =
     ++ fnl2 ()
     ++ string_lit_directive
     ++ str fun_concept
+    ++ fnl2 ()
+    ++ str
+         "template<class... Ts> struct Overloaded : Ts... { using \
+          Ts::operator()...; };\n\
+          template<class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;"
     ++ fnl2 ()
 
 (** Generate include guard closing for header files. *)
@@ -1015,13 +1021,13 @@ let print_structure_to_file (fn, si, mo) dry struc =
     Table.reset_needs_string_literals ();
   (* First, a dry run, for computing objects to rename or duplicate.
      Also accumulates needed standard headers via require_header. *)
-  Cpp_state.reset_needed_headers ();
+  if lang () = Cpp then Cpp_state.reset_needed_headers ();
   set_phase Pre;
   ignore (d.pp_struct struc);
   ignore (d.pp_hstruct struc);
-  (* The MapsTo concept boilerplate always emitted by spec_header
+  (* The MapsTo concept / Overloaded boilerplate always emitted by spec_header
      uses std::is_invocable_r_v, which requires <type_traits>. *)
-  if Table.std_lib () <> "BDE" then
+  if lang () = Cpp && Table.std_lib () <> "BDE" then
     Cpp_state.require_header "type_traits";
   let opened = opened_libraries () in
   (* Print the implementation *)
@@ -1031,7 +1037,7 @@ let print_structure_to_file (fn, si, mo) dry struc =
   ( try
       (* The real printing of the implementation *)
       set_phase Impl;
-      pp_with ft (header fn ());
+      if lang () = Cpp then pp_with ft (header fn ());
       pp_with ft (d.preamble mo comment opened unsafe_needs);
       pp_with ft (d.pp_struct struc);
       (* If a [main] function returning a monad was found, it was renamed to
@@ -1126,8 +1132,10 @@ let init ?(compute = false) ?(inner = false) modular library =
   set_modular modular;
   set_library library;
   set_extrcompute compute;
-  Cpp_state.reset_cpp_state ();
-  (* Reset ALL C++ global state from previous extractions *)
+  ( match lang () with
+  | Cpp -> Cpp_state.reset_cpp_state ()
+  | Go  -> Go_print.reset_go_state () );
+  (* Reset ALL global state from previous extractions *)
   reset ()
 
 let warns () =

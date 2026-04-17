@@ -1238,7 +1238,7 @@ let {Goptions.get = file_comment} =
 
 (** {2 Crane Extraction Lang} *)
 
-type lang = Cpp
+type lang = Cpp | Go
 
 type benchmark_lang =
   | BenchmarkOCaml

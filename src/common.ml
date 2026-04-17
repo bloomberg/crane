@@ -654,7 +654,7 @@ and mp_renaming =
 let ref_renaming_fun (k, r) =
   let mp = modpath_of_r r in
   let l = mp_renaming mp in
-  let l = if lang () != Cpp && not (modular ()) then [""] else l in
+  let l = if (lang () != Cpp && lang () != Go) && not (modular ()) then [""] else l in
   let s =
     let idg = safe_basename_of_global r in
     match l with
@@ -945,6 +945,7 @@ let pp_global_with_key k key r =
     (* for what come next it's easier this way *)
     match lang () with
     | Cpp -> pp_cpp_gen k mp rls (Some l)
+    | Go  -> unquote s  (* Go has no module qualification — all in one package *)
 
 (** Print a reference using its canonical kernel name. *)
 let pp_global k r = pp_global_with_key k (repr_of_r r) r
@@ -997,6 +998,7 @@ let check_extract_ascii () =
     let char_type =
       match lang () with
       | Cpp -> "char"
+      | Go -> "byte"
     in
     String.equal (find_custom @@ ascii_type_ref ()) char_type
   with Not_found -> false
@@ -1055,6 +1057,7 @@ let check_extract_string () =
     let string_type =
       match lang () with
       | Cpp -> "string"
+      | Go -> "string"
     in
     String.equal (find_custom @@ string_type_ref ()) string_type
   with Not_found -> false

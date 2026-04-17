@@ -440,7 +440,7 @@ val file_comment : unit -> string
 (** {2 Target language} *)
 
 (** Target language for extraction. *)
-type lang = Cpp
+type lang = Cpp | Go
 
 (** Benchmark language variant. *)
 type benchmark_lang =

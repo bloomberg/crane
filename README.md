@@ -13,7 +13,7 @@
 
 ## Rationale
 
-This project provides extraction of [Rocq](https://rocq-prover.org/) (formerly known as Coq) code to (optionally [BDE](https://github.com/bloomberg/bde)-flavored) C++ code, implemented as a Rocq plugin. It extracts Rocq into valid, performant, and memory-safe, modern C++ code. The generated code avoids tracing garbage collection and does not need a separate runtime system, relying instead on `std::shared_ptr` or `bsl::shared_ptr` for reference counting.
+This project provides extraction of [Rocq](https://rocq-prover.org/) (formerly known as Coq) code to C++ and Go, implemented as a Rocq plugin. It extracts Rocq into valid, performant, and memory-safe target-language code. The C++ backend (the primary target) avoids tracing garbage collection and does not need a separate runtime system, relying instead on `std::shared_ptr` or `bsl::shared_ptr` for reference counting. The Go backend produces idiomatic Go using generics for polymorphic types.
 
 The project is a fork of the Rocq-to-OCaml extraction that comes built-in with Rocq.
 
@@ -102,6 +102,8 @@ To run the `Crane Benchmark` command, you will need to have [hyperfine](https://
 
 ## Usage
 
+### C++ extraction
+
 Once you write your Rocq program, you can extract to C++:
 
 ```coq
@@ -129,6 +131,31 @@ rocq compile Foo.v && clang++ -c -std=c++23 Foo.cpp -o Foo.o
 ```
 
 This command creates `Foo.h` and `Foo.cpp` files from the Rocq file, and then compiles the C++ to the object file `Foo.o` with Clang, ready to be linked to your own C++ file containing a `main` function for execution.
+
+### Go extraction
+
+Crane also supports extraction to Go. Import `Crane.Mapping.GoStd` (instead of `Crane.Mapping.Std`) to switch to the Go backend and load the standard-library mappings:
+
+```coq
+From Crane Require Extraction.
+From Crane.Mapping Require GoStd.
+
+Fixpoint add (n m : nat) : nat :=
+  match n with
+  | O => m
+  | S n' => S (add n' m)
+  end.
+
+Crane Extraction "add" add.
+```
+
+Then compile:
+
+```bash
+rocq compile Add.v && go build add.go
+```
+
+Crane generates a single `add.go` file (no separate header). See [docs/Getting-Started.md](docs/Getting-Started.md) for a fuller walkthrough and [docs/Reference-Manual.md](docs/Reference-Manual.md) for the `Crane Extraction Language` command reference.
 
 ## Maintainers
 

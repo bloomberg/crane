@@ -56,12 +56,14 @@ END
 
 let pr_language = function
   | Cpp -> str "C++"
+  | Go  -> str "Go"
 
 }
 
 VERNAC ARGUMENT EXTEND crane_language
 PRINTED BY { pr_language }
 | [ "C++" ] -> { Cpp }
+| [ "Go"  ] -> { Go  }
 END
 
 (* Extraction commands *)
