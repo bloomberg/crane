@@ -5232,6 +5232,12 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           | CPPstruct_id (sid, tys, args) ->
             CPPstruct_id (sid, tys, List.map sub args)
           | CPPqualified (e', qid) -> CPPqualified (sub e', qid)
+          | CPPany_cast (_, CPPfun_call (CPPvar id, args)) when Id.equal id target ->
+            (* The any_cast wraps a direct call to the variable being lifted.
+               The lifted template function returns a concrete type (not
+               std::any), so drop the cast and replace with the lifted call. *)
+            CPPfun_call (mk_cppglob lifted [], free_args @ List.map sub args)
+          | CPPany_cast (ty, e') -> CPPany_cast (ty, sub e')
           | _ -> e
         and subst_lifted_call_stmt
             (target : Id.t)
