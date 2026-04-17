@@ -3778,3 +3778,14 @@
   (alias runtest)
   (deps function_return_branch_probe.t.exe)
   (action (run ./function_return_branch_probe.t.exe))))
+
+(subdir sigt_probe
+ (rule
+  (targets sigt_probe.t.exe)
+  (deps SigTProbe.vo sigt_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_probe.t.exe sigt_probe.cpp sigt_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigt_probe.t.exe)
+  (action (run ./sigt_probe.t.exe))))

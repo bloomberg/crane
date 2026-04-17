@@ -2843,6 +2843,25 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           in
           let tvars = get_current_type_vars () in
           let temps = build_template_params env tvars tys in
+          (* In dependent types, if a constructor arg at position i is
+             [MLdummy Ktype] (a type-valued argument — e.g. [x : A] where
+             [A : Type]), any template param at a later position j > i must
+             also be erased to [std::any].
+             Rationale: later params often have types that are functions of
+             the erased type variable (e.g. [P x] for [sigT A P]).  When A
+             is erased, [P x] is equally abstract and the concrete type
+             inferred from the value argument (e.g. [bool] from [true : bool])
+             would produce an incompatible template instantiation
+             ([SigT<std::any, Bool0>] vs. the declared [SigT<std::any, std::any>]). *)
+          let temps =
+            let rec first_ktype_dummy i = function
+              | [] -> max_int
+              | (MLdummy Ktype | MLmagic (MLdummy Ktype)) :: _ -> i
+              | _ :: rest -> first_ktype_dummy (i + 1) rest
+            in
+            let cutoff = first_ktype_dummy 0 ts_updated in
+            List.mapi (fun i t -> if i > cutoff then Tany else t) temps
+          in
           let ctor_struct = ctor_struct_name_of_ref r in
           let ind_type_name = Common.pp_global_name Type n in
           let fname =
