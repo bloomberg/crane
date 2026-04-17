@@ -104,3 +104,14 @@
   (deps dependent_return_unit_probe.t.exe)
   (action (run ./dependent_return_unit_probe.t.exe))))
 
+(subdir function_return_branch_probe
+ (rule
+  (targets function_return_branch_probe.t.exe)
+  (deps FunctionReturnBranchProbe.vo function_return_branch_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} function_return_branch_probe.t.exe function_return_branch_probe.cpp function_return_branch_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps function_return_branch_probe.t.exe)
+  (action (run ./function_return_branch_probe.t.exe))))
+
