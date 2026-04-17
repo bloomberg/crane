@@ -15,6 +15,39 @@
 
 ; Test rules - compile C++ and run tests
 
+(subdir dependent_elim_stdexcept_probe
+ (rule
+  (targets dependent_elim_stdexcept_probe.t.exe)
+  (deps DependentElimStdexceptProbe.vo dependent_elim_stdexcept_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dependent_elim_stdexcept_probe.t.exe dependent_elim_stdexcept_probe.cpp dependent_elim_stdexcept_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dependent_elim_stdexcept_probe.t.exe)
+  (action (run ./dependent_elim_stdexcept_probe.t.exe))))
+
+(subdir record_function_field_stdlib_probe
+ (rule
+  (targets record_function_field_stdlib_probe.t.exe)
+  (deps RecordFunctionFieldStdlibProbe.vo record_function_field_stdlib_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_function_field_stdlib_probe.t.exe record_function_field_stdlib_probe.cpp record_function_field_stdlib_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_function_field_stdlib_probe.t.exe)
+  (action (run ./record_function_field_stdlib_probe.t.exe))))
+
+(subdir typeclass_function_field_probe
+ (rule
+  (targets typeclass_function_field_probe.t.exe)
+  (deps TypeclassFunctionFieldProbe.vo typeclass_function_field_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typeclass_function_field_probe.t.exe typeclass_function_field_probe.cpp typeclass_function_field_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps typeclass_function_field_probe.t.exe)
+  (action (run ./typeclass_function_field_probe.t.exe))))
+
 (subdir implicit_args
  (rule
   (targets implicit_args.t.exe)
