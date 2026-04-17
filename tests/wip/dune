@@ -92,3 +92,14 @@
   (alias runtest)
   (deps functor_output_probe.t.exe)
   (action (run ./functor_output_probe.t.exe))))
+
+(subdir dependent_return_unit_probe
+ (rule
+  (targets dependent_return_unit_probe.t.exe)
+  (deps DependentReturnUnitProbe.vo dependent_return_unit_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dependent_return_unit_probe.t.exe dependent_return_unit_probe.cpp dependent_return_unit_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dependent_return_unit_probe.t.exe)
+  (action (run ./dependent_return_unit_probe.t.exe))))
