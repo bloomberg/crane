@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Extraction mappings shared by all C++ flavors (Std, BDE).
 
-    Maps [bool], [sumbool], [unit], [void], and [PrimArray] to
+    Maps [bool], [sumbool], [unit], and [PrimArray] to
     library-agnostic C++ types. Imported transitively by [Mapping.Std]
     and [Mapping.BDE]. *)
 From Crane Require Extraction.
@@ -20,10 +20,6 @@ Crane Extract Inductive sumbool =>
 Crane Extract Inlined Constant negb => "!(%a0)".
 Crane Extract Inlined Constant andb => "(%a0 && %a1)".
 Crane Extract Inlined Constant orb => "(%a0 || %a1)".
-
-Axiom void : Type.
-Axiom ghost : void.
-Crane Extract Void void [ ghost ].
 
 Crane Extract Inductive unit =>
   "std::monostate"
