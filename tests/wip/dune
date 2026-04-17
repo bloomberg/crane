@@ -58,15 +58,26 @@
   (deps shared_uptr_escape.t.exe)
   (action (run ./shared_uptr_escape.t.exe))))
 
-(subdir imported_alias_qualification
+
+
+(subdir loopify_unit_void_repro
  (rule
-  (targets alias_probe.t.exe)
-  (deps AliasProbe.vo alias_probe.t.cpp (source_tree .))
+  (targets loopify_unit_void_repro.t.exe)
+  (deps LoopifyUnitVoidRepro.vo loopify_unit_void_repro.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_probe.t.exe alias_probe.cpp alias_probe.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_unit_void_repro.t.exe loopify_unit_void_repro.cpp loopify_unit_void_repro.t.cpp)))
  (rule
   (alias runtest)
-  (deps alias_probe.t.exe)
-  (action (run ./alias_probe.t.exe))))
+  (deps loopify_unit_void_repro.t.exe)
+  (action (run ./loopify_unit_void_repro.t.exe))))
 
-
+(subdir no_mapping_event_probe
+ (rule
+  (targets no_mapping_event_probe.t.exe)
+  (deps NoMappingEventProbe.vo no_mapping_event_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} no_mapping_event_probe.t.exe no_mapping_event_probe.cpp no_mapping_event_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps no_mapping_event_probe.t.exe)
+  (action (run ./no_mapping_event_probe.t.exe))))

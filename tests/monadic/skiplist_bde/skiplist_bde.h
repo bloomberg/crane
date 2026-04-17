@@ -866,11 +866,10 @@ template <typename K, typename V> struct SkipList {
     unsigned int _loop_acc = acc;
     bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> _loop_node = node;
     unsigned int _loop_fuel = fuel;
-    bool _continue = true;
-    while (_continue) {
+    while (true) {
       if (_loop_fuel <= 0) {
         _result = _loop_acc;
-        _continue = false;
+        break;
       } else {
         unsigned int fuel_ = _loop_fuel - 1;
         if (_loop_node.has_value()) {
@@ -885,7 +884,7 @@ template <typename K, typename V> struct SkipList {
           _loop_fuel = bsl::move(_next_fuel);
         } else {
           _result = _loop_acc;
-          _continue = false;
+          break;
         }
       }
     }
