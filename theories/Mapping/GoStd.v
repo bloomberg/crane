@@ -1,5 +1,3 @@
-(* Copyright 2025 Bloomberg Finance L.P. *)
-(* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Standard-library extraction mappings for the Go backend.
 
     Maps [bool], [unit], [option], [prod], [list], [nat], [positive],

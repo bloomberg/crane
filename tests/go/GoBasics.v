@@ -1,5 +1,3 @@
-(* Copyright 2025 Bloomberg Finance L.P. *)
-(* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 From Crane Require Extraction.
 From Crane.Mapping Require GoStd.
