@@ -103,3 +103,14 @@
   (alias runtest)
   (deps dependent_return_unit_probe.t.exe)
   (action (run ./dependent_return_unit_probe.t.exe))))
+
+(subdir dependent_elim_stdexcept_probe
+ (rule
+  (targets dependent_elim_stdexcept_probe.t.exe)
+  (deps DependentElimStdexceptProbe.vo dependent_elim_stdexcept_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dependent_elim_stdexcept_probe.t.exe dependent_elim_stdexcept_probe.cpp dependent_elim_stdexcept_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dependent_elim_stdexcept_probe.t.exe)
+  (action (run ./dependent_elim_stdexcept_probe.t.exe))))
