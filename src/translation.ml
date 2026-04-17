@@ -4316,6 +4316,14 @@ and gen_cpp_case (typ : ml_type) t env pv =
       | None -> None
     in
     let tvars = get_current_type_vars () in
+    (* Compute IIFE return type.  Void: [-> void] is required when the lambda
+       may have no return statement.  Function-typed ([Tfun _]): emit the
+       explicit [std::function<R(A...)>] type so that branches returning
+       distinct lambda closure types can all be implicitly converted via
+       [std::function]'s converting constructor; without it, C++ cannot deduce
+       a common return type from distinct closures.  Other non-void: [None]
+       lets C++ deduce, which avoids leaking unresolved Tvars (e.g. [T1])
+       from the ML type annotation into non-template contexts. *)
     let iife_ret_opt =
       let branch_rty =
         match Array.to_list pv with
@@ -4325,7 +4333,10 @@ and gen_cpp_case (typ : ml_type) t env pv =
       let r = convert_ml_type_to_cpp_type env Refset'.empty tvars branch_rty in
       if is_cpp_unit_type r
          || ml_type_is_unit (ml_result_type branch_rty)
-      then Some Tvoid else None
+      then Some Tvoid
+      else match r with
+        | Tfun _ -> Some r
+        | _ -> None
     in
     let saved_ret = tctx.current_cpp_return_type in
     if iife_ret_opt = Some Tvoid then
@@ -4531,11 +4542,14 @@ and gen_cpp_case (typ : ml_type) t env pv =
       else
         branches
     in
-    (* Compute IIFE return type.  For void (unit-typed) returns, specify
-       [-> void] explicitly since the lambda may have no return statement.
-       For non-void, let the C++ compiler deduce the type — this avoids
-       leaking unresolved type variables (e.g. [T1]) from the ML type
-       annotation into non-template contexts. *)
+    (* Compute IIFE return type.  Void: [-> void] is required when the lambda
+       may have no return statement.  Function-typed ([Tfun _]): emit the
+       explicit [std::function<R(A...)>] type so that branches returning
+       distinct lambda closure types can all be implicitly converted via
+       [std::function]'s converting constructor; without it, C++ cannot deduce
+       a common return type from distinct closures.  Other non-void: [None]
+       lets C++ deduce, which avoids leaking unresolved Tvars (e.g. [T1])
+       from the ML type annotation into non-template contexts. *)
     let tvars = get_current_type_vars () in
     let iife_ret_opt =
       let branch_rty =
@@ -4546,7 +4560,10 @@ and gen_cpp_case (typ : ml_type) t env pv =
       let r = convert_ml_type_to_cpp_type env Refset'.empty tvars branch_rty in
       if is_cpp_unit_type r
          || ml_type_is_unit (ml_result_type branch_rty)
-      then Some Tvoid else None
+      then Some Tvoid
+      else match r with
+        | Tfun _ -> Some r
+        | _ -> None
     in
     CPPfun_call
       ( CPPlambda ([], iife_ret_opt,

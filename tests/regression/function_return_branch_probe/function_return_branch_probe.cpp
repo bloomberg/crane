@@ -13,7 +13,7 @@
 std::shared_ptr<Nat>
 FunctionReturnBranchProbe::make_adder(const std::shared_ptr<Nat> &n,
                                       const std::shared_ptr<Nat> &_x0) {
-  return [&]() {
+  return [&]() -> std::function<std::shared_ptr<Nat>(std::shared_ptr<Nat>)> {
     if (std::holds_alternative<typename Nat::O>(n->v())) {
       return [](std::shared_ptr<Nat> x) { return x; };
     } else {
