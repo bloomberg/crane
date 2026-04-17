@@ -1683,7 +1683,12 @@ let pp_go_hstruct _mlstruct = mt ()
 
 (** Generate the [package <name>] declaration. *)
 let pp_go_preamble basename _comment _mps _usf =
-  str ("package " ^ String.lowercase_ascii (Id.to_string basename))
+  let override = Table.go_package_name () in
+  let name =
+    if override = "" then String.lowercase_ascii (Id.to_string basename)
+    else override
+  in
+  str ("package " ^ name)
   ++ fnl2 ()
 
 let pp_go_sig _mls = mt ()

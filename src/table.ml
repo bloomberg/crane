@@ -1178,6 +1178,13 @@ let {Goptions.get = conservative_types} =
 let {Goptions.get = loopify} =
   declare_bool_option_and_ref ~key:["Crane"; "Loopify"] ~value:false ()
 
+(* Override the Go package name emitted in the [package ...] declaration.
+   When empty (the default), the package name is derived from the extraction
+   filename.  Set to "main" to produce [package main] for all extractions
+   regardless of filename – needed for multi-file single-binary extraction. *)
+let {Goptions.get = go_package_name} =
+  declare_string_option_and_ref ~key:["Crane"; "Go"; "Package"] ~value:"" ()
+
 (* Per-function loopify/noloopify table. First set = force-loopify, second set =
    force-noloopify. *)
 

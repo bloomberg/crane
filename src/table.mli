@@ -432,6 +432,12 @@ val extraction_loopify : bool -> qualid list -> unit
 (** Reset per-function loopify table. *)
 val reset_extraction_loopify : unit -> unit
 
+(** {2 Go package name} *)
+
+(** Override the Go [package] declaration.  Empty string (default) means use
+    the extraction filename as the package name. *)
+val go_package_name : unit -> string
+
 (** {2 File comment} *)
 
 (** Get comment to print at the beginning of files. *)
