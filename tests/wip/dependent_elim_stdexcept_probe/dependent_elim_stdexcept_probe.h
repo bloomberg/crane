@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DEPENDENT_ELIM_STDEXCEPT_PROBE
 #define INCLUDED_DEPENDENT_ELIM_STDEXCEPT_PROBE
 
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 

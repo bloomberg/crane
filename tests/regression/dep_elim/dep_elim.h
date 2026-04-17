@@ -2,6 +2,7 @@
 #define INCLUDED_DEP_ELIM
 
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>

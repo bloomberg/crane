@@ -1367,6 +1367,8 @@ and pp_cpp_expr env args t =
     require_header "concepts";
     str "std::convertible_to<" ++ pp_cpp_type false [] ty ++ str ">"
   | CPPabort msg ->
+    require_header "any";
+    require_header "stdexcept";
     str "([]() -> std::any { throw "
     ++ str (sn ()).logic_error
     ++ str "(\""
@@ -1412,6 +1414,7 @@ and pp_cpp_expr env args t =
 and pp_cpp_stmt env args = function
   | Sreturn None -> str "return;"
   | Sreturn (Some (CPPabort msg)) ->
+    require_header "stdexcept";
     str "throw "
     ++ str (sn ()).logic_error
     ++ str "(\""
@@ -2707,6 +2710,7 @@ and pp_cpp_decl_raw env = function
     let expr_pp =
       match e with
       | CPPabort msg ->
+        require_header "stdexcept";
         str "([]() -> "
         ++ pp_cpp_type false [] ty
         ++ str " { throw "

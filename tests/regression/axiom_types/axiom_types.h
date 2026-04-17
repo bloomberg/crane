@@ -2,6 +2,7 @@
 #define INCLUDED_AXIOM_TYPES
 
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
