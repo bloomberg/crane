@@ -239,6 +239,10 @@ type language_descr = {
   preamble : Id.t -> Pp.t option -> ModPath.t list -> unsafe_needs -> Pp.t;
   pp_struct : ml_structure -> Pp.t;
   pp_hstruct : ml_structure -> Pp.t;
+  (* When true, separate extraction skips writing files whose struct body
+     would be empty (all definitions erased).  Stale files from prior runs
+     are deleted.  Set to false for backends where an empty file is valid. *)
+  skip_empty_files : bool;
   (* Concerning a possible interface file *)
   sig_suffix : string option;
   (* the second argument is a comment to add to the preamble *)

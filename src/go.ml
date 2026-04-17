@@ -19,9 +19,10 @@ let go_descr : language_descr = {
   file_suffix  = ".go";
   file_naming;
   preamble     = pp_go_preamble;
-  pp_struct    = pp_go_struct;
-  pp_hstruct   = pp_go_hstruct;
-  sig_suffix   = None;
+  pp_struct         = pp_go_struct;
+  pp_hstruct        = pp_go_hstruct;
+  skip_empty_files  = true;
+  sig_suffix        = None;
   sig_preamble = pp_go_sig_preamble;
   pp_sig       = pp_go_sig;
   pp_decl      = pp_go_decl;

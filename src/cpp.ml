@@ -1702,6 +1702,7 @@ let cpp_descr =
     preamble;
     pp_struct;
     pp_hstruct;
+    skip_empty_files = false;
     sig_suffix = Some ".h";
     sig_preamble;
     pp_sig = pp_signature;

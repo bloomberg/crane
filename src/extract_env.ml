@@ -1023,8 +1023,7 @@ let print_structure_to_file (fn, si, mo) dry struc =
      Also accumulates needed standard headers via require_header. *)
   if lang () = Cpp then Cpp_state.reset_needed_headers ();
   set_phase Pre;
-  (* Capture the pre-phase struct output.  For Go the printer is phase-agnostic,
-     so we reuse this value in the Impl phase to avoid a redundant render. *)
+  (* Capture the pre-phase struct output for the emptiness check below. *)
   let pre_struct_pp = d.pp_struct struc in
   ignore pre_struct_pp;
   ignore (d.pp_hstruct struc);
@@ -1037,17 +1036,17 @@ let print_structure_to_file (fn, si, mo) dry struc =
      creating the file — a package-declaration-only file is noise.
      We still run the Impl phase with a null formatter so that pop_visible
      fires and populates mpfiles_content for later modules. *)
-  let go_skip_file =
-    lang () = Go && (not dry) && fn <> None
+  let skip_file =
+    d.skip_empty_files && (not dry) && fn <> None
     && String.trim (string_of_ppcmds pre_struct_pp) = ""
   in
   (* Remove any stale file left from a previous run where the module was not empty. *)
-  if go_skip_file then
+  if skip_file then
     Option.iter (fun path -> if Sys.file_exists path then Sys.remove path) fn;
   (* Print the implementation *)
-  let cout = if dry || go_skip_file then None else Option.map open_out fn in
+  let cout = if dry || skip_file then None else Option.map open_out fn in
   let ft =
-    if go_skip_file then Format.make_formatter (fun _ _ _ -> ()) (fun () -> ())
+    if skip_file then Format.make_formatter (fun _ _ _ -> ()) (fun () -> ())
     else formatter dry cout
   in
   let comment = get_comment () in
@@ -1090,7 +1089,7 @@ let print_structure_to_file (fn, si, mo) dry struc =
       Option.iter close_out cout;
       raise reraise );
   (* If not a dry run (and not a skipped empty Go file), format and report *)
-  if not dry && not go_skip_file then (
+  if not dry && not skip_file then (
     Option.iter format_file_inplace fn;
     Option.iter info_file fn );
   (* Now, let's print the signature *)
