@@ -940,6 +940,47 @@ let add_candidate (reg : t) (ind_ref : GlobRef.t) (cand : method_candidate) =
   in
   Hashtbl.replace reg.candidates ind_ref (existing @ [cand])
 
+(** Check if a function qualifies as a method on [epon_ref] and register it
+    if so.  This is the single entry point for the
+    [find_epon_arg_pos] + [body_safe_for_method] + [register_method] +
+    [add_candidate] sequence that was previously duplicated across
+    [method_registry.ml], [cpp.ml], and [cpp_ind.ml].
+
+    Returns [Some (func_ref, body, ty, this_pos)] on success, [None] if the
+    function does not qualify. *)
+let try_register_method (reg : t) (epon_ref : GlobRef.t)
+    (func_ref : GlobRef.t) (body : Miniml.ml_ast) (ty : Miniml.ml_type) :
+    method_candidate option =
+  match find_epon_arg_pos epon_ref ty with
+  | Some (pos, ind_tvar_positions)
+    when body_safe_for_method ~this_pos:pos
+           ~ret_has_shared_epon:(ml_return_type_has_ref epon_ref ty)
+           body ->
+    register_into reg.methods func_ref epon_ref pos ~ind_tvar_positions;
+    let cand = (func_ref, body, ty, pos) in
+    add_candidate reg epon_ref cand;
+    Some cand
+  | _ -> None
+
+(** Collect [Dtype] refs from a declaration list that share [modpath],
+    excluding inline-custom types (e.g., [Crane Extract Inlined Constant]).
+    These produce [Dtype] entries but are not real C++ type aliases; including
+    them would incorrectly block method candidates whose signatures reference
+    the inlined name.
+
+    Works with both [ml_specif] lists (used during pre-scan) and
+    [ml_structure_elem] lists (used during rendering) via [extract_decl]. *)
+let collect_module_type_aliases ~extract_decl modpath decls =
+  List.fold_left
+    (fun acc item ->
+      match extract_decl item with
+      | Some (Miniml.Dtype (r, _, _))
+        when Names.ModPath.equal (modpath_of_r r) modpath
+          && not (Table.is_any_inline_custom r) ->
+        r :: acc
+      | _ -> acc)
+    [] decls
+
 (** Mark a registered method's return type as erased to [std::any]. Updates the
     method's [returns_any] flag to true. No-op if the function is not
     registered. *)

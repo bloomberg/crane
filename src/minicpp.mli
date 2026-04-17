@@ -180,12 +180,21 @@ and cpp_stmt =
           body is [Some stmts] for a wildcard/default case, or [None] to
           emit [std::unreachable()]. *)
 
-(** A branch in an {!Smatch} if/else-if pattern match chain. *)
+(** A branch in an {!Smatch} if/else-if pattern match chain.
+
+    Each branch stores its own scrutinee expression because type refinement
+    may yield different scrutinee expressions per branch (e.g., after
+    inlining or CSE).  The printer extracts the common scrutinee from the
+    first branch for the shared [auto&&] binding. *)
 and smatch_branch = {
   smb_scrutinee : cpp_expr;
-      (** Variant accessor expression, e.g. [scrut->v()] or [scrut.v()]. *)
+      (** Variant accessor expression, e.g. [scrut->v()] or [scrut.v()].
+          Stored per-branch intentionally: branches may have different
+          scrutinee expressions after type refinement; the printer extracts
+          the common scrutinee from the first branch. *)
   smb_ctor_type : cpp_type;
-      (** Constructor struct type for the template argument. *)
+      (** Constructor struct type for the template argument of
+          [std::holds_alternative<T>] / [std::get<T>]. *)
   smb_var : Id.t option;
       (** Binding variable for [std::get], or [None] when the
           branch body doesn't use fields.  Kept for scrutinee-name
@@ -194,8 +203,8 @@ and smatch_branch = {
       (** Ordered list of [(binding_name, field_cpp_type, used)] for C++
           structured bindings ([const auto& [f1, f2] = std::get<T>(…)]).
           Covers ALL constructor fields in struct-declaration order.
-          [used] is [true] when the binding is referenced in the branch
-          body; unused bindings are annotated [[[maybe_unused]]].
+          The [used] flag is [true] when the binding is referenced in the
+          branch body; unused bindings are annotated [[[maybe_unused]]].
           Empty when no fields are used or for frame-dispatch branches. *)
   smb_extra_conds : cpp_expr list;
       (** Additional [&&]-joined conditions. *)
@@ -376,6 +385,24 @@ val map_stmt :
   (cpp_type -> cpp_type) ->
   cpp_stmt ->
   cpp_stmt
+
+(** [iter_expr_children ~on_expr ~on_stmts e] calls [on_expr] on each
+    immediate child expression and [on_stmts] on each immediate child
+    statement list of [e]. Does not recurse — the caller controls recursion
+    depth through the callbacks. *)
+val iter_expr_children :
+  on_expr:(cpp_expr -> unit) -> on_stmts:(cpp_stmt list -> unit) ->
+  cpp_expr -> unit
+
+(** [iter_stmt_children ~on_expr ~on_stmts s] calls [on_expr] on each
+    immediate child expression and [on_stmts] on each immediate child
+    statement list of [s]. Does not recurse. For [Smatch], visits the
+    scrutinee, extra conditions, reuse condition and statements, and body
+    for each branch. For [Scustom_case], visits the scrutinee and branch
+    bodies. *)
+val iter_stmt_children :
+  on_expr:(cpp_expr -> unit) -> on_stmts:(cpp_stmt list -> unit) ->
+  cpp_stmt -> unit
 
 (** {2 Top-level declarations} *)
 

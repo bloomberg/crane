@@ -30,129 +30,92 @@ open Translation
 open Cpp_state
 open Cpp_names
 
+(** Memoized regex for matching the [::] C++ scope-resolution operator. *)
+let re_double_colon = Str.regexp_string "::"
+
 (** Registry of GlobRefs that are axiom types (extracted as std::any). Functions
     whose return type involves an axiom type should not be marked
     __attribute__((pure)) because they may transitively call axiom stubs that
     throw std::logic_error. *)
 let axiom_type_refs : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 16
 
+(** Register a GlobRef as an axiom type in the {!axiom_type_refs} table. *)
 let register_axiom_type (r : GlobRef.t) = Hashtbl.replace axiom_type_refs r ()
 
+(** Check whether a GlobRef has been registered as an axiom type. *)
 let is_axiom_type_ref (r : GlobRef.t) = Hashtbl.mem axiom_type_refs r
 
-(** Check if a lambda actually needs to capture variables from enclosing scope.
-    A lambda needs [&] capture if its body references variables that are:
-    - Not lambda parameters
-    - Not locally declared within the lambda body
-    - 'this' pointer (always needs capture in a lambda) Returns true if capture
-      is needed, false if [] can be used.
-
-    Also checks recursively: if a nested lambda captures from the outer lambda's
-    scope, that counts as the outer lambda needing capture. *)
 (** Check if an identifier is referenced in a list of statements.
-    Used to decide whether a parameter or variable needs [[maybe_unused]]. *)
+    Used to decide whether a parameter name should be emitted or omitted
+    (idiomatic C++ convention for intentionally unused parameters). *)
 let stmts_reference_id target_id body =
-  let open Minicpp in
-  let found = ref false in
-  let rec check_expr = function
-    | CPPvar id when Id.equal id target_id -> found := true
-    | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _
-    | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
-    | CPPabort _ | CPPenum_val _ | CPPraw _ | CPPbool _ | CPPint _
-    | CPPbrace_init | CPPthis | CPPunop _ -> ()
-    | CPPfun_call (f, args) -> check_expr f; List.iter check_expr args
-    | CPPnamespace (_, e) | CPPderef e | CPPmove e | CPPforward (_, e)
-    | CPPget (e, _) | CPPget' (e, _) | CPPmember (e, _) | CPParrow (e, _)
-    | CPPqualified (e, _) | CPPshared_ptr_ctor (_, e)
-    | CPPunique_ptr_ctor (_, e) | CPPany_cast (_, e) -> check_expr e
-    | CPPshared_from_this _ -> ()
-    | CPPlambda (_, _, stmts, _) -> List.iter check_stmt stmts
-    | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
-    | CPPstruct_id (_, _, es) | CPPnew (_, es) ->
-      List.iter check_expr es
-    | CPPparray (arr, e) -> Array.iter check_expr arr; check_expr e
-    | CPPmethod_call (obj, _, args) ->
-      check_expr obj; List.iter check_expr args
-    | CPPrequires (_, constraints, _) ->
-      List.iter (fun (e, _) -> check_expr e) constraints
-    | CPPbinop (_, l, r) -> check_expr l; check_expr r
-  and check_stmt = function
-    | Sreturn (Some e) | Sexpr e -> check_expr e
-    | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _
-    | Sstruct_def _ | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> ()
-    | Sasgn (_, _, e) -> check_expr e
-    | Sif (c, t, f) ->
-      check_expr c; List.iter check_stmt t; List.iter check_stmt f
-    | Sswitch (e, _, branches, def) ->
-      check_expr e;
-      List.iter (fun (_, stmts) -> List.iter check_stmt stmts) branches;
-      Option.iter (List.iter check_stmt) def
-    | Scustom_case (_, e, _, branches, template) ->
+  let exception Found in
+  let rec check_expr e =
+    (match e with CPPvar id when Id.equal id target_id -> raise Found | _ -> ());
+    iter_expr_children ~on_expr:check_expr ~on_stmts:(List.iter check_stmt) e
+  and check_stmt s =
+    match s with
+    | Scustom_case (_, scrut, _, branches, template) ->
       (* Only count scrutinee as a reference when the template actually uses it.
          E.g., unit match template "{ %br0 }" ignores the scrutinee, while nat
          template "if (%scrut <= 0) { ... }" uses it. *)
-      if Common.contains_substring template "%scrut" then check_expr e;
+      if Common.contains_substring template "%scrut" then check_expr scrut;
       List.iter (fun (_, _, stmts) -> List.iter check_stmt stmts) branches
-    | Sassign_field (o, _, e) -> check_expr o; check_expr e
-    | Swhile (c, stmts) -> check_expr c; List.iter check_stmt stmts
-    | Sblock stmts -> List.iter check_stmt stmts
-    | Sblock_custom (_, _, _, _, args, _) -> List.iter check_expr args
-    | Smatch (branches, default) ->
-      List.iter (fun br ->
-        check_expr br.smb_scrutinee;
-        List.iter check_expr br.smb_extra_conds;
-        ( match br.smb_reuse with
-        | Some (cond, _, stmts) -> check_expr cond; List.iter check_stmt stmts
-        | None -> () );
-        List.iter check_stmt br.smb_body) branches;
-      Option.iter (List.iter check_stmt) default
+    | _ ->
+      iter_stmt_children ~on_expr:check_expr ~on_stmts:(List.iter check_stmt) s
+  in
+  try List.iter check_stmt body; false
+  with Found -> true
+
+(** Collect all [CPPvar] identifiers referenced in a statement list.
+    Single traversal alternative to calling [stmts_reference_id] per
+    parameter — O(body) instead of O(n * body) for n parameters. *)
+let collect_referenced_ids body =
+  let ids = ref Id.Set.empty in
+  let rec check_expr e =
+    (match e with CPPvar id -> ids := Id.Set.add id !ids | _ -> ());
+    iter_expr_children ~on_expr:check_expr ~on_stmts:(List.iter check_stmt) e
+  and check_stmt s =
+    match s with
+    | Scustom_case (_, scrut, _, branches, template) ->
+      if Common.contains_substring template "%scrut" then check_expr scrut;
+      List.iter (fun (_, _, stmts) -> List.iter check_stmt stmts) branches
+    | _ ->
+      iter_stmt_children ~on_expr:check_expr ~on_stmts:(List.iter check_stmt) s
   in
   List.iter check_stmt body;
-  !found
+  !ids
 
-let[@warning "-39"] rec lambda_needs_capture
+(** Check if a lambda needs to capture variables from enclosing scope.
+    A lambda needs [&] capture if its body references variables that are
+    not lambda parameters and not locally declared within the body.
+    [this] pointer references always require capture.
+
+    Returns [(needs_capture, uses_this)].  Also recurses into nested lambdas:
+    if a nested lambda captures from the outer lambda's scope, that counts
+    as the outer lambda needing capture. *)
+let lambda_needs_capture
     (params : (Minicpp.cpp_type * Names.Id.t option) list)
     (body : Minicpp.cpp_stmt list) : bool * bool =
-  let open Minicpp in
-  (* Collect parameter names *)
   let param_names =
     List.fold_left
       (fun acc (_, id_opt) ->
-        match id_opt with
-        | Some id -> IdSet.add id acc
-        | None -> acc )
-      IdSet.empty
-      params
+        match id_opt with Some id -> IdSet.add id acc | None -> acc)
+      IdSet.empty params
   in
-  (* Track if 'this' is used - it always requires capture *)
   let uses_this = ref false in
-  (* Collect all variable references and local declarations from expressions and
-     statements *)
   let rec collect_from_expr (refs, decls) e =
     match e with
     | CPPvar id -> (IdSet.add id refs, decls)
-    | CPPthis ->
+    | CPPthis | CPPshared_from_this _ ->
       uses_this := true;
       (refs, decls)
-    | CPPshared_from_this _ ->
-      uses_this := true;
-      (refs, decls)
-    | CPPfun_call (f, args) ->
-      let acc = collect_from_expr (refs, decls) f in
-      List.fold_left collect_from_expr acc args
-    | CPPnamespace (_, e') -> collect_from_expr (refs, decls) e'
-    | CPPderef e' -> collect_from_expr (refs, decls) e'
-    | CPPmove e' -> collect_from_expr (refs, decls) e'
-    | CPPforward (_, e') -> collect_from_expr (refs, decls) e'
     | CPPlambda (inner_params, _, inner_body, _) ->
       let inner_param_names =
         List.fold_left
           (fun acc (_, id_opt) ->
-            match id_opt with
-            | Some id -> IdSet.add id acc
-            | None -> acc )
-          IdSet.empty
-          inner_params
+            match id_opt with Some id -> IdSet.add id acc | None -> acc)
+          IdSet.empty inner_params
       in
       let inner_refs, inner_decls =
         List.fold_left collect_from_stmt (IdSet.empty, IdSet.empty) inner_body
@@ -161,140 +124,75 @@ let[@warning "-39"] rec lambda_needs_capture
         IdSet.diff inner_refs (IdSet.union inner_param_names inner_decls)
       in
       (IdSet.union refs inner_free, decls)
-    | CPPoverloaded exprs ->
-      List.fold_left collect_from_expr (refs, decls) exprs
-    | CPPstructmk (_, _, args) ->
-      List.fold_left collect_from_expr (refs, decls) args
-    | CPPstruct (_, _, args) ->
-      List.fold_left collect_from_expr (refs, decls) args
-    | CPPstruct_id (_, _, args) ->
-      List.fold_left collect_from_expr (refs, decls) args
-    | CPPget (e', _) -> collect_from_expr (refs, decls) e'
-    | CPPget' (e', _) -> collect_from_expr (refs, decls) e'
-    | CPPparray (arr, e') ->
-      let acc =
-        Array.fold_left (fun a e -> collect_from_expr a e) (refs, decls) arr
-      in
-      collect_from_expr acc e'
-    | CPPnew (_, args) -> List.fold_left collect_from_expr (refs, decls) args
-    | CPPshared_ptr_ctor (_, e') -> collect_from_expr (refs, decls) e'
-    | CPPunique_ptr_ctor (_, e') -> collect_from_expr (refs, decls) e'
-    | CPPmember (e', _) -> collect_from_expr (refs, decls) e'
-    | CPParrow (e', _) -> collect_from_expr (refs, decls) e'
-    | CPPmethod_call (obj, _, args) ->
-      let acc = collect_from_expr (refs, decls) obj in
-      List.fold_left collect_from_expr acc args
-    | CPPqualified (e', _) -> collect_from_expr (refs, decls) e'
-    | CPPrequires (_, constraints, _) ->
-      List.fold_left
-        (fun acc (e', _) -> collect_from_expr acc e')
-        (refs, decls)
-        constraints
-    | CPPbinop (_, lhs, rhs) ->
-      collect_from_expr (collect_from_expr (refs, decls) lhs) rhs
-    | CPPglob _
-     |CPPvisit
-     |CPPmk_shared _
-     |CPPmk_unique _
-     |CPPstring _
-     |CPPuint _
-     |CPPfloat _
-     |CPPconvertible_to _
-     |CPPabort _
-     |CPPenum_val _
-     |CPPraw _
-     |CPPbool _
-     |CPPint _
-     |CPPbrace_init
-     |CPPunop _ -> (refs, decls)
-    | CPPany_cast (_, e) -> collect_from_expr (refs, decls) e
+    | _ ->
+      let acc = ref (refs, decls) in
+      iter_expr_children
+        ~on_expr:(fun e' -> acc := collect_from_expr !acc e')
+        ~on_stmts:(fun stmts ->
+          acc := List.fold_left collect_from_stmt !acc stmts)
+        e;
+      !acc
   and collect_from_stmt (refs, decls) stmt =
     match stmt with
-    | Sreturn None -> (refs, decls)
-    | Sreturn (Some e) -> collect_from_expr (refs, decls) e
-    | Sexpr e -> collect_from_expr (refs, decls) e
     | Sdecl (id, _) -> (refs, IdSet.add id decls)
     | Sasgn (id, ty, e) ->
       let refs', decls' = collect_from_expr (refs, decls) e in
       ( match ty with
-      | Some _ ->
-        (* Declaration: ty id = e; — id is a new local *)
-        (refs', IdSet.add id decls')
-      | None ->
-        (* Assignment: id = e; — id is a reference to an outer variable *)
-        (IdSet.add id refs', decls') )
-    | Sif (cond, then_stmts, else_stmts) ->
-      List.fold_left
-        collect_from_stmt
-        (List.fold_left
-           collect_from_stmt
-           (collect_from_expr (refs, decls) cond)
-           then_stmts )
-        else_stmts
-    | Sswitch (scrut, _, branches, default) ->
-      let acc =
-        List.fold_left
-          (fun acc (_, stmts) -> List.fold_left collect_from_stmt acc stmts)
-          (collect_from_expr (refs, decls) scrut)
-          branches
-      in
-      ( match default with
-      | Some stmts -> List.fold_left collect_from_stmt acc stmts
-      | None -> acc )
+      | Some _ -> (refs', IdSet.add id decls')
+      | None -> (IdSet.add id refs', decls') )
     | Scustom_case (_, scrut, _, branches, _) ->
       List.fold_left
         (fun (r, d) (branch_vars, _, stmts) ->
           let branch_decls =
             List.fold_left (fun acc (id, _) -> IdSet.add id acc) d branch_vars
           in
-          List.fold_left collect_from_stmt (r, branch_decls) stmts )
+          List.fold_left collect_from_stmt (r, branch_decls) stmts)
         (collect_from_expr (refs, decls) scrut)
         branches
-    | Sassign_field (obj, _, e) ->
-      collect_from_expr (collect_from_expr (refs, decls) obj) e
-    | Swhile (cond, body) ->
-      List.fold_left
-        collect_from_stmt
-        (collect_from_expr (refs, decls) cond)
-        body
-    | Sblock stmts -> List.fold_left collect_from_stmt (refs, decls) stmts
     | Sblock_custom (_, _, id, _, args, _) ->
-      let acc = List.fold_left (fun a e -> collect_from_expr a e) (refs, decls) args in
-      let refs', decls' = acc in
+      let refs', decls' =
+        List.fold_left collect_from_expr (refs, decls) args
+      in
       (refs', IdSet.add id decls')
     | Smatch (branches, default) ->
       let acc =
         List.fold_left
           (fun acc br ->
             let acc = collect_from_expr acc br.smb_scrutinee in
-            let acc = List.fold_left collect_from_expr acc br.smb_extra_conds in
+            let acc =
+              List.fold_left collect_from_expr acc br.smb_extra_conds
+            in
             let acc =
               match br.smb_reuse with
               | Some (cond, _, stmts) ->
-                let acc = collect_from_expr acc cond in
-                List.fold_left collect_from_stmt acc stmts
+                List.fold_left
+                  collect_from_stmt (collect_from_expr acc cond) stmts
               | None -> acc
             in
             let refs', decls' = acc in
             let branch_decls =
-              (* Add structured-binding field names as declared. *)
               let d =
                 List.fold_left
                   (fun d (bname, _, _) -> IdSet.add bname d)
                   decls' br.smb_field_bindings
               in
-              match br.smb_var with
-              | Some id -> IdSet.add id d
-              | None -> d
+              match br.smb_var with Some id -> IdSet.add id d | None -> d
             in
-            List.fold_left collect_from_stmt (refs', branch_decls) br.smb_body)
+            List.fold_left
+              collect_from_stmt (refs', branch_decls) br.smb_body)
           (refs, decls) branches
       in
       ( match default with
       | Some stmts -> List.fold_left collect_from_stmt acc stmts
       | None -> acc )
-    | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _ | Sdecl_init _
-    | Scontinue | Sbreak -> (refs, decls)
+    | _ ->
+      let acc = ref (refs, decls) in
+      iter_stmt_children
+        ~on_expr:(fun e -> acc := collect_from_expr !acc e)
+        ~on_stmts:(fun stmts ->
+          acc := List.fold_left collect_from_stmt !acc stmts)
+        stmt;
+      !acc
   in
   let all_refs, local_decls =
     List.fold_left collect_from_stmt (IdSet.empty, IdSet.empty) body
@@ -306,89 +204,37 @@ let[@warning "-39"] rec lambda_needs_capture
 (** Check if a cpp_expr contains any lambdas that need capture (have free
     variables). Used to determine if IIFE wrapping is needed for static inline
     initializers. Closed lambdas (with []) don't need IIFE wrapping. *)
-and expr_contains_capturing_lambda (e : Minicpp.cpp_expr) : bool =
-  let open Minicpp in
+let rec expr_contains_capturing_lambda (e : Minicpp.cpp_expr) : bool =
   match e with
   | CPPlambda (params, _, body, _) ->
     fst (lambda_needs_capture params body)
     || List.exists stmt_contains_capturing_lambda body
-  | CPPfun_call (f, args) ->
-    expr_contains_capturing_lambda f
-    || List.exists expr_contains_capturing_lambda args
-  | CPPnamespace (_, e') -> expr_contains_capturing_lambda e'
-  | CPPderef e' -> expr_contains_capturing_lambda e'
-  | CPPmove e' -> expr_contains_capturing_lambda e'
-  | CPPforward (_, e') -> expr_contains_capturing_lambda e'
-  | CPPoverloaded exprs -> List.exists expr_contains_capturing_lambda exprs
-  | CPPstructmk (_, _, args) -> List.exists expr_contains_capturing_lambda args
-  | CPPstruct (_, _, args) -> List.exists expr_contains_capturing_lambda args
-  | CPPstruct_id (_, _, args) -> List.exists expr_contains_capturing_lambda args
-  | CPPget (e', _) -> expr_contains_capturing_lambda e'
-  | CPPget' (e', _) -> expr_contains_capturing_lambda e'
-  | CPPparray (args, e') ->
-    Array.exists expr_contains_capturing_lambda args
-    || expr_contains_capturing_lambda e'
-  | CPPnew (_, args) -> List.exists expr_contains_capturing_lambda args
-  | CPPshared_ptr_ctor (_, e') -> expr_contains_capturing_lambda e'
-  | CPPunique_ptr_ctor (_, e') -> expr_contains_capturing_lambda e'
-  | CPPmember (e', _) -> expr_contains_capturing_lambda e'
-  | CPParrow (e', _) -> expr_contains_capturing_lambda e'
-  | CPPmethod_call (obj, _, args) ->
-    expr_contains_capturing_lambda obj
-    || List.exists expr_contains_capturing_lambda args
-  | CPPqualified (e', _) -> expr_contains_capturing_lambda e'
-  | CPPrequires (_, constraints, _) ->
-    List.exists (fun (e', _) -> expr_contains_capturing_lambda e') constraints
-  | CPPbinop (_, lhs, rhs) ->
-    expr_contains_capturing_lambda lhs || expr_contains_capturing_lambda rhs
-  | CPPvar _
-   |CPPglob _
-   |CPPvisit
-   |CPPmk_shared _
-   |CPPmk_unique _
-   |CPPstring _
-   |CPPuint _
-   |CPPfloat _
-   |CPPthis
-   |CPPshared_from_this _
-   |CPPconvertible_to _
-   |CPPabort _
-   |CPPenum_val _
-   |CPPraw _
-   |CPPbool _
-   |CPPint _
-   |CPPbrace_init
-   |CPPunop _ -> false
-  | CPPany_cast (_, e') -> expr_contains_capturing_lambda e'
+  | _ ->
+    let exception Found in
+    ( try
+        iter_expr_children
+          ~on_expr:(fun e' ->
+            if expr_contains_capturing_lambda e' then raise Found)
+          ~on_stmts:(fun stmts ->
+            if List.exists stmt_contains_capturing_lambda stmts then
+              raise Found)
+          e;
+        false
+      with Found -> true )
 
+(** Statement counterpart of {!expr_contains_capturing_lambda}. *)
 and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
-  let open Minicpp in
-  let any = List.exists stmt_contains_capturing_lambda in
-  let expr = expr_contains_capturing_lambda in
-  match s with
-  | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) -> expr e
-  | Sreturn None -> false
-  | Sassign_field (obj, _, e) -> expr obj || expr e
-  | Sif (cond, then_s, else_s) -> expr cond || any then_s || any else_s
-  | Sswitch (scrut, _, branches, default) ->
-    expr scrut || List.exists (fun (_, stmts) -> any stmts) branches
-    || (match default with Some stmts -> any stmts | None -> false)
-  | Scustom_case (_, scrut, _, branches, _) ->
-    expr scrut || List.exists (fun (_, _, stmts) -> any stmts) branches
-  | Swhile (cond, body) -> expr cond || any body
-  | Sblock stmts -> any stmts
-  | Sblock_custom (_, _, _, _, args, _) -> List.exists expr args
-  | Smatch (branches, default) ->
-    List.exists (fun br ->
-      expr br.smb_scrutinee
-      || List.exists expr br.smb_extra_conds
-      || ( match br.smb_reuse with
-         | Some (cond, _, stmts) -> expr cond || any stmts
-         | None -> false )
-      || any br.smb_body) branches
-    || (match default with Some stmts -> any stmts | None -> false)
-  | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _
-  | Sdecl_init _ | Scontinue | Sbreak -> false
+  let exception Found in
+  ( try
+      iter_stmt_children
+        ~on_expr:(fun e ->
+          if expr_contains_capturing_lambda e then raise Found)
+        ~on_stmts:(fun stmts ->
+          if List.exists stmt_contains_capturing_lambda stmts then
+            raise Found)
+        s;
+      false
+    with Found -> true )
 
 (** {2 Pretty-printing C++ syntax.} *)
 
@@ -574,8 +420,15 @@ let expand_custom_chunks parser cmds =
     []
     cmds
 
+(** Expand single-argument numbered placeholders (e.g. [%a0], [%t1]) in a
+    command list. *)
 let expand_numbered_args esc f = expand_custom_chunks (parse_numbered_args esc f)
+
+(** Expand double-argument binder placeholders (e.g. [%b0a1]) in a command
+    list. *)
 let expand_custom_binders esc1 esc2 f = expand_custom_chunks (parse_custom_numbered_binders esc1 esc2 f)
+
+(** Expand fixed-name placeholders (e.g. [%scrut], [%ty]) in a command list. *)
 let expand_custom_fixed esc cc = expand_custom_chunks (parse_custom_fixed esc cc)
 
 (** Flatten a command list that is known to contain only [CCstring] chunks
@@ -767,10 +620,7 @@ let rec pp_cpp_type par vl t =
                 let full_path = Pp.string_of_ppcmds (GlobRef.print r') in
                 let struct_name_str = Pp.string_of_ppcmds struct_name in
                 let struct_name_dotted =
-                  Str.global_replace
-                    (Str.regexp_string "::")
-                    "."
-                    struct_name_str
+                  Str.global_replace re_double_colon "." struct_name_str
                 in
                 if Common.contains_substring full_path struct_name_dotted then
                   struct_name ++ str "::"
@@ -1172,13 +1022,12 @@ and pp_cpp_expr env args t =
       match params with
       | [] -> (mt (), capture_str)
       | _ ->
+        let used_ids = collect_referenced_ids body in
         ( pp_list
             (fun (ty, id_opt) ->
               match id_opt with
               | None -> pp_cpp_type false [] ty
-              | Some id when not (stmts_reference_id id body) ->
-                (* Unused parameter: omit the name entirely — the idiomatic
-                   C++ way to signal an intentionally unused parameter. *)
+              | Some id when not (Id.Set.mem id used_ids) ->
                 pp_cpp_type false [] ty
               | Some id ->
                 pp_cpp_type false [] ty ++ spc () ++ Id.print id )
@@ -1587,11 +1436,19 @@ and pp_cpp_stmt env args = function
        false positives where the same optional-returning call appears in both
        the has_value() check and the dereference. *)
     let scrut_uses =
-      let plen = 6 in
+      let scrut_marker = "%scrut" in
+      let plen = String.length scrut_marker in
       let n = String.length cmatch in
+      let matches_at i =
+        let ok = ref true in
+        for j = 0 to plen - 1 do
+          if cmatch.[i + j] <> scrut_marker.[j] then ok := false
+        done;
+        !ok
+      in
       let rec count i acc =
         if i + plen > n then acc
-        else if String.sub cmatch i plen = "%scrut" then count (i + plen) (acc + 1)
+        else if matches_at i then count (i + plen) (acc + 1)
         else count (i + 1) acc
       in
       count 0 0
@@ -1720,7 +1577,11 @@ and pp_cpp_stmt env args = function
        Bind it with [auto&&] to extend any temporary's lifetime, then
        reconstruct the variant accessor as [_svN->v()].
        Falls back to the raw scrutinee expression when the pattern doesn't match. *)
-    let first_scrut = (List.hd branches).smb_scrutinee in
+    let first_scrut =
+      match branches with
+      | br :: _ -> br.smb_scrutinee
+      | [] -> CErrors.anomaly (Pp.str "Smatch with empty branch list")
+    in
     let scrut_obj_opt =
       match first_scrut with
       | CPPmethod_call (obj, v_id, []) when Id.to_string v_id = "v" ->
@@ -1751,7 +1612,7 @@ and pp_cpp_stmt env args = function
     if n_branches = 1 && default = None then
       (* Single-constructor exhaustive match: emit binding + body inline.
          No if/else needed. *)
-      let br = List.hd branches in
+      let br = match branches with br :: _ -> br | [] -> assert false in
       let body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
       let binding = pp_block_binding scrut_var_pp br in
       if binding = mt () then body_pp
@@ -1905,6 +1766,7 @@ and is_concrete_cpp_type = function
   | Tmod (_, inner) -> is_concrete_cpp_type inner
   | _ -> true
 
+(** Check if an expression is a method call whose return type is [std::any]. *)
 and expr_is_any_returning_method = function
   | CPPmethod_call (CPPglob (n, _, _), _, _) -> method_returns_any n
   | CPPfun_call (CPPglob (n, _, _), _) when lookup_method_this_pos n <> None ->
@@ -1919,6 +1781,8 @@ and expr_is_any_typed_param = function
   | CPPmove e -> expr_is_any_typed_param e
   | _ -> false
 
+(** Wrap a pretty-printed expression in [std::any_cast<T>(...)] when it
+    returns [std::any] but the context expects a concrete type [T]. *)
 and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
   if (expr_is_any_returning_method expr || expr_is_any_typed_param expr)
      && is_concrete_cpp_type expected_ty
@@ -1933,8 +1797,36 @@ and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
     expr_printed
 
 (** Render a custom extraction syntax template by substituting placeholder
-    tokens ([CCscrut], [CCty], [CCarg], etc.) with pretty-printed C++ fragments.
-*)
+    tokens with pretty-printed C++ fragments.
+
+    {b Placeholder tokens:}
+    - [CCstring s] — literal string, emitted verbatim.
+    - [CCscrut] — the scrutinee expression (for match-style custom extractions).
+      Wrapped in [std::any_cast] when the scrutinee type doesn't match the
+      expected type.
+    - [CCty] — the full C++ type of the expression being extracted.
+    - [CCty_arg i] — the [i]-th type argument of the applied type constructor
+      (e.g. for [list<int>], [CCty_arg 0] = [int]).
+    - [CCarg i] — the [i]-th function argument, pretty-printed as a C++
+      expression.  Compound expressions are parenthesized when followed by [.]
+      (member access) to prevent binding errors.
+    - [CCbr_var (i, j)] — the [j]-th pattern variable name from the [i]-th
+      match branch.
+    - [CCbr_var_ty (i, j)] — the type of the [j]-th pattern variable in the
+      [i]-th branch.
+    - [CCbody i] — the full statement body of the [i]-th match branch.
+    - [CCresult] — (handled upstream) the result expression in tail position.
+
+    @param custom  the raw custom syntax string (for error messages)
+    @param env     name environment for pretty-printing sub-expressions
+    @param typ     optional expected C++ type (for [CCty] and any-cast wrapping)
+    @param t       optional scrutinee expression (for [CCscrut])
+    @param tyargs  type arguments for [CCty_arg]
+    @param cases   match branches as [(ids, rty, stmts)] triples
+    @param args    function argument expressions for [CCarg]
+    @param arg_types  expected types for each arg (for any-cast wrapping)
+    @param vl      type variable names in scope
+    @param cmds    parsed placeholder token list to substitute *)
 and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
   let pp ?(followed_by_dot=false) cmd =
     match cmd with
@@ -2145,13 +2037,12 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
           match ty with Tany -> Id.Set.add id acc | _ -> acc)
         Id.Set.empty mf_params;
     let body_s = pp_list_stmt (pp_cpp_stmt env []) mf_body in
+    let used_ids = collect_referenced_ids mf_body in
     let params_s =
       pp_list
         (fun (id, ty) ->
-          if not (stmts_reference_id id mf_body) then
-            pp_cpp_type false [] ty
-          else
-            pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+          if not (Id.Set.mem id used_ids) then pp_cpp_type false [] ty
+          else pp_cpp_type false [] ty ++ str " " ++ Id.print id)
         mf_params
     in
     current_any_typed_params := saved_any_params;
@@ -2381,6 +2272,7 @@ let maybe_loopify decl =
     namespaces/structs, functions, assignments, enums, etc. *)
 let rec pp_cpp_decl env decl = pp_cpp_decl_raw env (maybe_loopify decl)
 
+(** Inner declaration printer, called after loopification has been applied. *)
 and pp_cpp_decl_raw env = function
   | Dtemplate (temps, cstr, Dasgn (id, ty, e)) when render_ctx.rc_in_struct ->
     let args = pp_list pp_template_param temps in
@@ -2507,13 +2399,12 @@ and pp_cpp_decl_raw env = function
       ++ fnl ()
       ++ str "};" )
   | Dfundef (ids, ret_ty, params, body, no_pure) ->
+    let used_ids = collect_referenced_ids body in
     let params_s =
       pp_list
         (fun (id, ty) ->
-          if not (stmts_reference_id id body) then
-            pp_cpp_type false [] ty
-          else
-            pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+          if not (Id.Set.mem id used_ids) then pp_cpp_type false [] ty
+          else pp_cpp_type false [] ty ++ str " " ++ Id.print id)
         (List.rev params)
     in
     let base_name =
@@ -2815,6 +2706,7 @@ and pp_cpp_decl_raw env = function
 (** {2 Pretty-printing of types. [par] is a boolean indicating whether
     parentheses are needed or not.} *)
 
+(** Convert a MiniML type to MiniCpp and pretty-print it as C++ source. *)
 let pp_type par vl t =
   let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] t in
   pp_cpp_type par vl cty

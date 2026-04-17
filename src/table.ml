@@ -148,6 +148,7 @@ let lookup_with_body_check find_opt kn cb =
   | Some (cb0, data) when cb0 == cb -> Some data
   | _ -> None
 
+(** Cache of expanded type definitions, keyed by constant. *)
 let typedefs = ref (Cmap_env.empty : (constant_body * ml_type) Cmap_env.t)
 
 (** Initialize the typedef cache table. *)
@@ -162,6 +163,7 @@ let add_typedef kn cb t = typedefs := Cmap_env.add kn (cb, t) !typedefs
 let lookup_typedef kn cb =
   lookup_with_body_check (fun kn -> Cmap_env.find_opt kn !typedefs) kn cb
 
+(** Cache of constant type schemes, keyed by constant. *)
 let cst_types = ref (Cmap_env.empty : (constant_body * ml_schema) Cmap_env.t)
 
 (** Initialize the constant type scheme cache table. *)
@@ -331,6 +333,7 @@ let get_ind_nb_sign_keeps r =
       with Not_found | Invalid_argument _ -> 0 )
   | _ -> 0
 
+(** Checks if a global reference refers to a typeclass inductive type. *)
 let is_typeclass r =
   let open GlobRef in
   match r with
@@ -344,7 +347,8 @@ let is_typeclass_type = function
   | Tglob (r, _, _) -> is_typeclass r
   | _ -> false
 
-(* Check if a C++ type is a type class type (unwrap modifiers first) *)
+(** Checks if a C++ type is a typeclass type, unwrapping const/ref/ptr
+    modifiers. *)
 let rec is_typeclass_type_cpp = function
   | Minicpp.Tglob (r, _, _) -> is_typeclass r
   | Minicpp.Tmod (_, t) ->
@@ -414,6 +418,8 @@ let recursors = ref KNset.empty
 
 let init_recursors () = recursors := KNset.empty
 
+(** Registers the [_rec] and [_rect] recursors for all packets of an inductive
+    type. *)
 let add_recursors env ind =
   let kn = MutInd.canonical ind in
   let mk_kn id = KerName.make (KerName.modpath kn) (Label.of_id id) in
@@ -662,6 +668,8 @@ let is_extrcompute () = !extrcompute
    done earlier, otherwise we can only ask the Nametab about currently visible
    objects. *)
 
+(** Returns the basename identifier for a global reference, falling back to
+    Nametab if extraction tables have no entry. *)
 let safe_basename_of_global r =
   let last_chance r =
     try Nametab.basename_of_global r
@@ -682,14 +690,14 @@ let safe_basename_of_global r =
       with Not_found -> last_chance r )
   | VarRef v -> v
 
+(** Converts a global reference to its shortest qualified string name. *)
 let string_of_global r =
   try string_of_qualid (Nametab.shortest_qualid_of_global Id.Set.empty r)
   with Not_found -> Id.to_string (safe_basename_of_global r)
 
 let safe_pr_global r = str (string_of_global r)
 
-(* idem, but with qualification, and only for constants. *)
-
+(** Like [safe_pr_global] but with full qualification, for constants only. *)
 let safe_pr_long_global r =
   try Printer.pr_global r
   with Not_found ->
@@ -1076,6 +1084,7 @@ let type_expand = my_bool_option "TypeExpand" true
 
 (** {2 Crane Extraction Optimize} *)
 
+(** Optimization flags controlling which simplification passes are enabled. *)
 type opt_flag = {
   opt_kill_dum : bool; (* 1 *)
   opt_fix_fun : bool; (* 2 *)
@@ -1093,6 +1102,7 @@ type opt_flag = {
 
 let kth_digit n k = not (Int.equal (n land (1 lsl k)) 0)
 
+(** Decodes an integer bitmask into individual optimization flags. *)
 let flag_of_int n =
   {
     opt_kill_dum = kth_digit n 0;
@@ -1185,6 +1195,8 @@ let empty_loopify_table = (Refset'.empty, Refset'.empty)
 
 let loopify_table = Summary.ref empty_loopify_table ~name:"CraneExtrLoopify"
 
+(** Determines whether a function should be loopified: forced on/off per
+    function, falling back to the global [Crane Loopify] setting. *)
 let should_loopify r =
   let yes, no = !loopify_table in
   if Refset'.mem r yes then
@@ -1408,6 +1420,8 @@ type int_or_id =
 
 let implicits_table = Summary.ref Refmap'.empty ~name:"CraneExtrImplicit"
 
+(** Returns the set of argument positions marked as implicit for extraction of
+    global reference [r]. *)
 let implicits_of_global r =
   match Refmap'.find_opt r !implicits_table with
   | Some s -> s
@@ -1573,6 +1587,8 @@ let custom_matchs = Summary.ref Refmap'.empty ~name:"CraneExtrCustomMatchs"
 
 let add_custom_match r s = custom_matchs := Refmap'.add r s !custom_matchs
 
+(** Extracts the inductive reference from a match pattern array by inspecting
+    the first branch's constructor. Raises [Not_found] if not possible. *)
 let indref_of_match pv =
   if Array.is_empty pv then raise Not_found;
   let _, _, pat, _ = pv.(0) in
@@ -1593,6 +1609,8 @@ let find_custom_match pv =
 
 (* Printing entries *)
 
+(** Prints the custom extraction mappings for all ConstRef entries in [ref_set],
+    formatted as a section with the given title. *)
 let print_constref_extractions ref_set val_lookup_f section_str =
   let i' =
     Refset'.filter
@@ -1747,6 +1765,7 @@ let extract_constant_generic
     Lib.add_leaf (in_customs (g, ids, s))
   | _ -> error_constant ?loc:r.CAst.loc g
 
+(** Registers a custom constant extraction with inline/noinline behavior. *)
 let extract_constant_inline inline r ids s =
   (*let arity_handler env typ g = let nargs = Hook.get use_type_scheme_nb_args
     env typ in if not (Int.equal (List.length ids) nargs) then
@@ -1776,6 +1795,7 @@ let extract_constant_foreign r s =
     (is_inline_custom, "inline")
     (fun g -> foreign_extraction [g] )
 
+(** Like [extract_constant_inline] but also registers import headers. *)
 let extract_constant_import inline r ids s imports =
   let g = Smartlocate.global_with_alias r in
   List.iter
@@ -1785,6 +1805,8 @@ let extract_constant_import inline r ids s imports =
     imports;
   extract_constant_inline inline r ids s
 
+(** Registers a custom inductive type extraction with constructor mappings and
+    optional match template. *)
 let extract_inductive r s l optstr imports =
   check_inside_section ();
   let g = Smartlocate.global_with_alias r in
@@ -1875,6 +1897,8 @@ let monad_extraction : GlobRef.t * GlobRef.t * GlobRef.t * string -> obj =
        ~discharge:(fun x -> Some x)
 (* TODO: figure out what subst is doing/if I need to fix. *)
 
+(** Registers a custom monad extraction with bind and return mappings, plus
+    optional import headers. *)
 let extract_monad m b r s imports =
   check_inside_section ();
   let mon = Smartlocate.global_with_alias m in
@@ -1942,9 +1966,12 @@ let is_tt_constructor r =
   | Some u -> GlobRef.CanOrd.equal r u
   | None -> false
 
+(** Checks if a reference has any custom extraction mapping (constant, monad,
+    bind, return, void, or ghost). *)
 let is_any_custom r =
   is_custom r || is_monad r || is_bind r || is_ret r || is_void r || is_ghost r
 
+(** Checks if a reference has a custom extraction that is inlined. *)
 let is_any_inline_custom r =
   (is_custom r && to_inline r)
   || is_monad r

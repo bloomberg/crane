@@ -314,6 +314,7 @@ let pp_doc_comment_for_name name =
     let lines = Doc_comments.format_as_cpp_lines text in
     prlist_with_sep fnl (fun l -> str l) lines ++ fnl ()
 
+(** Look up and format a doc comment for the given label. *)
 let pp_doc_comment label = pp_doc_comment_for_name (Label.to_string label)
 
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
@@ -463,21 +464,12 @@ let rec pp_structure_elem ~is_header f = function
         | Some epon_ref ->
           let epon_modpath = modpath_of_r epon_ref in
           let same_module r = ModPath.equal (modpath_of_r r) epon_modpath in
-          let module_type_aliases = ref [] in
-          List.iter
-            (fun (_l, se) ->
-              match se with
-              (* Collect type aliases from this module for visibility filtering.
-                 Exclude inline-custom types (e.g. Crane Extract Inlined Constant):
-                 they produce Dtype entries but are not real C++ types, so including
-                 them would incorrectly block methods whose signatures reference
-                 the inlined name (e.g. 'Pair' in the skiplist extraction). *)
-              | SEdecl (Dtype (r, _, _))
-                when ModPath.equal (modpath_of_r r) epon_modpath
-                  && not (is_any_inline_custom r) ->
-                module_type_aliases := r :: !module_type_aliases
-              | _ -> () )
-            sel;
+          let module_type_aliases =
+            ref (Method_registry.collect_module_type_aliases
+                   ~extract_decl:(fun (_l, se) ->
+                     match se with SEdecl d -> Some d | _ -> None)
+                   epon_modpath sel)
+          in
           let forward_inductives = ref [] in
           let seen_epon = ref false in
           List.iter
@@ -510,40 +502,17 @@ let rec pp_structure_elem ~is_header f = function
           let process_decl (_l, se) =
             match se with
             | SEdecl (Dterm (r, body, ty)) ->
-              if same_module r && not (refs_excluded ty) then (
-                match Method_registry.find_epon_arg_pos epon_ref ty with
-                | Some (pos, ind_tvar_positions)
-                  when Method_registry.body_safe_for_method ~this_pos:pos
-                         ~ret_has_shared_epon:
-                           (Method_registry.ml_return_type_has_ref epon_ref ty)
-                         body ->
-                  method_candidates := (r, body, ty, pos) :: !method_candidates;
-                  register_method r epon_ref pos ~ind_tvar_positions ();
-                  Method_registry.add_candidate
-                    (get_method_registry ())
-                    epon_ref
-                    (r, body, ty, pos)
-                | _ -> () )
+              if same_module r && not (refs_excluded ty) then
+                Option.iter
+                  (fun c -> method_candidates := c :: !method_candidates)
+                  (try_register_method epon_ref r body ty)
             | SEdecl (Dfix (rv, defs, typs)) ->
               Array.iteri
                 (fun i r ->
                   if same_module r && not (refs_excluded typs.(i)) then
-                    let ty = typs.(i) in
-                    let body = defs.(i) in
-                    match Method_registry.find_epon_arg_pos epon_ref ty with
-                    | Some (pos, ind_tvar_positions)
-                      when Method_registry.body_safe_for_method ~this_pos:pos
-                             ~ret_has_shared_epon:
-                               (Method_registry.ml_return_type_has_ref epon_ref ty)
-                             body ->
-                      method_candidates :=
-                        (r, body, ty, pos) :: !method_candidates;
-                      register_method r epon_ref pos ~ind_tvar_positions ();
-                      Method_registry.add_candidate
-                        (get_method_registry ())
-                        epon_ref
-                        (r, body, ty, pos)
-                    | _ -> () )
+                    Option.iter
+                      (fun c -> method_candidates := c :: !method_candidates)
+                      (try_register_method epon_ref r defs.(i) typs.(i)))
                 rv
             | _ -> ()
           in

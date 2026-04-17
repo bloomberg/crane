@@ -60,6 +60,8 @@ val pp_par : bool -> Pp.t -> Pp.t
 (** [pp_apply] : a head part applied to arguments, possibly with parenthesis *)
 val pp_apply : Pp.t -> bool -> Pp.t list -> Pp.t
 
+(** Like [pp_apply] but for C++ function call syntax (no space before parens,
+    comma-separated arguments). *)
 val pp_apply_cpp : Pp.t -> Pp.t list -> Pp.t
 
 (** Same as [pp_apply], but with also protection of the head by parenthesis *)

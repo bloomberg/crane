@@ -140,6 +140,16 @@ val register_method :
     candidate to the existing list for that inductive. *)
 val add_candidate : t -> GlobRef.t -> method_candidate -> unit
 
+(** Check if [func_ref] qualifies as a method on [epon_ref] and register it
+    if so.  Combines [find_epon_arg_pos], [body_safe_for_method],
+    [register_method], and [add_candidate] into a single call.
+
+    Returns [Some (func_ref, body, ty, this_pos)] on success, [None] if the
+    function does not qualify. *)
+val try_register_method :
+  t -> GlobRef.t -> GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type ->
+  method_candidate option
+
 (** Mark an existing registered method as returning [std::any]. No-op if the
     function is not registered. *)
 val register_method_returns_any : t -> GlobRef.t -> unit
@@ -171,7 +181,16 @@ val register_method_returns_any : t -> GlobRef.t -> unit
     - Pattern matching on the first argument: [MLcase(arg, ...)] translates to a
       [std::visit] on [this->v()].
     - Wrapping the argument in a constructor: [MLcons(C, [arg])] produces a new
-      value. *)
+      value.
+
+    @param this_pos  0-based index of the argument becoming [this].
+      Defaults to [0]. Must be less than the number of outer lambdas in
+      [body]; determines which [MLrel] index is checked for direct return.
+    @param ret_has_shared_epon  When [true], relaxes the safety check to
+      allow returning [this] wrapped in a constructor whose return type
+      contains [shared_ptr] of the eponymous type — the generated C++ will
+      use [shared_from_this()] instead of a bare [this]. Defaults to
+      [false]. *)
 val body_safe_for_method :
   ?this_pos:int -> ?ret_has_shared_epon:bool -> Miniml.ml_ast -> bool
 
@@ -185,6 +204,15 @@ val body_safe_for_method :
     [return shared_from_this()] — when the return type references the eponymous
     inductive, the C++ return type will contain [shared_ptr]. *)
 val ml_return_type_has_ref : GlobRef.t -> Miniml.ml_type -> bool
+
+(** {2 Module-level helpers} *)
+
+(** Collect [Dtype] refs from a declaration list that share [modpath],
+    excluding inline-custom types.  [extract_decl] extracts [ml_decl option]
+    from each list item (handles both [ml_specif] and [ml_structure_elem]). *)
+val collect_module_type_aliases :
+  extract_decl:('a -> Miniml.ml_decl option) ->
+  Names.ModPath.t -> 'a list -> GlobRef.t list
 
 (** {2 Eponymous-type helpers}
 

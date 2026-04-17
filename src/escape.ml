@@ -197,6 +197,7 @@ let infer_owned_params n_params body =
 
 (** {2 Utility functions} *)
 
+(** Set of integers for tracking de Bruijn indices. *)
 module IntSet = Set.Make (Int)
 
 (** Compute free de Bruijn indices in [t], shifted by [depth]. An index
@@ -243,11 +244,7 @@ let free_rels depth t =
 let single_use_nargs k t =
   let result = ref 0 in
   let rec search k = function
-    | MLapp (MLrel i, args) when i = k ->
-      result :=
-        List.length
-          (List.filter (function MLdummy _ -> false | _ -> true) args)
-    | MLapp (MLmagic (MLrel i), args) when i = k ->
+    | MLapp ((MLrel i | MLmagic (MLrel i)), args) when i = k ->
       result :=
         List.length
           (List.filter (function MLdummy _ -> false | _ -> true) args)

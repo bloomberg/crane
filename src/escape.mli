@@ -35,10 +35,13 @@ val is_partial_app : ml_ast -> ml_ast list -> bool
 
 (** [single_use_nargs k t] finds the single use of [MLrel k] in [t] and
     returns how many non-dummy args it is applied to (0 if bare).
-    Precondition: [k] occurs at most once in [t]. *)
+
+    @precondition [k] must occur at most once in [t]. If [k] occurs
+    multiple times, returns the arg count of the {i last} occurrence found.
+    Verify with [nb_occur_match k t <= 1] before calling. *)
 val single_use_nargs : int -> ml_ast -> int
 
-(** {2 Phase 2: owned/borrowed parameter inference} *)
+(** {2 Phase 1: owned/borrowed parameter inference} *)
 
 (** [infer_owned_params n body] returns a bool list of length [n]. Element [i]
     is true when the parameter at de Bruijn index [i+1] needs ownership (pass by
@@ -49,7 +52,7 @@ val single_use_nargs : int -> ml_ast -> int
     de Bruijn 1, element 1 → de Bruijn 2, etc. *)
 val infer_owned_params : int -> ml_ast -> bool list
 
-(** {2 Phase 3: reset/reuse optimization} *)
+(** {2 Phase 2: reset/reuse optimization} *)
 
 (** [find_reuse_candidates scrutinee_type branches] identifies branches where
     the result constructs a value of the same inductive type with the same

@@ -212,11 +212,14 @@ let safe_firstn n lst =
     they appear as sibling types rather than outer-namespace-qualified types. *)
 let local_inductives : GlobRef.t list ref = ref []
 
+(** Register an inductive as local to the current module scope. *)
 let add_local_inductive (r : GlobRef.t) =
   local_inductives := r :: !local_inductives
 
+(** Clear the local inductives list (called at module boundaries). *)
 let clear_local_inductives () = local_inductives := []
 
+(** Return the list of inductives local to the current module scope. *)
 let get_local_inductives () = !local_inductives
 
 (** Helper to create CPPglob with pre-computed custom_info *)
@@ -283,10 +286,13 @@ type translation_ctx = {
   mutable eta_keep_moves : bool;
 }
 
+(** Mode for ITree effect extraction: sequential erases the tree,
+    reified preserves it as [shared_ptr<ITree<R>>]. *)
 and itree_extraction_mode =
   | Sequential  (* Default: erase itree E R to R, bind becomes ; *)
   | Reified     (* Preserve structure: itree E R becomes shared_ptr<ITree<R>> *)
 
+(** The global mutable translation context, reset between top-level declarations. *)
 let tctx =
   {
     current_type_vars = [];
@@ -307,34 +313,47 @@ let tctx =
     eta_keep_moves = false;
   }
 
-(** Accessor wrappers — thin layer over tctx fields. *)
+(** {3 Accessor wrappers} --- thin layer over {!tctx} fields. *)
+
+(** Set the template type variables for the function currently being translated. *)
 let set_current_type_vars (tvars : Id.t list) = tctx.current_type_vars <- tvars
 
+(** Return the template type variables of the current function. *)
 let get_current_type_vars () = tctx.current_type_vars
 
+(** Reset the current type variables to the empty list. *)
 let clear_current_type_vars () = tctx.current_type_vars <- []
 
+(** Store 1-indexed parameter types for the current function.
+    Used to recover erased type info at call sites. *)
 let set_current_param_types (params : (Id.t * ml_type) list) =
   tctx.current_param_types <- List.mapi (fun i (_, ty) -> (i + 1, ty)) params
 
+(** Look up an ML parameter type by its 1-based index. *)
 let get_param_type_by_index (idx : int) : ml_type option =
   List.assoc_opt idx tctx.current_param_types
 
+(** Reset the current parameter types to the empty list. *)
 let clear_current_param_types () = tctx.current_param_types <- []
 
+(** Enqueue a declaration to be lifted to the enclosing scope. *)
 let add_lifted_decl (d : cpp_decl) =
   tctx.pending_lifted_decls <- d :: tctx.pending_lifted_decls
 
+(** Drain and return the pending lifted declarations in definition order. *)
 let take_lifted_decls () =
   let ds = List.rev tctx.pending_lifted_decls in
   tctx.pending_lifted_decls <- [];
   ds
 
+(** Prepend bindings to the de Bruijn environment type stack. *)
 let push_env_types (ids : (Id.t * ml_type) list) =
   tctx.env_types <- ids @ tctx.env_types
 
+(** Retrieve the ML type of the variable at de Bruijn index [i] (1-based). *)
 let get_env_type (i : int) : ml_type = snd (List.nth tctx.env_types (pred i))
 
+(** Reset the environment type stack to empty. *)
 let reset_env_types () = tctx.env_types <- []
 
 (** Resolve a chain of [Tmeta] indirections to the underlying type. *)
@@ -679,11 +698,44 @@ let with_escape_analysis body f =
   tctx.current_cpp_return_type <- saved_return_type;
   result
 
+(** Save move-tracking state, shift de Bruijn indices by [n] binders, run [f],
+    then restore the original state.  This is the standard bracket for code
+    that introduces [n] pattern variables or let bindings.
+
+    {b Why shift.}  [move_owned_vars] and [move_dead_after] track variables by
+    de Bruijn index.  When entering a scope with [n] new binders, all existing
+    indices must be shifted up by [n] so they continue to refer to the same
+    outer variables.
+
+    @param clear_dead  If [true], empty [move_dead_after] instead of shifting.
+      Used inside match branches, which are independent scopes: the outer
+      dead-after set must not leak in, because a variable dead after one branch
+      may still be live in another.
+    @param add_owned  Optional de Bruijn index to add to the owned set after
+      shifting.  Used for monadic bind continuation parameters that receive an
+      owned [shared_ptr] value (e.g. [>>=] callback arguments). *)
+let with_shifted_move_tracking n ?(clear_dead = false) ?add_owned f =
+  let saved_owned = tctx.move_owned_vars in
+  let saved_dead = tctx.move_dead_after in
+  tctx.move_owned_vars <-
+    Escape.IntSet.map (fun i -> i + n) tctx.move_owned_vars;
+  ( match add_owned with
+  | Some idx -> tctx.move_owned_vars <- Escape.IntSet.add idx tctx.move_owned_vars
+  | None -> () );
+  tctx.move_dead_after <-
+    ( if clear_dead then Escape.IntSet.empty
+      else Escape.IntSet.map (fun i -> i + n) tctx.move_dead_after );
+  let result = f () in
+  tctx.move_owned_vars <- saved_owned;
+  tctx.move_dead_after <- saved_dead;
+  result
+
 (* ============================================================================
    Shared helpers for method generation (used by gen_ind_header_v2 and
    gen_record_methods)
    ============================================================================ *)
 
+(** Re-export [IntSet] from [Escape] for local use in type variable collection. *)
 module IntSet = Escape.IntSet
 
 (** Collect all Tvar indices from an ml_type. Used to find type variables beyond
@@ -1033,6 +1085,23 @@ let resolve_body_tvars b ty =
     | [] -> b
     | _ -> map_types_in_ast (subst_tvars_type tvar_subst) b
 
+(** Resolve all unresolved type meta-variables in an [ml_type] to fresh
+    [Tvar]s. Each [Tmeta {contents = None}] encountered gets unified (via
+    [try_mgu]) with [Tvar idx], where [idx] is drawn from [next_tvar] and
+    incremented. Chases [Tmeta {contents = Some t}]. Recurses into [Tarr]
+    and [Tglob] args. *)
+let rec resolve_type_metas ~next_tvar = function
+  | Miniml.Tmeta ({contents = None} as m) ->
+    let idx = !next_tvar in
+    next_tvar := idx + 1;
+    try_mgu (Miniml.Tmeta m) (Miniml.Tvar idx)
+  | Miniml.Tmeta {contents = Some t} -> resolve_type_metas ~next_tvar t
+  | Miniml.Tarr (t1, t2) ->
+    resolve_type_metas ~next_tvar t1;
+    resolve_type_metas ~next_tvar t2
+  | Miniml.Tglob (_, args, _) -> List.iter (resolve_type_metas ~next_tvar) args
+  | _ -> ()
+
 (** Resolve unresolved metas in an ML AST by walking its sub-types.
     resolve_metas should be a function that resolves metas in a single ml_type.
 *)
@@ -1088,6 +1157,8 @@ let rec local_var_subst_expr (target : Id.t) (repl : cpp_expr) (e : cpp_expr) =
       Fun.id
       e
 
+(** Statement-level counterpart of [local_var_subst_expr]: substitute
+    [CPPvar target] with [repl] inside a single C++ statement. *)
 and local_var_subst_stmt (target : Id.t) (repl : cpp_expr) (s : cpp_stmt) =
   map_stmt
     (local_var_subst_expr target repl)
@@ -1163,6 +1234,17 @@ let stmts_reference_var_directly (target : Id.t) (stmts : cpp_stmt list) : bool 
   in
   try List.iter vs stmts; false
   with Found -> true
+
+(** Build type variable names for a list of Tvar indices. Indices within
+    [n_outer] reuse names from [outer_tvars]; indices beyond get fresh
+    [tvar_id i] names. Converts [outer_tvars] to an array for O(1) lookup. *)
+let build_tvar_names ~outer_tvars tvar_indices =
+  let n_outer = List.length outer_tvars in
+  let outer_arr = Array.of_list outer_tvars in
+  List.map
+    (fun i ->
+      if i <= n_outer then outer_arr.(i - 1) else tvar_id i)
+    tvar_indices
 
 (** Build extended tvar names covering both signature and body Tvar indices.
     sig_indices: sorted list of Tvar indices from the function signature
@@ -1476,9 +1558,14 @@ let rec ml_body_returns_erased_field = function
   | _ -> false
 
 (** Check if the head of an ML application has an [MLmagic] wrapper.
-    The optimization pass transforms [MLmagic(MLapp(f, args))] into
-    [MLapp(MLmagic(f), args)], so a top-level check for [MLmagic] misses
-    these.  This follows application heads recursively. *)
+
+    The [simpl] optimization in {!Mlutil} transforms
+    [MLmagic(MLapp(f, args))] into [MLapp(MLmagic(f), args)], pushing magic
+    inside application heads.  A top-level [MLmagic] check therefore misses
+    these cases.  This function follows application heads recursively.
+
+    Used in {!gen_spec} to detect when a function call's result needs a C++
+    cast to match the expected return type. *)
 let rec ml_head_has_magic = function
   | Miniml.MLmagic _ -> true
   | MLapp (f, _) -> ml_head_has_magic f
@@ -2149,8 +2236,15 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     let saved_env_types = tctx.env_types in
     push_env_types args;
     (* Infer owned/borrowed for each lambda parameter using escape analysis.
-       Borrowed parameters (only read, not stored/returned) get const T& to
-       avoid unnecessary shared_ptr refcount bumps. *)
+
+       Owned parameters (stored in a data structure or returned) are passed by
+       value (shared_ptr<T>), transferring ownership to the callee.  Borrowed
+       parameters (only read, not stored/returned) are passed by const ref
+       (const shared_ptr<T>&), avoiding a refcount bump on every call.
+
+       The inference is conservative: if a parameter escapes in any code path
+       (e.g. captured by a closure, stored in a constructor, or returned), it
+       is marked as owned.  See {!Escape.infer_owned_params}. *)
     let n_all_params = List.length lam_params in
     let owned_flags = Escape.infer_owned_params n_all_params a in
     let args_with_owned =
@@ -2258,7 +2352,8 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
             | Miniml.Tglob (g, ts, _) when is_custom g ->
               (* Custom types may use %t0, %t1 placeholders for type args *)
               let custom_str = find_custom g in
-              let rendered_ts = List.map render_ml_ty ts in
+              let rendered_ts = Array.of_list (List.map render_ml_ty ts) in
+              let n_rendered = Array.length rendered_ts in
               let len = String.length custom_str in
               let buf = Buffer.create len in
               let rec subst i =
@@ -2287,8 +2382,8 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
                          digit_start
                          (digit_end - digit_start) )
                   in
-                  if idx < List.length rendered_ts then
-                    Buffer.add_string buf (List.nth rendered_ts idx)
+                  if idx < n_rendered then
+                    Buffer.add_string buf rendered_ts.(idx)
                   else
                     Buffer.add_string
                       buf
@@ -3931,42 +4026,52 @@ and ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
     Produces an {!smatch_branch} record whose body statements live directly
     in the enclosing if-block.
 
-    Field accesses use structured bindings:
+    {b Structured bindings.}  Field accesses use
     [const auto& [d_f0, d_f1] = std::get<T>(v)].  The reference binding is
     required so that [[=]]-capturing closures copy the struct value rather
     than a raw pointer that could dangle after the match scope ends.
 
-    [match_i] is the match-level counter (0 for the outermost match): nested
-    matches use suffixed binding names (e.g. [d_a00], [d_a10]) to avoid
-    shadowing outer bindings. *)
+    {b [match_i] suffix generation.}  [match_i] is the match-level counter
+    (0 for the outermost match).  Nested matches increment the counter so
+    binding names get suffixed (e.g. [d_a00], [d_a10]) to avoid shadowing
+    outer bindings.
+
+    {b [dummies] mask.}  A [bool list] parallel to [ids]: [true] means the
+    pattern variable is actually used (gets a binding); [false] means it is
+    [Dummy] (omitted from the structured binding with a placeholder).  This
+    avoids generating unused variable warnings in the C++ output.
+
+    @param env      current name environment
+    @param typ      the scrutinee's ML type (used to resolve the inductive)
+    @param rty      the branch's return type
+    @param cname    the constructor's [GlobRef.t]
+    @param ids      renamed pattern variable names with types
+    @param dummies  parallel mask: [true] = non-Dummy (used), [false] = Dummy
+    @param body     the branch body AST
+    @param sname    scrutinee expression name (for structured binding access)
+    @param match_i  nesting level counter for name suffixing
+    @param scrut_v  the [scrut->v()] or [scrut.v()] accessor expression *)
 and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     match_i scrut_v =
   let ctor_type = ctor_type_of_match env typ cname in
   let ctor_name = ctor_struct_id_of_ref cname in
   let ctor_struct_name = Id.to_string ctor_name in
-  (* Pattern variables are field accesses from a std::get reference, not owned
-     local variables.  Don't add them to move_owned_vars. *)
-  let saved_dead = tctx.move_dead_after in
-  let saved_owned = tctx.move_owned_vars in
   let n_pat_vars = List.length ids in
-  let shifted_outer =
-    Escape.IntSet.map (fun i -> i + n_pat_vars) tctx.move_owned_vars
+  let body_stmts =
+    with_shifted_move_tracking n_pat_vars ~clear_dead:true (fun () ->
+      let saved_match_counter = tctx.match_param_counter in
+      let saved_return_type = tctx.current_cpp_return_type in
+      (* Prevent void optimisation from leaking into match branches: the branch
+         body lives inside an IIFE that returns the match result type, not the
+         enclosing function's void.  Clear return type to stop gen_stmts from
+         emitting bare [return;] for unit values. *)
+      ( if tctx.current_cpp_return_type = Some Tvoid then
+          tctx.current_cpp_return_type <- None );
+      let body_stmts = gen_stmts env (fun x -> Sreturn (Some x)) body in
+      tctx.current_cpp_return_type <- saved_return_type;
+      tctx.match_param_counter <- saved_match_counter;
+      body_stmts)
   in
-  tctx.move_owned_vars <- shifted_outer;
-  tctx.move_dead_after <- Escape.IntSet.empty;
-  let saved_match_counter = tctx.match_param_counter in
-  let saved_return_type = tctx.current_cpp_return_type in
-  (* Prevent void optimisation from leaking into match branches: the branch
-     body lives inside an IIFE that returns the match result type, not the
-     enclosing function's void.  Clear return type to stop gen_stmts from
-     emitting bare [return;] for unit values. *)
-  ( if tctx.current_cpp_return_type = Some Tvoid then
-      tctx.current_cpp_return_type <- None );
-  let body_stmts = gen_stmts env (fun x -> Sreturn (Some x)) body in
-  tctx.current_cpp_return_type <- saved_return_type;
-  tctx.match_param_counter <- saved_match_counter;
-  tctx.move_dead_after <- saved_dead;
-  tctx.move_owned_vars <- saved_owned;
   (* Compute structured binding names for ALL constructor fields.
      For match_i=0 the binding name equals the struct field name (e.g. [d_a0]);
      for deeper nesting a numeric suffix avoids shadowing outer bindings
@@ -3976,6 +4081,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   in
   let tvars = get_current_type_vars () in
   let rev_ids = List.rev ids in
+  let dummies_arr = Array.of_list dummies in
   let field_bindings =
     List.mapi
       (fun i (_var_name, ml_ty) ->
@@ -3986,10 +4092,11 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
         let cpp_ty =
           convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty
         in
-        let used = List.nth dummies i in
+        let used = dummies_arr.(i) in
         (binding_name, cpp_ty, used))
       rev_ids
   in
+  let field_bindings_arr = Array.of_list field_bindings in
   (* Substitute pattern variable references with the structured-binding
      names: [var_name] → [CPPvar binding_name].  The binding name is
      the struct field name (optionally suffixed for nesting depth).
@@ -3998,8 +4105,8 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   let body_stmts =
     List.fold_left
       (fun stmts (i, (var_name, _ty)) ->
-        if List.nth dummies i then
-          let binding_name = let (n, _, _) = List.nth field_bindings i in n in
+        if dummies_arr.(i) then
+          let binding_name = let (n, _, _) = field_bindings_arr.(i) in n in
           let field_expr = CPPvar binding_name in
           List.map (local_var_subst_stmt var_name field_expr) stmts
         else
@@ -4018,9 +4125,22 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     smb_reuse = None;
     smb_body = body_stmts }
 
-(** Generate std::visit-based pattern matching with expression reuse
-    optimization. Detects common subexpressions across branches and hoists them
-    to avoid recomputation. *)
+(** Generate C++ pattern matching for an [MLcase].
+
+    Dispatches based on the inductive's structure:
+    - {b Enum types}: generate a [switch] statement on tag values
+      ({!gen_enum_branches}).
+    - {b Variant types}: generate an if/else-if chain using
+      [std::holds_alternative] guards and [std::get] structured bindings
+      ({!gen_match_branch}).
+    - {b Reuse optimization}: when the scrutinee is an owned [shared_ptr] with
+      [use_count() == 1] and a branch constructs a value of the same type/arity,
+      mutate the existing allocation in-place instead of allocating a new one
+      ({!Escape.find_reuse_candidates}).
+
+    {b Type resolution.}  When the match type contains unresolved [Tvar]s,
+    attempts to resolve them from [env_types] so that field types and
+    constructor type parameters are concrete for code generation. *)
 and gen_cpp_case (typ : ml_type) t env pv =
   (* When the match type annotation has unresolved Tvars, try to resolve from
      context. This handles monomorphic functions where MLcase has Tvar but the
@@ -4180,6 +4300,23 @@ and gen_cpp_case (typ : ml_type) t env pv =
     let scrut_v =
       CPPmethod_call (scrut_expr, Id.of_string "v", [])
     in
+    (* Push renamed pattern variables into the environment, register their
+       types in [env_types], and compute a dummies mask (true = non-Dummy).
+       The caller is responsible for saving/restoring env_types. *)
+    let process_match_pattern_vars ids env =
+      let ids', env' =
+        push_vars'
+          (List.rev_map
+             (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
+             ids )
+          env
+      in
+      push_env_types ids';
+      let dummies =
+        List.map (fun (x, _) -> match x with Dummy -> false | _ -> true) ids
+      in
+      (ids', env', dummies)
+    in
     (* Generate one {!smatch_branch} per constructor pattern, collecting
        a wildcard body from [Pwild] / [Prel]. *)
     let rec gen_branches = function
@@ -4187,20 +4324,8 @@ and gen_cpp_case (typ : ml_type) t env pv =
       | (ids, rty, p, body) :: cs ->
       match p with
       | Pusual r | Pcons (r, _) ->
-        let ids', env' =
-          push_vars'
-            (List.rev_map
-               (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
-               ids )
-            env
-        in
         let saved_env_types = tctx.env_types in
-        push_env_types ids';
-        let dummies =
-          List.map
-            (fun (x, _) -> match x with Dummy -> false | _ -> true)
-            ids
-        in
+        let ids', env', dummies = process_match_pattern_vars ids env in
         let br =
           gen_match_branch env' typ rty r ids' dummies body sname
             match_i scrut_v
@@ -4236,21 +4361,9 @@ and gen_cpp_case (typ : ml_type) t env pv =
             CPPint 1)
         in
         (* Push pattern variables into the environment *)
-        let ids', env' =
-          push_vars'
-            (List.rev_map
-               (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
-               ids )
-            env
-        in
         let saved_env_types = tctx.env_types in
-        push_env_types ids';
+        let ids', env', dummies = process_match_pattern_vars ids env in
         (* Extract fields into local variables via [std::move(_rf.d_field)] *)
-        let dummies =
-          List.map
-            (fun (x, _) -> match x with Dummy -> false | _ -> true)
-            ids
-        in
         let rf_var = Id.of_string "_rf" in
         let rev_ids' = List.rev ids' in
         let extract_stmts =
@@ -4428,20 +4541,13 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       let n_pat_vars = List.length ids in
       let saved_env_types = tctx.env_types in
       let saved_owned = tctx.move_owned_vars in
-      let saved_dead = tctx.move_dead_after in
       push_env_types ids';
-      (* Shift move tracking sets: pattern variables add binders, so existing
-         de Bruijn indices must be adjusted to stay in sync with the branch
-         body's coordinate system. Without this shift, last-use move generation
-         fails for variables whose index is shifted by pattern bindings. *)
-      tctx.move_owned_vars <-
-        Escape.IntSet.map (fun i -> i + n_pat_vars) tctx.move_owned_vars;
-      tctx.move_dead_after <-
-        Escape.IntSet.map (fun i -> i + n_pat_vars) tctx.move_dead_after;
-      let br = gen_cpp_custom_body env' k rty ids' t in
+      let br =
+        with_shifted_move_tracking n_pat_vars (fun () ->
+          gen_cpp_custom_body env' k rty ids' t)
+      in
       tctx.env_types <- saved_env_types;
       tctx.move_owned_vars <- saved_owned;
-      tctx.move_dead_after <- saved_dead;
       br :: gen_cases cs
     | Pwild | Prel _ | Ptuple _ -> gen_cases cs
   in
@@ -4518,7 +4624,7 @@ and inline_iife (k : cpp_expr -> cpp_stmt) = function
        [Sswitch] and [Scustom_case] is safe — [return] preserves the
        "exit the enclosing case" semantics.  [Sif] is always safe
        because if/else branches are mutually exclusive. *)
-    let try_all_branches transform branches =
+    let map_all_or_none transform branches =
       let results = List.map transform branches in
       if List.for_all (fun x -> x <> None) results then
         Some (List.filter_map Fun.id results)
@@ -4539,7 +4645,7 @@ and inline_iife (k : cpp_expr -> cpp_stmt) = function
             | None -> None )
           | None -> Some None
         in
-        ( match (try_all_branches
+        ( match (map_all_or_none
             (fun (id, stmts) ->
               match replace_last_return stmts with
               | Some stmts' -> Some (id, stmts')
@@ -4549,7 +4655,7 @@ and inline_iife (k : cpp_expr -> cpp_stmt) = function
         | Some branches', Some default' -> Some [Sswitch (scrut, ind_ref, branches', default')]
         | _ -> None )
       | [Scustom_case (ty, scrut, tyargs, branches, cmatch)] ->
-        ( match try_all_branches
+        ( match map_all_or_none
             (fun (args, bty, stmts) ->
               match replace_last_return stmts with
               | Some stmts' -> Some (args, bty, stmts')
@@ -4567,7 +4673,7 @@ and inline_iife (k : cpp_expr -> cpp_stmt) = function
             | None -> None )
           | None -> Some None
         in
-        ( match (try_all_branches
+        ( match (map_all_or_none
             (fun br ->
               match replace_last_return br.smb_body with
               | Some body' -> Some { br with smb_body = body' }
@@ -4597,18 +4703,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     (* Special case for let-fix: the let binding name is the fix function name *)
     (* Resolve unresolved metas in fix function types to Tvars using mgu. *)
     let next_tvar = ref 1 in
-    let rec resolve_metas = function
-      | Miniml.Tmeta ({contents = None} as m) ->
-        let idx = !next_tvar in
-        next_tvar := idx + 1;
-        try_mgu (Miniml.Tmeta m) (Miniml.Tvar idx)
-      | Miniml.Tmeta {contents = Some t} -> resolve_metas t
-      | Miniml.Tarr (t1, t2) ->
-        resolve_metas t1;
-        resolve_metas t2
-      | Miniml.Tglob (_, args, _) -> List.iter resolve_metas args
-      | _ -> ()
-    in
+    let resolve_metas = resolve_type_metas ~next_tvar in
     Array.iter (fun (_, ty) -> resolve_metas ty) ids;
     (* Collect all Tvar indices from the fixpoint types *)
     let fix_tvar_indices =
@@ -4624,15 +4719,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
          names for all Tvars used in the fixpoint type: - Tvars 1..n_outer reuse
          the outer function's template param names - Tvars beyond n_outer get
          fresh names T<i> *)
-      let all_tvar_names =
-        List.map
-          (fun i ->
-            if i <= n_outer then
-              List.nth outer_tvars (i - 1)
-            else
-              tvar_id i )
-          fix_tvar_indices
-      in
+      let all_tvar_names = build_tvar_names ~outer_tvars fix_tvar_indices in
       let all_temps = List.map (fun id -> (TTtypename, id)) all_tvar_names in
       (* Generate the lifted function name *)
       let fix_name = fst ids.(x) in
@@ -4829,18 +4916,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     (* Check if this is a polymorphic lambda that should be lifted to a
        top-level template function. *)
     let next_tvar = ref 1 in
-    let rec resolve_metas = function
-      | Miniml.Tmeta ({contents = None} as m) ->
-        let idx = !next_tvar in
-        next_tvar := idx + 1;
-        try_mgu (Miniml.Tmeta m) (Miniml.Tvar idx)
-      | Miniml.Tmeta {contents = Some t} -> resolve_metas t
-      | Miniml.Tarr (t1, t2) ->
-        resolve_metas t1;
-        resolve_metas t2
-      | Miniml.Tglob (_, args, _) -> List.iter resolve_metas args
-      | _ -> ()
-    in
+    let resolve_metas = resolve_type_metas ~next_tvar in
     resolve_metas t;
     resolve_metas_in_ast resolve_metas a;
     (* Collect all Tvar indices from the let-binding type *)
@@ -4973,15 +5049,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       else
         (* 2. Build tvar names: outer tvars keep their names, extra tvars get
            fresh names *)
-        let all_tvar_names =
-          List.map
-            (fun i ->
-              if i <= n_outer then
-                List.nth outer_tvars (i - 1)
-              else
-                tvar_id i )
-            tvar_indices
-        in
+        let all_tvar_names = build_tvar_names ~outer_tvars tvar_indices in
         let all_temps = List.map (fun id -> (TTtypename, id)) all_tvar_names in
 
         let extended_tvar_names =
@@ -5185,9 +5253,9 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
 
         (* 10. Compile the continuation body b, substituting calls to x' with
            calls to the lifted function *)
-        let ids_renamed2, env' = push_vars' [(x', t)] env in
-        let x_renamed2 = fst (List.hd ids_renamed2) in
-        push_env_types [(x_renamed2, t)];
+        let lifted_ids, env' = push_vars' [(x', t)] env in
+        let x_lifted = fst (List.hd lifted_ids) in
+        push_env_types [(x_lifted, t)];
         (* Phase 2: shift owned vars for lifted lambda binding *)
         let saved_owned_lifted2 = tctx.move_owned_vars in
         tctx.move_owned_vars <-
@@ -5199,7 +5267,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           List.map (fun (name, _, _) -> CPPvar name) free_vars
         in
         List.map
-          (subst_lifted_call_stmt x_renamed2 lifted_ref free_var_cpps)
+          (subst_lifted_call_stmt x_lifted lifted_ref free_var_cpps)
           cont
   | MLletin (x, t, a, b) ->
     let x' = remove_prime_id (id_of_mlid x) in
@@ -5207,17 +5275,8 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     let x_renamed = fst (List.hd ids_renamed) in
     if x == Dummy then (
       push_env_types [(x_renamed, t)];
-      (* Shift move tracking: the erased binding adds a de Bruijn level. *)
-      let saved_owned_dummy = tctx.move_owned_vars in
-      let saved_dead_dummy = tctx.move_dead_after in
-      tctx.move_owned_vars <-
-        Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars;
-      tctx.move_dead_after <-
-        Escape.IntSet.map (fun i -> i + 1) tctx.move_dead_after;
-      let result = gen_stmts env' k b in
-      tctx.move_owned_vars <- saved_owned_dummy;
-      tctx.move_dead_after <- saved_dead_dummy;
-      result )
+      with_shifted_move_tracking 1 (fun () ->
+        gen_stmts env' k b) )
     else if ml_type_is_unit t then (
       (* Unit-typed let bindings: the RHS may call a void-ified function,
          so we can't assign its result to a variable.  Execute the RHS for
@@ -5231,19 +5290,13 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         | Sexpr (CPPenum_val _) -> false
         | Sexpr (CPPvar _) -> false
         | _ -> true) rhs in
-      (* Shift move tracking: the unit binding adds a de Bruijn level. *)
-      let saved_owned_unit = tctx.move_owned_vars in
-      let saved_dead_unit = tctx.move_dead_after in
-      tctx.move_owned_vars <-
-        Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars;
-      tctx.move_dead_after <-
-        Escape.IntSet.map (fun i -> i + 1) tctx.move_dead_after;
-      (* Generate the body first, then check if the variable is actually
-         referenced in the generated C++ (not just the ML AST, since
-         optimizations like unit-match elimination may drop references). *)
-      let body = gen_stmts env' k b in
-      tctx.move_owned_vars <- saved_owned_unit;
-      tctx.move_dead_after <- saved_dead_unit;
+      (* Generate the body first (under shifted move tracking for the new
+         binder), then check if the variable is actually referenced in the
+         generated C++ (not just the ML AST, since optimizations like
+         unit-match elimination may drop references). *)
+      let body =
+        with_shifted_move_tracking 1 (fun () -> gen_stmts env' k b)
+      in
       let decl =
         if stmts_reference_var x_renamed body then
           let tvars = get_current_type_vars () in
@@ -5399,18 +5452,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     (* Resolve unresolved metas in fix function types to Tvars using mgu.
        Traverse types and assign Tvar 1, 2, ... to each unresolved meta. *)
     let next_tvar = ref 1 in
-    let rec resolve_metas = function
-      | Miniml.Tmeta ({contents = None} as m) ->
-        let idx = !next_tvar in
-        next_tvar := idx + 1;
-        try_mgu (Miniml.Tmeta m) (Miniml.Tvar idx)
-      | Miniml.Tmeta {contents = Some t} -> resolve_metas t
-      | Miniml.Tarr (t1, t2) ->
-        resolve_metas t1;
-        resolve_metas t2
-      | Miniml.Tglob (_, args, _) -> List.iter resolve_metas args
-      | _ -> ()
-    in
+    let resolve_metas = resolve_type_metas ~next_tvar in
     Array.iter (fun (_, ty) -> resolve_metas ty) ids;
     Array.iter (resolve_metas_in_ast resolve_metas) funs;
     List.iter (resolve_metas_in_ast resolve_metas) args;
@@ -5428,15 +5470,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     let has_extra_tvars = List.exists (fun i -> i > n_outer) fix_tvar_indices in
     if has_extra_tvars then (
       (* Lift the polymorphic inner fixpoint to a top-level function *)
-      let all_tvar_names =
-        List.map
-          (fun i ->
-            if i <= n_outer then
-              List.nth outer_tvars (i - 1)
-            else
-              tvar_id i )
-          fix_tvar_indices
-      in
+      let all_tvar_names = build_tvar_names ~outer_tvars fix_tvar_indices in
       let all_temps = List.map (fun id -> (TTtypename, id)) all_tvar_names in
       let extended_tvar_names =
         build_extended_tvar_names fix_tvar_indices all_tvar_names all_body_tvars
@@ -5617,18 +5651,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     (* Standalone fixpoint (not immediately applied) - e.g., in let binding *)
     (* Resolve unresolved metas in fix function types to Tvars using mgu. *)
     let next_tvar = ref 1 in
-    let rec resolve_metas = function
-      | Miniml.Tmeta ({contents = None} as m) ->
-        let idx = !next_tvar in
-        next_tvar := idx + 1;
-        try_mgu (Miniml.Tmeta m) (Miniml.Tvar idx)
-      | Miniml.Tmeta {contents = Some t} -> resolve_metas t
-      | Miniml.Tarr (t1, t2) ->
-        resolve_metas t1;
-        resolve_metas t2
-      | Miniml.Tglob (_, args, _) -> List.iter resolve_metas args
-      | _ -> ()
-    in
+    let resolve_metas = resolve_type_metas ~next_tvar in
     Array.iter (fun (_, ty) -> resolve_metas ty) ids;
     (* Call gen_fix with all mutual fixpoint names so each body can reference
        the others *)
@@ -5732,23 +5755,13 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
        stay in sync with the body's coordinate system.  Without this shift,
        after N bind continuations the indices drift by N, causing spurious
        collisions that produce incorrect std::move (use-after-move). *)
-    let saved_owned_bind = tctx.move_owned_vars in
-    let saved_dead_bind = tctx.move_dead_after in
-    let shifted_owned =
-      Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars
+    let add_owned =
+      match ids with
+      | (_, ty) :: _ when Escape.is_shared_ptr_type ty -> Some 1
+      | _ -> None
     in
-    let bind_param_ml_ty = match ids with (_, ty) :: _ -> Some ty | _ -> None in
-    let owned_for_bind =
-      match bind_param_ml_ty with
-      | Some ty when Escape.is_shared_ptr_type ty ->
-        Escape.IntSet.add 1 shifted_owned
-      | _ -> shifted_owned
-    in
-    tctx.move_owned_vars <- owned_for_bind;
-    tctx.move_dead_after <-
-      Escape.IntSet.map (fun i -> i + 1) tctx.move_dead_after;
-    let result =
-    ( match ids with
+    with_shifted_move_tracking 1 ?add_owned (fun () ->
+    match ids with
     | (x, ml_ty) :: _ ->
       let tvars = get_current_type_vars () in
       let ty = convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty in
@@ -5829,10 +5842,6 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           [Sasgn (temp_id, Some cpp_ty, a); k app]
         | None ->
           side_effect @ gen_stmts env k f ) ) )
-    in
-    tctx.move_owned_vars <- saved_owned_bind;
-    tctx.move_dead_after <- saved_dead_bind;
-    result
     end
   | MLapp (MLglob (r, _), a1 :: l) when is_ret r ->
     if tctx.itree_mode = Reified then begin
@@ -7323,6 +7332,7 @@ let rec glob_subst_expr (id : GlobRef.t) (repl : cpp_expr) (e : cpp_expr) =
     repl
   | _ -> map_expr (glob_subst_expr id repl) (glob_subst_stmt id repl) Fun.id e
 
+(** Statement-level case of {!glob_subst_expr}. *)
 and glob_subst_stmt (id : GlobRef.t) (repl : cpp_expr) (s : cpp_stmt) =
   map_stmt (glob_subst_expr id repl) (glob_subst_stmt id repl) Fun.id s
 
@@ -7333,6 +7343,7 @@ let rec var_subst_expr (id : Id.t) (repl : cpp_expr) (e : cpp_expr) =
   | CPPvar id' when Id.equal id id' -> repl
   | _ -> map_expr (var_subst_expr id repl) (var_subst_stmt id repl) Fun.id e
 
+(** Statement-level case of {!var_subst_expr}. *)
 and var_subst_stmt (id : Id.t) (repl : cpp_expr) (s : cpp_stmt) =
   map_stmt (var_subst_expr id repl) (var_subst_stmt id repl) Fun.id s
 
@@ -7356,6 +7367,7 @@ let rec tvar_subst_expr (tvars : Id.t list) (e : cpp_expr) : cpp_expr =
     (tvar_subst_type tvars)
     e
 
+(** Statement-level case of {!tvar_subst_expr}. *)
 and tvar_subst_stmt (tvars : Id.t list) (s : cpp_stmt) : cpp_stmt =
   map_stmt
     (tvar_subst_expr tvars)
@@ -9042,6 +9054,8 @@ let rec replace_return_this_expr inner_ty = function
     CPPoverloaded (List.map (replace_return_this_expr inner_ty) exprs)
   | e -> e
 
+(** Statement-level counterpart of {!replace_return_this_expr}: recurses into
+    if/switch/match branches to replace [return this] with [shared_from_this]. *)
 and replace_return_this_stmt inner_ty = function
   | Sreturn (Some e) -> Sreturn (Some (replace_return_this_expr inner_ty e))
   | Sif (cond, then_stmts, else_stmts) ->
@@ -9081,7 +9095,15 @@ and replace_return_this_stmt inner_ty = function
   | Sexpr e -> Sexpr (replace_return_this_expr inner_ty e)
   | s -> s
 
-(** Check if a C++ type contains [Tshared_ptr] anywhere. *)
+(** Check if a C++ type contains [Tshared_ptr] anywhere in its structure.
+
+    Recurses through [Tref], [Tmod], [Tunique_ptr], [Tptr], [Tid], [Tglob],
+    [Tnamespace], and [Tfun] to find any nested [Tshared_ptr].
+
+    Used in method generation to gate [replace_return_this_stmt]: the
+    [return this] to [return shared_from_this()] transformation is only
+    correct when the return type actually wraps the receiver in
+    [shared_ptr] (e.g., [shared_ptr<T>] or [pair<shared_ptr<T>, V>]). *)
 let rec contains_shared_ptr = function
   | Tshared_ptr _ -> true
   | Tref t | Tmod (_, t) | Tunique_ptr t | Tptr t -> contains_shared_ptr t
@@ -9100,6 +9122,8 @@ let rec expr_has_shared_from_this = function
   | CPPoverloaded exprs -> List.exists expr_has_shared_from_this exprs
   | _ -> false
 
+(** Statement-level counterpart of {!expr_has_shared_from_this}: checks whether
+    any statement in a method body contains [CPPshared_from_this]. *)
 and stmt_has_shared_from_this = function
   | Sreturn (Some e) -> expr_has_shared_from_this e
   | Sexpr e -> expr_has_shared_from_this e

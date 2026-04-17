@@ -10,8 +10,11 @@
 (*         *     (see LICENSE file for the text of the license)         *)
 (************************************************************************)
 
+(** Vernacular argument witness for integer-or-identifier parameters. *)
 val wit_crane_int_or_id : Table.int_or_id Genarg.vernac_genarg_type
 
+(** Vernacular argument witness for target language selection. *)
 val wit_crane_language : Table.lang Genarg.vernac_genarg_type
 
+(** Vernacular argument witness for C++ name string parameters. *)
 val wit_cppname : string Genarg.vernac_genarg_type

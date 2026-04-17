@@ -31,19 +31,26 @@ open Cpp_state
     update table of content for modules. Many [let] below should not be altered
     since they force evaluation order. *)
 
+(** Print a global reference as a C++ name string, respecting custom mappings
+    and inline extraction. *)
 let str_global_with_key k key r =
   match find_custom_opt r with
   | Some custom_str when to_inline r -> custom_str
   | _ -> Common.pp_global_with_key k key r
 
+(** Print a global reference as a C++ name string using the default key. *)
 let str_global k r = str_global_with_key k (repr_of_r r) r
 
+(** Pretty-print a global reference as a Pp.t, with explicit key. *)
 let pp_global_with_key k key r = str (str_global_with_key k key r)
 
+(** Pretty-print a global reference as a Pp.t. *)
 let pp_global k r = str (str_global k r)
 
+(** Pretty-print a global name (without custom mapping) as a Pp.t. *)
 let pp_global_name k r = str (Common.pp_global k r)
 
+(** Pretty-print a module path as a Pp.t. *)
 let pp_modname mp = str (Common.pp_module mp)
 
 (** Check if a non-local inductive's Dnspace wrapper was merged with its inner
@@ -59,9 +66,11 @@ let is_merged_inductive (r : GlobRef.t) : bool =
 
 (** grammar from OCaml 4.06 manual, "Prefix and infix symbols" *)
 
+(** Characters that can begin an infix operator in OCaml. *)
 let infix_symbols =
   ['='; '<'; '>'; '@'; '^'; ';'; '&'; '+'; '-'; '*'; '/'; '$'; '%']
 
+(** Characters that can appear anywhere in an OCaml operator symbol. *)
 let operator_chars =
   [
     '!';
@@ -86,8 +95,10 @@ let operator_chars =
 
 (** infix ops in OCaml, but disallowed by preceding grammar *)
 
+(** OCaml built-in infix operators not covered by the operator grammar. *)
 let builtin_infixes = ["::"; ","]
 
+(** Check that all characters in [s[start..stop)] are operator characters. *)
 let substring_all_opchars s start stop =
   let rec check_char i =
     if i >= stop then
@@ -97,6 +108,7 @@ let substring_all_opchars s start stop =
   in
   check_char start
 
+(** Check if a custom extraction for [r] defines an infix operator. *)
 let is_infix r =
   match find_custom_opt r with
   | Some s when to_inline r ->
@@ -120,10 +132,12 @@ let is_infix r =
     List.mem inparens builtin_infixes
   | _ -> false
 
+(** Extract the operator symbol from a parenthesized infix custom extraction. *)
 let get_infix r =
   let s = find_custom r in
   String.sub s 1 (String.length s - 2)
 
+(** Extract the [IndRef] from an [IndRef] or [ConstructRef]. *)
 let get_ind =
   let open GlobRef in
   function
@@ -131,18 +145,22 @@ let get_ind =
     | ConstructRef (ind, _) -> IndRef ind
     | _ -> CErrors.anomaly (Pp.str "get_ind: expected IndRef or ConstructRef")
 
+(** Extract the [KerName] from an [IndRef]. *)
 let kn_of_ind =
   let open GlobRef in
   function
     | IndRef (kn, _) -> MutInd.user kn
     | _ -> CErrors.anomaly (Pp.str "kn_of_ind: expected IndRef")
 
+(** Pretty-print a single record field, using the field ref if available. *)
 let pp_one_field r i = function
   | Some r' -> pp_global_with_key Term (kn_of_ind (get_ind r)) r'
   | None -> pp_global Type (get_ind r) ++ str "__" ++ int i
 
+(** Pretty-print the [i]-th record field. *)
 let pp_field r fields i = pp_one_field r i (List.nth fields i)
 
+(** Pretty-print all record fields. *)
 let pp_fields r fields = List.mapi (pp_one_field r) fields
 
 (* ============================================================================
@@ -215,6 +233,9 @@ let capitalize_enum_qualified s r =
   else
     Common.capitalize_last_component s
 
+(** Pretty-print the C++ type name for an inductive reference, handling
+    eponymous records, promoted inductives, enums, locals, and merged/unmerged
+    wrappers. *)
 let pp_inductive_type_name r =
   let result =
     match r with
@@ -446,12 +467,14 @@ let is_merged_inductive_cached : GlobRef.t -> bool =
 let get_ind_kind_cached : GlobRef.t -> Minicpp.cpp_ind_kind option =
   with_cache Name_resolution.get_ind_kind (fun _ -> None)
 
+(** Cache-backed enum check — falls back to [is_enum_inductive]. *)
 let is_enum_cached (r : GlobRef.t) : bool =
   match get_ind_kind_cached r with
   | Some IK_Enum -> true
   | Some _ -> false
   | None -> is_enum_inductive r
 
+(** Cache-backed record check — falls back to [is_record_inductive]. *)
 let is_record_cached (r : GlobRef.t) : bool =
   match get_ind_kind_cached r with
   | Some (IK_Record _ | IK_Eponymous _) -> true
@@ -461,10 +484,13 @@ let is_record_cached (r : GlobRef.t) : bool =
 (** For display names, delegate to original functions — they need visibility
     context. These are thin wrappers for now; they become useful when we have
     more context. *)
+(** Cache-backed wrapper for {!pp_inductive_type_name}. *)
 let pp_inductive_type_name_cached r = pp_inductive_type_name r
 
+(** Cache-backed wrapper for {!inductive_name_info}. *)
 let inductive_name_info_cached r = inductive_name_info r
 
+(** Cache-backed wrapper for {!wrapper_qualify_name}. *)
 let wrapper_qualify_name_cached r name = wrapper_qualify_name r name
 
 (** Look up method info for a function reference. Checks both local
@@ -488,4 +514,5 @@ let lookup_method_this_pos n =
   | None -> None
 
 (** Helper module for tracking variable names *)
+(** Set of [Id.t] names for tracking variable identifiers. *)
 module IdSet = Set.Make (Names.Id)

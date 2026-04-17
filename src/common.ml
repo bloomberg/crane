@@ -75,6 +75,7 @@ let rec intersperse sep = function
   | [] -> []
   | x :: xs -> x :: prepend_to_all sep xs
 
+(** Prepend [sep] before every element of the list. *)
 and prepend_to_all sep = function
   | [] -> []
   | x :: xs -> sep :: x :: prepend_to_all sep xs
@@ -172,6 +173,8 @@ let pp_array f = function
 
 (* EG: This looks quite suspicious... but beware of bugs *)
 (* let fnl () = stras (1000000,"") ++ fnl () *)
+(** Shadow [Pp.fnl] to attach a large virtual size, preventing Pp from
+    collapsing lines. *)
 let fnl () = fnl ()
 
 (** Two consecutive newlines. *)
@@ -443,6 +446,7 @@ let mktable_modpath autoclean =
 let add_mpfiles_content, get_mpfiles_content, clear_mpfiles_content =
   mktable_modpath false
 
+(** Retrieve module file content, raising [Failure] if not registered. *)
 let get_mpfiles_content mp =
   try get_mpfiles_content mp with Not_found -> failwith "get_mpfiles_content"
 
@@ -488,6 +492,8 @@ type visible_layer = {
   mutable content : Label.t KMap.t;
 }
 
+(** Visibility stack for module rendering: tracks which module paths are in
+    scope and their label-to-key content mappings. *)
 let pop_visible, push_visible, get_visible =
   let vis = ref [] in
   register_cleanup (fun () -> vis := []);
@@ -589,6 +595,7 @@ let modular_rename k id = fst (modular_rename_ex k id)
 (** For monolithic extraction, first-level modules might have to be renamed with
     unique numbers *)
 
+(** Rename first-level module labels with unique numeric suffixes. *)
 let modfstlev_rename =
   let add_index, get_index, _ = mktable_id true in
   fun l ->
@@ -985,13 +992,17 @@ let pp_module mp =
 
 let ascii_type_name = "core.ascii.type"
 
+(** Rocq library reference for the [ascii] constructor. *)
 let ascii_constructor_name = "core.ascii.ascii"
 
+(** Check if both ascii type and constructor are registered in the library. *)
 let is_ascii_registered () =
   Rocqlib.has_ref ascii_type_name && Rocqlib.has_ref ascii_constructor_name
 
+(** Get the [GlobRef] for the ascii type. *)
 let ascii_type_ref () = Rocqlib.lib_ref ascii_type_name
 
+(** Check if ascii has been extracted to the language's native char type. *)
 let check_extract_ascii () =
   try
     let char_type =
@@ -1001,6 +1012,8 @@ let check_extract_ascii () =
     String.equal (find_custom @@ ascii_type_ref ()) char_type
   with Not_found -> false
 
+(** Check if a list of ML AST nodes consists entirely of nullary constructors
+    (used for char list → string optimization). *)
 let is_list_cons l =
   List.for_all
     (function
@@ -1016,6 +1029,7 @@ let is_native_char = function
     && is_list_cons l
   | _ -> false
 
+(** Decode an [ascii] constructor application into a native [char] value. *)
 let get_native_char c =
   let rec cumul = function
     | [] -> 0
@@ -1031,6 +1045,7 @@ let get_native_char c =
   in
   Char.chr (cumul l)
 
+(** Pretty-print an ascii constructor as a C++ char literal. *)
 let pp_native_char c = str ("'" ^ Char.escaped (get_native_char c) ^ "'")
 
 (** Special hack for constants of type String.string : if an
@@ -1039,17 +1054,22 @@ let pp_native_char c = str ("'" ^ Char.escaped (get_native_char c) ^ "'")
 
 let string_type_name = "core.string.type"
 
+(** Rocq library reference for the empty string constructor. *)
 let empty_string_name = "core.string.empty"
 
+(** Rocq library reference for the string constructor. *)
 let string_constructor_name = "core.string.string"
 
+(** Check if all string-related types are registered in the library. *)
 let is_string_registered () =
   Rocqlib.has_ref string_type_name
   && Rocqlib.has_ref empty_string_name
   && Rocqlib.has_ref string_constructor_name
 
+(** Get the [GlobRef] for the string type. *)
 let string_type_ref () = Rocqlib.lib_ref string_type_name
 
+(** Check if string has been extracted to the language's native string type. *)
 let check_extract_string () =
   try
     let string_type =
@@ -1169,6 +1189,8 @@ let lookup_ctor_field_name ctor_name field_idx =
     passes to avoid stale names from one module leaking into another. *)
 let reset_ctor_field_names () = Hashtbl.clear ctor_field_names
 
+(** {3 More synthetic name generators} *)
+
 let eta_param_name i = "_x" ^ string_of_int i
 
 let eta_param_id i = Id.of_string (eta_param_name i)
@@ -1189,6 +1211,7 @@ let tparam_name id = Id.of_string ("t_" ^ Id.to_string id)
 
 let enum_ctor_name s = "e_" ^ String.uppercase_ascii s
 
+(** Capitalize only the last [::]-separated component of a qualified name. *)
 let capitalize_last_component s =
   match String.rindex_opt s ':' with
   | Some i when i > 0 && i < String.length s - 1 && s.[i - 1] = ':' ->

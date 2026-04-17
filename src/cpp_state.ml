@@ -484,7 +484,12 @@ let global_scope_enum_table : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 16
     inside any struct.  When an imported module's type alias (e.g., [cell] from
     [AliasSource.v]) is rendered at global scope in the header but the struct
     qualifier logic would incorrectly add [StructName::] in the .cpp, checking
-    this table prevents the spurious qualification. *)
+    this table prevents the spurious qualification.
+
+    {b Lifecycle:} Populated during the rendering pass by
+    [register_global_scope_type_alias] when a [Dtype] is rendered outside
+    any struct.  Queried in [cpp_names.ml] for name qualification.
+    Cleared by [reset_cpp_state] between extraction runs. *)
 let global_scope_type_alias_table : (GlobRef.t, unit) Hashtbl.t =
   Hashtbl.create 8
 
@@ -562,6 +567,14 @@ let register_method
     epon_ref
     this_pos
     ~ind_tvar_positions
+
+(** Check if a function qualifies as a method on [epon_ref] and register it
+    if so.  Single entry point replacing the manual
+    [find_epon_arg_pos] + [body_safe_for_method] + [register_method] +
+    [add_candidate] sequence. *)
+let try_register_method epon_ref func_ref body ty =
+  Method_registry.try_register_method
+    (get_method_registry ()) epon_ref func_ref body ty
 
 (** Check if a function is registered as a method, returning its eponymous type
     and this position if so. *)

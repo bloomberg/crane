@@ -32,11 +32,13 @@ let dummy_name = Id.of_string "_x"
 
 let anonymous = Id anonymous_name
 
+(** Converts a Rocq [Name.t] to an [Id.t], mapping anonymous names to ["x"]. *)
 let id_of_name = function
   | Name.Anonymous -> anonymous_name
   | Name.Name id when Id.equal id dummy_name -> anonymous_name
   | Name.Name id -> id
 
+(** Converts an [ml_ident] to an [Id.t]. *)
 let id_of_mlid = function
   | Dummy -> dummy_name
   | Id id -> id
@@ -56,10 +58,12 @@ let meta_count = ref 0
 
 let reset_meta_count () = meta_count := 0
 
+(** Creates a fresh type metavariable for unification. *)
 let new_meta _ =
   incr meta_count;
   Tmeta {id = !meta_count; contents = None}
 
+(** Structural equality on ML types. *)
 let rec eq_ml_type t1 t2 =
   match (t1, t2) with
   | Tarr (tl1, tr1), Tarr (tl2, tr2) -> eq_ml_type tl1 tl2 && eq_ml_type tr1 tr2
@@ -86,8 +90,8 @@ let rec eq_ml_type t1 t2 =
 and eq_ml_meta m1 m2 =
   Int.equal m1.id m2.id && Option.equal eq_ml_type m1.contents m2.contents
 
-(* Simultaneous substitution of [[Tvar 1; ... ; Tvar n]] by [l] in a ML type. *)
-
+(** Simultaneously substitutes [[Tvar 1; ...; Tvar n]] by the types in [l]
+    within ML type [t]. *)
 let type_subst_list l t =
   let n = List.length l in
   let rec subst t =
@@ -104,10 +108,9 @@ let type_subst_list l t =
   in
   subst t
 
-(* Simultaneous substitution of [[|Tvar 1; ... ; Tvar n|]] by [v] in a ML type.
-   Type variables with indices > n are left unchanged (these are per-constructor
-   existential type variables that should not be substituted). *)
-
+(** Simultaneously substitutes [[|Tvar 1; ...; Tvar n|]] by the types in
+    array [v] within ML type [t]. Type vars with indices > n are left unchanged
+    (per-constructor existential type variables). *)
 let type_subst_vect v t =
   let n = Array.length v in
   let rec subst t =
@@ -193,6 +196,8 @@ let try_mgu t1 t2 = try mgu (t1, t2) with Impossible -> ()
 
 let skip_typing () = is_extrcompute ()
 
+(** Returns [true] if a type coercion (MLmagic) is needed because the two types
+    in pair [p] cannot be unified. *)
 let needs_magic p =
   if skip_typing () then
     false
@@ -206,6 +211,8 @@ let put_magic_if b a = if b then MLmagic a else a
 
 let put_magic p a = if needs_magic p then MLmagic a else a
 
+(** Checks if an ML expression can be generalized (polymorphic let). In C++,
+    applications are excluded. *)
 let generalizable a =
   lang () != Cpp
   ||
@@ -408,14 +415,15 @@ let sign_of_id = function
   | Dummy -> Kill Kprop
   | Id _ | Tmp _ -> Keep
 
-(* Classification of signatures *)
-
+(** Classification of a type signature by its logical content. *)
 type sign_kind =
   | EmptySig
   | NonLogicalSig (* at least a [Keep] *)
   | SafeLogicalSig (* only [Kill Ktype] *)
   | UnsafeLogicalSig (* No [Keep], not all [Kill Ktype] *)
 
+(** Classifies a signature as empty, non-logical, safe-logical, or
+    unsafe-logical. *)
 let rec sign_kind = function
   | [] -> EmptySig
   | Keep :: _ -> NonLogicalSig
@@ -425,8 +433,7 @@ let rec sign_kind = function
   | Ktype, (SafeLogicalSig | EmptySig) -> SafeLogicalSig
   | _, _ -> UnsafeLogicalSig
 
-(* Removing the final [Keep] in a signature *)
-
+(** Removes trailing [Keep] entries from a signature. *)
 let rec sign_no_final_keeps = function
   | [] -> []
   | k :: s ->
@@ -705,8 +712,7 @@ let nb_occur_match =
   in
   nb 1
 
-(* Replace unused variables by _ *)
-
+(** Replaces unused bound variables by [Dummy] (["_"]) throughout an ML AST. *)
 let dump_unused_vars a =
   let rec ren env a =
     match a with
@@ -853,6 +859,7 @@ let is_basic_pattern = function
   | Prel _ | Pwild -> true
   | Pusual _ | Pcons _ | Ptuple _ -> false
 
+(** Returns [true] if any branch contains a nested (non-basic) pattern. *)
 let has_deep_pattern br =
   let deep = function
     | Pcons (_, l) | Ptuple l -> not (List.for_all is_basic_pattern l)
@@ -863,6 +870,8 @@ let has_deep_pattern br =
       | _, _, pat, _ -> deep pat )
     br
 
+(** Returns [true] if all branches match the standard constructor pattern with
+    sequential constructor indices. *)
 let is_regular_match br =
   if Array.is_empty br then
     false (* empty match becomes MLexn *)
@@ -1151,6 +1160,9 @@ let branch_as_cst (l, _, c) =
    position, and then finally return the most frequent element and its
    positions. *)
 
+(** Census functions for branch factorization: [census_add] records an element
+    at a position, [census_max] returns the most frequent element and its
+    positions, [census_clean] resets the census. *)
 let census_add, census_max, census_clean =
   let h = ref [] in
   let clearf () = h := [] in
@@ -1217,12 +1229,14 @@ let factor_branches o typ br =
 (** {2 If all branches are functions, try to permute the case and the functions}
 *)
 
+(** Merges two identifier lists, preferring non-Dummy names from either side. *)
 let rec merge_ids ids ids' =
   match (ids, ids') with
   | [], l -> l
   | l, [] -> l
   | i :: ids, i' :: ids' -> (if i == Dummy then i' else i) :: merge_ids ids ids'
 
+(** Like [merge_ids] but for [(ml_ident * ml_type)] pairs. *)
 let rec merge_ids' ids ids' =
   match (ids, ids') with
   | [], l -> l
@@ -1667,8 +1681,7 @@ let rec kill_dummy = function
       with Impossible -> MLletin (id, t, kill_dummy c, kill_dummy e) )
   | a -> ast_map kill_dummy a
 
-(* Similar function, but acting only on head lambdas and let-ins *)
-
+(** Like [kill_dummy] but only acts on head lambdas and let-ins. *)
 and kill_dummy_hd = function
   | MLlam (id, ty, e) -> MLlam (id, ty, kill_dummy_hd e)
   | MLletin (id, t, c, e) ->
@@ -1680,6 +1693,8 @@ and kill_dummy_hd = function
       with Impossible -> MLletin (id, t, kill_dummy c, kill_dummy_hd e) )
   | a -> a
 
+(** Removes dummy lambdas from fixpoint body [i] and propagates the change
+    to all mutual bodies. *)
 and kill_dummy_fix i c s =
   let n = Array.length c in
   let k, ci = kill_dummy_lams s (kill_dummy_hd c.(i)) in
@@ -1702,6 +1717,8 @@ let normalize a =
 
 (** {1 Special treatment of fixpoint for pretty-printing purpose} *)
 
+(** Optimizes a fixpoint by reordering arguments so that [n] leading arguments
+    are directly accessible, reducing eta-expansion overhead. *)
 let general_optimize_fix f ids n args m c =
   let v = Array.init n (fun i -> i) in
   let aux i = function
@@ -1800,6 +1817,8 @@ let pop n l = List.map (fun x -> if x <= n then raise Toplevel else x - n) l
    candidates? We use this flag to check only the external lambdas, those that
    will correspond to arguments. *)
 
+(** Returns de Bruijn indices of non-strict variables in a term. Raises
+    [Toplevel] if an internal non-strict variable is found. *)
 let rec non_stricts add cand = function
   | MLlam (id, _, t) ->
     let cand = lift 1 cand in
@@ -1839,6 +1858,7 @@ let rec non_stricts add cand = function
    with no candidates, and the only positive answer is via the [Toplevel]
    exception. *)
 
+(** Returns [true] if the term has at least one non-strict external lambda. *)
 let is_not_strict t =
   try
     let _ = non_stricts true [] t in
@@ -1870,10 +1890,13 @@ let inline_test r t =
     let t2 = snd (collect_lams t1) in
     (not (is_fix t2)) && ml_size t < 12 && is_not_strict t
 
+(** Parses a fully qualified constant name string into a [Constant.t]. *)
 let con_of_string s =
   let d, id = Libnames.split_dirpath (dirpath_of_string s) in
   Constant.make2 (ModPath.MPfile d) (Label.of_id id)
 
+(** Set of standard library constants that are always inlined during
+    extraction (e.g. well-founded recursion combinators, boolean operators). *)
 let manual_inline_set =
   List.fold_right
     (fun x -> Cset_env.add (con_of_string x))
@@ -1894,6 +1917,7 @@ let manual_inline_set =
     ]
     Cset_env.empty
 
+(** Checks if a global reference is in the manual inline set. *)
 let manual_inline = function
   | GlobRef.ConstRef c -> Cset_env.mem c manual_inline_set
   | _ -> false

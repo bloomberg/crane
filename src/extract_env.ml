@@ -28,10 +28,14 @@ open Common
 (** {1 Part I: computing Rocq environment} *)
 (****************************************)
 
+(** Returns the current toplevel environment as a (module_path, structure) pair
+    with the structure reversed for bottom-up processing. *)
 let toplevel_env () =
   let mp, struc = Safe_typing.flatten_env (Global.safe_env ()) in
   (mp, List.rev struc)
 
+(** Returns all loaded library environments up to (and including) [dir_opt].
+    If [dir_opt] is [None], includes the toplevel environment as well. *)
 let environment_until dir_opt =
   let rec parse = function
     | [] when Option.is_empty dir_opt -> [toplevel_env ()]
@@ -144,12 +148,15 @@ let rec add_labels mp = function
 
 exception Impossible
 
+(** Raises [Impossible] if the constant's type is an arity (type scheme). *)
 let check_arity env cb =
   let t = cb.const_type in
   if Reduction.is_arity env t then raise Impossible
 
 let get_body lbody = EConstr.of_constr lbody
 
+(** Checks if a constant body is a (co)fixpoint at index [i]. Returns
+    [(is_fix, recd)] or raises [Impossible]. *)
 let check_fix env sg cb i =
   match cb.const_body with
   | Def lbody ->
@@ -163,6 +170,8 @@ let check_fix env sg cb i =
     | _ -> raise Impossible )
   | Undef _ | OpaqueDef _ | Primitive _ | Symbol _ -> raise Impossible
 
+(** Tests equality of two mutual fixpoint declarations (names, bodies,
+    types). *)
 let prec_declaration_equal sg (na1, ca1, ta1) (na2, ca2, ta2) =
   Array.equal
     (Context.eq_annot Name.equal (EConstr.ERelevance.equal sg))
@@ -171,6 +180,9 @@ let prec_declaration_equal sg (na1, ca1, ta1) (na2, ca2, ta2) =
   && Array.equal (EConstr.eq_constr sg) ca1 ca2
   && Array.equal (EConstr.eq_constr sg) ta1 ta2
 
+(** Groups consecutive structure fields that form a mutual (co)fixpoint into
+    a single definition with shared bodies. Returns [(labels, is_fix, recd,
+    remaining_struc)]. *)
 let factor_fix env sg l cb msb =
   let ((is_fix, recd) as check) = check_fix env sg cb 0 in
   let n =
@@ -208,6 +220,8 @@ let vm_state =
   let vm_handler _ _ _ () = ((), None) in
   ((), {Mod_typing.vm_handler})
 
+(** Expands a module algebraic expression into its structure and delta resolver
+    by type-checking it. *)
 let expand_mexpr env mp me =
   let inl = Some (Flags.get_inline_level ()) in
   let state =
@@ -219,6 +233,7 @@ let expand_mexpr env mp me =
   in
   (mb.mod_type, mb.mod_delta)
 
+(** Expands a module type algebraic expression into a full module type body. *)
 let expand_modtype env mp me =
   let inl = Some (Flags.get_inline_level ()) in
   let state =
@@ -232,6 +247,9 @@ let expand_modtype env mp me =
 
 let no_delta = Mod_subst.empty_delta_resolver
 
+(** Flattens a module type into its structure and delta resolver, using a
+    precomputed structure if available, otherwise expanding the algebraic
+    expression. *)
 let flatten_modtype env mp me_alg struc_opt =
   match struc_opt with
   | Some me -> (me, no_delta)
@@ -242,6 +260,8 @@ let flatten_modtype env mp me_alg struc_opt =
 (** Ad-hoc update of environment, inspired by [Mod_typing.check_with_aux_def].
 *)
 
+(** Builds a local environment for a [with Definition] clause by adding all
+    structure fields before the targeted definition. *)
 let env_for_mtb_with_def env mp me reso idl =
   let struc = Modops.destr_nofunctor mp me in
   let l = Label.of_id (List.hd idl) in
@@ -252,9 +272,11 @@ let env_for_mtb_with_def env mp me reso idl =
   let before = fst (List.split_when spot struc) in
   Modops.add_structure mp before reso env
 
+(** Resolves a label to a constant through a delta resolver. *)
 let make_cst resolver mp l =
   Mod_subst.constant_of_delta_kn resolver (KerName.make mp l)
 
+(** Resolves a label to a mutual inductive through a delta resolver. *)
 let make_mind resolver mp l =
   Mod_subst.mind_of_delta_kn resolver (KerName.make mp l)
 
@@ -595,6 +617,7 @@ let mono_environment ~opaque_access refs mpl =
 (** {1 Part II : Input/Output primitives} *)
 (**************************************)
 
+(** Returns the language descriptor for the current extraction target. *)
 let descr () =
   match lang () with
   | Cpp -> Cpp.cpp_descr
@@ -604,6 +627,7 @@ let descr () =
 
 let default_id = Id.of_string "Main"
 
+(** Standard C++ headers to include in generated implementation files. *)
 let header_imports =
   [
     "algorithm";
@@ -628,6 +652,7 @@ let needed_std_headers () =
   let needed = Cpp_state.get_needed_headers () in
   List.filter (fun h -> List.mem h needed) header_imports
 
+(** BDE-flavored standard headers using [bsl_*] naming. *)
 let header_imports_bsl =
   [
     "bdlf_overloaded.h";
@@ -643,6 +668,7 @@ let header_imports_bsl =
 
 let mk_include s = str ("#include <" ^ s ^ ">")
 
+(** Generates the [#include] block for a C++ implementation file. *)
 let header fn () =
   let imps = get_custom_imports () in
   let himports =
@@ -677,6 +703,8 @@ let header fn () =
 
 let mk_include_quoted s = str ("#include \"" ^ s ^ "\"")
 
+(** Generates the header file preamble: include guard, includes, MapsTo concept
+    boilerplate, and string literals directive. *)
 let spec_header si () =
   let imps = get_custom_imports () in
   let himports =
@@ -777,6 +805,8 @@ let spec_footer si () =
     fnl () ++ str ("#endif // " ^ guard) ++ fnl ()
   | None -> mt ()
 
+(** Computes the (impl_file, header_file, module_id) triple for monolithic
+    extraction from an optional filename. *)
 let mono_filename f =
   let d = descr () in
   match f with
@@ -797,8 +827,8 @@ let mono_filename f =
     in
     (Some (f ^ d.file_suffix), Option.map (( ^ ) f) d.sig_suffix, id)
 
-(* Builds a suitable filename from a module id *)
-
+(** Builds (impl_file, header_file, module_id) for a module file path in
+    separate extraction mode. *)
 let module_filename mp =
   let f = file_of_modfile mp in
   let id = Id.of_string f in
@@ -830,6 +860,8 @@ let print_one_decl struc mp decl =
 
 let buf = Buffer.create 1000
 
+(** Creates a [Format.formatter] for output. In dry-run mode, discards all
+    output. When no file is given, writes to [buf]. *)
 let formatter dry file =
   let ft =
     if dry then
@@ -850,6 +882,7 @@ let formatter dry file =
   (* note: max_indent should be < margin above, otherwise it's ignored *)
   ft
 
+(** Returns the user-set file comment split into words, or [None] if empty. *)
 let get_comment () =
   let s = file_comment () in
   if String.is_empty s then
@@ -915,9 +948,8 @@ let format_buffer_to_string (buf : Buffer.t) : string =
         | Unix.WEXITED 0 -> Buffer.contents fmt_buf
         | _ -> Buffer.contents buf )
 
-(* [format_file_inplace filename] runs {bde,clang}-format -i on the given file
-   [filename], formatting it in place. If {bde,clang}-format is not available,
-   this is a no-op. *)
+(** Runs [clang-format -i] (or [bde-format]) on [filename] in place. No-op
+    if the formatter is unavailable or style is set to ["None"]. *)
 let format_file_inplace (filename : string) : unit =
   let skip_format = Table.format_style () = "None" in
   let use_bde = Table.format_style () = "BDE" || Table.std_lib () = "BDE" in
@@ -948,10 +980,9 @@ let format_file_inplace (filename : string) : unit =
     else
       ignore (Sys.command cmd)
 
-(* Scan the ml_structure and mark all GlobRefs that have custom extraction
-   mappings as "used", so that their associated [From "header.h"] imports are
-   included in the generated header. This must run before [header()] is called,
-   because [header()] reads the used-import set. *)
+(** Scans the ML structure and marks all custom-extracted GlobRefs as "used"
+    so their associated [From "header.h"] imports are included. Must run before
+    [header()] which reads the used-import set. *)
 let mark_used_customs struc =
   Table.reset_used_custom_imports ();
   let mark r = if Table.is_custom r then Table.mark_custom_used r in
@@ -961,6 +992,8 @@ let mark_used_customs struc =
     (fun _ -> ())
     struc
 
+(** Scans the ML structure for projections used in higher-order positions
+    (passed as function values rather than used as field accessors). *)
 let mark_higher_order_projections struc =
   Table.init_higher_order_projections ();
   let rec scan_ast = function
@@ -1116,11 +1149,14 @@ let print_structure_to_file (fn, si, mo) dry struc =
 (** {2 Part III: the actual extraction commands} *)
 (*********************************************)
 
+(** Resets all extraction state: visit lists, tables, and renaming. *)
 let reset () =
   Visit.reset ();
   reset_tables ();
   reset_renaming_tables Everything
 
+(** Initializes the extraction environment, checking section scope and setting
+    mode flags (modular/library/compute). *)
 let init ?(compute = false) ?(inner = false) modular library =
   if not inner then check_inside_section ();
   set_keywords (descr ()).keywords;
@@ -1131,6 +1167,8 @@ let init ?(compute = false) ?(inner = false) modular library =
   (* Reset ALL C++ global state from previous extractions *)
   reset ()
 
+(** Emits warnings about opaque constants and axioms encountered during
+    extraction. *)
 let warns () =
   warning_opaques (access_opaque ());
   warning_axioms ()
@@ -1138,6 +1176,8 @@ let warns () =
 (* From a list of [reference], let's retrieve whether they correspond to modules
    or [global_reference]. Warn the user if both is possible. *)
 
+(** Separates a list of qualified names into global references and module
+    paths, warning when a name is ambiguous between both. *)
 let rec locate_ref = function
   | [] -> ([], [])
   | qid :: l ->
@@ -1214,6 +1254,8 @@ let derive_source_file filename =
     extracting to a file with the command: \verb!Extraction "file"! [qualid1]
     ... [qualidn]} *)
 
+(** Core of recursive extraction: extracts the given references and module
+    paths, optimizes, and writes to a monolithic output file. *)
 let full_extr opaque_access f (refs, mps) =
   init false false;
   List.iter (fun mp -> if is_modfile mp then error_MPfile_as_mod mp true) mps;
@@ -1269,6 +1311,7 @@ let separate_extraction ~opaque_access lr =
 (** {2 Simple extraction in the Rocq toplevel. The vernacular command is
     \verb!Extraction! [qualid]} *)
 
+(** Extracts a single reference or module to the Rocq toplevel output. *)
 let simple_extraction ~opaque_access r =
   match locate_ref [r] with
   | ([], [mp]) as p -> full_extr opaque_access None p
@@ -1287,6 +1330,8 @@ let simple_extraction ~opaque_access r =
 (** {2 (Recursive) Extraction of a library. The vernacular command is
     \verb!(Recursive) Extraction Library! [M]} *)
 
+(** Extracts an entire Rocq library module to separate C++ files. When
+    [is_rec] is true, recursively extracts all dependencies. *)
 let extraction_library ~opaque_access is_rec CAst.{loc; v = m} =
   init true true;
   let dir_m =
@@ -1339,12 +1384,14 @@ let emit_test_status status test_id_str source_file =
       ++ str ":"
       ++ str source_file )
 
-(* For the test-suite : extraction to a temporary file + run clang on it *)
+(** {2 Test-suite: extraction to a temporary file + compilation} *)
 
 exception NoClangFound
 
 exception ClangError of int * string
 
+(** Compiles a C++ file using clang++. When [shouldlink] is false, only compiles
+    to object code. Raises [NoClangFound] or [ClangError] on failure. *)
 let compile_cpp ?(shouldlink = false) ?(includes = []) ?outfile ?errfile infile
     =
   if not (clang_available ()) then raise NoClangFound;
@@ -1414,6 +1461,8 @@ exception NoOcamloptFound
 
 exception OcamloptError of int * string
 
+(** Compiles an OCaml file using ocamlopt. Raises [NoOcamloptFound] or
+    [OcamloptError] on failure. *)
 let compile_ocaml
     ?(shouldlink = false)
     ?(includes = [])
@@ -1447,6 +1496,9 @@ let compile_ocaml
     raise (OcamloptError (res, errors)) );
   if Sys.file_exists errfile then Sys.remove errfile
 
+(** Links and runs a test executable from the compiled object and its
+    [.t.cpp] test driver. Returns the test's stdout. Raises [ClangError] on
+    compilation failure or [Failure] if test assertions fail. *)
 let compile_and_test ?outfile ?errfile infile =
   if not (clang_available ()) then raise NoClangFound;
   let dir = Filename.dirname infile in
@@ -1529,6 +1581,8 @@ let compile_and_test ?outfile ?errfile infile =
          ^ ")" ) );
   out_string
 
+(** Full extract-compile-test pipeline: extracts to C++, compiles with clang,
+    optionally links and runs the [.t.cpp] test driver, and reports results. *)
 let extract_and_compile ~opaque_access file l =
   let filename =
     match mono_filename file with

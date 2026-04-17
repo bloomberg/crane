@@ -257,22 +257,12 @@ let pp_cpp_ind_header kn ind =
        `priqueue` is a type alias not visible from inside `tree`. *)
     let find_methods_for_inductive ind_ref =
       let ind_modpath = modpath_of_r ind_ref in
-      (* First, collect all type aliases (Dtype) defined in the same module.
-         These are types like `priqueue := list tree` that become `using`
-         declarations. Methods on nested inductives can't reference these
-         (visibility issue).  Inline-custom types (Crane Extract Inlined Constant)
-         also produce Dtype entries but are not real C++ type aliases — exclude
-         them so they don't spuriously block method candidates. *)
-      let module_type_aliases = ref [] in
-      List.iter
-        (fun (_l, se) ->
-          match se with
-          | SEdecl (Dtype (r, _, _))
-            when ModPath.equal (modpath_of_r r) ind_modpath
-              && not (is_any_inline_custom r) ->
-            module_type_aliases := r :: !module_type_aliases
-          | _ -> () )
-        !current_structure_decls;
+      let module_type_aliases =
+        ref (Method_registry.collect_module_type_aliases
+               ~extract_decl:(fun (_l, se) ->
+                 match se with SEdecl d -> Some d | _ -> None)
+               ind_modpath !current_structure_decls)
+      in
       (* Collect all inductives that come AFTER ind_ref in declaration order.
          Methods that reference these would cause forward declaration issues
          since the method body pattern-matches on variants that aren't defined
@@ -312,43 +302,17 @@ let pp_cpp_ind_header kn ind =
         (fun (_l, se) ->
           match se with
           | SEdecl (Dterm (r, body, ty)) ->
-            (* Skip if function signature references an excluded type (alias or
-               forward inductive) *)
-            if same_module r && not (refs_excluded ty) then (
-              match Method_registry.find_epon_arg_pos ind_ref ty with
-              | Some (pos, ind_tvar_positions)
-                when Method_registry.body_safe_for_method ~this_pos:pos
-                       ~ret_has_shared_epon:
-                         (Method_registry.ml_return_type_has_ref ind_ref ty)
-                       body ->
-                methods := (r, body, ty, pos) :: !methods;
-                register_method r ind_ref pos ~ind_tvar_positions ();
-                Method_registry.add_candidate
-                  (get_method_registry ())
-                  ind_ref
-                  (r, body, ty, pos)
-              | _ -> () )
+            if same_module r && not (refs_excluded ty) then
+              Option.iter
+                (fun c -> methods := c :: !methods)
+                (try_register_method ind_ref r body ty)
           | SEdecl (Dfix (rv, defs, typs)) ->
             Array.iteri
               (fun i r ->
-                let ty = typs.(i) in
-                (* Skip if function signature references an excluded type (alias
-                   or forward inductive) *)
-                if same_module r && not (refs_excluded ty) then
-                  let body = defs.(i) in
-                  match Method_registry.find_epon_arg_pos ind_ref ty with
-                  | Some (pos, ind_tvar_positions)
-                    when Method_registry.body_safe_for_method ~this_pos:pos
-                           ~ret_has_shared_epon:
-                             (Method_registry.ml_return_type_has_ref ind_ref ty)
-                           body ->
-                    methods := (r, body, ty, pos) :: !methods;
-                    register_method r ind_ref pos ~ind_tvar_positions ();
-                    Method_registry.add_candidate
-                      (get_method_registry ())
-                      ind_ref
-                      (r, body, ty, pos)
-                  | _ -> () )
+                if same_module r && not (refs_excluded typs.(i)) then
+                  Option.iter
+                    (fun c -> methods := c :: !methods)
+                    (try_register_method ind_ref r defs.(i) typs.(i)))
               rv
           | _ -> () )
         !current_structure_decls;

@@ -30,6 +30,9 @@ open Common
 open Context.Rel.Declaration
 (*i*)
 
+(** Raised during inductive extraction to signal the kind of an inductive type
+    (e.g., record, singleton, standard). Caught by the inductive extraction
+    pipeline to classify the result. *)
 exception I of inductive_kind
 
 (* A set of all fixpoint functions currently being extracted *)
@@ -168,6 +171,7 @@ let rec type_sign env sg c =
     :: type_sign (push_rel_assum (n, t) env) sg d
   | _ -> []
 
+(** Counts the number of informative type-scheme arguments in a product type. *)
 let rec type_scheme_nb_args env sg c =
   match EConstr.kind sg (whd_all env sg c) with
   | Prod (n, t, d) ->
@@ -219,8 +223,8 @@ let rec nb_default_params env sg c =
     if is_default env sg t then n + 1 else n
   | _ -> 0
 
-(* Enriching a signature with implicit information *)
-
+(** Enriches a type signature by marking implicit arguments as [Kill Kimplicit],
+    skipping the first [nb_params] parameters. *)
 let sign_with_implicits r s nb_params =
   let implicits = implicits_of_global r in
   let rec add_impl i = function
@@ -1020,6 +1024,7 @@ and expand env = type_expand (mlt_env env)
 (** Converts an ML type to a type signature (Keep/Kill list). *)
 and type2signature env = type_to_signature (mlt_env env)
 
+(** Converts an ML type to a simplified type signature (list of types). *)
 and type2sign env = type_to_sign (mlt_env env)
 
 (** {2 Extraction of the type of a constant} *)
@@ -1874,13 +1879,17 @@ let add_tvars n t =
 (** Removes erased type arguments from a type scheme. *)
 let type_expunge env = type_expunge (mlt_env env)
 
+(** Removes erased arguments from a type using an explicit signature. *)
 and type_expunge_from_sign env = type_expunge_from_sign (mlt_env env)
 
 (* Sigma type precondition detection. For functions taking {x : A | P x}, detect
    P and translate to C++ assertions. *)
 
+(** Looks up a Rocq library reference by name, returning [None] if not found. *)
 let try_ref name = try Some (Rocqlib.lib_ref name) with _ -> None
 
+(** Tests whether a global reference [gr] corresponds to the Rocq library
+    reference with the given name. *)
 let is_ref name gr =
   try Environ.QGlobRef.equal Environ.empty_env gr (Rocqlib.lib_ref name)
   with _ -> false

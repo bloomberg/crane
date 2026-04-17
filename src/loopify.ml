@@ -142,6 +142,8 @@ type recursion_kind =
     top-level functions ({!fn_checker}) vs methods ({!method_checker}) vs inner
     lambdas ({!lambda_checker}). *)
 
+(** Type alias for recursive call detection functions. Given a [cpp_expr],
+    returns [Some call_site] if it is a direct recursive call, [None] otherwise. *)
 type call_checker = cpp_expr -> call_site option
 
 (** Check whether a [GlobRef.t] matches any of the given function refs. *)
@@ -983,6 +985,8 @@ let rec strip_unnecessary_blocks = function
   | s :: rest -> strip_loopify_stmt s :: strip_unnecessary_blocks rest
   | [] -> []
 
+(** Recursively strip unnecessary blocks from a single statement's sub-branches
+    ([Sif], [Sswitch], [Scustom_case], [Smatch], [Swhile], nested [Sblock]). *)
 and strip_loopify_stmt = function
   | Sif (cond, then_br, else_br) ->
     Sif
@@ -1233,8 +1237,6 @@ type tmc_branch_info = {
       (** Arguments to the innermost recursive call *)
 }
 
-(** Summary of TMC analysis for a whole function.  All TMC branches must use the
-    same constructor and recursive field.  Computed by {!try_tmc_classify}. *)
 (** Summary of TMC analysis for a whole function.  The type is a unit-like
     marker: [Some ()] signals that all TMC branches are eligible and use the
     same constructor and recursive field.  The per-branch details are carried
@@ -1679,7 +1681,19 @@ let is_ctor_factory_call = function
 
 (** Try to decompose a return expression as a TMC-eligible branch.  Handles
     both single-level ([cons x (RECURSE xs)]) and nested constructors
-    ([cons x (cons x (RECURSE xs))]).  Strip [CPPmove] wrapping before checking.
+    ([cons x (cons x (RECURSE xs))]).  Strips [CPPmove] wrapping before
+    checking.
+
+    {b Example.}  Given [cons x (cons y (f xs))]:
+    - Outer constructor [cons(x, HOLE)] is cell 0 (allocated first, returned to
+      the caller via [_head]).
+    - Inner constructor [cons(y, HOLE)] is cell 1 (allocated second, linked
+      into cell 0's recursive field).
+    - [f xs] is the recursive call that fills cell 1's HOLE.
+
+    Cells are returned outermost-first so the caller can chain them:
+    allocate cell 0, allocate cell 1, link cell 1 into cell 0, then loop with
+    [_last] pointing to cell 1 for the next iteration to fill.
 
     @return [Some tmc_branch_info] with a chain of cells, outermost first *)
 let rec try_tmc_decompose check expr =
@@ -2837,10 +2851,21 @@ type all_calls_decomp = {
   acd_combine : cpp_expr list -> cpp_expr list -> cpp_expr;
 }
 
-(** Decompose an expression into all N recursive calls. Generalizes
-    {!decompose_double_call} to arbitrary counts. Returns argument lists (one
-    per call, left-to-right), saved expressions, and a combine function that
-    reconstructs the original from saved values and call results. *)
+(** Decompose an expression into all N recursive calls.  Generalizes
+    {!decompose_double_call} to arbitrary counts.
+
+    {b Example.}  For [a + f(x) * f(y)]:
+    - [acd_saved = [a]] — non-recursive sub-expressions that must be computed
+      before the loop and stored in the stack frame.
+    - [acd_calls = [[x]; [y]]] — argument lists for each recursive call, in
+      left-to-right order.
+    - [acd_combine saved results] — rebuilds the original expression:
+      [saved.(0) + results.(0) * results.(1)].
+
+    The combine callback receives saved values and call results as lists
+    (in the same order as [acd_saved] and [acd_calls]) and produces the
+    final expression.  This is used by the enter-frame rewriter to emit
+    stack frames that save intermediate values across recursive calls. *)
 let rec decompose_all_calls check expr =
   match check expr with
   | Some cs ->
@@ -3977,8 +4002,20 @@ let rec rewrite_enter_lambda_return
     This is the core of the nontail frame-based transformation for statement
     sequences. When it encounters [Sasgn(id, ty, e)] where [e] contains one or
     more recursive calls, it captures the remaining statements ([rest]) as a
-    "continuation" that is embedded in the Call frame's handler. This avoids
-    needing to return to the Enter handler after each intermediate assignment.
+    "continuation" that is embedded in the Call frame's handler.
+
+    {b Stack frame chaining strategy.}  For [let x = f(a) in rest]:
+    + Push [_CallN\{saved_fields\}] — saves continuation variables live across
+      the call.
+    + Push [_Enter\{args\}] — provides the recursive call's arguments.
+    + The loop pops [_Enter], executes the call, stores the result in
+      [_result], then pops [_CallN] whose handler binds [x = _result],
+      restores saved fields, and processes [rest].
+
+    For nested calls like [let x = f(a) in let y = f(b) in rest], frames
+    chain: [_Call1]'s handler processes the [let y = ...] assignment, which
+    pushes [_Call2] + [_Enter] for the second call.  The final handler in
+    [_Call2] processes [rest].
 
     The function handles several cases:
     - {b Single direct call}: [let x = f(args) in rest] -- creates one Call

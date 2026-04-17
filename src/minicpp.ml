@@ -480,6 +480,65 @@ let map_stmt
           branches,
         Option.map (List.map fs) default )
 
+(** Iterate over the immediate children of a [cpp_expr], calling [on_expr]
+    for child expressions and [on_stmts] for child statement lists.  Does
+    not recurse — the caller controls recursion depth.  Covers every
+    constructor in {!cpp_expr}. *)
+let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
+  match e with
+  | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _
+  | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
+  | CPPabort _ | CPPenum_val _ | CPPraw _ | CPPbool _ | CPPint _
+  | CPPbrace_init | CPPthis | CPPshared_from_this _ -> ()
+  | CPPfun_call (f, args) -> on_expr f; List.iter on_expr args
+  | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
+  | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
+  | CPPqualified (e', _) | CPPshared_ptr_ctor (_, e')
+  | CPPunique_ptr_ctor (_, e') | CPPany_cast (_, e') | CPPunop (_, e') ->
+    on_expr e'
+  | CPPlambda (_, _, stmts, _) -> on_stmts stmts
+  | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
+  | CPPstruct_id (_, _, es) | CPPnew (_, es) ->
+    List.iter on_expr es
+  | CPPparray (arr, e') -> Array.iter on_expr arr; on_expr e'
+  | CPPmethod_call (obj, _, args) -> on_expr obj; List.iter on_expr args
+  | CPPrequires (_, constraints, _) ->
+    List.iter (fun (e', _) -> on_expr e') constraints
+  | CPPbinop (_, l, r) -> on_expr l; on_expr r
+
+(** Iterate over the immediate children of a [cpp_stmt], calling [on_expr]
+    for child expressions and [on_stmts] for child statement lists.  Does
+    not recurse — the caller controls recursion depth.  Covers every
+    constructor in {!cpp_stmt}. *)
+let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
+  match s with
+  | Sreturn (Some e) | Sexpr e -> on_expr e
+  | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _
+  | Sstruct_def _ | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> ()
+  | Sasgn (_, _, e) -> on_expr e
+  | Sif (cond, then_br, else_br) ->
+    on_expr cond; on_stmts then_br; on_stmts else_br
+  | Sswitch (scrut, _, branches, default) ->
+    on_expr scrut;
+    List.iter (fun (_, stmts) -> on_stmts stmts) branches;
+    Option.iter on_stmts default
+  | Scustom_case (_, scrut, _, branches, _) ->
+    on_expr scrut;
+    List.iter (fun (_, _, stmts) -> on_stmts stmts) branches
+  | Sassign_field (obj, _, e) -> on_expr obj; on_expr e
+  | Swhile (cond, body) -> on_expr cond; on_stmts body
+  | Sblock stmts -> on_stmts stmts
+  | Sblock_custom (_, _, _, _, args, _) -> List.iter on_expr args
+  | Smatch (branches, default) ->
+    List.iter (fun br ->
+      on_expr br.smb_scrutinee;
+      List.iter on_expr br.smb_extra_conds;
+      ( match br.smb_reuse with
+      | Some (cond, _, stmts) -> on_expr cond; on_stmts stmts
+      | None -> () );
+      on_stmts br.smb_body) branches;
+    Option.iter on_stmts default
+
 (** C++ top-level declarations. *)
 type cpp_decl =
   | Dtemplate of (template_type * Id.t) list * cpp_constraint option * cpp_decl
