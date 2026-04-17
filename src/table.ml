@@ -333,6 +333,34 @@ let get_ind_nb_sign_keeps r =
       with Not_found | Invalid_argument _ -> 0 )
   | _ -> 0
 
+let get_ctor_ip_types_opt r =
+  let open GlobRef in
+  match r with
+  | ConstructRef ((kn, i), j) ->
+    ( try
+        let ind = unsafe_lookup_ind kn in
+        Some ind.ind_packets.(i).ip_types.(j - 1)
+      with Not_found | Invalid_argument _ -> None )
+  | _ -> None
+
+(** Get the number of C++ parameter type variables for the inductive
+    containing [r].  Only [Keep] entries in the PARAMETER portion of
+    [ip_sign] (first [ind_nparams] positions) are counted — type indices
+    are excluded.  Mirrors the [param_vars] computation in
+    [gen_ind_header_v2].  Returns 0 on lookup failure. *)
+let get_ctor_num_param_vars r =
+  let open GlobRef in
+  match r with
+  | ConstructRef ((kn, i), _) ->
+    ( try
+        let ind = unsafe_lookup_ind kn in
+        let p = ind.ind_packets.(i) in
+        let param_sign = List.firstn ind.ind_nparams p.ip_sign in
+        List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
+      with Not_found | Invalid_argument _ -> 0 )
+  | _ -> 0
+
+
 (** Checks if a global reference refers to a typeclass inductive type. *)
 let is_typeclass r =
   let open GlobRef in

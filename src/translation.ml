@@ -4199,15 +4199,82 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
      the same safety guarantees as the old [const T&] approach. *)
   let body_stmts =
     List.fold_left
-      (fun stmts (i, (var_name, _ty)) ->
+      (fun stmts (i, (var_name, _ml_ty)) ->
         if dummies_arr.(i) then
-          let binding_name = let (n, _, _) = field_bindings_arr.(i) in n in
-          let field_expr = CPPvar binding_name in
-          List.map (local_var_subst_stmt var_name field_expr) stmts
+          let (binding_name, _, _) = field_bindings_arr.(i) in
+          List.map (local_var_subst_stmt var_name (CPPvar binding_name)) stmts
         else
           stmts )
       body_stmts
       (List.mapi (fun i x -> (i, x)) rev_ids)
+  in
+  (* For fields stored as [std::any] (erased type indices in type-indexed
+     inductives such as [wrap : Set -> Type]), wrap direct returns of those
+     bindings with [std::any_cast<rty>].
+
+     A struct field is [std::any] when [gen_ind_header_v2] erases its type:
+     this happens when a field's ML type is a [Tvar] that references a type
+     INDEX (not a kept PARAMETER), so it has no C++ template name and
+     [tvar_erase_type] converts it to [Tany].  The pattern variable's ML type
+     is NOT a reliable indicator — the Tmeta reconstructor resolves it to a
+     concrete type in monomorphic contexts, masking the [std::any] storage.
+
+     We only fix DIRECT [return <binding>;] statements.  When the binding is
+     passed to a higher-rank callback (e.g. the auto-generated [wrap_rect]),
+     the field is forwarded as [std::any] unchanged; the existing
+     [ml_codomain_erases_to_any] mechanism handles the cast on the call result. *)
+  let body_stmts =
+    match Table.get_ctor_ip_types_opt cname with
+    | None -> body_stmts
+    | Some ip_tys ->
+      let cast_ty_opt =
+        let t = convert_ml_type_to_cpp_type env Refset'.empty tvars rty in
+        if type_is_erased t then None else Some t
+      in
+      ( match cast_ty_opt with
+      | None -> body_stmts
+      | Some cast_ty ->
+        (* Identify which field bindings are stored as std::any in C++.
+           A field is std::any iff gen_ind_header_v2 would erase its type.
+           gen_ind_header_v2 uses only PARAMETER type vars (not index vars)
+           and applies tvar_erase_type when param_vars is empty — making
+           any Tvar that references an index (rather than a parameter)
+           collapse to Tany.  We replicate that computation here. *)
+        let num_param_vars = Table.get_ctor_num_param_vars cname in
+        let param_vars =
+          List.map Common.tparam_name
+            (List.firstn num_param_vars (Table.get_ind_ip_vars cname))
+        in
+        let ind_ref =
+          match cname with
+          | GlobRef.ConstructRef ((kn, i), _) -> GlobRef.IndRef (kn, i)
+          | r -> r
+        in
+        let ind_ns = Refset'.add ind_ref Refset'.empty in
+        let non_dummy_ip_tys = List.filter (fun t -> not (isTdummy t)) ip_tys in
+        let erased_names =
+          List.mapi (fun i (bn, _, _) ->
+              match List.nth_opt non_dummy_ip_tys i with
+              | Some ip_ty ->
+                let cpp_ty =
+                  convert_ml_type_to_cpp_type (empty_env ()) ind_ns param_vars ip_ty
+                in
+                let cpp_ty =
+                  if param_vars = [] then tvar_erase_type cpp_ty else cpp_ty
+                in
+                if is_erased_type cpp_ty then Some bn else None
+              | None -> None)
+            field_bindings
+          |> List.filter_map Fun.id
+        in
+        if erased_names = [] then body_stmts
+        else
+          List.map (function
+            | Sreturn (Some (CPPvar id))
+              when List.exists (Id.equal id) erased_names ->
+              Sreturn (Some (CPPany_cast (cast_ty, CPPvar id)))
+            | s -> s )
+            body_stmts )
   in
   (* Use std::get (smb_var = Some) when any constructor field is actually used;
      otherwise use holds_alternative only (smb_var = None). *)

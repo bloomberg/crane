@@ -228,6 +228,18 @@ val get_ind_ip_vars : GlobRef.t -> Names.Id.t list
 (** Get number of significant type parameters. *)
 val get_ind_nb_sign_keeps : GlobRef.t -> int
 
+(** Get the ML field types for a constructor, as stored in [ip_types].
+    Returns [None] if the inductive is not in the extraction table.
+    The list order matches the constructor argument order. *)
+val get_ctor_ip_types_opt : GlobRef.t -> Miniml.ml_type list option
+
+(** Get the number of C++ parameter type variables for the inductive
+    containing the given constructor.  Only [Keep] entries in the PARAMETER
+    portion of [ip_sign] (first [ind_nparams] positions) are counted —
+    type indices are excluded.  Mirrors the [param_vars] computation in
+    [gen_ind_header_v2].  Returns 0 on lookup failure. *)
+val get_ctor_num_param_vars : GlobRef.t -> int
+
 (** Check if reference is a typeclass. *)
 val is_typeclass : GlobRef.t -> bool
 
