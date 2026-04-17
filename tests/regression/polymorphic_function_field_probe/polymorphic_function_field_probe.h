@@ -4,7 +4,6 @@
 #include <any>
 #include <functional>
 #include <memory>
-#include <stdexcept>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>
@@ -19,11 +18,7 @@ struct PolymorphicFunctionFieldProbe {
 
   template <typename T1>
   static T1 apply(const std::shared_ptr<poly> &p0, const T1 x) {
-    return p0->apply(([]() -> std::any {
-                       throw std::logic_error("unreachable");
-                       return std::any{};
-                     })(),
-                     x);
+    return std::any_cast<T1>(p0->apply(x));
   }
 
   static inline const std::shared_ptr<poly> p =

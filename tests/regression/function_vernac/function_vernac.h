@@ -1,6 +1,7 @@
 #ifndef INCLUDED_FUNCTION_VERNAC
 #define INCLUDED_FUNCTION_VERNAC
 
+#include <any>
 #include <functional>
 #include <memory>
 #include <type_traits>
@@ -208,8 +209,8 @@ struct FunctionVernac {
   static T1 div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int n) {
     std::function<T1(unsigned int, T1)> f2 =
         [=](unsigned int _pa0, T1 _pa1) mutable { return f1(n, _pa0, _pa1); };
-    T1 f3 = f0(n);
-    T1 f4 = f(n);
+    T1 f3 = std::any_cast<T1>(f0(n));
+    T1 f4 = std::any_cast<T1>(f(n));
     if (n <= 0) {
       return f4;
     } else {
@@ -365,7 +366,7 @@ struct FunctionVernac {
     std::function<T1(unsigned int, std::shared_ptr<List<unsigned int>>, T1)>
         f1 = [=](unsigned int _pa0, std::shared_ptr<List<unsigned int>> _pa1,
                  T1 _pa2) mutable { return f0(l, _pa0, _pa1, _pa2); };
-    T1 f2 = f(l);
+    T1 f2 = std::any_cast<T1>(f(l));
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
       return f2;
     } else {

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NESTED_TREE
 #define INCLUDED_NESTED_TREE
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -146,7 +147,7 @@ struct NestedTree {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree<T2>::Node>(t->v());
-      return f0(d_a0, d_a1, tree_rect<T1, T2>(f, f0, d_a1));
+      return std::any_cast<T1>(f0(d_a0, d_a1, tree_rect<T1, T2>(f, f0, d_a1)));
     }
   }
 
@@ -156,7 +157,7 @@ struct NestedTree {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree<T2>::Node>(t->v());
-      return f0(d_a0, d_a1, tree_rec<T1, T2>(f, f0, d_a1));
+      return std::any_cast<T1>(f0(d_a0, d_a1, tree_rec<T1, T2>(f, f0, d_a1)));
     }
   }
 

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_HIGHER_KINDED
 #define INCLUDED_HIGHER_KINDED
 
+#include <any>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -14,7 +15,7 @@ struct HigherKinded {
   template <typename T1, typename T2 = void, typename T3 = void, typename F0,
             typename F1>
   static T1 hk_map(F0 &&map_f, F1 &&f, const T1 x) {
-    return map_f(f, x);
+    return std::any_cast<T1>(map_f(f, x));
   }
 
   template <typename t_A> struct Tree {

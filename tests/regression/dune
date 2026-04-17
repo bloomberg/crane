@@ -3745,3 +3745,25 @@
   (alias runtest)
   (deps unit_monostate_erase.t.exe)
   (action (run ./unit_monostate_erase.t.exe))))
+
+(subdir higher_rank_argument_probe
+ (rule
+  (targets higher_rank_argument_probe.t.exe)
+  (deps HigherRankArgumentProbe.vo higher_rank_argument_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} higher_rank_argument_probe.t.exe higher_rank_argument_probe.cpp higher_rank_argument_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps higher_rank_argument_probe.t.exe)
+  (action (run ./higher_rank_argument_probe.t.exe))))
+
+(subdir polymorphic_function_field_probe
+ (rule
+  (targets polymorphic_function_field_probe.t.exe)
+  (deps PolymorphicFunctionFieldProbe.vo polymorphic_function_field_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} polymorphic_function_field_probe.t.exe polymorphic_function_field_probe.cpp polymorphic_function_field_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps polymorphic_function_field_probe.t.exe)
+  (action (run ./polymorphic_function_field_probe.t.exe))))

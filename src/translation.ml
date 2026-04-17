@@ -443,6 +443,30 @@ let ml_type_is_unit_or_void ty = ml_type_is_void ty || ml_type_is_unit ty
 (** Filter out erased ([Tdummy]) types from a type list. *)
 let filter_value_types = List.filter (fun t -> not (isTdummy t))
 
+(** Test whether the codomain of an ML function type, after skipping [n]
+    value-domain arrows, erases to [std::any] in the generated C++.
+
+    A [Tvar], [Tvar'], or [Tunknown] codomain erases to [std::any] only when
+    at least one [Tdummy Ktype] was encountered while traversing the domain.
+    That marker identifies a higher-rank, universally-quantified function (e.g.
+    [forall A : Type, A -> A]) whose C++ encoding stores arguments and results
+    as [std::any].  A plain [Tvar i] with no preceding [Tdummy] is a named C++
+    template parameter (e.g. [T2] in [T1 -> T2]) and must {b not} be treated
+    as erased.
+
+    [n] counts the value-domain arrows to skip before inspecting the codomain;
+    pass [0] to query the type's immediate codomain.  The [?has_dummy] flag
+    accumulates whether a [Tdummy] was seen; callers should omit it (defaults
+    to [false]). *)
+let rec ml_codomain_erases_to_any ?(has_dummy = false) n = function
+  | Miniml.Tarr (t, rest) ->
+    if isTdummy t then ml_codomain_erases_to_any ~has_dummy:true n rest
+    else if n > 0 then ml_codomain_erases_to_any ~has_dummy (n - 1) rest
+    else false
+  | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tunknown -> n = 0 && has_dummy
+  | Miniml.Tmeta {contents = Some t} -> ml_codomain_erases_to_any ~has_dummy n t
+  | _ -> false
+
 (** Check if a monad reference uses the reified ITree extraction mode
     (i.e. its monad template string contains ["ITree"]). *)
 let is_monad_reified monad_ref =
@@ -2977,7 +3001,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           access
       | _ ->
         CErrors.anomaly (Pp.str "record field index out of bounds") )
-    | MLapp (MLrel i, args) when i <= n ->
+    | MLapp ((MLrel i | MLmagic (MLrel i)), args) when i <= n ->
       let fld =
         try Some (List.nth non_erased_fields (n - i)) with _ -> None
       in
@@ -2989,29 +3013,34 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           env
       in
       ( match fld with
-      (* CPPfun_call expects args in reverse order; List.rev_map both converts
-         and reverses *)
+      (* [CPPfun_call] expects args in reverse order; [List.rev_map] both
+         converts and reverses.  Filter [MLdummy] args — these are erased type
+         parameters (e.g. [A : Type] in [f : forall A, A -> A]) with no C++
+         runtime representation.  When the field's codomain erases to [std::any]
+         (see [ml_codomain_erases_to_any]), wrap the result with
+         [std::any_cast<T>] to recover the caller's concrete return type. *)
       | Some fld ->
-        CPPfun_call
-          ( make_field_access (gen_expr env t) fld,
-            List.rev_map (gen_expr env') args )
-      | _ -> CErrors.anomaly (Pp.str "record field index out of bounds") )
-    | MLapp (MLmagic (MLrel i), args) when i <= n ->
-      let fld =
-        try Some (List.nth non_erased_fields (n - i)) with _ -> None
-      in
-      let _, env' =
-        push_vars'
-          (List.rev_map
-             (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
-             ids )
-          env
-      in
-      ( match fld with
-      | Some fld ->
-        CPPfun_call
-          ( make_field_access (gen_expr env t) fld,
-            List.rev_map (gen_expr env') args )
+        let value_args =
+          List.filter (fun a -> match a with MLdummy _ -> false | _ -> true) args
+        in
+        let call =
+          CPPfun_call
+            ( make_field_access (gen_expr env t) fld,
+              List.rev_map (gen_expr env') value_args )
+        in
+        let fld_ty_opt =
+          try Some (List.nth non_erased_field_types (n - i)) with _ -> None
+        in
+        let n_value_args = List.length value_args in
+        let erased_cod =
+          match fld_ty_opt with
+          | Some ft -> ml_codomain_erases_to_any n_value_args ft
+          | None -> false
+        in
+        ( match (erased_cod, tctx.current_cpp_return_type) with
+        | (true, Some ty) when ty <> Tany && not (is_erased_type ty) && ty <> Tvoid ->
+          CPPany_cast (ty, call)
+        | _ -> call )
       | _ -> CErrors.anomaly (Pp.str "record field index out of bounds") )
     | _ ->
       (* Destructure record fields into local variables, then evaluate the body
@@ -3101,7 +3130,15 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
 (** Handle eta expansion, curried function application, and promoted type arg
     resolution. Recovers erased template type args at call sites where C++ can't
     deduce them from lambda arguments, using the enclosing function's return
-    type. *)
+    type.
+
+    In the normal (exact-application) case, also detects calls that return
+    [std::any] because the callee is higher-rank polymorphic — either a record
+    field (e.g. [apply : forall A, A -> A] stored as
+    [std::function<std::any(std::any)>]) or an [MLrel] callback with a
+    [Tdummy]-guarded [Tvar] codomain.  When such a call is made in a context
+    where the enclosing function's return type is a concrete C++ type [T], the
+    result is wrapped with [std::any_cast<T>].  See [ml_codomain_erases_to_any]. *)
 and eta_fun env f args =
   let rec get_eta_args dom args =
     match (dom, args) with
@@ -3987,7 +4024,46 @@ and eta_fun env f args =
       let excess = List.rev (List.skipn n_value_dom args) in
       CPPfun_call (CPPfun_call (gen_expr env f, primary), excess)
     else
-      CPPfun_call (gen_expr env f, List.rev args)
+      (* Check whether this call returns [std::any] (erased type) but the
+         enclosing function expects a concrete type, requiring an
+         [std::any_cast<T>] wrapper.  See [ml_codomain_erases_to_any].
+         Two callee forms are handled:
+         - [MLcase] single-branch record projection whose field type has a
+           higher-rank codomain (e.g. [apply : forall A, A -> A] stored as
+           [std::function<std::any(std::any)>]).
+         - [MLrel] higher-rank callback whose env-type has a [Tvar] codomain
+           guarded by [Tdummy] (e.g. [f : forall A, A -> A]). *)
+      let result = CPPfun_call (gen_expr env f, List.rev args) in
+      let n = n_args in
+      let erased_cod =
+        match f with
+        | MLcase (case_ty, _, pv) when Array.length pv = 1 ->
+          let (binds, _, _, br_body) = pv.(0) in
+          let n_binds = List.length binds in
+          let proj_idx =
+            match br_body with
+            | MLrel i when i >= 1 && i <= n_binds -> Some (n_binds - i)
+            | MLmagic (MLrel i) when i >= 1 && i <= n_binds -> Some (n_binds - i)
+            | _ -> None
+          in
+          ( match proj_idx with
+          | Some idx ->
+            ( match case_ty with
+            | Tglob (r, _, _) ->
+              let all_ft = Table.record_field_types r in
+              let non_erased = filter_value_types all_ft in
+              ( try ml_codomain_erases_to_any n (List.nth non_erased idx)
+                with _ -> false )
+            | _ -> false )
+          | None -> false )
+        | MLrel i ->
+          ( try ml_codomain_erases_to_any n (get_env_type i) with _ -> false )
+        | _ -> false
+      in
+      ( match (erased_cod, tctx.current_cpp_return_type) with
+      | (true, Some ty) when ty <> Tany && not (is_erased_type ty) && ty <> Tvoid ->
+        CPPany_cast (ty, result)
+      | _ -> result )
 
 (** Build the qualified constructor struct type for a pattern match branch.
 
@@ -7471,6 +7547,15 @@ let detect_cps_params (self_ref : GlobRef.t) (n_params : int) (body : ml_ast) :
 
 (** Generate a C++ function definition from an ML function body.
 
+    When the body has fewer lambda binders than the ML type's domain (i.e. it
+    is under-applied), missing parameters are eta-expanded by synthesising
+    [MLrel] arguments.  [Tdummy]-typed entries in the missing list are skipped:
+    they represent erased type parameters (e.g. [A : Type] in
+    [apply : forall A, A -> A]) that have no C++ runtime representation.
+    Including them would produce a spurious [CPPabort "unreachable"] IIFE as an
+    extra argument, causing [std::function] call sites to receive the wrong
+    number of arguments.
+
     @param n     the global reference for the function being defined
     @param b     the ML AST body
     @param cty   the C++ type of the function (decomposed internally into domain
@@ -8179,7 +8264,15 @@ let gen_dfun n b cty ty temps =
         | _ ->
           let k = List.length missing in
           let lifted_b = ast_lift k b in
-          let args = List.rev (List.mapi (fun i _ -> MLrel (i + 1)) missing) in
+          (* Only pass value-typed (non-dummy) eta args to the body.
+             Dummy-typed entries in [missing] represent erased type parameters
+             (e.g. [A : Type] in [apply : forall A, A -> A]).  Passing
+             [MLrel (i+1)] for them would generate a [CPPabort "unreachable"]
+             IIFE as an extra argument to a [std::function] field that only
+             takes one value argument. *)
+          let args = List.rev (List.filter_map
+            (fun (i, (_, t)) -> if isTdummy t then None else Some (MLrel (i + 1)))
+            (List.mapi (fun i x -> (i, x)) missing)) in
           List.map
             (glob_subst_stmt n rec_call)
             (gen_stmts env cofix_wrap (MLapp (lifted_b, args)))
