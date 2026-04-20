@@ -3800,3 +3800,168 @@
   (alias runtest)
   (deps type_indexed_inductive_probe.t.exe)
   (action (run ./type_indexed_inductive_probe.t.exe))))
+
+(subdir rocq_bug_10757
+ (rule
+  (targets rocq_bug_10757.t.exe)
+  (deps RocqBug10757.vo rocq_bug_10757.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_10757.t.exe rocq_bug_10757.cpp rocq_bug_10757.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_10757.t.exe)
+  (action (run ./rocq_bug_10757.t.exe))))
+
+(subdir rocq_bug_10796
+ (rule
+  (targets rocq_bug_10796.t.exe)
+  (deps RocqBug10796.vo rocq_bug_10796.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_10796.t.exe rocq_bug_10796.cpp rocq_bug_10796.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_10796.t.exe)
+  (action (run ./rocq_bug_10796.t.exe))))
+
+(subdir rocq_bug_11114
+ (rule
+  (targets rocq_bug_11114.t.exe)
+  (deps RocqBug11114.vo rocq_bug_11114.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_11114.t.exe rocq_bug_11114.cpp rocq_bug_11114.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_11114.t.exe)
+  (action (run ./rocq_bug_11114.t.exe))))
+
+(subdir rocq_bug_13453
+ (rule
+  (targets rocq_bug_13453.t.exe)
+  (deps RocqBug13453.vo rocq_bug_13453.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_13453.t.exe rocq_bug_13453.cpp rocq_bug_13453.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_13453.t.exe)
+  (action (run ./rocq_bug_13453.t.exe))))
+
+(subdir rocq_bug_13581
+ (rule
+  (targets rocq_bug_13581.t.exe)
+  (deps RocqBug13581.vo rocq_bug_13581.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_13581.t.exe rocq_bug_13581.cpp rocq_bug_13581.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_13581.t.exe)
+  (action (run ./rocq_bug_13581.t.exe))))
+
+(subdir rocq_bug_14843
+ (rule
+  (targets rocq_bug_14843.t.exe)
+  (deps RocqBug14843.vo rocq_bug_14843.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_14843.t.exe rocq_bug_14843.cpp rocq_bug_14843.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_14843.t.exe)
+  (action (run ./rocq_bug_14843.t.exe))))
+
+(subdir rocq_bug_20894
+ (rule
+  (targets rocq_bug_20894.t.exe)
+  (deps RocqBug20894.vo rocq_bug_20894.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_20894.t.exe rocq_bug_20894.cpp rocq_bug_20894.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_20894.t.exe)
+  (action (run ./rocq_bug_20894.t.exe))))
+
+(subdir rocq_bug_20989
+ (rule
+  (targets rocq_bug_20989.t.exe)
+  (deps RocqBug20989.vo rocq_bug_20989.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_20989.t.exe rocq_bug_20989.cpp rocq_bug_20989.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_20989.t.exe)
+  (action (run ./rocq_bug_20989.t.exe))))
+
+(subdir rocq_bug_3923
+ (rule
+  (targets rocq_bug_3923.t.exe)
+  (deps RocqBug3923.vo rocq_bug_3923.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_3923.t.exe rocq_bug_3923.cpp rocq_bug_3923.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_3923.t.exe)
+  (action (run ./rocq_bug_3923.t.exe))))
+
+(subdir rocq_bug_4616
+ (rule
+  (targets rocq_bug_4616.t.exe)
+  (deps RocqBug4616.vo rocq_bug_4616.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_4616.t.exe rocq_bug_4616.cpp rocq_bug_4616.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_4616.t.exe)
+  (action (run ./rocq_bug_4616.t.exe))))
+
+(subdir rocq_bug_4709
+ (rule
+  (targets rocq_bug_4709.t.exe)
+  (deps RocqBug4709.vo rocq_bug_4709.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_4709.t.exe rocq_bug_4709.cpp rocq_bug_4709.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_4709.t.exe)
+  (action (run ./rocq_bug_4709.t.exe))))
+
+(subdir rocq_bug_4710
+ (rule
+  (targets rocq_bug_4710.t.exe)
+  (deps RocqBug4710.vo rocq_bug_4710.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_4710.t.exe rocq_bug_4710.cpp rocq_bug_4710.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_4710.t.exe)
+  (action (run ./rocq_bug_4710.t.exe))))
+
+(subdir rocq_bug_4844
+ (rule
+  (targets rocq_bug_4844.t.exe)
+  (deps RocqBug4844.vo rocq_bug_4844.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_4844.t.exe rocq_bug_4844.cpp rocq_bug_4844.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_4844.t.exe)
+  (action (run ./rocq_bug_4844.t.exe))))
+
+(subdir rocq_bug_5177
+ (rule
+  (targets rocq_bug_5177.t.exe)
+  (deps RocqBug5177.vo rocq_bug_5177.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_5177.t.exe rocq_bug_5177.cpp rocq_bug_5177.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_5177.t.exe)
+  (action (run ./rocq_bug_5177.t.exe))))
+
+(subdir rocq_bug_7228
+ (rule
+  (targets rocq_bug_7228.t.exe)
+  (deps RocqBug7228.vo rocq_bug_7228.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_7228.t.exe rocq_bug_7228.cpp rocq_bug_7228.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_7228.t.exe)
+  (action (run ./rocq_bug_7228.t.exe))))

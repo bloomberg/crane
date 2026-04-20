@@ -105,3 +105,512 @@
   (deps dependent_return_unit_probe.t.exe)
   (action (run ./dependent_return_unit_probe.t.exe))))
 
+
+(subdir fix_escape_capture
+ (rule
+  (targets fix_escape_capture.t.exe)
+  (deps FixEscapeCapture.vo fix_escape_capture.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_escape_capture.t.exe fix_escape_capture.cpp fix_escape_capture.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_escape_capture.t.exe)
+  (action (run ./fix_escape_capture.t.exe))))
+
+(subdir fix_escape_match
+ (rule
+  (targets fix_escape_match.t.exe)
+  (deps FixEscapeMatch.vo fix_escape_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_escape_match.t.exe fix_escape_match.cpp fix_escape_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_escape_match.t.exe)
+  (action (run ./fix_escape_match.t.exe))))
+
+(subdir this_capture_dangling
+ (rule
+  (targets this_capture_dangling.t.exe)
+  (deps ThisCaptureDangling.vo this_capture_dangling.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} this_capture_dangling.t.exe this_capture_dangling.cpp this_capture_dangling.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps this_capture_dangling.t.exe)
+  (action (run ./this_capture_dangling.t.exe))))
+
+(subdir closure_pair_this
+ (rule
+  (targets closure_pair_this.t.exe)
+  (deps ClosurePairThis.vo closure_pair_this.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} closure_pair_this.t.exe closure_pair_this.cpp closure_pair_this.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps closure_pair_this.t.exe)
+  (action (run ./closure_pair_this.t.exe))))
+
+(subdir accum_closure_capture
+ (rule
+  (targets accum_closure_capture.t.exe)
+  (deps AccumClosureCapture.vo accum_closure_capture.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} accum_closure_capture.t.exe accum_closure_capture.cpp accum_closure_capture.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps accum_closure_capture.t.exe)
+  (action (run ./accum_closure_capture.t.exe))))
+
+(subdir closure_in_ctor
+ (rule
+  (targets closure_in_ctor.t.exe)
+  (deps ClosureInCtor.vo closure_in_ctor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} closure_in_ctor.t.exe closure_in_ctor.cpp closure_in_ctor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps closure_in_ctor.t.exe)
+  (action (run ./closure_in_ctor.t.exe))))
+
+(subdir closure_let_escape
+ (rule
+  (targets closure_let_escape.t.exe)
+  (deps ClosureLetEscape.vo closure_let_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} closure_let_escape.t.exe closure_let_escape.cpp closure_let_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps closure_let_escape.t.exe)
+  (action (run ./closure_let_escape.t.exe))))
+
+(subdir closure_map_escape
+ (rule
+  (targets closure_map_escape.t.exe)
+  (deps ClosureMapEscape.vo closure_map_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} closure_map_escape.t.exe closure_map_escape.cpp closure_map_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps closure_map_escape.t.exe)
+  (action (run ./closure_map_escape.t.exe))))
+
+(subdir closure_nested_escape
+ (rule
+  (targets closure_nested_escape.t.exe)
+  (deps ClosureNestedEscape.vo closure_nested_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} closure_nested_escape.t.exe closure_nested_escape.cpp closure_nested_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps closure_nested_escape.t.exe)
+  (action (run ./closure_nested_escape.t.exe))))
+
+(subdir fix_via_simple_lambda
+ (rule
+  (targets fix_via_simple_lambda.t.exe)
+  (deps FixViaSimpleLambda.vo fix_via_simple_lambda.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_via_simple_lambda.t.exe fix_via_simple_lambda.cpp fix_via_simple_lambda.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_via_simple_lambda.t.exe)
+  (action (run ./fix_via_simple_lambda.t.exe))))
+
+(subdir fix_shared_ptr_field
+ (rule
+  (targets fix_shared_ptr_field.t.exe)
+  (deps FixSharedPtrField.vo fix_shared_ptr_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_shared_ptr_field.t.exe fix_shared_ptr_field.cpp fix_shared_ptr_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_shared_ptr_field.t.exe)
+  (action (run ./fix_shared_ptr_field.t.exe))))
+
+(subdir simple_lambda_field_capture
+ (rule
+  (targets simple_lambda_field_capture.t.exe)
+  (deps SimpleLambdaFieldCapture.vo simple_lambda_field_capture.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} simple_lambda_field_capture.t.exe simple_lambda_field_capture.cpp simple_lambda_field_capture.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps simple_lambda_field_capture.t.exe)
+  (action (run ./simple_lambda_field_capture.t.exe))))
+
+(subdir fix_in_record
+ (rule
+  (targets fix_in_record.t.exe)
+  (deps FixInRecord.vo fix_in_record.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_in_record.t.exe fix_in_record.cpp fix_in_record.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_in_record.t.exe)
+  (action (run ./fix_in_record.t.exe))))
+
+
+
+(subdir closure_recursive_build
+ (rule
+  (targets closure_recursive_build.t.exe)
+  (deps ClosureRecursiveBuild.vo closure_recursive_build.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} closure_recursive_build.t.exe closure_recursive_build.cpp closure_recursive_build.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps closure_recursive_build.t.exe)
+  (action (run ./closure_recursive_build.t.exe))))
+
+(subdir fix_higher_order
+ (rule
+  (targets fix_higher_order.t.exe)
+  (deps FixHigherOrder.vo fix_higher_order.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_higher_order.t.exe fix_higher_order.cpp fix_higher_order.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_higher_order.t.exe)
+  (action (run ./fix_higher_order.t.exe))))
+
+(subdir fix_fold_escape
+ (rule
+  (targets fix_fold_escape.t.exe)
+  (deps FixFoldEscape.vo fix_fold_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_fold_escape.t.exe fix_fold_escape.cpp fix_fold_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_fold_escape.t.exe)
+  (action (run ./fix_fold_escape.t.exe))))
+
+(subdir value_type_match_fix
+ (rule
+  (targets value_type_match_fix.t.exe)
+  (deps ValueTypeMatchFix.vo value_type_match_fix.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} value_type_match_fix.t.exe value_type_match_fix.cpp value_type_match_fix.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps value_type_match_fix.t.exe)
+  (action (run ./value_type_match_fix.t.exe))))
+
+(subdir fix_direct_return
+ (rule
+  (targets fix_direct_return.t.exe)
+  (deps FixDirectReturn.vo fix_direct_return.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_direct_return.t.exe fix_direct_return.cpp fix_direct_return.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_direct_return.t.exe)
+  (action (run ./fix_direct_return.t.exe))))
+
+(subdir fix_capture_fn_arg
+ (rule
+  (targets fix_capture_fn_arg.t.exe)
+  (deps FixCaptureFnArg.vo fix_capture_fn_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_capture_fn_arg.t.exe fix_capture_fn_arg.cpp fix_capture_fn_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_capture_fn_arg.t.exe)
+  (action (run ./fix_capture_fn_arg.t.exe))))
+
+(subdir fix_pair_two_closures
+ (rule
+  (targets fix_pair_two_closures.t.exe)
+  (deps FixPairTwoClosures.vo fix_pair_two_closures.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_pair_two_closures.t.exe fix_pair_two_closures.cpp fix_pair_two_closures.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_pair_two_closures.t.exe)
+  (action (run ./fix_pair_two_closures.t.exe))))
+
+(subdir fix_chain_build
+ (rule
+  (targets fix_chain_build.t.exe)
+  (deps FixChainBuild.vo fix_chain_build.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_chain_build.t.exe fix_chain_build.cpp fix_chain_build.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_chain_build.t.exe)
+  (action (run ./fix_chain_build.t.exe))))
+
+(subdir cps_closure_chain
+ (rule
+  (targets cps_closure_chain.t.exe)
+  (deps CpsClosureChain.vo cps_closure_chain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cps_closure_chain.t.exe cps_closure_chain.cpp cps_closure_chain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps cps_closure_chain.t.exe)
+  (action (run ./cps_closure_chain.t.exe))))
+
+(subdir match_ref_after_move
+ (rule
+  (targets match_ref_after_move.t.exe)
+  (deps MatchRefAfterMove.vo match_ref_after_move.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} match_ref_after_move.t.exe match_ref_after_move.cpp match_ref_after_move.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps match_ref_after_move.t.exe)
+  (action (run ./match_ref_after_move.t.exe))))
+
+(subdir tailrec_reorder_probe
+ (rule
+  (targets tailrec_reorder_probe.t.exe)
+  (deps TailrecReorderProbe.vo tailrec_reorder_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tailrec_reorder_probe.t.exe tailrec_reorder_probe.cpp tailrec_reorder_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tailrec_reorder_probe.t.exe)
+  (action (run ./tailrec_reorder_probe.t.exe))))
+
+(subdir fold_closure_build
+ (rule
+  (targets fold_closure_build.t.exe)
+  (deps FoldClosureBuild.vo fold_closure_build.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fold_closure_build.t.exe fold_closure_build.cpp fold_closure_build.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fold_closure_build.t.exe)
+  (action (run ./fold_closure_build.t.exe))))
+
+(subdir mutual_fix_escape
+ (rule
+  (targets mutual_fix_escape.t.exe)
+  (deps MutualFixEscape.vo mutual_fix_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mutual_fix_escape.t.exe mutual_fix_escape.cpp mutual_fix_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mutual_fix_escape.t.exe)
+  (action (run ./mutual_fix_escape.t.exe))))
+
+(subdir nested_match_closure
+ (rule
+  (targets nested_match_closure.t.exe)
+  (deps NestedMatchClosure.vo nested_match_closure.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_match_closure.t.exe nested_match_closure.cpp nested_match_closure.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_match_closure.t.exe)
+  (action (run ./nested_match_closure.t.exe))))
+
+(subdir this_capture_record
+ (rule
+  (targets this_capture_record.t.exe)
+  (deps ThisCaptureRecord.vo this_capture_record.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} this_capture_record.t.exe this_capture_record.cpp this_capture_record.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps this_capture_record.t.exe)
+  (action (run ./this_capture_record.t.exe))))
+
+(subdir reuse_mixed_fields
+ (rule
+  (targets reuse_mixed_fields.t.exe)
+  (deps ReuseMixedFields.vo reuse_mixed_fields.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_mixed_fields.t.exe reuse_mixed_fields.cpp reuse_mixed_fields.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_mixed_fields.t.exe)
+  (action (run ./reuse_mixed_fields.t.exe))))
+
+(subdir reuse_tag_mismatch
+ (rule
+  (targets reuse_tag_mismatch.t.exe)
+  (deps ReuseTagMismatch.vo reuse_tag_mismatch.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_tag_mismatch.t.exe reuse_tag_mismatch.cpp reuse_tag_mismatch.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_tag_mismatch.t.exe)
+  (action (run ./reuse_tag_mismatch.t.exe))))
+
+(subdir existential_closure_probe
+ (rule
+  (targets existential_closure_probe.t.exe)
+  (deps ExistentialClosureProbe.vo existential_closure_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} existential_closure_probe.t.exe existential_closure_probe.cpp existential_closure_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps existential_closure_probe.t.exe)
+  (action (run ./existential_closure_probe.t.exe))))
+
+(subdir reuse_use_after_move
+ (rule
+  (targets reuse_use_after_move.t.exe)
+  (deps ReuseUseAfterMove.vo reuse_use_after_move.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_use_after_move.t.exe reuse_use_after_move.cpp reuse_use_after_move.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_use_after_move.t.exe)
+  (action (run ./reuse_use_after_move.t.exe))))
+
+(subdir reuse_self_cycle
+ (rule
+  (targets reuse_self_cycle.t.exe)
+  (deps ReuseSelfCycle.vo reuse_self_cycle.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_self_cycle.t.exe reuse_self_cycle.cpp reuse_self_cycle.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_self_cycle.t.exe)
+  (action (run ./reuse_self_cycle.t.exe))))
+
+(subdir cofix_this_thunk
+ (rule
+  (targets cofix_this_thunk.t.exe)
+  (deps CofixThisThunk.vo cofix_this_thunk.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cofix_this_thunk.t.exe cofix_this_thunk.cpp cofix_this_thunk.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps cofix_this_thunk.t.exe)
+  (action (run ./cofix_this_thunk.t.exe))))
+
+
+(subdir fix_compose_escape
+ (rule
+  (targets fix_compose_escape.t.exe)
+  (deps FixComposeEscape.vo fix_compose_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_compose_escape.t.exe fix_compose_escape.cpp fix_compose_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_compose_escape.t.exe)
+  (action (run ./fix_compose_escape.t.exe))))
+
+(subdir fix_curried_escape
+ (rule
+  (targets fix_curried_escape.t.exe)
+  (deps FixCurriedEscape.vo fix_curried_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_curried_escape.t.exe fix_curried_escape.cpp fix_curried_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_curried_escape.t.exe)
+  (action (run ./fix_curried_escape.t.exe))))
+
+(subdir reuse_lambda_capture
+ (rule
+  (targets reuse_lambda_capture.t.exe)
+  (deps ReuseLambdaCapture.vo reuse_lambda_capture.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_lambda_capture.t.exe reuse_lambda_capture.cpp reuse_lambda_capture.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_lambda_capture.t.exe)
+  (action (run ./reuse_lambda_capture.t.exe))))
+
+(subdir rocq_bug_14100
+ (rule
+  (targets rocq_bug_14100.t.exe)
+  (deps RocqBug14100.vo rocq_bug_14100.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_14100.t.exe rocq_bug_14100.cpp rocq_bug_14100.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_14100.t.exe)
+  (action (run ./rocq_bug_14100.t.exe))))
+
+(subdir rocq_bug_14174
+ (rule
+  (targets rocq_bug_14174.t.exe)
+  (deps RocqBug14174.vo rocq_bug_14174.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_14174.t.exe rocq_bug_14174.cpp rocq_bug_14174.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_14174.t.exe)
+  (action (run ./rocq_bug_14174.t.exe))))
+
+(subdir rocq_bug_16288
+ (rule
+  (targets rocq_bug_16288.t.exe)
+  (deps RocqBug16288.vo rocq_bug_16288.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_16288.t.exe rocq_bug_16288.cpp rocq_bug_16288.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_16288.t.exe)
+  (action (run ./rocq_bug_16288.t.exe))))
+
+(subdir rocq_bug_3287
+ (rule
+  (targets rocq_bug_3287.t.exe)
+  (deps RocqBug3287.vo rocq_bug_3287.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_3287.t.exe rocq_bug_3287.cpp rocq_bug_3287.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_3287.t.exe)
+  (action (run ./rocq_bug_3287.t.exe))))
+
+(subdir rocq_bug_4720
+ (rule
+  (targets rocq_bug_4720.t.exe)
+  (deps RocqBug4720.vo rocq_bug_4720.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_4720.t.exe rocq_bug_4720.cpp rocq_bug_4720.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_4720.t.exe)
+  (action (run ./rocq_bug_4720.t.exe))))
+
+(subdir reuse_move_shadow
+ (rule
+  (targets reuse_move_shadow.t.exe)
+  (deps ReuseMoveShadow.vo reuse_move_shadow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_move_shadow.t.exe reuse_move_shadow.cpp reuse_move_shadow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_move_shadow.t.exe)
+  (action (run ./reuse_move_shadow.t.exe))))
+
+(subdir reuse_fn_in_body
+ (rule
+  (targets reuse_fn_in_body.t.exe)
+  (deps ReuseFnInBody.vo reuse_fn_in_body.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_fn_in_body.t.exe reuse_fn_in_body.cpp reuse_fn_in_body.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_fn_in_body.t.exe)
+  (action (run ./reuse_fn_in_body.t.exe))))
+
+(subdir fix_move_capture
+ (rule
+  (targets fix_move_capture.t.exe)
+  (deps FixMoveCapture.vo fix_move_capture.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_move_capture.t.exe fix_move_capture.cpp fix_move_capture.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_move_capture.t.exe)
+  (action (run ./fix_move_capture.t.exe))))
+
+(subdir let_pair_shadow
+ (rule
+  (targets let_pair_shadow.t.exe)
+  (deps LetPairShadow.vo let_pair_shadow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_pair_shadow.t.exe let_pair_shadow.cpp let_pair_shadow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_pair_shadow.t.exe)
+  (action (run ./let_pair_shadow.t.exe))))
