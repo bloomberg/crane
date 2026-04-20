@@ -229,8 +229,8 @@ struct LoopifyTreePaths {
       struct _Call1 {
         unsigned int _s0;
         std::shared_ptr<tree> _s1;
-        const unsigned int _s2;
-        unsigned int _s3;
+        unsigned int _s2;
+        const unsigned int _s3;
       };
 
       struct _Call2 {
@@ -260,15 +260,15 @@ struct LoopifyTreePaths {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_self->v());
             unsigned int new_acc = (acc + d_a1);
-            _stack.emplace_back(_Call1{d_a1, d_a2, target, new_acc});
+            _stack.emplace_back(_Call1{d_a1, d_a2, new_acc, target});
             _stack.emplace_back(_Enter{d_a0.get(), new_acc});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           const auto &_f = std::get<_Call1>(_frame);
           unsigned int d_a1 = _f._s0;
           std::shared_ptr<tree> d_a2 = _f._s1;
-          const unsigned int target = _f._s2;
-          unsigned int new_acc = _f._s3;
+          unsigned int new_acc = _f._s2;
+          const unsigned int target = _f._s3;
           if (_result.has_value()) {
             const std::shared_ptr<List<unsigned int>> &path = *_result;
             _result = std::make_optional<std::shared_ptr<List<unsigned int>>>(

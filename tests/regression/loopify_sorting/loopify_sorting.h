@@ -149,14 +149,14 @@ struct LoopifySorting {
           } else {
             const auto &[d_a00, d_a10] =
                 std::get<typename List<T1>::Cons>(d_a1->v());
-            _stack.emplace_back(_Call1{d_a00, d_a0});
+            _stack.emplace_back(_Call1{d_a0, d_a00});
             _stack.emplace_back(_Enter{d_a10});
           }
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
-        T1 d_a00 = _f._s0;
-        T1 d_a0 = _f._s1;
+        T1 d_a0 = _f._s0;
+        T1 d_a00 = _f._s1;
         const std::shared_ptr<List<T1>> &l1 = _result.first;
         const std::shared_ptr<List<T1>> &l2 = _result.second;
         _result =

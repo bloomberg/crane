@@ -113,9 +113,9 @@ struct LetPairShadow {
       auto _cs = f(acc, d_a0);
       const T3 &new_acc = _cs.first;
       const T2 &y = _cs.second;
-      auto _cs = map_accum<T1, T2, T3>(f, new_acc, d_a1);
-      const std::shared_ptr<mylist<T2>> &rest = _cs.first;
-      const T3 &final_acc = _cs.second;
+      auto _cs1 = map_accum<T1, T2, T3>(f, new_acc, d_a1);
+      const std::shared_ptr<mylist<T2>> &rest = _cs1.first;
+      const T3 &final_acc = _cs1.second;
       return std::make_pair(mylist<T2>::mycons(y, rest), final_acc);
     }
   }

@@ -747,8 +747,8 @@ LoopifyTrees::count_nodes(
   };
 
   struct _Call1 {
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s0;
-    unsigned int _s1;
+    unsigned int _s0;
+    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s1;
   };
 
   struct _Call2 {
@@ -774,22 +774,22 @@ LoopifyTrees::count_nodes(
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t->v());
-        _stack.emplace_back(_Call1{d_a2, d_a1});
+        _stack.emplace_back(_Call1{d_a1, d_a2});
         _stack.emplace_back(_Enter{d_a0});
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       const auto &_f = std::get<_Call1>(_frame);
-      std::shared_ptr<LoopifyTrees::tree<unsigned int>> d_a2 = _f._s0;
-      unsigned int d_a1 = _f._s1;
+      unsigned int d_a1 = _f._s0;
+      std::shared_ptr<LoopifyTrees::tree<unsigned int>> d_a2 = _f._s1;
       const unsigned int &lc = _result.first;
       const unsigned int &ls = _result.second;
-      _stack.emplace_back(_Call2{ls, d_a1, lc});
+      _stack.emplace_back(_Call2{d_a1, lc, ls});
       _stack.emplace_back(_Enter{d_a2});
     } else {
       const auto &_f = std::get<_Call2>(_frame);
-      unsigned int ls = _f._s0;
-      unsigned int d_a1 = _f._s1;
-      unsigned int lc = _f._s2;
+      unsigned int d_a1 = _f._s0;
+      unsigned int lc = _f._s1;
+      unsigned int ls = _f._s2;
       const unsigned int &rc = _result.first;
       const unsigned int &rs = _result.second;
       _result = std::make_pair(((lc + rc) + 1), (d_a1 + (ls + rs)));
@@ -1117,8 +1117,8 @@ LoopifyTrees::tree_min_max(
   };
 
   struct _Call1 {
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s0;
-    unsigned int _s1;
+    unsigned int _s0;
+    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s1;
   };
 
   struct _Call2 {
@@ -1144,13 +1144,13 @@ LoopifyTrees::tree_min_max(
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t->v());
-        _stack.emplace_back(_Call1{d_a2, d_a1});
+        _stack.emplace_back(_Call1{d_a1, d_a2});
         _stack.emplace_back(_Enter{d_a0});
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       const auto &_f = std::get<_Call1>(_frame);
-      std::shared_ptr<LoopifyTrees::tree<unsigned int>> d_a2 = _f._s0;
-      unsigned int d_a1 = _f._s1;
+      unsigned int d_a1 = _f._s0;
+      std::shared_ptr<LoopifyTrees::tree<unsigned int>> d_a2 = _f._s1;
       const unsigned int &lmin = _result.first;
       const unsigned int &lmax = _result.second;
       _stack.emplace_back(_Call2{d_a1, lmax, lmin});

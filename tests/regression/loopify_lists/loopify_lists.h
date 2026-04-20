@@ -976,8 +976,8 @@ struct LoopifyLists {
     };
 
     struct _Call1 {
-      F0 _s0;
-      unsigned int _s1;
+      unsigned int _s0;
+      F0 _s1;
       F1 _s2;
     };
 
@@ -1002,13 +1002,13 @@ struct LoopifyLists {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename list<unsigned int>::Cons>(l->v());
-          _stack.emplace_back(_Call1{p, d_a0, q});
+          _stack.emplace_back(_Call1{d_a0, p, q});
           _stack.emplace_back(_Enter{d_a1});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
-        F0 p = _f._s0;
-        unsigned int d_a0 = _f._s1;
+        unsigned int d_a0 = _f._s0;
+        F0 p = _f._s1;
         F1 q = _f._s2;
         const std::pair<std::shared_ptr<list<unsigned int>>,
                         std::shared_ptr<list<unsigned int>>> &p0 =

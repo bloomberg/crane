@@ -36,9 +36,9 @@ LetPairShadow::double_call_destruct(const unsigned int a, const unsigned int b,
   auto _cs = add_pair(a, b);
   const unsigned int &sum_ab = _cs.first;
   const unsigned int &prod_ab = _cs.second;
-  auto _cs = sub_pair(c, d);
-  const unsigned int &diff_cd = _cs.first;
-  const unsigned int &sum_cd = _cs.second;
+  auto _cs1 = sub_pair(c, d);
+  const unsigned int &diff_cd = _cs1.first;
+  const unsigned int &sum_cd = _cs1.second;
   return (((sum_ab + prod_ab) + diff_cd) + sum_cd);
 }
 
@@ -49,11 +49,11 @@ __attribute__((pure)) unsigned int LetPairShadow::triple_call_destruct(
   auto _cs = add_pair(a, b);
   const unsigned int &r1 = _cs.first;
   const unsigned int &r2 = _cs.second;
-  auto _cs = add_pair(c, d);
-  const unsigned int &r3 = _cs.first;
-  const unsigned int &r4 = _cs.second;
-  auto _cs = add_pair(e, f);
-  const unsigned int &r5 = _cs.first;
-  const unsigned int &r6 = _cs.second;
+  auto _cs1 = add_pair(c, d);
+  const unsigned int &r3 = _cs1.first;
+  const unsigned int &r4 = _cs1.second;
+  auto _cs2 = add_pair(e, f);
+  const unsigned int &r5 = _cs2.first;
+  const unsigned int &r6 = _cs2.second;
   return (((((r1 + r2) + r3) + r4) + r5) + r6);
 }

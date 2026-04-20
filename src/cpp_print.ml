@@ -1430,67 +1430,30 @@ and pp_cpp_stmt env args = function
     in
     prlist_with_sep fnl (fun x -> x) (decl_pp :: stmt_pps)
   | Scustom_case (typ, t, tyargs, cases, cmatch) ->
-    (* When the template uses %scrut more than once and the scrutinee is a
-       non-trivial expression (e.g., a function call), cache it in a temporary
-       to avoid double evaluation. This fixes Infer OPTIONAL_EMPTY_ACCESS
-       false positives where the same optional-returning call appears in both
-       the has_value() check and the dereference. *)
-    let scrut_uses =
-      let scrut_marker = "%scrut" in
-      let plen = String.length scrut_marker in
-      let n = String.length cmatch in
-      let matches_at i =
-        let ok = ref true in
-        for j = 0 to plen - 1 do
-          if cmatch.[i + j] <> scrut_marker.[j] then ok := false
-        done;
-        !ok
-      in
-      let rec count i acc =
-        if i + plen > n then acc
-        else if matches_at i then count (i + plen) (acc + 1)
-        else count (i + 1) acc
-      in
-      count 0 0
-    in
-    let t, cache_decl_opt =
-      if scrut_uses > 1 then
-        match t with
-        | CPPvar _ | CPPget _ | CPPget' _ | CPParrow _ | CPPmember _
-        | CPPqualified _ | CPPderef _ | CPPenum_val _ | CPPglob _ -> (t, None)
-        | _ ->
-          let cache_id = Id.of_string "_cs" in
-          let cache_var = CPPvar cache_id in
-          let decl = Sasgn (cache_id, Some Ttodo, t) in
-          (cache_var, Some decl)
-      else (t, None)
-    in
+    (* Scrutinee caching (auto _cs = expr;) is handled during translation
+       in gen_custom_cpp_case, which prepends an Sasgn before this node
+       when the template uses %scrut more than once with a non-trivial
+       scrutinee.  The printer just expands the template. *)
     let cmds = parse_custom_fixed "scrut" CCscrut cmatch in
     let cmds = expand_custom_fixed "ty" CCty cmds in
     let cmds = expand_numbered_args "t" (fun i -> CCty_arg i) cmds in
     let cmds = expand_numbered_args "br" (fun i -> CCbody i) cmds in
     let cmds = expand_custom_binders "b" "a" (fun i j -> CCbr_var (i, j)) cmds in
     let cmds = expand_custom_binders "b" "t" (fun i j -> CCbr_var_ty (i, j)) cmds in
-    let case_pp =
-      pp_custom
-        ( "custom match for "
-        ^ Pp.string_of_ppcmds (pp_cpp_type false [] typ)
-        ^ " := "
-        ^ cmatch )
-        env
-        (Some typ)
-        (Some t)
-        tyargs
-        cases
-        []
-        []
-        []
-        cmds
-    in
-    ( match cache_decl_opt with
-    | None -> case_pp
-    | Some decl ->
-      pp_cpp_stmt env [] decl ++ fnl () ++ case_pp )
+    pp_custom
+      ( "custom match for "
+      ^ Pp.string_of_ppcmds (pp_cpp_type false [] typ)
+      ^ " := "
+      ^ cmatch )
+      env
+      (Some typ)
+      (Some t)
+      tyargs
+      cases
+      []
+      []
+      []
+      cmds
   | Smatch (branches, default) ->
     require_header "variant";
     (* Print an if/else-if chain using [std::holds_alternative] for

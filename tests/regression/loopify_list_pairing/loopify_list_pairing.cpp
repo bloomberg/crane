@@ -43,13 +43,13 @@ LoopifyListPairing::unzip(
             typename List<std::pair<unsigned int, unsigned int>>::Cons>(l->v());
         const unsigned int &a = d_a0.first;
         const unsigned int &b = d_a0.second;
-        _stack.emplace_back(_Call1{b, a});
+        _stack.emplace_back(_Call1{a, b});
         _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      unsigned int b = _f._s0;
-      unsigned int a = _f._s1;
+      unsigned int a = _f._s0;
+      unsigned int b = _f._s1;
       const std::shared_ptr<List<unsigned int>> &xs = _result.first;
       const std::shared_ptr<List<unsigned int>> &ys = _result.second;
       _result = std::make_pair(List<unsigned int>::cons(a, xs),

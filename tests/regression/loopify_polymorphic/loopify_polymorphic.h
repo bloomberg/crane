@@ -383,8 +383,8 @@ struct LoopifyPolymorphic {
     };
 
     struct _Call1 {
-      T2 _s0;
-      T1 _s1;
+      T1 _s0;
+      T2 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -406,13 +406,13 @@ struct LoopifyPolymorphic {
               std::get<typename List<std::pair<T1, T2>>::Cons>(l->v());
           const T1 &a = d_a0.first;
           const T2 &b = d_a0.second;
-          _stack.emplace_back(_Call1{b, a});
+          _stack.emplace_back(_Call1{a, b});
           _stack.emplace_back(_Enter{d_a1});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
-        T2 b = _f._s0;
-        T1 a = _f._s1;
+        T1 a = _f._s0;
+        T2 b = _f._s1;
         const std::shared_ptr<List<T1>> &as_ = _result.first;
         const std::shared_ptr<List<T2>> &bs = _result.second;
         _result = std::make_pair(List<T1>::cons(a, as_), List<T2>::cons(b, bs));
@@ -430,8 +430,8 @@ struct LoopifyPolymorphic {
     };
 
     struct _Call1 {
-      F0 _s0;
-      T1 _s1;
+      T1 _s0;
+      F0 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -449,13 +449,13 @@ struct LoopifyPolymorphic {
           _result = std::make_pair(List<T1>::nil(), List<T1>::nil());
         } else {
           const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
-          _stack.emplace_back(_Call1{p, d_a0});
+          _stack.emplace_back(_Call1{d_a0, p});
           _stack.emplace_back(_Enter{d_a1});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
-        F0 p = _f._s0;
-        T1 d_a0 = _f._s1;
+        T1 d_a0 = _f._s0;
+        F0 p = _f._s1;
         const std::shared_ptr<List<T1>> &trues = _result.first;
         const std::shared_ptr<List<T1>> &falses = _result.second;
         if (p(d_a0)) {

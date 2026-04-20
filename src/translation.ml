@@ -284,6 +284,10 @@ type translation_ctx = {
      capture instead of [=]. Set by the MLletin handler when it detects the
      bound variable is used at most once and does not escape. *)
   mutable eta_keep_moves : bool;
+  (* Counter for generating unique [_cs] / [_cs1] / [_cs2] cache variable
+     names when [Scustom_case] scrutinee caching is needed.  Reset at
+     function boundaries, same pattern as [match_param_counter]. *)
+  mutable cs_counter : int;
 }
 
 (** Mode for ITree effect extraction: sequential erases the tree,
@@ -311,6 +315,7 @@ let tctx =
     in_constructor_expr = false;
     itree_mode = Sequential;
     eta_keep_moves = false;
+    cs_counter = 0;
   }
 
 (** {3 Accessor wrappers} --- thin layer over {!tctx} fields. *)
@@ -702,12 +707,14 @@ let with_escape_analysis body f =
   let saved_owned = tctx.move_owned_vars in
   let saved_nparams = tctx.move_n_params in
   let saved_match_counter = tctx.match_param_counter in
+  let saved_cs_counter = tctx.cs_counter in
   let saved_return_type = tctx.current_cpp_return_type in
   tctx.current_letin_depth <- 0;
   tctx.move_dead_after <- Escape.IntSet.empty;
   tctx.move_owned_vars <- Escape.IntSet.empty;
   tctx.move_n_params <- 0;
   tctx.match_param_counter <- 0;
+  tctx.cs_counter <- 0;
   (* Prevent void optimization from leaking into IIFE/lambda bodies: when the
      outer function returns void, gen_stmts generates bare 'return;' for tt,
      but IIFE bodies return their own type (e.g. monostate), not void. *)
@@ -719,6 +726,7 @@ let with_escape_analysis body f =
   tctx.move_owned_vars <- saved_owned;
   tctx.move_n_params <- saved_nparams;
   tctx.match_param_counter <- saved_match_counter;
+  tctx.cs_counter <- saved_cs_counter;
   tctx.current_cpp_return_type <- saved_return_type;
   result
 
@@ -2953,9 +2961,9 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     let saved_ret = tctx.current_cpp_return_type in
     if iife_ret = Tvoid then
       tctx.current_cpp_return_type <- Some Tvoid;
-    let cexp = gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv in
+    let stmts = gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv in
     tctx.current_cpp_return_type <- saved_ret;
-    CPPfun_call (CPPlambda ([], Some iife_ret, [cexp], false), [])
+    CPPfun_call (CPPlambda ([], Some iife_ret, stmts, false), [])
   | MLcase (typ, t, pv)
     when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
     let ids, r, pat, body = pv.(0) in
@@ -4155,6 +4163,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   let body_stmts =
     with_shifted_move_tracking n_pat_vars ~clear_dead:true (fun () ->
       let saved_match_counter = tctx.match_param_counter in
+      let saved_cs_counter = tctx.cs_counter in
       let saved_return_type = tctx.current_cpp_return_type in
       (* Prevent void optimisation from leaking into match branches: the branch
          body lives inside an IIFE that returns the match result type, not the
@@ -4165,6 +4174,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       let body_stmts = gen_stmts env (fun x -> Sreturn (Some x)) body in
       tctx.current_cpp_return_type <- saved_return_type;
       tctx.match_param_counter <- saved_match_counter;
+      tctx.cs_counter <- saved_cs_counter;
       body_stmts)
   in
   (* Compute structured binding names for ALL constructor fields.
@@ -4670,8 +4680,21 @@ and gen_cpp_custom_body env k rty ids body =
   let body = gen_stmts env k body in
   (ids, ret, body)
 
+(** Test whether a C++ expression is "trivial" — a simple variable or member
+    access that can safely be duplicated without side effects.  Non-trivial
+    expressions (function calls, constructor applications, etc.) should be
+    cached in a temporary when the custom match template uses [%scrut] more
+    than once. *)
+and is_trivial_scrut = function
+  | CPPvar _ | CPPget _ | CPPget' _ | CPParrow _ | CPPmember _
+  | CPPqualified _ | CPPderef _ | CPPenum_val _ | CPPglob _ -> true
+  | _ -> false
+
 (** Generate a custom case expression using user-provided extraction syntax.
-    Entry point for custom pattern match generation. *)
+    Entry point for custom pattern match generation.
+    Returns a [cpp_stmt list]: when the scrutinee is non-trivial and the
+    template uses [%scrut] more than once, a cache declaration
+    [auto _cs = expr;] is prepended before the [Scustom_case] node. *)
 and gen_custom_cpp_case env k (typ : ml_type) t pv =
   let tvars = get_current_type_vars () in
   let temps =
@@ -4705,6 +4728,20 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     tctx.move_dead_after <- Escape.IntSet.empty;
   let t = gen_expr env t in
   tctx.move_dead_after <- saved_dead;
+  (* When the template uses %scrut more than once and the scrutinee is a
+     non-trivial expression (function call, constructor, etc.), cache it in
+     a temporary to avoid double evaluation. *)
+  let scrut, cache_prefix =
+    if scrut_uses > 1 && not (is_trivial_scrut t) then
+      let n = tctx.cs_counter in
+      tctx.cs_counter <- n + 1;
+      let cache_id =
+        Id.of_string (if n = 0 then "_cs" else "_cs" ^ string_of_int n)
+      in
+      (CPPvar cache_id, [Sasgn (cache_id, Some Ttodo, t)])
+    else
+      (t, [])
+  in
   let rec gen_cases = function
     | [] -> []
     | (ids, rty, p, t) :: cs ->
@@ -4730,7 +4767,8 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       br :: gen_cases cs
     | Pwild | Prel _ | Ptuple _ -> gen_cases cs
   in
-  Scustom_case (typ, t, temps, gen_cases (Array.to_list pv), cmatch)
+  cache_prefix @
+  [Scustom_case (typ, scrut, temps, gen_cases (Array.to_list pv), cmatch)]
 
 (** {2 IIFE Inlining}
 
@@ -6060,7 +6098,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         in
         tctx.move_dead_after <-
           Escape.IntSet.union tctx.move_dead_after tail_dead );
-    let result = [gen_custom_cpp_case env k typ t pv] in
+    let result = gen_custom_cpp_case env k typ t pv in
     tctx.move_dead_after <- saved_dead;
     result
   | MLcons (_, r, []) when Table.is_tt_constructor r
@@ -8304,6 +8342,7 @@ let gen_dfun n b cty ty temps =
   in
   tctx.current_letin_depth <- 0;
   tctx.match_param_counter <- 0;
+  tctx.cs_counter <- 0;
   (* Phase 2: Initialize owned-variable tracking for move insertion. Parameters
      at de Bruijn indices 1..n_params; owned ones get added to the set. *)
   let n_all_params = List.length all_params in
@@ -8777,6 +8816,7 @@ let gen_decl n b ty =
     | _ ->
       let saved_return_type = tctx.current_cpp_return_type in
       tctx.current_cpp_return_type <- Some cty;
+      tctx.cs_counter <- 0;
       let body_expr = gen_expr (empty_env ()) b in
       tctx.current_cpp_return_type <- saved_return_type;
       (* When a unit-typed constant's body calls a void-ified function,
@@ -8949,6 +8989,7 @@ let gen_spec n b ty =
     let has_magic =
       has_magic || ml_head_has_magic b
     in
+    tctx.cs_counter <- 0;
     let b_expr = gen_expr (empty_env ()) inner_body in
     tctx.current_cpp_return_type <- saved_return_type;
     (* Wrap with std::any_cast when the C++ expression returns std::any but the
@@ -9590,6 +9631,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   tctx.move_owned_vars <- Escape.IntSet.empty;
   tctx.move_n_params <- 0;
   tctx.match_param_counter <- 0;
+  tctx.cs_counter <- 0;
   tctx.current_letin_depth <- 0;
   (* Set current type vars to include both the inductive's type vars and extra
      tvars. This ensures gen_expr/eta_fun correctly convert Tvars to named C++

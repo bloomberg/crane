@@ -140,8 +140,8 @@ struct LoopifyPairs {
     };
 
     struct _Call1 {
-      F0 _s0;
-      T1 _s1;
+      T1 _s0;
+      F0 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -159,13 +159,13 @@ struct LoopifyPairs {
           _result = std::make_pair(list<T1>::nil(), list<T1>::nil());
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l->v());
-          _stack.emplace_back(_Call1{p, d_a0});
+          _stack.emplace_back(_Call1{d_a0, p});
           _stack.emplace_back(_Enter{d_a1});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
-        F0 p = _f._s0;
-        T1 d_a0 = _f._s1;
+        T1 d_a0 = _f._s0;
+        F0 p = _f._s1;
         const std::shared_ptr<list<T1>> &yes = _result.first;
         const std::shared_ptr<list<T1>> &no = _result.second;
         if (p(d_a0)) {
@@ -356,14 +356,14 @@ struct LoopifyPairs {
           } else {
             const auto &[d_a00, d_a10] =
                 std::get<typename list<T1>::Cons>(d_a1->v());
-            _stack.emplace_back(_Call1{d_a00, d_a0});
+            _stack.emplace_back(_Call1{d_a0, d_a00});
             _stack.emplace_back(_Enter{d_a10});
           }
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
-        T1 d_a00 = _f._s0;
-        T1 d_a0 = _f._s1;
+        T1 d_a0 = _f._s0;
+        T1 d_a00 = _f._s1;
         const std::shared_ptr<list<T1>> &evens = _result.first;
         const std::shared_ptr<list<T1>> &odds = _result.second;
         _result = std::make_pair(list<T1>::cons(d_a0, evens),

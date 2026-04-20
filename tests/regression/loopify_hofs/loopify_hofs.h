@@ -1057,8 +1057,8 @@ struct LoopifyHofs {
     };
 
     struct _Call1 {
-      F0 _s0;
-      unsigned int _s1;
+      unsigned int _s0;
+      F0 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -1080,13 +1080,13 @@ struct LoopifyHofs {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l->v());
-          _stack.emplace_back(_Call1{p, d_a0});
+          _stack.emplace_back(_Call1{d_a0, p});
           _stack.emplace_back(_Enter{d_a1});
         }
       } else {
         const auto &_f = std::get<_Call1>(_frame);
-        F0 p = _f._s0;
-        unsigned int d_a0 = _f._s1;
+        unsigned int d_a0 = _f._s0;
+        F0 p = _f._s1;
         const std::shared_ptr<List<unsigned int>> &yes = _result.first;
         const std::shared_ptr<List<unsigned int>> &no = _result.second;
         if (p(d_a0)) {

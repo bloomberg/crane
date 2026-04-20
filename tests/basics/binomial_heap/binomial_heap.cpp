@@ -258,11 +258,11 @@ BinomialHeap::delete_max(
   auto _cs = find_max(q);
   if (_cs.has_value()) {
     const unsigned int &m = *_cs;
-    auto _cs = delete_max_aux(m, q);
+    auto _cs1 = delete_max_aux(m, q);
     const std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> &p_ =
-        _cs.first;
+        _cs1.first;
     const std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> &q_ =
-        _cs.second;
+        _cs1.second;
     return std::make_optional<
         std::pair<unsigned int,
                   std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>>>>(

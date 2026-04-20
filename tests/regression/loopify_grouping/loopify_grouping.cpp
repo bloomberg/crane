@@ -214,8 +214,8 @@ LoopifyGrouping::partition3(const unsigned int pivot,
   };
 
   struct _Call1 {
-    const unsigned int _s0;
-    unsigned int _s1;
+    unsigned int _s0;
+    const unsigned int _s1;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -239,13 +239,13 @@ LoopifyGrouping::partition3(const unsigned int pivot,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l->v());
-        _stack.emplace_back(_Call1{pivot, d_a0});
+        _stack.emplace_back(_Call1{d_a0, pivot});
         _stack.emplace_back(_Enter{d_a1});
       }
     } else {
       const auto &_f = std::get<_Call1>(_frame);
-      const unsigned int pivot = _f._s0;
-      unsigned int d_a0 = _f._s1;
+      unsigned int d_a0 = _f._s0;
+      const unsigned int pivot = _f._s1;
       const std::pair<std::shared_ptr<List<unsigned int>>,
                       std::shared_ptr<List<unsigned int>>> &p = _result.first;
       const std::shared_ptr<List<unsigned int>> &greater = _result.second;

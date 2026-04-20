@@ -2484,6 +2484,23 @@ let dedup_ids ids =
         true ) )
     ids
 
+(** Substitute [CPPvar old_id] with [CPPvar new_id] throughout an expression,
+    statement, or statement list. Used to eliminate trivial variable aliases
+    like [auto _cs = _result;] by replacing [_cs] with [_result] directly. *)
+let rec subst_var_expr old_id new_id e =
+  let fe e = subst_var_expr old_id new_id e in
+  match e with
+  | CPPvar id when Id.equal id old_id -> CPPvar new_id
+  | _ -> Minicpp.map_expr fe (subst_var_stmt old_id new_id) (fun t -> t) e
+
+and subst_var_stmt old_id new_id s =
+  let fe e = subst_var_expr old_id new_id e in
+  let fs s = subst_var_stmt old_id new_id s in
+  Minicpp.map_stmt fe fs (fun t -> t) s
+
+let subst_var_stmts old_id new_id stmts =
+  List.map (subst_var_stmt old_id new_id) stmts
+
 (** Collect free variables from Scustom_case branch bodies, excluding
     pattern-bound variables. Deduplicated.
 
@@ -4078,7 +4095,15 @@ and rewrite_enter_stmts
           call_counter frames_ref varying_param_types rest
       in
       let handler =
-        bindings @ [Sasgn (id, ty_opt, assign_expr)] @ rest_processed
+        match assign_expr with
+        | CPPvar v when String.length (Id.to_string id) >= 3
+            && String.sub (Id.to_string id) 0 3 = "_cs" ->
+          (* assign_expr is a plain variable (e.g. _result) and id is a
+             scrutinee cache variable (_cs, _cs1, ...) — skip the
+             redundant alias [auto _cs = v;] and substitute v for id. *)
+          bindings @ subst_var_stmts id v rest_processed
+        | _ ->
+          bindings @ [Sasgn (id, ty_opt, assign_expr)] @ rest_processed
       in
       let all_saved = saved @ cont_saved in
       let all_types = types @ cont_types in

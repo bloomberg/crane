@@ -603,14 +603,3 @@
   (alias runtest)
   (deps fix_move_capture.t.exe)
   (action (run ./fix_move_capture.t.exe))))
-
-(subdir let_pair_shadow
- (rule
-  (targets let_pair_shadow.t.exe)
-  (deps LetPairShadow.vo let_pair_shadow.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} let_pair_shadow.t.exe let_pair_shadow.cpp let_pair_shadow.t.cpp)))
- (rule
-  (alias runtest)
-  (deps let_pair_shadow.t.exe)
-  (action (run ./let_pair_shadow.t.exe))))

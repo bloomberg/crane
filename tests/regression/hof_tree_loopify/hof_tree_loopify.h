@@ -809,14 +809,14 @@ struct HofTreeLoopify {
     };
 
     struct _Call1 {
-      F0 _s0;
-      T1 _s1;
-      std::shared_ptr<tree<T1>> _s2;
+      T1 _s0;
+      std::shared_ptr<tree<T1>> _s1;
+      F0 _s2;
     };
 
     struct _Call2 {
-      T2 _s0;
-      std::shared_ptr<tree<T2>> _s1;
+      std::shared_ptr<tree<T2>> _s0;
+      T2 _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -836,25 +836,25 @@ struct HofTreeLoopify {
         } else {
           const auto &[d_a0, d_a1, d_a2] =
               std::get<typename tree<T1>::Node>(t->v());
-          _stack.emplace_back(_Call1{f, d_a1, d_a2});
+          _stack.emplace_back(_Call1{d_a1, d_a2, f});
           _stack.emplace_back(_Enter{d_a0, acc});
         }
       } else if (std::holds_alternative<_Call1>(_frame)) {
         const auto &_f = std::get<_Call1>(_frame);
-        F0 f = _f._s0;
-        T1 d_a1 = _f._s1;
-        std::shared_ptr<tree<T1>> d_a2 = _f._s2;
+        T1 d_a1 = _f._s0;
+        std::shared_ptr<tree<T1>> d_a2 = _f._s1;
+        F0 f = _f._s2;
         const T3 &acc1 = _result.first;
         const std::shared_ptr<tree<T2>> &l_ = _result.second;
-        auto _cs = f(acc1, d_a1);
-        const T3 &acc2 = _cs.first;
-        const T2 &x_ = _cs.second;
-        _stack.emplace_back(_Call2{x_, l_});
+        auto _cs1 = f(acc1, d_a1);
+        const T3 &acc2 = _cs1.first;
+        const T2 &x_ = _cs1.second;
+        _stack.emplace_back(_Call2{l_, x_});
         _stack.emplace_back(_Enter{d_a2, acc2});
       } else {
         const auto &_f = std::get<_Call2>(_frame);
-        T2 x_ = _f._s0;
-        std::shared_ptr<tree<T2>> l_ = _f._s1;
+        std::shared_ptr<tree<T2>> l_ = _f._s0;
+        T2 x_ = _f._s1;
         const T3 &acc3 = _result.first;
         const std::shared_ptr<tree<T2>> &r_ = _result.second;
         _result = std::make_pair(acc3, tree<T2>::node(l_, x_, r_));
