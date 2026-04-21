@@ -121,8 +121,19 @@ and ml_type_has_tvar = function
   | Miniml.Tmeta {contents = None} -> true
   | _ -> false
 
-(** Convert a signature spec element to a C++20 requires clause requirement.
-    Used for module type → concept conversion. *)
+(** Convert a signature spec element to a C++20 [requires] clause requirement.
+    Used for module type -> concept conversion.
+
+    Each {!Miniml.ml_spec} variant maps to a different requirement:
+    - [Sind]: [typename M::Name;] — checks that a nested type exists.
+    - [Sval]: [{M::name(declval<A>(),...)} -> same_as<R>;] or the nullary
+      form with [convertible_to].
+    - [Stype] with empty [vl]: [typename M::Name;] — simple type member.
+    - [Stype] with non-empty [vl]: [typename M::template Name<void,...>;]
+      — validates a template alias member (higher-kinded type parameter
+      such as [Parameter F : Type -> Type]).  The dummy [void] arguments
+      serve only to check that the template exists with the correct arity;
+      no semantic meaning is attached to the instantiation. *)
 and pp_spec_as_requirement modtype_refs = function
   | Sval (r, _, _) when is_inline_custom r -> mt ()
   | Stype (r, _, _) when is_inline_custom r -> mt ()
@@ -366,12 +377,37 @@ let rec pp_structure_elem ~is_header f = function
             | _ -> ([], m.ml_mod_expr)
           in
           let template_params, body = get_template_and_body m.ml_mod_expr in
+          (* Try to extract a named concept from a module type.
+
+             Strips MTwith constraints (which have no C++ concept equivalent)
+             and MTfunsig parameter layers, looking for an MTident that
+             references an already-defined concept.  Returns None for
+             anonymous inline signatures (MTsig).
+
+             This is important for functor parameters like
+             [c' : C b' with Module a := A_instance].  Rocq's extraction
+             expands MEapply (module type application) into an inline MTsig,
+             losing the reference to the named concept C.  Without this
+             helper, pp_module_type would inline the concept body into the
+             template parameter list, producing garbled C++. *)
           let rec get_concept_name_from_mt = function
             | MTident kn -> Some (pp_modname kn)
             | MTwith (mt, _) -> get_concept_name_from_mt mt
             | MTfunsig (_, _, mt') -> get_concept_name_from_mt mt'
             | MTsig _ -> None
           in
+          (* Render a functor parameter as a C++ template parameter.
+
+             Strategy:
+             - If a named concept can be extracted from the module type via
+               get_concept_name_from_mt, emit [ConceptName param_name].
+             - If the module type has no constraints (empty concept body),
+               emit [typename param_name] (unconstrained type parameter).
+             - If the concept body is complex (multi-line or >40 chars) —
+               typically from MEapply expansion of a parameterised module
+               type — fall back to [typename param_name] rather than
+               inlining the unreadable requires body.
+             - Otherwise use the simple concept body as a constraint. *)
           let pp_template_param (mbid, mt) =
             let param_name = pp_modname (MPbound mbid) in
             match get_concept_name_from_mt mt with
@@ -379,15 +415,11 @@ let rec pp_structure_elem ~is_header f = function
             | None ->
               let concept_body = pp_module_type [] mt in
               if Pp.ismt concept_body then
-                (* No constraints — unconstrained type param *)
                 str "typename " ++ param_name
               else
                 let body_str = Pp.string_of_ppcmds concept_body in
                 if String.contains body_str '\n'
                    || String.length body_str > 40 then
-                  (* Complex inline concept body — use typename and skip
-                     the constraint (it's already checked elsewhere or
-                     is too complex for a template parameter) *)
                   str "typename " ++ param_name
                 else
                   concept_body ++ str " " ++ param_name
@@ -950,7 +982,13 @@ let rec pp_structure_elem ~is_header f = function
               ++ body
             else if Pp.ismt body && Pp.ismt record_fields_pp
                     && Pp.ismt record_methods_pp then
-              (* Still emit empty struct — may be needed as template arg *)
+              (* Empty module: emit [struct Name {};] even though there are
+                 no declarations.  The struct may be needed as a template
+                 argument in functor instantiations, e.g.
+                 [using M_ = M<Empty>;] where [Empty] was defined as an
+                 empty Rocq module satisfying some module type.  Previously
+                 this returned [mt ()] which suppressed the struct
+                 entirely, causing undeclared-identifier errors. *)
               template_decl ++ str "struct " ++ name ++ str " {};"
             else
               let struct_def =
@@ -993,8 +1031,16 @@ let rec pp_structure_elem ~is_header f = function
         else
           let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
           let body_str = Pp.string_of_ppcmds body in
-          (* Skip aliases to Coq__ duplicate wrappers — they are an OCaml
-             qualification workaround that doesn't translate to C++ *)
+          (* Skip [using] aliases whose target is a [Coq__N] duplicate
+             wrapper.  These wrappers are an OCaml-specific qualification
+             mechanism from {!Common.add_duplicate}: when an OCaml name is
+             shadowed inside its own module, the definition is duplicated
+             into a [Coq__N] namespace so that external references can
+             still reach it.  In C++, scoped structs and namespaces handle
+             qualification differently, making these wrappers unnecessary.
+             Moreover, the wrapped namespace may never be emitted (e.g.
+             notation-only modules with no computational content), causing
+             the [using] alias to reference an undefined type. *)
           if String.length body_str >= 5
              && String.sub body_str 0 5 = "Coq__" then
             mt ()

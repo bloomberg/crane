@@ -312,11 +312,20 @@ let same_inductive t1 t2 =
 (** Find branches suitable for memory reuse.
 
     For case expressions, identify branches where we can reuse the scrutinee's
-    memory cell when use_count() == 1 at runtime.
+    memory cell when [use_count() == 1] at runtime, avoiding a fresh
+    allocation.
 
-    Reuse is safe when: 1. Branch tail constructs same inductive type as
-    scrutinee 2. Constructor arity matches matched pattern arity 3. Type
-    arguments match exactly (conservative check) *)
+    A branch is a reuse candidate when all of the following hold:
+    + The branch tail constructs the same inductive type as the scrutinee
+      (checked via {!same_inductive}).
+    + The tail constructor's arity matches the matched pattern's arity, so
+      the rewritten field assignments are one-to-one.
+    + {b The matched constructor and the tail constructor are identical}
+      ([matched_ctor == tail_ctor]).  Without this check a branch that
+      matches one variant but constructs a {i different} variant of the
+      same inductive would reuse the memory cell with the wrong tag,
+      corrupting the variant discriminator.
+    + Type arguments match exactly (conservative structural equality). *)
 let find_reuse_candidates scrutinee_type branches =
   Array.to_list
     (Array.mapi

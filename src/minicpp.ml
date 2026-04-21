@@ -155,8 +155,12 @@ and cpp_stmt =
   (* Field assignment: obj.field = expr. Used for in-place mutation during
      memory reuse. *)
   | Sderef_asgn of Id.t * cpp_expr
-  (* Dereference assignment: *id = expr. Used for fixpoint definitions with
-     shared_ptr<std::function> indirection. *)
+  (* Dereference assignment: [*id = expr;].  Introduced for the
+     [shared_ptr<std::function>] fixpoint pattern where a fixpoint is
+     allocated as [auto f = make_shared<function<...>>()] and the body is
+     assigned via [*f = [=](...) mutable { ... }].  The indirection allows
+     the by-value lambda to capture [f] (a [shared_ptr] copy) instead of a
+     dangling [&]-reference.  See {!Translation.gen_local_fix_shared_ptr}. *)
   | Swhile of cpp_expr * cpp_stmt list
     (* while (condition) { body } — used by loopify pass *)
   | Sblock of cpp_stmt list

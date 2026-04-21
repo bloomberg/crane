@@ -2504,9 +2504,15 @@ let subst_var_stmts old_id new_id stmts =
   List.map (subst_var_stmt old_id new_id) stmts
 
 (** Substitute [CPPderef (CPPvar target_id)] with [CPPvar target_id] throughout
-    an expression, statement, or statement list.  Used to revert
-    shared_ptr-based fixpoint calls back to direct calls after loopification
-    eliminates the recursion. *)
+    an expression, statement, or statement list.
+
+    When {!Translation.gen_local_fix_shared_ptr} generates a
+    shared_ptr fixpoint, all call sites use dereferenced calls
+    (i.e. [CPPfun_call(CPPderef(CPPvar f), args)]).  After
+    {!loopify_inner_lambdas} converts the recursion into a loop, the
+    indirection is no longer needed.  This function strips the [CPPderef]
+    wrapper so subsequent code sees plain [CPPvar f] calls and the emitted
+    C++ uses direct calls instead of dereferenced ones. *)
 let rec un_deref_var_expr target_id e =
   let fe e = un_deref_var_expr target_id e in
   match e with
@@ -5254,8 +5260,10 @@ let lambda_checker (lambda_name : Id.t) : call_checker =
  fun e ->
    match e with
    | CPPfun_call (CPPvar id, args) when Id.equal id lambda_name ->
+     (* Direct call: [f(args)] — by-reference fixpoint pattern *)
      Some {cs_args = args; cs_is_tail = false}
    | CPPfun_call (CPPderef (CPPvar id), args) when Id.equal id lambda_name ->
+     (* Dereferenced call — shared_ptr fixpoint pattern *)
      Some {cs_args = args; cs_is_tail = false}
    | _ -> None
 
@@ -5351,7 +5359,22 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
         let lbody' = process_stmts lbody in
         Sasgn (id, ty_opt, CPPlambda (lparams, ret_ty_opt, lbody', cap))
         :: process_stmts rest )
-    (* Pattern 3: shared_ptr<std::function> fixpoint *)
+    (* Pattern 3: shared_ptr fixpoint.
+
+       Matches the two-statement pattern emitted by
+       {!Translation.gen_local_fix_shared_ptr}:
+       {v
+         auto f = make_shared<function<R(A...)>>();
+         *f = [=](A... args) mutable { ... };
+       v}
+
+       If loopification succeeds (the recursion is converted to a loop),
+       the shared_ptr indirection is no longer needed.  We revert the
+       declaration to a plain [std::function] and strip [CPPderef] wrappers
+       from call sites in the continuation via {!un_deref_var_stmts}.
+
+       If loopification fails (recursion cannot be converted), the original
+       shared_ptr pattern is preserved with its body recursively processed. *)
     | Sasgn (id, (Some Tauto as _ty_opt),
              (CPPfun_call (CPPmk_shared func_ty, []) as init_expr))
       :: Sderef_asgn (id2, CPPlambda (lparams, ret_ty_opt, lbody, cap))
@@ -5359,9 +5382,6 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
       when Id.equal id id2 ->
       ( match try_loopify_lambda id lparams ret_ty_opt lbody cap with
       | Some lbody' ->
-        (* Loopification succeeded — no recursion remains.  Revert to a
-           normal std::function declaration so the type is known for
-           decltype and calls use dependent lookup [f x] not [deref f x]. *)
         Sdecl (id, func_ty)
         :: Sasgn (id, None, CPPlambda (lparams, ret_ty_opt, lbody', false))
         :: process_stmts (un_deref_var_stmts id rest)

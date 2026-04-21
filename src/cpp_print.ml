@@ -141,6 +141,8 @@ let lambda_needs_capture
       | Some _ -> (refs', IdSet.add id decls')
       | None -> (IdSet.add id refs', decls') )
     | Sderef_asgn (id, e) ->
+      (* [*id = e]: the id is referenced (not declared) because the
+         variable was declared earlier; the RHS is scanned for captures. *)
       let refs', decls' = collect_from_expr (refs, decls) e in
       (IdSet.add id refs', decls')
     | Scustom_case (_, scrut, _, branches, _) ->
@@ -987,6 +989,9 @@ and pp_cpp_expr env args t =
       ++ str ")"
     | None -> pp_cpp_expr env args (CPPglob (n, tys, None)) ++ str "()" )
   | CPPfun_call (CPPderef e, ts) ->
+    (* Call through a dereferenced pointer: deref + invoke pattern.
+       Arises from the shared_ptr fixpoint pattern where recursive calls
+       dereference the function pointer before invoking. *)
     let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in
     str "(*" ++ pp_cpp_expr env args e ++ str ")(" ++ args_s ++ str ")"
   | CPPfun_call (f, ts) ->
@@ -1402,6 +1407,8 @@ and pp_cpp_stmt env args = function
     ++ pp_cpp_expr env args e
     ++ str ";"
   | Sderef_asgn (id, e) ->
+    (* Dereference assignment [*id = expr;] for the shared_ptr fixpoint
+       pattern.  Assigns the lambda body through the pointer. *)
     str "*" ++ Id.print id ++ str " = "
     ++ pp_cpp_expr env args e ++ str ";"
   | Sblock_custom (_ref, tmpl, result_var, result_ty, args, tyargs) ->

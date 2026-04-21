@@ -4537,14 +4537,21 @@ and gen_cpp_case (typ : ml_type) t env pv =
         in
         let reuse_ctor_struct_name = ctor_struct_name_of_ref matched_ctor in
         let ids, _rty, _pat, body = pv.(pv_idx) in
-        (* Safety check: skip reuse if the scrutinee is referenced in the
-           branch body.  The reuse path std::move's fields out of the
-           scrutinee before evaluating tail constructor arguments.  If any
-           tail arg (or prefix let-binding RHS) references the scrutinee
-           — directly or through a function call — the moved-from fields
-           cause null dereference or self-cycles.
-           In the body scope, pattern vars occupy db 1..n_pat_vars,
-           so the scrutinee is at db + n_pat_vars. *)
+        (* Safety check: skip reuse if the scrutinee is referenced anywhere
+           in the branch body.
+
+           The reuse path [std::move]'s fields out of the scrutinee before
+           evaluating tail constructor arguments.  If any tail arg, prefix
+           [let]-binding RHS, or lambda capture references the scrutinee —
+           directly or through a function call — the moved-from fields
+           produce null dereferences ([reuse_use_after_move],
+           [reuse_fn_in_body], [reuse_lambda_capture]) or self-referential
+           cycles ([reuse_self_cycle]).
+
+           {!Escape.nb_occur_match} counts occurrences of a de Bruijn
+           index in a MiniML term.  In the branch body scope, pattern
+           variables occupy indices [1..n_pat_vars], so the scrutinee
+           sits at [db + n_pat_vars]. *)
         let n_pat_vars = List.length ids in
         let scrutinee_used_in_body =
           match scrut_db with
@@ -4559,9 +4566,13 @@ and gen_cpp_case (typ : ml_type) t env pv =
             CPPfun_call (CPPmember (scrut_expr, Id.of_string "use_count"), []),
             CPPint 1)
         in
-        (* Push pattern variables into the environment.  Shift move tracking
-           indices by [n_pat_vars] so that parameter indices don't collide
-           with pattern variable indices (matching the non-reuse path). *)
+        (* Push pattern variables into the environment.  Wrap the entire
+           body generation in {!with_shifted_move_tracking} to shift
+           [move_owned_vars] and [move_dead_after] indices by [n_pat_vars].
+           This matches the index shift performed by the non-reuse path,
+           preventing parameter-level indices from colliding with
+           pattern-variable indices and causing spurious [std::move]s
+           ([reuse_move_shadow]). *)
         let saved_env_types = tctx.env_types in
         let rf_var = Id.of_string "_rf" in
         let ids', env', dummies, extract_stmts, prefix_stmts, assign_stmts =
@@ -4933,17 +4944,27 @@ and inline_iife (k : cpp_expr -> cpp_stmt) = function
     | None -> [k (CPPfun_call (CPPlambda ([], ret_ty, body, false), []))] )
   | expr -> [k expr]
 
-(** Check whether a fixpoint variable [target_id] escapes in a statement list.
-    A variable escapes if it appears in any position other than the function
-    in a direct call [CPPfun_call(CPPvar id, args)].  For example, appearing
-    as a function argument, constructor field, or return value counts as
-    escaping.
+(** Escape analysis for local fixpoint variables.
 
-    Lambda bodies are treated specially: ANY reference to the fixpoint
-    inside a lambda body (even in call position) counts as an escape.
-    This is because the lambda captures the fixpoint, and the captured
-    [std::function]'s internal [\[&\]] lambda still holds dangling
-    references when the lambda outlives the fixpoint's defining scope. *)
+    Determines whether [target_id] appears in any position other than the
+    callee of a direct call [CPPfun_call(CPPvar target_id, args)].  If so,
+    the fixpoint "escapes" and must use the [shared_ptr<std::function>]
+    pattern (see {!gen_local_fix_shared_ptr}) instead of the simpler [\[&\]]
+    capture pattern (see {!gen_local_fix_by_ref}).
+
+    Escape positions include: function argument, constructor field, return
+    value, record field, or binding RHS.
+
+    Lambda bodies are treated conservatively: {b any} reference to the
+    fixpoint inside a lambda body — even in call position — counts as an
+    escape.  This is because the lambda captures the [std::function] value,
+    and a [\[&\]]-captured [std::function]'s internal lambda still holds
+    dangling stack references when the lambda outlives the fixpoint's scope.
+
+    @param target_id  The fixpoint variable to track.
+    @param stmts      The statement list (typically the continuation after
+                      the fixpoint's let-binding) to scan.
+    @return [true] if the fixpoint escapes. *)
 and fixpoint_escapes_in_stmts target_id stmts =
   let rec check_expr e =
     match e with
@@ -4994,13 +5015,22 @@ and fixpoint_escapes_in_stmts target_id stmts =
   in
   check_stmts stmts
 
-(** Generate local fixpoint declarations using the old [&]-capture pattern.
-    Used when the fixpoint does not escape its defining scope, so dangling
-    references are not a concern.
+(** Generate local fixpoint declarations using the [\[&\]]-capture pattern.
 
-    Returns [(decls, defs)] where:
-    - [decls]: [std::function<...> f;] for each fixpoint
-    - [defs]: [f = \[&\](...) \{ body \}] for each fixpoint *)
+    Used when {!fixpoint_escapes_in_stmts} returns [false], meaning the
+    fixpoint variable is only used in direct call position and never
+    escapes into a closure or data structure.  The [\[&\]] capture is
+    lightweight (no heap allocation, no indirection) but creates dangling
+    references if the closure outlives the enclosing scope.
+
+    Generated C++:
+    {v
+      std::function<R(A...)> f;
+      f = [&](A... args) { ... f(args) ... };
+    v}
+
+    @return [(decls, defs)] — declaration and definition statement lists.
+    @see gen_local_fix_shared_ptr for the escaping-fixpoint alternative. *)
 and gen_local_fix_by_ref env renamed_ids funs_with_params =
   let tvars = get_current_type_vars () in
   let fix_func_type ty =
@@ -5045,15 +5075,29 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params =
   in
   (decls, defs)
 
-(** Generate shared_ptr-based local fixpoint declarations and definitions.
-    Uses [shared_ptr<std::function<...>>] so that the fixpoint lambda can
-    capture by value ([=]) instead of by reference ([&]), preventing dangling
-    references when the closure escapes its defining scope.
+(** Generate local fixpoint declarations using the shared_ptr fixpoint
+    pattern for escaping fixpoints.
 
-    Returns [(decls, defs, deref_subst)] where:
-    - [decls]: [auto f = std::make_shared<std::function<...>>();] for each fixpoint
-    - [defs]: [*f = \[=\](...) mutable \{ body \}] for each fixpoint
-    - [deref_subst]: rewrites [CPPvar(fix_id)] -> [CPPderef(CPPvar(fix_id))] *)
+    Used when {!fixpoint_escapes_in_stmts} returns [true], meaning the
+    fixpoint variable is captured by a closure, stored in a data structure,
+    or otherwise outlives its defining scope.  The [\[=\]] capture copies the
+    [shared_ptr] into the lambda, keeping the [std::function] alive on the
+    heap.  Recursive calls dereference the shared pointer before invoking.
+
+    Generated C++ (schematic):
+    - [auto f = make_shared<function<R(A...)>>()] allocates the shared cell.
+    - [*f = \[=\](A... args) mutable { ... }] assigns the closure body.
+    - Inside the closure, the recursive call dereferences [f] before invoking.
+
+    The lambda is marked [mutable] because the captured [shared_ptr] must be
+    non-const to allow the internal [std::function] to be invoked.
+
+    @return [(decls, defs, deref_subst)] where [deref_subst] is a function
+    that rewrites [CPPvar fix_id] to [CPPderef(CPPvar fix_id)] in a
+    statement list, so that call sites in the continuation use the
+    dereferenced form.
+    @see gen_local_fix_by_ref for the non-escaping alternative.
+    @see Minicpp.Sderef_asgn for the dereference assignment node. *)
 and gen_local_fix_shared_ptr env renamed_ids funs_with_params =
   let tvars = get_current_type_vars () in
   let fix_func_type ty =
@@ -5244,7 +5288,23 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       tctx.move_owned_vars <- saved_owned_lifted;
       List.map (local_var_subst_stmt fix_name lifted_call) result )
     else
-      (* No extra Tvars - proceed with local fixpoint approach *)
+      (* No extra Tvars — proceed with local fixpoint approach.
+
+         Three sub-steps:
+         1. Compile all mutual fixpoint bodies via {!gen_fix}.
+         2. Push only the PROJECTED fixpoint (the one this [MLletin]
+            binds) into the continuation environment — not all mutual
+            fix names, which would shift de Bruijn indices by [n]
+            instead of the correct [1].
+         3. Run escape analysis ({!fixpoint_escapes_in_stmts}) on the
+            compiled continuation to decide between the [\[&\]] pattern
+            ({!gen_local_fix_by_ref}) and the [shared_ptr] pattern
+            ({!gen_local_fix_shared_ptr}).
+
+         Move tracking: variables captured by the fixpoint bodies
+         ({!Escape.free_rels}) are removed from [move_owned_vars] so
+         that [dead_in_a] does not [std::move] them while the fixpoint's
+         [\[&\]] lambda still holds references ([fix_move_capture]). *)
       let all_fix_ids_list = Array.to_list ids in
       let funs_compiled =
         Array.to_list
@@ -6033,7 +6093,11 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       @ [k (CPPfun_call
               (CPPvar (fst (List.nth renamed_ids x)), args))]
   | MLfix (x, ids, funs, _) ->
-    (* Standalone fixpoint (not immediately applied) - e.g., in let binding *)
+    (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
+       RHS of a let-binding.  Since the fixpoint value itself is returned (not
+       called in place), it will always escape, so we unconditionally use the
+       shared_ptr pattern via gen_local_fix_shared_ptr.  The result is
+       [*fix_name], dereferencing the shared_ptr to yield the std::function. *)
     let next_tvar = ref 1 in
     let resolve_metas = resolve_type_metas ~next_tvar in
     Array.iter (fun (_, ty) -> resolve_metas ty) ids;

@@ -161,7 +161,10 @@ and cpp_stmt =
   | Sassign_field of cpp_expr * Id.t * cpp_expr
       (** Field assignment for in-place mutation during memory reuse *)
   | Sderef_asgn of Id.t * cpp_expr
-      (** Dereference assignment: *id = expr *)
+      (** Dereference assignment: [*id = expr].  Used by the
+          [shared_ptr<std::function>] fixpoint pattern to assign through
+          the pointer indirection.
+          See {!Translation.gen_local_fix_shared_ptr}. *)
   | Swhile of cpp_expr * cpp_stmt list
       (** While loop: condition and body (used by loopify pass) *)
   | Sblock of cpp_stmt list  (** Scoped block for local declarations *)
