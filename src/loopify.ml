@@ -402,7 +402,7 @@ and collect_stmt check ~in_visitor = function
     | _ -> collect_expr check e )
   | Sreturn None -> []
   | Sexpr e -> collect_expr check e
-  | Sasgn (_, _, e) -> collect_expr check e
+  | Sasgn (_, _, e) | Sderef_asgn (_, e) -> collect_expr check e
   | Sif (cond, then_br, else_br) ->
     collect_expr check cond
     @ collect_stmts check ~in_visitor then_br
@@ -480,7 +480,8 @@ let rec count_calls_stmts (check : call_checker) stmts =
       acc
       +
       match stmt with
-      | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) -> count_calls_expr check e
+      | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) | Sderef_asgn (_, e) ->
+        count_calls_expr check e
       | Sif (cond, then_br, else_br) ->
         count_calls_expr check cond
         + count_calls_stmts check then_br
@@ -2408,6 +2409,7 @@ and free_vars_stmt = function
   | Sreturn None -> []
   | Sexpr e -> free_vars_expr e
   | Sasgn (_, _, e) -> free_vars_expr e
+  | Sderef_asgn (id, e) -> id :: free_vars_expr e
   | Sif (c, t, f) ->
     free_vars_expr c @ free_vars_body t @ free_vars_body f
   | Scustom_case (_, s, _, bs, _) ->
@@ -2500,6 +2502,24 @@ and subst_var_stmt old_id new_id s =
 
 let subst_var_stmts old_id new_id stmts =
   List.map (subst_var_stmt old_id new_id) stmts
+
+(** Substitute [CPPderef (CPPvar target_id)] with [CPPvar target_id] throughout
+    an expression, statement, or statement list.  Used to revert
+    shared_ptr-based fixpoint calls back to direct calls after loopification
+    eliminates the recursion. *)
+let rec un_deref_var_expr target_id e =
+  let fe e = un_deref_var_expr target_id e in
+  match e with
+  | CPPderef (CPPvar id) when Id.equal id target_id -> CPPvar id
+  | _ -> Minicpp.map_expr fe (un_deref_var_stmt target_id) (fun t -> t) e
+
+and un_deref_var_stmt target_id s =
+  let fe e = un_deref_var_expr target_id e in
+  let fs s = un_deref_var_stmt target_id s in
+  Minicpp.map_stmt fe fs (fun t -> t) s
+
+let un_deref_var_stmts target_id stmts =
+  List.map (un_deref_var_stmt target_id) stmts
 
 (** Collect free variables from Scustom_case branch bodies, excluding
     pattern-bound variables. Deduplicated.
@@ -4916,7 +4936,7 @@ and stmt_has_expr pred = function
   | Sreturn (Some e) -> expr_has pred e
   | Sreturn None -> false
   | Sdecl _ -> false
-  | Sasgn (_, _, e) -> expr_has pred e
+  | Sasgn (_, _, e) | Sderef_asgn (_, e) -> expr_has pred e
   | Sexpr e -> expr_has pred e
   | Sif (cond, then_br, else_br) ->
     expr_has pred cond
@@ -5094,7 +5114,7 @@ let try_inline_mutual_into names body =
   and find_callee_in_stmts stmts = List.find_map find_callee_in_stmt stmts
   and find_callee_in_stmt = function
     | Sreturn (Some e) -> find_callee_in_expr e
-    | Sasgn (_, _, e) | Sexpr e -> find_callee_in_expr e
+    | Sasgn (_, _, e) | Sderef_asgn (_, e) | Sexpr e -> find_callee_in_expr e
     | Sif (_, t, e) ->
       ( match find_callee_in_stmts t with
       | Some _ as r -> r
@@ -5186,6 +5206,7 @@ let try_inline_mutual_into names body =
         ]
       | Sreturn (Some e) -> [Sreturn (Some (inline_expr e))]
       | Sasgn (id, ty, e) -> [Sasgn (id, ty, inline_expr e)]
+      | Sderef_asgn (id, e) -> [Sderef_asgn (id, inline_expr e)]
       | Sexpr e -> [Sexpr (inline_expr e)]
       | Smatch (branches, default) ->
         [
@@ -5233,6 +5254,8 @@ let lambda_checker (lambda_name : Id.t) : call_checker =
  fun e ->
    match e with
    | CPPfun_call (CPPvar id, args) when Id.equal id lambda_name ->
+     Some {cs_args = args; cs_is_tail = false}
+   | CPPfun_call (CPPderef (CPPvar id), args) when Id.equal id lambda_name ->
      Some {cs_args = args; cs_is_tail = false}
    | _ -> None
 
@@ -5328,6 +5351,25 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
         let lbody' = process_stmts lbody in
         Sasgn (id, ty_opt, CPPlambda (lparams, ret_ty_opt, lbody', cap))
         :: process_stmts rest )
+    (* Pattern 3: shared_ptr<std::function> fixpoint *)
+    | Sasgn (id, (Some Tauto as _ty_opt),
+             (CPPfun_call (CPPmk_shared func_ty, []) as init_expr))
+      :: Sderef_asgn (id2, CPPlambda (lparams, ret_ty_opt, lbody, cap))
+      :: rest
+      when Id.equal id id2 ->
+      ( match try_loopify_lambda id lparams ret_ty_opt lbody cap with
+      | Some lbody' ->
+        (* Loopification succeeded — no recursion remains.  Revert to a
+           normal std::function declaration so the type is known for
+           decltype and calls use dependent lookup [f x] not [deref f x]. *)
+        Sdecl (id, func_ty)
+        :: Sasgn (id, None, CPPlambda (lparams, ret_ty_opt, lbody', false))
+        :: process_stmts (un_deref_var_stmts id rest)
+      | None ->
+        let lbody' = process_stmts lbody in
+        Sasgn (id, _ty_opt, init_expr)
+        :: Sderef_asgn (id, CPPlambda (lparams, ret_ty_opt, lbody', cap))
+        :: process_stmts rest )
     | stmt :: rest -> process_stmt stmt :: process_stmts rest
   and process_expr expr =
     match expr with
@@ -5372,6 +5414,7 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
     | Swhile (cond, body) -> Swhile (process_expr cond, process_stmts body)
     | Sexpr e -> Sexpr (process_expr e)
     | Sasgn (id, ty, e) -> Sasgn (id, ty, process_expr e)
+    | Sderef_asgn (id, e) -> Sderef_asgn (id, process_expr e)
     | Sreturn (Some e) -> Sreturn (Some (process_expr e))
     | s -> s
   in
@@ -5682,6 +5725,8 @@ and inline_id_in_stmt target_id target_params target_body stmt =
     [Sreturn (Some (inline_id_in_expr target_id target_params target_body e))]
   | Sasgn (id, ty, e) ->
     [Sasgn (id, ty, inline_id_in_expr target_id target_params target_body e)]
+  | Sderef_asgn (id, e) ->
+    [Sderef_asgn (id, inline_id_in_expr target_id target_params target_body e)]
   | Sexpr e -> [Sexpr (inline_id_in_expr target_id target_params target_body e)]
   | Scustom_case (ty, scrut, tyargs, branches, err) ->
     [

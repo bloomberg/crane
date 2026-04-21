@@ -140,6 +140,9 @@ let lambda_needs_capture
       ( match ty with
       | Some _ -> (refs', IdSet.add id decls')
       | None -> (IdSet.add id refs', decls') )
+    | Sderef_asgn (id, e) ->
+      let refs', decls' = collect_from_expr (refs, decls) e in
+      (IdSet.add id refs', decls')
     | Scustom_case (_, scrut, _, branches, _) ->
       List.fold_left
         (fun (r, d) (branch_vars, _, stmts) ->
@@ -983,6 +986,9 @@ and pp_cpp_expr env args t =
       ++ args_s
       ++ str ")"
     | None -> pp_cpp_expr env args (CPPglob (n, tys, None)) ++ str "()" )
+  | CPPfun_call (CPPderef e, ts) ->
+    let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in
+    str "(*" ++ pp_cpp_expr env args e ++ str ")(" ++ args_s ++ str ")"
   | CPPfun_call (f, ts) ->
     let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in
     pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")"
@@ -1395,6 +1401,9 @@ and pp_cpp_stmt env args = function
     ++ str " = "
     ++ pp_cpp_expr env args e
     ++ str ";"
+  | Sderef_asgn (id, e) ->
+    str "*" ++ Id.print id ++ str " = "
+    ++ pp_cpp_expr env args e ++ str ";"
   | Sblock_custom (_ref, tmpl, result_var, result_ty, args, tyargs) ->
     (* Block template: emit a declaration + template-substituted statements.
        %result → result_var, %aN → value args, %tN → type args *)

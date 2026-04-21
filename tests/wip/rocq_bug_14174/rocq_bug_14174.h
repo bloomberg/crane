@@ -795,16 +795,16 @@ struct RocqBug14174 {
     template <typename T1, MapsTo<std::shared_ptr<sig<T1>>, T1> F0>
     static std::shared_ptr<sig<std::function<T1(std::shared_ptr<Nat>)>>>
     dependent_choice(F0 &&h, const T1 x0) {
-      std::function<T1(std::shared_ptr<Nat>)> f;
-      f = [&](std::shared_ptr<Nat> n) -> T1 {
+      auto f = std::make_shared<std::function<T1(std::shared_ptr<Nat>)>>();
+      *f = [=](std::shared_ptr<Nat> n) mutable -> T1 {
         if (std::holds_alternative<typename Nat::O>(n->v())) {
           return x0;
         } else {
           const auto &[d_a0] = std::get<typename Nat::S>(n->v());
-          return h(f(d_a0))->proj1_sig();
+          return h((*f)(d_a0))->proj1_sig();
         }
       };
-      return sig<std::function<T1(std::shared_ptr<Nat>)>>::exist(f);
+      return sig<std::function<T1(std::shared_ptr<Nat>)>>::exist(*f);
     }
 
     template <typename a> using Exc = std::shared_ptr<Option<a>>;

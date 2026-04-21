@@ -1241,7 +1241,7 @@ let stmts_reference_var_directly (target : Id.t) (stmts : cpp_stmt list) : bool 
     | Sreturn (Some e) | Sexpr e -> ve e
     | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _
     | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> ()
-    | Sasgn (_, _, e) -> ve e
+    | Sasgn (_, _, e) | Sderef_asgn (_, e) -> ve e
     | Sif (c, t, f) -> ve c; List.iter vs t; List.iter vs f
     | Sswitch (e, _, branches, def) ->
       ve e;
@@ -4911,6 +4911,182 @@ and inline_iife (k : cpp_expr -> cpp_stmt) = function
     | None -> [k (CPPfun_call (CPPlambda ([], ret_ty, body, false), []))] )
   | expr -> [k expr]
 
+(** Check whether a fixpoint variable [target_id] escapes in a statement list.
+    A variable escapes if it appears in any position other than the function
+    in a direct call [CPPfun_call(CPPvar id, args)].  For example, appearing
+    as a function argument, constructor field, or return value counts as
+    escaping.
+
+    Lambda bodies are treated specially: ANY reference to the fixpoint
+    inside a lambda body (even in call position) counts as an escape.
+    This is because the lambda captures the fixpoint, and the captured
+    [std::function]'s internal [\[&\]] lambda still holds dangling
+    references when the lambda outlives the fixpoint's defining scope. *)
+and fixpoint_escapes_in_stmts target_id stmts =
+  let rec check_expr e =
+    match e with
+    | CPPfun_call (CPPvar id, args) when Id.equal id target_id ->
+      (* Safe: direct call.  But check the arguments for escapes. *)
+      List.exists check_expr args
+    | CPPvar id when Id.equal id target_id ->
+      true  (* Escape: bare reference outside call position *)
+    | CPPlambda (_, _, body, _) ->
+      (* Any reference inside a lambda means the fixpoint is captured.
+         Even if only called, the capture copies the std::function whose
+         internal lambda still has dangling [&] references.
+         Must use a properly recursive walker since map_expr/map_stmt
+         only do one level of descent. *)
+      let rec has_var_in_expr e =
+        match e with
+        | CPPvar id when Id.equal id target_id -> true
+        | _ ->
+          let found = ref false in
+          let fe e' = if not !found then found := has_var_in_expr e'; e' in
+          let fs s' = if not !found then found := has_var_in_stmt s'; s' in
+          ignore (Minicpp.map_expr fe fs Fun.id e);
+          !found
+      and has_var_in_stmt s =
+        let found = ref false in
+        let on_expr e = if not !found then found := has_var_in_expr e in
+        let on_stmts ss =
+          if not !found then found := List.exists has_var_in_stmt ss
+        in
+        Minicpp.iter_stmt_children ~on_expr ~on_stmts s;
+        !found
+      in
+      List.exists has_var_in_stmt body
+    | _ ->
+      (* Recurse into sub-expressions *)
+      let found = ref false in
+      let fe e = if not !found then found := check_expr e; e in
+      ignore (Minicpp.map_expr fe Fun.id Fun.id e);
+      !found
+  in
+  let rec check_stmt s =
+    let found = ref false in
+    let on_expr e = if not !found then found := check_expr e in
+    let on_stmts ss = if not !found then found := check_stmts ss in
+    Minicpp.iter_stmt_children ~on_expr ~on_stmts s;
+    !found
+  and check_stmts ss = List.exists check_stmt ss
+  in
+  check_stmts stmts
+
+(** Generate local fixpoint declarations using the old [&]-capture pattern.
+    Used when the fixpoint does not escape its defining scope, so dangling
+    references are not a concern.
+
+    Returns [(decls, defs)] where:
+    - [decls]: [std::function<...> f;] for each fixpoint
+    - [defs]: [f = \[&\](...) \{ body \}] for each fixpoint *)
+and gen_local_fix_by_ref env renamed_ids funs_with_params =
+  let tvars = get_current_type_vars () in
+  let fix_func_type ty =
+    match ty with
+    | Minicpp.Tfun (params, Minicpp.Tvar (_, None)) ->
+      Minicpp.Tfun (params, Minicpp.Tvoid)
+    | _ -> ty
+  in
+  let ret_ty ty =
+    match convert_ml_type_to_cpp_type env Refset'.empty tvars ty with
+    | Tfun (_, t) ->
+      ( match t with
+      | Minicpp.Tvar (_, None) -> None
+      | _ -> Some t )
+    | _ -> None
+  in
+  let decls =
+    List.map
+      (fun (id, ty) ->
+        Sdecl
+          ( id,
+            fix_func_type
+              (convert_ml_type_to_cpp_type env Refset'.empty tvars ty) ) )
+      renamed_ids
+  in
+  let defs =
+    List.map2
+      (fun (id, _fty) (args, body) ->
+        Sasgn
+          ( id,
+            None,
+            CPPlambda
+              ( List.map
+                  (fun (id, ty) ->
+                    ( convert_ml_type_to_cpp_type env Refset'.empty tvars ty,
+                      Some id ) )
+                  args,
+                ret_ty _fty,
+                body,
+                false ) ) )
+      renamed_ids funs_with_params
+  in
+  (decls, defs)
+
+(** Generate shared_ptr-based local fixpoint declarations and definitions.
+    Uses [shared_ptr<std::function<...>>] so that the fixpoint lambda can
+    capture by value ([=]) instead of by reference ([&]), preventing dangling
+    references when the closure escapes its defining scope.
+
+    Returns [(decls, defs, deref_subst)] where:
+    - [decls]: [auto f = std::make_shared<std::function<...>>();] for each fixpoint
+    - [defs]: [*f = \[=\](...) mutable \{ body \}] for each fixpoint
+    - [deref_subst]: rewrites [CPPvar(fix_id)] -> [CPPderef(CPPvar(fix_id))] *)
+and gen_local_fix_shared_ptr env renamed_ids funs_with_params =
+  let tvars = get_current_type_vars () in
+  let fix_func_type ty =
+    match ty with
+    | Minicpp.Tfun (params, Minicpp.Tvar (_, None)) ->
+      Minicpp.Tfun (params, Minicpp.Tvoid)
+    | _ -> ty
+  in
+  let deref_subst stmts =
+    List.fold_left
+      (fun s (fix_id, _) ->
+        List.map
+          (local_var_subst_stmt fix_id (CPPderef (CPPvar fix_id)))
+          s )
+      stmts renamed_ids
+  in
+  let ret_ty ty =
+    match convert_ml_type_to_cpp_type env Refset'.empty tvars ty with
+    | Tfun (_, t) ->
+      ( match t with
+      | Minicpp.Tvar (_, None) -> None
+      | _ -> Some t )
+    | _ -> None
+  in
+  let decls =
+    List.map
+      (fun (id, ty) ->
+        Sasgn
+          ( id,
+            Some Tauto,
+            CPPfun_call
+              ( CPPmk_shared
+                  (fix_func_type
+                     (convert_ml_type_to_cpp_type env Refset'.empty tvars ty)),
+                [] ) ) )
+      renamed_ids
+  in
+  let defs =
+    List.map2
+      (fun (id, _fty) (args, body) ->
+        Sderef_asgn
+          ( id,
+            CPPlambda
+              ( List.map
+                  (fun (id, ty) ->
+                    ( convert_ml_type_to_cpp_type env Refset'.empty tvars ty,
+                      Some id ) )
+                  args,
+                ret_ty _fty,
+                deref_subst body,
+                true ) ) )
+      renamed_ids funs_with_params
+  in
+  (decls, defs, deref_subst)
+
 (** Generate C++ statements from an ML AST. The continuation [k] transforms the
     final expression into a statement (e.g., return, assignment). Handles
     let-bindings, pattern matching, fix expressions, and monadic operations. *)
@@ -4995,11 +5171,9 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       (* In the continuation body b, the fixpoint name should resolve to a call
          to the lifted function with appropriate type arguments. We push the fix
          name into the env so that MLrel references in b resolve correctly. *)
-      let fix_ids_for_env =
-        Array.to_list (Array.map (fun (n, ty) -> (n, ty)) ids)
-      in
-      let _, env_with_fix = push_vars' fix_ids_for_env env in
-      push_env_types fix_ids_for_env;
+      let projected_fix_id = (fst ids.(x), snd ids.(x)) in
+      let _, env_with_fix = push_vars' [projected_fix_id] env in
+      push_env_types [projected_fix_id];
       (* Generate b, then replace references to the fixpoint var with calls to
          the lifted function. Build explicit type args: outer tvars stay as Tvar
          references, extra tvars are resolved to concrete types from the
@@ -5040,19 +5214,15 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           outer_args @ extra_args
       in
       let lifted_call = mk_cppglob lifted_ref call_type_args in
-      (* Phase 2: shift owned vars for fix bindings *)
-      let n_fix_bindings_lifted = Array.length ids in
+      (* Phase 2: shift owned vars for the single let binding *)
       let saved_owned_lifted = tctx.move_owned_vars in
       tctx.move_owned_vars <-
-        Escape.IntSet.map
-          (fun i -> i + n_fix_bindings_lifted)
-          tctx.move_owned_vars;
+        Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars;
       let result = gen_stmts env_with_fix k b in
       tctx.move_owned_vars <- saved_owned_lifted;
       List.map (local_var_subst_stmt fix_name lifted_call) result )
     else
-      (* No extra Tvars - proceed with original local fixpoint approach *)
-      (* Call gen_fix with all mutual fixpoint names so each body can reference the others *)
+      (* No extra Tvars - proceed with local fixpoint approach *)
       let all_fix_ids_list = Array.to_list ids in
       let funs_compiled =
         Array.to_list
@@ -5061,74 +5231,83 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
                gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f )
              funs )
       in
-      (* Extract the renamed ids from gen_fix results *)
       let renamed_ids =
         List.map (fun (renamed_id, _, _) -> renamed_id) funs_compiled
       in
       let funs_with_params =
         List.map (fun (_, params, body) -> (params, body)) funs_compiled
       in
-      let tvars = get_current_type_vars () in
-      (* For std::function declarations, if return type is an unnamed Tvar, use
-         void as placeholder. *)
-      let fix_func_type ty =
-        match ty with
-        | Minicpp.Tfun (params, Minicpp.Tvar (_, None)) ->
-          Minicpp.Tfun (params, Minicpp.Tvoid)
-        | _ -> ty
+      (* Add only the PROJECTED fixpoint id to the continuation env.
+         MLletin binds ONE variable (the projected fixpoint), not all mutual
+         fix functions.  Pushing all fix names would shift de Bruijn indices
+         by n instead of 1, corrupting references in the continuation.
+         However, ALL fix names are added to the avoid set to prevent
+         name clashes in subsequent fixpoints (e.g., when the same mutual
+         block is instantiated again with a different projection). *)
+      let projected_id = List.nth renamed_ids x in
+      (* Add non-projected fix names to the avoid set so that subsequent
+         fixpoints (e.g., a second MLfix with a different projection from
+         the same mutual block) will rename conflicting names. *)
+      let env_for_cont =
+        let (db, avoid) = env in
+        let avoid' = List.fold_left
+          (fun acc (i, (id, _)) ->
+            if i <> x then Id.Set.add id acc else acc)
+          avoid (List.mapi (fun i x -> (i, x)) renamed_ids)
+        in
+        (db, avoid')
       in
-      (* Use renamed ids for declarations *)
-      let decls =
-        List.map
-          (fun (id, ty) ->
-            Sdecl
-              ( id,
-                fix_func_type
-                  (convert_ml_type_to_cpp_type env Refset'.empty tvars ty) ) )
-          renamed_ids
+      let _, env_with_fix = push_vars' [projected_id] env_for_cont in
+      push_env_types [projected_id];
+      (* Compute outer variables captured by the fixpoint bodies.
+         If the fixpoint ends up using [&] capture, these variables must
+         not be moved in the continuation — the fixpoint holds references
+         to them. Even if the fixpoint later uses [=] (escape path),
+         suppressing moves is safe (just conservative: copies instead
+         of moves for those vars). *)
+      let fix_captured =
+        Array.fold_left
+          (fun acc body ->
+            Escape.IntSet.union acc
+              (Escape.free_rels (Array.length ids) body))
+          Escape.IntSet.empty funs
       in
-      let ret_ty ty =
-        match convert_ml_type_to_cpp_type env Refset'.empty tvars ty with
-        | Tfun (_, t) ->
-          ( match t with
-          | Minicpp.Tvar (_, None) -> None
-          | _ -> Some t )
-        | _ -> None
+      (* Shift captured indices: free var at index i in the fix scope
+         becomes i+1 in the continuation (one let-binding added). *)
+      let captured_shifted =
+        Escape.IntSet.map (fun i -> i + 1) fix_captured
       in
-      (* Use renamed ids for definitions *)
-      let defs =
-        List.map2
-          (fun (id, fty) (args, body) ->
-            Sasgn
-              ( id,
-                None,
-                CPPlambda
-                  ( List.map
-                      (fun (id, ty) ->
-                        ( convert_ml_type_to_cpp_type env Refset'.empty tvars ty,
-                          Some id ) )
-                      args,
-                    ret_ty fty,
-                    body,
-                    false ) ) )
-          renamed_ids
-          funs_with_params
-      in
-      (* Add renamed ids to environment for processing body *)
-      let _, env_with_fix = push_vars' renamed_ids env in
-      push_env_types renamed_ids;
-      (* Phase 2: shift owned vars and dead-after for fix bindings *)
-      let n_fix_bindings = Array.length ids in
+      (* Phase 2: shift owned vars and dead-after for the single let binding.
+         Remove captured variables from owned set to prevent moves. *)
       let saved_owned = tctx.move_owned_vars in
       let saved_dead_fix = tctx.move_dead_after in
       tctx.move_owned_vars <-
-        Escape.IntSet.map (fun i -> i + n_fix_bindings) tctx.move_owned_vars;
+        Escape.IntSet.diff
+          (Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars)
+          captured_shifted;
       tctx.move_dead_after <-
-        Escape.IntSet.map (fun i -> i + n_fix_bindings) tctx.move_dead_after;
+        Escape.IntSet.map (fun i -> i + 1) tctx.move_dead_after;
       let cont = gen_stmts env_with_fix k b in
       tctx.move_owned_vars <- saved_owned;
       tctx.move_dead_after <- saved_dead_fix;
-      decls @ defs @ cont
+      (* Check if any fixpoint variable escapes in the continuation.
+         If so, use shared_ptr + [=] to prevent dangling references.
+         Otherwise, use the simpler [&] capture pattern. *)
+      let any_escapes =
+        List.exists
+          (fun (id, _) -> fixpoint_escapes_in_stmts id cont)
+          renamed_ids
+      in
+      if any_escapes then
+        let decls, defs, deref_subst =
+          gen_local_fix_shared_ptr env renamed_ids funs_with_params
+        in
+        decls @ defs @ deref_subst cont
+      else
+        let decls, defs =
+          gen_local_fix_by_ref env renamed_ids funs_with_params
+        in
+        decls @ defs @ cont
   | MLletin (x, t, (MLlam _ as a), b) ->
     (* Check if this is a polymorphic lambda that should be lifted to a
        top-level template function. *)
@@ -5809,7 +5988,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       in
       let cpp_args = List.rev_map (gen_expr env) args in
       [k (CPPfun_call (mk_cppglob lifted_ref call_type_args, cpp_args))] )
-    else (* No extra Tvars - proceed with original local fixpoint approach *)
+    else (* No extra Tvars - proceed with by-ref local fixpoint (immediately applied) *)
       let all_fix_ids_list = Array.to_list ids in
       let funs_compiled =
         Array.to_list
@@ -5824,60 +6003,18 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       let funs_with_params =
         List.map (fun (_, params, body) -> (params, body)) funs_compiled
       in
-      let tvars = get_current_type_vars () in
-      let fix_func_type ty =
-        match ty with
-        | Minicpp.Tfun (params, Minicpp.Tvar (_, None)) ->
-          Minicpp.Tfun (params, Minicpp.Tvoid)
-        | _ -> ty
-      in
-      let decls =
-        List.map
-          (fun (id, ty) ->
-            Sdecl
-              ( id,
-                fix_func_type
-                  (convert_ml_type_to_cpp_type env Refset'.empty tvars ty) ) )
-          renamed_ids
-      in
-      let ret_ty ty =
-        match convert_ml_type_to_cpp_type env Refset'.empty tvars ty with
-        | Tfun (_, t) ->
-          ( match t with
-          | Minicpp.Tvar (_, None) -> None
-          | _ -> Some t )
-        | _ -> None
-      in
-      let defs =
-        List.map2
-          (fun (id, fty) (params, body) ->
-            Sasgn
-              ( id,
-                None,
-                CPPlambda
-                  ( List.map
-                      (fun (id, ty) ->
-                        ( convert_ml_type_to_cpp_type env Refset'.empty tvars ty,
-                          Some id ) )
-                      params,
-                    ret_ty fty,
-                    body,
-                    false ) ) )
-          renamed_ids
-          funs_with_params
+      let decls, defs =
+        gen_local_fix_by_ref env renamed_ids funs_with_params
       in
       let args = List.rev_map (gen_expr env) args in
-      decls
-      @ defs
-      @ [k (CPPfun_call (CPPvar (fst (List.nth renamed_ids x)), args))]
+      decls @ defs
+      @ [k (CPPfun_call
+              (CPPvar (fst (List.nth renamed_ids x)), args))]
   | MLfix (x, ids, funs, _) ->
     (* Standalone fixpoint (not immediately applied) - e.g., in let binding *)
-    (* Resolve unresolved metas in fix function types to Tvars using mgu. *)
     let next_tvar = ref 1 in
     let resolve_metas = resolve_type_metas ~next_tvar in
     Array.iter (fun (_, ty) -> resolve_metas ty) ids;
-    (* Call gen_fix with all mutual fixpoint names so each body can reference
-       the others *)
     let all_fix_ids_list = Array.to_list ids in
     let funs_compiled =
       Array.to_list
@@ -5886,59 +6023,17 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
              gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f )
            funs )
     in
-    (* Extract the renamed ids from gen_fix results *)
     let renamed_ids =
       List.map (fun (renamed_id, _, _) -> renamed_id) funs_compiled
     in
     let funs_with_params =
       List.map (fun (_, params, body) -> (params, body)) funs_compiled
     in
-    let tvars = get_current_type_vars () in
-    (* For std::function declarations, if return type is an unnamed Tvar, use
-       void as placeholder. *)
-    let fix_func_type ty =
-      match ty with
-      | Minicpp.Tfun (params, Minicpp.Tvar (_, None)) ->
-        Minicpp.Tfun (params, Minicpp.Tvoid)
-      | _ -> ty
+    let decls, defs, _deref_subst =
+      gen_local_fix_shared_ptr env renamed_ids funs_with_params
     in
-    let decls =
-      List.map
-        (fun (id, ty) ->
-          Sdecl
-            ( id,
-              fix_func_type
-                (convert_ml_type_to_cpp_type env Refset'.empty tvars ty) ) )
-        renamed_ids
-    in
-    let ret_ty ty =
-      match convert_ml_type_to_cpp_type env Refset'.empty tvars ty with
-      | Tfun (_, t) ->
-        ( match t with
-        | Minicpp.Tvar (_, None) -> None
-        | _ -> Some t )
-      | _ -> None
-    in
-    let defs =
-      List.map2
-        (fun (id, fty) (params, body) ->
-          Sasgn
-            ( id,
-              None,
-              CPPlambda
-                ( List.map
-                    (fun (id, ty) ->
-                      ( convert_ml_type_to_cpp_type env Refset'.empty tvars ty,
-                        Some id ) )
-                    params,
-                  ret_ty fty,
-                  body,
-                  false ) ) )
-        renamed_ids
-        funs_with_params
-    in
-    (* Return the fix function itself (for use in let bindings etc.) *)
-    decls @ defs @ [k (CPPvar (fst (List.nth renamed_ids x)))]
+    (* Return *fix_name (the std::function value) *)
+    decls @ defs @ [k (CPPderef (CPPvar (fst (List.nth renamed_ids x))))]
   (* | MLapp (MLglob (h, _), a1 :: a2 :: l) when is_hoist h -> gen_stmts env k
      (MLapp (a1, a2::[])) *)
   | MLapp (MLglob (r, bind_tys), a1 :: a2 :: l) when is_bind r ->
@@ -6282,17 +6377,24 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
   in
   (* Push all mutual fixpoint names (or just (n,ty) for single fixpoints). For
      mutual fixpoints, all_fix_ids contains all fixpoint names in array order.
-     For single fixpoints, all_fix_ids is empty and we use [(n,ty)]. *)
+     For single fixpoints, all_fix_ids is empty and we use [(n,ty)].
+
+     IMPORTANT: Rocq's extraction pushes fix bindings so that the LAST function
+     is at db 1 and the FIRST is at db n (standard de Bruijn convention with
+     fold_left over the array). We must reverse fix_names to match. *)
   let fix_names = if all_fix_ids = [] then [(n, ty)] else all_fix_ids in
   let n_fix_funs = List.length fix_names in
-  let renamed_fix_ids, env = push_vars' (ids @ fix_names) env in
+  let fix_names_db_order = List.rev fix_names in
+  let renamed_fix_ids, env = push_vars' (ids @ fix_names_db_order) env in
   let saved_env_types = tctx.env_types in
-  push_env_types (ids @ fix_names);
-  (* Extract the renamed name for THIS fixpoint function. fix_names are at the
-     end of renamed_fix_ids, starting at position (List.length ids). For mutual
-     fixpoints, fix_idx identifies which one is ours. *)
+  push_env_types (ids @ fix_names_db_order);
+  (* Extract the renamed name for THIS fixpoint function. fix_names_db_order
+     is reversed from the array order, so fix array index i corresponds to
+     position (n_fix_funs - 1 - i) in the reversed list. *)
   let n_lam_params = List.length ids in
-  let renamed_n = fst (List.nth renamed_fix_ids (n_lam_params + fix_idx)) in
+  let renamed_n =
+    fst (List.nth renamed_fix_ids
+           (n_lam_params + (n_fix_funs - 1 - fix_idx))) in
   let ids = List.filter (fun (_, ty) -> not (ml_type_is_void ty)) ids in
   (* Phase 2: set up move state for fixpoint body. Fix params are owned (passed
      by value in the generated std::function lambda). After push_vars'(ids @
