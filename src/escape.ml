@@ -337,7 +337,8 @@ let find_reuse_candidates scrutinee_type branches =
            ( match tail_constructor body with
            | Some (cons_ty, tail_ctor, tail_args)
              when same_inductive scrutinee_type cons_ty
-                  && List.length tail_args = matched_arity ->
+                  && List.length tail_args = matched_arity
+                  && Names.GlobRef.CanOrd.equal matched_ctor tail_ctor ->
              Some (_idx, variant_idx, matched_ctor, matched_arity, tail_ctor, tail_args)
            | _ -> None )
          | _ -> None )

@@ -26,7 +26,7 @@ LoopifyGrouping::prepend_to_groups(
         std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> gs =
             std::move(_rf.d_a1);
         _rf.d_a0 = List<unsigned int>::cons(x, g);
-        _rf.d_a1 = std::move(gs);
+        _rf.d_a1 = gs;
         return groups;
       } else {
         const auto &[d_a0, d_a1] =

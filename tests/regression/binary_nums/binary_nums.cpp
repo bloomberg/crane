@@ -446,7 +446,7 @@ std::shared_ptr<N> BinNat::add(std::shared_ptr<N> n, std::shared_ptr<N> m) {
       if (m.use_count() == 1) {
         auto &_rf = std::get<typename N::Npos>(m->v_mut());
         std::shared_ptr<Positive> q = std::move(_rf.d_a0);
-        _rf.d_a0 = Coq_Pos::add(std::move(d_a0), q);
+        _rf.d_a0 = Coq_Pos::add(d_a0, q);
         return m;
       } else {
         const auto &[d_a00] = std::get<typename N::Npos>(m->v());
@@ -564,7 +564,7 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
       if (y.use_count() == 1) {
         auto &_rf = std::get<typename Z::Zpos>(y->v_mut());
         std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
-        _rf.d_a0 = Pos::add(std::move(d_a0), y_);
+        _rf.d_a0 = Pos::add(d_a0, y_);
         return y;
       } else {
         const auto &[d_a00] = std::get<typename Z::Zpos>(y->v());
@@ -586,7 +586,7 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
       if (y.use_count() == 1) {
         auto &_rf = std::get<typename Z::Zneg>(y->v_mut());
         std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
-        _rf.d_a0 = Pos::add(std::move(d_a0), y_);
+        _rf.d_a0 = Pos::add(d_a0, y_);
         return y;
       } else {
         const auto &[d_a00] = std::get<typename Z::Zneg>(y->v());

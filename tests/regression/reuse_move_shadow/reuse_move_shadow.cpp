@@ -50,8 +50,8 @@ ReuseMoveShadow::dup_left(std::shared_ptr<ReuseMoveShadow::tree> t,
         unsigned int v = std::move(_rf.d_a0);
         std::shared_ptr<ReuseMoveShadow::tree> l = std::move(_rf.d_a1);
         _rf.d_a0 = v;
-        _rf.d_a1 = std::move(l);
-        _rf.d_a2 = std::move(l);
+        _rf.d_a1 = l;
+        _rf.d_a2 = l;
         return t;
       } else {
         const auto &[d_a0, d_a1, d_a2] =

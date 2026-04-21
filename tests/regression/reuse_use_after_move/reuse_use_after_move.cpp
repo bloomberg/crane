@@ -52,19 +52,9 @@ ReuseUseAfterMove::rewrite_head(std::shared_ptr<ReuseUseAfterMove::mylist> l,
   if (b) {
     if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
             l->v())) {
-      if (l.use_count() == 1) {
-        auto &_rf =
-            std::get<typename ReuseUseAfterMove::mylist::Mycons>(l->v_mut());
-        std::shared_ptr<ReuseUseAfterMove::mylist> xs = std::move(_rf.d_a1);
-        _rf.d_a0 = length(l);
-        _rf.d_a1 = xs;
-        return l;
-      } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename ReuseUseAfterMove::mylist::Mycons>(l->v());
-        return mylist::mycons(length(l), d_a1);
-      }
-
+      const auto &[d_a0, d_a1] =
+          std::get<typename ReuseUseAfterMove::mylist::Mycons>(l->v());
+      return mylist::mycons(length(l), d_a1);
     } else {
       return mylist::mynil();
     }
@@ -79,19 +69,9 @@ std::shared_ptr<ReuseUseAfterMove::mylist> ReuseUseAfterMove::rewrite_head_sum(
   if (b) {
     if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
             l->v())) {
-      if (l.use_count() == 1) {
-        auto &_rf =
-            std::get<typename ReuseUseAfterMove::mylist::Mycons>(l->v_mut());
-        std::shared_ptr<ReuseUseAfterMove::mylist> xs = std::move(_rf.d_a1);
-        _rf.d_a0 = sum(l);
-        _rf.d_a1 = xs;
-        return l;
-      } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename ReuseUseAfterMove::mylist::Mycons>(l->v());
-        return mylist::mycons(sum(l), d_a1);
-      }
-
+      const auto &[d_a0, d_a1] =
+          std::get<typename ReuseUseAfterMove::mylist::Mycons>(l->v());
+      return mylist::mycons(sum(l), d_a1);
     } else {
       return mylist::mynil();
     }

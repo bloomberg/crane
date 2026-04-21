@@ -141,28 +141,6 @@
   (deps tailrec_reorder_probe.t.exe)
   (action (run ./tailrec_reorder_probe.t.exe))))
 
-(subdir reuse_mixed_fields
- (rule
-  (targets reuse_mixed_fields.t.exe)
-  (deps ReuseMixedFields.vo reuse_mixed_fields.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_mixed_fields.t.exe reuse_mixed_fields.cpp reuse_mixed_fields.t.cpp)))
- (rule
-  (alias runtest)
-  (deps reuse_mixed_fields.t.exe)
-  (action (run ./reuse_mixed_fields.t.exe))))
-
-(subdir reuse_tag_mismatch
- (rule
-  (targets reuse_tag_mismatch.t.exe)
-  (deps ReuseTagMismatch.vo reuse_tag_mismatch.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_tag_mismatch.t.exe reuse_tag_mismatch.cpp reuse_tag_mismatch.t.cpp)))
- (rule
-  (alias runtest)
-  (deps reuse_tag_mismatch.t.exe)
-  (action (run ./reuse_tag_mismatch.t.exe))))
-
 (subdir existential_closure_probe
  (rule
   (targets existential_closure_probe.t.exe)
@@ -173,28 +151,6 @@
   (alias runtest)
   (deps existential_closure_probe.t.exe)
   (action (run ./existential_closure_probe.t.exe))))
-
-(subdir reuse_use_after_move
- (rule
-  (targets reuse_use_after_move.t.exe)
-  (deps ReuseUseAfterMove.vo reuse_use_after_move.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_use_after_move.t.exe reuse_use_after_move.cpp reuse_use_after_move.t.cpp)))
- (rule
-  (alias runtest)
-  (deps reuse_use_after_move.t.exe)
-  (action (run ./reuse_use_after_move.t.exe))))
-
-(subdir reuse_self_cycle
- (rule
-  (targets reuse_self_cycle.t.exe)
-  (deps ReuseSelfCycle.vo reuse_self_cycle.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_self_cycle.t.exe reuse_self_cycle.cpp reuse_self_cycle.t.cpp)))
- (rule
-  (alias runtest)
-  (deps reuse_self_cycle.t.exe)
-  (action (run ./reuse_self_cycle.t.exe))))
 
 (subdir cofix_this_thunk
  (rule
@@ -207,17 +163,6 @@
   (deps cofix_this_thunk.t.exe)
   (action (run ./cofix_this_thunk.t.exe))))
 
-
-(subdir reuse_lambda_capture
- (rule
-  (targets reuse_lambda_capture.t.exe)
-  (deps ReuseLambdaCapture.vo reuse_lambda_capture.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_lambda_capture.t.exe reuse_lambda_capture.cpp reuse_lambda_capture.t.cpp)))
- (rule
-  (alias runtest)
-  (deps reuse_lambda_capture.t.exe)
-  (action (run ./reuse_lambda_capture.t.exe))))
 
 (subdir rocq_bug_14100
  (rule
@@ -273,25 +218,3 @@
   (alias runtest)
   (deps rocq_bug_4720.t.exe)
   (action (run ./rocq_bug_4720.t.exe))))
-
-(subdir reuse_move_shadow
- (rule
-  (targets reuse_move_shadow.t.exe)
-  (deps ReuseMoveShadow.vo reuse_move_shadow.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_move_shadow.t.exe reuse_move_shadow.cpp reuse_move_shadow.t.cpp)))
- (rule
-  (alias runtest)
-  (deps reuse_move_shadow.t.exe)
-  (action (run ./reuse_move_shadow.t.exe))))
-
-(subdir reuse_fn_in_body
- (rule
-  (targets reuse_fn_in_body.t.exe)
-  (deps ReuseFnInBody.vo reuse_fn_in_body.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_fn_in_body.t.exe reuse_fn_in_body.cpp reuse_fn_in_body.t.cpp)))
- (rule
-  (alias runtest)
-  (deps reuse_fn_in_body.t.exe)
-  (action (run ./reuse_fn_in_body.t.exe))))

@@ -37,19 +37,9 @@ ReuseSelfCycle::prepend_self(std::shared_ptr<ReuseSelfCycle::mylist> l,
   if (b) {
     if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(
             l->v())) {
-      if (l.use_count() == 1) {
-        auto &_rf =
-            std::get<typename ReuseSelfCycle::mylist::Mycons>(l->v_mut());
-        unsigned int x = std::move(_rf.d_a0);
-        _rf.d_a0 = x;
-        _rf.d_a1 = l;
-        return l;
-      } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename ReuseSelfCycle::mylist::Mycons>(l->v());
-        return mylist::mycons(d_a0, l);
-      }
-
+      const auto &[d_a0, d_a1] =
+          std::get<typename ReuseSelfCycle::mylist::Mycons>(l->v());
+      return mylist::mycons(d_a0, l);
     } else {
       return mylist::mynil();
     }

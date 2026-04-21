@@ -4537,17 +4537,37 @@ and gen_cpp_case (typ : ml_type) t env pv =
         in
         let reuse_ctor_struct_name = ctor_struct_name_of_ref matched_ctor in
         let ids, _rty, _pat, body = pv.(pv_idx) in
+        (* Safety check: skip reuse if the scrutinee is referenced in the
+           branch body.  The reuse path std::move's fields out of the
+           scrutinee before evaluating tail constructor arguments.  If any
+           tail arg (or prefix let-binding RHS) references the scrutinee
+           — directly or through a function call — the moved-from fields
+           cause null dereference or self-cycles.
+           In the body scope, pattern vars occupy db 1..n_pat_vars,
+           so the scrutinee is at db + n_pat_vars. *)
+        let n_pat_vars = List.length ids in
+        let scrutinee_used_in_body =
+          match scrut_db with
+          | Some db -> Escape.nb_occur_match (db + n_pat_vars) body > 0
+          | None -> true
+        in
+        if scrutinee_used_in_body then branches
+        else
         (* use_count() == 1 guard *)
         let use_count_cond =
           CPPbinop ("==",
             CPPfun_call (CPPmember (scrut_expr, Id.of_string "use_count"), []),
             CPPint 1)
         in
-        (* Push pattern variables into the environment *)
+        (* Push pattern variables into the environment.  Shift move tracking
+           indices by [n_pat_vars] so that parameter indices don't collide
+           with pattern variable indices (matching the non-reuse path). *)
         let saved_env_types = tctx.env_types in
+        let rf_var = Id.of_string "_rf" in
+        let ids', env', dummies, extract_stmts, prefix_stmts, assign_stmts =
+          with_shifted_move_tracking n_pat_vars ~clear_dead:true (fun () ->
         let ids', env', dummies = process_match_pattern_vars ids env in
         (* Extract fields into local variables via [std::move(_rf.d_field)] *)
-        let rf_var = Id.of_string "_rf" in
         let rev_ids' = List.rev ids' in
         let extract_stmts =
           List.filter_map Fun.id
@@ -4609,6 +4629,8 @@ and gen_cpp_case (typ : ml_type) t env pv =
                 Some (Sassign_field (CPPvar rf_var, field_id,
                         gen_expr body_env tail_arg)))
             (List.mapi (fun i a -> (i, a)) tail_args)
+        in
+        (ids', env', dummies, extract_stmts, prefix_stmts, assign_stmts))
         in
         tctx.env_types <- saved_env_types;
         (* Build reuse body: extract fields, prefix lets,

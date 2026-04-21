@@ -17,18 +17,9 @@ ReuseTagMismatch::id_or_flip(std::shared_ptr<ReuseTagMismatch::direction> d,
   if (flip_flag) {
     if (std::holds_alternative<typename ReuseTagMismatch::direction::GoUp>(
             d->v())) {
-      if (d.use_count() == 1) {
-        auto &_rf =
-            std::get<typename ReuseTagMismatch::direction::GoUp>(d->v_mut());
-        unsigned int n = std::move(_rf.d_a0);
-        _rf.d_a0 = n;
-        return d;
-      } else {
-        const auto &[d_a0] =
-            std::get<typename ReuseTagMismatch::direction::GoUp>(d->v());
-        return direction::godown(d_a0);
-      }
-
+      const auto &[d_a0] =
+          std::get<typename ReuseTagMismatch::direction::GoUp>(d->v());
+      return direction::godown(d_a0);
     } else {
       const auto &[d_a0] =
           std::get<typename ReuseTagMismatch::direction::GoDown>(d->v());

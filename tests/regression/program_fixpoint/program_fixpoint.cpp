@@ -38,8 +38,8 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
       auto &_rf = std::get<typename List<unsigned int>::Cons>(l1->v_mut());
       unsigned int x0 = std::move(_rf.d_a0);
       std::shared_ptr<List<unsigned int>> xs = std::move(_rf.d_a1);
-      _rf.d_a0 = std::move(x0);
-      _rf.d_a1 = std::move(interleave0)(l2, xs);
+      _rf.d_a0 = x0;
+      _rf.d_a1 = interleave0(l2, xs);
       return l1;
     } else {
       const auto &[d_a0, d_a1] =
