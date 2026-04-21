@@ -1,6 +1,6 @@
 From Crane Require Import Mapping.Std.
 From Crane Require Extraction.
-From CraneTestsWIP Require Import imported_alias_qualification.AliasSource.
+From CraneTestsRegression Require Import imported_alias_qualification.AliasSource.
 
 (**
   Bug: Imported module type aliases are emitted at top level but referenced
@@ -15,4 +15,4 @@ From CraneTestsWIP Require Import imported_alias_qualification.AliasSource.
 Definition entry : AliasSource.cell :=
   AliasSource.id_cell AliasSource.empty_cell.
 
-Crane Extraction "alias_probe" entry.
+Crane Extraction "imported_alias_qualification" entry.

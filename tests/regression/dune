@@ -4416,3 +4416,25 @@
   (alias runtest)
   (deps this_capture_dangling.t.exe)
   (action (run ./this_capture_dangling.t.exe))))
+
+(subdir functor_output_probe
+ (rule
+  (targets functor_output_probe.t.exe)
+  (deps FunctorOutputProbe.vo functor_output_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_output_probe.t.exe functor_output_probe.cpp functor_output_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps functor_output_probe.t.exe)
+  (action (run ./functor_output_probe.t.exe))))
+
+(subdir imported_alias_qualification
+ (rule
+  (targets imported_alias_qualification.t.exe)
+  (deps ImportedAliasQualification.vo imported_alias_qualification.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} imported_alias_qualification.t.exe imported_alias_qualification.cpp imported_alias_qualification.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps imported_alias_qualification.t.exe)
+  (action (run ./imported_alias_qualification.t.exe))))

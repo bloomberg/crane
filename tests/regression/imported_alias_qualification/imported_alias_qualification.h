@@ -1,5 +1,5 @@
-#ifndef INCLUDED_ALIAS_PROBE
-#define INCLUDED_ALIAS_PROBE
+#ifndef INCLUDED_IMPORTED_ALIAS_QUALIFICATION
+#define INCLUDED_IMPORTED_ALIAS_QUALIFICATION
 
 #include <memory>
 #include <optional>
@@ -18,4 +18,4 @@ struct AliasSource {
 
 const cell entry = AliasSource::id_cell(AliasSource::empty_cell);
 
-#endif // INCLUDED_ALIAS_PROBE
+#endif // INCLUDED_IMPORTED_ALIAS_QUALIFICATION

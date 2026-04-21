@@ -71,17 +71,6 @@
   (deps no_mapping_event_probe.t.exe)
   (action (run ./no_mapping_event_probe.t.exe))))
 
-(subdir functor_output_probe
- (rule
-  (targets functor_output_probe.t.exe)
-  (deps FunctorOutputProbe.vo functor_output_probe.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_output_probe.t.exe functor_output_probe.cpp functor_output_probe.t.cpp)))
- (rule
-  (alias runtest)
-  (deps functor_output_probe.t.exe)
-  (action (run ./functor_output_probe.t.exe))))
-
 
 (subdir dependent_return_unit_probe
  (rule
