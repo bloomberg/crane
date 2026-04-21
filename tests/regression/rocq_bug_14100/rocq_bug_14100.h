@@ -7,7 +7,7 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 template <typename M>
-concept MinSIG = requires { typename M::otherE; };
+concept MinSIG = requires { typename M::template otherE<void>; };
 
 struct RocqBug14100 {
   enum class NondetE { e_OR };

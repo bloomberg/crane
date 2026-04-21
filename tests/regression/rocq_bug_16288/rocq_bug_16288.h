@@ -55,6 +55,8 @@ template <typename M>
 concept Nop = true;
 
 struct RocqBug16288 {
+  struct Empty {};
+
   template <Nop N> struct M {
     template <typename t_elt> struct M_t_NonEmpty {
       std::shared_ptr<List<t_elt>> M_m;

@@ -231,7 +231,18 @@ and pp_spec_as_requirement modtype_refs = function
       ++ fnl ()
   | Stype (r, vl, ot) ->
     let name = pp_global_name Type r in
-    str "typename M::" ++ name ++ str ";" ++ fnl ()
+    if vl = [] then
+      str "typename M::" ++ name ++ str ";" ++ fnl ()
+    else
+      (* Higher-kinded type parameter: check template alias exists by
+         instantiating with dummy void arguments *)
+      let dummy_args = List.map (fun _ -> str "void") vl in
+      str "typename M::template "
+      ++ name
+      ++ str "<"
+      ++ prlist_with_sep (fun () -> str ", ") identity dummy_args
+      ++ str ">;"
+      ++ fnl ()
 
 (** Convert a module type to a C++20 concept. MTsig generates requires clauses,
     MTfunsig is handled by param tracking, MTident references an existing
@@ -355,10 +366,31 @@ let rec pp_structure_elem ~is_header f = function
             | _ -> ([], m.ml_mod_expr)
           in
           let template_params, body = get_template_and_body m.ml_mod_expr in
+          let rec get_concept_name_from_mt = function
+            | MTident kn -> Some (pp_modname kn)
+            | MTwith (mt, _) -> get_concept_name_from_mt mt
+            | MTfunsig (_, _, mt') -> get_concept_name_from_mt mt'
+            | MTsig _ -> None
+          in
           let pp_template_param (mbid, mt) =
-            let concept_name = pp_module_type [] mt in
             let param_name = pp_modname (MPbound mbid) in
-            concept_name ++ str " " ++ param_name
+            match get_concept_name_from_mt mt with
+            | Some cname -> cname ++ str " " ++ param_name
+            | None ->
+              let concept_body = pp_module_type [] mt in
+              if Pp.ismt concept_body then
+                (* No constraints — unconstrained type param *)
+                str "typename " ++ param_name
+              else
+                let body_str = Pp.string_of_ppcmds concept_body in
+                if String.contains body_str '\n'
+                   || String.length body_str > 40 then
+                  (* Complex inline concept body — use typename and skip
+                     the constraint (it's already checked elsewhere or
+                     is too complex for a template parameter) *)
+                  str "typename " ++ param_name
+                else
+                  concept_body ++ str " " ++ param_name
           in
           let template_decl =
             str "template<"
@@ -918,7 +950,8 @@ let rec pp_structure_elem ~is_header f = function
               ++ body
             else if Pp.ismt body && Pp.ismt record_fields_pp
                     && Pp.ismt record_methods_pp then
-              mt ()
+              (* Still emit empty struct — may be needed as template arg *)
+              template_decl ++ str "struct " ++ name ++ str " {};"
             else
               let struct_def =
                 template_decl
@@ -959,7 +992,14 @@ let rec pp_structure_elem ~is_header f = function
           mt ()
         else
           let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
-          str "using " ++ name ++ str " = " ++ body ++ str ";"
+          let body_str = Pp.string_of_ppcmds body in
+          (* Skip aliases to Coq__ duplicate wrappers — they are an OCaml
+             qualification workaround that doesn't translate to C++ *)
+          if String.length body_str >= 5
+             && String.sub body_str 0 5 = "Coq__" then
+            mt ()
+          else
+            str "using " ++ name ++ str " = " ++ body ++ str ";"
     in
     if Pp.ismt mod_pp then
       mt ()

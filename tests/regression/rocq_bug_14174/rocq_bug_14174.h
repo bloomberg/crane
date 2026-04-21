@@ -238,6 +238,8 @@ public:
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
+
+struct SigTNotations {};
 enum class Sumbool { e_LEFT0, e_RIGHT0 };
 
 template <typename t_A> struct Sumor {
@@ -613,8 +615,6 @@ struct RocqBug14174 {
         return f(d_x, d_a1, d_a2);
       }
     };
-
-    using SigTNotations = Coq__1;
 
     template <typename T1>
     static std::shared_ptr<sig<T1>>

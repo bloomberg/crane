@@ -19,7 +19,7 @@ concept HasType = requires {
       });
 };
 template <typename M>
-concept Container = requires { typename M::t; };
+concept Container = requires { typename M::template t<void>; };
 
 struct DependentTypename {
   template <HasType M> struct UsesType {

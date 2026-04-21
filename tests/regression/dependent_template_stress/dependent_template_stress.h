@@ -8,15 +8,15 @@ concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 template <typename M>
 concept Container = requires {
-  typename M::t;
-  typename M::inner;
+  typename M::template t<void>;
+  typename M::template inner<void>;
   typename M::elem;
 };
 template <typename M>
 concept NestedContainer = requires {
-  typename M::outer;
-  typename M::middle;
-  typename M::inner;
+  typename M::template outer<void>;
+  typename M::template middle<void>;
+  typename M::template inner<void>;
 };
 
 struct DependentTemplateStress {

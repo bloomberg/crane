@@ -63,20 +63,12 @@ struct RocqBug4720 {
   };
 
   static_assert(A<A_private>);
-  template <A a_, B b_,
-              requires A<typename M::a>;
 
-  c_ > struct WithMod {};
+  template <A a_, B b_, typename c_> struct WithMod {};
 
-  template <A a_, B b_,
-              requires A<typename M::a>;
+  template <A a_, B b_, typename c_> struct WithDef {};
 
-  c_ > struct WithDef {};
-
-  template <A a_, B b_,
-              requires A<typename M::a>;
-
-  c_ > struct WithModPriv {};
+  template <A a_, B b_, typename c_> struct WithModPriv {};
 };
 
 #endif // INCLUDED_ROCQ_BUG_4720

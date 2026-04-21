@@ -4431,10 +4431,54 @@
 (subdir imported_alias_qualification
  (rule
   (targets imported_alias_qualification.t.exe)
-  (deps ImportedAliasQualification.vo imported_alias_qualification.t.cpp (source_tree .))
+  (deps AliasSource.vo imported_alias_qualification.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} imported_alias_qualification.t.exe imported_alias_qualification.cpp imported_alias_qualification.t.cpp)))
  (rule
   (alias runtest)
   (deps imported_alias_qualification.t.exe)
   (action (run ./imported_alias_qualification.t.exe))))
+
+(subdir rocq_bug_14100
+ (rule
+  (targets rocq_bug_14100.t.exe)
+  (deps RocqBug14100.vo rocq_bug_14100.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_14100.t.exe rocq_bug_14100.cpp rocq_bug_14100.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_14100.t.exe)
+  (action (run ./rocq_bug_14100.t.exe))))
+
+(subdir rocq_bug_14174
+ (rule
+  (targets rocq_bug_14174.t.exe)
+  (deps RocqBug14174.vo rocq_bug_14174.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_14174.t.exe rocq_bug_14174.cpp rocq_bug_14174.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_14174.t.exe)
+  (action (run ./rocq_bug_14174.t.exe))))
+
+(subdir rocq_bug_16288
+ (rule
+  (targets rocq_bug_16288.t.exe)
+  (deps RocqBug16288.vo rocq_bug_16288.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_16288.t.exe rocq_bug_16288.cpp rocq_bug_16288.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_16288.t.exe)
+  (action (run ./rocq_bug_16288.t.exe))))
+
+(subdir rocq_bug_4720
+ (rule
+  (targets rocq_bug_4720.t.exe)
+  (deps RocqBug4720.vo rocq_bug_4720.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_4720.t.exe rocq_bug_4720.cpp rocq_bug_4720.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_4720.t.exe)
+  (action (run ./rocq_bug_4720.t.exe))))
