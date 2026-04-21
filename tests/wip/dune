@@ -130,17 +130,6 @@
 
 
 
-(subdir tailrec_reorder_probe
- (rule
-  (targets tailrec_reorder_probe.t.exe)
-  (deps TailrecReorderProbe.vo tailrec_reorder_probe.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tailrec_reorder_probe.t.exe tailrec_reorder_probe.cpp tailrec_reorder_probe.t.cpp)))
- (rule
-  (alias runtest)
-  (deps tailrec_reorder_probe.t.exe)
-  (action (run ./tailrec_reorder_probe.t.exe))))
-
 (subdir existential_closure_probe
  (rule
   (targets existential_closure_probe.t.exe)
