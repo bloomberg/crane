@@ -9462,6 +9462,87 @@ and replace_return_this_stmt inner_ty = function
   | Sexpr e -> Sexpr (replace_return_this_expr inner_ty e)
   | s -> s
 
+(** Prevent dangling [this] in by-value lambda captures.
+
+    When a methodified function contains a by-value lambda that references
+    [this], the lambda may escape the method scope (returned through
+    [option], [pair], record, etc.).  The raw [this] pointer dangles once
+    the caller's [shared_ptr] is released.
+
+    Fix: bind [shared_from_this()] to a local [_self] at the top of the
+    method body, then replace [CPPthis] inside every by-value lambda body
+    with [CPPvar "_self"].  The lambda's [=] capture picks up [_self] as
+    a [shared_ptr] copy that keeps the object alive.  The outer method
+    body keeps raw [CPPthis] for direct method calls (safe because the
+    method is invoked on a live object). *)
+let replace_this_in_lambdas self_type stmts =
+  let id_type ty = ty in
+  let self_id = Id.of_string "_self" in
+  (* Check if CPPthis or CPPshared_from_this appears in an expression. *)
+  let rec expr_has_this = function
+    | CPPthis | CPPshared_from_this _ -> true
+    | e ->
+      let found = ref false in
+      ignore (map_expr (fun e' ->
+        if expr_has_this e' then found := true; e') (fun s -> s) id_type e);
+      !found
+  in
+  (* Check if CPPthis or CPPshared_from_this appears in statements. *)
+  let rec stmt_has_this = function
+    | s ->
+      let found = ref false in
+      ignore (map_stmt
+        (fun e -> if expr_has_this e then found := true; e)
+        (fun s' -> if stmt_has_this s' then found := true; s')
+        id_type s);
+      !found
+  in
+  let stmts_have_this stmts = List.exists stmt_has_this stmts in
+  (* Check if any by-value lambda in the method body captures this. *)
+  let rec lambda_captures_this_expr = function
+    | CPPlambda (_, _, body, true) -> stmts_have_this body
+    | e ->
+      let found = ref false in
+      ignore (map_expr (fun e' ->
+        if lambda_captures_this_expr e' then found := true; e')
+        (fun s ->
+          if lambda_captures_this_stmt s then found := true; s)
+        id_type e);
+      !found
+  and lambda_captures_this_stmt s =
+    let found = ref false in
+    ignore (map_stmt
+      (fun e -> if lambda_captures_this_expr e then found := true; e)
+      (fun s' -> if lambda_captures_this_stmt s' then found := true; s')
+      id_type s);
+    !found
+  in
+  let needs_self = List.exists lambda_captures_this_stmt stmts in
+  if not needs_self then stmts
+  else
+    (* Substitute CPPthis and CPPshared_from_this → CPPvar "_self" inside
+       by-value lambda bodies.  Both refer to the receiver object through
+       the raw [this] pointer; replacing with [_self] (a captured shared_ptr)
+       keeps the object alive after the method returns. *)
+    let rec subst_expr = function
+      | CPPthis | CPPshared_from_this _ -> CPPvar self_id
+      | e -> map_expr subst_expr subst_stmt id_type e
+    and subst_stmt s =
+      map_stmt subst_expr subst_stmt id_type s
+    in
+    let rec walk_expr = function
+      | CPPlambda (params, ret, body, true) ->
+        CPPlambda (params, ret, List.map subst_stmt body, true)
+      | e -> map_expr walk_expr walk_stmt id_type e
+    and walk_stmt s =
+      map_stmt walk_expr walk_stmt id_type s
+    in
+    let self_binding =
+      Sasgn (self_id, Some (Tshared_ptr self_type),
+             CPPshared_from_this self_type)
+    in
+    self_binding :: List.map walk_stmt stmts
+
 (** Check if a C++ type contains [Tshared_ptr] anywhere in its structure.
 
     Recurses through [Tref], [Tmod], [Tunique_ptr], [Tptr], [Tid], [Tglob],
@@ -9511,6 +9592,7 @@ and stmt_has_shared_from_this = function
       (fun br -> List.exists stmt_has_shared_from_this br.smb_body)
       branches
     || (match default with Some stmts -> List.exists stmt_has_shared_from_this stmts | None -> false)
+  | Sasgn (_, _, e) -> expr_has_shared_from_this e
   | _ -> false
 
 (** Generate a single method from a method candidate. name: the containing
@@ -9806,15 +9888,23 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      [shared_ptr] from the raw pointer.  Only applied when the return type
      contains [shared_ptr] (e.g. [shared_ptr<T>], [pair<shared_ptr, shared_ptr>])
      to avoid replacing [this] in method calls that just forward the receiver. *)
+  (* Compute self_type unconditionally — needed by both return-this and
+     lambda-this passes. *)
+  let self_type_args =
+    List.mapi (fun i vname -> Tvar (i, Some vname)) vars
+  in
+  let self_type = Tglob (name, self_type_args, []) in
   let stmts =
     if contains_shared_ptr ret_cpp then
-      let self_type_args =
-        List.mapi (fun i vname -> Tvar (i, Some vname)) vars
-      in
-      let self_type = Tglob (name, self_type_args, []) in
       List.map (replace_return_this_stmt self_type) stmts
     else stmts
   in
+  (* Replace [CPPthis] with [CPPshared_from_this] inside by-value lambda
+     bodies.  When a method returns a closure that captures [this], the raw
+     pointer would dangle after the caller's [shared_ptr] is released.
+     Using [shared_from_this()] inside the lambda ensures the closure keeps
+     the object alive. *)
+  let stmts = replace_this_in_lambdas self_type stmts in
   (* Apply tvar_subst_stmt with the extended vars list (defined above).
      extended_vars covers positions 1..num_ind_vars (inductive vars) and
      num_ind_vars+1, num_ind_vars+2, etc. (extra vars) so tvar_subst_stmt can

@@ -1,8 +1,9 @@
-#ifndef INCLUDED_CLOSURE_PAIR_THIS
-#define INCLUDED_CLOSURE_PAIR_THIS
+#ifndef INCLUDED_THIS_CAPTURE_DANGLING
+#define INCLUDED_THIS_CAPTURE_DANGLING
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -10,8 +11,8 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
-struct ClosurePairThis {
-  struct tree {
+struct ThisCaptureDangling {
+  struct tree : public std::enable_shared_from_this<tree> {
     // TYPES
     struct Leaf {};
 
@@ -56,24 +57,33 @@ struct ClosurePairThis {
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-    /// BUG HYPOTHESIS: get_fn_pair returns two closures in a pair.
-    /// When methodified, both closures capture the raw this pointer.
-    /// The pair is custom-extracted as std::make_pair, so the closures
-    /// are evaluated and stored while this is still valid.
-    /// But after get_fn_pair returns, the temporary tree may be
-    /// destroyed — calling either closure is then use-after-free.
-    __attribute__((pure)) std::pair<std::function<unsigned int(unsigned int)>,
-                                    std::function<unsigned int(unsigned int)>>
-    get_fn_pair(const unsigned int flag) const {
-      if (flag <= 0) {
-        return std::make_pair(
-            [=, this](const unsigned int x) { return (x + this->tree_sum()); },
-            [=, this](const unsigned int x) { return (this->tree_sum() * x); });
+    /// BUG HYPOTHESIS: When get_fn is methodified (tree is the only inductive),
+    /// the first argument t becomes the raw this pointer.
+    ///
+    /// The return type is option (nat -> nat) — one branch returns None,
+    /// the other returns Some (fun x => x + tree_sum t). The option wrapper
+    /// prevents lambda flattening, so the inner lambda IS a genuine C++ lambda.
+    ///
+    /// The lambda captures this via =, this. Since the return type
+    /// does NOT contain shared_ptr<tree>, replace_return_this_stmt is NOT
+    /// applied — this stays as a raw pointer. If the closure outlives the
+    /// tree's shared_ptr, we have use-after-free.
+    ///
+    /// Note: option is custom-extracted to std::optional.
+    __attribute__((pure))
+    std::optional<std::function<unsigned int(unsigned int)>>
+    get_fn() const {
+      std::shared_ptr<tree> _self =
+          std::const_pointer_cast<tree>(this->shared_from_this());
+      auto _cs = this->tree_sum();
+      if (_cs <= 0) {
+        return std::optional<std::function<unsigned int(unsigned int)>>();
       } else {
-        unsigned int _x = flag - 1;
-        return std::make_pair(
-            [=, this](const unsigned int x) { return (this->tree_sum() + x); },
-            [](const unsigned int x) { return x; });
+        unsigned int _x = _cs - 1;
+        return std::make_optional<std::function<unsigned int(unsigned int)>>(
+            [=](const unsigned int x) mutable {
+              return (x + _self->tree_sum());
+            });
       }
     }
 
@@ -159,36 +169,50 @@ struct ClosurePairThis {
     return f(d_a0);
   }
 
-  /// test1: flag=0 on tree with sum=7. fst closure adds, snd multiplies.
-  /// (3 + 7) + (7 * 2) = 10 + 14 = 24.
-  static inline const unsigned int test1 = []() {
-    std::pair<std::function<unsigned int(unsigned int)>,
-              std::function<unsigned int(unsigned int)>>
-        p = tree::node(tree::leaf(), 7u, tree::leaf())->get_fn_pair(0u);
-    return (p.first(3u) + p.second(2u));
+  /// test1: Call get_fn on a temporary tree with sum=42.
+  /// The tree shared_ptr is released after get_fn returns.
+  /// Unwrapping the option and calling the closure dereferences
+  /// the dangling this.
+  /// Expected: match result is Some f, then f 10 = 10 + 42 = 52.
+  static inline const unsigned int test1 = []() -> unsigned int {
+    auto _cs = tree::node(tree::leaf(), 42u, tree::leaf())->get_fn();
+    if (_cs.has_value()) {
+      const std::function<unsigned int(unsigned int)> &f = *_cs;
+      return f(10u);
+    } else {
+      return 999u;
+    }
   }();
-  /// test2: flag=1. fst closure adds sum, snd is identity.
-  /// (7 + 4) + 5 = 11 + 5 = 16.
-  static inline const unsigned int test2 = []() {
-    std::pair<std::function<unsigned int(unsigned int)>,
-              std::function<unsigned int(unsigned int)>>
-        p = tree::node(tree::leaf(), 7u, tree::leaf())->get_fn_pair(1u);
-    return (p.first(4u) + p.second(5u));
+  /// test2: Same pattern with a larger tree (sum = 42).
+  /// Expected: 5 + 42 = 47.
+  static inline const unsigned int test2 = []() -> unsigned int {
+    auto _cs = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                          tree::node(tree::leaf(), 12u, tree::leaf()))
+                   ->get_fn();
+    if (_cs.has_value()) {
+      const std::function<unsigned int(unsigned int)> &f = *_cs;
+      return f(5u);
+    } else {
+      return 999u;
+    }
   }();
-  /// test3: Use both closures after allocating another tree to increase
-  /// memory pressure on the freed region.
+  /// test3: Allocate another tree between getting the closure and calling it.
+  /// This increases memory pressure on the freed region.
+  /// Expected: f noise = noise + 100 where noise = 1+2+3 = 6. So 106.
   static inline const unsigned int test3 = []() {
-    std::pair<std::function<unsigned int(unsigned int)>,
-              std::function<unsigned int(unsigned int)>>
-        p = tree::node(tree::node(tree::leaf(), 3u, tree::leaf()), 5u,
-                       tree::node(tree::leaf(), 2u, tree::leaf()))
-                ->get_fn_pair(0u);
+    std::optional<std::function<unsigned int(unsigned int)>> opt =
+        tree::node(tree::leaf(), 100u, tree::leaf())->get_fn();
     unsigned int noise =
-        tree::node(tree::leaf(), 999u, tree::leaf())->tree_sum();
-    unsigned int a = p.first(noise);
-    unsigned int b = p.second(1u);
-    return (a + b);
+        tree::node(tree::node(tree::leaf(), 1u, tree::leaf()), 2u,
+                   tree::node(tree::leaf(), 3u, tree::leaf()))
+            ->tree_sum();
+    if (opt.has_value()) {
+      const std::function<unsigned int(unsigned int)> &f = *opt;
+      return f(noise);
+    } else {
+      return 999u;
+    }
   }();
 };
 
-#endif // INCLUDED_CLOSURE_PAIR_THIS
+#endif // INCLUDED_THIS_CAPTURE_DANGLING

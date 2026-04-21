@@ -95,39 +95,6 @@
   (action (run ./dependent_return_unit_probe.t.exe))))
 
 
-(subdir this_capture_dangling
- (rule
-  (targets this_capture_dangling.t.exe)
-  (deps ThisCaptureDangling.vo this_capture_dangling.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} this_capture_dangling.t.exe this_capture_dangling.cpp this_capture_dangling.t.cpp)))
- (rule
-  (alias runtest)
-  (deps this_capture_dangling.t.exe)
-  (action (run ./this_capture_dangling.t.exe))))
-
-(subdir closure_pair_this
- (rule
-  (targets closure_pair_this.t.exe)
-  (deps ClosurePairThis.vo closure_pair_this.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} closure_pair_this.t.exe closure_pair_this.cpp closure_pair_this.t.cpp)))
- (rule
-  (alias runtest)
-  (deps closure_pair_this.t.exe)
-  (action (run ./closure_pair_this.t.exe))))
-
-(subdir accum_closure_capture
- (rule
-  (targets accum_closure_capture.t.exe)
-  (deps AccumClosureCapture.vo accum_closure_capture.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} accum_closure_capture.t.exe accum_closure_capture.cpp accum_closure_capture.t.cpp)))
- (rule
-  (alias runtest)
-  (deps accum_closure_capture.t.exe)
-  (action (run ./accum_closure_capture.t.exe))))
-
 
 
 (subdir existential_closure_probe
@@ -140,17 +107,6 @@
   (alias runtest)
   (deps existential_closure_probe.t.exe)
   (action (run ./existential_closure_probe.t.exe))))
-
-(subdir cofix_this_thunk
- (rule
-  (targets cofix_this_thunk.t.exe)
-  (deps CofixThisThunk.vo cofix_this_thunk.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} cofix_this_thunk.t.exe cofix_this_thunk.cpp cofix_this_thunk.t.cpp)))
- (rule
-  (alias runtest)
-  (deps cofix_this_thunk.t.exe)
-  (action (run ./cofix_this_thunk.t.exe))))
 
 
 (subdir rocq_bug_14100

@@ -119,25 +119,20 @@ public:
   }
 
   template <MapsTo<t_A, t_A> F0> std::shared_ptr<Sseq<t_A>> smap(F0 &&f) const {
-    return Sseq<t_A>::lazy_([=, this]() -> std::shared_ptr<Sseq<t_A>> {
-      return Sseq<t_A>::scons(
-          std::const_pointer_cast<Sseq<t_A>>(this->shared_from_this())
-              ->double_head(f),
-          std::const_pointer_cast<Sseq<t_A>>(this->shared_from_this())
-              ->stail()
-              ->smap(f));
+    std::shared_ptr<Sseq<t_A>> _self =
+        std::const_pointer_cast<Sseq<t_A>>(this->shared_from_this());
+    return Sseq<t_A>::lazy_([=]() mutable -> std::shared_ptr<Sseq<t_A>> {
+      return Sseq<t_A>::scons(_self->double_head(f), _self->stail()->smap(f));
     });
   }
 
   template <MapsTo<t_A, t_A> F0>
   std::shared_ptr<Sseq<t_A>> smap_direct(F0 &&f) const {
-    return Sseq<t_A>::lazy_([=, this]() -> std::shared_ptr<Sseq<t_A>> {
-      return Sseq<t_A>::scons(
-          f(std::const_pointer_cast<Sseq<t_A>>(this->shared_from_this())
-                ->shead()),
-          std::const_pointer_cast<Sseq<t_A>>(this->shared_from_this())
-              ->stail()
-              ->smap_direct(f));
+    std::shared_ptr<Sseq<t_A>> _self =
+        std::const_pointer_cast<Sseq<t_A>>(this->shared_from_this());
+    return Sseq<t_A>::lazy_([=]() mutable -> std::shared_ptr<Sseq<t_A>> {
+      return Sseq<t_A>::scons(f(_self->shead()),
+                              _self->stail()->smap_direct(f));
     });
   }
 

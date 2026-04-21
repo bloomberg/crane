@@ -143,24 +143,22 @@ struct AccumClosureCapture {
     /// destroyed. Calling the closures from apply_all dereferences dangling
     /// this.
     std::shared_ptr<fn_list> extract_closures() const {
+      std::shared_ptr<tree> _self =
+          std::const_pointer_cast<tree>(this->shared_from_this());
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return fn_list::fnil();
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename tree::Node>(this->v());
         return fn_list::fcons(
-            [=, this](const unsigned int x) {
-              return (x +
-                      std::const_pointer_cast<tree>(this->shared_from_this())
-                          ->tree_sum());
+            [=](const unsigned int x) mutable {
+              return (x + _self->tree_sum());
             },
             fn_list::fcons(
                 [=](const unsigned int x) mutable { return (x + d_a1); },
                 fn_list::fcons(
-                    [=, this](const unsigned int x) {
-                      return (x + std::const_pointer_cast<tree>(
-                                      this->shared_from_this())
-                                      ->tree_sum());
+                    [=](const unsigned int x) mutable {
+                      return (x + _self->tree_sum());
                     },
                     fn_list::fnil())));
       }
