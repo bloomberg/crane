@@ -108,3 +108,14 @@
   (alias runtest)
   (deps rocq_bug_3287.t.exe)
   (action (run ./rocq_bug_3287.t.exe))))
+
+(subdir typeclass_method_function_return_probe
+ (rule
+  (targets typeclass_method_function_return_probe.t.exe)
+  (deps TypeclassMethodFunctionReturnProbe.vo typeclass_method_function_return_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typeclass_method_function_return_probe.t.exe typeclass_method_function_return_probe.cpp typeclass_method_function_return_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps typeclass_method_function_return_probe.t.exe)
+  (action (run ./typeclass_method_function_return_probe.t.exe))))
