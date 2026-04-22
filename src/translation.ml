@@ -2260,6 +2260,24 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
         CPPraw rendered
       | None -> eta_fun env (MLglob (r, [])) [arg] )
     | None -> eta_fun env (MLglob (r, [])) [arg] )
+  | MLapp (MLcase (typ, scrut, pv), outer_args)
+    when Array.length pv = 1
+         && not (record_fields_of_type typ == []) ->
+    (* Flatten outer args into a single-branch record-projection case body.
+       When a typeclass method is partially applied, Rocq extracts it as
+       MLcase(instance, [(binds, MLapp(MLrel field, inner_args))]). If this
+       MLcase is the callee of an outer MLapp, the inner call only has some
+       args while the outer provides the rest — generating a curried C++ call
+       like make(a)(b) instead of make(a, b).  Push the outer args into the
+       branch body so gen_expr sees the complete argument list. *)
+    let (ids, rty, pat, body) = pv.(0) in
+    let n_bindings = List.length ids in
+    let lifted_outer = List.map (ast_lift n_bindings) outer_args in
+    let new_body = match body with
+      | MLapp (f, inner_args) -> MLapp (f, inner_args @ lifted_outer)
+      | _ -> MLapp (body, lifted_outer)
+    in
+    gen_expr env (MLcase (typ, scrut, [|(ids, rty, pat, new_body)|]))
   | MLapp (f, args) -> eta_fun env f args
   | MLlam _ as a ->
     let args, a = collect_lams a in
