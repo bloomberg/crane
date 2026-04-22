@@ -1307,6 +1307,7 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
 let do_struct_with_decl_tracking ~is_header f s =
   ignore (Translation.take_lifted_decls ());
   init_std_names ();
+  Common.detect_sibling_module_inductive_collisions s;
   method_registry := Some (Method_registry.create s);
   let analysis = Structure_analysis.analyze (get_method_registry ()) s in
   Hashtbl.clear global_inductive_names;

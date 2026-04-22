@@ -414,6 +414,15 @@ let add_mp_sibling, get_mp_siblings =
   and get mp = try MPmap.find mp !tbl with Not_found -> Id.Set.empty in
   (add, get)
 
+(* When a module and an inductive type with the same C++ name are siblings
+   in the same enclosing scope, the module is renamed with a "_Mod" suffix.
+   Maps the module's ModPath.t to the renamed C++ name.  Populated by
+   detect_sibling_module_inductive_collisions, consulted by mp_renaming_fun. *)
+let sibling_collision_renames : (ModPath.t, string) Hashtbl.t =
+  Hashtbl.create 8
+
+let () = register_cleanup (fun () -> Hashtbl.clear sibling_collision_renames)
+
 (** Create a fresh de Bruijn environment with current global ids. *)
 let empty_env () = ([], get_global_ids ())
 
@@ -592,6 +601,49 @@ let modular_rename_ex _k id =
     replacement). *)
 let modular_rename k id = fst (modular_rename_ex k id)
 
+let detect_sibling_module_inductive_collisions (s : ml_structure) =
+  Hashtbl.clear sibling_collision_renames;
+  let rec scan_sel parent_mp sel =
+    let module_entries =
+      List.filter_map
+        (fun (l, se) ->
+          match se with
+          | SEmodule _ ->
+            Some (l, modular_rename Mod (Label.to_id l))
+          | _ -> None )
+        sel
+    in
+    let inductive_names =
+      List.concat_map
+        (fun (_l, se) ->
+          match se with
+          | SEdecl (Dind (_kn, ind)) ->
+            Array.to_list
+              (Array.map
+                 (fun p -> modular_rename Type p.ip_typename)
+                 ind.ind_packets)
+          | _ -> [] )
+        sel
+    in
+    List.iter
+      (fun (l, mod_name) ->
+        if List.exists (String.equal mod_name) inductive_names then
+          Hashtbl.replace sibling_collision_renames
+            (MPdot (parent_mp, l))
+            (mod_name ^ "_Mod") )
+      module_entries;
+    List.iter
+      (fun (_l, se) ->
+        match se with
+        | SEmodule m ->
+          ( match m.ml_mod_expr with
+          | MEstruct (inner_mp, inner_sel) -> scan_sel inner_mp inner_sel
+          | _ -> () )
+        | _ -> () )
+      sel
+  in
+  List.iter (fun (mp, sel) -> scan_sel mp sel) s
+
 (** For monolithic extraction, first-level modules might have to be renamed with
     unique numbers *)
 
@@ -615,20 +667,23 @@ let modfstlev_rename =
 (** {2 Creating renaming for a module_path} *)
 
 (** First, the real function ... *)
-let rec mp_renaming_fun mp =
-  match mp with
-  | _ when (not (modular ())) && at_toplevel mp -> [""]
-  | MPdot (mp, l) ->
-    let lmp = mp_renaming mp in
-    let mp =
-      match lmp with
-      | [""] -> modfstlev_rename l
-      | _ -> modular_rename Mod (Label.to_id l)
+let rec mp_renaming_fun full_mp =
+  match full_mp with
+  | _ when (not (modular ())) && at_toplevel full_mp -> [""]
+  | MPdot (parent_mp, l) ->
+    let lmp = mp_renaming parent_mp in
+    let name =
+      match Hashtbl.find_opt sibling_collision_renames full_mp with
+      | Some renamed -> renamed
+      | None ->
+        ( match lmp with
+        | [""] -> modfstlev_rename l
+        | _ -> modular_rename Mod (Label.to_id l) )
     in
-    mp :: lmp
+    name :: lmp
   | MPbound mbid ->
     let s = modular_rename Mod (MBId.to_id mbid) in
-    if not (params_ren_mem mp) then
+    if not (params_ren_mem full_mp) then
       [s]
     else
       let i, _, _ = MBId.repr mbid in
@@ -638,8 +693,8 @@ let rec mp_renaming_fun mp =
     (* see [at_toplevel] above *)
     assert (get_phase () == Pre);
     let current_mpfile = (List.last (get_visible ())).mp in
-    if not (ModPath.equal mp current_mpfile) then mpfiles_add mp;
-    [string_of_modfile mp]
+    if not (ModPath.equal full_mp current_mpfile) then mpfiles_add full_mp;
+    [string_of_modfile full_mp]
 
 (** ... and its version using a cache *)
 

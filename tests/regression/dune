@@ -4493,3 +4493,14 @@
   (alias runtest)
   (deps typeclass_method_function_return_probe.t.exe)
   (action (run ./typeclass_method_function_return_probe.t.exe))))
+
+(subdir module_type_name_clash_probe
+ (rule
+  (targets module_type_name_clash_probe.t.exe)
+  (deps ModuleTypeNameClashProbe.vo module_type_name_clash_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_name_clash_probe.t.exe module_type_name_clash_probe.cpp module_type_name_clash_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_type_name_clash_probe.t.exe)
+  (action (run ./module_type_name_clash_probe.t.exe))))

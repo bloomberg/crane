@@ -159,6 +159,12 @@ val pp_type_name_capitalized : GlobRef.t -> string
 (** Print a module path. *)
 val pp_module : ModPath.t -> string
 
+(** Pre-scan the structure for sibling module-inductive name collisions.
+    When a module and an inductive type with the same C++ name are siblings
+    in the same scope, the module is renamed with a ["_Mod"] suffix.
+    Must be called before any [pp_global] or [pp_module] calls. *)
+val detect_sibling_module_inductive_collisions : ml_structure -> unit
+
 (** Get the module path of the innermost visible layer. *)
 val top_visible_mp : unit -> ModPath.t
 
