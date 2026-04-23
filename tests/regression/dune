@@ -4504,3 +4504,14 @@
   (alias runtest)
   (deps module_type_name_clash_probe.t.exe)
   (action (run ./module_type_name_clash_probe.t.exe))))
+
+(subdir local_fix_higher_order_probe
+ (rule
+  (targets local_fix_higher_order_probe.t.exe)
+  (deps LocalFixHigherOrderProbe.vo local_fix_higher_order_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_higher_order_probe.t.exe local_fix_higher_order_probe.cpp local_fix_higher_order_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_higher_order_probe.t.exe)
+  (action (run ./local_fix_higher_order_probe.t.exe))))
