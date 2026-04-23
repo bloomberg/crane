@@ -242,7 +242,8 @@ struct AccumClosureEscape {
   /// COMPOSE CLOSURES: Each step builds a composed function.
   /// This creates closures that capture OTHER closures.
   __attribute__((pure)) static unsigned int
-  compose_from_list(const std::shared_ptr<mylist<unsigned int>> &l, F1 &&acc,
+  compose_from_list(const std::shared_ptr<mylist<unsigned int>> &l,
+                    const std::function<unsigned int(unsigned int)> acc,
                     const unsigned int _x0) {
     return [&]() -> std::function<unsigned int(unsigned int)> {
       if (std::holds_alternative<typename mylist<unsigned int>::Mynil>(

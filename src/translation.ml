@@ -1319,12 +1319,85 @@ let build_extended_tvar_names sig_indices sig_names body_tvars =
   else
     sig_names
 
+(* Walk an ML AST and collect source-order parameter indices that are NOT
+   simply forwarded unchanged at recursive call sites.  [is_self_call depth f]
+   returns true when the head [f] of an application is a self-recursive
+   reference at the given binder depth.
+
+   After collect_lams, param source index [i] has de Bruijn index
+   [n_params - i] at depth 0, shifted by [depth] under binders. *)
+let detect_non_forwarded_params_generic ~is_self_call n_params body =
+  let non_fwd = Hashtbl.create 4 in
+  let is_forwarded depth i arg =
+    let expected_db = n_params - i + depth in
+    match arg with
+    | MLmagic (MLrel db) | MLrel db -> db = expected_db
+    | _ -> false
+  in
+  let rec walk depth = function
+    | MLapp (f, args) when is_self_call depth f ->
+      List.iteri
+        (fun i arg ->
+          if i < n_params && not (is_forwarded depth i arg) then
+            Hashtbl.replace non_fwd i true )
+        args
+    | MLapp (f, args) ->
+      walk depth f;
+      List.iter (walk depth) args
+    | MLlam (_, _, body) -> walk (depth + 1) body
+    | MLletin (_, _, e1, e2) ->
+      walk depth e1;
+      walk (depth + 1) e2
+    | MLcase (_, scrut, branches) ->
+      walk depth scrut;
+      Array.iter
+        (fun (ids, _, _, body) ->
+          walk (depth + List.length ids) body )
+        branches
+    | MLcons (_, _, args) -> List.iter (walk depth) args
+    | MLtuple args -> List.iter (walk depth) args
+    | MLfix (_, _, bodies, _) ->
+      let n = Array.length bodies in
+      Array.iter (walk (depth + n)) bodies
+    | MLmagic e -> walk depth e
+    | MLparray (elts, def) ->
+      Array.iter (walk depth) elts;
+      walk depth def
+    | MLrel _
+     |MLglob _
+     |MLexn _
+     |MLdummy _
+     |MLaxiom _
+     |MLuint _
+     |MLfloat _
+     |MLstring _ -> ()
+  in
+  walk 0 body;
+  Hashtbl.fold (fun k _ acc -> k :: acc) non_fwd []
+
+(* Detect non-forwarded params in a local fixpoint body.  Self-references
+   use MLrel: after collect_lams strips [n_params] lambda params, the fix
+   binding for [fix_idx] in [n_fix] mutual funs is at
+   db = [n_params + n_fix - fix_idx], shifted by binder depth. *)
+let detect_non_forwarded_params_fix n_params n_fix fix_idx body =
+  let base_self_db = n_params + n_fix - fix_idx in
+  detect_non_forwarded_params_generic
+    ~is_self_call:(fun depth -> function
+      | MLrel db -> db = base_self_db + depth
+      | _ -> false )
+    n_params body
+
 (** Convert ML params to C++ types with const/ref wrapping, and create
     forwarding-ref template parameters for function-typed params. convert_fn:
     function to convert ml_type -> cpp_type (typically
     convert_ml_type_to_cpp_type env Refset'.empty tvar_names) Returns
     (cpp_params, all_temps_with_funs). *)
-let build_lifted_cpp_params convert_fn base_temps params =
+let build_lifted_cpp_params ?(non_fwd_source_indices = []) convert_fn base_temps params =
+  let n_total = List.length params in
+  (* Non-forwarded check in source order (for fun_tys, which iterates List.rev) *)
+  let is_non_fwd_source j = List.mem j non_fwd_source_indices in
+  (* Non-forwarded check in de Bruijn order (for cpp_params replacement) *)
+  let is_non_fwd_db j = List.mem (n_total - 1 - j) non_fwd_source_indices in
   let cpp_params =
     List.map
       (fun (id, ty) ->
@@ -1338,7 +1411,7 @@ let build_lifted_cpp_params convert_fn base_temps params =
     List.filter_map
       (fun (x, ty, j) ->
         match ty with
-        | Tmod (TMconst, Tfun (dom, cod_f)) ->
+        | Tmod (TMconst, Tfun (dom, cod_f)) when not (is_non_fwd_source j) ->
           let cod_f = if is_cpp_unit_type cod_f then Tvoid else cod_f in
           Some (x, TTfun (dom, cod_f), fun_tparam_id j)
         | _ -> None )
@@ -1349,7 +1422,7 @@ let build_lifted_cpp_params convert_fn base_temps params =
     List.mapi
       (fun j (x, ty) ->
         match ty with
-        | Tmod (TMconst, Tfun (_, _)) ->
+        | Tmod (TMconst, Tfun (_, _)) when not (is_non_fwd_db j) ->
           (x, Tref (Tref (Tvar (0, Some (fun_tparam_id (n_params - j - 1))))))
         | _ -> (x, ty) )
       cpp_params
@@ -5224,6 +5297,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       (* Restore outer type vars *)
       set_current_type_vars saved_tvars;
       (* Build a lifted Dfundef for each fixpoint function (usually just one) *)
+      let n_fix = Array.length funs in
       List.iteri
         (fun i ((renamed_id, fix_ty), params, body) ->
           let cpp_ty =
@@ -5234,8 +5308,19 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
             | Tfun (dom, cod) -> (dom, cod)
             | _ -> ([], cpp_ty)
           in
+          (* Detect params that are not simply forwarded at recursive call
+             sites — these must keep std::function type to avoid infinite
+             recursive template instantiation. *)
+          let non_fwd_source_indices =
+            let lam_params, stripped_body =
+              Mlutil.collect_lams funs.(i)
+            in
+            detect_non_forwarded_params_fix
+              (List.length lam_params) n_fix i stripped_body
+          in
           let cpp_params, all_temps_with_funs =
             build_lifted_cpp_params
+              ~non_fwd_source_indices
               (convert_ml_type_to_cpp_type env Refset'.empty all_tvar_names)
               all_temps
               params
@@ -6000,6 +6085,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       in
       set_current_type_vars saved_tvars;
       (* Build lifted declarations *)
+      let n_fix = Array.length funs in
       List.iteri
         (fun i ((renamed_id, fix_ty), params, body) ->
           let cpp_ty =
@@ -6014,8 +6100,16 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
             | Tfun (dom, cod) -> (dom, cod)
             | _ -> ([], cpp_ty)
           in
+          let non_fwd_source_indices =
+            let lam_params, stripped_body =
+              Mlutil.collect_lams funs.(i)
+            in
+            detect_non_forwarded_params_fix
+              (List.length lam_params) n_fix i stripped_body
+          in
           let cpp_params, all_temps_with_funs =
             build_lifted_cpp_params
+              ~non_fwd_source_indices
               (convert_ml_type_to_cpp_type
                  env
                  Refset'.empty
@@ -7804,99 +7898,32 @@ and tvar_subst_stmt (tvars : Id.t list) (s : cpp_stmt) : cpp_stmt =
     (tvar_subst_type tvars)
     s
 
-(** Detect function-typed parameter positions that receive a freshly constructed
-    lambda in a self-recursive call.
+(** Detect function-typed parameters that are NOT simply forwarded at
+   self-recursive call sites.
 
-    Higher-order function parameters are normally emitted as C++ template
-   parameters constrained with a [MapsTo] concept:
+   Higher-order function parameters are normally emitted as C++ template
+   parameters constrained with a [MapsTo] concept, preserving the exact lambda
+   type for inlining.  However, when a recursive call passes a *different*
+   expression (not the parameter variable itself) for a function-typed parameter,
+   each recursion level creates a new template instantiation with a distinct type,
+   leading to infinite recursive template instantiation.
 
-   template <MapsTo<T1, unsigned int> F0, MapsTo<T1, shared_ptr<tree>, T1,
-   shared_ptr<tree>, T1> F1> static T1 tree_rect(F0 &&f, F1 &&f0, const
-   shared_ptr<tree> &t);
+   The fix: detect which parameters are not forwarded unchanged at any recursive
+   call site.  Those parameters are emitted as [std::function] instead of template
+   parameters, since [std::function] is a concrete type that stays the same
+   regardless of wrapping.
 
-   This is preferred because template parameters preserve the exact lambda type,
-   enabling the compiler to inline the call — there is no type-erasure overhead
-   as there would be with [std::function].
-
-   However, this breaks when a self-recursive function passes a *new* lambda at
-   a function-typed parameter position in its own recursive call. This is the
-   continuation-passing style (CPS) pattern:
-
-   template <MapsTo<unsigned int, unsigned int> F1> static unsigned int
-   fact_cps(unsigned int n, F1 &&k) { ... return fact_cps(n_, [&](unsigned int
-   r) { return k(n_ * r); }); }
-
-   Each recursive call wraps [k] inside a fresh lambda with a unique type.
-   Because [F1] is a template parameter, the compiler must instantiate a new
-   specialization of [fact_cps] for every nesting depth. That creates an
-   infinite chain of template instantiations and the compiler rejects the
-   program.
-
-   The fix is to emit those specific parameters as [std::function] instead.
-   [std::function] is a concrete type — the continuation's type is always
-   [std::function<unsigned int(unsigned int)>] regardless of how many lambdas
-   are wrapped around it, so the recursive call resolves to the same function
-   and no new instantiation is needed:
-
-   static unsigned int fact_cps( unsigned int n, const std::function<unsigned
-   int(unsigned int)> k) { ... return fact_cps(n_, [&](unsigned int r) { return
-   k(n_ * r); }); }
-
-   Only parameters that actually exhibit this pattern are affected. For example,
-   in [partition_cps p l k], the predicate [p] is passed unchanged to the
-   recursive call ([partition_cps p rest (fun ...)]), so [p] stays as a template
-   parameter while [k] becomes [std::function]. Similarly, non-recursive
-   higher-order functions like [tree_rect] never trigger this issue and keep
-   full template parameters throughout.
-
-   The detection works by walking the function body's ML AST, looking for
-   self-recursive calls [MLapp(MLglob(self_ref, _), args)]. For each such call,
-   we check which argument positions contain a lambda ([MLlam]). Those positions
-   are the CPS parameters that must use [std::function]. *)
-let detect_cps_params (self_ref : GlobRef.t) (n_params : int) (body : ml_ast) :
-    int list =
-  let cps_set = Hashtbl.create 4 in
-  let rec walk = function
-    | MLapp (MLglob (r, _), args)
-      when Environ.QGlobRef.equal Environ.empty_env r self_ref ->
-      List.iteri
-        (fun i arg ->
-          if i < n_params && contains_lambda arg then
-            Hashtbl.replace cps_set i true )
-        args
-    | MLapp (f, args) ->
-      walk f;
-      List.iter walk args
-    | MLlam (_, _, body) -> walk body
-    | MLletin (_, _, e1, e2) ->
-      walk e1;
-      walk e2
-    | MLcase (_, scrut, branches) ->
-      walk scrut;
-      Array.iter (fun (_, _, _, body) -> walk body) branches
-    | MLcons (_, _, args) -> List.iter walk args
-    | MLtuple args -> List.iter walk args
-    | MLfix (_, _, bodies, _) -> Array.iter walk bodies
-    | MLmagic e -> walk e
-    | MLparray (elts, def) ->
-      Array.iter walk elts;
-      walk def
-    | MLrel _
-     |MLglob _
-     |MLexn _
-     |MLdummy _
-     |MLaxiom _
-     |MLuint _
-     |MLfloat _
-     |MLstring _ -> ()
-  and contains_lambda = function
-    | MLlam _ -> true
-    | MLletin (_, _, _, body) -> contains_lambda body
-    | MLmagic e -> contains_lambda e
-    | _ -> false
-  in
-  walk body;
-  Hashtbl.fold (fun k _ acc -> k :: acc) cps_set []
+   Parameters that ARE forwarded unchanged (e.g., a predicate [p] passed as-is in
+   [partition_cps p rest (fun ...)]) keep their template parameter status.
+   Non-recursive higher-order functions like [tree_rect] are unaffected since they
+   have no self-recursive calls. *)
+let detect_non_forwarded_params (self_ref : GlobRef.t) (n_params : int)
+    (body : ml_ast) : int list =
+  detect_non_forwarded_params_generic
+    ~is_self_call:(fun _depth -> function
+      | MLglob (r, _) -> Environ.QGlobRef.equal Environ.empty_env r self_ref
+      | _ -> false )
+    n_params body
 
 (** Generate a C++ function definition from an ML function body.
 
@@ -8078,25 +8105,25 @@ let gen_dfun n b cty ty temps =
     else
       ids
   in
-  (* Detect which function-typed parameters are CPS parameters (see
-     [detect_cps_params] above for the full explanation). These are excluded
-     from template-parameter promotion below — they keep their [Tmod(TMconst,
-     Tfun(dom, cod))] type which prints as [const std::function<R(Args...)>].
+  (* Detect which function-typed parameters are NOT simply forwarded at
+     self-recursive call sites.  These are excluded from template-parameter
+     promotion below — they keep their [Tmod(TMconst, Tfun(dom, cod))] type
+     which prints as [const std::function<R(Args...)>].
 
-     [detect_cps_params] returns source-order indices (param 0 = first Rocq
-     parameter). We need two index-checking helpers because the parameter list
-     [ids] is in de Bruijn order (innermost first = last source param first),
-     while [List.rev ids] is in source order:
+     [detect_non_forwarded_params] returns source-order indices (param 0 =
+     first Rocq parameter).  We need two index-checking helpers because the
+     parameter list [ids] is in de Bruijn order (innermost first = last source
+     param first), while [List.rev ids] is in source order:
 
      Source order (Rocq): p0 p1 p2 indices 0, 1, 2 De Bruijn order (ids): p2 p1
      p0 indices 0, 1, 2
 
-     So CPS source index [i] maps to de Bruijn index [n_ids - 1 - i]. *)
-  let cps_param_indices = detect_cps_params n (List.length ids) b in
-  let cps_set = IntSet.of_list cps_param_indices in
-  let is_cps_param_source i = IntSet.mem i cps_set in
+     So non-forwarded source index [i] maps to de Bruijn index [n_ids - 1 - i]. *)
+  let non_fwd_param_indices = detect_non_forwarded_params n (List.length ids) b in
+  let non_fwd_set = IntSet.of_list non_fwd_param_indices in
+  let is_non_fwd_param_source i = IntSet.mem i non_fwd_set in
   let n_ids = List.length ids in
-  let is_cps_param_db i = IntSet.mem (n_ids - 1 - i) cps_set in
+  let is_non_fwd_param_db i = IntSet.mem (n_ids - 1 - i) non_fwd_set in
   let all_params = missing @ ids in
   (* Type class instance parameters become C++ template type parameters. We
      assign unique names (_tcI0, _tcI1, ...) to avoid collision with: - User
@@ -8330,7 +8357,7 @@ let gen_dfun n b cty ty temps =
         (x, wrapped) )
       ids_with_owned
   in
-  (* Promote non-CPS function-typed parameters to C++ template parameters.
+  (* Promote forwarded function-typed parameters to C++ template parameters.
 
      Function-typed parameters (those with C++ type [Tmod(TMconst, Tfun(...))])
      are normally promoted to template parameters with [MapsTo] concept
@@ -8348,20 +8375,20 @@ let gen_dfun n b cty ty temps =
      [f0] unchanged — the template type stays the same at every recursion
      depth.
 
-     CPS parameters are excluded from this promotion.  A CPS parameter
-     receives a *new* lambda at each recursive call site, which means the
+     Non-forwarded parameters are excluded from this promotion.  A parameter
+     that receives a *different* expression at a recursive call site means the
      template type would be different at each recursion depth, causing
      infinite template instantiation.  These parameters keep their
      [const std::function<R(Args...)>] type, which is a concrete
-     (non-template) type that stays the same regardless of lambda wrapping.
+     (non-template) type that stays the same regardless of wrapping.
 
      For example, [partition_cps p l k] has three parameters:
-     - [p] is passed unchanged to the recursive call → template [F0 &&p]
+     - [p] is forwarded unchanged to the recursive call → template [F0 &&p]
      - [l] is not function-typed → stays as-is
-     - [k] receives a new lambda at the recursive call → [const std::function<...> k]
+     - [k] receives a different expression at the recursive call → [const std::function<...> k]
 
      This loop iterates [List.rev ids] which is in source order,
-     so we use [is_cps_param_source] for the CPS guard. *)
+     so we use [is_non_fwd_param_source] for the guard. *)
   (* Determine which tvars are "primary" — deducible from non-function domain
      params or the return type.  Function-typed params that reference tvars
      outside this set (e.g., erased HKT type variables) get TTtypename (no
@@ -8375,7 +8402,7 @@ let gen_dfun n b cty ty temps =
     List.filter_map
       (fun (x, ty, i) ->
         match ty with
-        | Tmod (TMconst, Tfun (fdom, fcod)) when not (is_cps_param_source i) ->
+        | Tmod (TMconst, Tfun (fdom, fcod)) when not (is_non_fwd_param_source i) ->
           let fun_idx = get_tvar_indices (Tfun (fdom, fcod)) in
           let has_undeclared =
             List.exists (fun idx -> not (IntSet.mem idx primary)) fun_idx
@@ -8388,16 +8415,16 @@ let gen_dfun n b cty ty temps =
         | _ -> None )
       (List.mapi (fun i (x, ty) -> (x, ty, i)) (List.rev ids))
   in
-  (* Replace the parameter type of promoted (non-CPS) function params with the
-     template type variable [F&&]. CPS params are left untouched — they keep
-     [Tmod(TMconst, Tfun(dom, cod))] which prints as [const
+  (* Replace the parameter type of promoted (forwarded) function params with the
+     template type variable [F&&]. Non-forwarded params are left untouched — they
+     keep [Tmod(TMconst, Tfun(dom, cod))] which prints as [const
      std::function<R(Args...)>]. This loop iterates [ids] which is in de Bruijn
-     order, so we use [is_cps_param_db] for the CPS guard. *)
+     order, so we use [is_non_fwd_param_db] for the guard. *)
   let ids =
     List.mapi
       (fun i (x, ty) ->
         match ty with
-        | Tmod (TMconst, Tfun (dom, cod)) when not (is_cps_param_db i) ->
+        | Tmod (TMconst, Tfun (dom, cod)) when not (is_non_fwd_param_db i) ->
           ( x,
             Tref
               (Tref (Tvar (0, Some (fun_tparam_id (List.length ids - i - 1)))))

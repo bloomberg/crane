@@ -141,11 +141,11 @@ struct BinomialHeap {
        const std::shared_ptr<List<std::shared_ptr<tree>>> &q,
        std::shared_ptr<tree> c);
 
-  template <MapsTo<std::shared_ptr<List<std::shared_ptr<tree>>>,
-                   std::shared_ptr<List<std::shared_ptr<tree>>>>
-                F1>
-  __attribute__((pure)) static priqueue unzip(const std::shared_ptr<tree> &t,
-                                              F1 &&cont) {
+  __attribute__((pure)) static priqueue
+  unzip(const std::shared_ptr<tree> &t,
+        const std::function<std::shared_ptr<List<std::shared_ptr<tree>>>(
+            std::shared_ptr<List<std::shared_ptr<tree>>>)>
+            cont) {
     if (std::holds_alternative<typename tree::Node>(t->v())) {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
       std::function<std::shared_ptr<List<std::shared_ptr<tree>>>(
