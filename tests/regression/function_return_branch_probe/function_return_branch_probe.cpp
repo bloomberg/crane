@@ -10,20 +10,18 @@
 /// expressions.  Crane generates an inner lambda with no explicit return type,
 /// causing C++ to fail to deduce a common return type across the two distinct
 /// closure types.
-std::shared_ptr<Nat>
-FunctionReturnBranchProbe::make_adder(const std::shared_ptr<Nat> &n,
-                                      const std::shared_ptr<Nat> &_x0) {
-  return [&]() -> std::function<std::shared_ptr<Nat>(std::shared_ptr<Nat>)> {
-    if (std::holds_alternative<typename Nat::O>(n->v())) {
-      return [](std::shared_ptr<Nat> x) { return x; };
+__attribute__((pure)) Nat
+FunctionReturnBranchProbe::make_adder(const Nat &n, const Nat &_x0) {
+  return [=]() mutable -> std::function<Nat(Nat)> {
+    if (std::holds_alternative<typename Nat::O>(n.v())) {
+      return [](Nat x) { return x; };
     } else {
-      const auto &[d_a0] = std::get<typename Nat::S>(n->v());
-      std::function<std::shared_ptr<Nat>(std::shared_ptr<Nat>)> f =
-          [=](const std::shared_ptr<Nat> &_x0) mutable -> std::shared_ptr<Nat> {
-        return make_adder(d_a0, _x0);
+      const auto &[d_a0] = std::get<typename Nat::S>(n.v());
+      Nat d_a0_value = clone_as_value<Nat>(d_a0);
+      std::function<Nat(Nat)> f = [=](Nat _x0) mutable -> Nat {
+        return make_adder(d_a0_value, _x0);
       };
-      return
-          [=](const std::shared_ptr<Nat> &x) mutable { return Nat::s(f(x)); };
+      return [=](const Nat &x) mutable { return Nat::s(f(x)); };
     }
   }()(_x0);
 }

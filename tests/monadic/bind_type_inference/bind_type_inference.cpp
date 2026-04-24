@@ -16,13 +16,13 @@ int64_t BindTypeInference::test1() {
 
 int64_t BindTypeInference::test2() {
   return transform<std::monostate, int64_t>(
-      std::monostate{}, [](const std::monostate) { return int64_t(42); });
+      std::monostate{}, [](const std::monostate &) { return int64_t(42); });
 }
 
 int64_t BindTypeInference::test3() {
   return nested<std::monostate, bool, int64_t>(
-      std::monostate{}, [](const std::monostate) { return true; },
-      [](const bool b) {
+      std::monostate{}, [](const std::monostate &) { return true; },
+      [](const bool &b) {
         if (b) {
           return int64_t(1);
         } else {
@@ -39,18 +39,19 @@ int64_t BindTypeInference::test4() {
   return v.size();
 }
 
-std::shared_ptr<List<int64_t>> BindTypeInference::intToList(const int64_t n) {
+__attribute__((pure)) List<int64_t>
+BindTypeInference::intToList(const int64_t n) {
   return List<int64_t>::cons(n, List<int64_t>::nil());
 }
 
-std::shared_ptr<List<int64_t>> BindTypeInference::test5() {
+List<int64_t> BindTypeInference::test5() {
   int64_t x = int64_t(1);
   return intToList(x);
 }
 
 int64_t BindTypeInference::test6() {
   bool y = true;
-  return [&]() -> int64_t {
+  return [=]() mutable -> int64_t {
     if (y) {
       return int64_t(42);
     } else {

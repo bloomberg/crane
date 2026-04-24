@@ -8,7 +8,129 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 template <typename t_A> struct List {
   // TYPES
@@ -16,10 +138,11 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
+  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -27,37 +150,84 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  __attribute__((pure)) List<t_A> clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<t_A>(Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<t_A>(Cons{clone_as_value<t_A>(d_a0),
+                            clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
+    }
+  }
+
+  template <typename _CloneT0>
+  __attribute__((pure)) List<_CloneT0> clone_as() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<_CloneT0>(typename List<_CloneT0>::Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<_CloneT0>(typename List<_CloneT0>::Cons{
+          clone_as_value<_CloneT0>(d_a0),
+          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+    }
+  }
+
+  // CREATORS
+  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+
+  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
+  __attribute__((pure)) List<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = List<t_A>(); }
+
+  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <MapsTo<bool, t_A> F0>
   __attribute__((pure)) bool forallb(F0 &&f) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return true;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return (f(d_a0) && d_a1->forallb(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      return (f(d_a0) && (*(d_a1)).forallb(f));
     }
   }
 };
@@ -83,26 +253,70 @@ struct ProgramTargetsRegionScan {
 
   public:
     // CREATORS
+    instruction() {}
+
     explicit instruction(JUN _v) : d_v_(std::move(_v)) {}
 
     explicit instruction(JMS _v) : d_v_(std::move(_v)) {}
 
     explicit instruction(NOP _v) : d_v_(_v) {}
 
-    static std::shared_ptr<instruction> jun(unsigned int a0) {
-      return std::make_shared<instruction>(JUN{std::move(a0)});
+    instruction(const instruction &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    instruction(instruction &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) instruction &operator=(const instruction &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instruction> jms(unsigned int a0) {
-      return std::make_shared<instruction>(JMS{std::move(a0)});
+    __attribute__((pure)) instruction &operator=(instruction &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instruction> nop() {
-      return std::make_shared<instruction>(NOP{});
+    // ACCESSORS
+    __attribute__((pure)) instruction clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<JUN>(_sv.v())) {
+        const auto &[d_a0] = std::get<JUN>(_sv.v());
+        return instruction(JUN{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<JMS>(_sv.v())) {
+        const auto &[d_a0] = std::get<JMS>(_sv.v());
+        return instruction(JMS{clone_as_value<unsigned int>(d_a0)});
+      } else {
+        return instruction(NOP{});
+      }
     }
+
+    // CREATORS
+    __attribute__((pure)) static instruction jun(unsigned int a0) {
+      return instruction(JUN{std::move(a0)});
+    }
+
+    __attribute__((pure)) static instruction jms(unsigned int a0) {
+      return instruction(JMS{std::move(a0)});
+    }
+
+    constexpr static instruction nop() { return instruction(NOP{}); }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    __attribute__((pure)) instruction *operator->() { return this; }
+
+    __attribute__((pure)) const instruction *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = instruction(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -111,12 +325,12 @@ struct ProgramTargetsRegionScan {
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int> F1>
   static T1 instruction_rect(F0 &&f, F1 &&f0, const T1 f1,
-                             const std::shared_ptr<instruction> &i) {
-    if (std::holds_alternative<typename instruction::JUN>(i->v())) {
-      const auto &[d_a0] = std::get<typename instruction::JUN>(i->v());
+                             const instruction &i) {
+    if (std::holds_alternative<typename instruction::JUN>(i.v())) {
+      const auto &[d_a0] = std::get<typename instruction::JUN>(i.v());
       return f(d_a0);
-    } else if (std::holds_alternative<typename instruction::JMS>(i->v())) {
-      const auto &[d_a0] = std::get<typename instruction::JMS>(i->v());
+    } else if (std::holds_alternative<typename instruction::JMS>(i.v())) {
+      const auto &[d_a0] = std::get<typename instruction::JMS>(i.v());
       return f0(d_a0);
     } else {
       return f1;
@@ -126,12 +340,12 @@ struct ProgramTargetsRegionScan {
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int> F1>
   static T1 instruction_rec(F0 &&f, F1 &&f0, const T1 f1,
-                            const std::shared_ptr<instruction> &i) {
-    if (std::holds_alternative<typename instruction::JUN>(i->v())) {
-      const auto &[d_a0] = std::get<typename instruction::JUN>(i->v());
+                            const instruction &i) {
+    if (std::holds_alternative<typename instruction::JUN>(i.v())) {
+      const auto &[d_a0] = std::get<typename instruction::JUN>(i.v());
       return f(d_a0);
-    } else if (std::holds_alternative<typename instruction::JMS>(i->v())) {
-      const auto &[d_a0] = std::get<typename instruction::JMS>(i->v());
+    } else if (std::holds_alternative<typename instruction::JMS>(i.v())) {
+      const auto &[d_a0] = std::get<typename instruction::JMS>(i.v());
       return f0(d_a0);
     } else {
       return f1;
@@ -141,29 +355,29 @@ struct ProgramTargetsRegionScan {
   struct layout {
     unsigned int base_addr;
     unsigned int code_size;
+
+    __attribute__((pure)) layout *operator->() { return this; }
+
+    __attribute__((pure)) const layout *operator->() const { return this; }
   };
 
   __attribute__((pure)) static std::optional<unsigned int>
-  jump_target(const std::shared_ptr<instruction> &i);
+  jump_target(const instruction &i);
+  __attribute__((pure)) static bool addr_in_regionb(const unsigned int &addr,
+                                                    const layout &l);
+  __attribute__((pure)) static bool target_in_layoutb(const layout &l,
+                                                      const instruction &i);
   __attribute__((pure)) static bool
-  addr_in_regionb(const unsigned int addr, const std::shared_ptr<layout> &l);
-  __attribute__((pure)) static bool
-  target_in_layoutb(const std::shared_ptr<layout> &l,
-                    const std::shared_ptr<instruction> &i);
-  __attribute__((pure)) static bool program_targets_okb(
-      const std::shared_ptr<List<std::shared_ptr<instruction>>> &prog,
-      std::shared_ptr<layout> l);
+  program_targets_okb(const List<instruction> &prog, layout l);
   static inline const unsigned int t = []() {
-    std::shared_ptr<layout> l = std::make_shared<layout>(layout{200u, 20u});
-    std::shared_ptr<List<std::shared_ptr<instruction>>> p =
-        List<std::shared_ptr<instruction>>::cons(
-            instruction::nop(),
-            List<std::shared_ptr<instruction>>::cons(
-                instruction::jun(205u),
-                List<std::shared_ptr<instruction>>::cons(
-                    instruction::jms(218u),
-                    List<std::shared_ptr<instruction>>::nil())));
-    if (program_targets_okb(std::move(p), std::move(l))) {
+    layout l = layout{200u, 20u};
+    List<instruction> p = List<instruction>::cons(
+        instruction::nop(),
+        List<instruction>::cons(
+            instruction::jun(205u),
+            List<instruction>::cons(instruction::jms(218u),
+                                    List<instruction>::nil())));
+    if (program_targets_okb(p, l)) {
       return 1u;
     } else {
       return 0u;

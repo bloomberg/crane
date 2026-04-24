@@ -57,7 +57,7 @@ void EffectWorkflow::read_and_set() {
 }
 
 /// 4. Recursive function using effects
-unsigned int EffectWorkflow::repeat_log(const unsigned int n,
+unsigned int EffectWorkflow::repeat_log(const unsigned int &n,
                                         const std::string msg) {
   if (n <= 0) {
     return 0u;

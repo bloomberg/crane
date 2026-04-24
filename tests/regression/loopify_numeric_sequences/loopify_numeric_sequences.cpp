@@ -7,8 +7,8 @@
 #include <vector>
 
 __attribute__((pure)) unsigned int
-LoopifyNumericSequences::collatz_length_fuel(const unsigned int fuel,
-                                             const unsigned int n) {
+LoopifyNumericSequences::collatz_length_fuel(const unsigned int &fuel,
+                                             const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
     const unsigned int fuel;
@@ -31,7 +31,7 @@ LoopifyNumericSequences::collatz_length_fuel(const unsigned int fuel,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
@@ -51,10 +51,10 @@ LoopifyNumericSequences::collatz_length_fuel(const unsigned int fuel,
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _result = (_f._s0 + _result);
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
+      auto _f = std::move(std::get<_Call2>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -62,42 +62,48 @@ LoopifyNumericSequences::collatz_length_fuel(const unsigned int fuel,
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNumericSequences::collatz_length(const unsigned int n) {
+LoopifyNumericSequences::collatz_length(const unsigned int &n) {
   return collatz_length_fuel((n * 100u), n);
 }
 
-std::shared_ptr<List<unsigned int>>
-LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int fuel,
-                                               const unsigned int n) {
-  std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> *_write = &_head;
-  unsigned int _loop_n = n;
+__attribute__((pure)) List<unsigned int>
+LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int &fuel,
+                                               unsigned int n) {
+  std::unique_ptr<List<unsigned int>> _head{};
+  std::unique_ptr<List<unsigned int>> *_write = &_head;
+  unsigned int _loop_n = std::move(n);
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write = List<unsigned int>::nil();
+      *(_write) =
+          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       if (_loop_n <= 1u) {
-        *_write = List<unsigned int>::cons(1u, List<unsigned int>::nil());
+        *(_write) = std::make_unique<List<unsigned int>>(
+            List<unsigned int>::cons(1u, List<unsigned int>::nil()));
         break;
       } else {
         if ((2u ? _loop_n % 2u : _loop_n) == 0u) {
-          auto _cell = List<unsigned int>::cons(_loop_n, nullptr);
-          *_write = _cell;
+          auto _cell = std::make_unique<List<unsigned int>>(
+              typename List<unsigned int>::Cons(_loop_n, nullptr));
+          *(_write) = std::move(_cell);
           _write =
-              &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
+              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+                   .d_a1;
           unsigned int _next_n = (2u ? _loop_n / 2u : 0);
           unsigned int _next_fuel = fuel_;
           _loop_n = std::move(_next_n);
           _loop_fuel = std::move(_next_fuel);
           continue;
         } else {
-          auto _cell = List<unsigned int>::cons(_loop_n, nullptr);
-          *_write = _cell;
+          auto _cell = std::make_unique<List<unsigned int>>(
+              typename List<unsigned int>::Cons(_loop_n, nullptr));
+          *(_write) = std::move(_cell);
           _write =
-              &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
+              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+                   .d_a1;
           unsigned int _next_n = ((3u * _loop_n) + 1u);
           unsigned int _next_fuel = fuel_;
           _loop_n = std::move(_next_n);
@@ -107,17 +113,17 @@ LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int fuel,
       }
     }
   }
-  return _head;
+  return std::move(*(_head));
 }
 
-std::shared_ptr<List<unsigned int>>
-LoopifyNumericSequences::collatz_sequence(const unsigned int n) {
+__attribute__((pure)) List<unsigned int>
+LoopifyNumericSequences::collatz_sequence(const unsigned int &n) {
   return collatz_sequence_fuel((n * 100u), n);
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNumericSequences::tribonacci_fuel(const unsigned int fuel,
-                                         const unsigned int n) {
+LoopifyNumericSequences::tribonacci_fuel(const unsigned int &fuel,
+                                         const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
     const unsigned int fuel;
@@ -150,7 +156,7 @@ LoopifyNumericSequences::tribonacci_fuel(const unsigned int fuel,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
@@ -176,15 +182,15 @@ LoopifyNumericSequences::tribonacci_fuel(const unsigned int fuel,
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _stack.emplace_back(_Call2{_result, _f._s2, _f._s3});
       _stack.emplace_back(_Enter{_f._s0, _f._s1});
     } else if (std::holds_alternative<_Call2>(_frame)) {
-      const auto &_f = std::get<_Call2>(_frame);
+      auto _f = std::move(std::get<_Call2>(_frame));
       _stack.emplace_back(_Call3{_f._s0, _result});
       _stack.emplace_back(_Enter{_f._s1, _f._s2});
     } else {
-      const auto &_f = std::get<_Call3>(_frame);
+      auto _f = std::move(std::get<_Call3>(_frame));
       _result = ((_result + _f._s1) + _f._s0);
     }
   }
@@ -192,13 +198,13 @@ LoopifyNumericSequences::tribonacci_fuel(const unsigned int fuel,
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNumericSequences::tribonacci(const unsigned int n) {
+LoopifyNumericSequences::tribonacci(const unsigned int &n) {
   return tribonacci_fuel((n * 3u), n);
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNumericSequences::staircase_fuel(const unsigned int fuel,
-                                        const unsigned int n) {
+LoopifyNumericSequences::staircase_fuel(const unsigned int &fuel,
+                                        const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
     const unsigned int fuel;
@@ -231,7 +237,7 @@ LoopifyNumericSequences::staircase_fuel(const unsigned int fuel,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
@@ -251,15 +257,15 @@ LoopifyNumericSequences::staircase_fuel(const unsigned int fuel,
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _stack.emplace_back(_Call2{_result, _f._s2, _f._s3});
       _stack.emplace_back(_Enter{_f._s0, _f._s1});
     } else if (std::holds_alternative<_Call2>(_frame)) {
-      const auto &_f = std::get<_Call2>(_frame);
+      auto _f = std::move(std::get<_Call2>(_frame));
       _stack.emplace_back(_Call3{_f._s0, _result});
       _stack.emplace_back(_Enter{_f._s1, _f._s2});
     } else {
-      const auto &_f = std::get<_Call3>(_frame);
+      auto _f = std::move(std::get<_Call3>(_frame));
       _result = ((_result + _f._s1) + _f._s0);
     }
   }
@@ -267,13 +273,13 @@ LoopifyNumericSequences::staircase_fuel(const unsigned int fuel,
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNumericSequences::staircase(const unsigned int n) {
+LoopifyNumericSequences::staircase(const unsigned int &n) {
   return staircase_fuel((n * 3u), n);
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNumericSequences::digitsum_fuel(const unsigned int fuel,
-                                       const unsigned int n) {
+LoopifyNumericSequences::digitsum_fuel(const unsigned int &fuel,
+                                       const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
     const unsigned int fuel;
@@ -293,7 +299,7 @@ LoopifyNumericSequences::digitsum_fuel(const unsigned int fuel,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
@@ -308,7 +314,7 @@ LoopifyNumericSequences::digitsum_fuel(const unsigned int fuel,
         }
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -316,13 +322,13 @@ LoopifyNumericSequences::digitsum_fuel(const unsigned int fuel,
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNumericSequences::digitsum(const unsigned int n) {
+LoopifyNumericSequences::digitsum(const unsigned int &n) {
   return digitsum_fuel((n + 1u), n);
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNumericSequences::dec_to_bin_fuel(const unsigned int fuel,
-                                         const unsigned int n) {
+LoopifyNumericSequences::dec_to_bin_fuel(const unsigned int &fuel,
+                                         const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
     const unsigned int fuel;
@@ -343,7 +349,7 @@ LoopifyNumericSequences::dec_to_bin_fuel(const unsigned int fuel,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
@@ -358,7 +364,7 @@ LoopifyNumericSequences::dec_to_bin_fuel(const unsigned int fuel,
         }
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _result = (_f._s0 + (_f._s1 * _result));
     }
   }
@@ -366,27 +372,26 @@ LoopifyNumericSequences::dec_to_bin_fuel(const unsigned int fuel,
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNumericSequences::dec_to_bin(const unsigned int n) {
+LoopifyNumericSequences::dec_to_bin(const unsigned int &n) {
   return dec_to_bin_fuel((n + 1u), n);
 }
 
-__attribute__((pure)) unsigned int LoopifyNumericSequences::alternate_sum(
-    const bool sign, const unsigned int acc,
-    const std::shared_ptr<List<unsigned int>> &l) {
+__attribute__((pure)) unsigned int
+LoopifyNumericSequences::alternate_sum(const bool &sign, unsigned int acc,
+                                       const List<unsigned int> &l) {
   unsigned int _result;
-  std::shared_ptr<List<unsigned int>> _loop_l = l;
-  unsigned int _loop_acc = acc;
+  List<unsigned int> _loop_l = l;
+  unsigned int _loop_acc = std::move(acc);
   bool _loop_sign = sign;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(
-            _loop_l->v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
       _result = _loop_acc;
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
       if (_loop_sign) {
-        std::shared_ptr<List<unsigned int>> _next_l = d_a1;
+        List<unsigned int> _next_l = *(d_a1);
         unsigned int _next_acc = (_loop_acc + d_a0);
         bool _next_sign = false;
         _loop_l = std::move(_next_l);
@@ -394,7 +399,7 @@ __attribute__((pure)) unsigned int LoopifyNumericSequences::alternate_sum(
         _loop_sign = std::move(_next_sign);
       } else {
         if (d_a0 <= _loop_acc) {
-          std::shared_ptr<List<unsigned int>> _next_l = d_a1;
+          List<unsigned int> _next_l = *(d_a1);
           unsigned int _next_acc =
               (((_loop_acc - d_a0) > _loop_acc ? 0 : (_loop_acc - d_a0)));
           bool _next_sign = true;
@@ -402,7 +407,7 @@ __attribute__((pure)) unsigned int LoopifyNumericSequences::alternate_sum(
           _loop_acc = std::move(_next_acc);
           _loop_sign = std::move(_next_sign);
         } else {
-          std::shared_ptr<List<unsigned int>> _next_l = d_a1;
+          List<unsigned int> _next_l = *(d_a1);
           unsigned int _next_acc = 0u;
           bool _next_sign = true;
           _loop_l = std::move(_next_l);
@@ -416,8 +421,8 @@ __attribute__((pure)) unsigned int LoopifyNumericSequences::alternate_sum(
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNumericSequences::sum_divisors_aux(const unsigned int n,
-                                          const unsigned int d) {
+LoopifyNumericSequences::sum_divisors_aux(const unsigned int &n,
+                                          const unsigned int &d) {
   struct _Enter {
     const unsigned int d;
   };
@@ -435,7 +440,7 @@ LoopifyNumericSequences::sum_divisors_aux(const unsigned int n,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int d = _f.d;
       if (d <= 0) {
         _result = 0u;
@@ -449,7 +454,7 @@ LoopifyNumericSequences::sum_divisors_aux(const unsigned int n,
         }
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -457,7 +462,7 @@ LoopifyNumericSequences::sum_divisors_aux(const unsigned int n,
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNumericSequences::sum_divisors(const unsigned int n) {
+LoopifyNumericSequences::sum_divisors(const unsigned int &n) {
   if (n <= 1u) {
     return 0u;
   } else {

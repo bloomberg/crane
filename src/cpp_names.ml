@@ -513,6 +513,18 @@ let lookup_method_this_pos n =
   | Some (_, pos) -> Some pos
   | None -> None
 
+(** Check if a method's receiver is a pointer type (coinductive/shared_ptr)
+    rather than a value type.  Returns true if the method's eponymous
+    inductive is coinductive.  For non-method refs, returns false. *)
+let method_receiver_is_ptr n =
+  match is_registered_method n with
+  | Some (epon_ref, _) -> Table.is_coinductive epon_ref
+  | None ->
+    (* Check local method_candidates: they include a GlobRef at element 2
+       which is the eponymous type. For local candidates without eponymous info,
+       default to false (value type). *)
+    false
+
 (** Helper module for tracking variable names *)
 (** Set of [Id.t] names for tracking variable identifiers. *)
 module IdSet = Set.Make (Names.Id)

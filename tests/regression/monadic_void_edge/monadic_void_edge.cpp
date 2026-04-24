@@ -42,7 +42,7 @@ void MonadicVoidEdge::unit_chain() {
 /// 5. Match on a value obtained from a bind
 unsigned int MonadicVoidEdge::match_after_bind() {
   bool b = true;
-  return [&]() -> unsigned int {
+  return [=]() mutable -> unsigned int {
     if (b) {
       return 1u;
     } else {
@@ -71,7 +71,7 @@ void MonadicVoidEdge::deeply_nested_void() {
 
 void MonadicVoidEdge::test_apply_effect() {
   apply_effect(
-      [](const unsigned int) {
+      [](const unsigned int &) {
         std::cout << "applied"s << '\n';
         return std::monostate{};
       },
@@ -80,7 +80,7 @@ void MonadicVoidEdge::test_apply_effect() {
 }
 
 /// 9. Monadic function returning option unit
-std::optional<std::monostate> MonadicVoidEdge::maybe_print(const bool b) {
+std::optional<std::monostate> MonadicVoidEdge::maybe_print(const bool &b) {
   if (b) {
     std::cout << "yes"s << '\n';
     return std::make_optional<std::monostate>(std::monostate{});
@@ -97,7 +97,7 @@ std::pair<unsigned int, unsigned int> MonadicVoidEdge::bind_into_pair() {
 }
 
 /// 11. Void function result stored in list (should stay Unit, not void)
-std::shared_ptr<List<std::monostate>> MonadicVoidEdge::unit_in_list() {
+List<std::monostate> MonadicVoidEdge::unit_in_list() {
   std::monostate x = std::monostate{};
   std::monostate y = std::monostate{};
   return List<std::monostate>::cons(
@@ -115,8 +115,8 @@ unsigned int MonadicVoidEdge::mixed_binds() {
 }
 
 /// 13. Function that takes itree as argument and sequences
-void MonadicVoidEdge::sequence_effects(const std::monostate e1,
-                                       const std::monostate) {
+void MonadicVoidEdge::sequence_effects(const std::monostate &e1,
+                                       std::monostate) {
   e1;
   return;
 }

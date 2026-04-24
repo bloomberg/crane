@@ -1,6 +1,5 @@
 #include <large_enum.h>
 
-#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -90,46 +89,45 @@ __attribute__((pure)) bool LargeEnum::is_neutral(const LargeEnum::Color c) {
 }
 
 __attribute__((pure)) unsigned int
-LargeEnum::tok_to_nat(const std::shared_ptr<LargeEnum::tok> &t) {
-  if (std::holds_alternative<typename LargeEnum::tok::TNum>(t->v())) {
-    const auto &[d_a0] = std::get<typename LargeEnum::tok::TNum>(t->v());
+LargeEnum::tok_to_nat(const LargeEnum::tok &t) {
+  if (std::holds_alternative<typename LargeEnum::tok::TNum>(t.v())) {
+    const auto &[d_a0] = std::get<typename LargeEnum::tok::TNum>(t.v());
     return d_a0;
-  } else if (std::holds_alternative<typename LargeEnum::tok::TPlus>(t->v())) {
+  } else if (std::holds_alternative<typename LargeEnum::tok::TPlus>(t.v())) {
     return 100u;
-  } else if (std::holds_alternative<typename LargeEnum::tok::TMinus>(t->v())) {
+  } else if (std::holds_alternative<typename LargeEnum::tok::TMinus>(t.v())) {
     return 101u;
-  } else if (std::holds_alternative<typename LargeEnum::tok::TStar>(t->v())) {
+  } else if (std::holds_alternative<typename LargeEnum::tok::TStar>(t.v())) {
     return 102u;
-  } else if (std::holds_alternative<typename LargeEnum::tok::TSlash>(t->v())) {
+  } else if (std::holds_alternative<typename LargeEnum::tok::TSlash>(t.v())) {
     return 103u;
-  } else if (std::holds_alternative<typename LargeEnum::tok::TLParen>(t->v())) {
+  } else if (std::holds_alternative<typename LargeEnum::tok::TLParen>(t.v())) {
     return 104u;
-  } else if (std::holds_alternative<typename LargeEnum::tok::TRParen>(t->v())) {
+  } else if (std::holds_alternative<typename LargeEnum::tok::TRParen>(t.v())) {
     return 105u;
-  } else if (std::holds_alternative<typename LargeEnum::tok::TEq>(t->v())) {
+  } else if (std::holds_alternative<typename LargeEnum::tok::TEq>(t.v())) {
     return 106u;
-  } else if (std::holds_alternative<typename LargeEnum::tok::TBang>(t->v())) {
+  } else if (std::holds_alternative<typename LargeEnum::tok::TBang>(t.v())) {
     return 107u;
   } else if (std::holds_alternative<typename LargeEnum::tok::TSemicolon>(
-                 t->v())) {
+                 t.v())) {
     return 108u;
-  } else if (std::holds_alternative<typename LargeEnum::tok::TIdent>(t->v())) {
-    const auto &[d_a0] = std::get<typename LargeEnum::tok::TIdent>(t->v());
+  } else if (std::holds_alternative<typename LargeEnum::tok::TIdent>(t.v())) {
+    const auto &[d_a0] = std::get<typename LargeEnum::tok::TIdent>(t.v());
     return (200u + d_a0);
   } else {
     return 999u;
   }
 }
 
-__attribute__((pure)) bool
-LargeEnum::is_operator(const std::shared_ptr<LargeEnum::tok> &t) {
-  if (std::holds_alternative<typename LargeEnum::tok::TPlus>(t->v())) {
+__attribute__((pure)) bool LargeEnum::is_operator(const LargeEnum::tok &t) {
+  if (std::holds_alternative<typename LargeEnum::tok::TPlus>(t.v())) {
     return true;
-  } else if (std::holds_alternative<typename LargeEnum::tok::TMinus>(t->v())) {
+  } else if (std::holds_alternative<typename LargeEnum::tok::TMinus>(t.v())) {
     return true;
-  } else if (std::holds_alternative<typename LargeEnum::tok::TStar>(t->v())) {
+  } else if (std::holds_alternative<typename LargeEnum::tok::TStar>(t.v())) {
     return true;
-  } else if (std::holds_alternative<typename LargeEnum::tok::TSlash>(t->v())) {
+  } else if (std::holds_alternative<typename LargeEnum::tok::TSlash>(t.v())) {
     return true;
   } else {
     return false;

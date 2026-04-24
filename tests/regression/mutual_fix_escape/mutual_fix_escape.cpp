@@ -9,7 +9,7 @@
 /// both functions through a pair.
 __attribute__((pure))
 std::pair<std::function<bool(unsigned int)>, std::function<bool(unsigned int)>>
-MutualFixEscape::make_even_odd(const unsigned int) {
+MutualFixEscape::make_even_odd(const unsigned int &) {
   auto even = std::make_shared<std::function<bool(unsigned int)>>();
   auto odd = std::make_shared<std::function<bool(unsigned int)>>();
   *even = [=](unsigned int n) mutable -> bool {
@@ -46,13 +46,13 @@ MutualFixEscape::make_even_odd(const unsigned int) {
       return (*even0)(n_);
     }
   };
-  return std::make_pair(*even, *odd0);
+  return std::make_pair((*even), (*odd0));
 }
 
 /// A mutual fixpoint that captures a parameter base.
 __attribute__((pure)) std::pair<std::function<unsigned int(unsigned int)>,
                                 std::function<unsigned int(unsigned int)>>
-MutualFixEscape::make_count_pair(const unsigned int base) {
+MutualFixEscape::make_count_pair(unsigned int base) {
   auto count_even =
       std::make_shared<std::function<unsigned int(unsigned int)>>();
   auto count_odd =
@@ -93,5 +93,5 @@ MutualFixEscape::make_count_pair(const unsigned int base) {
       return (1u + (*count_even0)(n_));
     }
   };
-  return std::make_pair(*count_even, *count_odd0);
+  return std::make_pair((*count_even), (*count_odd0));
 }

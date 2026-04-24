@@ -5,34 +5,33 @@
 #include <utility>
 #include <variant>
 
-__attribute__((pure)) unsigned int LetPairShadow::mylist_sum(
-    const std::shared_ptr<LetPairShadow::mylist<unsigned int>> &l) {
+__attribute__((pure)) unsigned int
+LetPairShadow::mylist_sum(const LetPairShadow::mylist<unsigned int> &l) {
   if (std::holds_alternative<
-          typename LetPairShadow::mylist<unsigned int>::Mynil>(l->v())) {
+          typename LetPairShadow::mylist<unsigned int>::Mynil>(l.v())) {
     return 0u;
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename LetPairShadow::mylist<unsigned int>::Mycons>(l->v());
-    return (d_a0 + mylist_sum(d_a1));
+        std::get<typename LetPairShadow::mylist<unsigned int>::Mycons>(l.v());
+    return (d_a0 + mylist_sum(*(d_a1)));
   }
 }
 
 /// Helper functions that return pairs (force temporary allocation).
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
-LetPairShadow::add_pair(const unsigned int a, const unsigned int b) {
+LetPairShadow::add_pair(const unsigned int &a, const unsigned int &b) {
   return std::make_pair((a + b), (a * b));
 }
 
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
-LetPairShadow::sub_pair(const unsigned int a, const unsigned int b) {
+LetPairShadow::sub_pair(const unsigned int &a, const unsigned int &b) {
   return std::make_pair((((a - b) > a ? 0 : (a - b))), (a + b));
 }
 
 /// Pattern 2: Two destructs of function-call results in top-level body.
-__attribute__((pure)) unsigned int
-LetPairShadow::double_call_destruct(const unsigned int a, const unsigned int b,
-                                    const unsigned int c,
-                                    const unsigned int d) {
+__attribute__((pure)) unsigned int LetPairShadow::double_call_destruct(
+    const unsigned int &a, const unsigned int &b, const unsigned int &c,
+    const unsigned int &d) {
   auto _cs = add_pair(a, b);
   const unsigned int &sum_ab = _cs.first;
   const unsigned int &prod_ab = _cs.second;
@@ -44,8 +43,8 @@ LetPairShadow::double_call_destruct(const unsigned int a, const unsigned int b,
 
 /// Pattern 3: Three destructs of function-call results.
 __attribute__((pure)) unsigned int LetPairShadow::triple_call_destruct(
-    const unsigned int a, const unsigned int b, const unsigned int c,
-    const unsigned int d, const unsigned int e, const unsigned int f) {
+    const unsigned int &a, const unsigned int &b, const unsigned int &c,
+    const unsigned int &d, const unsigned int &e, const unsigned int &f) {
   auto _cs = add_pair(a, b);
   const unsigned int &r1 = _cs.first;
   const unsigned int &r2 = _cs.second;

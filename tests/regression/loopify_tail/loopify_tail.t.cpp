@@ -72,7 +72,7 @@ int main() {
   // Build a moderately large list to test no stack overflow
   auto big = List::nil();
   for (unsigned int i = 0; i < 10000; ++i) {
-    big = List::cons(i, big);
+    big = List::cons(i, std::move(big));
   }
 
   // These use the loopified (iterative) versions - should not stack overflow
@@ -83,11 +83,10 @@ int main() {
 
   // Iteratively destroy the big list to avoid shared_ptr destructor
   // stack overflow (a known limitation of shared_ptr for deep lists)
-  while (std::holds_alternative<List::Cons>(big->v_mut())) {
-    auto next = std::get<List::Cons>(big->v_mut()).d_a1;
-    big = next;
+  while (std::holds_alternative<List::Cons>(big.v_mut())) {
+    auto next = std::get<List::Cons>(big.v_mut()).d_a1;
+    big = std::move(*next);
   }
-  big.reset();
 
   return testStatus;
 }

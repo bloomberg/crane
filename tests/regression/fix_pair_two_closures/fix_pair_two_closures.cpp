@@ -12,7 +12,7 @@
 /// dangle after make_ops returns.
 __attribute__((pure)) std::pair<std::function<unsigned int(unsigned int)>,
                                 std::function<unsigned int(unsigned int)>>
-FixPairTwoClosures::make_ops(const unsigned int a, const unsigned int b) {
+FixPairTwoClosures::make_ops(unsigned int a, unsigned int b) {
   auto f = std::make_shared<std::function<unsigned int(unsigned int)>>();
   *f = [=](unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
@@ -31,5 +31,5 @@ FixPairTwoClosures::make_ops(const unsigned int a, const unsigned int b) {
       return ((*g)(x_) + 1);
     }
   };
-  return std::make_pair(*f, *g);
+  return std::make_pair((*f), (*g));
 }

@@ -11,9 +11,9 @@
 /// If the eta-expanded lambda uses & capture,
 /// the Box will hold a dangling reference after the
 /// function returns.
-std::shared_ptr<MoveSafety::fn_box>
-MoveSafety::make_box(std::shared_ptr<MoveSafety::tree> t) {
+__attribute__((pure)) MoveSafety::fn_box
+MoveSafety::make_box(MoveSafety::tree t) {
   return fn_box::box([=](unsigned int _x0) mutable -> unsigned int {
-    return t->sum_values(_x0);
+    return t.sum_values(_x0);
   });
 }

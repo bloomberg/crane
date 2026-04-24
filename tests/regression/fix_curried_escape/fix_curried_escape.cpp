@@ -17,7 +17,7 @@
 /// After make_fn returns, base is destroyed, and calling
 /// the extracted function accesses freed memory.
 __attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
-FixCurriedEscape::make_fn(const unsigned int base) {
+FixCurriedEscape::make_fn(unsigned int base) {
   auto go = std::make_shared<std::function<unsigned int(unsigned int)>>();
   *go = [=](unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
@@ -27,5 +27,5 @@ FixCurriedEscape::make_fn(const unsigned int base) {
       return ((*go)(x_) + 1);
     }
   };
-  return std::make_optional<std::function<unsigned int(unsigned int)>>(*go);
+  return std::make_optional<std::function<unsigned int(unsigned int)>>((*go));
 }

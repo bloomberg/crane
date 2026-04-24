@@ -97,6 +97,15 @@
 open Names
 open Minicpp
 
+(** Check whether a C++ return type is a value-type inductive (non-coinductive,
+    non-enum bare [Tglob]).  When true, TMC must wrap [_head]/_write in
+    [shared_ptr] because the constructor's recursive field is [shared_ptr].
+    Handles [Tnamespace] wrapping for out-of-line (.cpp) method definitions. *)
+let rec is_value_type_ret = function
+  | Tglob (r, _, _) -> not (Table.is_coinductive r) && not (Table.is_custom r)
+  | Tnamespace (_, t) -> is_value_type_ret t
+  | _ -> false
+
 (** {2 Mutual recursion table}
 
     Functions register their bodies here so mutual pairs can be detected and
@@ -190,36 +199,39 @@ let method_checker
     ~(has_self_param : bool)
     ~(this_pos : int)
     (method_name : Id.t) : call_checker =
+ (* Convert a receiver expression to a raw pointer for the _Enter struct.
+    Unwrap CPPderef: deref(shared_ptr) uses shared_ptr.get() directly.
+    Otherwise apply .get() to the expression itself. *)
+ let recv_to_ptr recv =
+   match recv with
+   | CPPderef inner ->
+     CPPfun_call (CPPmember (inner, Id.of_string "get"), [])
+   | _ ->
+     CPPfun_call (CPPmember (recv, Id.of_string "get"), [])
+ in
+ let extract_at pos lst =
+   let rec aux i acc = function
+     | [] -> (None, List.rev acc)
+     | x :: rest ->
+       if i = pos then (Some x, List.rev_append acc rest)
+       else aux (i + 1) (x :: acc) rest
+   in
+   aux 0 [] lst
+ in
  fun e ->
    match e with
    | CPPmethod_call (recv, id, args) when Id.equal id method_name ->
      if has_self_param then
-       (* Include receiver (converted to raw pointer via .get()) as first arg *)
-       let recv_ptr = CPPfun_call (CPPmember (recv, Id.of_string "get"), []) in
-       Some {cs_args = recv_ptr :: args; cs_is_tail = false}
+       Some {cs_args = recv_to_ptr recv :: args; cs_is_tail = false}
      else
        Some {cs_args = args; cs_is_tail = false}
    | CPPfun_call (CPPvar id, args) when Id.equal id method_name ->
-     (* Fixpoint recursive calls appear as CPPvar calls. CPPfun_call stores
-        args reversed; reverse to normal order before extracting this_pos. *)
      let args_normal = List.rev args in
      if has_self_param && List.length args_normal > n_params then
-       let extract_at pos lst =
-         let rec aux i acc = function
-           | [] -> (None, List.rev acc)
-           | x :: rest ->
-             if i = pos then (Some x, List.rev_append acc rest)
-             else aux (i + 1) (x :: acc) rest
-         in
-         aux 0 [] lst
-       in
        let self_arg, rest = extract_at this_pos args_normal in
        ( match self_arg with
        | Some recv ->
-         let recv_ptr =
-           CPPfun_call (CPPmember (recv, Id.of_string "get"), [])
-         in
-         Some {cs_args = recv_ptr :: rest; cs_is_tail = false}
+         Some {cs_args = recv_to_ptr recv :: rest; cs_is_tail = false}
        | None -> Some {cs_args = args_normal; cs_is_tail = false} )
      else if (not has_self_param) && List.length args_normal > n_params then
        Some {cs_args = List.filteri (fun i _ -> i <> this_pos) args_normal;
@@ -235,28 +247,14 @@ let method_checker
        | GlobRef.VarRef v -> v
      in
      if Id.equal label method_name then
-       (* CPPfun_call stores args in reverse order (see translation.ml).
-          Reverse to get normal order before position-based extraction. *)
        let args_normal = List.rev args in
        if has_self_param then
-         let extract_at pos lst =
-           let rec aux i acc = function
-             | [] -> (None, List.rev acc)
-             | x :: rest ->
-               if i = pos then (Some x, List.rev_append acc rest)
-               else aux (i + 1) (x :: acc) rest
-           in
-           aux 0 [] lst
-         in
          let self_arg, rest = extract_at this_pos args_normal in
          ( match self_arg with
          | Some recv ->
-           let recv_ptr =
-             CPPfun_call (CPPmember (recv, Id.of_string "get"), [])
-           in
-           Some {cs_args = recv_ptr :: rest; cs_is_tail = false}
+           Some {cs_args = recv_to_ptr recv :: rest; cs_is_tail = false}
          | None -> Some {cs_args = args_normal; cs_is_tail = false} )
-       else (* Strip receiver at [this_pos] to align with mf_params *)
+       else
          let args_stripped =
            if List.length args_normal > n_params then
              List.filteri (fun i _ -> i <> this_pos) args_normal
@@ -1909,19 +1907,39 @@ let patch_cell_field pp_expr ~type_expr ~ctor_name ~n_args ~rec_field_idx
         _head = val;
       \}
     ]} *)
-let patch_tmc_dest _pp_expr _ti val_expr =
+let patch_tmc_dest ~vt_ret _pp_expr _ti val_expr =
   (* Write-pointer technique: *_write = val.
      _write always points to where the next value should go — initially
      &_head, then the recursive field of the most recently allocated cell.
      No branch needed: the pointer handles both the first-element and
-     subsequent-element cases uniformly. *)
+     subsequent-element cases uniformly.
+     For value-type returns, base-case values need make_unique wrapping;
+     cell values (from build_cell_call) are already unique_ptr. *)
+  let val_expr =
+    match vt_ret with
+    | Some _ -> CPPmove val_expr
+    | None -> val_expr
+  in
   [Sexpr (CPPbinop ("=", CPPderef (CPPvar (Id.of_string "_write")), val_expr))]
 
-(** Build a constructor factory call with [nullptr] at the recursive argument
-    position.
+(** Wrap a base-case value in [make_unique] for value-type returns.
+    TMC branch cells are already [unique_ptr] from {!build_cell_call}. *)
+let wrap_base_for_vt vt_ret val_expr =
+  match vt_ret with
+  | Some ret_ty ->
+    CPPfun_call (CPPmk_unique ret_ty, [val_expr])
+  | None -> val_expr
 
-    @param cell A single TMC cell allocation descriptor *)
-let build_cell_call cell =
+(** Build a constructor call with [nullptr] at the recursive argument position.
+
+    When [~vt_ret] is [Some ret_ty], the factory method cannot accept [nullptr]
+    because the recursive parameter is a value type.  Instead we construct the
+    inner struct directly and wrap it:
+    [std::make_unique<list<T>>(typename list<T>::Cons\{x, nullptr\})]
+
+    @param cell A single TMC cell allocation descriptor
+    @param vt_ret [Some ret_ty] for value-type returns, [None] otherwise *)
+let build_cell_call ~vt_ret pp_expr cell =
   let args =
     List.init cell.tca_n_args (fun i ->
       if i = cell.tca_rec_field_idx then CPPraw "nullptr"
@@ -1932,7 +1950,18 @@ let build_cell_call cell =
           (* This shouldn't happen if the analysis is correct *)
           CPPraw "std::any{}" )
   in
-  CPPfun_call (cell.tca_factory, args)
+  match vt_ret with
+  | Some ret_ty ->
+    (* Direct struct construction wrapped in make_unique:
+       std::make_unique<Type>(typename Type::Ctor{args...}) *)
+    let type_str = pp_expr cell.tca_type_expr in
+    let struct_init =
+      CPPraw ("typename " ^ type_str ^ "::" ^ cell.tca_ctor_name)
+    in
+    CPPfun_call (CPPmk_unique ret_ty,
+                 [CPPfun_call (struct_init, args)])
+  | None ->
+    CPPfun_call (cell.tca_factory, args)
 
 (** Generate statements for a TMC branch with possibly nested constructor cells.
     Allocates all cells with [nullptr] holes, links consecutive pairs via
@@ -1949,7 +1978,7 @@ let build_cell_call cell =
       _last = _cell1;                     // advance
       <shadow updates>
     ]} *)
-let build_tmc_branch_stmts pp_expr ti br varying shadow_params =
+let build_tmc_branch_stmts ~vt_ret pp_expr ti br varying shadow_params =
   (* Generate unique cell names: _cell, _cell1, _cell2, ... *)
   let cell_names =
     List.mapi
@@ -1960,7 +1989,8 @@ let build_tmc_branch_stmts pp_expr ti br varying shadow_params =
   (* 1. Allocate all cells with nullptr holes *)
   let cell_decls =
     List.map2
-      (fun cell_id cell -> Sasgn (cell_id, Some Tauto, build_cell_call cell))
+      (fun cell_id cell ->
+        Sasgn (cell_id, Some Tauto, build_cell_call ~vt_ret pp_expr cell))
       cell_names br.tmc_cells
   in
   (* 2. Link consecutive cells: outer.rec_field = inner *)
@@ -1970,17 +2000,24 @@ let build_tmc_branch_stmts pp_expr ti br varying shadow_params =
       patch_cell_field pp_expr
         ~type_expr:cell.tca_type_expr ~ctor_name:cell.tca_ctor_name
         ~n_args:cell.tca_n_args ~rec_field_idx:cell.tca_rec_field_idx
-        (CPPvar outer_name) (CPPvar inner_name)
+        (CPPvar outer_name)
+        (match vt_ret with
+         | Some _ -> CPPmove (CPPvar inner_name)
+         | None -> CPPvar inner_name)
       :: link_cells rest_cells rest_names
     | _ -> []
   in
   let link_stmts = link_cells br.tmc_cells cell_names in
   (* 3. Patch destination with outermost cell via write pointer *)
-  let patch = patch_tmc_dest pp_expr ti (CPPvar (List.hd cell_names)) in
+  let patch = patch_tmc_dest ~vt_ret pp_expr ti (CPPvar (List.hd cell_names)) in
   (* 4. Advance _write to the recursive field of the innermost cell.
         Generates: _write = &std::get<typename Type::Ctor>(inner->v_mut()).field; *)
   let innermost_name = List.rev cell_names |> List.hd in
-  let innermost_cell = CPPvar innermost_name in
+  let innermost_cell =
+    match vt_ret with
+    | Some _ -> CPPraw "(*_write)"
+    | None -> CPPvar innermost_name
+  in
   let inner_ti = List.rev br.tmc_cells |> List.hd in
   let field_idx = inner_ti.tca_n_args - 1 - inner_ti.tca_rec_field_idx in
   let field_id = Common.lookup_ctor_field_name inner_ti.tca_ctor_name field_idx in
@@ -2009,7 +2046,7 @@ let build_tmc_branch_stmts pp_expr ti br varying shadow_params =
 
     {b TMC branches}: allocate a cell with a hole, patch the destination,
     update [_last], and update shadow variables. *)
-let rec rewrite_tmc_lambda_return check pp_expr ti varying shadow_params =
+let rec rewrite_tmc_lambda_return ~vt_ret check pp_expr ti varying shadow_params =
   function
   | Sreturn (Some (CPPfun_call (CPPvisit, [scrut; CPPoverloaded lambdas])))
     when count_calls_expr check scrut = 0
@@ -2020,7 +2057,7 @@ let rec rewrite_tmc_lambda_return check pp_expr ti varying shadow_params =
                   collect_stmts check ~in_visitor:true body <> []
                 | _ -> false )
               lambdas ->
-    let rw = rewrite_tmc_lambda_return check pp_expr ti varying shadow_params in
+    let rw = rewrite_tmc_lambda_return ~vt_ret check pp_expr ti varying shadow_params in
     let new_lambdas =
       map_visit_lambdas ~ret_ty:None
         ~rewrite:(fun _ body -> List.concat_map rw body)
@@ -2035,23 +2072,25 @@ let rec rewrite_tmc_lambda_return check pp_expr ti varying shadow_params =
     | None ->
       let n = count_calls_expr check e in
       if n = 0 then
-        (* Base case — patch destination and stop *)
-        patch_tmc_dest pp_expr ti e @ [Sbreak]
+        (* Base case — patch destination and stop.
+           For value-type returns, wrap in make_shared. *)
+        patch_tmc_dest ~vt_ret:None pp_expr ti (wrap_base_for_vt vt_ret e)
+        @ [Sbreak]
       else
         (* TMC branch — allocate cell(s) with holes, patch, continue *)
         match try_tmc_decompose check e with
         | Some br ->
-          build_tmc_branch_stmts pp_expr ti br varying shadow_params
+          build_tmc_branch_stmts ~vt_ret pp_expr ti br varying shadow_params
         | None ->
           (* Shouldn't happen if try_tmc_classify was correct, but fallback *)
           [Sreturn (Some e)] )
   | Sif (cond, then_br, else_br) ->
-    let rw = rewrite_tmc_lambda_return check pp_expr ti varying shadow_params in
+    let rw = rewrite_tmc_lambda_return ~vt_ret check pp_expr ti varying shadow_params in
     rewrite_if_with_reuse_bypass check cond
       (List.concat_map rw then_br)
       (List.concat_map rw else_br)
   | Scustom_case (ty, scrut, tyargs, branches, err) ->
-    let rw = rewrite_tmc_lambda_return check pp_expr ti varying shadow_params in
+    let rw = rewrite_tmc_lambda_return ~vt_ret check pp_expr ti varying shadow_params in
     [
       Scustom_case
         ( ty,
@@ -2063,7 +2102,7 @@ let rec rewrite_tmc_lambda_return check pp_expr ti varying shadow_params =
           err );
     ]
   | Smatch (branches, default) ->
-    let rw = rewrite_tmc_lambda_return check pp_expr ti varying shadow_params in
+    let rw = rewrite_tmc_lambda_return ~vt_ret check pp_expr ti varying shadow_params in
     [
       Smatch
         ( List.map
@@ -2078,13 +2117,13 @@ let rec rewrite_tmc_lambda_return check pp_expr ti varying shadow_params =
           Option.map (List.concat_map rw) default );
     ]
   | Sblock stmts ->
-    let rw = rewrite_tmc_lambda_return check pp_expr ti varying shadow_params in
+    let rw = rewrite_tmc_lambda_return ~vt_ret check pp_expr ti varying shadow_params in
     [Sblock (List.concat_map rw stmts)]
   | s -> [s]
 
 (** Rewrite a top-level statement for TMC.  Handles [std::visit] returns and
     direct returns at the statement level. *)
-let rec rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params = function
+let rec rewrite_tmc_visit_stmt ~vt_ret check pp_expr ti varying shadow_params = function
   | Sreturn (Some e) ->
     ( match check e with
     | Some cs ->
@@ -2100,7 +2139,7 @@ let rec rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params = function
         map_visit_lambdas ~ret_ty:None
           ~rewrite:(fun _ body ->
             List.concat_map
-              (rewrite_tmc_lambda_return check pp_expr ti varying shadow_params)
+              (rewrite_tmc_lambda_return ~vt_ret check pp_expr ti varying shadow_params)
               body )
           lambdas
       in
@@ -2109,23 +2148,24 @@ let rec rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params = function
       (* Direct base return *)
       let n = count_calls_expr check e in
       if n = 0 then
-        Sblock (patch_tmc_dest pp_expr ti e @ [Sbreak])
+        Sblock (patch_tmc_dest ~vt_ret:None pp_expr ti (wrap_base_for_vt vt_ret e)
+                @ [Sbreak])
       else
         (* TMC branch at top level *)
         match try_tmc_decompose check e with
         | Some br ->
-          Sblock (build_tmc_branch_stmts pp_expr ti br varying shadow_params
+          Sblock (build_tmc_branch_stmts ~vt_ret pp_expr ti br varying shadow_params
                   @ [Scontinue])
         | None -> Sreturn (Some e) )
   | Sif (cond, then_br, else_br) ->
-    let rw = rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params in
+    let rw = rewrite_tmc_visit_stmt ~vt_ret check pp_expr ti varying shadow_params in
     Sif (cond, List.map rw then_br, List.map rw else_br)
   | Sswitch (scrut, r, branches, default) ->
-    let rw = rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params in
+    let rw = rewrite_tmc_visit_stmt ~vt_ret check pp_expr ti varying shadow_params in
     Sswitch
       (scrut, r, List.map (fun (id, body) -> (id, List.map rw body)) branches, default)
   | Scustom_case (ty, scrut, tyargs, branches, err) ->
-    let rw = rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params in
+    let rw = rewrite_tmc_visit_stmt ~vt_ret check pp_expr ti varying shadow_params in
     Scustom_case
       ( ty,
         scrut,
@@ -2135,7 +2175,7 @@ let rec rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params = function
           branches,
         err )
   | Smatch (branches, default) ->
-    let rw = rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params in
+    let rw = rewrite_tmc_visit_stmt ~vt_ret check pp_expr ti varying shadow_params in
     Smatch
       ( List.map
           (fun br ->
@@ -2152,7 +2192,7 @@ let rec rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params = function
           branches,
         Option.map (List.map rw) default )
   | Sblock stmts ->
-    let rw = rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params in
+    let rw = rewrite_tmc_visit_stmt ~vt_ret check pp_expr ti varying shadow_params in
     Sblock (List.map rw stmts)
   | s -> s
 
@@ -2168,6 +2208,7 @@ let rec rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params = function
     @param body Function body
     @return Transformed body with TMC while loop *)
 let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
+  let vt_ret = if is_value_type_ret ret_ty then Some ret_ty else None in
   let varying = find_varying_params check params body in
   let varying_params = filter_by_mask varying params in
   let shadow_params =
@@ -2176,12 +2217,15 @@ let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
   let subs =
     List.map2 (fun (id, _) (sid, _) -> (id, sid)) varying_params shadow_params
   in
-  (* Declare _head (value-initialized) and _write (raw pointer into the chain).
-     _write starts pointing at &_head; each TMC iteration advances it to the
-     recursive-field address of the most recently allocated cell. *)
-  let head_decl = Sdecl_init (Id.of_string "_head", ret_ty) in
+  (* For value-type returns, _head is unique_ptr<ret_ty> and _write points
+     into the unique_ptr chain.  For pointer returns, _head is the bare type. *)
+  let head_ty = match vt_ret with
+    | Some t -> Tunique_ptr t
+    | None -> ret_ty
+  in
+  let head_decl = Sdecl_init (Id.of_string "_head", head_ty) in
   let write_decl =
-    Sasgn (Id.of_string "_write", Some (Tptr ret_ty),
+    Sasgn (Id.of_string "_write", Some (Tptr head_ty),
            CPPunop ("&", CPPvar (Id.of_string "_head")))
   in
   (* Shadow variable declarations.
@@ -2214,15 +2258,20 @@ let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
   (* Rewrite body for TMC, then flatten unnecessary Sblock wrappers *)
   let body'' =
     List.map
-      (rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params)
+      (rewrite_tmc_visit_stmt ~vt_ret check pp_expr ti varying shadow_params)
       body'
     |> strip_unnecessary_blocks
+  in
+  (* For value-type returns, dereference _head (shared_ptr → value) *)
+  let ret_expr = match vt_ret with
+    | Some _ -> CPPmove (CPPderef (CPPvar (Id.of_string "_head")))
+    | None -> CPPvar (Id.of_string "_head")
   in
   [head_decl; write_decl]
   @ shadow_decls
   @ [
       Swhile (CPPbool true, body'');
-      Sreturn (Some (CPPvar (Id.of_string "_head")));
+      Sreturn (Some ret_expr);
     ]
 
 (** {3 Frame-based non-tail recursion helpers} *)
@@ -2339,6 +2388,10 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       | Some ty -> strip_ref_type ty
       | None -> Tunknown )
     | CPPmove inner -> infer_saved_type tparams env inner
+    | CPPderef inner ->
+      ( match infer_saved_type tparams env inner with
+      | Tshared_ptr t | Tunique_ptr t | Tptr t -> t
+      | t -> t )
     | CPPbinop (_, lhs, _) -> infer_saved_type tparams env lhs
     | CPPfun_call (CPPvar f, _) ->
       ( match lookup_var_type env f with
@@ -2360,15 +2413,13 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
     | CPPfun_call (CPPglob _, _) -> Tunknown
     | CPPfun_call (CPPmember (inner, id), [])
       when String.equal (Id.to_string id) "get" ->
-      (* shared_ptr::get() returns a raw pointer.  Infer from the inner
-         expression: if it's a shared_ptr<T>, .get() returns T*.  We use
-         Tunknown and rely on decltype, but at least make sure infer doesn't
-         fail silently.  For method self-conversion, the inner expression
-         is a constructor field — infer its type and strip shared_ptr. *)
+      (* shared_ptr::get() / unique_ptr::get() returns a raw pointer.
+         Infer from the inner expression. *)
       let inner_ty = infer_saved_type tparams env inner in
       ( match inner_ty with
       | Tptr t -> Tptr t  (* already a pointer *)
       | Tshared_ptr t -> Tptr t  (* shared_ptr<T> → T* *)
+      | Tunique_ptr t -> Tptr t  (* unique_ptr<T> → T* *)
       | _ -> Tunknown )
     | _ -> Tunknown
   in
@@ -2718,6 +2769,23 @@ let frame_field i =
 let frame_fields ?(offset = 0) n =
   List.init n (fun i -> frame_field (offset + i))
 
+
+(** Clone a unique_ptr expression for saving in a frame struct.
+    [unique_ptr<T>] is move-only, but the source may be a const reference
+    from a borrowed pattern match.  We clone the value and wrap in
+    [make_unique] to produce a new owned [unique_ptr<T>].
+    Non-unique_ptr expressions pass through unchanged. *)
+let clone_for_frame ty expr =
+  match ty with
+  | Tunique_ptr inner ->
+    CPPfun_call (CPPmk_unique inner,
+                 [CPPmethod_call (CPPderef expr, Id.of_string "clone", [])])
+  | _ -> expr
+
+(** Apply [clone_for_frame] to parallel type and expression lists. *)
+let clone_for_frame_list types exprs =
+  List.map2 clone_for_frame types exprs
+
 (** {4 Frame construction helpers}
 
     These helpers reduce code duplication when constructing frame instances and
@@ -2742,6 +2810,7 @@ let make_call_frame_name (counter : int ref) : string =
     @return A [CPPstruct_id] expression representing the frame instance *)
 let make_enter_frame (args : cpp_expr list) : cpp_expr =
   CPPstruct_id (Id.of_string "_Enter", [], args)
+
 
 (** Batch-infer types for a list of saved expressions.
 
@@ -2779,9 +2848,16 @@ let build_scrutinee_handler
       (fun i id ->
         let ty = List.nth saved_types i in
         let ty_opt = if ty = Tunknown then None else Some ty in
-        Sasgn (id, ty_opt,
-               CPPmember (CPPvar (Id.of_string "_f"),
-                          Id.of_string ("_s" ^ string_of_int i))))
+        let field_expr =
+          CPPmember (CPPvar (Id.of_string "_f"),
+                     Id.of_string ("_s" ^ string_of_int i))
+        in
+        (* Move unique_ptr fields out of the owned frame *)
+        let rhs = match ty with
+          | Tunique_ptr _ -> CPPmove field_expr
+          | _ -> field_expr
+        in
+        Sasgn (id, ty_opt, rhs))
       unique_vars
   in
   (* Rewrite branch bodies *)
@@ -3101,6 +3177,7 @@ let gen_chained_call_frames
   let n_calls = List.length acd.acd_calls in
   let n_saved = List.length acd.acd_saved in
   let saved_types = infer_saved_types tparams env acd.acd_saved in
+  let saved_exprs_conv = clone_for_frame_list saved_types acd.acd_saved in
   let rec gen_frames call_idx =
     if call_idx = n_calls - 1 then (
       let call_name = make_call_frame_name call_counter in
@@ -3109,7 +3186,7 @@ let gen_chained_call_frames
       let all_saved_types = partial_types @ saved_types in
       let all_saved_exprs =
         List.init n_partials (fun _ -> CPPvar (Id.of_string "_result"))
-        @ acd.acd_saved
+        @ saved_exprs_conv
       in
       let handler =
         let partials = frame_fields n_partials in
@@ -3140,11 +3217,14 @@ let gen_chained_call_frames
       let remaining_arg_types =
         List.concat (List.init n_remaining_calls (fun _ -> varying_param_types))
       in
+      (* Clone unique_ptr args for frame storage *)
+      let remaining_args_conv =
+        clone_for_frame_list remaining_arg_types remaining_args in
       let all_saved_types = partial_types @ remaining_arg_types @ saved_types in
       let all_saved_exprs =
         List.init n_partials (fun _ -> CPPvar (Id.of_string "_result"))
-        @ remaining_args
-        @ acd.acd_saved
+        @ remaining_args_conv
+        @ saved_exprs_conv
       in
       let handler =
         let n_remaining_args_for_next =
@@ -3187,7 +3267,14 @@ let gen_chained_call_frames
   let remaining_args =
     List.concat_map (fun args -> filter_by_mask varying args) remaining_calls
   in
-  let first_frame_saved = remaining_args @ acd.acd_saved in
+  (* Clone unique_ptr args for frame storage *)
+  let remaining_arg_types_init =
+    let n = List.length remaining_calls in
+    List.concat (List.init n (fun _ -> varying_param_types))
+  in
+  let remaining_args_conv =
+    clone_for_frame_list remaining_arg_types_init remaining_args in
+  let first_frame_saved = remaining_args_conv @ saved_exprs_conv in
   [
     make_stack_push
       (CPPstruct_id (Id.of_string first_call_name, [], first_frame_saved));
@@ -3751,10 +3838,12 @@ let rec rewrite_enter_lambda_return
           branches
           err
       in
+      (* Clone unique_ptr-typed variables for frame storage *)
+      let saved_exprs_conv = clone_for_frame_list saved_types saved_exprs in
       register_frame frames_ref ~name:call_name ~saved_types
-        ~saved_exprs ~env ~handler;
+        ~saved_exprs:saved_exprs_conv ~env ~handler;
       let push_call =
-        make_stack_push (CPPstruct_id (Id.of_string call_name, [], saved_exprs))
+        make_stack_push (CPPstruct_id (Id.of_string call_name, [], saved_exprs_conv))
       in
       let push_enter =
         make_stack_push
@@ -4636,6 +4725,8 @@ let make_frame_branch frame_name body =
     smb_field_bindings = [];
     smb_extra_conds = [];
     smb_reuse = None;
+    smb_is_value_type = false;
+    smb_is_owned = true;
     smb_body = body }
 
 (** Generate the while-loop body and surrounding boilerplate for the

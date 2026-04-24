@@ -17,8 +17,8 @@
 ///
 /// Difference from fix_escape_capture: escapes through a CUSTOM
 /// INDUCTIVE constructor, not a pair.
-std::shared_ptr<ClosureInCtor::box>
-ClosureInCtor::make_box_fix(const unsigned int n) {
+__attribute__((pure)) ClosureInCtor::box
+ClosureInCtor::make_box_fix(unsigned int n) {
   auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
   *add = [=](unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
@@ -28,5 +28,5 @@ ClosureInCtor::make_box_fix(const unsigned int n) {
       return ((*add)(x_) + 1);
     }
   };
-  return box::box0(*add);
+  return box::box0((*add));
 }

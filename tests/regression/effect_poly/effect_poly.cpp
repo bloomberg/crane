@@ -12,7 +12,7 @@
 
 unsigned int EffectPoly::test_map_result() {
   return map_result<unsigned int, unsigned int>(
-      [](const unsigned int x) { return (x + 1); }, 41u);
+      [](unsigned int x) { return (x + 1); }, 41u);
 }
 
 unsigned int EffectPoly::test_lift_nat() {
@@ -27,7 +27,7 @@ bool EffectPoly::test_lift_bool() {
   return lift_pure<bool>(true);
 } /// 3. Monadic when / guard
 
-void EffectPoly::when_(const bool b, const std::monostate) {
+void EffectPoly::when_(const bool &b, std::monostate) {
   if (b) {
     return;
   } else {
@@ -43,7 +43,7 @@ void EffectPoly::test_when() {
   return;
 } /// 4. Monadic unless
 
-void EffectPoly::unless(const bool b, const std::monostate) {
+void EffectPoly::unless(const bool &b, std::monostate) {
   if (b) {
     return;
   } else {
@@ -60,16 +60,14 @@ void EffectPoly::test_unless() {
 }
 
 /// 5. Monadic sequence of list of actions
-void EffectPoly::sequence_void(
-    const std::shared_ptr<List<std::monostate>> &actions) {
-  if (std::holds_alternative<typename List<std::monostate>::Nil>(
-          actions->v())) {
+void EffectPoly::sequence_void(const List<std::monostate> &actions) {
+  if (std::holds_alternative<typename List<std::monostate>::Nil>(actions.v())) {
     return;
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename List<std::monostate>::Cons>(actions->v());
+        std::get<typename List<std::monostate>::Cons>(actions.v());
     d_a0;
-    sequence_void(d_a1);
+    sequence_void(*(d_a1));
     return;
   }
 }
@@ -89,8 +87,7 @@ void EffectPoly::test_sequence_void() {
   return;
 }
 
-unsigned int EffectPoly::sum_with_logging(const unsigned int acc,
-                                          const unsigned int n) {
+unsigned int EffectPoly::sum_with_logging(unsigned int acc, unsigned int n) {
   std::cout << "adding"s << '\n';
   return (acc + n);
 }

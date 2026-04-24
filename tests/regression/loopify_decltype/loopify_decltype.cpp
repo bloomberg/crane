@@ -9,9 +9,9 @@
 /// Minimal trigger: fold over a list with a conditional per-element
 /// contribution.
 __attribute__((pure)) unsigned int
-LoopifyDecltype::count_true(const std::shared_ptr<List<bool>> &xs) {
+LoopifyDecltype::count_true(const List<bool> &xs) {
   struct _Enter {
-    const std::shared_ptr<List<bool>> xs;
+    const List<bool> xs;
   };
 
   struct _Call1 {
@@ -27,12 +27,13 @@ LoopifyDecltype::count_true(const std::shared_ptr<List<bool>> &xs) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<List<bool>> xs = _f.xs;
-      if (std::holds_alternative<typename List<bool>::Nil>(xs->v())) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<bool> xs = _f.xs;
+      if (std::holds_alternative<typename List<bool>::Nil>(xs.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs->v());
+        const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs.v());
+        List<bool> d_a1_value = clone_as_value<List<bool>>(d_a1);
         _stack.emplace_back(_Call1{[&]() -> unsigned int {
           if (d_a0) {
             return 1u;
@@ -40,20 +41,20 @@ LoopifyDecltype::count_true(const std::shared_ptr<List<bool>> &xs) {
             return 0u;
           }
         }()});
-        _stack.emplace_back(_Enter{d_a1});
+        _stack.emplace_back(_Enter{d_a1_value});
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _result = (_f._s0 + _result);
     }
   }
   return _result;
 }
 
-__attribute__((pure)) unsigned int LoopifyDecltype::sum_flagged(
-    const std::shared_ptr<List<std::shared_ptr<LoopifyDecltype::item>>> &xs) {
+__attribute__((pure)) unsigned int
+LoopifyDecltype::sum_flagged(const List<LoopifyDecltype::item> &xs) {
   struct _Enter {
-    const std::shared_ptr<List<std::shared_ptr<LoopifyDecltype::item>>> xs;
+    const List<LoopifyDecltype::item> xs;
   };
 
   struct _Call1 {
@@ -69,28 +70,27 @@ __attribute__((pure)) unsigned int LoopifyDecltype::sum_flagged(
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<List<std::shared_ptr<LoopifyDecltype::item>>> xs =
-          _f.xs;
-      if (std::holds_alternative<
-              typename List<std::shared_ptr<LoopifyDecltype::item>>::Nil>(
-              xs->v())) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<LoopifyDecltype::item> xs = _f.xs;
+      if (std::holds_alternative<typename List<LoopifyDecltype::item>::Nil>(
+              xs.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] = std::get<
-            typename List<std::shared_ptr<LoopifyDecltype::item>>::Cons>(
-            xs->v());
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<LoopifyDecltype::item>::Cons>(xs.v());
+        List<LoopifyDecltype::item> d_a1_value =
+            clone_as_value<List<item>>(d_a1);
         _stack.emplace_back(_Call1{[&]() -> unsigned int {
-          if (d_a0->item_flag) {
-            return d_a0->item_val;
+          if (d_a0.item_flag) {
+            return d_a0.item_val;
           } else {
             return 0u;
           }
         }()});
-        _stack.emplace_back(_Enter{d_a1});
+        _stack.emplace_back(_Enter{d_a1_value});
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _result = (_f._s0 + _result);
     }
   }

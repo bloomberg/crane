@@ -9,9 +9,9 @@ int main() {
   assert(v == 0u);
 
   auto rs = RamStateOps::reset_state(RamStateOps::cleared_state);
-  assert(rs->state_acc == 0u);
-  assert(rs->state_carry == false);
-  assert(rs->state_pc == 0u);
+  assert(rs.state_acc == 0u);
+  assert(rs.state_carry == false);
+  assert(rs.state_pc == 0u);
 
   assert(RamStateOps::t == 0u);
 

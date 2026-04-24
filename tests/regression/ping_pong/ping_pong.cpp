@@ -22,8 +22,8 @@ __attribute__((pure)) bool PingPong::string_eq(const std::string s1,
   }
 }
 
-void PingPong::run_game(const unsigned int round) {
-  unsigned int _loop_round = round;
+void PingPong::run_game(unsigned int round) {
+  unsigned int _loop_round = std::move(round);
   while (true) {
     std::cout << "ping"s << '\n';
     std::string response;

@@ -1,31 +1,30 @@
 #include <nested_mod.h>
 
-#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
-__attribute__((pure)) unsigned int NestedMod::Outer::Inner::area(
-    const std::shared_ptr<NestedMod::Outer::Inner::shape> &s) {
+__attribute__((pure)) unsigned int
+NestedMod::Outer::Inner::area(const NestedMod::Outer::Inner::shape &s) {
   if (std::holds_alternative<typename NestedMod::Outer::Inner::shape::Circle>(
-          s->v())) {
+          s.v())) {
     const auto &[d_a0] =
-        std::get<typename NestedMod::Outer::Inner::shape::Circle>(s->v());
+        std::get<typename NestedMod::Outer::Inner::shape::Circle>(s.v());
     return ((d_a0 * d_a0) * 3u);
   } else if (std::holds_alternative<
-                 typename NestedMod::Outer::Inner::shape::Square>(s->v())) {
+                 typename NestedMod::Outer::Inner::shape::Square>(s.v())) {
     const auto &[d_a0] =
-        std::get<typename NestedMod::Outer::Inner::shape::Square>(s->v());
+        std::get<typename NestedMod::Outer::Inner::shape::Square>(s.v());
     return (d_a0 * d_a0);
   } else {
     const auto &[d_a0, d_a1, d_a2] =
-        std::get<typename NestedMod::Outer::Inner::shape::Triangle>(s->v());
+        std::get<typename NestedMod::Outer::Inner::shape::Triangle>(s.v());
     return (2u ? (d_a0 * d_a1) / 2u : 0);
   }
 }
 
 __attribute__((pure)) unsigned int
-NestedMod::Outer::shape_with_color(const std::shared_ptr<Inner::shape> &s,
+NestedMod::Outer::shape_with_color(const Inner::shape &s,
                                    const NestedMod::Outer::Color c) {
   switch (c) {
   case Color::e_RED: {

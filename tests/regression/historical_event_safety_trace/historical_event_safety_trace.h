@@ -9,7 +9,129 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 template <typename t_A> struct List {
   // TYPES
@@ -17,10 +139,11 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
+  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -28,36 +151,83 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  __attribute__((pure)) List<t_A> clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<t_A>(Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<t_A>(Cons{clone_as_value<t_A>(d_a0),
+                            clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
+    }
+  }
+
+  template <typename _CloneT0>
+  __attribute__((pure)) List<_CloneT0> clone_as() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<_CloneT0>(typename List<_CloneT0>::Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<_CloneT0>(typename List<_CloneT0>::Cons{
+          clone_as_value<_CloneT0>(d_a0),
+          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+    }
+  }
+
+  // CREATORS
+  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+
+  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
+  __attribute__((pure)) List<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = List<t_A>(); }
+
+  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return (d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      return ((*(d_a1)).length() + 1);
     }
   }
 };
@@ -67,43 +237,43 @@ struct Uint {
   struct Nil {};
 
   struct D0 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D1 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D2 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D3 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D4 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D5 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D6 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D7 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D8 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D9 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   using variant_t = std::variant<Nil, D0, D1, D2, D3, D4, D5, D6, D7, D8, D9>;
@@ -114,6 +284,8 @@ private:
 
 public:
   // CREATORS
+  Uint() {}
+
   explicit Uint(Nil _v) : d_v_(_v) {}
 
   explicit Uint(D0 _v) : d_v_(std::move(_v)) {}
@@ -136,90 +308,115 @@ public:
 
   explicit Uint(D9 _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<Uint> nil() { return std::make_shared<Uint>(Nil{}); }
+  Uint(const Uint &_other) : d_v_(std::move(_other.clone().d_v_)) {}
 
-  static std::shared_ptr<Uint> d0(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D0{a0});
+  Uint(Uint &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) Uint &operator=(const Uint &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<Uint> d0(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D0{std::move(a0)});
+  __attribute__((pure)) Uint &operator=(Uint &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<Uint> d1(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D1{a0});
+  // ACCESSORS
+  __attribute__((pure)) Uint clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return Uint(Nil{});
+    } else if (std::holds_alternative<D0>(_sv.v())) {
+      const auto &[d_a0] = std::get<D0>(_sv.v());
+      return Uint(D0{clone_as_value<std::unique_ptr<Uint>>(d_a0)});
+    } else if (std::holds_alternative<D1>(_sv.v())) {
+      const auto &[d_a0] = std::get<D1>(_sv.v());
+      return Uint(D1{clone_as_value<std::unique_ptr<Uint>>(d_a0)});
+    } else if (std::holds_alternative<D2>(_sv.v())) {
+      const auto &[d_a0] = std::get<D2>(_sv.v());
+      return Uint(D2{clone_as_value<std::unique_ptr<Uint>>(d_a0)});
+    } else if (std::holds_alternative<D3>(_sv.v())) {
+      const auto &[d_a0] = std::get<D3>(_sv.v());
+      return Uint(D3{clone_as_value<std::unique_ptr<Uint>>(d_a0)});
+    } else if (std::holds_alternative<D4>(_sv.v())) {
+      const auto &[d_a0] = std::get<D4>(_sv.v());
+      return Uint(D4{clone_as_value<std::unique_ptr<Uint>>(d_a0)});
+    } else if (std::holds_alternative<D5>(_sv.v())) {
+      const auto &[d_a0] = std::get<D5>(_sv.v());
+      return Uint(D5{clone_as_value<std::unique_ptr<Uint>>(d_a0)});
+    } else if (std::holds_alternative<D6>(_sv.v())) {
+      const auto &[d_a0] = std::get<D6>(_sv.v());
+      return Uint(D6{clone_as_value<std::unique_ptr<Uint>>(d_a0)});
+    } else if (std::holds_alternative<D7>(_sv.v())) {
+      const auto &[d_a0] = std::get<D7>(_sv.v());
+      return Uint(D7{clone_as_value<std::unique_ptr<Uint>>(d_a0)});
+    } else if (std::holds_alternative<D8>(_sv.v())) {
+      const auto &[d_a0] = std::get<D8>(_sv.v());
+      return Uint(D8{clone_as_value<std::unique_ptr<Uint>>(d_a0)});
+    } else {
+      const auto &[d_a0] = std::get<D9>(_sv.v());
+      return Uint(D9{clone_as_value<std::unique_ptr<Uint>>(d_a0)});
+    }
   }
 
-  static std::shared_ptr<Uint> d1(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D1{std::move(a0)});
+  // CREATORS
+  __attribute__((pure)) static Uint nil() { return Uint(Nil{}); }
+
+  __attribute__((pure)) static Uint d0(const Uint &a0) {
+    return Uint(D0{std::make_unique<Uint>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint> d2(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D2{a0});
+  __attribute__((pure)) static Uint d1(const Uint &a0) {
+    return Uint(D1{std::make_unique<Uint>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint> d2(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D2{std::move(a0)});
+  __attribute__((pure)) static Uint d2(const Uint &a0) {
+    return Uint(D2{std::make_unique<Uint>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint> d3(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D3{a0});
+  __attribute__((pure)) static Uint d3(const Uint &a0) {
+    return Uint(D3{std::make_unique<Uint>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint> d3(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D3{std::move(a0)});
+  __attribute__((pure)) static Uint d4(const Uint &a0) {
+    return Uint(D4{std::make_unique<Uint>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint> d4(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D4{a0});
+  __attribute__((pure)) static Uint d5(const Uint &a0) {
+    return Uint(D5{std::make_unique<Uint>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint> d4(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D4{std::move(a0)});
+  __attribute__((pure)) static Uint d6(const Uint &a0) {
+    return Uint(D6{std::make_unique<Uint>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint> d5(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D5{a0});
+  __attribute__((pure)) static Uint d7(const Uint &a0) {
+    return Uint(D7{std::make_unique<Uint>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint> d5(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D5{std::move(a0)});
+  __attribute__((pure)) static Uint d8(const Uint &a0) {
+    return Uint(D8{std::make_unique<Uint>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint> d6(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D6{a0});
-  }
-
-  static std::shared_ptr<Uint> d6(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D6{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint> d7(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D7{a0});
-  }
-
-  static std::shared_ptr<Uint> d7(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D7{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint> d8(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D8{a0});
-  }
-
-  static std::shared_ptr<Uint> d8(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D8{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint> d9(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D9{a0});
-  }
-
-  static std::shared_ptr<Uint> d9(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D9{std::move(a0)});
+  __attribute__((pure)) static Uint d9(const Uint &a0) {
+    return Uint(D9{std::make_unique<Uint>(a0.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+  // ACCESSORS
+  __attribute__((pure)) Uint *operator->() { return this; }
+
+  __attribute__((pure)) const Uint *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = Uint(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -230,67 +427,67 @@ struct Uint0 {
   struct Nil0 {};
 
   struct D10 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D11 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D12 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D13 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D14 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D15 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D16 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D17 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D18 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D19 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct Da {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct Db {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct Dc {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct Dd {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct De {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct Df {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   using variant_t = std::variant<Nil0, D10, D11, D12, D13, D14, D15, D16, D17,
@@ -302,6 +499,8 @@ private:
 
 public:
   // CREATORS
+  Uint0() {}
+
   explicit Uint0(Nil0 _v) : d_v_(_v) {}
 
   explicit Uint0(D10 _v) : d_v_(std::move(_v)) {}
@@ -336,140 +535,157 @@ public:
 
   explicit Uint0(Df _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<Uint0> nil0() {
-    return std::make_shared<Uint0>(Nil0{});
+  Uint0(const Uint0 &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  Uint0(Uint0 &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) Uint0 &operator=(const Uint0 &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<Uint0> d10(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D10{a0});
+  __attribute__((pure)) Uint0 &operator=(Uint0 &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<Uint0> d10(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D10{std::move(a0)});
+  // ACCESSORS
+  __attribute__((pure)) Uint0 clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil0>(_sv.v())) {
+      return Uint0(Nil0{});
+    } else if (std::holds_alternative<D10>(_sv.v())) {
+      const auto &[d_a0] = std::get<D10>(_sv.v());
+      return Uint0(D10{clone_as_value<std::unique_ptr<Uint0>>(d_a0)});
+    } else if (std::holds_alternative<D11>(_sv.v())) {
+      const auto &[d_a0] = std::get<D11>(_sv.v());
+      return Uint0(D11{clone_as_value<std::unique_ptr<Uint0>>(d_a0)});
+    } else if (std::holds_alternative<D12>(_sv.v())) {
+      const auto &[d_a0] = std::get<D12>(_sv.v());
+      return Uint0(D12{clone_as_value<std::unique_ptr<Uint0>>(d_a0)});
+    } else if (std::holds_alternative<D13>(_sv.v())) {
+      const auto &[d_a0] = std::get<D13>(_sv.v());
+      return Uint0(D13{clone_as_value<std::unique_ptr<Uint0>>(d_a0)});
+    } else if (std::holds_alternative<D14>(_sv.v())) {
+      const auto &[d_a0] = std::get<D14>(_sv.v());
+      return Uint0(D14{clone_as_value<std::unique_ptr<Uint0>>(d_a0)});
+    } else if (std::holds_alternative<D15>(_sv.v())) {
+      const auto &[d_a0] = std::get<D15>(_sv.v());
+      return Uint0(D15{clone_as_value<std::unique_ptr<Uint0>>(d_a0)});
+    } else if (std::holds_alternative<D16>(_sv.v())) {
+      const auto &[d_a0] = std::get<D16>(_sv.v());
+      return Uint0(D16{clone_as_value<std::unique_ptr<Uint0>>(d_a0)});
+    } else if (std::holds_alternative<D17>(_sv.v())) {
+      const auto &[d_a0] = std::get<D17>(_sv.v());
+      return Uint0(D17{clone_as_value<std::unique_ptr<Uint0>>(d_a0)});
+    } else if (std::holds_alternative<D18>(_sv.v())) {
+      const auto &[d_a0] = std::get<D18>(_sv.v());
+      return Uint0(D18{clone_as_value<std::unique_ptr<Uint0>>(d_a0)});
+    } else if (std::holds_alternative<D19>(_sv.v())) {
+      const auto &[d_a0] = std::get<D19>(_sv.v());
+      return Uint0(D19{clone_as_value<std::unique_ptr<Uint0>>(d_a0)});
+    } else if (std::holds_alternative<Da>(_sv.v())) {
+      const auto &[d_a0] = std::get<Da>(_sv.v());
+      return Uint0(Da{clone_as_value<std::unique_ptr<Uint0>>(d_a0)});
+    } else if (std::holds_alternative<Db>(_sv.v())) {
+      const auto &[d_a0] = std::get<Db>(_sv.v());
+      return Uint0(Db{clone_as_value<std::unique_ptr<Uint0>>(d_a0)});
+    } else if (std::holds_alternative<Dc>(_sv.v())) {
+      const auto &[d_a0] = std::get<Dc>(_sv.v());
+      return Uint0(Dc{clone_as_value<std::unique_ptr<Uint0>>(d_a0)});
+    } else if (std::holds_alternative<Dd>(_sv.v())) {
+      const auto &[d_a0] = std::get<Dd>(_sv.v());
+      return Uint0(Dd{clone_as_value<std::unique_ptr<Uint0>>(d_a0)});
+    } else if (std::holds_alternative<De>(_sv.v())) {
+      const auto &[d_a0] = std::get<De>(_sv.v());
+      return Uint0(De{clone_as_value<std::unique_ptr<Uint0>>(d_a0)});
+    } else {
+      const auto &[d_a0] = std::get<Df>(_sv.v());
+      return Uint0(Df{clone_as_value<std::unique_ptr<Uint0>>(d_a0)});
+    }
   }
 
-  static std::shared_ptr<Uint0> d11(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D11{a0});
+  // CREATORS
+  __attribute__((pure)) static Uint0 nil0() { return Uint0(Nil0{}); }
+
+  __attribute__((pure)) static Uint0 d10(const Uint0 &a0) {
+    return Uint0(D10{std::make_unique<Uint0>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint0> d11(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D11{std::move(a0)});
+  __attribute__((pure)) static Uint0 d11(const Uint0 &a0) {
+    return Uint0(D11{std::make_unique<Uint0>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint0> d12(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D12{a0});
+  __attribute__((pure)) static Uint0 d12(const Uint0 &a0) {
+    return Uint0(D12{std::make_unique<Uint0>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint0> d12(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D12{std::move(a0)});
+  __attribute__((pure)) static Uint0 d13(const Uint0 &a0) {
+    return Uint0(D13{std::make_unique<Uint0>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint0> d13(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D13{a0});
+  __attribute__((pure)) static Uint0 d14(const Uint0 &a0) {
+    return Uint0(D14{std::make_unique<Uint0>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint0> d13(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D13{std::move(a0)});
+  __attribute__((pure)) static Uint0 d15(const Uint0 &a0) {
+    return Uint0(D15{std::make_unique<Uint0>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint0> d14(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D14{a0});
+  __attribute__((pure)) static Uint0 d16(const Uint0 &a0) {
+    return Uint0(D16{std::make_unique<Uint0>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint0> d14(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D14{std::move(a0)});
+  __attribute__((pure)) static Uint0 d17(const Uint0 &a0) {
+    return Uint0(D17{std::make_unique<Uint0>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint0> d15(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D15{a0});
+  __attribute__((pure)) static Uint0 d18(const Uint0 &a0) {
+    return Uint0(D18{std::make_unique<Uint0>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint0> d15(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D15{std::move(a0)});
+  __attribute__((pure)) static Uint0 d19(const Uint0 &a0) {
+    return Uint0(D19{std::make_unique<Uint0>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint0> d16(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D16{a0});
+  __attribute__((pure)) static Uint0 da(const Uint0 &a0) {
+    return Uint0(Da{std::make_unique<Uint0>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint0> d16(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D16{std::move(a0)});
+  __attribute__((pure)) static Uint0 db(const Uint0 &a0) {
+    return Uint0(Db{std::make_unique<Uint0>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint0> d17(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D17{a0});
+  __attribute__((pure)) static Uint0 dc(const Uint0 &a0) {
+    return Uint0(Dc{std::make_unique<Uint0>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint0> d17(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D17{std::move(a0)});
+  __attribute__((pure)) static Uint0 dd(const Uint0 &a0) {
+    return Uint0(Dd{std::make_unique<Uint0>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint0> d18(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D18{a0});
+  __attribute__((pure)) static Uint0 de(const Uint0 &a0) {
+    return Uint0(De{std::make_unique<Uint0>(a0.clone())});
   }
 
-  static std::shared_ptr<Uint0> d18(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D18{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint0> d19(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D19{a0});
-  }
-
-  static std::shared_ptr<Uint0> d19(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D19{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint0> da(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(Da{a0});
-  }
-
-  static std::shared_ptr<Uint0> da(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(Da{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint0> db(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(Db{a0});
-  }
-
-  static std::shared_ptr<Uint0> db(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(Db{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint0> dc(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(Dc{a0});
-  }
-
-  static std::shared_ptr<Uint0> dc(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(Dc{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint0> dd(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(Dd{a0});
-  }
-
-  static std::shared_ptr<Uint0> dd(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(Dd{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint0> de(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(De{a0});
-  }
-
-  static std::shared_ptr<Uint0> de(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(De{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint0> df(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(Df{a0});
-  }
-
-  static std::shared_ptr<Uint0> df(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(Df{std::move(a0)});
+  __attribute__((pure)) static Uint0 df(const Uint0 &a0) {
+    return Uint0(Df{std::make_unique<Uint0>(a0.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+  // ACCESSORS
+  __attribute__((pure)) Uint0 *operator->() { return this; }
+
+  __attribute__((pure)) const Uint0 *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = Uint0(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -478,11 +694,11 @@ public:
 struct Uint1 {
   // TYPES
   struct UIntDecimal {
-    std::shared_ptr<Uint> d_u;
+    Uint d_u;
   };
 
   struct UIntHexadecimal {
-    std::shared_ptr<Uint0> d_u;
+    Uint0 d_u;
   };
 
   using variant_t = std::variant<UIntDecimal, UIntHexadecimal>;
@@ -493,51 +709,80 @@ private:
 
 public:
   // CREATORS
+  Uint1() {}
+
   explicit Uint1(UIntDecimal _v) : d_v_(std::move(_v)) {}
 
   explicit Uint1(UIntHexadecimal _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<Uint1> uintdecimal(const std::shared_ptr<Uint> &u) {
-    return std::make_shared<Uint1>(UIntDecimal{u});
+  Uint1(const Uint1 &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  Uint1(Uint1 &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) Uint1 &operator=(const Uint1 &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<Uint1> uintdecimal(std::shared_ptr<Uint> &&u) {
-    return std::make_shared<Uint1>(UIntDecimal{std::move(u)});
+  __attribute__((pure)) Uint1 &operator=(Uint1 &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<Uint1>
-  uinthexadecimal(const std::shared_ptr<Uint0> &u) {
-    return std::make_shared<Uint1>(UIntHexadecimal{u});
+  // ACCESSORS
+  __attribute__((pure)) Uint1 clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<UIntDecimal>(_sv.v())) {
+      const auto &[d_u] = std::get<UIntDecimal>(_sv.v());
+      return Uint1(UIntDecimal{clone_as_value<Uint>(d_u)});
+    } else {
+      const auto &[d_u] = std::get<UIntHexadecimal>(_sv.v());
+      return Uint1(UIntHexadecimal{clone_as_value<Uint0>(d_u)});
+    }
   }
 
-  static std::shared_ptr<Uint1> uinthexadecimal(std::shared_ptr<Uint0> &&u) {
-    return std::make_shared<Uint1>(UIntHexadecimal{std::move(u)});
+  // CREATORS
+  __attribute__((pure)) static Uint1 uintdecimal(Uint u) {
+    return Uint1(UIntDecimal{std::move(u)});
+  }
+
+  __attribute__((pure)) static Uint1 uinthexadecimal(Uint0 u) {
+    return Uint1(UIntHexadecimal{std::move(u)});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
+  __attribute__((pure)) Uint1 *operator->() { return this; }
+
+  __attribute__((pure)) const Uint1 *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = Uint1(); }
+
+  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct Nat {
-  __attribute__((pure)) static unsigned int tail_add(const unsigned int n,
-                                                     const unsigned int m);
+  __attribute__((pure)) static unsigned int tail_add(const unsigned int &n,
+                                                     unsigned int m);
   __attribute__((pure)) static unsigned int
-  tail_addmul(const unsigned int r, const unsigned int n, const unsigned int m);
-  __attribute__((pure)) static unsigned int tail_mul(const unsigned int n,
-                                                     const unsigned int m);
-  __attribute__((pure)) static unsigned int
-  of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc);
-  __attribute__((pure)) static unsigned int
-  of_uint(const std::shared_ptr<Uint> &d);
-  __attribute__((pure)) static unsigned int
-  of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc);
-  __attribute__((pure)) static unsigned int
-  of_hex_uint(const std::shared_ptr<Uint0> &d);
-  __attribute__((pure)) static unsigned int
-  of_num_uint(const std::shared_ptr<Uint1> &d);
+  tail_addmul(unsigned int r, const unsigned int &n, const unsigned int &m);
+  __attribute__((pure)) static unsigned int tail_mul(const unsigned int &n,
+                                                     const unsigned int &m);
+  __attribute__((pure)) static unsigned int of_uint_acc(const Uint &d,
+                                                        unsigned int acc);
+  __attribute__((pure)) static unsigned int of_uint(const Uint &d);
+  __attribute__((pure)) static unsigned int of_hex_uint_acc(const Uint0 &d,
+                                                            unsigned int acc);
+  __attribute__((pure)) static unsigned int of_hex_uint(const Uint0 &d);
+  __attribute__((pure)) static unsigned int of_num_uint(const Uint1 &d);
 };
 
 struct HistoricalEventSafetyTraceCase {
@@ -545,6 +790,10 @@ struct HistoricalEventSafetyTraceCase {
     unsigned int reservoir_level_cm;
     unsigned int downstream_stage_cm;
     unsigned int gate_open_pct;
+
+    __attribute__((pure)) State *operator->() { return this; }
+
+    __attribute__((pure)) const State *operator->() const { return this; }
   };
 
   struct PlantConfig {
@@ -559,21 +808,30 @@ struct HistoricalEventSafetyTraceCase {
     std::function<unsigned int(unsigned int)> reservoir_area_curve_cm2;
     unsigned int design_head_cm;
     unsigned int timestep_s;
+
+    __attribute__((pure)) PlantConfig *operator->() { return this; }
+
+    __attribute__((pure)) const PlantConfig *operator->() const { return this; }
   };
 
-  __attribute__((pure)) static bool
-  is_safe_bool(const std::shared_ptr<PlantConfig> &pconf,
-               const std::shared_ptr<State> &s);
+  __attribute__((pure)) static bool is_safe_bool(const PlantConfig &pconf,
+                                                 const State &s);
 
   struct InflowRecord {
     unsigned int ir_timestep;
     unsigned int ir_inflow_cm;
+
+    __attribute__((pure)) InflowRecord *operator->() { return this; }
+
+    __attribute__((pure)) const InflowRecord *operator->() const {
+      return this;
+    }
   };
 
-  using HistoricalEvent = std::shared_ptr<List<std::shared_ptr<InflowRecord>>>;
-  __attribute__((pure)) static unsigned int event_to_inflow(
-      const std::shared_ptr<List<std::shared_ptr<InflowRecord>>> &event,
-      const unsigned int default_inflow, const unsigned int t);
+  using HistoricalEvent = List<InflowRecord>;
+  __attribute__((pure)) static unsigned int
+  event_to_inflow(const List<InflowRecord> &event, unsigned int default_inflow,
+                  const unsigned int &t);
 
   struct TestResult {
     unsigned int tr_event_name;
@@ -581,57 +839,56 @@ struct HistoricalEventSafetyTraceCase {
     bool tr_final_safe;
     unsigned int tr_max_level;
     unsigned int tr_max_stage;
+
+    __attribute__((pure)) TestResult *operator->() { return this; }
+
+    __attribute__((pure)) const TestResult *operator->() const { return this; }
   };
 
   template <MapsTo<unsigned int, unsigned int> F0,
-            MapsTo<unsigned int, std::shared_ptr<State>, unsigned int> F1,
+            MapsTo<unsigned int, State, unsigned int> F1,
             MapsTo<unsigned int, unsigned int> F2>
-  static std::shared_ptr<State>
-  step_hist(F0 &&inflow, F1 &&ctrl, F2 &&stage_fn,
-            const std::shared_ptr<PlantConfig> &pconf,
-            const std::shared_ptr<State> &s, const unsigned int t) {
+  __attribute__((pure)) static State
+  step_hist(F0 &&inflow, F1 &&ctrl, F2 &&stage_fn, const PlantConfig &pconf,
+            const State &s, const unsigned int &t) {
     unsigned int out =
-        std::min((100u ? (pconf->gate_capacity_cm * ctrl(s, t)) / 100u : 0),
-                 (s->reservoir_level_cm + inflow(t)));
+        std::min((100u ? (pconf.gate_capacity_cm * ctrl(s, t)) / 100u : 0),
+                 (s.reservoir_level_cm + inflow(t)));
     unsigned int new_level =
-        ((((s->reservoir_level_cm + inflow(t)) - out) >
-                  (s->reservoir_level_cm + inflow(t))
+        ((((s.reservoir_level_cm + inflow(t)) - out) >
+                  (s.reservoir_level_cm + inflow(t))
               ? 0
-              : ((s->reservoir_level_cm + inflow(t)) - out)));
+              : ((s.reservoir_level_cm + inflow(t)) - out)));
     unsigned int new_stage = stage_fn(out);
-    return std::make_shared<State>(State{new_level, new_stage, ctrl(s, t)});
+    return State{new_level, new_stage, ctrl(s, t)};
   }
 
   template <MapsTo<unsigned int, unsigned int> F0,
-            MapsTo<unsigned int, std::shared_ptr<State>, unsigned int> F1,
+            MapsTo<unsigned int, State, unsigned int> F1,
             MapsTo<unsigned int, unsigned int> F2>
-  __attribute__((pure)) static std::pair<
-      std::pair<std::shared_ptr<State>, unsigned int>, unsigned int>
+  __attribute__((
+      pure)) static std::pair<std::pair<State, unsigned int>, unsigned int>
   simulate_with_max(F0 &&inflow, F1 &&ctrl, F2 &&stage_fn,
-                    const std::shared_ptr<PlantConfig> &pconf,
-                    const unsigned int horizon, std::shared_ptr<State> s,
-                    const unsigned int max_level,
-                    const unsigned int max_stage) {
+                    const PlantConfig &pconf, const unsigned int &horizon,
+                    State s, unsigned int max_level, unsigned int max_stage) {
     if (horizon <= 0) {
-      return std::make_pair(std::make_pair(std::move(s), max_level), max_stage);
+      return std::make_pair(std::make_pair(s, max_level), max_stage);
     } else {
       unsigned int k = horizon - 1;
-      std::shared_ptr<State> s_ =
-          step_hist(inflow, ctrl, stage_fn, pconf, std::move(s), k);
+      State s_ = step_hist(inflow, ctrl, stage_fn, pconf, s, k);
       return simulate_with_max(inflow, ctrl, stage_fn, pconf, k, s_,
-                               std::max(max_level, s_->reservoir_level_cm),
-                               std::max(max_stage, s_->downstream_stage_cm));
+                               std::max(max_level, s_.reservoir_level_cm),
+                               std::max(max_stage, s_.downstream_stage_cm));
     }
   }
 
-  template <MapsTo<unsigned int, std::shared_ptr<State>, unsigned int> F3,
+  template <MapsTo<unsigned int, State, unsigned int> F3,
             MapsTo<unsigned int, unsigned int> F4>
-  static std::shared_ptr<TestResult> run_historical_test(
-      const std::shared_ptr<PlantConfig> &pconf,
-      std::shared_ptr<List<std::shared_ptr<InflowRecord>>> event,
-      const unsigned int default_inflow, F3 &&ctrl, F4 &&stage_fn,
-      const std::shared_ptr<State> &initial_state, const unsigned int horizon,
-      const unsigned int event_id) {
+  __attribute__((pure)) static TestResult
+  run_historical_test(const PlantConfig &pconf, List<InflowRecord> event,
+                      unsigned int default_inflow, F3 &&ctrl, F4 &&stage_fn,
+                      const State &initial_state, const unsigned int &horizon,
+                      unsigned int event_id) {
     std::function<unsigned int(unsigned int)> inflow =
         [=](unsigned int _x0) mutable -> unsigned int {
       return event_to_inflow(event, default_inflow, _x0);
@@ -639,217 +896,200 @@ struct HistoricalEventSafetyTraceCase {
     bool initial_safe = is_safe_bool(pconf, initial_state);
     auto _cs = simulate_with_max(inflow, ctrl, stage_fn, pconf, horizon,
                                  initial_state, 0u, 0u);
-    const std::pair<std::shared_ptr<State>, unsigned int> &p = _cs.first;
+    const std::pair<State, unsigned int> &p = _cs.first;
     const unsigned int &max_stg = _cs.second;
-    const std::shared_ptr<State> &final_state = p.first;
+    const State &final_state = p.first;
     const unsigned int &max_lev = p.second;
     bool final_safe = is_safe_bool(pconf, final_state);
-    return std::make_shared<TestResult>(
-        TestResult{event_id, initial_safe, final_safe, max_lev, max_stg});
+    return TestResult{event_id, initial_safe, final_safe, max_lev, max_stg};
   }
 
+  __attribute__((pure)) static bool test_passes(const TestResult &result);
   __attribute__((pure)) static bool
-  test_passes(const std::shared_ptr<TestResult> &result);
-  __attribute__((pure)) static bool all_tests_pass(
-      const std::shared_ptr<List<std::shared_ptr<TestResult>>> &results);
-  using RatingTable =
-      std::shared_ptr<List<std::pair<unsigned int, unsigned int>>>;
-  __attribute__((pure)) static unsigned int stage_from_table(
-      const std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> &tbl,
-      const unsigned int base_stage, const unsigned int out);
+  all_tests_pass(const List<TestResult> &results);
+  using RatingTable = List<std::pair<unsigned int, unsigned int>>;
+  __attribute__((pure)) static unsigned int
+  stage_from_table(const List<std::pair<unsigned int, unsigned int>> &tbl,
+                   unsigned int base_stage, const unsigned int &out);
 
   struct MonotoneRatingTable {
     RatingTable mrt_table;
+
+    __attribute__((pure)) MonotoneRatingTable *operator->() { return this; }
+
+    __attribute__((pure)) const MonotoneRatingTable *operator->() const {
+      return this;
+    }
   };
 
   static inline const HistoricalEvent flood_1983_inflows =
-      List<std::shared_ptr<InflowRecord>>::cons(
-          std::make_shared<InflowRecord>(InflowRecord{0u, 50u}),
-          List<std::shared_ptr<InflowRecord>>::cons(
-              std::make_shared<InflowRecord>(InflowRecord{1u, 75u}),
-              List<std::shared_ptr<InflowRecord>>::cons(
-                  std::make_shared<InflowRecord>(InflowRecord{2u, 100u}),
-                  List<std::shared_ptr<InflowRecord>>::cons(
-                      std::make_shared<InflowRecord>(InflowRecord{3u, 150u}),
-                      List<std::shared_ptr<InflowRecord>>::cons(
-                          std::make_shared<InflowRecord>(
-                              InflowRecord{4u, 200u}),
-                          List<std::shared_ptr<InflowRecord>>::cons(
-                              std::make_shared<InflowRecord>(
-                                  InflowRecord{5u, 250u}),
-                              List<std::shared_ptr<InflowRecord>>::cons(
-                                  std::make_shared<InflowRecord>(
-                                      InflowRecord{6u, 300u}),
-                                  List<std::shared_ptr<InflowRecord>>::cons(
-                                      std::make_shared<InflowRecord>(
-                                          InflowRecord{7u, 250u}),
-                                      List<std::shared_ptr<InflowRecord>>::cons(
-                                          std::make_shared<InflowRecord>(
-                                              InflowRecord{8u, 200u}),
-                                          List<std::shared_ptr<InflowRecord>>::
-                                              cons(std::make_shared<
-                                                       InflowRecord>(
-                                                       InflowRecord{9u, 150u}),
-                                                   List<std::shared_ptr<
-                                                       InflowRecord>>::
-                                                       nil()))))))))));
+      List<InflowRecord>::cons(
+          InflowRecord{0u, 50u},
+          List<InflowRecord>::cons(
+              InflowRecord{1u, 75u},
+              List<InflowRecord>::cons(
+                  InflowRecord{2u, 100u},
+                  List<InflowRecord>::cons(
+                      InflowRecord{3u, 150u},
+                      List<InflowRecord>::cons(
+                          InflowRecord{4u, 200u},
+                          List<InflowRecord>::cons(
+                              InflowRecord{5u, 250u},
+                              List<InflowRecord>::cons(
+                                  InflowRecord{6u, 300u},
+                                  List<InflowRecord>::cons(
+                                      InflowRecord{7u, 250u},
+                                      List<InflowRecord>::cons(
+                                          InflowRecord{8u, 200u},
+                                          List<InflowRecord>::cons(
+                                              InflowRecord{9u, 150u},
+                                              List<InflowRecord>::
+                                                  nil()))))))))));
   static inline const HistoricalEvent flood_2011_inflows =
-      List<std::shared_ptr<InflowRecord>>::cons(
-          std::make_shared<InflowRecord>(InflowRecord{0u, 100u}),
-          List<std::shared_ptr<InflowRecord>>::cons(
-              std::make_shared<InflowRecord>(InflowRecord{1u, 150u}),
-              List<std::shared_ptr<InflowRecord>>::cons(
-                  std::make_shared<InflowRecord>(InflowRecord{2u, 200u}),
-                  List<std::shared_ptr<InflowRecord>>::cons(
-                      std::make_shared<InflowRecord>(InflowRecord{3u, 300u}),
-                      List<std::shared_ptr<InflowRecord>>::cons(
-                          std::make_shared<InflowRecord>(
-                              InflowRecord{4u, 400u}),
-                          List<std::shared_ptr<InflowRecord>>::cons(
-                              std::make_shared<InflowRecord>(
-                                  InflowRecord{5u, 350u}),
-                              List<std::shared_ptr<InflowRecord>>::cons(
-                                  std::make_shared<InflowRecord>(
-                                      InflowRecord{6u, 300u}),
-                                  List<std::shared_ptr<InflowRecord>>::cons(
-                                      std::make_shared<InflowRecord>(
-                                          InflowRecord{7u, 250u}),
-                                      List<std::shared_ptr<InflowRecord>>::cons(
-                                          std::make_shared<InflowRecord>(
-                                              InflowRecord{8u, 200u}),
-                                          List<std::shared_ptr<InflowRecord>>::
-                                              cons(std::make_shared<
-                                                       InflowRecord>(
-                                                       InflowRecord{9u, 150u}),
-                                                   List<std::shared_ptr<
-                                                       InflowRecord>>::
-                                                       nil()))))))))));
+      List<InflowRecord>::cons(
+          InflowRecord{0u, 100u},
+          List<InflowRecord>::cons(
+              InflowRecord{1u, 150u},
+              List<InflowRecord>::cons(
+                  InflowRecord{2u, 200u},
+                  List<InflowRecord>::cons(
+                      InflowRecord{3u, 300u},
+                      List<InflowRecord>::cons(
+                          InflowRecord{4u, 400u},
+                          List<InflowRecord>::cons(
+                              InflowRecord{5u, 350u},
+                              List<InflowRecord>::cons(
+                                  InflowRecord{6u, 300u},
+                                  List<InflowRecord>::cons(
+                                      InflowRecord{7u, 250u},
+                                      List<InflowRecord>::cons(
+                                          InflowRecord{8u, 200u},
+                                          List<InflowRecord>::cons(
+                                              InflowRecord{9u, 150u},
+                                              List<InflowRecord>::
+                                                  nil()))))))))));
   static inline const HistoricalEvent dual_peak_scenario =
-      List<std::shared_ptr<InflowRecord>>::cons(
-          std::make_shared<InflowRecord>(InflowRecord{0u, 30u}),
-          List<std::shared_ptr<InflowRecord>>::cons(
-              std::make_shared<InflowRecord>(InflowRecord{1u, 60u}),
-              List<std::shared_ptr<InflowRecord>>::cons(
-                  std::make_shared<InflowRecord>(InflowRecord{2u, 120u}),
-                  List<std::shared_ptr<InflowRecord>>::cons(
-                      std::make_shared<InflowRecord>(InflowRecord{3u, 200u}),
-                      List<std::shared_ptr<InflowRecord>>::cons(
-                          std::make_shared<InflowRecord>(
-                              InflowRecord{4u, 300u}),
-                          List<std::shared_ptr<InflowRecord>>::cons(
-                              std::make_shared<InflowRecord>(
-                                  InflowRecord{5u, 380u}),
-                              List<std::shared_ptr<InflowRecord>>::cons(
-                                  std::make_shared<InflowRecord>(
-                                      InflowRecord{6u, 420u}),
-                                  List<std::shared_ptr<InflowRecord>>::cons(
-                                      std::make_shared<InflowRecord>(
-                                          InflowRecord{7u, 400u}),
-                                      List<std::shared_ptr<InflowRecord>>::cons(
-                                          std::make_shared<InflowRecord>(
-                                              InflowRecord{8u, 350u}),
-                                          List<std::shared_ptr<InflowRecord>>::
-                                              cons(std::make_shared<
-                                                       InflowRecord>(
-                                                       InflowRecord{9u, 280u}),
-                                                   List<std::shared_ptr<
-                                                       InflowRecord>>::
-                                                       nil()))))))))));
-  static inline const std::shared_ptr<PlantConfig> hist_witness_plant =
-      std::make_shared<PlantConfig>(
-          PlantConfig{500u, 500u, 500u, 1u, 5u, 10u, 100u, 100u,
-                      [](const unsigned int) { return 100u; }, 100u, 1u});
+      List<InflowRecord>::cons(
+          InflowRecord{0u, 30u},
+          List<InflowRecord>::cons(
+              InflowRecord{1u, 60u},
+              List<InflowRecord>::cons(
+                  InflowRecord{2u, 120u},
+                  List<InflowRecord>::cons(
+                      InflowRecord{3u, 200u},
+                      List<InflowRecord>::cons(
+                          InflowRecord{4u, 300u},
+                          List<InflowRecord>::cons(
+                              InflowRecord{5u, 380u},
+                              List<InflowRecord>::cons(
+                                  InflowRecord{6u, 420u},
+                                  List<InflowRecord>::cons(
+                                      InflowRecord{7u, 400u},
+                                      List<InflowRecord>::cons(
+                                          InflowRecord{8u, 350u},
+                                          List<InflowRecord>::cons(
+                                              InflowRecord{9u, 280u},
+                                              List<InflowRecord>::
+                                                  nil()))))))))));
+  static inline const PlantConfig hist_witness_plant =
+      PlantConfig{500u, 500u, 500u,
+                  1u,   5u,   10u,
+                  100u, 100u, [](const unsigned int &) {
+return 100u; },
+                  100u, 1u};
   __attribute__((pure)) static unsigned int
-  hist_witness_stage(const unsigned int out);
+  hist_witness_stage(const unsigned int &out);
   __attribute__((pure)) static unsigned int
-  hist_witness_ctrl(const std::shared_ptr<State> &s, const unsigned int _x);
-  static inline const std::shared_ptr<State> hist_witness_initial =
-      std::make_shared<State>(State{50u, 0u, 0u});
-  static inline const std::shared_ptr<TestResult> hist_test_1983 =
-      run_historical_test(hist_witness_plant, flood_1983_inflows, 0u,
-                          hist_witness_ctrl, hist_witness_stage,
-                          hist_witness_initial, 10u, 1983u);
-  static inline const std::shared_ptr<TestResult> hist_test_2011 =
-      run_historical_test(hist_witness_plant, flood_2011_inflows, 0u,
-                          hist_witness_ctrl, hist_witness_stage,
-                          hist_witness_initial, 10u, 2011u);
-  static inline const std::shared_ptr<PlantConfig> hoover_dam_config =
-      std::make_shared<PlantConfig>(
-          PlantConfig{2200u, 100u, 500u, 15u, 5u, 10u, 1000u, 1000u,
-                      [](const unsigned int) { return 1000u; }, 200u, 60u});
-  static inline const std::shared_ptr<State> hoover_initial_state =
-      std::make_shared<State>(State{1500u, 20u, 0u});
+  hist_witness_ctrl(const State &s, const unsigned int &_x);
+  static inline const State hist_witness_initial = State{50u, 0u, 0u};
+  static inline const TestResult hist_test_1983 = run_historical_test(
+      hist_witness_plant, flood_1983_inflows, 0u, hist_witness_ctrl,
+      hist_witness_stage, hist_witness_initial, 10u, 1983u);
+  static inline const TestResult hist_test_2011 = run_historical_test(
+      hist_witness_plant, flood_2011_inflows, 0u, hist_witness_ctrl,
+      hist_witness_stage, hist_witness_initial, 10u, 2011u);
+  static inline const PlantConfig hoover_dam_config =
+      PlantConfig{2200u, 100u,  500u,
+                  15u,   5u,    10u,
+                  1000u, 1000u, [](const unsigned int &) {
+return 1000u; },
+                  200u,  60u};
+  static inline const State hoover_initial_state = State{1500u, 20u, 0u};
   __attribute__((pure)) static unsigned int
-  hoover_controller(const std::shared_ptr<State> &s, const unsigned int _x);
-  static inline const std::shared_ptr<MonotoneRatingTable> hoover_rating_table =
-      std::make_shared<MonotoneRatingTable>(
-          MonotoneRatingTable{List<std::pair<unsigned int, unsigned int>>::cons(
-              std::make_pair(100u, 30u),
+  hoover_controller(const State &s, const unsigned int &_x);
+  static inline const MonotoneRatingTable hoover_rating_table =
+      MonotoneRatingTable{List<std::pair<unsigned int, unsigned int>>::cons(
+          std::make_pair(100u, 30u),
+          List<std::pair<unsigned int, unsigned int>>::cons(
+              std::make_pair(200u, 45u),
               List<std::pair<unsigned int, unsigned int>>::cons(
-                  std::make_pair(200u, 45u),
+                  std::make_pair(300u, 60u),
                   List<std::pair<unsigned int, unsigned int>>::cons(
-                      std::make_pair(300u, 60u),
+                      std::make_pair(400u, 75u),
                       List<std::pair<unsigned int, unsigned int>>::cons(
-                          std::make_pair(400u, 75u),
-                          List<std::pair<unsigned int, unsigned int>>::cons(
-                              std::make_pair(500u, 90u),
-                              List<std::pair<unsigned int,
-                                             unsigned int>>::nil())))))});
+                          std::make_pair(500u, 90u),
+                          List<std::pair<unsigned int,
+                                         unsigned int>>::nil())))))};
   __attribute__((pure)) static unsigned int
-  hoover_stage_from_rating(const unsigned int out);
-  static inline const std::shared_ptr<TestResult> hoover_test =
-      run_historical_test(hoover_dam_config, dual_peak_scenario, 0u,
-                          hoover_controller, hoover_stage_from_rating,
-                          hoover_initial_state, 10u, 9001u);
+  hoover_stage_from_rating(const unsigned int &out);
+  static inline const TestResult hoover_test = run_historical_test(
+      hoover_dam_config, dual_peak_scenario, 0u, hoover_controller,
+      hoover_stage_from_rating, hoover_initial_state, 10u, 9001u);
 
   struct HistoricalScenarioBundle {
-    std::shared_ptr<PlantConfig> hsb_hist_plant;
-    std::shared_ptr<MonotoneRatingTable> hsb_hist_table;
-    std::shared_ptr<State> hsb_hist_initial;
-    std::shared_ptr<TestResult> hsb_test_1983;
-    std::shared_ptr<TestResult> hsb_test_2011;
-    std::shared_ptr<PlantConfig> hsb_hoover_plant;
-    std::shared_ptr<TestResult> hsb_hoover_test;
+    PlantConfig hsb_hist_plant;
+    MonotoneRatingTable hsb_hist_table;
+    State hsb_hist_initial;
+    TestResult hsb_test_1983;
+    TestResult hsb_test_2011;
+    PlantConfig hsb_hoover_plant;
+    TestResult hsb_hoover_test;
+
+    __attribute__((pure)) HistoricalScenarioBundle *operator->() {
+      return this;
+    }
+
+    __attribute__((pure)) const HistoricalScenarioBundle *operator->() const {
+      return this;
+    }
   };
 
-  static inline const std::shared_ptr<HistoricalScenarioBundle>
-      historical_bundle =
-          std::make_shared<HistoricalScenarioBundle>(HistoricalScenarioBundle{
-              hist_witness_plant, hoover_rating_table, hist_witness_initial,
-              hist_test_1983, hist_test_2011, hoover_dam_config, hoover_test});
+  static inline const HistoricalScenarioBundle historical_bundle =
+      HistoricalScenarioBundle{hist_witness_plant,   hoover_rating_table,
+                               hist_witness_initial, hist_test_1983,
+                               hist_test_2011,       hoover_dam_config,
+                               hoover_test};
   __attribute__((pure)) static unsigned int
-  historical_lookup_1983(const unsigned int t);
+  historical_lookup_1983(const unsigned int &t);
   __attribute__((pure)) static unsigned int
-  historical_lookup_2011(const unsigned int t);
+  historical_lookup_2011(const unsigned int &t);
   __attribute__((pure)) static bool
-  witness_test_initial_safe_at(const unsigned int h);
+  witness_test_initial_safe_at(const unsigned int &h);
   __attribute__((pure)) static unsigned int
-  witness_test_peak_level_at(const unsigned int h);
+  witness_test_peak_level_at(const unsigned int &h);
   __attribute__((pure)) static unsigned int
-  hoover_controller_sample(const unsigned int level);
+  hoover_controller_sample(unsigned int level);
   __attribute__((pure)) static unsigned int
-  hoover_stage_sample(const unsigned int _x0);
+  hoover_stage_sample(const unsigned int &_x0);
   static inline const unsigned int sample_bundle_test_count =
-      List<std::shared_ptr<TestResult>>::cons(
-          historical_bundle->hsb_test_1983,
-          List<std::shared_ptr<TestResult>>::cons(
-              historical_bundle->hsb_test_2011,
-              List<std::shared_ptr<TestResult>>::cons(
-                  historical_bundle->hsb_hoover_test,
-                  List<std::shared_ptr<TestResult>>::nil())))
-          ->length();
+      List<TestResult>::cons(
+          historical_bundle.hsb_test_1983,
+          List<TestResult>::cons(
+              historical_bundle.hsb_test_2011,
+              List<TestResult>::cons(historical_bundle.hsb_hoover_test,
+                                     List<TestResult>::nil())))
+          .length();
   static inline const bool sample_bundle_initial_safe =
-      historical_bundle->hsb_test_1983->tr_initial_safe;
+      historical_bundle.hsb_test_1983.tr_initial_safe;
   static inline const unsigned int sample_bundle_hist_2011_id =
-      historical_bundle->hsb_test_2011->tr_event_name;
+      historical_bundle.hsb_test_2011.tr_event_name;
   static inline const bool sample_all_tests_pass =
-      all_tests_pass(List<std::shared_ptr<TestResult>>::cons(
-          historical_bundle->hsb_test_1983,
-          List<std::shared_ptr<TestResult>>::cons(
-              historical_bundle->hsb_test_2011,
-              List<std::shared_ptr<TestResult>>::cons(
-                  historical_bundle->hsb_hoover_test,
-                  List<std::shared_ptr<TestResult>>::nil()))));
+      all_tests_pass(List<TestResult>::cons(
+          historical_bundle.hsb_test_1983,
+          List<TestResult>::cons(
+              historical_bundle.hsb_test_2011,
+              List<TestResult>::cons(historical_bundle.hsb_hoover_test,
+                                     List<TestResult>::nil()))));
 };
 
 #endif // INCLUDED_HISTORICAL_EVENT_SAFETY_TRACE

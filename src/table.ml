@@ -396,6 +396,36 @@ let add_enum_inductive r = enum_inductives := Refset'.add r !enum_inductives
 
 let is_enum_inductive r = Refset'.mem r !enum_inductives
 
+(** Check if the inductive referred to by [r] has any constructor field
+    whose ip_type refers back to the same MutInd, either directly or
+    nested inside type arguments (e.g. [list (tree A)] counts for [tree]).
+    This detects self-referencing (recursive) fields that are stored
+    as [shared_ptr] in the C++ struct.  Returns [false] if the inductive
+    is not found in the extraction tables. *)
+let has_recursive_fields r =
+  match r with
+  | GlobRef.IndRef (kn, i) ->
+    let rec ty_mentions_kn ty =
+      match ty with
+      | Miniml.Tglob (GlobRef.IndRef (kn2, _), args, _) ->
+        MutInd.CanOrd.equal kn kn2
+        || List.exists ty_mentions_kn args
+      | Miniml.Tglob (_, args, _) ->
+        List.exists ty_mentions_kn args
+      | Miniml.Tarr (a, b) ->
+        ty_mentions_kn a || ty_mentions_kn b
+      | Miniml.Tmeta { contents = Some t } -> ty_mentions_kn t
+      | _ -> false
+    in
+    ( try
+        let ind = snd (Mindmap_env.find kn !inductives) in
+        let packet = ind.ind_packets.(i) in
+        Array.exists (fun tys ->
+          List.exists ty_mentions_kn tys
+        ) packet.ip_types
+      with Not_found | Invalid_argument _ -> false )
+  | _ -> false
+
 (** Check if an inductive packet qualifies as an enum: all constructors nullary,
     no kept type parameters, at least one constructor. *)
 let is_enum_inductive_packet ind i =

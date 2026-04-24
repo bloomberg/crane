@@ -2,12 +2,10 @@
 
 #include <type_traits>
 
-__attribute__((pure)) unsigned int
-EscapeCollision::double_(const unsigned int n) {
+__attribute__((pure)) unsigned int EscapeCollision::double_(unsigned int n) {
   return n;
 }
 
-__attribute__((pure)) unsigned int
-EscapeCollision::double_0(const unsigned int n) {
+__attribute__((pure)) unsigned int EscapeCollision::double_0(unsigned int n) {
   return (n + 1);
 }

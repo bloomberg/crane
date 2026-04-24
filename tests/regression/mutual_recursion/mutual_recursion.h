@@ -7,19 +7,141 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 struct MutualRecursion {
-  __attribute__((pure)) static bool even(const unsigned int n);
-  __attribute__((pure)) static bool odd(const unsigned int n);
+  __attribute__((pure)) static bool even(const unsigned int &n);
+  __attribute__((pure)) static bool odd(const unsigned int &n);
   __attribute__((pure)) static unsigned int
-  sum_even_indices(const unsigned int n, const unsigned int acc);
+  sum_even_indices(const unsigned int &n, unsigned int acc);
   __attribute__((pure)) static unsigned int
-  sum_odd_indices(const unsigned int n, const unsigned int acc);
-  __attribute__((pure)) static unsigned int process_a(const unsigned int n,
-                                                      const unsigned int m);
-  __attribute__((pure)) static unsigned int process_b(const unsigned int n,
-                                                      const unsigned int m);
+  sum_odd_indices(const unsigned int &n, unsigned int acc);
+  __attribute__((pure)) static unsigned int process_a(const unsigned int &n,
+                                                      unsigned int m);
+  __attribute__((pure)) static unsigned int process_b(const unsigned int &n,
+                                                      unsigned int m);
 
   struct expr {
     // TYPES
@@ -29,13 +151,13 @@ struct MutualRecursion {
 
     struct BinOp {
       unsigned int d_a0;
-      std::shared_ptr<expr> d_a1;
-      std::shared_ptr<expr> d_a2;
+      std::unique_ptr<expr> d_a1;
+      std::unique_ptr<expr> d_a2;
     };
 
     struct UnOp {
       unsigned int d_a0;
-      std::shared_ptr<expr> d_a1;
+      std::unique_ptr<expr> d_a1;
     };
 
     using variant_t = std::variant<Val, BinOp, UnOp>;
@@ -46,90 +168,120 @@ struct MutualRecursion {
 
   public:
     // CREATORS
+    expr() {}
+
     explicit expr(Val _v) : d_v_(std::move(_v)) {}
 
     explicit expr(BinOp _v) : d_v_(std::move(_v)) {}
 
     explicit expr(UnOp _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<expr> val(unsigned int a0) {
-      return std::make_shared<expr>(Val{std::move(a0)});
+    expr(const expr &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    expr(expr &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) expr &operator=(const expr &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<expr> binop(unsigned int a0,
-                                       const std::shared_ptr<expr> &a1,
-                                       const std::shared_ptr<expr> &a2) {
-      return std::make_shared<expr>(BinOp{std::move(a0), a1, a2});
+    __attribute__((pure)) expr &operator=(expr &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<expr> binop(unsigned int a0,
-                                       std::shared_ptr<expr> &&a1,
-                                       std::shared_ptr<expr> &&a2) {
-      return std::make_shared<expr>(
-          BinOp{std::move(a0), std::move(a1), std::move(a2)});
+    // ACCESSORS
+    __attribute__((pure)) expr clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Val>(_sv.v())) {
+        const auto &[d_a0] = std::get<Val>(_sv.v());
+        return expr(Val{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<BinOp>(_sv.v())) {
+        const auto &[d_a0, d_a1, d_a2] = std::get<BinOp>(_sv.v());
+        return expr(BinOp{clone_as_value<unsigned int>(d_a0),
+                          clone_as_value<std::unique_ptr<expr>>(d_a1),
+                          clone_as_value<std::unique_ptr<expr>>(d_a2)});
+      } else {
+        const auto &[d_a0, d_a1] = std::get<UnOp>(_sv.v());
+        return expr(UnOp{clone_as_value<unsigned int>(d_a0),
+                         clone_as_value<std::unique_ptr<expr>>(d_a1)});
+      }
     }
 
-    static std::shared_ptr<expr> unop(unsigned int a0,
-                                      const std::shared_ptr<expr> &a1) {
-      return std::make_shared<expr>(UnOp{std::move(a0), a1});
+    // CREATORS
+    __attribute__((pure)) static expr val(unsigned int a0) {
+      return expr(Val{std::move(a0)});
     }
 
-    static std::shared_ptr<expr> unop(unsigned int a0,
-                                      std::shared_ptr<expr> &&a1) {
-      return std::make_shared<expr>(UnOp{std::move(a0), std::move(a1)});
+    __attribute__((pure)) static expr binop(unsigned int a0, const expr &a1,
+                                            const expr &a2) {
+      return expr(BinOp{std::move(a0), std::make_unique<expr>(a1.clone()),
+                        std::make_unique<expr>(a2.clone())});
+    }
+
+    __attribute__((pure)) static expr unop(unsigned int a0, const expr &a1) {
+      return expr(UnOp{std::move(a0), std::make_unique<expr>(a1.clone())});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) expr *operator->() { return this; }
+
+    __attribute__((pure)) const expr *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = expr(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int, std::shared_ptr<expr>, T1,
-                   std::shared_ptr<expr>, T1>
-                F1,
-            MapsTo<T1, unsigned int, std::shared_ptr<expr>, T1> F2>
-  static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f4,
-                      const std::shared_ptr<expr> &e) {
-    if (std::holds_alternative<typename expr::Val>(e->v())) {
-      const auto &[d_a0] = std::get<typename expr::Val>(e->v());
+            MapsTo<T1, unsigned int, expr, T1, expr, T1> F1,
+            MapsTo<T1, unsigned int, expr, T1> F2>
+  static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f4, const expr &e) {
+    if (std::holds_alternative<typename expr::Val>(e.v())) {
+      const auto &[d_a0] = std::get<typename expr::Val>(e.v());
       return f(d_a0);
-    } else if (std::holds_alternative<typename expr::BinOp>(e->v())) {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename expr::BinOp>(e->v());
-      return f0(d_a0, d_a1, expr_rect<T1>(f, f0, f4, d_a1), d_a2,
-                expr_rect<T1>(f, f0, f4, d_a2));
+    } else if (std::holds_alternative<typename expr::BinOp>(e.v())) {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename expr::BinOp>(e.v());
+      return f0(d_a0, *(d_a1), expr_rect<T1>(f, f0, f4, *(d_a1)), *(d_a2),
+                expr_rect<T1>(f, f0, f4, *(d_a2)));
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename expr::UnOp>(e->v());
-      return f4(d_a0, d_a1, expr_rect<T1>(f, f0, f4, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename expr::UnOp>(e.v());
+      return f4(d_a0, *(d_a1), expr_rect<T1>(f, f0, f4, *(d_a1)));
     }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int, std::shared_ptr<expr>, T1,
-                   std::shared_ptr<expr>, T1>
-                F1,
-            MapsTo<T1, unsigned int, std::shared_ptr<expr>, T1> F2>
-  static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f4, const std::shared_ptr<expr> &e) {
-    if (std::holds_alternative<typename expr::Val>(e->v())) {
-      const auto &[d_a0] = std::get<typename expr::Val>(e->v());
+            MapsTo<T1, unsigned int, expr, T1, expr, T1> F1,
+            MapsTo<T1, unsigned int, expr, T1> F2>
+  static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f4, const expr &e) {
+    if (std::holds_alternative<typename expr::Val>(e.v())) {
+      const auto &[d_a0] = std::get<typename expr::Val>(e.v());
       return f(d_a0);
-    } else if (std::holds_alternative<typename expr::BinOp>(e->v())) {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename expr::BinOp>(e->v());
-      return f0(d_a0, d_a1, expr_rec<T1>(f, f0, f4, d_a1), d_a2,
-                expr_rec<T1>(f, f0, f4, d_a2));
+    } else if (std::holds_alternative<typename expr::BinOp>(e.v())) {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename expr::BinOp>(e.v());
+      return f0(d_a0, *(d_a1), expr_rec<T1>(f, f0, f4, *(d_a1)), *(d_a2),
+                expr_rec<T1>(f, f0, f4, *(d_a2)));
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename expr::UnOp>(e->v());
-      return f4(d_a0, d_a1, expr_rec<T1>(f, f0, f4, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename expr::UnOp>(e.v());
+      return f4(d_a0, *(d_a1), expr_rec<T1>(f, f0, f4, *(d_a1)));
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  eval_expr(const std::shared_ptr<expr> &e);
-  __attribute__((pure)) static unsigned int f1(const unsigned int n);
-  __attribute__((pure)) static unsigned int f2(const unsigned int n);
-  __attribute__((pure)) static unsigned int f3(const unsigned int n);
+  __attribute__((pure)) static unsigned int eval_expr(const expr &e);
+  __attribute__((pure)) static unsigned int f1(const unsigned int &n);
+  __attribute__((pure)) static unsigned int f2(const unsigned int &n);
+  __attribute__((pure)) static unsigned int f3(const unsigned int &n);
   static inline const bool test_even = even(10u);
   static inline const unsigned int test_sum = sum_even_indices(5u, 0u);
   static inline const unsigned int test_eval =

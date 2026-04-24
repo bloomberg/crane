@@ -9,7 +9,129 @@
 #include <vector>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 template <typename t_A> struct List {
   // TYPES
@@ -17,10 +139,11 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
+  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -28,26 +151,72 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  __attribute__((pure)) List<t_A> clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<t_A>(Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<t_A>(Cons{clone_as_value<t_A>(d_a0),
+                            clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
+    }
+  }
+
+  template <typename _CloneT0>
+  __attribute__((pure)) List<_CloneT0> clone_as() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<_CloneT0>(typename List<_CloneT0>::Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<_CloneT0>(typename List<_CloneT0>::Cons{
+          clone_as_value<_CloneT0>(d_a0),
+          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+    }
+  }
+
+  // CREATORS
+  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+
+  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+  // ACCESSORS
+  __attribute__((pure)) List<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = List<t_A>(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -55,52 +224,56 @@ public:
 
 struct LoopifyPredicates {
   template <MapsTo<bool, unsigned int> F0>
-  static std::shared_ptr<List<unsigned int>>
-  take_while(F0 &&p, const std::shared_ptr<List<unsigned int>> &l) {
-    std::shared_ptr<List<unsigned int>> _head{};
-    std::shared_ptr<List<unsigned int>> *_write = &_head;
-    std::shared_ptr<List<unsigned int>> _loop_l = l;
+  __attribute__((pure)) static List<unsigned int>
+  take_while(F0 &&p, const List<unsigned int> &l) {
+    std::unique_ptr<List<unsigned int>> _head{};
+    std::unique_ptr<List<unsigned int>> *_write = &_head;
+    List<unsigned int> _loop_l = l;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
-        *_write = List<unsigned int>::nil();
+              _loop_l.v())) {
+        *(_write) =
+            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
         if (p(d_a0)) {
-          auto _cell = List<unsigned int>::cons(d_a0, nullptr);
-          *_write = _cell;
+          auto _cell = std::make_unique<List<unsigned int>>(
+              typename List<unsigned int>::Cons(d_a0, nullptr));
+          *(_write) = std::move(_cell);
           _write =
-              &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
-          _loop_l = d_a1;
+              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+                   .d_a1;
+          _loop_l = *(d_a1);
           continue;
         } else {
-          *_write = List<unsigned int>::nil();
+          *(_write) =
+              std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
           break;
         }
       }
     }
-    return _head;
+    return std::move(*(_head));
   }
 
   template <MapsTo<bool, unsigned int> F0>
-  static std::shared_ptr<List<unsigned int>>
-  drop_while(F0 &&p, std::shared_ptr<List<unsigned int>> l) {
-    std::shared_ptr<List<unsigned int>> _result;
-    std::shared_ptr<List<unsigned int>> _loop_l = std::move(l);
+  __attribute__((pure)) static List<unsigned int>
+  drop_while(F0 &&p, List<unsigned int> l) {
+    List<unsigned int> _result;
+    List<unsigned int> _loop_l = std::move(l);
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
+              _loop_l.v())) {
         _result = List<unsigned int>::nil();
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
         if (p(d_a0)) {
-          _loop_l = d_a1;
+          _loop_l = *(d_a1);
         } else {
-          _result = std::move(_loop_l);
+          _result = _loop_l;
           break;
         }
       }
@@ -109,11 +282,10 @@ struct LoopifyPredicates {
   }
 
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static std::pair<std::shared_ptr<List<unsigned int>>,
-                                         std::shared_ptr<List<unsigned int>>>
-  span(F0 &&p, std::shared_ptr<List<unsigned int>> l) {
+  __attribute__((pure)) static std::pair<List<unsigned int>, List<unsigned int>>
+  span(F0 &&p, List<unsigned int> l) {
     struct _Enter {
-      std::shared_ptr<List<unsigned int>> l;
+      List<unsigned int> l;
     };
 
     struct _Call1 {
@@ -121,9 +293,7 @@ struct LoopifyPredicates {
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
-    std::pair<std::shared_ptr<List<unsigned int>>,
-              std::shared_ptr<List<unsigned int>>>
-        _result{};
+    std::pair<List<unsigned int>, List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
@@ -131,26 +301,26 @@ struct LoopifyPredicates {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        std::shared_ptr<List<unsigned int>> l = _f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        List<unsigned int> l = _f.l;
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(List<unsigned int>::nil(),
                                    List<unsigned int>::nil());
         } else {
           const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l->v());
+              std::get<typename List<unsigned int>::Cons>(l.v());
           if (p(d_a0)) {
             _stack.emplace_back(_Call1{d_a0});
-            _stack.emplace_back(_Enter{d_a1});
+            _stack.emplace_back(_Enter{*(d_a1)});
           } else {
-            _result = std::make_pair(List<unsigned int>::nil(), std::move(l));
+            _result = std::make_pair(List<unsigned int>::nil(), l);
           }
         }
       } else {
-        const auto &_f = std::get<_Call1>(_frame);
+        auto _f = std::move(std::get<_Call1>(_frame));
         unsigned int d_a0 = _f._s0;
-        const std::shared_ptr<List<unsigned int>> &yes = _result.first;
-        const std::shared_ptr<List<unsigned int>> &no = _result.second;
+        const List<unsigned int> &yes = _result.first;
+        const List<unsigned int> &no = _result.second;
         _result = std::make_pair(List<unsigned int>::cons(d_a0, yes), no);
       }
     }
@@ -158,11 +328,10 @@ struct LoopifyPredicates {
   }
 
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static std::pair<std::shared_ptr<List<unsigned int>>,
-                                         std::shared_ptr<List<unsigned int>>>
-  break_at(F0 &&p, std::shared_ptr<List<unsigned int>> l) {
+  __attribute__((pure)) static std::pair<List<unsigned int>, List<unsigned int>>
+  break_at(F0 &&p, List<unsigned int> l) {
     struct _Enter {
-      std::shared_ptr<List<unsigned int>> l;
+      List<unsigned int> l;
     };
 
     struct _Call1 {
@@ -170,9 +339,7 @@ struct LoopifyPredicates {
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
-    std::pair<std::shared_ptr<List<unsigned int>>,
-              std::shared_ptr<List<unsigned int>>>
-        _result{};
+    std::pair<List<unsigned int>, List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
@@ -180,26 +347,26 @@ struct LoopifyPredicates {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        std::shared_ptr<List<unsigned int>> l = _f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        List<unsigned int> l = _f.l;
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(List<unsigned int>::nil(),
                                    List<unsigned int>::nil());
         } else {
           const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l->v());
+              std::get<typename List<unsigned int>::Cons>(l.v());
           if (p(d_a0)) {
-            _result = std::make_pair(List<unsigned int>::nil(), std::move(l));
+            _result = std::make_pair(List<unsigned int>::nil(), l);
           } else {
             _stack.emplace_back(_Call1{d_a0});
-            _stack.emplace_back(_Enter{d_a1});
+            _stack.emplace_back(_Enter{*(d_a1)});
           }
         }
       } else {
-        const auto &_f = std::get<_Call1>(_frame);
+        auto _f = std::move(std::get<_Call1>(_frame));
         unsigned int d_a0 = _f._s0;
-        const std::shared_ptr<List<unsigned int>> &before = _result.first;
-        const std::shared_ptr<List<unsigned int>> &after = _result.second;
+        const List<unsigned int> &before = _result.first;
+        const List<unsigned int> &after = _result.second;
         _result = std::make_pair(List<unsigned int>::cons(d_a0, before), after);
       }
     }
@@ -207,70 +374,76 @@ struct LoopifyPredicates {
   }
 
   template <MapsTo<bool, unsigned int> F0>
-  static std::shared_ptr<List<unsigned int>>
-  filter(F0 &&p, const std::shared_ptr<List<unsigned int>> &l) {
-    std::shared_ptr<List<unsigned int>> _head{};
-    std::shared_ptr<List<unsigned int>> *_write = &_head;
-    std::shared_ptr<List<unsigned int>> _loop_l = l;
+  __attribute__((pure)) static List<unsigned int>
+  filter(F0 &&p, const List<unsigned int> &l) {
+    std::unique_ptr<List<unsigned int>> _head{};
+    std::unique_ptr<List<unsigned int>> *_write = &_head;
+    List<unsigned int> _loop_l = l;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
-        *_write = List<unsigned int>::nil();
+              _loop_l.v())) {
+        *(_write) =
+            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
         if (p(d_a0)) {
-          auto _cell = List<unsigned int>::cons(d_a0, nullptr);
-          *_write = _cell;
+          auto _cell = std::make_unique<List<unsigned int>>(
+              typename List<unsigned int>::Cons(d_a0, nullptr));
+          *(_write) = std::move(_cell);
           _write =
-              &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
-          _loop_l = d_a1;
+              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+                   .d_a1;
+          _loop_l = *(d_a1);
           continue;
         } else {
-          _loop_l = d_a1;
+          _loop_l = *(d_a1);
           continue;
         }
       }
     }
-    return _head;
+    return std::move(*(_head));
   }
 
   template <MapsTo<bool, unsigned int> F0>
-  static std::shared_ptr<List<unsigned int>>
-  reject(F0 &&p, const std::shared_ptr<List<unsigned int>> &l) {
-    std::shared_ptr<List<unsigned int>> _head{};
-    std::shared_ptr<List<unsigned int>> *_write = &_head;
-    std::shared_ptr<List<unsigned int>> _loop_l = l;
+  __attribute__((pure)) static List<unsigned int>
+  reject(F0 &&p, const List<unsigned int> &l) {
+    std::unique_ptr<List<unsigned int>> _head{};
+    std::unique_ptr<List<unsigned int>> *_write = &_head;
+    List<unsigned int> _loop_l = l;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
-        *_write = List<unsigned int>::nil();
+              _loop_l.v())) {
+        *(_write) =
+            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
         if (p(d_a0)) {
-          _loop_l = d_a1;
+          _loop_l = *(d_a1);
           continue;
         } else {
-          auto _cell = List<unsigned int>::cons(d_a0, nullptr);
-          *_write = _cell;
+          auto _cell = std::make_unique<List<unsigned int>>(
+              typename List<unsigned int>::Cons(d_a0, nullptr));
+          *(_write) = std::move(_cell);
           _write =
-              &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
-          _loop_l = d_a1;
+              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+                   .d_a1;
+          _loop_l = *(d_a1);
           continue;
         }
       }
     }
-    return _head;
+    return std::move(*(_head));
   }
 
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static bool
-  forall_pred(F0 &&p, const std::shared_ptr<List<unsigned int>> &l) {
+  __attribute__((pure)) static bool forall_pred(F0 &&p,
+                                                const List<unsigned int> &l) {
     struct _Enter {
-      const std::shared_ptr<List<unsigned int>> l;
+      const List<unsigned int> l;
     };
 
     struct _Call1 {
@@ -286,18 +459,18 @@ struct LoopifyPredicates {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        const std::shared_ptr<List<unsigned int>> l = _f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List<unsigned int> l = _f.l;
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = true;
         } else {
           const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l->v());
+              std::get<typename List<unsigned int>::Cons>(l.v());
           _stack.emplace_back(_Call1{p(d_a0)});
-          _stack.emplace_back(_Enter{d_a1});
+          _stack.emplace_back(_Enter{*(d_a1)});
         }
       } else {
-        const auto &_f = std::get<_Call1>(_frame);
+        auto _f = std::move(std::get<_Call1>(_frame));
         _result = (_f._s0 && _result);
       }
     }
@@ -305,10 +478,10 @@ struct LoopifyPredicates {
   }
 
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static bool
-  exists_pred(F0 &&p, const std::shared_ptr<List<unsigned int>> &l) {
+  __attribute__((pure)) static bool exists_pred(F0 &&p,
+                                                const List<unsigned int> &l) {
     struct _Enter {
-      const std::shared_ptr<List<unsigned int>> l;
+      const List<unsigned int> l;
     };
 
     struct _Call1 {
@@ -324,18 +497,18 @@ struct LoopifyPredicates {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        const std::shared_ptr<List<unsigned int>> l = _f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List<unsigned int> l = _f.l;
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = false;
         } else {
           const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l->v());
+              std::get<typename List<unsigned int>::Cons>(l.v());
           _stack.emplace_back(_Call1{p(d_a0)});
-          _stack.emplace_back(_Enter{d_a1});
+          _stack.emplace_back(_Enter{*(d_a1)});
         }
       } else {
-        const auto &_f = std::get<_Call1>(_frame);
+        auto _f = std::move(std::get<_Call1>(_frame));
         _result = (_f._s0 || _result);
       }
     }
@@ -344,25 +517,24 @@ struct LoopifyPredicates {
 
   template <MapsTo<bool, unsigned int> F0>
   __attribute__((pure)) static std::optional<unsigned int>
-  find_index_aux(F0 &&p, const std::shared_ptr<List<unsigned int>> &l,
-                 const unsigned int idx) {
+  find_index_aux(F0 &&p, const List<unsigned int> &l, unsigned int idx) {
     std::optional<unsigned int> _result;
-    unsigned int _loop_idx = idx;
-    std::shared_ptr<List<unsigned int>> _loop_l = l;
+    unsigned int _loop_idx = std::move(idx);
+    List<unsigned int> _loop_l = l;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
+              _loop_l.v())) {
         _result = std::optional<unsigned int>();
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
         if (p(d_a0)) {
           _result = std::make_optional<unsigned int>(_loop_idx);
           break;
         } else {
           unsigned int _next_idx = (_loop_idx + 1u);
-          std::shared_ptr<List<unsigned int>> _next_l = d_a1;
+          List<unsigned int> _next_l = *(d_a1);
           _loop_idx = std::move(_next_idx);
           _loop_l = std::move(_next_l);
         }
@@ -373,88 +545,91 @@ struct LoopifyPredicates {
 
   template <MapsTo<bool, unsigned int> F0>
   __attribute__((pure)) static std::optional<unsigned int>
-  find_index(F0 &&p, const std::shared_ptr<List<unsigned int>> &l) {
+  find_index(F0 &&p, const List<unsigned int> &l) {
     return find_index_aux(p, l, 0u);
   }
 
   template <MapsTo<bool, unsigned int> F0>
-  static std::shared_ptr<List<unsigned int>>
-  find_indices_aux(F0 &&p, const std::shared_ptr<List<unsigned int>> &l,
-                   const unsigned int idx) {
-    std::shared_ptr<List<unsigned int>> _head{};
-    std::shared_ptr<List<unsigned int>> *_write = &_head;
-    unsigned int _loop_idx = idx;
-    std::shared_ptr<List<unsigned int>> _loop_l = l;
+  __attribute__((pure)) static List<unsigned int>
+  find_indices_aux(F0 &&p, const List<unsigned int> &l, unsigned int idx) {
+    std::unique_ptr<List<unsigned int>> _head{};
+    std::unique_ptr<List<unsigned int>> *_write = &_head;
+    unsigned int _loop_idx = std::move(idx);
+    List<unsigned int> _loop_l = l;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
-        *_write = List<unsigned int>::nil();
+              _loop_l.v())) {
+        *(_write) =
+            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
         if (p(d_a0)) {
-          auto _cell = List<unsigned int>::cons(_loop_idx, nullptr);
-          *_write = _cell;
+          auto _cell = std::make_unique<List<unsigned int>>(
+              typename List<unsigned int>::Cons(_loop_idx, nullptr));
+          *(_write) = std::move(_cell);
           _write =
-              &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
+              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+                   .d_a1;
           unsigned int _next_idx = (_loop_idx + 1u);
-          std::shared_ptr<List<unsigned int>> _next_l = d_a1;
+          List<unsigned int> _next_l = *(d_a1);
           _loop_idx = std::move(_next_idx);
           _loop_l = std::move(_next_l);
           continue;
         } else {
           unsigned int _next_idx = (_loop_idx + 1u);
-          std::shared_ptr<List<unsigned int>> _next_l = d_a1;
+          List<unsigned int> _next_l = *(d_a1);
           _loop_idx = std::move(_next_idx);
           _loop_l = std::move(_next_l);
           continue;
         }
       }
     }
-    return _head;
+    return std::move(*(_head));
   }
 
   template <MapsTo<bool, unsigned int> F0>
-  static std::shared_ptr<List<unsigned int>>
-  find_indices(F0 &&p, const std::shared_ptr<List<unsigned int>> &l) {
+  __attribute__((pure)) static List<unsigned int>
+  find_indices(F0 &&p, const List<unsigned int> &l) {
     return find_indices_aux(p, l, 0u);
   }
 
   template <MapsTo<bool, unsigned int, unsigned int> F0>
-  static std::shared_ptr<List<unsigned int>>
-  delete_by(F0 &&eq, const unsigned int x,
-            const std::shared_ptr<List<unsigned int>> &l) {
-    std::shared_ptr<List<unsigned int>> _head{};
-    std::shared_ptr<List<unsigned int>> *_write = &_head;
-    std::shared_ptr<List<unsigned int>> _loop_l = l;
+  __attribute__((pure)) static List<unsigned int>
+  delete_by(F0 &&eq, const unsigned int &x, const List<unsigned int> &l) {
+    std::unique_ptr<List<unsigned int>> _head{};
+    std::unique_ptr<List<unsigned int>> *_write = &_head;
+    List<unsigned int> _loop_l = l;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
-        *_write = List<unsigned int>::nil();
+              _loop_l.v())) {
+        *(_write) =
+            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
         if (eq(x, d_a0)) {
-          *_write = d_a1;
+          *(_write) = std::make_unique<List<unsigned int>>(*(d_a1));
           break;
         } else {
-          auto _cell = List<unsigned int>::cons(d_a0, nullptr);
-          *_write = _cell;
+          auto _cell = std::make_unique<List<unsigned int>>(
+              typename List<unsigned int>::Cons(d_a0, nullptr));
+          *(_write) = std::move(_cell);
           _write =
-              &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
-          _loop_l = d_a1;
+              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+                   .d_a1;
+          _loop_l = *(d_a1);
           continue;
         }
       }
     }
-    return _head;
+    return std::move(*(_head));
   }
 
-  static std::shared_ptr<List<unsigned int>>
-  remove_all(const unsigned int x,
-             const std::shared_ptr<List<unsigned int>> &l);
+  __attribute__((pure)) static List<unsigned int>
+  remove_all(const unsigned int &x, const List<unsigned int> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_PREDICATES

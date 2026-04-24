@@ -767,7 +767,107 @@ let spec_header si () =
       \ };"
     else
       "template <typename F, typename R, typename... Args>\n\
-       concept MapsTo = std::is_invocable_r_v<R, F&, Args&...>;"
+       concept MapsTo = std::is_invocable_v<F&, Args&...>;\n\n\
+       template <typename T> struct is_unique_ptr : std::false_type {};\n\
+       template <typename T> struct is_unique_ptr<std::unique_ptr<T>> : std::true_type { using element_type = T; };\n\n\
+       template <typename T> struct is_shared_ptr : std::false_type {};\n\
+       template <typename T> struct is_shared_ptr<std::shared_ptr<T>> : std::true_type { using element_type = T; };\n\n\
+       template <typename T>\n\
+       auto clone_value(const T& x) { return x; }\n\n\
+       template <typename T>\n\
+       std::unique_ptr<T> clone_value(const std::unique_ptr<T>& x) {\n\
+      \  return x ? std::make_unique<T>(x->clone()) : nullptr;\n\
+       }\n\n\
+       template <typename T>\n\
+       std::shared_ptr<T> clone_value(const std::shared_ptr<T>& x) {\n\
+      \  return x ? std::make_shared<T>(x->clone()) : nullptr;\n\
+       }\n\n\
+       template <typename Target, typename Source>\n\
+       Target clone_as_value(const Source& x) {\n\
+      \  using TargetBare = std::remove_cvref_t<Target>;\n\
+      \  using SourceBare = std::remove_cvref_t<Source>;\n\
+      \  if constexpr (is_unique_ptr<TargetBare>::value) {\n\
+      \    using Inner = typename is_unique_ptr<TargetBare>::element_type;\n\
+      \    if constexpr (is_unique_ptr<SourceBare>::value) {\n\
+      \      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;\n\
+      \      if (!x) return nullptr;\n\
+      \      if constexpr (std::is_same_v<Inner, SourceInner>) {\n\
+      \        return clone_value(x);\n\
+      \      } else\n\
+      \      if constexpr (requires { typename Inner::crane_element_type; x->template clone_as<typename Inner::crane_element_type>(); }) {\n\
+      \        return std::make_unique<Inner>(x->template clone_as<typename Inner::crane_element_type>());\n\
+      \      } else\n\
+      \      if constexpr (requires { x->template clone_as<Inner>(); }) {\n\
+      \        return std::make_unique<Inner>(x->template clone_as<Inner>());\n\
+      \      } else {\n\
+      \        return std::make_unique<Inner>(x->clone());\n\
+      \      }\n\
+      \    } else {\n\
+      \      if constexpr (std::is_same_v<Inner, SourceBare>) {\n\
+      \        return std::make_unique<Inner>(x.clone());\n\
+      \      } else\n\
+      \      if constexpr (requires { x.template clone_as<Inner>(); }) {\n\
+      \        return std::make_unique<Inner>(x.template clone_as<Inner>());\n\
+      \      } else {\n\
+      \        return std::make_unique<Inner>(x.clone());\n\
+      \      }\n\
+      \    }\n\
+      \  } else if constexpr (is_shared_ptr<TargetBare>::value) {\n\
+      \    using Inner = typename is_shared_ptr<TargetBare>::element_type;\n\
+      \    if constexpr (is_shared_ptr<SourceBare>::value) {\n\
+      \      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;\n\
+      \      if (!x) return nullptr;\n\
+      \      if constexpr (std::is_same_v<Inner, SourceInner>) {\n\
+      \        return clone_value(x);\n\
+      \      } else if constexpr (requires { x->template clone_as<Inner>(); }) {\n\
+      \        return std::make_shared<Inner>(x->template clone_as<Inner>());\n\
+      \      } else {\n\
+      \        return std::make_shared<Inner>(x->clone());\n\
+      \      }\n\
+      \    } else if constexpr (is_unique_ptr<SourceBare>::value) {\n\
+      \      if (!x) return nullptr;\n\
+      \      if constexpr (requires { x->template clone_as<Inner>(); }) {\n\
+      \        return std::make_shared<Inner>(x->template clone_as<Inner>());\n\
+      \      } else {\n\
+      \        return std::make_shared<Inner>(x->clone());\n\
+      \      }\n\
+      \    } else {\n\
+      \      if constexpr (std::is_same_v<Inner, SourceBare>) {\n\
+      \        return std::make_shared<Inner>(x.clone());\n\
+      \      } else if constexpr (requires { x.template clone_as<Inner>(); }) {\n\
+      \        return std::make_shared<Inner>(x.template clone_as<Inner>());\n\
+      \      } else {\n\
+      \        return std::make_shared<Inner>(x.clone());\n\
+      \      }\n\
+      \    }\n\
+      \  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {\n\
+      \    return clone_value(x);\n\
+      \  } else if constexpr (is_unique_ptr<SourceBare>::value) {\n\
+      \    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;\n\
+      \    if constexpr (std::is_same_v<TargetBare, SourceInner>) {\n\
+      \      return x ? x->clone() : Target{};\n\
+      \    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {\n\
+      \      return x->template clone_as<TargetBare>();\n\
+      \    } else {\n\
+      \      return Target(*x);\n\
+      \    }\n\
+      \  } else if constexpr (is_shared_ptr<SourceBare>::value) {\n\
+      \    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;\n\
+      \    if constexpr (std::is_same_v<TargetBare, SourceInner>) {\n\
+      \      return x ? x->clone() : Target{};\n\
+      \    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {\n\
+      \      return x->template clone_as<TargetBare>();\n\
+      \    } else {\n\
+      \      return Target(*x);\n\
+      \    }\n\
+      \  } else if constexpr (requires { typename TargetBare::crane_element_type; x.template clone_as<typename TargetBare::crane_element_type>(); }) {\n\
+      \    return x.template clone_as<typename TargetBare::crane_element_type>();\n\
+      \  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {\n\
+      \    return x.template clone_as<TargetBare>();\n\
+      \  } else {\n\
+      \    return Target(x);\n\
+      \  }\n\
+       }"
   in
   let string_lit_directive =
     if Table.needs_string_literals () then

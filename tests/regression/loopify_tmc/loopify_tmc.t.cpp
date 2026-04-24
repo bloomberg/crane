@@ -4,11 +4,6 @@
 #include <iostream>
 #include <loopify_tmc.h>
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 namespace {
 int testStatus = 0;
 void aSsErT(bool condition, const char *message, int line) {
@@ -24,28 +19,24 @@ void aSsErT(bool condition, const char *message, int line) {
 
 // Helper: convert list to vector for easy comparison
 template <typename T>
-std::vector<T> to_vec(std::shared_ptr<LoopifyTmc::list<T>> l) {
+std::vector<T> to_vec(const LoopifyTmc::list<T> &l) {
   std::vector<T> result;
-  while (l) {
-    std::visit(
-        Overloaded{
-            [&](const typename LoopifyTmc::list<T>::Nil) { l = nullptr; },
-            [&](const typename LoopifyTmc::list<T>::Cons &c) {
-              result.push_back(c.d_a0);
-              l = c.d_a1;
-            }},
-        l->v());
+  const LoopifyTmc::list<T> *cur = &l;
+  while (std::holds_alternative<typename LoopifyTmc::list<T>::Cons>(cur->v())) {
+    auto &c = std::get<typename LoopifyTmc::list<T>::Cons>(cur->v());
+    result.push_back(c.d_a0);
+    cur = c.d_a1.get();
   }
   return result;
 }
 
 // Helper: build list from vector
 template <typename T>
-std::shared_ptr<LoopifyTmc::list<T>> from_vec(const std::vector<T> &v) {
+LoopifyTmc::list<T> from_vec(const std::vector<T> &v) {
   using List = LoopifyTmc::list<T>;
   auto result = List::nil();
   for (int i = v.size() - 1; i >= 0; --i) {
-    result = List::cons(v[i], result);
+    result = List::cons(v[i], std::move(result));
   }
   return result;
 }
@@ -157,40 +148,38 @@ int main() {
   }
 
   // ===== Large-input test: verify no stack overflow =====
-  // Use a moderate size (10000) to avoid stack overflow during shared_ptr
-  // destructor chains while still being large enough to overflow without TMC.
   {
     const unsigned int N = 2000;
     auto big = List::nil();
     for (unsigned int i = 0; i < N; ++i) {
-      big = List::cons(i, big);
+      big = List::cons(i, std::move(big));
     }
 
-    // app on large lists — would overflow with O(n) stack frames
+    // app on large lists
     auto appended = LoopifyTmc::app(big, List::cons(999u, List::nil()));
-    ASSERT(appended != nullptr);
+    ASSERT(!to_vec(appended).empty());
 
     // map on large list
     auto mapped = LoopifyTmc::map<unsigned int, unsigned int>(
         [](unsigned int x) { return x + 1; }, big);
-    ASSERT(mapped != nullptr);
+    ASSERT(!to_vec(mapped).empty());
 
     // filter on large list (keep ~half)
     auto filtered = LoopifyTmc::filter(
         [](unsigned int x) { return x % 2 == 0; }, big);
-    ASSERT(filtered != nullptr);
+    ASSERT(!to_vec(filtered).empty());
 
     // snoc on large list
     auto snocced = LoopifyTmc::snoc(big, 42u);
-    ASSERT(snocced != nullptr);
+    ASSERT(!to_vec(snocced).empty());
 
     // replicate large
     auto repl = LoopifyTmc::replicate(N, 1u);
-    ASSERT(repl != nullptr);
+    ASSERT(!to_vec(repl).empty());
 
-    // stutter large — nested TMC
+    // stutter large
     auto stuttered = LoopifyTmc::stutter(big);
-    ASSERT(stuttered != nullptr);
+    ASSERT(!to_vec(stuttered).empty());
   }
 
   if (testStatus == 0) {

@@ -8,7 +8,129 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 template <typename t_A> struct List {
   // TYPES
@@ -16,10 +138,11 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
+  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -27,37 +150,84 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  __attribute__((pure)) List<t_A> clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<t_A>(Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<t_A>(Cons{clone_as_value<t_A>(d_a0),
+                            clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
+    }
+  }
+
+  template <typename _CloneT0>
+  __attribute__((pure)) List<_CloneT0> clone_as() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<_CloneT0>(typename List<_CloneT0>::Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<_CloneT0>(typename List<_CloneT0>::Cons{
+          clone_as_value<_CloneT0>(d_a0),
+          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+    }
+  }
+
+  // CREATORS
+  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+
+  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
+  __attribute__((pure)) List<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = List<t_A>(); }
+
+  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <typename T1, MapsTo<T1, t_A> F0>
-  std::shared_ptr<List<T1>> map(F0 &&f) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+  __attribute__((pure)) List<T1> map(F0 &&f) const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return List<T1>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return List<T1>::cons(f(d_a0), d_a1->template map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      return List<T1>::cons(f(d_a0), (*(d_a1)).template map<T1>(f));
     }
   }
 };
@@ -68,9 +238,9 @@ struct MapPartialApp {
     struct Leaf {};
 
     struct Node {
-      std::shared_ptr<tree> d_a0;
+      std::unique_ptr<tree> d_a0;
       unsigned int d_a1;
-      std::shared_ptr<tree> d_a2;
+      std::unique_ptr<tree> d_a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -81,68 +251,97 @@ struct MapPartialApp {
 
   public:
     // CREATORS
+    tree() {}
+
     explicit tree(Leaf _v) : d_v_(_v) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<tree> leaf() {
-      return std::make_shared<tree>(Leaf{});
+    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) tree &operator=(const tree &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(const std::shared_ptr<tree> &a0,
-                                      unsigned int a1,
-                                      const std::shared_ptr<tree> &a2) {
-      return std::make_shared<tree>(Node{a0, std::move(a1), a2});
+    __attribute__((pure)) tree &operator=(tree &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(std::shared_ptr<tree> &&a0,
-                                      unsigned int a1,
-                                      std::shared_ptr<tree> &&a2) {
-      return std::make_shared<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
+    // ACCESSORS
+    __attribute__((pure)) tree clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Leaf>(_sv.v())) {
+        return tree(Leaf{});
+      } else {
+        const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
+        return tree(Node{clone_as_value<std::unique_ptr<tree>>(d_a0),
+                         clone_as_value<unsigned int>(d_a1),
+                         clone_as_value<std::unique_ptr<tree>>(d_a2)});
+      }
+    }
+
+    // CREATORS
+    __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
+
+    __attribute__((pure)) static tree node(const tree &a0, unsigned int a1,
+                                           const tree &a2) {
+      return tree(Node{std::make_unique<tree>(a0.clone()), std::move(a1),
+                       std::make_unique<tree>(a2.clone())});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) tree *operator->() { return this; }
+
+    __attribute__((pure)) const tree *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = tree(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                std::shared_ptr<tree>, T1>
-                             F1>
-  static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+  template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+  static T1 tree_rect(const T1 f, F1 &&f0, const tree &t) {
+    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
-      return f0(d_a0, tree_rect<T1>(f, f0, d_a0), d_a1, d_a2,
-                tree_rect<T1>(f, f0, d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
+      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
+                tree_rect<T1>(f, f0, *(d_a2)));
     }
   }
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                std::shared_ptr<tree>, T1>
-                             F1>
-  static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+  template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+  static T1 tree_rec(const T1 f, F1 &&f0, const tree &t) {
+    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
-      return f0(d_a0, tree_rec<T1>(f, f0, d_a0), d_a1, d_a2,
-                tree_rec<T1>(f, f0, d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
+      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
+                tree_rec<T1>(f, f0, *(d_a2)));
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  tree_sum(const std::shared_ptr<tree> &t);
+  __attribute__((pure)) static unsigned int tree_sum(const tree &t);
   /// wrap: takes tree and nat, builds Node with leaves.
-  static std::shared_ptr<tree> wrap(std::shared_ptr<tree> t,
-                                    const unsigned int v);
+  __attribute__((pure)) static tree wrap(tree t, unsigned int v);
   /// Sum a list of nats.
   __attribute__((pure)) static unsigned int
-  sum_list(const std::shared_ptr<List<unsigned int>> &l);
+  sum_list(const List<unsigned int> &l);
   /// BUG HYPOTHESIS: Create a partial application (wrap t), store it,
   /// then apply it to multiple values from a list via map.
   /// The same closure is invoked repeatedly through list traversal.
@@ -158,70 +357,62 @@ struct MapPartialApp {
   /// 13 = 36
   static inline const unsigned int map_partial_bug = []() {
     return []() {
-      std::shared_ptr<tree> t = tree::node(tree::leaf(), 10u, tree::leaf());
-      std::function<std::shared_ptr<tree>(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> std::shared_ptr<tree> {
-        return wrap(t, _x0);
-      };
-      std::shared_ptr<List<unsigned int>> results =
+      tree t = tree::node(tree::leaf(), 10u, tree::leaf());
+      std::function<tree(unsigned int)> f =
+          [=](unsigned int _x0) mutable -> tree { return wrap(t, _x0); };
+      List<unsigned int> results =
           List<unsigned int>::cons(
               1u,
               List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())))
-              ->template map<unsigned int>(
-                  [=](const unsigned int v) mutable { return tree_sum(f(v)); });
-      return sum_list(std::move(results));
+              .template map<unsigned int>([=](const unsigned int &v) mutable {
+                return tree_sum(f(v));
+              });
+      return sum_list(results);
     }();
   }();
   /// Variation: store the partial app in a pair, extract it, then map.
   /// Extra indirection through pair.
   static inline const unsigned int map_partial_pair = []() {
     return []() {
-      std::shared_ptr<tree> t = tree::node(tree::leaf(), 10u, tree::leaf());
-      std::function<std::shared_ptr<tree>(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> std::shared_ptr<tree> {
-        return wrap(t, _x0);
-      };
-      std::pair<std::function<std::shared_ptr<tree>(unsigned int)>,
-                unsigned int>
-          p = std::make_pair(f, 0u);
-      std::shared_ptr<List<unsigned int>> results =
+      tree t = tree::node(tree::leaf(), 10u, tree::leaf());
+      std::function<tree(unsigned int)> f =
+          [=](unsigned int _x0) mutable -> tree { return wrap(t, _x0); };
+      std::pair<std::function<tree(unsigned int)>, unsigned int> p =
+          std::make_pair(f, 0u);
+      List<unsigned int> results =
           List<unsigned int>::cons(
               1u,
               List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())))
-              ->template map<unsigned int>([=](const unsigned int v) mutable {
+              .template map<unsigned int>([=](const unsigned int &v) mutable {
                 return tree_sum(p.first(v));
               });
-      return sum_list(std::move(results));
+      return sum_list(results);
     }();
   }();
   /// Variation: two closures mapped over same list.
   static inline const unsigned int map_two_closures = []() {
     return []() {
-      std::shared_ptr<tree> t1 = tree::node(tree::leaf(), 10u, tree::leaf());
-      std::shared_ptr<tree> t2 = tree::node(tree::leaf(), 20u, tree::leaf());
-      std::function<std::shared_ptr<tree>(unsigned int)> f1 =
-          [=](unsigned int _x0) mutable -> std::shared_ptr<tree> {
-        return wrap(t1, _x0);
-      };
-      std::function<std::shared_ptr<tree>(unsigned int)> f2 =
-          [=](unsigned int _x0) mutable -> std::shared_ptr<tree> {
-        return wrap(t2, _x0);
-      };
-      std::shared_ptr<List<unsigned int>> r1 =
+      tree t1 = tree::node(tree::leaf(), 10u, tree::leaf());
+      tree t2 = tree::node(tree::leaf(), 20u, tree::leaf());
+      std::function<tree(unsigned int)> f1 =
+          [=](unsigned int _x0) mutable -> tree { return wrap(t1, _x0); };
+      std::function<tree(unsigned int)> f2 =
+          [=](unsigned int _x0) mutable -> tree { return wrap(t2, _x0); };
+      List<unsigned int> r1 =
           List<unsigned int>::cons(
               1u, List<unsigned int>::cons(2u, List<unsigned int>::nil()))
-              ->template map<unsigned int>([=](const unsigned int v) mutable {
+              .template map<unsigned int>([=](const unsigned int &v) mutable {
                 return tree_sum(f1(v));
               });
-      std::shared_ptr<List<unsigned int>> r2 =
+      List<unsigned int> r2 =
           List<unsigned int>::cons(
               3u, List<unsigned int>::cons(4u, List<unsigned int>::nil()))
-              ->template map<unsigned int>([=](const unsigned int v) mutable {
+              .template map<unsigned int>([=](const unsigned int &v) mutable {
                 return tree_sum(f2(v));
               });
-      return (sum_list(std::move(r1)) + sum_list(std::move(r2)));
+      return (sum_list(r1) + sum_list(r2));
     }();
   }();
 };

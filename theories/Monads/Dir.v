@@ -13,7 +13,7 @@ From Crane Require Export Monads.DirDefs.
 Crane Extract Inductive dirE => ""
   [ "std::filesystem::create_directories(std::filesystem::path(%a0))"
     "std::filesystem::remove_all(std::filesystem::path(%a0))"
-    "[&]() -> std::shared_ptr<List<std::string>> {
+    "[&]() -> List<std::string> {
   auto result = List<std::string>::nil();
   for (const auto& entry : std::filesystem::directory_iterator(%a0)) {
     result = List<std::string>::cons(entry.path().filename().string(), std::move(result));
@@ -32,7 +32,7 @@ Crane Extract Inlined Constant remove_directory =>
   From "filesystem".
 
 Crane Extract Inlined Constant list_directory =>
-"[&]() -> std::shared_ptr<List<std::string>> {
+"[&]() -> List<std::string> {
   auto result = List<std::string>::nil();
   for (const auto& entry : std::filesystem::directory_iterator(%a0)) {
     result = List<std::string>::cons(entry.path().filename().string(), std::move(result));

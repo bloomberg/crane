@@ -5,16 +5,14 @@
 #include <utility>
 #include <variant>
 
-std::shared_ptr<WrrRdrRoundtrip::state>
-WrrRdrRoundtrip::execute_wrr(const std::shared_ptr<WrrRdrRoundtrip::state> &s) {
-  return std::make_shared<WrrRdrRoundtrip::state>(
-      state{s->acc, update_nth<unsigned int>(s->sel_rom, s->acc, s->rom_ports),
-            s->sel_rom});
+__attribute__((pure)) WrrRdrRoundtrip::state
+WrrRdrRoundtrip::execute_wrr(const WrrRdrRoundtrip::state &s) {
+  return state{s.acc, update_nth<unsigned int>(s.sel_rom, s.acc, s.rom_ports),
+               s.sel_rom};
 }
 
-std::shared_ptr<WrrRdrRoundtrip::state>
-WrrRdrRoundtrip::execute_rdr(const std::shared_ptr<WrrRdrRoundtrip::state> &s) {
-  return std::make_shared<WrrRdrRoundtrip::state>(
-      state{ListDef::template nth<unsigned int>(s->sel_rom, s->rom_ports, 0u),
-            s->rom_ports, s->sel_rom});
+__attribute__((pure)) WrrRdrRoundtrip::state
+WrrRdrRoundtrip::execute_rdr(const WrrRdrRoundtrip::state &s) {
+  return state{ListDef::template nth<unsigned int>(s.sel_rom, s.rom_ports, 0u),
+               s.rom_ports, s.sel_rom};
 }

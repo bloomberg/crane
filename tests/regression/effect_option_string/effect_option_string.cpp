@@ -33,7 +33,7 @@ std::string EffectOptionString::bind_option_match(const std::string name) {
     auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
-  return [&]() -> std::string {
+  return [=]() mutable -> std::string {
     if (r.has_value()) {
       const std::string &v = *r;
       return v;

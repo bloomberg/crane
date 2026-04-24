@@ -107,6 +107,13 @@ let lambda_needs_capture
   let rec collect_from_expr (refs, decls) e =
     match e with
     | CPPvar id -> (IdSet.add id refs, decls)
+    | CPPderef e -> collect_from_expr (refs, decls) e
+    | CPPraw s
+      when String.length s > 3
+           && String.sub s 0 2 = "(*"
+           && s.[String.length s - 1] = ')' ->
+      let name = String.sub s 2 (String.length s - 3) in
+      (try (IdSet.add (Id.of_string name) refs, decls) with _ -> (refs, decls))
     | CPPthis | CPPshared_from_this _ ->
       uses_this := true;
       (refs, decls)
@@ -802,7 +809,9 @@ and pp_cpp_expr env args t =
            | None -> false )
          | None -> false ->
     let method_name = Id.of_string (Common.pp_global_name Term x) in
-    str "[](const auto &_x) { return _x->"
+    let accessor = if method_receiver_is_ptr x then "->" else "." in
+    str "[](const auto &_x) { return _x"
+    ++ str accessor
     ++ Id.print method_name
     ++ str "(); }"
   | CPPglob (x, tys, _) ->
@@ -979,8 +988,22 @@ and pp_cpp_expr env args t =
           ( str "template ",
             str "<" ++ pp_list (pp_cpp_type false []) filtered_tys ++ str ">" )
       in
-      obj_s
-      ++ str "->"
+      (* Coinductive types are shared_ptr → use arrow.
+         Value types → use dot.  unique_ptr pattern match fields
+         are auto-dereferenced at binding time, so variables holding
+         inductives are always value types (T or const T&). *)
+      let use_arrow = method_receiver_is_ptr n in
+      let accessor = if use_arrow then "->" else "." in
+      (* Parenthesize deref expressions for correct precedence. *)
+      let obj_pp =
+        if not use_arrow then
+          match this_arg with
+          | CPPderef _ -> str "(" ++ obj_s ++ str ")"
+          | _ -> obj_s
+        else obj_s
+      in
+      obj_pp
+      ++ str accessor
       ++ template_kw
       ++ Id.print method_name
       ++ ty_args_s
@@ -997,7 +1020,7 @@ and pp_cpp_expr env args t =
   | CPPfun_call (f, ts) ->
     let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in
     pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")"
-  | CPPderef e -> str "*" ++ pp_cpp_expr env args e
+  | CPPderef e -> str "*(" ++ pp_cpp_expr env args e ++ str ")"
   | CPPmove e ->
     require_header "utility";
     str (sn ()).move ++ str "(" ++ pp_cpp_expr env args e ++ str ")"
@@ -1010,6 +1033,49 @@ and pp_cpp_expr env args t =
     ++ str ")"
   | CPPlambda (params, ret_ty, body, capture_by_value) ->
     let needs_capture, uses_this = lambda_needs_capture params body in
+    let body_derefs_var =
+      let found = ref false in
+      let rec scan_expr = function
+        | CPPderef (CPPvar id) when String.equal (Id.to_string id) "_self" ->
+          ()
+        | CPPderef _ -> found := true
+        | e ->
+          iter_expr_children
+            ~on_expr:scan_expr
+            ~on_stmts:(List.iter scan_stmt)
+            e
+      and scan_stmt s =
+        iter_stmt_children
+          ~on_expr:scan_expr
+          ~on_stmts:(List.iter scan_stmt)
+          s
+      in
+      List.iter scan_stmt body;
+      !found
+    in
+    let rec type_contains_unique_ptr = function
+      | Tunique_ptr _ -> true
+      | Tshared_ptr t | Tref t | Tptr t | Tmod (_, t) -> type_contains_unique_ptr t
+      | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
+       |Tvariant ts | Tnamespace (_, Tglob (_, ts, _)) ->
+        List.exists type_contains_unique_ptr ts
+      | Tfun (dom, cod) ->
+        List.exists type_contains_unique_ptr dom || type_contains_unique_ptr cod
+      | Tnamespace (_, t) | Tqualified (t, _) -> type_contains_unique_ptr t
+      | _ -> false
+    in
+    let capture_by_value =
+      capture_by_value
+      && not body_derefs_var
+      && not
+           ( List.exists
+               (fun (ty, _) -> type_contains_unique_ptr ty)
+               params
+             ||
+             match ret_ty with
+             | Some ty -> type_contains_unique_ptr ty
+             | None -> false )
+    in
     let capture_str =
       if not needs_capture then
         str "[]("
@@ -1114,8 +1180,17 @@ and pp_cpp_expr env args t =
       | _ -> str "<" ++ pp_list (pp_cpp_type false []) tys ++ str ">"
     in
     Id.print id ++ templates ++ str "{" ++ es_s ++ str "}"
-  | CPPget (e, id) -> pp_cpp_expr env args e ++ str "." ++ Id.print id
-  | CPPget' (e, id) -> pp_cpp_expr env args e ++ str "->" ++ pp_global Type id
+  | CPPget (e, id) ->
+    ( match e with
+    | CPPderef _ | CPPraw _ ->
+      str "(" ++ pp_cpp_expr env args e ++ str ")." ++ Id.print id
+    | _ -> pp_cpp_expr env args e ++ str "." ++ Id.print id )
+  | CPPget' (e, id) ->
+    (* Record field access: use "." since records are value types. *)
+    ( match e with
+    | CPPderef _ | CPPraw _ ->
+      str "(" ++ pp_cpp_expr env args e ++ str ")." ++ pp_global Type id
+    | _ -> pp_cpp_expr env args e ++ str "." ++ pp_global Type id )
   | CPPstring s -> str ("\"" ^ Pstring.to_string s ^ "\"")
   | CPPparray (elems, _) ->
     str "{" ++ pp_list (pp_cpp_expr env args) (Array.to_list elems) ++ str "}"
@@ -1205,6 +1280,10 @@ and pp_cpp_expr env args t =
     ( match e with
     | CPPmove inner ->
       str (sn ()).move ++ str "(" ++ pp_cpp_expr env args inner ++ str "." ++ Id.print id ++ str ")"
+    | CPPderef _ ->
+      str "(" ++ pp_cpp_expr env args e ++ str ")." ++ Id.print id
+    | CPPraw s when String.length s > 0 && s.[0] = '*' ->
+      str "(" ++ pp_cpp_expr env args e ++ str ")." ++ Id.print id
     | _ ->
       pp_cpp_expr env args e ++ str "." ++ Id.print id )
   | CPParrow (e, id) ->
@@ -1240,7 +1319,12 @@ and pp_cpp_expr env args t =
     let full_name = capitalize_enum_qualified (str_global Type ind) ind in
     str full_name ++ str "::" ++ Id.print ctor
   (* Low-level constructs for reuse optimization *)
-  | CPPraw code -> str code
+  | CPPraw code ->
+    str
+      (Str.global_replace
+         (Str.regexp_string "*(this).")
+         "(*(this))."
+         code)
   | CPPbinop (op, lhs, rhs) ->
     (* Parenthesize && subexpressions inside || to avoid
        -Wlogical-op-parentheses warnings. *)
@@ -1281,11 +1365,18 @@ and pp_cpp_stmt env args = function
     ++ str msg
     ++ str "\");"
   | Sreturn (Some e) ->
-    (* Strip std::move from return statements — C++ applies implicit move
-       on local variables in return statements.  Explicit std::move prevents
-       NRVO (Named Return Value Optimization) and triggers
-       -Wpessimizing-move / -Wredundant-move warnings. *)
-    let e = match e with CPPmove inner -> inner | _ -> e in
+    (* Strip std::move from return statements when the inner expression is a
+       plain variable — C++ applies implicit move on local variables in return
+       statements.  Explicit std::move prevents NRVO and triggers
+       -Wpessimizing-move / -Wredundant-move.
+       Keep std::move for non-variable expressions like *_head (dereference of
+       shared_ptr) where explicit move is required. *)
+    let e = match e with
+      | CPPmove (CPPvar _ as inner) -> inner
+      | CPPmove ((CPPfun_call _ | CPPmethod_call _ | CPPstruct _ | CPPstructmk _
+                 | CPPstruct_id _) as inner) -> inner
+      | _ -> e
+    in
     str "return " ++ pp_cpp_expr env args e ++ str ";"
   | Sdecl (id, ty) ->
     pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str ";"
@@ -1546,38 +1637,52 @@ and pp_cpp_stmt env args = function
       | [] ->
         ( match br.smb_var with
         | Some var_id ->
-          str "const auto& " ++ Id.print var_id
-          ++ str " = " ++ str (sn ()).get ++ str "<"
-          ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("
-          ++ scrut_var_pp ++ str ");"
+          if br.smb_is_owned then
+            str "auto " ++ Id.print var_id
+            ++ str " = std::move(" ++ str (sn ()).get ++ str "<"
+            ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("
+            ++ scrut_var_pp ++ str "));"
+          else
+            str "const auto& " ++ Id.print var_id
+            ++ str " = " ++ str (sn ()).get ++ str "<"
+            ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("
+            ++ scrut_var_pp ++ str ");"
         | None -> mt () )
     in
-    (* Extract the scrutinee object expression from [CPPmethod_call(obj, "v", [])].
-       Bind it with [auto&&] to extend any temporary's lifetime, then
-       reconstruct the variant accessor as [_svN->v()].
-       Falls back to the raw scrutinee expression when the pattern doesn't match. *)
-    let first_scrut =
+    (* Extract the scrutinee object expression from the variant accessor.
+       Handles both [CPPmethod_call(obj, "v", [])] (pointer: [obj->v()])
+       and [CPPfun_call(CPPmember(obj, "v"), [])] (value: [obj.v()]).
+       Bind temporaries with [auto&&] to extend lifetime, then reconstruct
+       the accessor. *)
+    let first_br =
       match branches with
-      | br :: _ -> br.smb_scrutinee
+      | br :: _ -> br
       | [] -> CErrors.anomaly (Pp.str "Smatch with empty branch list")
     in
+    let first_scrut = first_br.smb_scrutinee in
+    let is_value_type = first_br.smb_is_value_type in
     let scrut_obj_opt =
       match first_scrut with
       | CPPmethod_call (obj, v_id, []) when Id.to_string v_id = "v" ->
         Some obj
+      | CPPfun_call (CPPmember (obj, v_id), []) when Id.to_string v_id = "v" ->
+        Some obj
       | _ -> None
+    in
+    let v_access name =
+      if is_value_type then name ^ ".v()" else name ^ "->v()"
     in
     let scrut_binding_pp, scrut_var_pp, scrut_obj_pp =
       match scrut_obj_opt with
       | Some (CPPvar id) ->
         let name = Id.to_string id in
-        (mt (), str (name ^ "->v()"), str name)
+        (mt (), str (v_access name), str name)
       | Some CPPthis ->
         (mt (), str "this->v()", str "(*this)")
       | Some obj_expr ->
         let obj_pp = pp_scrut obj_expr in
         ( str ("auto&& " ^ sv_name ^ " = ") ++ obj_pp ++ str ";" ++ fnl (),
-          str (sv_name ^ "->v()"), str sv_name )
+          str (v_access sv_name), str sv_name )
       | None ->
         ( match first_scrut with
         | CPPvar id ->
@@ -1699,6 +1804,26 @@ and is_constexpr_type = function
   | Tfun _ -> false  (* std::function uses type erasure *)
   | Tdecltype _ -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false
+  | Tglob (GlobRef.IndRef (kn, i), _, _) ->
+    (* Value-type inductives with recursive fields contain shared_ptr
+       internally, making them non-literal. Check ip_types of each
+       constructor for self-references (same MutInd). *)
+    let has_recursive_field =
+      let rec check_ctor j =
+        let cref = GlobRef.ConstructRef ((kn, i), j) in
+        match Table.get_ctor_ip_types_opt cref with
+        | None -> false
+        | Some tys ->
+          List.exists (fun ty ->
+            match ty with
+            | Miniml.Tglob (GlobRef.IndRef (kn2, _), _, _) ->
+              MutInd.CanOrd.equal kn kn2
+            | _ -> false) tys
+          || check_ctor (j + 1)
+      in
+      (try check_ctor 1 with Not_found -> false)
+    in
+    not has_recursive_field
   | Tmod (_, t) | Tref t | Tptr t -> is_constexpr_type t
   | Tvariant tys -> List.for_all is_constexpr_type tys
   | Tglob (_, tys, _) -> List.for_all is_constexpr_type tys
@@ -2020,7 +2145,10 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     let params_s =
       pp_list
         (fun (id, ty) ->
-          if not (Id.Set.mem id used_ids) then pp_cpp_type false [] ty
+          if
+            (not (Id.Set.mem id used_ids))
+            && not (String.equal (Id.to_string mf_name) "operator=")
+          then pp_cpp_type false [] ty
           else pp_cpp_type false [] ty ++ str " " ++ Id.print id)
         mf_params
     in

@@ -9,14 +9,136 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 struct Nat {
   // TYPES
   struct O {};
 
   struct S {
-    std::shared_ptr<Nat> d_a0;
+    std::unique_ptr<Nat> d_a0;
   };
 
   using variant_t = std::variant<O, S>;
@@ -27,22 +149,58 @@ private:
 
 public:
   // CREATORS
+  Nat() {}
+
   explicit Nat(O _v) : d_v_(_v) {}
 
   explicit Nat(S _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<Nat> o() { return std::make_shared<Nat>(O{}); }
+  Nat(const Nat &_other) : d_v_(std::move(_other.clone().d_v_)) {}
 
-  static std::shared_ptr<Nat> s(const std::shared_ptr<Nat> &a0) {
-    return std::make_shared<Nat>(S{a0});
+  Nat(Nat &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) Nat &operator=(const Nat &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<Nat> s(std::shared_ptr<Nat> &&a0) {
-    return std::make_shared<Nat>(S{std::move(a0)});
+  __attribute__((pure)) Nat &operator=(Nat &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
+  }
+
+  // ACCESSORS
+  __attribute__((pure)) Nat clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<O>(_sv.v())) {
+      return Nat(O{});
+    } else {
+      const auto &[d_a0] = std::get<S>(_sv.v());
+      return Nat(S{clone_as_value<std::unique_ptr<Nat>>(d_a0)});
+    }
+  }
+
+  // CREATORS
+  __attribute__((pure)) static Nat o() { return Nat(O{}); }
+
+  __attribute__((pure)) static Nat s(const Nat &a0) {
+    return Nat(S{std::make_unique<Nat>(a0.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+  // ACCESSORS
+  __attribute__((pure)) Nat *operator->() { return this; }
+
+  __attribute__((pure)) const Nat *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = Nat(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -54,10 +212,11 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
+  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -65,40 +224,87 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  __attribute__((pure)) List<t_A> clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<t_A>(Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<t_A>(Cons{clone_as_value<t_A>(d_a0),
+                            clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
+    }
+  }
+
+  template <typename _CloneT0>
+  __attribute__((pure)) List<_CloneT0> clone_as() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<_CloneT0>(typename List<_CloneT0>::Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<_CloneT0>(typename List<_CloneT0>::Cons{
+          clone_as_value<_CloneT0>(d_a0),
+          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+    }
+  }
+
+  // CREATORS
+  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+
+  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
+  __attribute__((pure)) List<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = List<t_A>(); }
+
+  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <MapsTo<bool, t_A> F0>
-  std::shared_ptr<List<t_A>> filter(F0 &&f) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+  __attribute__((pure)) List<t_A> filter(F0 &&f) const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return List<t_A>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
       if (f(d_a0)) {
-        return List<t_A>::cons(d_a0, d_a1->filter(f));
+        return List<t_A>::cons(d_a0, (*(d_a1)).filter(f));
       } else {
-        return d_a1->filter(f);
+        return (*(d_a1)).filter(f);
       }
     }
   }
@@ -122,10 +328,8 @@ concept Graph = requires(t_G a0, t_A a1) {
   { I::empty() } -> std::convertible_to<t_G>;
   { I::add_node(a0, a1) } -> std::convertible_to<t_G>;
   { I::add_edge(a0, a1) } -> std::convertible_to<t_G>;
-  { I::nodes(a0) } -> std::convertible_to<std::shared_ptr<List<t_A>>>;
-  {
-    I::edges(a0, a1)
-  } -> std::convertible_to<std::shared_ptr<List<typename I::edge>>>;
+  { I::nodes(a0) } -> std::convertible_to<List<t_A>>;
+  { I::edges(a0, a1) } -> std::convertible_to<List<typename I::edge>>;
 };
 
 template <typename g, typename a> using edge = std::any;
@@ -134,54 +338,60 @@ template <typename g, typename a> using edge = std::any;
 template <typename t_A> struct DirectedEdge {
   t_A edge_from;
   t_A edge_to;
+
+  __attribute__((pure)) DirectedEdge<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const DirectedEdge<t_A> *operator->() const {
+    return this;
+  }
 };
 
 template <typename _tcI0, typename T1>
-__attribute__((pure)) bool
-directed_originates(const T1 a, const std::shared_ptr<DirectedEdge<T1>> &e) {
-  return _tcI0::eqb(e->edge_from, a);
+__attribute__((pure)) bool directed_originates(const T1 a,
+                                               const DirectedEdge<T1> &e) {
+  return _tcI0::eqb(e.edge_from, a);
 }
 
 /// A directed graph storing its directed_nodes and directed_edges.
 template <typename t_A> struct Directed {
-  std::shared_ptr<List<t_A>> directed_nodes;
-  std::shared_ptr<List<std::shared_ptr<DirectedEdge<t_A>>>> directed_edges;
+  List<t_A> directed_nodes;
+  List<DirectedEdge<t_A>> directed_edges;
+
+  __attribute__((pure)) Directed<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const Directed<t_A> *operator->() const { return this; }
 };
 
 template <typename _tcI0, typename T1> struct DirectedGraph {
-  using edge = std::shared_ptr<DirectedEdge<T1>>;
+  using edge = DirectedEdge<T1>;
 
-  static std::shared_ptr<Directed<std::any>> empty() {
-    return std::make_shared<Directed<std::any>>(Directed<std::any>{
-        List<std::any>::nil(),
-        List<std::shared_ptr<DirectedEdge<std::any>>>::nil()});
+  constexpr static Directed<std::any> empty() {
+    return Directed<std::any>{List<std::any>::nil(),
+                              List<DirectedEdge<std::any>>::nil()};
   }
 
-  static std::shared_ptr<Directed<std::any>>
-  add_node(std::shared_ptr<Directed<std::any>> g, T1 n) {
-    return std::make_shared<Directed<std::any>>(Directed<std::any>{
-        List<std::any>::cons(n, g->directed_nodes), g->directed_edges});
+  __attribute__((pure)) static Directed<std::any> add_node(Directed<std::any> g,
+                                                           T1 n) {
+    return Directed<std::any>{List<std::any>::cons(n, g.directed_nodes),
+                              g.directed_edges};
   }
 
-  static std::shared_ptr<Directed<std::any>>
-  add_edge(std::shared_ptr<Directed<std::any>> g,
-           std::shared_ptr<DirectedEdge<T1>> e) {
-    return std::make_shared<Directed<std::any>>(Directed<std::any>{
-        g->directed_nodes, List<std::shared_ptr<DirectedEdge<std::any>>>::cons(
-                               e, g->directed_edges)});
+  constexpr static Directed<std::any> add_edge(Directed<std::any> g,
+                                               DirectedEdge<T1> e) {
+    return Directed<std::any>{
+        g.directed_nodes,
+        List<DirectedEdge<std::any>>::cons(e, g.directed_edges)};
   }
 
-  static std::shared_ptr<List<T1>>
-  nodes(std::shared_ptr<Directed<std::any>> g) {
-    return g->directed_nodes;
+  __attribute__((pure)) static List<T1> nodes(Directed<std::any> g) {
+    return g.directed_nodes;
   }
 
-  static std::shared_ptr<List<std::shared_ptr<DirectedEdge<T1>>>>
-  edges(std::shared_ptr<Directed<std::any>> g, T1 n) {
-    return g->directed_edges->filter(
-        [=](const std::shared_ptr<DirectedEdge<T1>> &_x0) mutable -> bool {
-          return directed_originates<_tcI0, T1>(n, _x0);
-        });
+  __attribute__((pure)) static List<DirectedEdge<T1>>
+  edges(Directed<std::any> g, T1 n) {
+    return g.directed_edges.filter([=](DirectedEdge<T1> _x0) mutable -> bool {
+      return directed_originates<_tcI0, T1>(n, _x0);
+    });
   }
 };
 
@@ -189,77 +399,82 @@ template <typename _tcI0, typename T1> struct DirectedGraph {
 template <typename t_A> struct UndirectedEdge {
   t_A edge_first;
   t_A edge_second;
+
+  __attribute__((pure)) UndirectedEdge<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const UndirectedEdge<t_A> *operator->() const {
+    return this;
+  }
 };
 
 template <typename _tcI0, typename T1>
-__attribute__((pure)) bool
-undirected_originates(const T1 a,
-                      const std::shared_ptr<UndirectedEdge<T1>> &e) {
-  return (_tcI0::eqb(e->edge_first, a) || _tcI0::eqb(e->edge_second, a));
+__attribute__((pure)) bool undirected_originates(const T1 a,
+                                                 const UndirectedEdge<T1> &e) {
+  return (_tcI0::eqb(e.edge_first, a) || _tcI0::eqb(e.edge_second, a));
 }
 
 template <typename t_A> struct Undirected {
-  std::shared_ptr<List<t_A>> undirected_nodes;
-  std::shared_ptr<List<std::shared_ptr<UndirectedEdge<t_A>>>> undirected_edges;
+  List<t_A> undirected_nodes;
+  List<UndirectedEdge<t_A>> undirected_edges;
+
+  __attribute__((pure)) Undirected<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const Undirected<t_A> *operator->() const {
+    return this;
+  }
 };
 
 template <typename _tcI0, typename T1> struct UndirectedGraph {
-  using edge = std::shared_ptr<UndirectedEdge<T1>>;
+  using edge = UndirectedEdge<T1>;
 
-  static std::shared_ptr<Undirected<std::any>> empty() {
-    return std::make_shared<Undirected<std::any>>(Undirected<std::any>{
-        List<std::any>::nil(),
-        List<std::shared_ptr<UndirectedEdge<std::any>>>::nil()});
+  constexpr static Undirected<std::any> empty() {
+    return Undirected<std::any>{List<std::any>::nil(),
+                                List<UndirectedEdge<std::any>>::nil()};
   }
 
-  static std::shared_ptr<Undirected<std::any>>
-  add_node(std::shared_ptr<Undirected<std::any>> g, T1 n) {
-    return std::make_shared<Undirected<std::any>>(Undirected<std::any>{
-        List<std::any>::cons(n, g->undirected_nodes), g->undirected_edges});
+  __attribute__((pure)) static Undirected<std::any>
+  add_node(Undirected<std::any> g, T1 n) {
+    return Undirected<std::any>{List<std::any>::cons(n, g.undirected_nodes),
+                                g.undirected_edges};
   }
 
-  static std::shared_ptr<Undirected<std::any>>
-  add_edge(std::shared_ptr<Undirected<std::any>> g,
-           std::shared_ptr<UndirectedEdge<T1>> e) {
-    return std::make_shared<Undirected<std::any>>(Undirected<std::any>{
-        g->undirected_nodes,
-        List<std::shared_ptr<UndirectedEdge<std::any>>>::cons(
-            e, g->undirected_edges)});
+  constexpr static Undirected<std::any> add_edge(Undirected<std::any> g,
+                                                 UndirectedEdge<T1> e) {
+    return Undirected<std::any>{
+        g.undirected_nodes,
+        List<UndirectedEdge<std::any>>::cons(e, g.undirected_edges)};
   }
 
-  static std::shared_ptr<List<T1>>
-  nodes(std::shared_ptr<Undirected<std::any>> g) {
-    return g->undirected_nodes;
+  __attribute__((pure)) static List<T1> nodes(Undirected<std::any> g) {
+    return g.undirected_nodes;
   }
 
-  static std::shared_ptr<List<std::shared_ptr<UndirectedEdge<T1>>>>
-  edges(std::shared_ptr<Undirected<std::any>> g, T1 n) {
-    return g->undirected_edges->filter(
-        [=](const std::shared_ptr<UndirectedEdge<T1>> &_x0) mutable -> bool {
+  __attribute__((pure)) static List<UndirectedEdge<T1>>
+  edges(Undirected<std::any> g, T1 n) {
+    return g.undirected_edges.filter(
+        [=](UndirectedEdge<T1> _x0) mutable -> bool {
           return undirected_originates<_tcI0, T1>(n, _x0);
         });
   }
 };
 
-__attribute__((pure)) bool nat_eqb(const std::shared_ptr<Nat> &n,
-                                   const std::shared_ptr<Nat> &m);
+__attribute__((pure)) bool nat_eqb(const Nat &n, const Nat &m);
 
 struct NatEq {
-  __attribute__((pure)) static bool eqb(std::shared_ptr<Nat> a0,
-                                        std::shared_ptr<Nat> a1) {
+  __attribute__((pure)) static bool eqb(Nat a0, Nat a1) {
     return nat_eqb(a0, a1);
   }
 };
 
-static_assert(Eq<NatEq, std::shared_ptr<Nat>>);
+static_assert(Eq<NatEq, Nat>);
 
 template <typename _tcI0, typename T1>
 __attribute__((pure)) bool test_eq(const T1 x, const T1 y) {
   return _tcI0::eqb(x, y);
 }
 
-const bool test_int_eq = test_eq<NatEq, std::shared_ptr<Nat>>(
-    Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))),
-    Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
+const bool test_int_eq =
+    test_eq<NatEq, Nat>(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))),
+                        Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
 
 #endif // INCLUDED_GRAPH

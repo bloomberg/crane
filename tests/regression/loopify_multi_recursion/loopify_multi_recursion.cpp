@@ -8,8 +8,8 @@
 #include <vector>
 
 __attribute__((pure)) unsigned int
-LoopifyMultiRecursion::mixed_arith_fuel(const unsigned int fuel,
-                                        const unsigned int n) {
+LoopifyMultiRecursion::mixed_arith_fuel(const unsigned int &fuel,
+                                        const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
     const unsigned int fuel;
@@ -42,7 +42,7 @@ LoopifyMultiRecursion::mixed_arith_fuel(const unsigned int fuel,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
@@ -68,15 +68,15 @@ LoopifyMultiRecursion::mixed_arith_fuel(const unsigned int fuel,
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _stack.emplace_back(_Call2{_result, _f._s2, _f._s3});
       _stack.emplace_back(_Enter{_f._s0, _f._s1});
     } else if (std::holds_alternative<_Call2>(_frame)) {
-      const auto &_f = std::get<_Call2>(_frame);
+      auto _f = std::move(std::get<_Call2>(_frame));
       _stack.emplace_back(_Call3{_f._s0, _result});
       _stack.emplace_back(_Enter{_f._s1, _f._s2});
     } else {
-      const auto &_f = std::get<_Call3>(_frame);
+      auto _f = std::move(std::get<_Call3>(_frame));
       _result = ((_result * _f._s1) + _f._s0);
     }
   }
@@ -84,12 +84,14 @@ LoopifyMultiRecursion::mixed_arith_fuel(const unsigned int fuel,
 }
 
 __attribute__((pure)) unsigned int
-LoopifyMultiRecursion::mixed_arith(const unsigned int n) {
+LoopifyMultiRecursion::mixed_arith(const unsigned int &n) {
   return mixed_arith_fuel((n * 3u), n);
 }
 
-__attribute__((pure)) bool LoopifyMultiRecursion::bool_or_chain_fuel(
-    const unsigned int fuel, const unsigned int n, const unsigned int target) {
+__attribute__((pure)) bool
+LoopifyMultiRecursion::bool_or_chain_fuel(const unsigned int &fuel,
+                                          const unsigned int &n,
+                                          const unsigned int &target) {
   struct _Enter {
     const unsigned int n;
     const unsigned int fuel;
@@ -120,7 +122,7 @@ __attribute__((pure)) bool LoopifyMultiRecursion::bool_or_chain_fuel(
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
@@ -136,11 +138,11 @@ __attribute__((pure)) bool LoopifyMultiRecursion::bool_or_chain_fuel(
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _stack.emplace_back(_Call2{_result, _f._s2});
       _stack.emplace_back(_Enter{_f._s0, _f._s1});
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
+      auto _f = std::move(std::get<_Call2>(_frame));
       _result = ((_f._s1 || _result) || _f._s0);
     }
   }
@@ -148,8 +150,8 @@ __attribute__((pure)) bool LoopifyMultiRecursion::bool_or_chain_fuel(
 }
 
 __attribute__((pure)) unsigned int
-LoopifyMultiRecursion::bool_or_chain(const unsigned int n,
-                                     const unsigned int target) {
+LoopifyMultiRecursion::bool_or_chain(const unsigned int &n,
+                                     const unsigned int &target) {
   if (bool_or_chain_fuel((n * 2u), n, target)) {
     return 1u;
   } else {
@@ -158,8 +160,8 @@ LoopifyMultiRecursion::bool_or_chain(const unsigned int n,
 }
 
 __attribute__((pure)) bool
-LoopifyMultiRecursion::bool_and_chain_fuel(const unsigned int fuel,
-                                           const unsigned int n) {
+LoopifyMultiRecursion::bool_and_chain_fuel(const unsigned int &fuel,
+                                           const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
     const unsigned int fuel;
@@ -186,7 +188,7 @@ LoopifyMultiRecursion::bool_and_chain_fuel(const unsigned int fuel,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
@@ -201,11 +203,11 @@ LoopifyMultiRecursion::bool_and_chain_fuel(const unsigned int fuel,
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _stack.emplace_back(_Call2{_result});
       _stack.emplace_back(_Enter{_f._s0, _f._s1});
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
+      auto _f = std::move(std::get<_Call2>(_frame));
       _result = (_result && _f._s0);
     }
   }
@@ -213,7 +215,7 @@ LoopifyMultiRecursion::bool_and_chain_fuel(const unsigned int fuel,
 }
 
 __attribute__((pure)) unsigned int
-LoopifyMultiRecursion::bool_and_chain(const unsigned int n) {
+LoopifyMultiRecursion::bool_and_chain(const unsigned int &n) {
   if (bool_and_chain_fuel((n * 2u), n)) {
     return 1u;
   } else {
@@ -222,27 +224,27 @@ LoopifyMultiRecursion::bool_and_chain(const unsigned int n) {
 }
 
 __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_count_leaves(
-    const std::shared_ptr<LoopifyMultiRecursion::quadtree> &t) {
+    const LoopifyMultiRecursion::quadtree &t) {
   struct _Enter {
-    const std::shared_ptr<LoopifyMultiRecursion::quadtree> t;
+    const LoopifyMultiRecursion::quadtree t;
   };
 
   struct _Call1 {
-    const std::shared_ptr<LoopifyMultiRecursion::quadtree> _s0;
-    const std::shared_ptr<LoopifyMultiRecursion::quadtree> _s1;
-    const std::shared_ptr<LoopifyMultiRecursion::quadtree> _s2;
+    const LoopifyMultiRecursion::quadtree _s0;
+    const LoopifyMultiRecursion::quadtree _s1;
+    const LoopifyMultiRecursion::quadtree _s2;
   };
 
   struct _Call2 {
     unsigned int _s0;
-    const std::shared_ptr<LoopifyMultiRecursion::quadtree> _s1;
-    const std::shared_ptr<LoopifyMultiRecursion::quadtree> _s2;
+    const LoopifyMultiRecursion::quadtree _s1;
+    const LoopifyMultiRecursion::quadtree _s2;
   };
 
   struct _Call3 {
     unsigned int _s0;
     unsigned int _s1;
-    const std::shared_ptr<LoopifyMultiRecursion::quadtree> _s2;
+    const LoopifyMultiRecursion::quadtree _s2;
   };
 
   struct _Call4 {
@@ -260,61 +262,61 @@ __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_count_leaves(
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<LoopifyMultiRecursion::quadtree> t = _f.t;
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const LoopifyMultiRecursion::quadtree t = _f.t;
       if (std::holds_alternative<
-              typename LoopifyMultiRecursion::quadtree::QLeaf>(t->v())) {
+              typename LoopifyMultiRecursion::quadtree::QLeaf>(t.v())) {
         _result = 1u;
       } else {
         const auto &[d_a0, d_a1, d_a2, d_a3] =
-            std::get<typename LoopifyMultiRecursion::quadtree::QQuad>(t->v());
-        _stack.emplace_back(_Call1{d_a2, d_a1, d_a0});
-        _stack.emplace_back(_Enter{d_a3});
+            std::get<typename LoopifyMultiRecursion::quadtree::QQuad>(t.v());
+        _stack.emplace_back(_Call1{*(d_a2), *(d_a1), *(d_a0)});
+        _stack.emplace_back(_Enter{*(d_a3)});
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
       _stack.emplace_back(_Enter{_f._s0});
     } else if (std::holds_alternative<_Call2>(_frame)) {
-      const auto &_f = std::get<_Call2>(_frame);
+      auto _f = std::move(std::get<_Call2>(_frame));
       _stack.emplace_back(_Call3{_f._s0, _result, _f._s2});
       _stack.emplace_back(_Enter{_f._s1});
     } else if (std::holds_alternative<_Call3>(_frame)) {
-      const auto &_f = std::get<_Call3>(_frame);
+      auto _f = std::move(std::get<_Call3>(_frame));
       _stack.emplace_back(_Call4{_f._s0, _f._s1, _result});
       _stack.emplace_back(_Enter{_f._s2});
     } else {
-      const auto &_f = std::get<_Call4>(_frame);
+      auto _f = std::move(std::get<_Call4>(_frame));
       _result = (((_result + _f._s2) + _f._s1) + _f._s0);
     }
   }
   return _result;
 }
 
-__attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_depth(
-    const std::shared_ptr<LoopifyMultiRecursion::quadtree> &t) {
+__attribute__((pure)) unsigned int
+LoopifyMultiRecursion::quad_depth(const LoopifyMultiRecursion::quadtree &t) {
   struct _Enter {
-    const std::shared_ptr<LoopifyMultiRecursion::quadtree> t;
+    const LoopifyMultiRecursion::quadtree t;
   };
 
   struct _Call1 {
-    const std::shared_ptr<LoopifyMultiRecursion::quadtree> _s0;
-    const std::shared_ptr<LoopifyMultiRecursion::quadtree> _s1;
-    const std::shared_ptr<LoopifyMultiRecursion::quadtree> _s2;
+    const LoopifyMultiRecursion::quadtree _s0;
+    const LoopifyMultiRecursion::quadtree _s1;
+    const LoopifyMultiRecursion::quadtree _s2;
     decltype(1u) _s3;
   };
 
   struct _Call2 {
     unsigned int _s0;
-    const std::shared_ptr<LoopifyMultiRecursion::quadtree> _s1;
-    const std::shared_ptr<LoopifyMultiRecursion::quadtree> _s2;
+    const LoopifyMultiRecursion::quadtree _s1;
+    const LoopifyMultiRecursion::quadtree _s2;
     decltype(1u) _s3;
   };
 
   struct _Call3 {
     unsigned int _s0;
     unsigned int _s1;
-    const std::shared_ptr<LoopifyMultiRecursion::quadtree> _s2;
+    const LoopifyMultiRecursion::quadtree _s2;
     decltype(1u) _s3;
   };
 
@@ -334,31 +336,31 @@ __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_depth(
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<LoopifyMultiRecursion::quadtree> t = _f.t;
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const LoopifyMultiRecursion::quadtree t = _f.t;
       if (std::holds_alternative<
-              typename LoopifyMultiRecursion::quadtree::QLeaf>(t->v())) {
+              typename LoopifyMultiRecursion::quadtree::QLeaf>(t.v())) {
         _result = 0u;
       } else {
         const auto &[d_a0, d_a1, d_a2, d_a3] =
-            std::get<typename LoopifyMultiRecursion::quadtree::QQuad>(t->v());
-        _stack.emplace_back(_Call1{d_a2, d_a1, d_a0, 1u});
-        _stack.emplace_back(_Enter{d_a3});
+            std::get<typename LoopifyMultiRecursion::quadtree::QQuad>(t.v());
+        _stack.emplace_back(_Call1{*(d_a2), *(d_a1), *(d_a0), 1u});
+        _stack.emplace_back(_Enter{*(d_a3)});
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
       _stack.emplace_back(_Enter{_f._s0});
     } else if (std::holds_alternative<_Call2>(_frame)) {
-      const auto &_f = std::get<_Call2>(_frame);
+      auto _f = std::move(std::get<_Call2>(_frame));
       _stack.emplace_back(_Call3{_f._s0, _result, _f._s2, _f._s3});
       _stack.emplace_back(_Enter{_f._s1});
     } else if (std::holds_alternative<_Call3>(_frame)) {
-      const auto &_f = std::get<_Call3>(_frame);
+      auto _f = std::move(std::get<_Call3>(_frame));
       _stack.emplace_back(_Call4{_f._s0, _f._s1, _result, _f._s3});
       _stack.emplace_back(_Enter{_f._s2});
     } else {
-      const auto &_f = std::get<_Call4>(_frame);
+      auto _f = std::move(std::get<_Call4>(_frame));
       _result = (_f._s3 +
                  std::max(std::max(_result, _f._s2), std::max(_f._s1, _f._s0)));
     }
@@ -367,8 +369,8 @@ __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_depth(
 }
 
 __attribute__((pure)) unsigned int
-LoopifyMultiRecursion::hofstadter_q_fuel(const unsigned int fuel,
-                                         const unsigned int n) {
+LoopifyMultiRecursion::hofstadter_q_fuel(const unsigned int &fuel,
+                                         const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
     const unsigned int fuel;
@@ -408,7 +410,7 @@ LoopifyMultiRecursion::hofstadter_q_fuel(const unsigned int fuel,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
@@ -432,14 +434,14 @@ LoopifyMultiRecursion::hofstadter_q_fuel(const unsigned int fuel,
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       unsigned int fuel_ = _f._s0;
       const unsigned int n = _f._s1;
       unsigned int q1 = _result;
       _stack.emplace_back(_Call2{fuel_, n, q1});
       _stack.emplace_back(_Enter{(((n - 2u) > n ? 0 : (n - 2u))), fuel_});
     } else if (std::holds_alternative<_Call2>(_frame)) {
-      const auto &_f = std::get<_Call2>(_frame);
+      auto _f = std::move(std::get<_Call2>(_frame));
       unsigned int fuel_ = _f._s0;
       const unsigned int n = _f._s1;
       unsigned int q1 = _f._s2;
@@ -447,11 +449,11 @@ LoopifyMultiRecursion::hofstadter_q_fuel(const unsigned int fuel,
       _stack.emplace_back(_Call3{(((n - q1) > n ? 0 : (n - q1))), fuel_});
       _stack.emplace_back(_Enter{(((n - q2) > n ? 0 : (n - q2))), fuel_});
     } else if (std::holds_alternative<_Call3>(_frame)) {
-      const auto &_f = std::get<_Call3>(_frame);
+      auto _f = std::move(std::get<_Call3>(_frame));
       _stack.emplace_back(_Call4{_result});
       _stack.emplace_back(_Enter{_f._s0, _f._s1});
     } else {
-      const auto &_f = std::get<_Call4>(_frame);
+      auto _f = std::move(std::get<_Call4>(_frame));
       _result = (_result + _f._s0);
     }
   }
@@ -459,6 +461,6 @@ LoopifyMultiRecursion::hofstadter_q_fuel(const unsigned int fuel,
 }
 
 __attribute__((pure)) unsigned int
-LoopifyMultiRecursion::hofstadter_q(const unsigned int n) {
+LoopifyMultiRecursion::hofstadter_q(const unsigned int &n) {
   return hofstadter_q_fuel(((n * n) + 1u), n);
 }

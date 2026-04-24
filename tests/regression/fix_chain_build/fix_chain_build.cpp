@@ -16,9 +16,9 @@
 /// is destroyed, and the returned closure holds dangling references.
 __attribute__((pure))
 std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
-FixChainBuild::build_chain(const unsigned int n) {
+FixChainBuild::build_chain(unsigned int n) {
   if (n <= 0) {
-    return std::make_pair(0u, [](const unsigned int x) { return x; });
+    return std::make_pair(0u, [](unsigned int x) { return x; });
   } else {
     unsigned int n_ = n - 1;
     auto _cs = build_chain(n_);
@@ -33,6 +33,6 @@ FixChainBuild::build_chain(const unsigned int n) {
         return (prev((*step)(x_)) + 1);
       }
     };
-    return std::make_pair(n, *step);
+    return std::make_pair(n, (*step));
   }
 }

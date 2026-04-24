@@ -10,11 +10,11 @@
 #include <utility>
 #include <variant>
 
-void VoidCallback::print_nat(const unsigned int) { return; }
+void VoidCallback::print_nat(const unsigned int &) { return; }
 
 void VoidCallback::test_for_each_m() {
   for_each_m(
-      [](const unsigned int) {
+      [](const unsigned int &) {
         std::cout << "item"s << '\n';
         return std::monostate{};
       },
@@ -24,10 +24,10 @@ void VoidCallback::test_for_each_m() {
 }
 
 /// 3. Pure function returning unit, used in let
-void VoidCallback::side_effect_pure(const unsigned int) { return; }
+void VoidCallback::side_effect_pure(const unsigned int &) { return; }
 
 /// 7. Void returning function in a match arm
-void VoidCallback::void_in_match(const bool b) {
+void VoidCallback::void_in_match(const bool &b) {
   if (b) {
     print_nat(1u);
     return;
@@ -39,7 +39,7 @@ void VoidCallback::void_in_match(const bool b) {
 
 /// 8. Option of void function result
 __attribute__((pure)) std::optional<std::monostate>
-VoidCallback::void_option(const bool b) {
+VoidCallback::void_option(const bool &b) {
   if (b) {
     return std::make_optional<std::monostate>([]() {
       print_nat(1u);

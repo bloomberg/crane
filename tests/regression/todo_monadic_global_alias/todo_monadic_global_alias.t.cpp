@@ -4,21 +4,15 @@
 
 #include "todo_monadic_global_alias.h"
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
 namespace {
 
-unsigned int nat_to_uint(const std::shared_ptr<Nat> &n) {
-  return std::visit(Overloaded{
-                        [](const Nat::O &) -> unsigned int { return 0u; },
-                        [](const Nat::S &succ) -> unsigned int {
-                          return 1u + nat_to_uint(succ.d_a0);
-                        },
-                    },
-                    n->v());
+unsigned int nat_to_uint(const Nat &n) {
+  if (std::holds_alternative<Nat::O>(n.v())) {
+    return 0u;
+  } else {
+    const auto &s = std::get<Nat::S>(n.v());
+    return 1u + nat_to_uint(*s.d_a0);
+  }
 }
 
 } // namespace

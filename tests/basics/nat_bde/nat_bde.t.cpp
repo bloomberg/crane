@@ -34,18 +34,18 @@ void aSsErT(bool condition, const char *message, int line) {
 
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-bsl::shared_ptr<Nat> int_to_nat(int x) {
-  if (x <= 0) {
-    return Nat::o();
-  } else {
-    return Nat::s(int_to_nat(x - 1));
+Nat int_to_nat(int x) {
+  Nat result = Nat::o();
+  for (int i = 0; i < x; i++) {
+    result = Nat::s(bsl::move(result));
   }
+  return result;
 }
 
 int main() {
 
-  ASSERT(5 == int_to_nat(5)->nat_to_int());
-  ASSERT(9 == int_to_nat(5)->add(int_to_nat(4))->nat_to_int());
+  ASSERT(5 == int_to_nat(5).nat_to_int());
+  ASSERT(9 == int_to_nat(5).add(int_to_nat(4)).nat_to_int());
 
   bsl::cout << "hello from BDE!\n";
 

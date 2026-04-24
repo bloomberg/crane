@@ -7,7 +7,129 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 template <typename t_A> struct List {
   // TYPES
@@ -15,10 +137,11 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
+  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -26,36 +149,83 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  __attribute__((pure)) List<t_A> clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<t_A>(Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<t_A>(Cons{clone_as_value<t_A>(d_a0),
+                            clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
+    }
+  }
+
+  template <typename _CloneT0>
+  __attribute__((pure)) List<_CloneT0> clone_as() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<_CloneT0>(typename List<_CloneT0>::Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<_CloneT0>(typename List<_CloneT0>::Cons{
+          clone_as_value<_CloneT0>(d_a0),
+          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+    }
+  }
+
+  // CREATORS
+  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+
+  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
+  __attribute__((pure)) List<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = List<t_A>(); }
+
+  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return (d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      return ((*(d_a1)).length() + 1);
     }
   }
 };
@@ -101,6 +271,8 @@ struct EncodeOps {
 
   public:
     // CREATORS
+    instruction1() {}
+
     explicit instruction1(CLB _v) : d_v_(_v) {}
 
     explicit instruction1(CMC _v) : d_v_(_v) {}
@@ -123,95 +295,136 @@ struct EncodeOps {
 
     explicit instruction1(WR0 _v) : d_v_(_v) {}
 
-    static std::shared_ptr<instruction1> clb() {
-      return std::make_shared<instruction1>(CLB{});
+    instruction1(const instruction1 &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    instruction1(instruction1 &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) instruction1 &operator=(const instruction1 &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instruction1> cmc() {
-      return std::make_shared<instruction1>(CMC{});
+    __attribute__((pure)) instruction1 &operator=(instruction1 &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instruction1> daa() {
-      return std::make_shared<instruction1>(DAA{});
+    // ACCESSORS
+    __attribute__((pure)) instruction1 clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<CLB>(_sv.v())) {
+        return instruction1(CLB{});
+      } else if (std::holds_alternative<CMC>(_sv.v())) {
+        return instruction1(CMC{});
+      } else if (std::holds_alternative<DAA>(_sv.v())) {
+        return instruction1(DAA{});
+      } else if (std::holds_alternative<FIM>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<FIM>(_sv.v());
+        return instruction1(FIM{clone_as_value<unsigned int>(d_a0),
+                                clone_as_value<unsigned int>(d_a1)});
+      } else if (std::holds_alternative<JUN>(_sv.v())) {
+        const auto &[d_a0] = std::get<JUN>(_sv.v());
+        return instruction1(JUN{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<LDM1>(_sv.v())) {
+        const auto &[d_a0] = std::get<LDM1>(_sv.v());
+        return instruction1(LDM1{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<NOP1>(_sv.v())) {
+        return instruction1(NOP1{});
+      } else if (std::holds_alternative<RDM>(_sv.v())) {
+        return instruction1(RDM{});
+      } else if (std::holds_alternative<TCS>(_sv.v())) {
+        return instruction1(TCS{});
+      } else if (std::holds_alternative<WPM>(_sv.v())) {
+        return instruction1(WPM{});
+      } else {
+        return instruction1(WR0{});
+      }
     }
 
-    static std::shared_ptr<instruction1> fim(unsigned int a0, unsigned int a1) {
-      return std::make_shared<instruction1>(FIM{std::move(a0), std::move(a1)});
+    // CREATORS
+    constexpr static instruction1 clb() { return instruction1(CLB{}); }
+
+    constexpr static instruction1 cmc() { return instruction1(CMC{}); }
+
+    constexpr static instruction1 daa() { return instruction1(DAA{}); }
+
+    __attribute__((pure)) static instruction1 fim(unsigned int a0,
+                                                  unsigned int a1) {
+      return instruction1(FIM{std::move(a0), std::move(a1)});
     }
 
-    static std::shared_ptr<instruction1> jun(unsigned int a0) {
-      return std::make_shared<instruction1>(JUN{std::move(a0)});
+    __attribute__((pure)) static instruction1 jun(unsigned int a0) {
+      return instruction1(JUN{std::move(a0)});
     }
 
-    static std::shared_ptr<instruction1> ldm1(unsigned int a0) {
-      return std::make_shared<instruction1>(LDM1{std::move(a0)});
+    __attribute__((pure)) static instruction1 ldm1(unsigned int a0) {
+      return instruction1(LDM1{std::move(a0)});
     }
 
-    static std::shared_ptr<instruction1> nop1() {
-      return std::make_shared<instruction1>(NOP1{});
-    }
+    constexpr static instruction1 nop1() { return instruction1(NOP1{}); }
 
-    static std::shared_ptr<instruction1> rdm() {
-      return std::make_shared<instruction1>(RDM{});
-    }
+    constexpr static instruction1 rdm() { return instruction1(RDM{}); }
 
-    static std::shared_ptr<instruction1> tcs() {
-      return std::make_shared<instruction1>(TCS{});
-    }
+    constexpr static instruction1 tcs() { return instruction1(TCS{}); }
 
-    static std::shared_ptr<instruction1> wpm() {
-      return std::make_shared<instruction1>(WPM{});
-    }
+    constexpr static instruction1 wpm() { return instruction1(WPM{}); }
 
-    static std::shared_ptr<instruction1> wr0() {
-      return std::make_shared<instruction1>(WR0{});
-    }
+    constexpr static instruction1 wr0() { return instruction1(WR0{}); }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    __attribute__((pure)) instruction1 *operator->() { return this; }
+
+    __attribute__((pure)) const instruction1 *operator->() const {
+      return this;
+    }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = instruction1(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) std::pair<unsigned int, unsigned int>
     encode1() const {
-      if (std::holds_alternative<typename instruction1::CLB>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instruction1::CLB>(_sv.v())) {
         return std::make_pair(240u, 0u);
-      } else if (std::holds_alternative<typename instruction1::CMC>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::CMC>(_sv.v())) {
         return std::make_pair(243u, 0u);
-      } else if (std::holds_alternative<typename instruction1::DAA>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::DAA>(_sv.v())) {
         return std::make_pair(251u, 0u);
-      } else if (std::holds_alternative<typename instruction1::FIM>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::FIM>(_sv.v())) {
         const auto &[d_a0, d_a1] =
-            std::get<typename instruction1::FIM>(this->v());
+            std::get<typename instruction1::FIM>(_sv.v());
         return std::make_pair(
             (32u + (((d_a0 - (2u ? d_a0 % 2u : d_a0)) > d_a0
                          ? 0
                          : (d_a0 - (2u ? d_a0 % 2u : d_a0))))),
             (256u ? d_a1 % 256u : d_a1));
-      } else if (std::holds_alternative<typename instruction1::JUN>(
-                     this->v())) {
-        const auto &[d_a0] = std::get<typename instruction1::JUN>(this->v());
+      } else if (std::holds_alternative<typename instruction1::JUN>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instruction1::JUN>(_sv.v());
         return std::make_pair((64u + (256u ? d_a0 / 256u : 0)),
                               (256u ? d_a0 % 256u : d_a0));
-      } else if (std::holds_alternative<typename instruction1::LDM1>(
-                     this->v())) {
-        const auto &[d_a0] = std::get<typename instruction1::LDM1>(this->v());
+      } else if (std::holds_alternative<typename instruction1::LDM1>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instruction1::LDM1>(_sv.v());
         return std::make_pair((208u + (16u ? d_a0 % 16u : d_a0)), 0u);
-      } else if (std::holds_alternative<typename instruction1::NOP1>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::NOP1>(_sv.v())) {
         return std::make_pair(0u, 0u);
-      } else if (std::holds_alternative<typename instruction1::RDM>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::RDM>(_sv.v())) {
         return std::make_pair(233u, 0u);
-      } else if (std::holds_alternative<typename instruction1::TCS>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::TCS>(_sv.v())) {
         return std::make_pair(249u, 0u);
-      } else if (std::holds_alternative<typename instruction1::WPM>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::WPM>(_sv.v())) {
         return std::make_pair(227u, 0u);
       } else {
         return std::make_pair(228u, 0u);
@@ -223,38 +436,30 @@ struct EncodeOps {
     T1 instruction1_rec(const T1 f, const T1 f0, const T1 f1, F3 &&f2, F4 &&f3,
                         F5 &&f4, const T1 f5, const T1 f6, const T1 f7,
                         const T1 f8, const T1 f9) const {
-      if (std::holds_alternative<typename instruction1::CLB>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instruction1::CLB>(_sv.v())) {
         return f;
-      } else if (std::holds_alternative<typename instruction1::CMC>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::CMC>(_sv.v())) {
         return f0;
-      } else if (std::holds_alternative<typename instruction1::DAA>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::DAA>(_sv.v())) {
         return f1;
-      } else if (std::holds_alternative<typename instruction1::FIM>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::FIM>(_sv.v())) {
         const auto &[d_a0, d_a1] =
-            std::get<typename instruction1::FIM>(this->v());
+            std::get<typename instruction1::FIM>(_sv.v());
         return f2(d_a0, d_a1);
-      } else if (std::holds_alternative<typename instruction1::JUN>(
-                     this->v())) {
-        const auto &[d_a0] = std::get<typename instruction1::JUN>(this->v());
+      } else if (std::holds_alternative<typename instruction1::JUN>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instruction1::JUN>(_sv.v());
         return f3(d_a0);
-      } else if (std::holds_alternative<typename instruction1::LDM1>(
-                     this->v())) {
-        const auto &[d_a0] = std::get<typename instruction1::LDM1>(this->v());
+      } else if (std::holds_alternative<typename instruction1::LDM1>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instruction1::LDM1>(_sv.v());
         return f4(d_a0);
-      } else if (std::holds_alternative<typename instruction1::NOP1>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::NOP1>(_sv.v())) {
         return f5;
-      } else if (std::holds_alternative<typename instruction1::RDM>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::RDM>(_sv.v())) {
         return f6;
-      } else if (std::holds_alternative<typename instruction1::TCS>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::TCS>(_sv.v())) {
         return f7;
-      } else if (std::holds_alternative<typename instruction1::WPM>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::WPM>(_sv.v())) {
         return f8;
       } else {
         return f9;
@@ -266,38 +471,30 @@ struct EncodeOps {
     T1 instruction1_rect(const T1 f, const T1 f0, const T1 f1, F3 &&f2, F4 &&f3,
                          F5 &&f4, const T1 f5, const T1 f6, const T1 f7,
                          const T1 f8, const T1 f9) const {
-      if (std::holds_alternative<typename instruction1::CLB>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instruction1::CLB>(_sv.v())) {
         return f;
-      } else if (std::holds_alternative<typename instruction1::CMC>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::CMC>(_sv.v())) {
         return f0;
-      } else if (std::holds_alternative<typename instruction1::DAA>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::DAA>(_sv.v())) {
         return f1;
-      } else if (std::holds_alternative<typename instruction1::FIM>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::FIM>(_sv.v())) {
         const auto &[d_a0, d_a1] =
-            std::get<typename instruction1::FIM>(this->v());
+            std::get<typename instruction1::FIM>(_sv.v());
         return f2(d_a0, d_a1);
-      } else if (std::holds_alternative<typename instruction1::JUN>(
-                     this->v())) {
-        const auto &[d_a0] = std::get<typename instruction1::JUN>(this->v());
+      } else if (std::holds_alternative<typename instruction1::JUN>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instruction1::JUN>(_sv.v());
         return f3(d_a0);
-      } else if (std::holds_alternative<typename instruction1::LDM1>(
-                     this->v())) {
-        const auto &[d_a0] = std::get<typename instruction1::LDM1>(this->v());
+      } else if (std::holds_alternative<typename instruction1::LDM1>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instruction1::LDM1>(_sv.v());
         return f4(d_a0);
-      } else if (std::holds_alternative<typename instruction1::NOP1>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::NOP1>(_sv.v())) {
         return f5;
-      } else if (std::holds_alternative<typename instruction1::RDM>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::RDM>(_sv.v())) {
         return f6;
-      } else if (std::holds_alternative<typename instruction1::TCS>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::TCS>(_sv.v())) {
         return f7;
-      } else if (std::holds_alternative<typename instruction1::WPM>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction1::WPM>(_sv.v())) {
         return f8;
       } else {
         return f9;
@@ -306,19 +503,19 @@ struct EncodeOps {
   };
 
   __attribute__((pure)) static bool
-  pair_in_range(const std::pair<unsigned int, unsigned int> p);
+  pair_in_range(const std::pair<unsigned int, unsigned int> &p);
   static inline const bool test_encode_bytes_in_range =
-      ((((((((((pair_in_range(instruction1::clb()->encode1()) &&
-                pair_in_range(instruction1::cmc()->encode1())) &&
-               pair_in_range(instruction1::daa()->encode1())) &&
-              pair_in_range(instruction1::fim(14u, 255u)->encode1())) &&
-             pair_in_range(instruction1::jun(4095u)->encode1())) &&
-            pair_in_range(instruction1::ldm1(15u)->encode1())) &&
-           pair_in_range(instruction1::nop1()->encode1())) &&
-          pair_in_range(instruction1::rdm()->encode1())) &&
-         pair_in_range(instruction1::tcs()->encode1())) &&
-        pair_in_range(instruction1::wpm()->encode1())) &&
-       pair_in_range(instruction1::wr0()->encode1()));
+      ((((((((((pair_in_range(instruction1::clb().encode1()) &&
+                pair_in_range(instruction1::cmc().encode1())) &&
+               pair_in_range(instruction1::daa().encode1())) &&
+              pair_in_range(instruction1::fim(14u, 255u).encode1())) &&
+             pair_in_range(instruction1::jun(4095u).encode1())) &&
+            pair_in_range(instruction1::ldm1(15u).encode1())) &&
+           pair_in_range(instruction1::nop1().encode1())) &&
+          pair_in_range(instruction1::rdm().encode1())) &&
+         pair_in_range(instruction1::tcs().encode1())) &&
+        pair_in_range(instruction1::wpm().encode1())) &&
+       pair_in_range(instruction1::wr0().encode1()));
 
   struct instruction2 {
     // TYPES
@@ -336,66 +533,112 @@ struct EncodeOps {
 
   public:
     // CREATORS
+    instruction2() {}
+
     explicit instruction2(NOP2 _v) : d_v_(_v) {}
 
     explicit instruction2(LDM2 _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<instruction2> nop2() {
-      return std::make_shared<instruction2>(NOP2{});
+    instruction2(const instruction2 &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    instruction2(instruction2 &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) instruction2 &operator=(const instruction2 &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instruction2> ldm2(unsigned int a0) {
-      return std::make_shared<instruction2>(LDM2{std::move(a0)});
+    __attribute__((pure)) instruction2 &operator=(instruction2 &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) instruction2 clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<NOP2>(_sv.v())) {
+        return instruction2(NOP2{});
+      } else {
+        const auto &[d_a0] = std::get<LDM2>(_sv.v());
+        return instruction2(LDM2{clone_as_value<unsigned int>(d_a0)});
+      }
+    }
+
+    // CREATORS
+    constexpr static instruction2 nop2() { return instruction2(NOP2{}); }
+
+    __attribute__((pure)) static instruction2 ldm2(unsigned int a0) {
+      return instruction2(LDM2{std::move(a0)});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) instruction2 *operator->() { return this; }
+
+    __attribute__((pure)) const instruction2 *operator->() const {
+      return this;
+    }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = instruction2(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) std::pair<unsigned int, unsigned int>
     encode2() const {
-      if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instruction2::NOP2>(_sv.v())) {
         return std::make_pair(0u, 0u);
       } else {
-        const auto &[d_a0] = std::get<typename instruction2::LDM2>(this->v());
+        const auto &[d_a0] = std::get<typename instruction2::LDM2>(_sv.v());
         return std::make_pair(13u, (16u ? d_a0 % 16u : d_a0));
       }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F1>
     T1 instruction2_rec(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instruction2::NOP2>(_sv.v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename instruction2::LDM2>(this->v());
+        const auto &[d_a0] = std::get<typename instruction2::LDM2>(_sv.v());
         return f0(d_a0);
       }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F1>
     T1 instruction2_rect(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instruction2::NOP2>(_sv.v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename instruction2::LDM2>(this->v());
+        const auto &[d_a0] = std::get<typename instruction2::LDM2>(_sv.v());
         return f0(d_a0);
       }
     }
   };
 
-  static std::shared_ptr<List<unsigned int>> encode_list2(
-      const std::shared_ptr<List<std::shared_ptr<instruction2>>> &prog);
+  __attribute__((pure)) static List<unsigned int>
+  encode_list2(const List<instruction2> &prog);
   static inline const unsigned int test_encode_list_byte_count =
-      encode_list2(List<std::shared_ptr<instruction2>>::cons(
-                       instruction2::nop2(),
-                       List<std::shared_ptr<instruction2>>::cons(
-                           instruction2::ldm2(5u),
-                           List<std::shared_ptr<instruction2>>::cons(
-                               instruction2::nop2(),
-                               List<std::shared_ptr<instruction2>>::nil()))))
-          ->length();
+      encode_list2(
+          List<instruction2>::cons(
+              instruction2::nop2(),
+              List<instruction2>::cons(
+                  instruction2::ldm2(5u),
+                  List<instruction2>::cons(instruction2::nop2(),
+                                           List<instruction2>::nil()))))
+          .length();
 
   struct instruction3 {
     // TYPES
@@ -413,66 +656,112 @@ struct EncodeOps {
 
   public:
     // CREATORS
+    instruction3() {}
+
     explicit instruction3(NOP3 _v) : d_v_(_v) {}
 
     explicit instruction3(LDM3 _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<instruction3> nop3() {
-      return std::make_shared<instruction3>(NOP3{});
+    instruction3(const instruction3 &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    instruction3(instruction3 &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) instruction3 &operator=(const instruction3 &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instruction3> ldm3(unsigned int a0) {
-      return std::make_shared<instruction3>(LDM3{std::move(a0)});
+    __attribute__((pure)) instruction3 &operator=(instruction3 &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) instruction3 clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<NOP3>(_sv.v())) {
+        return instruction3(NOP3{});
+      } else {
+        const auto &[d_a0] = std::get<LDM3>(_sv.v());
+        return instruction3(LDM3{clone_as_value<unsigned int>(d_a0)});
+      }
+    }
+
+    // CREATORS
+    constexpr static instruction3 nop3() { return instruction3(NOP3{}); }
+
+    __attribute__((pure)) static instruction3 ldm3(unsigned int a0) {
+      return instruction3(LDM3{std::move(a0)});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) instruction3 *operator->() { return this; }
+
+    __attribute__((pure)) const instruction3 *operator->() const {
+      return this;
+    }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = instruction3(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) std::pair<unsigned int, unsigned int>
     encode3() const {
-      if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instruction3::NOP3>(_sv.v())) {
         return std::make_pair(0u, 0u);
       } else {
-        const auto &[d_a0] = std::get<typename instruction3::LDM3>(this->v());
+        const auto &[d_a0] = std::get<typename instruction3::LDM3>(_sv.v());
         return std::make_pair(((13u * 16u) + (16u ? d_a0 % 16u : d_a0)), 0u);
       }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F1>
     T1 instruction3_rec(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instruction3::NOP3>(_sv.v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename instruction3::LDM3>(this->v());
+        const auto &[d_a0] = std::get<typename instruction3::LDM3>(_sv.v());
         return f0(d_a0);
       }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F1>
     T1 instruction3_rect(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instruction3::NOP3>(_sv.v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename instruction3::LDM3>(this->v());
+        const auto &[d_a0] = std::get<typename instruction3::LDM3>(_sv.v());
         return f0(d_a0);
       }
     }
   };
 
-  static std::shared_ptr<List<unsigned int>> encode_list3(
-      const std::shared_ptr<List<std::shared_ptr<instruction3>>> &prog);
+  __attribute__((pure)) static List<unsigned int>
+  encode_list3(const List<instruction3> &prog);
   static inline const unsigned int test_instruction_byte_stream_encode =
-      encode_list3(List<std::shared_ptr<instruction3>>::cons(
-                       instruction3::nop3(),
-                       List<std::shared_ptr<instruction3>>::cons(
-                           instruction3::ldm3(3u),
-                           List<std::shared_ptr<instruction3>>::cons(
-                               instruction3::ldm3(12u),
-                               List<std::shared_ptr<instruction3>>::nil()))))
-          ->length();
+      encode_list3(
+          List<instruction3>::cons(
+              instruction3::nop3(),
+              List<instruction3>::cons(
+                  instruction3::ldm3(3u),
+                  List<instruction3>::cons(instruction3::ldm3(12u),
+                                           List<instruction3>::nil()))))
+          .length();
   static inline const std::pair<std::pair<bool, unsigned int>, unsigned int> t =
       std::make_pair(std::make_pair(test_encode_bytes_in_range,
                                     test_encode_list_byte_count),

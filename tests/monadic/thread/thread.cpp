@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <variant>
 
-void threadtest::fun1(const unsigned int n) {
+void threadtest::fun1(const unsigned int &n) {
   if (n <= 0) {
     std::cout << "fun1 is done!!!"s << '\n';
     return;
@@ -21,7 +21,7 @@ void threadtest::fun1(const unsigned int n) {
   }
 }
 
-void threadtest::fun2(const unsigned int n) {
+void threadtest::fun2(const unsigned int &n) {
   if (n <= 0) {
     std::cout << "fun2 is done!!!"s << '\n';
     return;
@@ -34,7 +34,7 @@ void threadtest::fun2(const unsigned int n) {
   }
 }
 
-void threadtest::test(const unsigned int m, const unsigned int n) {
+void threadtest::test(const unsigned int &m, unsigned int n) {
   std::thread t1 = std::thread(fun1, m);
   std::thread t2 = std::thread(fun2, n);
   t1.join();
@@ -42,7 +42,7 @@ void threadtest::test(const unsigned int m, const unsigned int n) {
   return;
 }
 
-void threadtest::test_pure(const unsigned int m, const unsigned int n) {
+void threadtest::test_pure(const unsigned int &m, const unsigned int &n) {
   test(m, n);
   return;
 }

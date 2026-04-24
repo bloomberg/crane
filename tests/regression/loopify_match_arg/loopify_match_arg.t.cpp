@@ -10,13 +10,12 @@
 
 #include <cassert>
 #include <iostream>
-#include <memory>
 
 template <typename T>
-static std::shared_ptr<List<T>> from_vec(const std::vector<T> &v) {
-  std::shared_ptr<List<T>> xs = std::make_shared<List<T>>(typename List<T>::Nil{});
+static List<T> from_vec(const std::vector<T> &v) {
+  List<T> xs = List<T>::nil();
   for (auto it = v.rbegin(); it != v.rend(); ++it) {
-    xs = std::make_shared<List<T>>(typename List<T>::Cons{*it, xs});
+    xs = List<T>::cons(*it, std::move(xs));
   }
   return xs;
 }

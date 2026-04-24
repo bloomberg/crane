@@ -27,7 +27,7 @@ void EffectBareVoid::print_then_ret(const std::string msg) {
 }
 
 /// 4. Void effect in conditional — both branches are bare effects
-void EffectBareVoid::cond_print(const bool flag, const std::string msg) {
+void EffectBareVoid::cond_print(const bool &flag, const std::string msg) {
   if (flag) {
     std::cout << msg << '\n';
     return;

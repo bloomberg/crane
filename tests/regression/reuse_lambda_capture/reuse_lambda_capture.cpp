@@ -5,13 +5,13 @@
 #include <utility>
 #include <variant>
 
-__attribute__((pure)) unsigned int ReuseLambdaCapture::length(
-    const std::shared_ptr<ReuseLambdaCapture::mylist> &l) {
+__attribute__((pure)) unsigned int
+ReuseLambdaCapture::length(const ReuseLambdaCapture::mylist &l) {
   if (std::holds_alternative<typename ReuseLambdaCapture::mylist::Mycons>(
-          l->v())) {
+          l.v())) {
     const auto &[d_a0, d_a1] =
-        std::get<typename ReuseLambdaCapture::mylist::Mycons>(l->v());
-    return (1u + length(d_a1));
+        std::get<typename ReuseLambdaCapture::mylist::Mycons>(l.v());
+    return (1u + length(*(d_a1)));
   } else {
     return 0u;
   }
@@ -28,18 +28,19 @@ __attribute__((pure)) unsigned int ReuseLambdaCapture::length(
 /// // l is the same object as _rf
 /// // l.d_a1 is null -> crash
 /// return _rf;
-std::shared_ptr<ReuseLambdaCapture::mylist>
-ReuseLambdaCapture::add_length_to_each(
-    std::shared_ptr<ReuseLambdaCapture::mylist> l, const bool b) {
+__attribute__((pure)) ReuseLambdaCapture::mylist
+ReuseLambdaCapture::add_length_to_each(ReuseLambdaCapture::mylist l,
+                                       const bool &b) {
   if (b) {
     if (std::holds_alternative<typename ReuseLambdaCapture::mylist::Mycons>(
-            l->v())) {
+            l.v())) {
       const auto &[d_a0, d_a1] =
-          std::get<typename ReuseLambdaCapture::mylist::Mycons>(l->v());
+          std::get<typename ReuseLambdaCapture::mylist::Mycons>(l.v());
+      ReuseLambdaCapture::mylist d_a1_value = clone_as_value<mylist>(d_a1);
       return mylist::mycons(
           (d_a0 + 1u),
-          map([=](const unsigned int x) mutable { return (x + length(l)); },
-              d_a1));
+          map([=](const unsigned int &x) mutable { return (x + length(l)); },
+              d_a1_value));
     } else {
       return mylist::mynil();
     }

@@ -11,7 +11,7 @@
 #include <variant>
 
 /// 1. get_line in both branches of if-then-else
-std::string EffectGetlineStress::get_or_default(const bool ask) {
+std::string EffectGetlineStress::get_or_default(const bool &ask) {
   if (ask) {
     return []() -> std::string {
       std::string _r;
@@ -24,7 +24,7 @@ std::string EffectGetlineStress::get_or_default(const bool ask) {
 }
 
 /// 2. get_line in a match arm
-std::string EffectGetlineStress::get_nth_line(const unsigned int n) {
+std::string EffectGetlineStress::get_nth_line(const unsigned int &n) {
   if (n <= 0) {
     return "none";
   } else {
@@ -49,9 +49,8 @@ std::string EffectGetlineStress::get_nth_line(const unsigned int n) {
 }
 
 /// 3. Recursive function that uses get_line in a loop
-std::shared_ptr<List<std::string>>
-EffectGetlineStress::read_lines(const unsigned int n,
-                                std::shared_ptr<List<std::string>> acc) {
+List<std::string> EffectGetlineStress::read_lines(const unsigned int &n,
+                                                  List<std::string> acc) {
   if (n <= 0) {
     return acc;
   } else {
@@ -96,7 +95,7 @@ std::pair<std::string, int64_t> EffectGetlineStress::get_and_measure() {
 }
 
 /// 8. Conditional get_line with print
-std::string EffectGetlineStress::interactive_prompt(const bool ask) {
+std::string EffectGetlineStress::interactive_prompt(const bool &ask) {
   if (ask) {
     std::cout << "Enter input:"s << '\n';
     std::string line;

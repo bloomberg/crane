@@ -11,9 +11,8 @@
 #include <variant>
 
 /// 1. list_directory returns a list
-std::shared_ptr<List<std::string>>
-EffectListReturn::list_files(const std::string path) {
-  return [&]() -> std::shared_ptr<List<std::string>> {
+List<std::string> EffectListReturn::list_files(const std::string path) {
+  return [&]() -> List<std::string> {
     auto result = List<std::string>::nil();
     for (const auto &entry : std::filesystem::directory_iterator(path)) {
       result = List<std::string>::cons(entry.path().filename().string(),
@@ -45,12 +44,11 @@ std::string EffectListReturn::get_cwd() {
 }
 
 /// 5. Chain effects with different return types
-std::pair<bool, std::shared_ptr<List<std::string>>>
+std::pair<bool, List<std::string>>
 EffectListReturn::create_and_list(const std::string dir) {
   bool ok = std::filesystem::create_directories(std::filesystem::path(dir));
   if (ok) {
-    std::shared_ptr<List<std::string>> files =
-        [&]() -> std::shared_ptr<List<std::string>> {
+    List<std::string> files = [&]() -> List<std::string> {
       auto result = List<std::string>::nil();
       for (const auto &entry : std::filesystem::directory_iterator(dir)) {
         result = List<std::string>::cons(entry.path().filename().string(),

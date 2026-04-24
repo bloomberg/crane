@@ -2,21 +2,8 @@
 // Distributed under the terms of the GNU LGPL v2.1 license.
 #include "mergesort_fuel.h"
 
-#include <functional>
 #include <iostream>
-#include <memory>
-#include <string>
-#include <variant>
 #include <vector>
-
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
-// ============================================================================
-//                     STANDARD BDE ASSERT TEST FUNCTION
-// ----------------------------------------------------------------------------
 
 namespace {
 
@@ -39,31 +26,23 @@ void aSsErT(bool condition, const char *message, int line) {
 
 // Helper to convert list to vector for testing
 std::vector<unsigned int>
-list_to_vector(const std::shared_ptr<List<unsigned int>> &l) {
+list_to_vector(const List<unsigned int> &l) {
   std::vector<unsigned int> result;
-  auto current = l;
-  while (true) {
-    bool done = false;
-    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil &) {
-                            done = true;
-                          },
-                          [&](const typename List<unsigned int>::Cons &c) {
-                            result.push_back(c.d_a0);
-                            current = c.d_a1;
-                          }},
-               current->v());
-    if (done)
-      break;
+  const List<unsigned int> *cur = &l;
+  while (std::holds_alternative<typename List<unsigned int>::Cons>(cur->v())) {
+    auto &c = std::get<typename List<unsigned int>::Cons>(cur->v());
+    result.push_back(c.d_a0);
+    cur = c.d_a1.get();
   }
   return result;
 }
 
 // Helper to create a list from a vector
-std::shared_ptr<List<unsigned int>>
+List<unsigned int>
 vector_to_list(const std::vector<unsigned int> &vec) {
   auto result = List<unsigned int>::nil();
   for (auto it = vec.rbegin(); it != vec.rend(); ++it) {
-    result = List<unsigned int>::cons(*it, result);
+    result = List<unsigned int>::cons(*it, std::move(result));
   }
   return result;
 }

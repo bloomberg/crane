@@ -21,7 +21,8 @@ std::pair<std::string, std::string> EffectComplexReturn::read_pair() {
 }
 
 /// 2. Effect returning an option
-std::optional<std::string> EffectComplexReturn::maybe_read(const bool do_read) {
+std::optional<std::string>
+EffectComplexReturn::maybe_read(const bool &do_read) {
   if (do_read) {
     std::string line;
     std::getline(std::cin, line);
@@ -77,8 +78,7 @@ int64_t EffectComplexReturn::elapsed_ms() {
 }
 
 /// 6. Effect result used to build a list
-std::shared_ptr<List<std::string>>
-EffectComplexReturn::read_n(const unsigned int n) {
+List<std::string> EffectComplexReturn::read_n(const unsigned int &n) {
   if (n <= 0) {
     return List<std::string>::nil();
   } else {

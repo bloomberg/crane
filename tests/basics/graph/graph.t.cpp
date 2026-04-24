@@ -43,10 +43,10 @@ int main() {
   auto six = Nat::s(Nat::s(Nat::s(
       Nat::s(Nat::s(Nat::s(Nat::o()))))));
 
-  bool result = test_eq<NatEq, std::shared_ptr<Nat>>(five_a, five_b);
+  bool result = test_eq<NatEq, Nat>(five_a, five_b);
   ASSERT(result == true);
 
-  bool result2 = test_eq<NatEq, std::shared_ptr<Nat>>(five_a, six);
+  bool result2 = test_eq<NatEq, Nat>(five_a, six);
   ASSERT(result2 == false);
 
   std::cout << "All graph tests passed!" << std::endl;

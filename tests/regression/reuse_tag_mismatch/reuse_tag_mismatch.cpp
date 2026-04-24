@@ -1,6 +1,5 @@
 #include <reuse_tag_mismatch.h>
 
-#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -11,18 +10,18 @@
 /// - GoUp/GoDown are the same inductive (direction)
 /// - Both have arity 1
 /// But GoUp and GoDown are DIFFERENT constructors.
-std::shared_ptr<ReuseTagMismatch::direction>
-ReuseTagMismatch::id_or_flip(std::shared_ptr<ReuseTagMismatch::direction> d,
-                             const bool flip_flag) {
+__attribute__((pure)) ReuseTagMismatch::direction
+ReuseTagMismatch::id_or_flip(ReuseTagMismatch::direction d,
+                             const bool &flip_flag) {
   if (flip_flag) {
     if (std::holds_alternative<typename ReuseTagMismatch::direction::GoUp>(
-            d->v())) {
+            d.v())) {
       const auto &[d_a0] =
-          std::get<typename ReuseTagMismatch::direction::GoUp>(d->v());
+          std::get<typename ReuseTagMismatch::direction::GoUp>(d.v());
       return direction::godown(d_a0);
     } else {
       const auto &[d_a0] =
-          std::get<typename ReuseTagMismatch::direction::GoDown>(d->v());
+          std::get<typename ReuseTagMismatch::direction::GoDown>(d.v());
       return direction::goup(d_a0);
     }
   } else {

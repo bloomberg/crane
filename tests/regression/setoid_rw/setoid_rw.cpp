@@ -3,12 +3,12 @@
 #include <type_traits>
 #include <utility>
 
-__attribute__((pure)) unsigned int SetoidRw::mod3(const unsigned int n) {
+__attribute__((pure)) unsigned int SetoidRw::mod3(const unsigned int &n) {
   return (3u ? n % 3u : n);
 }
 
 __attribute__((pure)) unsigned int
-SetoidRw::classify_mod3(const unsigned int n) {
+SetoidRw::classify_mod3(const unsigned int &n) {
   auto _cs = mod3(n);
   if (_cs <= 0) {
     return 0u;
@@ -23,7 +23,7 @@ SetoidRw::classify_mod3(const unsigned int n) {
   }
 }
 
-__attribute__((pure)) unsigned int SetoidRw::add_mod3(const unsigned int x,
-                                                      const unsigned int y) {
+__attribute__((pure)) unsigned int SetoidRw::add_mod3(const unsigned int &x,
+                                                      const unsigned int &y) {
   return mod3((x + y));
 }

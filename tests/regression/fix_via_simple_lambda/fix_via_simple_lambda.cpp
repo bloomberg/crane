@@ -19,7 +19,7 @@
 /// they escape INDIRECTLY by being captured in a simple lambda
 /// that is then stored in Some.
 __attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
-FixViaSimpleLambda::make_combined(const unsigned int n) {
+FixViaSimpleLambda::make_combined(const unsigned int &n) {
   unsigned int base = (n * 2u);
   auto double_add =
       std::make_shared<std::function<unsigned int(unsigned int)>>();
@@ -42,7 +42,7 @@ FixViaSimpleLambda::make_combined(const unsigned int n) {
     }
   };
   return std::make_optional<std::function<unsigned int(unsigned int)>>(
-      [=](const unsigned int x) mutable {
+      [=](const unsigned int &x) mutable {
         return ((*double_add)(x) + (*triple_add)(x));
       });
 }

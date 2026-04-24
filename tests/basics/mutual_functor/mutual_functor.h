@@ -8,7 +8,129 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 template <typename M>
 concept Elem = requires {
@@ -34,7 +156,7 @@ template <Elem E> struct MutualTree {
 
     struct Node {
       unsigned int d_a0;
-      std::shared_ptr<forest> d_a1;
+      std::unique_ptr<forest> d_a1;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -45,26 +167,64 @@ template <Elem E> struct MutualTree {
 
   public:
     // CREATORS
+    tree() {}
+
     explicit tree(Leaf _v) : d_v_(std::move(_v)) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<tree> leaf(unsigned int a0) {
-      return std::make_shared<tree>(Leaf{std::move(a0)});
+    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) tree &operator=(const tree &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(unsigned int a0,
-                                      const std::shared_ptr<forest> &a1) {
-      return std::make_shared<tree>(Node{std::move(a0), a1});
+    __attribute__((pure)) tree &operator=(tree &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(unsigned int a0,
-                                      std::shared_ptr<forest> &&a1) {
-      return std::make_shared<tree>(Node{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    __attribute__((pure)) tree clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Leaf>(_sv.v())) {
+        const auto &[d_a0] = std::get<Leaf>(_sv.v());
+        return tree(Leaf{clone_as_value<unsigned int>(d_a0)});
+      } else {
+        const auto &[d_a0, d_a1] = std::get<Node>(_sv.v());
+        return tree(Node{clone_as_value<unsigned int>(d_a0),
+                         clone_as_value<std::unique_ptr<forest>>(d_a1)});
+      }
+    }
+
+    // CREATORS
+    __attribute__((pure)) static tree leaf(unsigned int a0) {
+      return tree(Leaf{std::move(a0)});
+    }
+
+    __attribute__((pure)) static tree node(unsigned int a0, const forest &a1) {
+      return tree(Node{std::move(a0), std::make_unique<forest>(a1.clone())});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    __attribute__((pure)) tree *operator->() { return this; }
+
+    __attribute__((pure)) const tree *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = tree(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -75,8 +235,8 @@ template <Elem E> struct MutualTree {
     struct FNil {};
 
     struct FCons {
-      std::shared_ptr<tree> d_a0;
-      std::shared_ptr<forest> d_a1;
+      std::unique_ptr<tree> d_a0;
+      std::unique_ptr<forest> d_a1;
     };
 
     using variant_t = std::variant<FNil, FCons>;
@@ -87,137 +247,167 @@ template <Elem E> struct MutualTree {
 
   public:
     // CREATORS
+    forest() {}
+
     explicit forest(FNil _v) : d_v_(_v) {}
 
     explicit forest(FCons _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<forest> fnil() {
-      return std::make_shared<forest>(FNil{});
+    forest(const forest &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    forest(forest &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) forest &operator=(const forest &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<forest> fcons(const std::shared_ptr<tree> &a0,
-                                         const std::shared_ptr<forest> &a1) {
-      return std::make_shared<forest>(FCons{a0, a1});
+    __attribute__((pure)) forest &operator=(forest &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<forest> fcons(std::shared_ptr<tree> &&a0,
-                                         std::shared_ptr<forest> &&a1) {
-      return std::make_shared<forest>(FCons{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    __attribute__((pure)) forest clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<FNil>(_sv.v())) {
+        return forest(FNil{});
+      } else {
+        const auto &[d_a0, d_a1] = std::get<FCons>(_sv.v());
+        return forest(FCons{clone_as_value<std::unique_ptr<tree>>(d_a0),
+                            clone_as_value<std::unique_ptr<forest>>(d_a1)});
+      }
+    }
+
+    // CREATORS
+    __attribute__((pure)) static forest fnil() { return forest(FNil{}); }
+
+    __attribute__((pure)) static forest fcons(const tree &a0,
+                                              const forest &a1) {
+      return forest(FCons{std::make_unique<tree>(a0.clone()),
+                          std::make_unique<forest>(a1.clone())});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) forest *operator->() { return this; }
+
+    __attribute__((pure)) const forest *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = forest(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int, std::shared_ptr<forest>> F1>
-  static T1 tree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<tree> &t0) {
-    if (std::holds_alternative<typename tree::Leaf>(t0->v())) {
-      const auto &[d_a0] = std::get<typename tree::Leaf>(t0->v());
+            MapsTo<T1, unsigned int, forest> F1>
+  static T1 tree_rect(F0 &&f, F1 &&f0, const tree &t0) {
+    if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
+      const auto &[d_a0] = std::get<typename tree::Leaf>(t0.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t0->v());
-      return f0(d_a0, d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t0.v());
+      return f0(d_a0, *(d_a1));
     }
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int, std::shared_ptr<forest>> F1>
-  static T1 tree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<tree> &t0) {
-    if (std::holds_alternative<typename tree::Leaf>(t0->v())) {
-      const auto &[d_a0] = std::get<typename tree::Leaf>(t0->v());
+            MapsTo<T1, unsigned int, forest> F1>
+  static T1 tree_rec(F0 &&f, F1 &&f0, const tree &t0) {
+    if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
+      const auto &[d_a0] = std::get<typename tree::Leaf>(t0.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t0->v());
-      return f0(d_a0, d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t0.v());
+      return f0(d_a0, *(d_a1));
     }
   }
 
-  template <typename T1,
-            MapsTo<T1, std::shared_ptr<tree>, std::shared_ptr<forest>, T1> F1>
-  static T1 forest_rect(const T1 f, F1 &&f0,
-                        const std::shared_ptr<forest> &f1) {
-    if (std::holds_alternative<typename forest::FNil>(f1->v())) {
+  template <typename T1, MapsTo<T1, tree, forest, T1> F1>
+  static T1 forest_rect(const T1 f, F1 &&f0, const forest &f1) {
+    if (std::holds_alternative<typename forest::FNil>(f1.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename forest::FCons>(f1->v());
-      return f0(d_a0, d_a1, forest_rect<T1>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename forest::FCons>(f1.v());
+      return f0(*(d_a0), *(d_a1), forest_rect<T1>(f, f0, *(d_a1)));
     }
   }
 
-  template <typename T1,
-            MapsTo<T1, std::shared_ptr<tree>, std::shared_ptr<forest>, T1> F1>
-  static T1 forest_rec(const T1 f, F1 &&f0, const std::shared_ptr<forest> &f1) {
-    if (std::holds_alternative<typename forest::FNil>(f1->v())) {
+  template <typename T1, MapsTo<T1, tree, forest, T1> F1>
+  static T1 forest_rec(const T1 f, F1 &&f0, const forest &f1) {
+    if (std::holds_alternative<typename forest::FNil>(f1.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename forest::FCons>(f1->v());
-      return f0(d_a0, d_a1, forest_rec<T1>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename forest::FCons>(f1.v());
+      return f0(*(d_a0), *(d_a1), forest_rec<T1>(f, f0, *(d_a1)));
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  tree_size(const std::shared_ptr<tree> &t0) {
-    if (std::holds_alternative<typename tree::Leaf>(t0->v())) {
+  __attribute__((pure)) static unsigned int tree_size(const tree &t0) {
+    if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
       return 1u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t0->v());
-      return (1u + forest_size(d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t0.v());
+      return (1u + forest_size(*(d_a1)));
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  forest_size(const std::shared_ptr<forest> &f) {
-    if (std::holds_alternative<typename forest::FNil>(f->v())) {
+  __attribute__((pure)) static unsigned int forest_size(const forest &f) {
+    if (std::holds_alternative<typename forest::FNil>(f.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename forest::FCons>(f->v());
-      return (tree_size(d_a0) + forest_size(d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename forest::FCons>(f.v());
+      return (tree_size(*(d_a0)) + forest_size(*(d_a1)));
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  tree_sum(const std::shared_ptr<tree> &t0) {
-    if (std::holds_alternative<typename tree::Leaf>(t0->v())) {
-      const auto &[d_a0] = std::get<typename tree::Leaf>(t0->v());
+  __attribute__((pure)) static unsigned int tree_sum(const tree &t0) {
+    if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
+      const auto &[d_a0] = std::get<typename tree::Leaf>(t0.v());
       return d_a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t0->v());
-      return (d_a0 + forest_sum(d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t0.v());
+      return (d_a0 + forest_sum(*(d_a1)));
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  forest_sum(const std::shared_ptr<forest> &f) {
-    if (std::holds_alternative<typename forest::FNil>(f->v())) {
+  __attribute__((pure)) static unsigned int forest_sum(const forest &f) {
+    if (std::holds_alternative<typename forest::FNil>(f.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename forest::FCons>(f->v());
-      return (tree_sum(d_a0) + forest_sum(d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename forest::FCons>(f.v());
+      return (tree_sum(*(d_a0)) + forest_sum(*(d_a1)));
     }
   }
 
-  static const std::shared_ptr<tree> &leaf1() {
-    static const std::shared_ptr<tree> v = tree::leaf(1u);
+  static const tree &leaf1() {
+    static const tree v = tree::leaf(1u);
     return v;
   }
 
-  static const std::shared_ptr<tree> &leaf2() {
-    static const std::shared_ptr<tree> v = tree::leaf(2u);
+  static const tree &leaf2() {
+    static const tree v = tree::leaf(2u);
     return v;
   }
 
-  static const std::shared_ptr<forest> &small_forest() {
-    static const std::shared_ptr<forest> v =
+  static const forest &small_forest() {
+    static const forest v =
         forest::fcons(leaf1(), forest::fcons(leaf2(), forest::fnil()));
     return v;
   }
 
-  static const std::shared_ptr<tree> &sample_tree() {
-    static const std::shared_ptr<tree> v = tree::node(0u, small_forest());
+  static const tree &sample_tree() {
+    static const tree v = tree::node(0u, small_forest());
     return v;
   }
 };

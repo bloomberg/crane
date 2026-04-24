@@ -4,6 +4,6 @@
 #include <type_traits>
 
 __attribute__((pure)) TodoNestedModuleType::NatOuter::Inner::t
-TodoNestedModuleType::NatOuter::step(const unsigned int n) {
+TodoNestedModuleType::NatOuter::step(unsigned int n) {
   return (n + 1);
 }

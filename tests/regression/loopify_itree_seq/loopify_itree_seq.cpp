@@ -10,7 +10,7 @@
 /// Tail-recursive countdown using erased ITree. In sequential mode, itree is
 /// erased so this becomes a plain tail-recursive C++ function. Loopify should
 /// convert it to a while loop.
-unsigned int LoopifyItreeSeq::count_down(const unsigned int n) {
+unsigned int LoopifyItreeSeq::count_down(const unsigned int &n) {
   std::function<unsigned int(unsigned int, unsigned int)> go;
   go = [](unsigned int k, unsigned int acc) -> unsigned int {
     unsigned int _result;
@@ -34,7 +34,7 @@ unsigned int LoopifyItreeSeq::count_down(const unsigned int n) {
 }
 
 /// Sum 1..n via tail recursion with accumulator.
-unsigned int LoopifyItreeSeq::sum_to(const unsigned int n) {
+unsigned int LoopifyItreeSeq::sum_to(const unsigned int &n) {
   std::function<unsigned int(unsigned int, unsigned int)> go;
   go = [](unsigned int k, unsigned int acc) -> unsigned int {
     unsigned int _result;
@@ -58,18 +58,17 @@ unsigned int LoopifyItreeSeq::sum_to(const unsigned int n) {
 }
 
 /// Non-tail recursive: build a list counting down from n.
-std::shared_ptr<List<unsigned int>>
-LoopifyItreeSeq::countdown_list(const unsigned int n) {
+List<unsigned int> LoopifyItreeSeq::countdown_list(unsigned int n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
-    const unsigned int _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
-  std::shared_ptr<List<unsigned int>> _result{};
+  List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
@@ -77,8 +76,8 @@ LoopifyItreeSeq::countdown_list(const unsigned int n) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const unsigned int n = _f.n;
+      auto _f = std::move(std::get<_Enter>(_frame));
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = List<unsigned int>::cons(0u, List<unsigned int>::nil());
       } else {
@@ -87,17 +86,17 @@ LoopifyItreeSeq::countdown_list(const unsigned int n) {
         _stack.emplace_back(_Enter{n_});
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
-      const unsigned int n = _f._s0;
-      std::shared_ptr<List<unsigned int>> rest = _result;
+      auto _f = std::move(std::get<_Call1>(_frame));
+      unsigned int n = _f._s0;
+      List<unsigned int> rest = _result;
       _result = List<unsigned int>::cons(n, rest);
     }
   }
   return _result;
 }
 
-unsigned int LoopifyItreeSeq::delay_ret(const unsigned int n,
-                                        const unsigned int v) {
+unsigned int LoopifyItreeSeq::delay_ret(const unsigned int &n,
+                                        const unsigned int &v) {
   unsigned int _result;
   unsigned int _loop_n = n;
   while (true) {
@@ -118,8 +117,8 @@ void LoopifyItreeSeq::spin() {
   return;
 }
 
-void LoopifyItreeSeq::forever(const unsigned int n) {
-  unsigned int _loop_n = n;
+void LoopifyItreeSeq::forever(unsigned int n) {
+  unsigned int _loop_n = std::move(n);
   while (true) {
     _loop_n = (_loop_n + 1);
   }
@@ -130,7 +129,7 @@ unsigned int LoopifyItreeSeq::test_count_5() { return count_down(5u); }
 
 unsigned int LoopifyItreeSeq::test_sum_10() { return sum_to(10u); }
 
-std::shared_ptr<List<unsigned int>> LoopifyItreeSeq::test_clist_4() {
+List<unsigned int> LoopifyItreeSeq::test_clist_4() {
   return countdown_list(4u);
 }
 

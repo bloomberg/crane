@@ -6,11 +6,11 @@
 #include <variant>
 
 __attribute__((pure)) unsigned int
-ReuseMoveShadow::tree_sum(const std::shared_ptr<ReuseMoveShadow::tree> &t) {
-  if (std::holds_alternative<typename ReuseMoveShadow::tree::Node>(t->v())) {
+ReuseMoveShadow::tree_sum(const ReuseMoveShadow::tree &t) {
+  if (std::holds_alternative<typename ReuseMoveShadow::tree::Node>(t.v())) {
     const auto &[d_a0, d_a1, d_a2] =
-        std::get<typename ReuseMoveShadow::tree::Node>(t->v());
-    return ((d_a0 + tree_sum(d_a1)) + tree_sum(d_a2));
+        std::get<typename ReuseMoveShadow::tree::Node>(t.v());
+    return ((d_a0 + tree_sum(*(d_a1))) + tree_sum(*(d_a2)));
   } else {
     return 0u;
   }
@@ -40,25 +40,13 @@ ReuseMoveShadow::tree_sum(const std::shared_ptr<ReuseMoveShadow::tree> &t) {
 ///
 /// The returned tree has d_a2 = nullptr.  Traversing the right subtree
 /// crashes with a null-pointer dereference.
-std::shared_ptr<ReuseMoveShadow::tree>
-ReuseMoveShadow::dup_left(std::shared_ptr<ReuseMoveShadow::tree> t,
-                          const bool b) {
+__attribute__((pure)) ReuseMoveShadow::tree
+ReuseMoveShadow::dup_left(ReuseMoveShadow::tree t, const bool &b) {
   if (b) {
-    if (std::holds_alternative<typename ReuseMoveShadow::tree::Node>(t->v())) {
-      if (t.use_count() == 1) {
-        auto &_rf = std::get<typename ReuseMoveShadow::tree::Node>(t->v_mut());
-        unsigned int v = std::move(_rf.d_a0);
-        std::shared_ptr<ReuseMoveShadow::tree> l = std::move(_rf.d_a1);
-        _rf.d_a0 = v;
-        _rf.d_a1 = l;
-        _rf.d_a2 = l;
-        return t;
-      } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename ReuseMoveShadow::tree::Node>(t->v());
-        return tree::node(d_a0, d_a1, d_a1);
-      }
-
+    if (std::holds_alternative<typename ReuseMoveShadow::tree::Node>(t.v())) {
+      const auto &[d_a0, d_a1, d_a2] =
+          std::get<typename ReuseMoveShadow::tree::Node>(t.v());
+      return tree::node(d_a0, *(d_a1), *(d_a1));
     } else {
       return tree::leaf();
     }

@@ -8,7 +8,129 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 template <typename t_A> struct List {
   // TYPES
@@ -16,10 +138,11 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
+  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -27,26 +150,72 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  __attribute__((pure)) List<t_A> clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<t_A>(Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<t_A>(Cons{clone_as_value<t_A>(d_a0),
+                            clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
+    }
+  }
+
+  template <typename _CloneT0>
+  __attribute__((pure)) List<_CloneT0> clone_as() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<_CloneT0>(typename List<_CloneT0>::Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<_CloneT0>(typename List<_CloneT0>::Cons{
+          clone_as_value<_CloneT0>(d_a0),
+          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+    }
+  }
+
+  // CREATORS
+  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+
+  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+  // ACCESSORS
+  __attribute__((pure)) List<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = List<t_A>(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -67,19 +236,19 @@ struct Matcher {
     struct Eps {};
 
     struct Cat {
-      std::shared_ptr<regexp> d_r1;
-      std::shared_ptr<regexp> d_r2;
+      std::unique_ptr<regexp> d_r1;
+      std::unique_ptr<regexp> d_r2;
     };
 
     struct Alt {
-      std::shared_ptr<regexp> d_r1;
-      std::shared_ptr<regexp> d_r2;
+      std::unique_ptr<regexp> d_r1;
+      std::unique_ptr<regexp> d_r2;
     };
 
     struct Zero {};
 
     struct Star {
-      std::shared_ptr<regexp> d_r;
+      std::unique_ptr<regexp> d_r;
     };
 
     using variant_t = std::variant<Any, Char, Eps, Cat, Alt, Zero, Star>;
@@ -90,6 +259,8 @@ struct Matcher {
 
   public:
     // CREATORS
+    regexp() {}
+
     explicit regexp(Any _v) : d_v_(_v) {}
 
     explicit regexp(Char _v) : d_v_(std::move(_v)) {}
@@ -104,165 +275,187 @@ struct Matcher {
 
     explicit regexp(Star _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<regexp> any() {
-      return std::make_shared<regexp>(Any{});
+    regexp(const regexp &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    regexp(regexp &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) regexp &operator=(const regexp &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<regexp> Char_(int64_t c) {
-      return std::make_shared<regexp>(Char{std::move(c)});
+    __attribute__((pure)) regexp &operator=(regexp &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<regexp> eps() {
-      return std::make_shared<regexp>(Eps{});
+    // ACCESSORS
+    __attribute__((pure)) regexp clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Any>(_sv.v())) {
+        return regexp(Any{});
+      } else if (std::holds_alternative<Char>(_sv.v())) {
+        const auto &[d_c] = std::get<Char>(_sv.v());
+        return regexp(Char{clone_as_value<int64_t>(d_c)});
+      } else if (std::holds_alternative<Eps>(_sv.v())) {
+        return regexp(Eps{});
+      } else if (std::holds_alternative<Cat>(_sv.v())) {
+        const auto &[d_r1, d_r2] = std::get<Cat>(_sv.v());
+        return regexp(Cat{clone_as_value<std::unique_ptr<regexp>>(d_r1),
+                          clone_as_value<std::unique_ptr<regexp>>(d_r2)});
+      } else if (std::holds_alternative<Alt>(_sv.v())) {
+        const auto &[d_r1, d_r2] = std::get<Alt>(_sv.v());
+        return regexp(Alt{clone_as_value<std::unique_ptr<regexp>>(d_r1),
+                          clone_as_value<std::unique_ptr<regexp>>(d_r2)});
+      } else if (std::holds_alternative<Zero>(_sv.v())) {
+        return regexp(Zero{});
+      } else {
+        const auto &[d_r] = std::get<Star>(_sv.v());
+        return regexp(Star{clone_as_value<std::unique_ptr<regexp>>(d_r)});
+      }
     }
 
-    static std::shared_ptr<regexp> cat(const std::shared_ptr<regexp> &r1,
-                                       const std::shared_ptr<regexp> &r2) {
-      return std::make_shared<regexp>(Cat{r1, r2});
+    // CREATORS
+    __attribute__((pure)) static regexp any() { return regexp(Any{}); }
+
+    __attribute__((pure)) static regexp Char_(int64_t c) {
+      return regexp(Char{std::move(c)});
     }
 
-    static std::shared_ptr<regexp> cat(std::shared_ptr<regexp> &&r1,
-                                       std::shared_ptr<regexp> &&r2) {
-      return std::make_shared<regexp>(Cat{std::move(r1), std::move(r2)});
+    __attribute__((pure)) static regexp eps() { return regexp(Eps{}); }
+
+    __attribute__((pure)) static regexp cat(const regexp &r1,
+                                            const regexp &r2) {
+      return regexp(Cat{std::make_unique<regexp>(r1.clone()),
+                        std::make_unique<regexp>(r2.clone())});
     }
 
-    static std::shared_ptr<regexp> alt(const std::shared_ptr<regexp> &r1,
-                                       const std::shared_ptr<regexp> &r2) {
-      return std::make_shared<regexp>(Alt{r1, r2});
+    __attribute__((pure)) static regexp alt(const regexp &r1,
+                                            const regexp &r2) {
+      return regexp(Alt{std::make_unique<regexp>(r1.clone()),
+                        std::make_unique<regexp>(r2.clone())});
     }
 
-    static std::shared_ptr<regexp> alt(std::shared_ptr<regexp> &&r1,
-                                       std::shared_ptr<regexp> &&r2) {
-      return std::make_shared<regexp>(Alt{std::move(r1), std::move(r2)});
-    }
+    __attribute__((pure)) static regexp zero() { return regexp(Zero{}); }
 
-    static std::shared_ptr<regexp> zero() {
-      return std::make_shared<regexp>(Zero{});
-    }
-
-    static std::shared_ptr<regexp> star(const std::shared_ptr<regexp> &r) {
-      return std::make_shared<regexp>(Star{r});
-    }
-
-    static std::shared_ptr<regexp> star(std::shared_ptr<regexp> &&r) {
-      return std::make_shared<regexp>(Star{std::move(r)});
+    __attribute__((pure)) static regexp star(const regexp &r) {
+      return regexp(Star{std::make_unique<regexp>(r.clone())});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) regexp *operator->() { return this; }
+
+    __attribute__((pure)) const regexp *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = regexp(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
-  template <
-      typename T1, MapsTo<T1, int64_t> F1,
-      MapsTo<T1, std::shared_ptr<regexp>, T1, std::shared_ptr<regexp>, T1> F3,
-      MapsTo<T1, std::shared_ptr<regexp>, T1, std::shared_ptr<regexp>, T1> F4,
-      MapsTo<T1, std::shared_ptr<regexp>, T1> F6>
+  template <typename T1, MapsTo<T1, int64_t> F1,
+            MapsTo<T1, regexp, T1, regexp, T1> F3,
+            MapsTo<T1, regexp, T1, regexp, T1> F4, MapsTo<T1, regexp, T1> F6>
   static T1 regexp_rect(const T1 f, F1 &&f0, const T1 f1, F3 &&f2, F4 &&f3,
-                        const T1 f4, F6 &&f5,
-                        const std::shared_ptr<regexp> &r) {
-    if (std::holds_alternative<typename regexp::Any>(r->v())) {
+                        const T1 f4, F6 &&f5, const regexp &r) {
+    if (std::holds_alternative<typename regexp::Any>(r.v())) {
       return f;
-    } else if (std::holds_alternative<typename regexp::Char>(r->v())) {
-      const auto &[d_c] = std::get<typename regexp::Char>(r->v());
+    } else if (std::holds_alternative<typename regexp::Char>(r.v())) {
+      const auto &[d_c] = std::get<typename regexp::Char>(r.v());
       return f0(d_c);
-    } else if (std::holds_alternative<typename regexp::Eps>(r->v())) {
+    } else if (std::holds_alternative<typename regexp::Eps>(r.v())) {
       return f1;
-    } else if (std::holds_alternative<typename regexp::Cat>(r->v())) {
-      const auto &[d_r1, d_r2] = std::get<typename regexp::Cat>(r->v());
-      return f2(d_r1, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_r1), d_r2,
-                regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_r2));
-    } else if (std::holds_alternative<typename regexp::Alt>(r->v())) {
-      const auto &[d_r1, d_r2] = std::get<typename regexp::Alt>(r->v());
-      return f3(d_r1, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_r1), d_r2,
-                regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_r2));
-    } else if (std::holds_alternative<typename regexp::Zero>(r->v())) {
+    } else if (std::holds_alternative<typename regexp::Cat>(r.v())) {
+      const auto &[d_r1, d_r2] = std::get<typename regexp::Cat>(r.v());
+      return f2(*(d_r1), regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r1)),
+                *(d_r2), regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r2)));
+    } else if (std::holds_alternative<typename regexp::Alt>(r.v())) {
+      const auto &[d_r1, d_r2] = std::get<typename regexp::Alt>(r.v());
+      return f3(*(d_r1), regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r1)),
+                *(d_r2), regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r2)));
+    } else if (std::holds_alternative<typename regexp::Zero>(r.v())) {
       return f4;
     } else {
-      const auto &[d_r] = std::get<typename regexp::Star>(r->v());
-      return f5(d_r, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, d_r));
+      const auto &[d_r] = std::get<typename regexp::Star>(r.v());
+      return f5(*(d_r), regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r)));
     }
   }
 
-  template <
-      typename T1, MapsTo<T1, int64_t> F1,
-      MapsTo<T1, std::shared_ptr<regexp>, T1, std::shared_ptr<regexp>, T1> F3,
-      MapsTo<T1, std::shared_ptr<regexp>, T1, std::shared_ptr<regexp>, T1> F4,
-      MapsTo<T1, std::shared_ptr<regexp>, T1> F6>
+  template <typename T1, MapsTo<T1, int64_t> F1,
+            MapsTo<T1, regexp, T1, regexp, T1> F3,
+            MapsTo<T1, regexp, T1, regexp, T1> F4, MapsTo<T1, regexp, T1> F6>
   static T1 regexp_rec(const T1 f, F1 &&f0, const T1 f1, F3 &&f2, F4 &&f3,
-                       const T1 f4, F6 &&f5, const std::shared_ptr<regexp> &r) {
-    if (std::holds_alternative<typename regexp::Any>(r->v())) {
+                       const T1 f4, F6 &&f5, const regexp &r) {
+    if (std::holds_alternative<typename regexp::Any>(r.v())) {
       return f;
-    } else if (std::holds_alternative<typename regexp::Char>(r->v())) {
-      const auto &[d_c] = std::get<typename regexp::Char>(r->v());
+    } else if (std::holds_alternative<typename regexp::Char>(r.v())) {
+      const auto &[d_c] = std::get<typename regexp::Char>(r.v());
       return f0(d_c);
-    } else if (std::holds_alternative<typename regexp::Eps>(r->v())) {
+    } else if (std::holds_alternative<typename regexp::Eps>(r.v())) {
       return f1;
-    } else if (std::holds_alternative<typename regexp::Cat>(r->v())) {
-      const auto &[d_r1, d_r2] = std::get<typename regexp::Cat>(r->v());
-      return f2(d_r1, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_r1), d_r2,
-                regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_r2));
-    } else if (std::holds_alternative<typename regexp::Alt>(r->v())) {
-      const auto &[d_r1, d_r2] = std::get<typename regexp::Alt>(r->v());
-      return f3(d_r1, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_r1), d_r2,
-                regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_r2));
-    } else if (std::holds_alternative<typename regexp::Zero>(r->v())) {
+    } else if (std::holds_alternative<typename regexp::Cat>(r.v())) {
+      const auto &[d_r1, d_r2] = std::get<typename regexp::Cat>(r.v());
+      return f2(*(d_r1), regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r1)),
+                *(d_r2), regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r2)));
+    } else if (std::holds_alternative<typename regexp::Alt>(r.v())) {
+      const auto &[d_r1, d_r2] = std::get<typename regexp::Alt>(r.v());
+      return f3(*(d_r1), regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r1)),
+                *(d_r2), regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r2)));
+    } else if (std::holds_alternative<typename regexp::Zero>(r.v())) {
       return f4;
     } else {
-      const auto &[d_r] = std::get<typename regexp::Star>(r->v());
-      return f5(d_r, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, d_r));
+      const auto &[d_r] = std::get<typename regexp::Star>(r.v());
+      return f5(*(d_r), regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r)));
     }
   }
 
-  __attribute__((pure)) static bool regexp_eq(const std::shared_ptr<regexp> &r,
-                                              const std::shared_ptr<regexp> &x);
+  __attribute__((pure)) static bool regexp_eq(const regexp &r, const regexp &x);
   /// An optimized constructor for Cat.
-  static std::shared_ptr<regexp> OptCat(std::shared_ptr<regexp> r2,
-                                        std::shared_ptr<regexp> r3);
+  __attribute__((pure)) static regexp OptCat(regexp r2, regexp r3);
   /// Optimized version of Alt.
-  static std::shared_ptr<regexp> OptAlt(std::shared_ptr<regexp> r2,
-                                        std::shared_ptr<regexp> r3);
+  __attribute__((pure)) static regexp OptAlt(regexp r2, regexp r3);
   /// If r accepts the empty string, return Eps, else return Zero.
-  static std::shared_ptr<regexp> null(const std::shared_ptr<regexp> &r);
-  __attribute__((pure)) static bool
-  accepts_null(const std::shared_ptr<regexp> &r);
+  __attribute__((pure)) static regexp null(const regexp &r);
+  __attribute__((pure)) static bool accepts_null(const regexp &r);
   /// This is the heart of the algorithm.  It returns a regexp denoting
   /// { cs | (c::cs) in r }.
-  static std::shared_ptr<regexp> deriv(const std::shared_ptr<regexp> &r,
-                                       const int64_t c);
+  __attribute__((pure)) static regexp deriv(const regexp &r, const int64_t c);
   /// This calculates the derivative of a regular expression with respect to a
   /// string.
-  static std::shared_ptr<regexp>
-  derivs(std::shared_ptr<regexp> r, const std::shared_ptr<List<int64_t>> &cs);
+  __attribute__((pure)) static regexp derivs(regexp r, const List<int64_t> &cs);
   /// To see if cs matches r, calculate the derivative of r with respect
   /// to s, and see if the resulting regexp accepts the empty string.
-  __attribute__((pure)) static bool
-  deriv_parse(const std::shared_ptr<regexp> &r,
-              const std::shared_ptr<List<int64_t>> &cs);
+  __attribute__((pure)) static bool deriv_parse(const regexp &r,
+                                                const List<int64_t> &cs);
   /// null r returns Eps or Zero
-  __attribute__((pure)) static bool
-  NullEpsOrZero(const std::shared_ptr<regexp> &r);
+  __attribute__((pure)) static bool NullEpsOrZero(const regexp &r);
   /// From this, we can build a decidable regexp matcher by running
   /// the derivative-based parser.
-  __attribute__((pure)) static bool
-  parse(const std::shared_ptr<regexp> &r,
-        const std::shared_ptr<List<int64_t>> &cs);
-  __attribute__((pure)) static bool
-  parse_bool(const std::shared_ptr<regexp> &r,
-             const std::shared_ptr<List<int64_t>> &cs);
-  static inline const std::shared_ptr<regexp> r1 = regexp::cat(
+  __attribute__((pure)) static bool parse(const regexp &r,
+                                          const List<int64_t> &cs);
+  __attribute__((pure)) static bool parse_bool(const regexp &r,
+                                               const List<int64_t> &cs);
+  static inline const regexp r1 = regexp::cat(
       regexp::star(regexp::Char_(int64_t(0))), regexp::Char_(int64_t(1)));
-  static inline const std::shared_ptr<List<int64_t>> s1 = List<int64_t>::cons(
+  static inline const List<int64_t> s1 = List<int64_t>::cons(
       int64_t(0), List<int64_t>::cons(int64_t(1), List<int64_t>::nil()));
-  static inline const std::shared_ptr<List<int64_t>> s2 =
+  static inline const List<int64_t> s2 =
       List<int64_t>::cons(int64_t(1), List<int64_t>::nil());
-  static inline const std::shared_ptr<List<int64_t>> s3 = List<int64_t>::cons(
+  static inline const List<int64_t> s3 = List<int64_t>::cons(
       int64_t(0),
       List<int64_t>::cons(
           int64_t(0), List<int64_t>::cons(int64_t(1), List<int64_t>::nil())));
-  static inline const std::shared_ptr<List<int64_t>> s4 =
+  static inline const List<int64_t> s4 =
       List<int64_t>::cons(int64_t(0), List<int64_t>::nil());
 };
 
