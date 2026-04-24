@@ -7,110 +7,101 @@
 #include <utility>
 #include <variant>
 
-std::shared_ptr<FoldSequenceStateTraceCase::Line>
-FoldSequenceStateTraceCase::line_through(const std::pair<Real, Real> p1,
-                                         const std::pair<Real, Real> p2) {
+__attribute__((pure)) FoldSequenceStateTraceCase::Line
+FoldSequenceStateTraceCase::line_through(const std::pair<Real, Real> &p1,
+                                         const std::pair<Real, Real> &p2) {
   const Real &x1 = p1.first;
   const Real &y1 = p1.second;
   const Real &x2 = p2.first;
   const Real &y2 = p2.second;
   if ((x1 == x2)) {
-    return std::make_shared<FoldSequenceStateTraceCase::Line>(
-        Line{Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)), (-x1)});
+    return Line{Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)), (-x1)};
   } else {
     Real a = (y1 - y2);
     Real b = (x2 - x1);
     Real c = ((x1 * y2) - (x2 * y1));
-    return std::make_shared<FoldSequenceStateTraceCase::Line>(Line{a, b, c});
+    return Line{a, b, c};
   }
 }
 
-std::shared_ptr<FoldSequenceStateTraceCase::Line>
-FoldSequenceStateTraceCase::perp_bisector(const std::pair<Real, Real> p1,
-                                          const std::pair<Real, Real> p2) {
+__attribute__((pure)) FoldSequenceStateTraceCase::Line
+FoldSequenceStateTraceCase::perp_bisector(const std::pair<Real, Real> &p1,
+                                          const std::pair<Real, Real> &p2) {
   const Real &x1 = p1.first;
   const Real &y1 = p1.second;
   const Real &x2 = p2.first;
   const Real &y2 = p2.second;
   if ((x1 == x2)) {
     if ((y1 == y2)) {
-      return std::make_shared<FoldSequenceStateTraceCase::Line>(
-          Line{Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)), (-x1)});
+      return Line{Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)), (-x1)};
     } else {
       Real a = Real::from_z(INT64_C(0));
       Real b = (Real::from_z(INT64_C(2)) * (y2 - y1));
       Real c = ((((x1 * x1) + (y1 * y1)) - (x2 * x2)) - (y2 * y2));
-      return std::make_shared<FoldSequenceStateTraceCase::Line>(Line{a, b, c});
+      return Line{a, b, c};
     }
   } else {
     Real a = (Real::from_z(INT64_C(2)) * (x2 - x1));
     Real b = (Real::from_z(INT64_C(2)) * (y2 - y1));
     Real c = ((((x1 * x1) + (y1 * y1)) - (x2 * x2)) - (y2 * y2));
-    return std::make_shared<FoldSequenceStateTraceCase::Line>(Line{a, b, c});
+    return Line{a, b, c};
   }
 }
 
-std::shared_ptr<FoldSequenceStateTraceCase::Line>
+__attribute__((pure)) FoldSequenceStateTraceCase::Line
 FoldSequenceStateTraceCase::perp_through(
-    const std::pair<Real, Real> p,
-    const std::shared_ptr<FoldSequenceStateTraceCase::Line> &l) {
+    const std::pair<Real, Real> &p, const FoldSequenceStateTraceCase::Line &l) {
   const Real &x = p.first;
   const Real &y = p.second;
-  Real c = ((l->A * y) - (l->B * x));
-  return std::make_shared<FoldSequenceStateTraceCase::Line>(
-      Line{l->B, (-l->A), c});
+  Real c = ((l.A * y) - (l.B * x));
+  return Line{l.B, (-l.A), c};
 }
 
-std::shared_ptr<FoldSequenceStateTraceCase::Fold>
-FoldSequenceStateTraceCase::fold_O1(const std::pair<Real, Real> p1,
-                                    const std::pair<Real, Real> p2) {
+__attribute__((pure)) FoldSequenceStateTraceCase::Fold
+FoldSequenceStateTraceCase::fold_O1(const std::pair<Real, Real> &p1,
+                                    const std::pair<Real, Real> &p2) {
   return Fold::fold_line_ctor(line_through(p1, p2));
 }
 
-std::shared_ptr<FoldSequenceStateTraceCase::Fold>
-FoldSequenceStateTraceCase::fold_O2(const std::pair<Real, Real> p1,
-                                    const std::pair<Real, Real> p2) {
+__attribute__((pure)) FoldSequenceStateTraceCase::Fold
+FoldSequenceStateTraceCase::fold_O2(const std::pair<Real, Real> &p1,
+                                    const std::pair<Real, Real> &p2) {
   return Fold::fold_line_ctor(perp_bisector(p1, p2));
 }
 
-std::shared_ptr<FoldSequenceStateTraceCase::Fold>
-FoldSequenceStateTraceCase::fold_O4(
-    const std::pair<Real, Real> p,
-    const std::shared_ptr<FoldSequenceStateTraceCase::Line> &l) {
+__attribute__((pure)) FoldSequenceStateTraceCase::Fold
+FoldSequenceStateTraceCase::fold_O4(const std::pair<Real, Real> &p,
+                                    const FoldSequenceStateTraceCase::Line &l) {
   return Fold::fold_line_ctor(perp_through(p, l));
 }
 
-std::shared_ptr<FoldSequenceStateTraceCase::ConstructionState>
+__attribute__((pure)) FoldSequenceStateTraceCase::ConstructionState
 FoldSequenceStateTraceCase::add_fold_to_state(
-    const std::shared_ptr<FoldSequenceStateTraceCase::ConstructionState> &st,
-    const std::shared_ptr<FoldSequenceStateTraceCase::FoldStep> &step) {
-  std::shared_ptr<FoldSequenceStateTraceCase::Line> new_line =
-      step->execute_fold_step();
-  return std::make_shared<FoldSequenceStateTraceCase::ConstructionState>(
-      ConstructionState{
-          st->state_points,
-          List<std::shared_ptr<FoldSequenceStateTraceCase::Line>>::cons(
-              new_line, st->state_lines)});
+    const FoldSequenceStateTraceCase::ConstructionState &st,
+    const FoldSequenceStateTraceCase::FoldStep &step) {
+  FoldSequenceStateTraceCase::Line new_line = step.execute_fold_step();
+  return ConstructionState{
+      st.state_points,
+      List<FoldSequenceStateTraceCase::Line>::cons(new_line, st.state_lines)};
 }
 
-std::shared_ptr<FoldSequenceStateTraceCase::ConstructionState>
+__attribute__((pure)) FoldSequenceStateTraceCase::ConstructionState
 FoldSequenceStateTraceCase::execute_sequence(
-    std::shared_ptr<FoldSequenceStateTraceCase::ConstructionState> st,
-    const std::shared_ptr<
-        List<std::shared_ptr<FoldSequenceStateTraceCase::FoldStep>>> &seq) {
-  if (std::holds_alternative<typename List<
-          std::shared_ptr<FoldSequenceStateTraceCase::FoldStep>>::Nil>(
-          seq->v())) {
+    FoldSequenceStateTraceCase::ConstructionState st,
+    const List<FoldSequenceStateTraceCase::FoldStep> &seq) {
+  if (std::holds_alternative<
+          typename List<FoldSequenceStateTraceCase::FoldStep>::Nil>(seq.v())) {
     return st;
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<
-        std::shared_ptr<FoldSequenceStateTraceCase::FoldStep>>::Cons>(seq->v());
-    return execute_sequence(add_fold_to_state(std::move(st), d_a0), d_a1);
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<FoldSequenceStateTraceCase::FoldStep>::Cons>(
+            seq.v());
+    return execute_sequence(add_fold_to_state(st, d_a0), *(d_a1));
   }
 }
 
 __attribute__((pure)) unsigned int
 FoldSequenceStateTraceCase::line_count_after_sample_sequence(
-    const std::shared_ptr<FoldSequenceStateTraceCase::ConstructionState> &st) {
-  return execute_sequence(st, sample_sequence)->state_lines->length();
+    const FoldSequenceStateTraceCase::ConstructionState &st) {
+  return execute_sequence(st, sample_sequence).state_lines.length();
 }

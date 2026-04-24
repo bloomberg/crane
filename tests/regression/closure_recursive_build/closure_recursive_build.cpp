@@ -13,8 +13,8 @@
 /// by &. The closures are stored in FCons constructors. After
 /// build_adders returns, all intermediate stack frames are gone,
 /// and every closure holds a dangling reference.
-std::shared_ptr<ClosureRecursiveBuild::fn_list>
-ClosureRecursiveBuild::build_adders(const unsigned int n) {
+__attribute__((pure)) ClosureRecursiveBuild::fn_list
+ClosureRecursiveBuild::build_adders(unsigned int n) {
   if (n <= 0) {
     return fn_list::fnil();
   } else {
@@ -28,32 +28,32 @@ ClosureRecursiveBuild::build_adders(const unsigned int n) {
         return ((*adder)(x_) + 1);
       }
     };
-    return fn_list::fcons(*adder, build_adders(n_));
+    return fn_list::fcons((*adder), build_adders(n_));
   }
 }
 
-__attribute__((pure)) unsigned int ClosureRecursiveBuild::apply_first(
-    const std::shared_ptr<ClosureRecursiveBuild::fn_list> &fl,
-    const unsigned int x) {
+__attribute__((pure)) unsigned int
+ClosureRecursiveBuild::apply_first(const ClosureRecursiveBuild::fn_list &fl,
+                                   const unsigned int &x) {
   if (std::holds_alternative<typename ClosureRecursiveBuild::fn_list::FNil>(
-          fl->v())) {
+          fl.v())) {
     return 0u;
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename ClosureRecursiveBuild::fn_list::FCons>(fl->v());
+        std::get<typename ClosureRecursiveBuild::fn_list::FCons>(fl.v());
     return d_a0(x);
   }
 }
 
-__attribute__((pure)) unsigned int ClosureRecursiveBuild::apply_all_sum(
-    const std::shared_ptr<ClosureRecursiveBuild::fn_list> &fl,
-    const unsigned int x) {
+__attribute__((pure)) unsigned int
+ClosureRecursiveBuild::apply_all_sum(const ClosureRecursiveBuild::fn_list &fl,
+                                     const unsigned int &x) {
   if (std::holds_alternative<typename ClosureRecursiveBuild::fn_list::FNil>(
-          fl->v())) {
+          fl.v())) {
     return 0u;
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename ClosureRecursiveBuild::fn_list::FCons>(fl->v());
-    return (d_a0(x) + apply_all_sum(d_a1, x));
+        std::get<typename ClosureRecursiveBuild::fn_list::FCons>(fl.v());
+    return (d_a0(x) + apply_all_sum(*(d_a1), x));
   }
 }

@@ -40,15 +40,15 @@ void aSsErT(bool condition, const char *message, int line) {
 
 // Helper to convert list to vector for testing
 template <typename T>
-std::vector<T> list_to_vector(const std::shared_ptr<List<T>> &l) {
+std::vector<T> list_to_vector(const List<T> &l) {
   std::vector<T> result;
-  auto current = l;
+  const List<T> *current = &l;
   while (true) {
     bool done = false;
     std::visit(Overloaded{[&](const typename List<T>::Nil &) { done = true; },
                           [&](const typename List<T>::Cons &c) {
                             result.push_back(c.d_a0);
-                            current = c.d_a1;
+                            current = c.d_a1.get();
                           }},
                current->v());
     if (done)
@@ -59,7 +59,7 @@ std::vector<T> list_to_vector(const std::shared_ptr<List<T>> &l) {
 
 // Helper to create a list from a vector
 template <typename T>
-std::shared_ptr<List<T>> vector_to_list(const std::vector<T> &vec) {
+List<T> vector_to_list(const std::vector<T> &vec) {
   auto result = List<T>::nil();
   for (auto it = vec.rbegin(); it != vec.rend(); ++it) {
     result = List<T>::cons(*it, result);
@@ -67,21 +67,21 @@ std::shared_ptr<List<T>> vector_to_list(const std::vector<T> &vec) {
   return result;
 }
 
-// Helper to convert pair to std::pair
+// Helper to convert Prod to std::pair
 template <typename A, typename B>
-std::pair<A, B> prod_to_pair(const std::shared_ptr<Prod<A, B>> &p) {
+std::pair<A, B> prod_to_pair(const Prod<A, B> &p) {
   std::pair<A, B> result;
   std::visit(Overloaded{[&](const typename Prod<A, B>::Pair &pr) {
                result = std::make_pair(pr.d_a0, pr.d_a1);
              }},
-             p->v());
+             p.v());
   return result;
 }
 
 // Helper to convert list of prods to vector of pairs
 template <typename A, typename B>
 std::vector<std::pair<A, B>>
-list_to_pairs(const std::shared_ptr<List<std::shared_ptr<Prod<A, B>>>> &l) {
+list_to_pairs(const List<Prod<A, B>> &l) {
   auto prods = list_to_vector(l);
   std::vector<std::pair<A, B>> result;
   for (const auto &p : prods) {

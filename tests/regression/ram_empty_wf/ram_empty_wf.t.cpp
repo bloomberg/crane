@@ -4,10 +4,10 @@
 #include <ram_empty_wf.h>
 int main() {
   assert(RamEmptyWf::default_bank_idx == 0u);
-  assert(RamEmptyWf::default_sel->sel_bank == 0u);
-  assert(RamEmptyWf::default_sel->sel_chip == 0u);
-  assert(RamEmptyWf::default_sel->sel_reg == 0u);
-  assert(RamEmptyWf::default_sel->sel_char == 0u);
-  assert(RamEmptyWf::empty_chip->chip_port == 0u);
+  assert(RamEmptyWf::default_sel.sel_bank == 0u);
+  assert(RamEmptyWf::default_sel.sel_chip == 0u);
+  assert(RamEmptyWf::default_sel.sel_reg == 0u);
+  assert(RamEmptyWf::default_sel.sel_char == 0u);
+  assert(RamEmptyWf::empty_chip.chip_port == 0u);
   return 0;
 }

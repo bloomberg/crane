@@ -58,7 +58,7 @@ void EffectDeepCompose::show_env(const std::string name) {
 }
 
 /// 5. Conditional clock read
-int64_t EffectDeepCompose::maybe_time(const bool measure) {
+int64_t EffectDeepCompose::maybe_time(const bool &measure) {
   if (measure) {
     return static_cast<int64_t>(
         std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -70,7 +70,7 @@ int64_t EffectDeepCompose::maybe_time(const bool measure) {
 }
 
 /// 6. Recursive function over all three effects
-void EffectDeepCompose::repeat_n(const unsigned int n) {
+void EffectDeepCompose::repeat_n(const unsigned int &n) {
   if (n <= 0) {
     return;
   } else {

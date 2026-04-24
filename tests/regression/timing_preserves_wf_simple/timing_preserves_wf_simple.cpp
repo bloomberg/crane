@@ -1,13 +1,12 @@
 #include <timing_preserves_wf_simple.h>
 
-#include <memory>
 #include <type_traits>
 #include <utility>
 
-__attribute__((pure)) bool TimingPreservesWfSimple::wf(
-    const std::shared_ptr<TimingPreservesWfSimple::state> &s) {
-  return (s->regs_len == 4u &&
-          (s->rom_len == 4u && (s->pc < 4096u && s->stack_len <= 3u)));
+__attribute__((pure)) bool
+TimingPreservesWfSimple::wf(const TimingPreservesWfSimple::state &s) {
+  return (s.regs_len == 4u &&
+          (s.rom_len == 4u && (s.pc < 4096u && s.stack_len <= 3u)));
 }
 
 __attribute__((pure)) unsigned int
@@ -25,18 +24,15 @@ TimingPreservesWfSimple::cycles(const TimingPreservesWfSimple::Instr i) {
   }
 }
 
-std::shared_ptr<TimingPreservesWfSimple::state>
-TimingPreservesWfSimple::execute(
-    const std::shared_ptr<TimingPreservesWfSimple::state> &s,
-    const TimingPreservesWfSimple::Instr i) {
+__attribute__((pure)) TimingPreservesWfSimple::state
+TimingPreservesWfSimple::execute(const TimingPreservesWfSimple::state &s,
+                                 const TimingPreservesWfSimple::Instr i) {
   switch (i) {
   case Instr::e_JMS: {
-    return std::make_shared<TimingPreservesWfSimple::state>(
-        state{s->regs_len, s->rom_len, s->pc, (s->stack_len + 1)});
+    return state{s.regs_len, s.rom_len, s.pc, (s.stack_len + 1)};
   }
   default: {
-    return std::make_shared<TimingPreservesWfSimple::state>(
-        state{s->regs_len, s->rom_len, s->pc, s->stack_len});
+    return state{s.regs_len, s.rom_len, s.pc, s.stack_len};
   }
   }
 }

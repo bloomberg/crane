@@ -12,7 +12,7 @@
 ///
 /// The if result has type itree ioE unit, but its value is discarded
 /// by ;;.  Crane should lower this to plain if control flow.
-void UnitMonostateErase::seq_if(const bool b) {
+void UnitMonostateErase::seq_if(const bool &b) {
   [&]() -> void {
     if (b) {
       std::cout << "yes"s << '\n';
@@ -28,7 +28,7 @@ void UnitMonostateErase::seq_if(const bool b) {
 /// --- Example 2: sequenced if where both branches are effects ---
 ///
 /// Both branches produce itree ioE unit.  Should be a plain if.
-void UnitMonostateErase::seq_if_both(const bool b) {
+void UnitMonostateErase::seq_if_both(const bool &b) {
   [&]() -> void {
     if (b) {
       std::cout << "A"s << '\n';
@@ -89,7 +89,7 @@ void UnitMonostateErase::match_then_next(const UnitMonostateErase::Color c) {
 }
 
 /// --- Example 5: chained sequenced ifs ---
-void UnitMonostateErase::chained_ifs(const bool b1, const bool b2) {
+void UnitMonostateErase::chained_ifs(const bool &b1, bool b2) {
   [&]() -> void {
     if (b1) {
       std::cout << "b1"s << '\n';

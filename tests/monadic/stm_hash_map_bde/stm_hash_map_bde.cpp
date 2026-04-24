@@ -1,21 +1,27 @@
 #include <stm_hash_map_bde.h>
 
 #include <bdlf_overloaded.h>
-#include <bdls_filesystemutil.h>
 #include <bsl_concepts.h>
-#include <bsl_cstdint.h>
 #include <bsl_functional.h>
 #include <bsl_iostream.h>
 #include <bsl_memory.h>
-#include <bsl_optional.h>
 #include <bsl_stdexcept.h>
 #include <bsl_string.h>
 #include <bsl_type_traits.h>
-#include <bsl_utility.h>
 #include <bsl_variant.h>
-#include <bsl_vector.h>
-#include <fstream>
+#include <bsl_optional.h>
+#include <bsl_iostream.h>
+#include <bdls_filesystemutil.h>
 #include <stm_adapter.h>
+#include <bsl_utility.h>
+#include <bsl_cstdint.h>
+#include <bsl_vector.h>
+#include <bsl_memory.h>
 #include <variant>
+#include <fstream>
 
-namespace BloombergLP {}
+
+namespace BloombergLP {
+
+}
+

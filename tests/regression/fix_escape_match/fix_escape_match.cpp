@@ -13,13 +13,12 @@
 /// through an option constructor. After the match IIFE returns,
 /// h is destroyed — invoking the closure is use-after-free.
 __attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
-FixEscapeMatch::make_fn_from_head(
-    const std::shared_ptr<List<unsigned int>> &l) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+FixEscapeMatch::make_fn_from_head(const List<unsigned int> &l) {
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return std::optional<std::function<unsigned int(unsigned int)>>();
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l->v());
+        std::get<typename List<unsigned int>::Cons>(l.v());
     auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
     *add = [=](unsigned int x) mutable -> unsigned int {
       if (x <= 0) {
@@ -29,24 +28,26 @@ FixEscapeMatch::make_fn_from_head(
         return ((*add)(x_) + 1);
       }
     };
-    return std::make_optional<std::function<unsigned int(unsigned int)>>(*add);
+    return std::make_optional<std::function<unsigned int(unsigned int)>>(
+        (*add));
   }
 }
 
 /// Variant: fixpoint captures TWO pattern variables from the match.
 __attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
-FixEscapeMatch::make_fn_from_pair(
-    const std::shared_ptr<List<unsigned int>> &l) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+FixEscapeMatch::make_fn_from_pair(const List<unsigned int> &l) {
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return std::optional<std::function<unsigned int(unsigned int)>>();
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l->v());
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a1->v())) {
+        std::get<typename List<unsigned int>::Cons>(l.v());
+    List<unsigned int> d_a1_value = clone_as_value<List<unsigned int>>(d_a1);
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            d_a1_value.v())) {
       return std::optional<std::function<unsigned int(unsigned int)>>();
     } else {
       const auto &[d_a00, d_a10] =
-          std::get<typename List<unsigned int>::Cons>(d_a1->v());
+          std::get<typename List<unsigned int>::Cons>(d_a1_value.v());
       auto combine =
           std::make_shared<std::function<unsigned int(unsigned int)>>();
       *combine = [=](unsigned int x) mutable -> unsigned int {
@@ -58,7 +59,7 @@ FixEscapeMatch::make_fn_from_pair(
         }
       };
       return std::make_optional<std::function<unsigned int(unsigned int)>>(
-          *combine);
+          (*combine));
     }
   }
 }

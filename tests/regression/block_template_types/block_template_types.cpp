@@ -19,7 +19,7 @@ std::string BlockTemplateTypes::test_is_positive() {
   std::cin >> n;
   bool b;
   b = (n > 0u);
-  return [&]() -> std::string {
+  return [=]() mutable -> std::string {
     if (b) {
       return "positive";
     } else {
@@ -47,7 +47,7 @@ std::string BlockTemplateTypes::test_mixed() {
   std::cin >> n;
   bool b;
   b = (n > 0u);
-  return name + [&]() -> std::string {
+  return name + [=]() mutable -> std::string {
     if (b) {
       return " wins";
     } else {

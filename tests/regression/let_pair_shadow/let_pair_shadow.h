@@ -7,7 +7,129 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 struct LetPairShadow {
   /// BUG: Two sequential let '(a, b) := f x destructurings of COMPUTED
@@ -36,7 +158,7 @@ struct LetPairShadow {
 
     struct Mycons {
       t_A d_a0;
-      std::shared_ptr<mylist<t_A>> d_a1;
+      std::unique_ptr<mylist<t_A>> d_a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
@@ -47,74 +169,120 @@ struct LetPairShadow {
 
   public:
     // CREATORS
+    mylist() {}
+
     explicit mylist(Mynil _v) : d_v_(_v) {}
 
     explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<mylist<t_A>> mynil() {
-      return std::make_shared<mylist<t_A>>(Mynil{});
+    mylist(const mylist<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    mylist(mylist<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) mylist<t_A> &operator=(const mylist<t_A> &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<mylist<t_A>>
-    mycons(t_A a0, const std::shared_ptr<mylist<t_A>> &a1) {
-      return std::make_shared<mylist<t_A>>(Mycons{std::move(a0), a1});
+    __attribute__((pure)) mylist<t_A> &operator=(mylist<t_A> &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<mylist<t_A>>
-    mycons(t_A a0, std::shared_ptr<mylist<t_A>> &&a1) {
-      return std::make_shared<mylist<t_A>>(
-          Mycons{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    __attribute__((pure)) mylist<t_A> clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Mynil>(_sv.v())) {
+        return mylist<t_A>(Mynil{});
+      } else {
+        const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
+        return mylist<t_A>(
+            Mycons{clone_as_value<t_A>(d_a0),
+                   clone_as_value<std::unique_ptr<mylist<t_A>>>(d_a1)});
+      }
+    }
+
+    template <typename _CloneT0>
+    __attribute__((pure)) mylist<_CloneT0> clone_as() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Mynil>(_sv.v())) {
+        return mylist<_CloneT0>(typename mylist<_CloneT0>::Mynil{});
+      } else {
+        const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
+        return mylist<_CloneT0>(typename mylist<_CloneT0>::Mycons{
+            clone_as_value<_CloneT0>(d_a0),
+            clone_as_value<std::unique_ptr<mylist<_CloneT0>>>(d_a1)});
+      }
+    }
+
+    // CREATORS
+    __attribute__((pure)) static mylist<t_A> mynil() { return mylist(Mynil{}); }
+
+    __attribute__((pure)) static mylist<t_A> mycons(t_A a0,
+                                                    const mylist<t_A> &a1) {
+      return mylist(
+          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(a1.clone())});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) mylist<t_A> *operator->() { return this; }
+
+    __attribute__((pure)) const mylist<t_A> *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = mylist<t_A>(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
-  static T2 mylist_rect(const T2 f, F1 &&f0,
-                        const std::shared_ptr<mylist<T1>> &m) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
+  template <typename T1, typename T2, MapsTo<T2, T1, mylist<T1>, T2> F1>
+  static T2 mylist_rect(const T2 f, F1 &&f0, const mylist<T1> &m) {
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m->v());
-      return f0(d_a0, d_a1, mylist_rect<T1, T2>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
+      return f0(d_a0, *(d_a1), mylist_rect<T1, T2>(f, f0, *(d_a1)));
     }
   }
 
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
-  static T2 mylist_rec(const T2 f, F1 &&f0,
-                       const std::shared_ptr<mylist<T1>> &m) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
+  template <typename T1, typename T2, MapsTo<T2, T1, mylist<T1>, T2> F1>
+  static T2 mylist_rec(const T2 f, F1 &&f0, const mylist<T1> &m) {
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m->v());
-      return f0(d_a0, d_a1, mylist_rec<T1, T2>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
+      return f0(d_a0, *(d_a1), mylist_rec<T1, T2>(f, f0, *(d_a1)));
     }
   }
 
   __attribute__((pure)) static unsigned int
-  mylist_sum(const std::shared_ptr<mylist<unsigned int>> &l);
+  mylist_sum(const mylist<unsigned int> &l);
 
   /// Pattern 1: map_accum — two sequential pair destructurings of
   /// function-call results in the same match branch.
   template <typename T1, typename T2, typename T3,
             MapsTo<std::pair<T3, T2>, T3, T1> F0>
-  __attribute__((pure)) static std::pair<std::shared_ptr<mylist<T2>>, T3>
-  map_accum(F0 &&f, const T3 acc, const std::shared_ptr<mylist<T1>> &l) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(l->v())) {
+  __attribute__((pure)) static std::pair<mylist<T2>, T3>
+  map_accum(F0 &&f, const T3 acc, const mylist<T1> &l) {
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
       return std::make_pair(mylist<T2>::mynil(), acc);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l->v());
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l.v());
       auto _cs = f(acc, d_a0);
       const T3 &new_acc = _cs.first;
       const T2 &y = _cs.second;
-      auto _cs1 = map_accum<T1, T2, T3>(f, new_acc, d_a1);
-      const std::shared_ptr<mylist<T2>> &rest = _cs1.first;
+      auto _cs1 = map_accum<T1, T2, T3>(f, new_acc, *(d_a1));
+      const mylist<T2> &rest = _cs1.first;
       const T3 &final_acc = _cs1.second;
       return std::make_pair(mylist<T2>::mycons(y, rest), final_acc);
     }
@@ -126,7 +294,7 @@ struct LetPairShadow {
   /// sum(list) + acc = 40 + 60 = 100
   static inline const unsigned int test1 = []() -> unsigned int {
     auto _cs = map_accum<unsigned int, unsigned int, unsigned int>(
-        [](const unsigned int s, const unsigned int x) {
+        [](unsigned int s, const unsigned int &x) {
           return std::make_pair((s + x), s);
         },
         0u,
@@ -134,28 +302,28 @@ struct LetPairShadow {
             10u, mylist<unsigned int>::mycons(
                      20u, mylist<unsigned int>::mycons(
                               30u, mylist<unsigned int>::mynil()))));
-    const std::shared_ptr<mylist<unsigned int>> &l = _cs.first;
+    const mylist<unsigned int> &l = _cs.first;
     const unsigned int &acc = _cs.second;
     return (mylist_sum(l) + acc);
   }();
   /// Helper functions that return pairs (force temporary allocation).
   __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  add_pair(const unsigned int a, const unsigned int b);
+  add_pair(const unsigned int &a, const unsigned int &b);
   __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  sub_pair(const unsigned int a, const unsigned int b);
+  sub_pair(const unsigned int &a, const unsigned int &b);
   /// Pattern 2: Two destructs of function-call results in top-level body.
   __attribute__((pure)) static unsigned int
-  double_call_destruct(const unsigned int a, const unsigned int b,
-                       const unsigned int c, const unsigned int d);
+  double_call_destruct(const unsigned int &a, const unsigned int &b,
+                       const unsigned int &c, const unsigned int &d);
   /// test2: add_pair 3 4 = (7, 12), sub_pair 10 3 = (7, 13)
   /// 7 + 12 + 7 + 13 = 39
   static inline const unsigned int test2 =
       double_call_destruct(3u, 4u, 10u, 3u);
   /// Pattern 3: Three destructs of function-call results.
   __attribute__((pure)) static unsigned int
-  triple_call_destruct(const unsigned int a, const unsigned int b,
-                       const unsigned int c, const unsigned int d,
-                       const unsigned int e, const unsigned int f);
+  triple_call_destruct(const unsigned int &a, const unsigned int &b,
+                       const unsigned int &c, const unsigned int &d,
+                       const unsigned int &e, const unsigned int &f);
   /// test3: add_pair 1 2 = (3,2), add_pair 3 4 = (7,12),
   /// add_pair 5 6 = (11,30).  3+2+7+12+11+30 = 65
   static inline const unsigned int test3 =

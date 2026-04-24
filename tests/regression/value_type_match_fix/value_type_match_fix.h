@@ -9,7 +9,129 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 struct ValueTypeMatchFix {
   /// A non-recursive inductive (will be a value type).
@@ -29,16 +151,55 @@ struct ValueTypeMatchFix {
 
   public:
     // CREATORS
+    triple() {}
+
     explicit triple(MkTriple _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<triple> mktriple(unsigned int a0, unsigned int a1,
-                                            unsigned int a2) {
-      return std::make_shared<triple>(
-          MkTriple{std::move(a0), std::move(a1), std::move(a2)});
+    triple(const triple &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    triple(triple &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) triple &operator=(const triple &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
+    }
+
+    __attribute__((pure)) triple &operator=(triple &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) triple clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0, d_a1, d_a2] = std::get<MkTriple>(_sv.v());
+      return triple(MkTriple{clone_as_value<unsigned int>(d_a0),
+                             clone_as_value<unsigned int>(d_a1),
+                             clone_as_value<unsigned int>(d_a2)});
+    }
+
+    // CREATORS
+    __attribute__((pure)) static triple
+    mktriple(unsigned int a0, unsigned int a1, unsigned int a2) {
+      return triple(MkTriple{std::move(a0), std::move(a1), std::move(a2)});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    __attribute__((pure)) triple *operator->() { return this; }
+
+    __attribute__((pure)) const triple *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = triple(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -46,17 +207,15 @@ struct ValueTypeMatchFix {
 
   template <typename T1,
             MapsTo<T1, unsigned int, unsigned int, unsigned int> F0>
-  static T1 triple_rect(F0 &&f, const std::shared_ptr<triple> &t) {
-    const auto &[d_a0, d_a1, d_a2] =
-        std::get<typename triple::MkTriple>(t->v());
+  static T1 triple_rect(F0 &&f, const triple &t) {
+    const auto &[d_a0, d_a1, d_a2] = std::get<typename triple::MkTriple>(t.v());
     return f(d_a0, d_a1, d_a2);
   }
 
   template <typename T1,
             MapsTo<T1, unsigned int, unsigned int, unsigned int> F0>
-  static T1 triple_rec(F0 &&f, const std::shared_ptr<triple> &t) {
-    const auto &[d_a0, d_a1, d_a2] =
-        std::get<typename triple::MkTriple>(t->v());
+  static T1 triple_rec(F0 &&f, const triple &t) {
+    const auto &[d_a0, d_a1, d_a2] = std::get<typename triple::MkTriple>(t.v());
     return f(d_a0, d_a1, d_a2);
   }
 
@@ -72,7 +231,7 @@ struct ValueTypeMatchFix {
   /// field data lives on the heap and persists as long as the shared_ptr.
   __attribute__((
       pure)) static std::optional<std::function<unsigned int(unsigned int)>>
-  make_adder_from_triple(const std::shared_ptr<triple> &t);
+  make_adder_from_triple(const triple &t);
   /// test1: MkTriple 10 20 30 -> base=60, go(5) = 60+5 = 65.
   static inline const unsigned int test1 = []() -> unsigned int {
     auto _cs = make_adder_from_triple(triple::mktriple(10u, 20u, 30u));
@@ -98,7 +257,7 @@ struct ValueTypeMatchFix {
   /// Direct capture of pattern fields (no intermediate let binding).
   __attribute__((
       pure)) static std::optional<std::function<unsigned int(unsigned int)>>
-  make_field_adder(const std::shared_ptr<triple> &t);
+  make_field_adder(const triple &t);
   /// test3: MkTriple 42 0 0 -> a=42, go(3) = 42+3 = 45.
   static inline const unsigned int test3 = []() -> unsigned int {
     auto _cs = make_field_adder(triple::mktriple(42u, 0u, 0u));

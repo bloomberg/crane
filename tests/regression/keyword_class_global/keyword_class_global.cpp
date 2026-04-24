@@ -3,6 +3,6 @@
 #include <type_traits>
 
 __attribute__((pure)) unsigned int
-KeywordClassGlobal::class_(const unsigned int n) {
+KeywordClassGlobal::class_(const unsigned int &n) {
   return (n + n);
 }

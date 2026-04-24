@@ -6,7 +6,7 @@
 #include <vector>
 
 __attribute__((pure)) unsigned int
-LoopifyClassics::factorial(const unsigned int n) {
+LoopifyClassics::factorial(const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
   };
@@ -24,7 +24,7 @@ LoopifyClassics::factorial(const unsigned int n) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       if (n <= 0) {
         _result = 1u;
@@ -34,14 +34,14 @@ LoopifyClassics::factorial(const unsigned int n) {
         _stack.emplace_back(_Enter{n_});
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _result = (_f._s0 * _result);
     }
   }
   return _result;
 }
 
-__attribute__((pure)) unsigned int LoopifyClassics::fib(const unsigned int n) {
+__attribute__((pure)) unsigned int LoopifyClassics::fib(const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
   };
@@ -63,7 +63,7 @@ __attribute__((pure)) unsigned int LoopifyClassics::fib(const unsigned int n) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
@@ -78,11 +78,11 @@ __attribute__((pure)) unsigned int LoopifyClassics::fib(const unsigned int n) {
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _stack.emplace_back(_Call2{_result});
       _stack.emplace_back(_Enter{_f._s0});
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
+      auto _f = std::move(std::get<_Call2>(_frame));
       _result = (_result + _f._s0);
     }
   }
@@ -90,8 +90,8 @@ __attribute__((pure)) unsigned int LoopifyClassics::fib(const unsigned int n) {
 }
 
 __attribute__((pure)) unsigned int
-LoopifyClassics::ack_fuel(const unsigned int fuel, const unsigned int m,
-                          const unsigned int n) {
+LoopifyClassics::ack_fuel(const unsigned int &fuel, const unsigned int &m,
+                          const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
     const unsigned int m;
@@ -112,7 +112,7 @@ LoopifyClassics::ack_fuel(const unsigned int fuel, const unsigned int m,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       const unsigned int m = _f.m;
       const unsigned int fuel = _f.fuel;
@@ -134,7 +134,7 @@ LoopifyClassics::ack_fuel(const unsigned int fuel, const unsigned int m,
         }
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       unsigned int fuel_ = _f._s0;
       const unsigned int m = _f._s1;
       unsigned int inner = _result;
@@ -145,14 +145,14 @@ LoopifyClassics::ack_fuel(const unsigned int fuel, const unsigned int m,
   return _result;
 }
 
-__attribute__((pure)) unsigned int LoopifyClassics::ack(const unsigned int m,
-                                                        const unsigned int n) {
+__attribute__((pure)) unsigned int LoopifyClassics::ack(const unsigned int &m,
+                                                        const unsigned int &n) {
   return ack_fuel(((100u * (m + 1u)) * (n + 1u)), m, n);
 }
 
 __attribute__((pure)) unsigned int
-LoopifyClassics::binomial_fuel(const unsigned int fuel, const unsigned int n,
-                               const unsigned int k) {
+LoopifyClassics::binomial_fuel(const unsigned int &fuel, const unsigned int &n,
+                               const unsigned int &k) {
   struct _Enter {
     const unsigned int k;
     const unsigned int n;
@@ -184,7 +184,7 @@ LoopifyClassics::binomial_fuel(const unsigned int fuel, const unsigned int n,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int k = _f.k;
       const unsigned int n = _f.n;
       const unsigned int fuel = _f.fuel;
@@ -202,11 +202,11 @@ LoopifyClassics::binomial_fuel(const unsigned int fuel, const unsigned int n,
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _stack.emplace_back(_Call2{_result});
       _stack.emplace_back(_Enter{_f._s0, _f._s1, _f._s2});
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
+      auto _f = std::move(std::get<_Call2>(_frame));
       _result = (_result + _f._s0);
     }
   }
@@ -214,13 +214,13 @@ LoopifyClassics::binomial_fuel(const unsigned int fuel, const unsigned int n,
 }
 
 __attribute__((pure)) unsigned int
-LoopifyClassics::binomial(const unsigned int n, const unsigned int k) {
+LoopifyClassics::binomial(const unsigned int &n, const unsigned int &k) {
   return binomial_fuel((n * k), n, k);
 }
 
 __attribute__((pure)) unsigned int
-LoopifyClassics::pascal_fuel(const unsigned int fuel, const unsigned int row,
-                             const unsigned int col) {
+LoopifyClassics::pascal_fuel(const unsigned int &fuel, const unsigned int &row,
+                             const unsigned int &col) {
   struct _Enter {
     const unsigned int col;
     const unsigned int row;
@@ -252,7 +252,7 @@ LoopifyClassics::pascal_fuel(const unsigned int fuel, const unsigned int row,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int col = _f.col;
       const unsigned int row = _f.row;
       const unsigned int fuel = _f.fuel;
@@ -271,11 +271,11 @@ LoopifyClassics::pascal_fuel(const unsigned int fuel, const unsigned int row,
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _stack.emplace_back(_Call2{_result});
       _stack.emplace_back(_Enter{_f._s0, _f._s1, _f._s2});
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
+      auto _f = std::move(std::get<_Call2>(_frame));
       _result = (_result + _f._s0);
     }
   }
@@ -283,16 +283,16 @@ LoopifyClassics::pascal_fuel(const unsigned int fuel, const unsigned int row,
 }
 
 __attribute__((pure)) unsigned int
-LoopifyClassics::pascal(const unsigned int row, const unsigned int col) {
+LoopifyClassics::pascal(const unsigned int &row, const unsigned int &col) {
   return pascal_fuel((row * col), row, col);
 }
 
 __attribute__((pure)) unsigned int
-LoopifyClassics::gcd_fuel(const unsigned int fuel, const unsigned int a,
-                          const unsigned int b) {
+LoopifyClassics::gcd_fuel(const unsigned int &fuel, unsigned int a,
+                          const unsigned int &b) {
   unsigned int _result;
   unsigned int _loop_b = b;
-  unsigned int _loop_a = a;
+  unsigned int _loop_a = std::move(a);
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
@@ -316,13 +316,13 @@ LoopifyClassics::gcd_fuel(const unsigned int fuel, const unsigned int a,
   return _result;
 }
 
-__attribute__((pure)) unsigned int LoopifyClassics::gcd(const unsigned int a,
-                                                        const unsigned int b) {
+__attribute__((pure)) unsigned int LoopifyClassics::gcd(const unsigned int &a,
+                                                        const unsigned int &b) {
   return gcd_fuel((a + b), a, b);
 }
 
 __attribute__((pure)) unsigned int
-LoopifyClassics::power(const unsigned int base, const unsigned int exp) {
+LoopifyClassics::power(const unsigned int &base, const unsigned int &exp) {
   struct _Enter {
     const unsigned int exp;
   };
@@ -340,7 +340,7 @@ LoopifyClassics::power(const unsigned int base, const unsigned int exp) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int exp = _f.exp;
       if (exp <= 0) {
         _result = 1u;
@@ -350,7 +350,7 @@ LoopifyClassics::power(const unsigned int base, const unsigned int exp) {
         _stack.emplace_back(_Enter{exp_});
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _result = (_f._s0 * _result);
     }
   }
@@ -358,7 +358,7 @@ LoopifyClassics::power(const unsigned int base, const unsigned int exp) {
 }
 
 __attribute__((pure)) unsigned int
-LoopifyClassics::sum_to(const unsigned int n) {
+LoopifyClassics::sum_to(const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
   };
@@ -376,7 +376,7 @@ LoopifyClassics::sum_to(const unsigned int n) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
@@ -386,7 +386,7 @@ LoopifyClassics::sum_to(const unsigned int n) {
         _stack.emplace_back(_Enter{n_});
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -394,7 +394,7 @@ LoopifyClassics::sum_to(const unsigned int n) {
 }
 
 __attribute__((pure)) unsigned int
-LoopifyClassics::sum_squares(const unsigned int n) {
+LoopifyClassics::sum_squares(const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
   };
@@ -413,7 +413,7 @@ LoopifyClassics::sum_squares(const unsigned int n) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
@@ -423,7 +423,7 @@ LoopifyClassics::sum_squares(const unsigned int n) {
         _stack.emplace_back(_Enter{n_});
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _result = (_f._s0 + _result);
     }
   }

@@ -583,6 +583,7 @@ let pp_hdecl d =
   | Dtype (r, l, t) ->
     let name = pp_global Type r in
     let l = rename_tvars keywords l in
+    let saved_method_ns = set_method_ns_for_locals () in
     let ids, def =
       match find_type_custom_opt r with
       | Some (ids, s) -> (pp_string_parameters ids, str " =" ++ spc () ++ str s)
@@ -594,6 +595,7 @@ let pp_hdecl d =
           else
             str " =" ++ spc () ++ pp_type false l t )
     in
+    restore_method_self_ns saved_method_ns;
     pp_tydef l name def
   | Dterm (r, a, Tglob (ty, args, e)) when is_monad ty ->
     let defs =
@@ -719,6 +721,7 @@ let pp_hdecl_spec_only = function
   | Dtype (r, l, t) ->
     let name = pp_global Type r in
     let l = rename_tvars keywords l in
+    let saved_method_ns = set_method_ns_for_locals () in
     let ids, def =
       match find_type_custom_opt r with
       | Some (ids, s) -> (pp_string_parameters ids, str " =" ++ spc () ++ str s)
@@ -730,6 +733,7 @@ let pp_hdecl_spec_only = function
           else
             str " =" ++ spc () ++ pp_type false l t )
     in
+    restore_method_self_ns saved_method_ns;
     pp_tydef l name def
   | Dterm (r, _, _)
     when List.exists
@@ -778,6 +782,7 @@ let pp_spec = function
   | Stype (r, vl, ot) ->
     let name = pp_global_name Type r in
     let l = rename_tvars keywords vl in
+    let saved_method_ns = set_method_ns_for_locals () in
     let ids, def =
       match find_type_custom_opt r with
       | Some (ids, s) -> (pp_string_parameters ids, str " =" ++ spc () ++ str s)
@@ -790,4 +795,5 @@ let pp_spec = function
           (ids, str " = std::any /* AXIOM TO BE REALIZED */")
         | Some t -> (ids, str " =" ++ spc () ++ pp_type false l t) )
     in
+    restore_method_self_ns saved_method_ns;
     pp_tydef l name def

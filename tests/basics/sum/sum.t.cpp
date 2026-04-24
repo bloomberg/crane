@@ -37,16 +37,16 @@ int main() {
 
   // Test left_val is Left
   ASSERT((std::holds_alternative<Sum::either<unsigned int, bool>::Left>(
-      Sum::left_val->v())));
+      Sum::left_val.v())));
 
   // Test right_val is Right
   ASSERT((std::holds_alternative<Sum::either<unsigned int, bool>::Right>(
-      Sum::right_val->v())));
+      Sum::right_val.v())));
 
   // Test triple
   ASSERT((std::holds_alternative<
           Sum::triple<unsigned int, bool, unsigned int>::Second>(
-      Sum::triple_test->v())));
+      Sum::triple_test.v())));
 
   return testStatus;
 }

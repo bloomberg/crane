@@ -9,7 +9,7 @@
 #include <variant>
 
 /// Single effect then recurse: effect ;; recursive_call
-void CountDown::count_down(const unsigned int n) {
+void CountDown::count_down(const unsigned int &n) {
   unsigned int _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -24,7 +24,7 @@ void CountDown::count_down(const unsigned int n) {
 }
 
 /// Two effects then recurse: effect ;; effect ;; recursive_call
-void CountDown::two_prints(const unsigned int n) {
+void CountDown::two_prints(const unsigned int &n) {
   unsigned int _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -40,7 +40,7 @@ void CountDown::two_prints(const unsigned int n) {
 }
 
 /// Read from user, echo back, then recurse
-void CountDown::echo_loop(const unsigned int n) {
+void CountDown::echo_loop(const unsigned int &n) {
   unsigned int _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -57,7 +57,7 @@ void CountDown::echo_loop(const unsigned int n) {
 }
 
 /// Effect in base case too: both branches do IO
-void CountDown::announce(const unsigned int n) {
+void CountDown::announce(const unsigned int &n) {
   unsigned int _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -73,7 +73,7 @@ void CountDown::announce(const unsigned int n) {
 }
 
 /// Multiple arguments: two nat params, recurse on first
-void CountDown::repeat_msg(const unsigned int n, const std::string msg) {
+void CountDown::repeat_msg(const unsigned int &n, const std::string msg) {
   unsigned int _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -150,8 +150,8 @@ void CountDown::co_echo_loop() {
   return;
 }
 
-void CountDown::co_announce(const unsigned int round) {
-  unsigned int _loop_round = round;
+void CountDown::co_announce(unsigned int round) {
+  unsigned int _loop_round = std::move(round);
   while (true) {
     std::string line;
     std::getline(std::cin, line);

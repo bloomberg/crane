@@ -38,7 +38,7 @@ unsigned int EffectUnitStress::bind_ignore() {
 }
 
 /// 4. Multiple Ret tt in if-then-else
-void EffectUnitStress::conditional_tt(const bool b) {
+void EffectUnitStress::conditional_tt(const bool &b) {
   if (b) {
     return;
   } else {
@@ -47,7 +47,7 @@ void EffectUnitStress::conditional_tt(const bool b) {
 }
 
 /// 5. Ret in one branch, effect in other
-void EffectUnitStress::conditional_mixed(const bool b) {
+void EffectUnitStress::conditional_mixed(const bool &b) {
   if (b) {
     std::cout << "yes"s << '\n';
     return;
@@ -66,7 +66,7 @@ std::pair<std::string, std::string> EffectUnitStress::pair_of_effects() {
 }
 
 /// 7. match on nat with monadic body
-std::string EffectUnitStress::nat_dispatch(const unsigned int n) {
+std::string EffectUnitStress::nat_dispatch(const unsigned int &n) {
   if (n <= 0) {
     return "zero";
   } else {
@@ -90,7 +90,8 @@ int64_t EffectUnitStress::let_pure_in_monadic() {
 }
 
 /// 9. Nested if in monadic context
-std::string EffectUnitStress::nested_if_monadic(const bool b1, const bool b2) {
+std::string EffectUnitStress::nested_if_monadic(const bool &b1,
+                                                const bool &b2) {
   if (b1) {
     if (b2) {
       return "both";
@@ -108,13 +109,13 @@ std::string EffectUnitStress::nested_if_monadic(const bool b1, const bool b2) {
 
 /// 10. Monadic function returning option
 std::optional<unsigned int>
-EffectUnitStress::safe_head(const std::shared_ptr<List<unsigned int>> &xs) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(xs->v())) {
+EffectUnitStress::safe_head(const List<unsigned int> &xs) {
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
     std::cout << "empty!"s << '\n';
     return std::optional<unsigned int>();
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(xs->v());
+        std::get<typename List<unsigned int>::Cons>(xs.v());
     return std::make_optional<unsigned int>(d_a0);
   }
 }

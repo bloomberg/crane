@@ -17,8 +17,8 @@ bool Dir::remove_dir(const std::string path) {
 
 std::string Dir::get_cwd() { return std::filesystem::current_path().string(); }
 
-std::shared_ptr<List<std::string>> Dir::list_dir(const std::string path) {
-  return [&]() -> std::shared_ptr<List<std::string>> {
+List<std::string> Dir::list_dir(const std::string path) {
+  return [&]() -> List<std::string> {
     auto result = List<std::string>::nil();
     for (const auto &entry : std::filesystem::directory_iterator(path)) {
       result = List<std::string>::cons(entry.path().filename().string(),

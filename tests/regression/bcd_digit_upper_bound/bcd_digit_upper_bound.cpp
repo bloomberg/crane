@@ -3,6 +3,6 @@
 #include <type_traits>
 
 __attribute__((pure)) bool
-BcdDigitUpperBound::is_bcd_digitb(const unsigned int n) {
+BcdDigitUpperBound::is_bcd_digitb(const unsigned int &n) {
   return n <= 9u;
 }

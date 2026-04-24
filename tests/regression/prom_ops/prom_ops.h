@@ -7,7 +7,129 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 template <typename t_A> struct List {
   // TYPES
@@ -15,10 +137,11 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
+  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -26,73 +149,117 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  __attribute__((pure)) List<t_A> clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<t_A>(Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<t_A>(Cons{clone_as_value<t_A>(d_a0),
+                            clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
+    }
+  }
+
+  template <typename _CloneT0>
+  __attribute__((pure)) List<_CloneT0> clone_as() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<_CloneT0>(typename List<_CloneT0>::Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<_CloneT0>(typename List<_CloneT0>::Cons{
+          clone_as_value<_CloneT0>(d_a0),
+          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+    }
+  }
+
+  // CREATORS
+  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+
+  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
+  __attribute__((pure)) List<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = List<t_A>(); }
+
+  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return (d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      return ((*(d_a1)).length() + 1);
     }
   }
 };
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
-                const T1 default0);
+  static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
 };
 
 struct Bool {
-  __attribute__((pure)) static bool eqb(const bool b1, const bool b2);
+  __attribute__((pure)) static bool eqb(const bool &b1, const bool &b2);
 };
 
 struct PromOps {
-  __attribute__((pure)) static bool
-  nat_list_eqb(const std::shared_ptr<List<unsigned int>> &xs,
-               const std::shared_ptr<List<unsigned int>> &ys);
+  __attribute__((pure)) static bool nat_list_eqb(const List<unsigned int> &xs,
+                                                 const List<unsigned int> &ys);
 
   template <typename T1>
-  static std::shared_ptr<List<T1>>
-  update_nth(const unsigned int n, const T1 x,
-             const std::shared_ptr<List<T1>> &l) {
+  __attribute__((pure)) static List<T1>
+  update_nth(const unsigned int &n, const T1 x, const List<T1> &l) {
     if (n <= 0) {
-      if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
-        return List<T1>::cons(x, d_a1);
+        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
+        return List<T1>::cons(x, *(d_a1));
       }
     } else {
       unsigned int n_ = n - 1;
-      if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
-        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, d_a10));
+        const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
+        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *(d_a10)));
       }
     }
   }
@@ -100,110 +267,140 @@ struct PromOps {
   struct state1 {
     unsigned int prom_data1;
     bool prom_enable1;
+
+    __attribute__((pure)) state1 *operator->() { return this; }
+
+    __attribute__((pure)) const state1 *operator->() const { return this; }
   };
 
-  __attribute__((pure)) static unsigned int
-  prom_data_or_zero(const std::shared_ptr<state1> &s);
+  __attribute__((pure)) static unsigned int prom_data_or_zero(const state1 &s);
   static inline const unsigned int test1 =
-      prom_data_or_zero(std::make_shared<state1>(state1{77u, false}));
+      prom_data_or_zero(state1{77u, false});
 
   struct state2 {
     unsigned int acc2;
     unsigned int prom_addr2;
     unsigned int prom_data2;
     bool prom_enable2;
+
+    __attribute__((pure)) state2 *operator->() { return this; }
+
+    __attribute__((pure)) const state2 *operator->() const { return this; }
   };
 
-  __attribute__((pure)) static unsigned int
-  flagged_sum(const std::shared_ptr<state2> &s);
+  __attribute__((pure)) static unsigned int flagged_sum(const state2 &s);
   static inline const unsigned int test2 =
-      flagged_sum(std::make_shared<state2>(state2{3u, 12u, 77u, false}));
+      flagged_sum(state2{3u, 12u, 77u, false});
 
   struct state3 {
     unsigned int acc3;
-    std::shared_ptr<List<unsigned int>> regs3;
+    List<unsigned int> regs3;
     bool carry3;
     unsigned int pc3;
-    std::shared_ptr<List<unsigned int>> stack3;
-    std::shared_ptr<List<unsigned int>> ram_sys3;
+    List<unsigned int> stack3;
+    List<unsigned int> ram_sys3;
     unsigned int cur_bank3;
     unsigned int sel_ram3;
-    std::shared_ptr<List<unsigned int>> rom_ports3;
+    List<unsigned int> rom_ports3;
     unsigned int sel_rom3;
-    std::shared_ptr<List<unsigned int>> rom3;
+    List<unsigned int> rom3;
     bool test_pin3;
     unsigned int prom_addr3;
     unsigned int prom_data3;
     bool prom_enable3;
+
+    __attribute__((pure)) state3 *operator->() { return this; }
+
+    __attribute__((pure)) const state3 *operator->() const { return this; }
   };
 
-  static std::shared_ptr<state3>
-  set_prom_params3(const std::shared_ptr<state3> &s, const unsigned int addr,
-                   const unsigned int data, const bool enable);
+  __attribute__((pure)) static state3 set_prom_params3(const state3 &s,
+                                                       unsigned int addr,
+                                                       unsigned int data,
+                                                       bool enable);
   static inline const unsigned int test3 = []() {
     return []() {
-      std::shared_ptr<state3> s = std::make_shared<state3>(state3{
+      state3 s = state3{
           1u,
           List<unsigned int>::cons(
               2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())),
-          false, 4u, List<unsigned int>::cons(5u, List<unsigned int>::nil()),
-          List<unsigned int>::cons(6u, List<unsigned int>::nil()), 0u, 0u,
-          List<unsigned int>::cons(7u, List<unsigned int>::nil()), 0u,
+          false,
+          4u,
+          List<unsigned int>::cons(5u, List<unsigned int>::nil()),
+          List<unsigned int>::cons(6u, List<unsigned int>::nil()),
+          0u,
+          0u,
+          List<unsigned int>::cons(7u, List<unsigned int>::nil()),
+          0u,
           List<unsigned int>::cons(
               8u, List<unsigned int>::cons(9u, List<unsigned int>::nil())),
-          true, 0u, 0u, false});
-      std::shared_ptr<state3> s_ =
-          set_prom_params3(std::move(s), 21u, 144u, true);
-      return ((s_->prom_addr3 + [&]() -> unsigned int {
-                if (s_->prom_enable3) {
-                  return std::move(s_)->prom_data3;
+          true,
+          0u,
+          0u,
+          false};
+      state3 s_ = set_prom_params3(s, 21u, 144u, true);
+      return ((s_.prom_addr3 + [&]() -> unsigned int {
+                if (s_.prom_enable3) {
+                  return s_.prom_data3;
                 } else {
                   return 0u;
                 }
               }()) +
-              s_->regs3->length());
+              s_.regs3.length());
     }();
   }();
   static inline const unsigned int test4 = []() {
     return []() {
-      std::shared_ptr<state3> s = std::make_shared<state3>(state3{
+      state3 s = state3{
           1u,
           List<unsigned int>::cons(
               2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())),
-          false, 4u, List<unsigned int>::cons(5u, List<unsigned int>::nil()),
-          List<unsigned int>::cons(6u, List<unsigned int>::nil()), 0u, 0u,
-          List<unsigned int>::cons(7u, List<unsigned int>::nil()), 0u,
+          false,
+          4u,
+          List<unsigned int>::cons(5u, List<unsigned int>::nil()),
+          List<unsigned int>::cons(6u, List<unsigned int>::nil()),
+          0u,
+          0u,
+          List<unsigned int>::cons(7u, List<unsigned int>::nil()),
+          0u,
           List<unsigned int>::cons(
               8u, List<unsigned int>::cons(9u, List<unsigned int>::nil())),
-          true, 0u, 0u, false});
-      std::shared_ptr<state3> s_ =
-          set_prom_params3(std::move(s), 21u, 144u, true);
-      return ((s_->prom_addr3 + [&]() -> unsigned int {
-                if (s_->prom_enable3) {
-                  return std::move(s_)->prom_data3;
+          true,
+          0u,
+          0u,
+          false};
+      state3 s_ = set_prom_params3(s, 21u, 144u, true);
+      return ((s_.prom_addr3 + [&]() -> unsigned int {
+                if (s_.prom_enable3) {
+                  return s_.prom_data3;
                 } else {
                   return 0u;
                 }
               }()) +
-              s_->regs3->length());
+              s_.regs3.length());
     }();
   }();
 
   struct state5 {
     unsigned int acc5;
-    std::shared_ptr<List<unsigned int>> regs5;
-    std::shared_ptr<List<unsigned int>> rom5;
+    List<unsigned int> regs5;
+    List<unsigned int> rom5;
     unsigned int prom_addr5;
     unsigned int prom_data5;
     bool prom_enable5;
+
+    __attribute__((pure)) state5 *operator->() { return this; }
+
+    __attribute__((pure)) const state5 *operator->() const { return this; }
   };
 
-  static std::shared_ptr<state5>
-  set_prom_params5(const std::shared_ptr<state5> &s, const unsigned int addr,
-                   const unsigned int data, const bool enable);
+  __attribute__((pure)) static state5 set_prom_params5(const state5 &s,
+                                                       unsigned int addr,
+                                                       unsigned int data,
+                                                       bool enable);
   static inline const unsigned int test5 = []() {
     return []() {
-      std::shared_ptr<state5> s = std::make_shared<state5>(state5{
+      state5 s = state5{
           3u,
           List<unsigned int>::cons(
               1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())),
@@ -211,12 +408,13 @@ struct PromOps {
               9u,
               List<unsigned int>::cons(
                   8u, List<unsigned int>::cons(7u, List<unsigned int>::nil()))),
-          0u, 0u, false});
-      std::shared_ptr<state5> s_ =
-          set_prom_params5(std::move(s), 23u, 77u, true);
-      return ((s_->acc5 + s_->prom_addr5) + [&]() -> unsigned int {
-        if (s_->prom_enable5) {
-          return std::move(s_)->prom_data5;
+          0u,
+          0u,
+          false};
+      state5 s_ = set_prom_params5(s, 23u, 77u, true);
+      return ((s_.acc5 + s_.prom_addr5) + [&]() -> unsigned int {
+        if (s_.prom_enable5) {
+          return s_.prom_data5;
         } else {
           return 0u;
         }
@@ -225,198 +423,208 @@ struct PromOps {
   }();
 
   struct state6 {
-    std::shared_ptr<List<unsigned int>> rom6;
+    List<unsigned int> rom6;
     unsigned int prom_addr6;
     unsigned int prom_data6;
     bool prom_enable6;
+
+    __attribute__((pure)) state6 *operator->() { return this; }
+
+    __attribute__((pure)) const state6 *operator->() const { return this; }
   };
 
-  static std::shared_ptr<state6>
-  set_prom_params6(const std::shared_ptr<state6> &s, const unsigned int addr,
-                   const unsigned int data, const bool enable);
-  static inline const std::shared_ptr<state6> sample6 =
-      std::make_shared<state6>(state6{
-          List<unsigned int>::cons(
-              10u, List<unsigned int>::cons(
-                       11u, List<unsigned int>::cons(
-                                12u, List<unsigned int>::cons(
-                                         13u, List<unsigned int>::nil())))),
-          0u, 0u, false});
+  __attribute__((pure)) static state6 set_prom_params6(const state6 &s,
+                                                       unsigned int addr,
+                                                       unsigned int data,
+                                                       bool enable);
+  static inline const state6 sample6 =
+      state6{List<unsigned int>::cons(
+                 10u, List<unsigned int>::cons(
+                          11u, List<unsigned int>::cons(
+                                   12u, List<unsigned int>::cons(
+                                            13u, List<unsigned int>::nil())))),
+             0u, 0u, false};
   static inline const bool test6 =
-      Bool::eqb(set_prom_params6(sample6, 2u, 99u, true)->prom_enable6, true);
+      Bool::eqb(set_prom_params6(sample6, 2u, 99u, true).prom_enable6, true);
 
   struct state7 {
-    std::shared_ptr<List<unsigned int>> regs7;
-    std::shared_ptr<List<unsigned int>> ram_sys7;
+    List<unsigned int> regs7;
+    List<unsigned int> ram_sys7;
     unsigned int prom_addr7;
     unsigned int prom_data7;
     bool prom_enable7;
+
+    __attribute__((pure)) state7 *operator->() { return this; }
+
+    __attribute__((pure)) const state7 *operator->() const { return this; }
   };
 
-  static std::shared_ptr<state7>
-  set_prom_params7(const std::shared_ptr<state7> &s, const unsigned int addr,
-                   const unsigned int data, const bool enable);
-  static inline const std::shared_ptr<state7> sample7 =
-      std::make_shared<state7>(state7{
-          List<unsigned int>::cons(
-              1u,
-              List<unsigned int>::cons(
+  __attribute__((pure)) static state7 set_prom_params7(const state7 &s,
+                                                       unsigned int addr,
+                                                       unsigned int data,
+                                                       bool enable);
+  static inline const state7 sample7 = state7{
+      List<unsigned int>::cons(
+          1u, List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))),
-          List<unsigned int>::cons(
-              9u,
-              List<unsigned int>::cons(
+      List<unsigned int>::cons(
+          9u, List<unsigned int>::cons(
                   8u, List<unsigned int>::cons(7u, List<unsigned int>::nil()))),
-          0u, 0u, false});
+      0u, 0u, false};
   static inline const bool test7 = nat_list_eqb(
-      set_prom_params7(sample7, 12u, 99u, true)->ram_sys7, sample7->ram_sys7);
+      set_prom_params7(sample7, 12u, 99u, true).ram_sys7, sample7.ram_sys7);
 
   struct state8 {
-    std::shared_ptr<List<unsigned int>> regs8;
-    std::shared_ptr<List<unsigned int>> ram_sys8;
+    List<unsigned int> regs8;
+    List<unsigned int> ram_sys8;
     unsigned int prom_addr8;
     unsigned int prom_data8;
     bool prom_enable8;
+
+    __attribute__((pure)) state8 *operator->() { return this; }
+
+    __attribute__((pure)) const state8 *operator->() const { return this; }
   };
 
-  static std::shared_ptr<state8>
-  set_prom_params8(const std::shared_ptr<state8> &s, const unsigned int addr,
-                   const unsigned int data, const bool enable);
-  static inline const std::shared_ptr<state8> sample8 =
-      std::make_shared<state8>(state8{
-          List<unsigned int>::cons(
-              1u,
-              List<unsigned int>::cons(
+  __attribute__((pure)) static state8 set_prom_params8(const state8 &s,
+                                                       unsigned int addr,
+                                                       unsigned int data,
+                                                       bool enable);
+  static inline const state8 sample8 = state8{
+      List<unsigned int>::cons(
+          1u, List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))),
-          List<unsigned int>::cons(
-              9u, List<unsigned int>::cons(8u, List<unsigned int>::nil())),
-          0u, 0u, false});
+      List<unsigned int>::cons(
+          9u, List<unsigned int>::cons(8u, List<unsigned int>::nil())),
+      0u, 0u, false};
   static inline const bool test8 = nat_list_eqb(
-      set_prom_params8(sample8, 12u, 99u, true)->regs8, sample8->regs8);
+      set_prom_params8(sample8, 12u, 99u, true).regs8, sample8.regs8);
 
   struct state9 {
-    std::shared_ptr<List<unsigned int>> rom9;
+    List<unsigned int> rom9;
     unsigned int prom_addr9;
     unsigned int prom_data9;
     bool prom_enable9;
+
+    __attribute__((pure)) state9 *operator->() { return this; }
+
+    __attribute__((pure)) const state9 *operator->() const { return this; }
   };
 
-  static std::shared_ptr<state9>
-  set_prom_params9(const std::shared_ptr<state9> &s, const unsigned int addr,
-                   const unsigned int data, const bool enable);
-  static inline const std::shared_ptr<state9> sample9 =
-      std::make_shared<state9>(state9{
-          List<unsigned int>::cons(
-              10u, List<unsigned int>::cons(
-                       11u, List<unsigned int>::cons(
-                                12u, List<unsigned int>::cons(
-                                         13u, List<unsigned int>::nil())))),
-          0u, 0u, false});
+  __attribute__((pure)) static state9 set_prom_params9(const state9 &s,
+                                                       unsigned int addr,
+                                                       unsigned int data,
+                                                       bool enable);
+  static inline const state9 sample9 =
+      state9{List<unsigned int>::cons(
+                 10u, List<unsigned int>::cons(
+                          11u, List<unsigned int>::cons(
+                                   12u, List<unsigned int>::cons(
+                                            13u, List<unsigned int>::nil())))),
+             0u, 0u, false};
   static inline const bool test9 =
-      set_prom_params9(sample9, 12u, 99u, true)->rom9->length() ==
-      sample9->rom9->length();
+      set_prom_params9(sample9, 12u, 99u, true).rom9.length() ==
+      sample9.rom9.length();
 
   struct state10 {
-    std::shared_ptr<List<unsigned int>> regs10;
-    std::shared_ptr<List<unsigned int>> rom10;
+    List<unsigned int> regs10;
+    List<unsigned int> rom10;
     unsigned int acc10;
     unsigned int pc10;
-    std::shared_ptr<List<unsigned int>> stack10;
+    List<unsigned int> stack10;
     unsigned int cur_bank10;
-    std::shared_ptr<List<unsigned int>> rom_ports10;
+    List<unsigned int> rom_ports10;
     unsigned int sel_rom10;
     unsigned int prom_addr10;
     unsigned int prom_data10;
     bool prom_enable10;
+
+    __attribute__((pure)) state10 *operator->() { return this; }
+
+    __attribute__((pure)) const state10 *operator->() const { return this; }
   };
 
-  static std::shared_ptr<state10>
-  set_prom_params10(const std::shared_ptr<state10> &s, const unsigned int addr,
-                    const unsigned int data, const bool enable);
-  static std::shared_ptr<state10>
-  execute_wpm10(const std::shared_ptr<state10> &s);
-  static inline const std::shared_ptr<state10> sample10 =
-      std::make_shared<state10>(state10{
+  __attribute__((pure)) static state10 set_prom_params10(const state10 &s,
+                                                         unsigned int addr,
+                                                         unsigned int data,
+                                                         bool enable);
+  __attribute__((pure)) static state10 execute_wpm10(const state10 &s);
+  static inline const state10 sample10 = state10{
+      List<unsigned int>::cons(
+          1u, List<unsigned int>::cons(
+                  2u, List<unsigned int>::cons(
+                          3u, List<unsigned int>::cons(
+                                  4u, List<unsigned int>::nil())))),
+      List<unsigned int>::cons(
+          10u,
           List<unsigned int>::cons(
-              1u, List<unsigned int>::cons(
-                      2u, List<unsigned int>::cons(
-                              3u, List<unsigned int>::cons(
-                                      4u, List<unsigned int>::nil())))),
-          List<unsigned int>::cons(
-              10u,
+              11u,
               List<unsigned int>::cons(
-                  11u,
+                  12u,
                   List<unsigned int>::cons(
-                      12u,
+                      13u,
                       List<unsigned int>::cons(
-                          13u,
+                          14u,
                           List<unsigned int>::cons(
-                              14u,
+                              15u,
                               List<unsigned int>::cons(
-                                  15u,
+                                  16u,
                                   List<unsigned int>::cons(
-                                      16u,
-                                      List<unsigned int>::cons(
-                                          17u,
-                                          List<unsigned int>::nil())))))))),
-          7u, 1025u,
-          List<unsigned int>::cons(
-              7u, List<unsigned int>::cons(9u, List<unsigned int>::nil())),
-          2u,
-          List<unsigned int>::cons(
-              3u, List<unsigned int>::cons(
-                      4u, List<unsigned int>::cons(
-                              5u, List<unsigned int>::cons(
-                                      6u, List<unsigned int>::nil())))),
-          5u, 0u, 0u, false});
+                                      17u, List<unsigned int>::nil())))))))),
+      7u,
+      1025u,
+      List<unsigned int>::cons(
+          7u, List<unsigned int>::cons(9u, List<unsigned int>::nil())),
+      2u,
+      List<unsigned int>::cons(
+          3u, List<unsigned int>::cons(
+                  4u, List<unsigned int>::cons(
+                          5u, List<unsigned int>::cons(
+                                  6u, List<unsigned int>::nil())))),
+      5u,
+      0u,
+      0u,
+      false};
   static inline const bool check_pc_bound = []() {
-    std::shared_ptr<state10> after =
-        execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
-    return std::move(after)->pc10 < 4096u;
+    state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
+    return after.pc10 < 4096u;
   }();
   static inline const bool check_acc_bound = []() {
-    std::shared_ptr<state10> after =
-        execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
-    return std::move(after)->acc10 < 16u;
+    state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
+    return after.acc10 < 16u;
   }();
   static inline const bool check_bank_bound = []() {
-    std::shared_ptr<state10> after =
-        execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
-    return std::move(after)->cur_bank10 < 8u;
+    state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
+    return after.cur_bank10 < 8u;
   }();
   static inline const bool check_regs_length = []() {
-    std::shared_ptr<state10> after =
-        execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
-    return std::move(after)->regs10->length() == 4u;
+    state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
+    return after.regs10.length() == 4u;
   }();
   static inline const bool check_rom_ports_length = []() {
-    std::shared_ptr<state10> after =
-        execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
-    return std::move(after)->rom_ports10->length() == 4u;
+    state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
+    return after.rom_ports10.length() == 4u;
   }();
   static inline const bool check_sel_rom_bound = []() {
-    std::shared_ptr<state10> after =
-        execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
-    return std::move(after)->sel_rom10 < 16u;
+    state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
+    return after.sel_rom10 < 16u;
   }();
   static inline const bool check_stack_length = []() {
-    std::shared_ptr<state10> after =
-        execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
-    return std::move(after)->stack10->length() <= 3u;
+    state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
+    return after.stack10.length() <= 3u;
   }();
   static inline const bool check_prom_addr_bound = []() {
-    std::shared_ptr<state10> after =
+    state10 after =
         execute_wpm10(set_prom_params10(sample10, 2048u, 99u, true));
-    return std::move(after)->prom_addr10 < 4096u;
+    return after.prom_addr10 < 4096u;
   }();
   static inline const bool check_prom_data_bound = []() {
-    std::shared_ptr<state10> after =
-        execute_wpm10(set_prom_params10(sample10, 3u, 155u, true));
-    return std::move(after)->prom_data10 < 256u;
+    state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 155u, true));
+    return after.prom_data10 < 256u;
   }();
   static inline const bool check_rom_length = []() {
-    std::shared_ptr<state10> after =
-        execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
-    return std::move(after)->rom10->length() == 8u;
+    state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
+    return after.rom10.length() == 8u;
   }();
   static inline const bool test10 =
       (((((((((check_pc_bound && check_acc_bound) && check_bank_bound) &&
@@ -429,22 +637,24 @@ struct PromOps {
        check_rom_length);
 
   struct state11 {
-    std::shared_ptr<List<unsigned int>> rom11;
+    List<unsigned int> rom11;
     unsigned int prom_addr11;
     unsigned int prom_data11;
     bool prom_enable11;
+
+    __attribute__((pure)) state11 *operator->() { return this; }
+
+    __attribute__((pure)) const state11 *operator->() const { return this; }
   };
 
-  static std::shared_ptr<state11> execute_wpm11(std::shared_ptr<state11> s);
-  static inline const std::shared_ptr<state11> sample11 =
-      std::make_shared<state11>(state11{
-          List<unsigned int>::cons(
-              0u,
-              List<unsigned int>::cons(
+  __attribute__((pure)) static state11 execute_wpm11(state11 s);
+  static inline const state11 sample11 = state11{
+      List<unsigned int>::cons(
+          0u, List<unsigned int>::cons(
                   0u, List<unsigned int>::cons(0u, List<unsigned int>::nil()))),
-          1u, 9u, true});
+      1u, 9u, true};
   static inline const unsigned int test11 = ListDef::template nth<unsigned int>(
-      1u, execute_wpm11(sample11)->rom11, 0u);
+      1u, execute_wpm11(sample11).rom11, 0u);
   static inline const std::pair<
       std::pair<
           std::pair<
@@ -483,22 +693,21 @@ struct PromOps {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
-                const T1 default0) {
+T1 ListDef::nth(const unsigned int &n, const List<T1> &l, const T1 default0) {
   if (n <= 0) {
-    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
       return d_a0;
     }
   } else {
     unsigned int m = n - 1;
-    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
-      return ListDef::template nth<T1>(m, d_a10, default0);
+      const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
+      return ListDef::template nth<T1>(m, *(d_a10), default0);
     }
   }
 }

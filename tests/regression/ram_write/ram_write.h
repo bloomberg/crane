@@ -7,7 +7,129 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 template <typename t_A> struct List {
   // TYPES
@@ -15,10 +137,11 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
+  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -26,83 +149,141 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  __attribute__((pure)) List<t_A> clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<t_A>(Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<t_A>(Cons{clone_as_value<t_A>(d_a0),
+                            clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
+    }
+  }
+
+  template <typename _CloneT0>
+  __attribute__((pure)) List<_CloneT0> clone_as() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<_CloneT0>(typename List<_CloneT0>::Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<_CloneT0>(typename List<_CloneT0>::Cons{
+          clone_as_value<_CloneT0>(d_a0),
+          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+    }
+  }
+
+  // CREATORS
+  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+
+  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
+  __attribute__((pure)) List<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = List<t_A>(); }
+
+  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return (d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      return ((*(d_a1)).length() + 1);
     }
   }
 };
 
 struct ListDef {
   template <typename T1>
-  static std::shared_ptr<List<T1>> repeat(const T1 x, const unsigned int n);
+  __attribute__((pure)) static List<T1> repeat(const T1 x,
+                                               const unsigned int &n);
   template <typename T1>
-  static T1 nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
-                const T1 default0);
+  static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
 };
 
 struct RamWrite {
   template <typename T1>
-  static std::shared_ptr<List<T1>>
-  update_nth(const unsigned int n, const T1 x,
-             const std::shared_ptr<List<T1>> &l) {
+  __attribute__((pure)) static List<T1>
+  update_nth(const unsigned int &n, const T1 x, const List<T1> &l) {
     if (n <= 0) {
-      if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
-        return List<T1>::cons(x, d_a1);
+        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
+        return List<T1>::cons(x, *(d_a1));
       }
     } else {
       unsigned int n_ = n - 1;
-      if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
-        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, d_a10));
+        const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
+        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *(d_a10)));
       }
     }
   }
 
   struct ram_reg {
-    std::shared_ptr<List<unsigned int>> reg_main;
-    std::shared_ptr<List<unsigned int>> reg_status;
+    List<unsigned int> reg_main;
+    List<unsigned int> reg_status;
+
+    __attribute__((pure)) ram_reg *operator->() { return this; }
+
+    __attribute__((pure)) const ram_reg *operator->() const { return this; }
   };
 
   struct ram_chip {
-    std::shared_ptr<List<std::shared_ptr<ram_reg>>> chip_regs;
+    List<ram_reg> chip_regs;
     unsigned int chip_port;
+
+    __attribute__((pure)) ram_chip *operator->() { return this; }
+
+    __attribute__((pure)) const ram_chip *operator->() const { return this; }
   };
 
   struct ram_bank {
-    std::shared_ptr<List<std::shared_ptr<ram_chip>>> bank_chips;
+    List<ram_chip> bank_chips;
+
+    __attribute__((pure)) ram_bank *operator->() { return this; }
+
+    __attribute__((pure)) const ram_bank *operator->() const { return this; }
   };
 
   struct ram_sel {
@@ -110,82 +291,83 @@ struct RamWrite {
     unsigned int sel_chip;
     unsigned int sel_reg;
     unsigned int sel_char;
+
+    __attribute__((pure)) ram_sel *operator->() { return this; }
+
+    __attribute__((pure)) const ram_sel *operator->() const { return this; }
   };
 
   struct state {
-    std::shared_ptr<List<unsigned int>> state_regs;
+    List<unsigned int> state_regs;
     unsigned int state_acc;
     bool state_carry;
     unsigned int state_pc;
-    std::shared_ptr<List<unsigned int>> state_stack;
-    std::shared_ptr<List<std::shared_ptr<ram_bank>>> state_ram;
-    std::shared_ptr<ram_sel> state_sel;
-    std::shared_ptr<List<unsigned int>> state_rom;
+    List<unsigned int> state_stack;
+    List<ram_bank> state_ram;
+    ram_sel state_sel;
+    List<unsigned int> state_rom;
+
+    __attribute__((pure)) state *operator->() { return this; }
+
+    __attribute__((pure)) const state *operator->() const { return this; }
   };
 
-  static inline const std::shared_ptr<ram_reg> empty_reg =
-      std::make_shared<ram_reg>(
-          ram_reg{ListDef::template repeat<unsigned int>(0u, 16u),
-                  ListDef::template repeat<unsigned int>(0u, 4u)});
-  static inline const std::shared_ptr<ram_chip> empty_chip =
-      std::make_shared<ram_chip>(ram_chip{
-          ListDef::template repeat<std::shared_ptr<ram_reg>>(empty_reg, 4u),
-          0u});
-  static inline const std::shared_ptr<ram_bank> empty_bank =
-      std::make_shared<ram_bank>(ram_bank{
-          ListDef::template repeat<std::shared_ptr<ram_chip>>(empty_chip, 4u)});
-  static inline const std::shared_ptr<List<std::shared_ptr<ram_bank>>>
-      empty_ram =
-          ListDef::template repeat<std::shared_ptr<ram_bank>>(empty_bank, 4u);
-  static inline const std::shared_ptr<ram_sel> default_sel =
-      std::make_shared<ram_sel>(ram_sel{0u, 0u, 0u, 0u});
-  static inline const std::shared_ptr<state> init_state =
-      std::make_shared<state>(
-          state{ListDef::template repeat<unsigned int>(0u, 16u), 0u, false, 0u,
-                List<unsigned int>::nil(), empty_ram, default_sel,
-                ListDef::template repeat<unsigned int>(0u, 8u)});
-  __attribute__((pure)) static unsigned int
-  get_main(const std::shared_ptr<ram_reg> &rg, const unsigned int i);
-  static std::shared_ptr<ram_reg>
-  upd_main_in_reg(const std::shared_ptr<ram_reg> &rg, const unsigned int i,
-                  const unsigned int v);
-  static std::shared_ptr<ram_reg>
-  upd_stat_in_reg(const std::shared_ptr<ram_reg> &rg, const unsigned int i,
-                  const unsigned int v);
-  static std::shared_ptr<ram_reg>
-  get_regRAM(const std::shared_ptr<ram_chip> &ch, const unsigned int r);
-  static std::shared_ptr<ram_chip>
-  upd_reg_in_chip(const std::shared_ptr<ram_chip> &ch, const unsigned int r,
-                  const std::shared_ptr<ram_reg> &rg);
-  static std::shared_ptr<ram_chip> get_chip(const std::shared_ptr<ram_bank> &bk,
-                                            const unsigned int c);
-  static std::shared_ptr<ram_bank>
-  upd_chip_in_bank(const std::shared_ptr<ram_bank> &bk, const unsigned int c,
-                   const std::shared_ptr<ram_chip> &ch);
-  static std::shared_ptr<ram_bank>
-  get_bank_from_sys(const std::shared_ptr<List<std::shared_ptr<ram_bank>>> &sys,
-                    const unsigned int b);
-  static std::shared_ptr<List<std::shared_ptr<ram_bank>>>
-  upd_bank_in_sys(const std::shared_ptr<state> &s, const unsigned int b,
-                  const std::shared_ptr<ram_bank> &bk);
-  static std::shared_ptr<ram_bank>
-  current_bank(const std::shared_ptr<state> &s);
-  static std::shared_ptr<ram_chip>
-  current_chip(const std::shared_ptr<state> &s);
-  static std::shared_ptr<ram_reg> current_reg(const std::shared_ptr<state> &s);
-  __attribute__((pure)) static unsigned int
-  ram_read_main(const std::shared_ptr<state> &s);
-  static std::shared_ptr<List<std::shared_ptr<ram_bank>>>
-  ram_write_main_sys(const std::shared_ptr<state> &s, const unsigned int v);
-  static std::shared_ptr<List<std::shared_ptr<ram_bank>>>
-  ram_write_status_sys(const std::shared_ptr<state> &s, const unsigned int idx,
-                       const unsigned int v);
+  static inline const ram_reg empty_reg =
+      ram_reg{ListDef::template repeat<unsigned int>(0u, 16u),
+              ListDef::template repeat<unsigned int>(0u, 4u)};
+  static inline const ram_chip empty_chip =
+      ram_chip{ListDef::template repeat<ram_reg>(empty_reg, 4u), 0u};
+  static inline const ram_bank empty_bank =
+      ram_bank{ListDef::template repeat<ram_chip>(empty_chip, 4u)};
+  static inline const List<ram_bank> empty_ram =
+      ListDef::template repeat<ram_bank>(empty_bank, 4u);
+  static inline const ram_sel default_sel = ram_sel{0u, 0u, 0u, 0u};
+  static inline const state init_state =
+      state{ListDef::template repeat<unsigned int>(0u, 16u),
+            0u,
+            false,
+            0u,
+            List<unsigned int>::nil(),
+            empty_ram,
+            default_sel,
+            ListDef::template repeat<unsigned int>(0u, 8u)};
+  __attribute__((pure)) static unsigned int get_main(const ram_reg &rg,
+                                                     const unsigned int &i);
+  __attribute__((pure)) static ram_reg upd_main_in_reg(const ram_reg &rg,
+                                                       const unsigned int &i,
+                                                       const unsigned int &v);
+  __attribute__((pure)) static ram_reg upd_stat_in_reg(const ram_reg &rg,
+                                                       const unsigned int &i,
+                                                       const unsigned int &v);
+  __attribute__((pure)) static ram_reg get_regRAM(const ram_chip &ch,
+                                                  const unsigned int &r);
+  __attribute__((pure)) static ram_chip
+  upd_reg_in_chip(const ram_chip &ch, const unsigned int &r, const ram_reg &rg);
+  __attribute__((pure)) static ram_chip get_chip(const ram_bank &bk,
+                                                 const unsigned int &c);
+  __attribute__((pure)) static ram_bank upd_chip_in_bank(const ram_bank &bk,
+                                                         const unsigned int &c,
+                                                         const ram_chip &ch);
+  __attribute__((pure)) static ram_bank
+  get_bank_from_sys(const List<ram_bank> &sys, const unsigned int &b);
+  __attribute__((pure)) static List<ram_bank>
+  upd_bank_in_sys(const state &s, const unsigned int &b, const ram_bank &bk);
+  __attribute__((pure)) static ram_bank current_bank(const state &s);
+  __attribute__((pure)) static ram_chip current_chip(const state &s);
+  __attribute__((pure)) static ram_reg current_reg(const state &s);
+  __attribute__((pure)) static unsigned int ram_read_main(const state &s);
+  __attribute__((pure)) static List<ram_bank>
+  ram_write_main_sys(const state &s, const unsigned int &v);
+  __attribute__((pure)) static List<ram_bank>
+  ram_write_status_sys(const state &s, const unsigned int &idx,
+                       const unsigned int &v);
   static inline const unsigned int write_bank_count =
-      ram_write_main_sys(init_state, 12u)->length();
+      ram_write_main_sys(init_state, 12u).length();
 };
 
 template <typename T1>
-std::shared_ptr<List<T1>> ListDef::repeat(const T1 x, const unsigned int n) {
+__attribute__((pure)) List<T1> ListDef::repeat(const T1 x,
+                                               const unsigned int &n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {
@@ -195,22 +377,21 @@ std::shared_ptr<List<T1>> ListDef::repeat(const T1 x, const unsigned int n) {
 }
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const std::shared_ptr<List<T1>> &l,
-                const T1 default0) {
+T1 ListDef::nth(const unsigned int &n, const List<T1> &l, const T1 default0) {
   if (n <= 0) {
-    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
       return d_a0;
     }
   } else {
     unsigned int m = n - 1;
-    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l->v());
-      return ListDef::template nth<T1>(m, d_a10, default0);
+      const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
+      return ListDef::template nth<T1>(m, *(d_a10), default0);
     }
   }
 }

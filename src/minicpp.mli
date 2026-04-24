@@ -219,6 +219,11 @@ and smatch_branch = {
           [auto& id = std::get<smb_ctor_type>(scrut->v_mut())] before the body.
           Typically [cond = use_count() == 1].  [None] for branches without
           reuse. *)
+  smb_is_value_type : bool;
+      (** When [true], the scrutinee is a value type (not shared_ptr). *)
+  smb_is_owned : bool;
+      (** When [true], the scrutinee is owned.  Owned value types use
+          [auto [...] = std::move(std::get<T>(scrut.v_mut()))]. *)
   smb_body : cpp_stmt list;
       (** Branch body statements. *)
 }

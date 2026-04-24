@@ -8,12 +8,12 @@
 #include <utility>
 #include <variant>
 
-void RocqBug20894::M::fold(const std::shared_ptr<List<Unit>> &l) {
-  if (std::holds_alternative<typename List<Unit>::Nil>(l->v())) {
+void RocqBug20894::M::fold(const List<Unit> &l) {
+  if (std::holds_alternative<typename List<Unit>::Nil>(l.v())) {
     return;
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<Unit>::Cons>(l->v());
-    fold(d_a1);
+    const auto &[d_a0, d_a1] = std::get<typename List<Unit>::Cons>(l.v());
+    fold(*(d_a1));
     return;
   }
 }

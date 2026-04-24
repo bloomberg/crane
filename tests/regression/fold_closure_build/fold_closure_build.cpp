@@ -18,47 +18,44 @@
 /// The inner closure fun x => acc(h+x) captures acc (std::function)
 /// and h (unsigned int). If these are captured by =, safe. By &, dangles.
 __attribute__((pure)) unsigned int FoldClosureBuild::compose_adders(
-    const std::shared_ptr<FoldClosureBuild::mylist<unsigned int>> &l,
-    const unsigned int _x0) {
+    const FoldClosureBuild::mylist<unsigned int> &l, const unsigned int &_x0) {
   return fold_left<std::function<unsigned int(unsigned int)>, unsigned int>(
       [](const std::function<unsigned int(unsigned int)> acc,
-         const unsigned int h) -> std::function<unsigned int(unsigned int)> {
-        return [=](const unsigned int x) mutable { return acc((h + x)); };
+         unsigned int h) -> std::function<unsigned int(unsigned int)> {
+        return [=](const unsigned int &x) mutable { return acc((h + x)); };
       },
-      [](const unsigned int x) { return x; }, l)(_x0);
+      [](unsigned int x) { return x; }, l)(_x0);
 }
 
 /// Pattern 3: Fold producing a list of closures (not composing them).
 /// Each closure captures the list element from the fold iteration.
-std::shared_ptr<
-    FoldClosureBuild::mylist<std::function<unsigned int(unsigned int)>>>
+__attribute__((pure))
+FoldClosureBuild::mylist<std::function<unsigned int(unsigned int)>>
 FoldClosureBuild::collect_adders(
-    const std::shared_ptr<FoldClosureBuild::mylist<unsigned int>> &l) {
-  return fold_left<std::shared_ptr<FoldClosureBuild::mylist<
-                       std::function<unsigned int(unsigned int)>>>,
-                   unsigned int>(
-      [](std::shared_ptr<FoldClosureBuild::mylist<
-             std::function<unsigned int(unsigned int)>>>
+    const FoldClosureBuild::mylist<unsigned int> &l) {
+  return fold_left<
+      FoldClosureBuild::mylist<std::function<unsigned int(unsigned int)>>,
+      unsigned int>(
+      [](FoldClosureBuild::mylist<std::function<unsigned int(unsigned int)>>
              acc,
-         const unsigned int h) {
+         unsigned int h) {
         return mylist<std::function<unsigned int(unsigned int)>>::mycons(
-            [=](const unsigned int x) mutable { return (h + x); }, acc);
+            [=](const unsigned int &x) mutable { return (h + x); }, acc);
       },
       mylist<std::function<unsigned int(unsigned int)>>::mynil(), l);
 }
 
 __attribute__((pure)) unsigned int FoldClosureBuild::apply_all(
-    const std::shared_ptr<
-        FoldClosureBuild::mylist<std::function<unsigned int(unsigned int)>>>
+    const FoldClosureBuild::mylist<std::function<unsigned int(unsigned int)>>
         &fns,
-    const unsigned int x) {
+    const unsigned int &x) {
   if (std::holds_alternative<typename FoldClosureBuild::mylist<
-          std::function<unsigned int(unsigned int)>>::Mynil>(fns->v())) {
+          std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
     return 0u;
   } else {
     const auto &[d_a0, d_a1] = std::get<typename FoldClosureBuild::mylist<
-        std::function<unsigned int(unsigned int)>>::Mycons>(fns->v());
-    return (d_a0(x) + apply_all(d_a1, x));
+        std::function<unsigned int(unsigned int)>>::Mycons>(fns.v());
+    return (d_a0(x) + apply_all(*(d_a1), x));
   }
 }
 
@@ -72,11 +69,9 @@ __attribute__((pure)) unsigned int FoldClosureBuild::apply_all(
 /// When fold returns, these scopes are destroyed, but the
 /// final fixpoint (stored in the accumulator) still references them.
 __attribute__((pure)) unsigned int FoldClosureBuild::compose_with_fix(
-    const std::shared_ptr<FoldClosureBuild::mylist<unsigned int>> &l,
-    const unsigned int _x0) {
+    const FoldClosureBuild::mylist<unsigned int> &l, const unsigned int &_x0) {
   return fold_left<std::function<unsigned int(unsigned int)>, unsigned int>(
-      [](const std::function<unsigned int(unsigned int)> acc,
-         const unsigned int h) {
+      [](const std::function<unsigned int(unsigned int)> acc, unsigned int h) {
         auto go = std::make_shared<std::function<unsigned int(unsigned int)>>();
         *go = [=](unsigned int x) mutable -> unsigned int {
           if (x <= 0) {
@@ -86,7 +81,10 @@ __attribute__((pure)) unsigned int FoldClosureBuild::compose_with_fix(
             return ((*go)(x_) + 1);
           }
         };
-        return *go;
+        return [=](unsigned int x) mutable -> unsigned int {
+          go;
+          return (*go)(x);
+        };
       },
-      [](const unsigned int x) { return x; }, l)(_x0);
+      [](unsigned int x) { return x; }, l)(_x0);
 }

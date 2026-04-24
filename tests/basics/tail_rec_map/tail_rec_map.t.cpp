@@ -39,15 +39,15 @@ void aSsErT(bool condition, const char *message, int line) {
 
 // Helper to convert list to vector for testing
 template <typename T>
-std::vector<T> list_to_vector(const std::shared_ptr<List<T>> &l) {
+std::vector<T> list_to_vector(const List<T> &l) {
   std::vector<T> result;
-  auto current = l;
+  const List<T> *current = &l;
   while (true) {
     bool done = false;
     std::visit(Overloaded{[&](const typename List<T>::Nil &) { done = true; },
                           [&](const typename List<T>::Cons &c) {
                             result.push_back(c.d_a0);
-                            current = c.d_a1;
+                            current = c.d_a1.get();
                           }},
                current->v());
     if (done)
@@ -58,7 +58,7 @@ std::vector<T> list_to_vector(const std::shared_ptr<List<T>> &l) {
 
 // Helper to create a list from a vector
 template <typename T>
-std::shared_ptr<List<T>> vector_to_list(const std::vector<T> &vec) {
+List<T> vector_to_list(const std::vector<T> &vec) {
   auto result = List<T>::nil();
   for (auto it = vec.rbegin(); it != vec.rend(); ++it) {
     result = List<T>::cons(*it, result);

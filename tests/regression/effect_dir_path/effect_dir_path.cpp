@@ -12,8 +12,7 @@
 
 /// 1. list_directory result matched — exercises IIFE + list match
 std::optional<std::string> EffectDirPath::first_file(const std::string path) {
-  std::shared_ptr<List<std::string>> files =
-      [&]() -> std::shared_ptr<List<std::string>> {
+  List<std::string> files = [&]() -> List<std::string> {
     auto result = List<std::string>::nil();
     for (const auto &entry : std::filesystem::directory_iterator(path)) {
       result = List<std::string>::cons(entry.path().filename().string(),
@@ -21,11 +20,11 @@ std::optional<std::string> EffectDirPath::first_file(const std::string path) {
     }
     return result;
   }();
-  if (std::holds_alternative<typename List<std::string>::Nil>(files->v())) {
+  if (std::holds_alternative<typename List<std::string>::Nil>(files.v())) {
     return std::optional<std::string>();
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename List<std::string>::Cons>(files->v());
+        std::get<typename List<std::string>::Cons>(files.v());
     return std::make_optional<std::string>(d_a0);
   }
 }
@@ -84,16 +83,14 @@ std::string EffectDirPath::create_and_report(const std::string path) {
 }
 
 /// 7. Recursive function counting list items from list_directory
-unsigned int
-EffectDirPath::count_entries(const std::shared_ptr<List<std::string>> &dirs,
-                             const unsigned int acc) {
-  if (std::holds_alternative<typename List<std::string>::Nil>(dirs->v())) {
+unsigned int EffectDirPath::count_entries(const List<std::string> &dirs,
+                                          unsigned int acc) {
+  if (std::holds_alternative<typename List<std::string>::Nil>(dirs.v())) {
     return acc;
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename List<std::string>::Cons>(dirs->v());
-    std::shared_ptr<List<std::string>> files =
-        [&]() -> std::shared_ptr<List<std::string>> {
+        std::get<typename List<std::string>::Cons>(dirs.v());
+    List<std::string> files = [&]() -> List<std::string> {
       auto result = List<std::string>::nil();
       for (const auto &entry : std::filesystem::directory_iterator(d_a0)) {
         result = List<std::string>::cons(entry.path().filename().string(),
@@ -101,8 +98,8 @@ EffectDirPath::count_entries(const std::shared_ptr<List<std::string>> &dirs,
       }
       return result;
     }();
-    unsigned int n = std::move(files)->length();
-    return count_entries(d_a1, (acc + n));
+    unsigned int n = files.length();
+    return count_entries(*(d_a1), (acc + n));
   }
 }
 

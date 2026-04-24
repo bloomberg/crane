@@ -9,7 +9,129 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 struct FixSharedPtrField {
   /// A value-type inductive with recursive self-reference (shared_ptr).
@@ -34,7 +156,7 @@ struct FixSharedPtrField {
 
     struct Mycons {
       unsigned int d_a0;
-      std::shared_ptr<mylist> d_a1;
+      std::unique_ptr<mylist> d_a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
@@ -45,26 +167,63 @@ struct FixSharedPtrField {
 
   public:
     // CREATORS
+    mylist() {}
+
     explicit mylist(Mynil _v) : d_v_(_v) {}
 
     explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<mylist> mynil() {
-      return std::make_shared<mylist>(Mynil{});
+    mylist(const mylist &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    mylist(mylist &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) mylist &operator=(const mylist &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<mylist> mycons(unsigned int a0,
-                                          const std::shared_ptr<mylist> &a1) {
-      return std::make_shared<mylist>(Mycons{std::move(a0), a1});
+    __attribute__((pure)) mylist &operator=(mylist &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<mylist> mycons(unsigned int a0,
-                                          std::shared_ptr<mylist> &&a1) {
-      return std::make_shared<mylist>(Mycons{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    __attribute__((pure)) mylist clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Mynil>(_sv.v())) {
+        return mylist(Mynil{});
+      } else {
+        const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
+        return mylist(Mycons{clone_as_value<unsigned int>(d_a0),
+                             clone_as_value<std::unique_ptr<mylist>>(d_a1)});
+      }
+    }
+
+    // CREATORS
+    __attribute__((pure)) static mylist mynil() { return mylist(Mynil{}); }
+
+    __attribute__((pure)) static mylist mycons(unsigned int a0,
+                                               const mylist &a1) {
+      return mylist(
+          Mycons{std::move(a0), std::make_unique<mylist>(a1.clone())});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    __attribute__((pure)) mylist *operator->() { return this; }
+
+    __attribute__((pure)) const mylist *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = mylist(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -74,62 +233,68 @@ struct FixSharedPtrField {
     __attribute__((pure))
     std::optional<std::function<unsigned int(unsigned int)>>
     make_list_fn() const {
-      if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
         return std::optional<std::function<unsigned int(unsigned int)>>();
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
+        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
+        mylist d_a1_value = clone_as_value<mylist>(d_a1);
         auto compute =
             std::make_shared<std::function<unsigned int(unsigned int)>>();
         *compute = [=](unsigned int x) mutable -> unsigned int {
           if (x <= 0) {
-            return (d_a0 + d_a1->mylist_sum());
+            return (d_a0 + d_a1_value.mylist_sum());
           } else {
             unsigned int x_ = x - 1;
             return (1u + (*compute)(x_));
           }
         };
         return std::make_optional<std::function<unsigned int(unsigned int)>>(
-            *compute);
+            (*compute));
       }
     }
 
     __attribute__((pure)) unsigned int mylist_length() const {
-      if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
-        return (1u + d_a1->mylist_length());
+        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
+        return (1u + (*(d_a1)).mylist_length());
       }
     }
 
     __attribute__((pure)) unsigned int mylist_sum() const {
-      if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
-        return (d_a0 + d_a1->mylist_sum());
+        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
+        return (d_a0 + (*(d_a1)).mylist_sum());
       }
     }
 
     template <typename T1,
-              MapsTo<T1, unsigned int, std::shared_ptr<mylist>, T1> F1>
+              MapsTo<T1, unsigned int, std::unique_ptr<mylist>, T1> F1>
     T1 mylist_rec(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
-        return f0(d_a0, d_a1, d_a1->template mylist_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
+        return f0(d_a0, *(d_a1), (*(d_a1)).template mylist_rec<T1>(f, f0));
       }
     }
 
     template <typename T1,
-              MapsTo<T1, unsigned int, std::shared_ptr<mylist>, T1> F1>
+              MapsTo<T1, unsigned int, std::unique_ptr<mylist>, T1> F1>
     T1 mylist_rect(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
-        return f0(d_a0, d_a1, d_a1->template mylist_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
+        return f0(d_a0, *(d_a1), (*(d_a1)).template mylist_rect<T1>(f, f0));
       }
     }
   };
@@ -138,7 +303,7 @@ struct FixSharedPtrField {
   struct wrapper {
     // TYPES
     struct Wrap {
-      std::shared_ptr<mylist> d_a0;
+      mylist d_a0;
     };
 
     using variant_t = std::variant<Wrap>;
@@ -149,32 +314,66 @@ struct FixSharedPtrField {
 
   public:
     // CREATORS
+    wrapper() {}
+
     explicit wrapper(Wrap _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<wrapper> wrap(const std::shared_ptr<mylist> &a0) {
-      return std::make_shared<wrapper>(Wrap{a0});
+    wrapper(const wrapper &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    wrapper(wrapper &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) wrapper &operator=(const wrapper &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<wrapper> wrap(std::shared_ptr<mylist> &&a0) {
-      return std::make_shared<wrapper>(Wrap{std::move(a0)});
+    __attribute__((pure)) wrapper &operator=(wrapper &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) wrapper clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0] = std::get<Wrap>(_sv.v());
+      return wrapper(Wrap{clone_as_value<mylist>(d_a0)});
+    }
+
+    // CREATORS
+    __attribute__((pure)) static wrapper wrap(mylist a0) {
+      return wrapper(Wrap{std::move(a0)});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) wrapper *operator->() { return this; }
+
+    __attribute__((pure)) const wrapper *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = wrapper(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<mylist>> F0>
-  static T1 wrapper_rect(F0 &&f, const std::shared_ptr<wrapper> &w) {
-    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w->v());
+  template <typename T1, MapsTo<T1, mylist> F0>
+  static T1 wrapper_rect(F0 &&f, const wrapper &w) {
+    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
     return f(d_a0);
   }
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<mylist>> F0>
-  static T1 wrapper_rec(F0 &&f, const std::shared_ptr<wrapper> &w) {
-    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w->v());
+  template <typename T1, MapsTo<T1, mylist> F0>
+  static T1 wrapper_rec(F0 &&f, const wrapper &w) {
+    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
     return f(d_a0);
   }
 
@@ -185,7 +384,7 @@ struct FixSharedPtrField {
     auto _cs =
         mylist::mycons(
             10u, mylist::mycons(20u, mylist::mycons(30u, mylist::mynil())))
-            ->make_list_fn();
+            .make_list_fn();
     if (_cs.has_value()) {
       const std::function<unsigned int(unsigned int)> &f = *_cs;
       return f(5u);
@@ -199,11 +398,11 @@ struct FixSharedPtrField {
   static inline const unsigned int test2 = []() {
     std::optional<std::function<unsigned int(unsigned int)>> opt =
         mylist::mycons(100u, mylist::mycons(200u, mylist::mynil()))
-            ->make_list_fn();
+            .make_list_fn();
     unsigned int noise =
         mylist::mycons(1u,
                        mylist::mycons(2u, mylist::mycons(3u, mylist::mynil())))
-            ->mylist_sum();
+            .mylist_sum();
     if (opt.has_value()) {
       const std::function<unsigned int(unsigned int)> &f = *opt;
       return f(0u);
@@ -222,7 +421,7 @@ struct FixSharedPtrField {
                 10u, mylist::mycons(
                          15u, mylist::mycons(
                                   20u, mylist::mycons(25u, mylist::mynil())))))
-            ->make_list_fn();
+            .make_list_fn();
     if (_cs.has_value()) {
       const std::function<unsigned int(unsigned int)> &f = *_cs;
       return f(10u);
@@ -231,7 +430,7 @@ struct FixSharedPtrField {
     }
   }();
   /// Dummy use of wrapper to keep it alive for extraction.
-  static std::shared_ptr<wrapper> wrap_list(std::shared_ptr<mylist> l);
+  __attribute__((pure)) static wrapper wrap_list(mylist l);
 };
 
 #endif // INCLUDED_FIX_SHARED_PTR_FIELD

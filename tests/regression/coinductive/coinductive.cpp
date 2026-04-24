@@ -12,8 +12,7 @@ std::shared_ptr<Coinductive::stream> Coinductive::zeros() {
   });
 }
 
-std::shared_ptr<Coinductive::stream>
-Coinductive::count_from(const unsigned int n) {
+std::shared_ptr<Coinductive::stream> Coinductive::count_from(unsigned int n) {
   return stream::lazy_([=]() mutable -> std::shared_ptr<Coinductive::stream> {
     return stream::cons(n, count_from((n + 1)));
   });
@@ -44,8 +43,7 @@ Coinductive::interleave(const std::shared_ptr<Coinductive::stream> &s1,
   });
 }
 
-std::shared_ptr<Coinductive::tree>
-Coinductive::infinite_tree(const unsigned int n) {
+std::shared_ptr<Coinductive::tree> Coinductive::infinite_tree(unsigned int n) {
   return tree::lazy_([=]() mutable -> std::shared_ptr<Coinductive::tree> {
     return tree::node(n, infinite_tree((n + 1u)), infinite_tree((n + 2u)));
   });

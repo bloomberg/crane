@@ -6,7 +6,7 @@
 #include <variant>
 
 __attribute__((pure)) bool
-ComputationalProof::nat_eq_dec(const unsigned int n, const unsigned int x) {
+ComputationalProof::nat_eq_dec(const unsigned int &n, const unsigned int &x) {
   if (n <= 0) {
     if (x <= 0) {
       return true;
@@ -30,7 +30,7 @@ ComputationalProof::nat_eq_dec(const unsigned int n, const unsigned int x) {
 }
 
 __attribute__((pure)) bool
-ComputationalProof::nat_eqb_dec(const unsigned int n, const unsigned int m) {
+ComputationalProof::nat_eqb_dec(const unsigned int &n, const unsigned int &m) {
   if (nat_eq_dec(n, m)) {
     return true;
   } else {
@@ -38,8 +38,8 @@ ComputationalProof::nat_eqb_dec(const unsigned int n, const unsigned int m) {
   }
 }
 
-__attribute__((pure)) bool ComputationalProof::le_dec(const unsigned int n,
-                                                      const unsigned int m) {
+__attribute__((pure)) bool ComputationalProof::le_dec(const unsigned int &n,
+                                                      const unsigned int &m) {
   if (n <= 0) {
     return true;
   } else {
@@ -59,7 +59,7 @@ __attribute__((pure)) bool ComputationalProof::le_dec(const unsigned int n,
 }
 
 __attribute__((pure)) bool
-ComputationalProof::nat_leb_dec(const unsigned int n, const unsigned int m) {
+ComputationalProof::nat_leb_dec(const unsigned int &n, const unsigned int &m) {
   if (le_dec(n, m)) {
     return true;
   } else {
@@ -67,8 +67,8 @@ ComputationalProof::nat_leb_dec(const unsigned int n, const unsigned int m) {
   }
 }
 
-__attribute__((pure)) unsigned int
-ComputationalProof::min_dec(const unsigned int n, const unsigned int m) {
+__attribute__((pure)) unsigned int ComputationalProof::min_dec(unsigned int n,
+                                                               unsigned int m) {
   if (le_dec(n, m)) {
     return n;
   } else {
@@ -76,8 +76,8 @@ ComputationalProof::min_dec(const unsigned int n, const unsigned int m) {
   }
 }
 
-__attribute__((pure)) unsigned int
-ComputationalProof::max_dec(const unsigned int n, const unsigned int m) {
+__attribute__((pure)) unsigned int ComputationalProof::max_dec(unsigned int n,
+                                                               unsigned int m) {
   if (le_dec(n, m)) {
     return m;
   } else {
@@ -85,29 +85,29 @@ ComputationalProof::max_dec(const unsigned int n, const unsigned int m) {
   }
 }
 
-std::shared_ptr<List<unsigned int>>
-ComputationalProof::insert_dec(const unsigned int x,
-                               const std::shared_ptr<List<unsigned int>> &l) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+__attribute__((pure)) List<unsigned int>
+ComputationalProof::insert_dec(unsigned int x, const List<unsigned int> &l) {
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return List<unsigned int>::cons(x, List<unsigned int>::nil());
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l->v());
+        std::get<typename List<unsigned int>::Cons>(l.v());
     if (le_dec(x, d_a0)) {
-      return List<unsigned int>::cons(x, List<unsigned int>::cons(d_a0, d_a1));
+      return List<unsigned int>::cons(x,
+                                      List<unsigned int>::cons(d_a0, *(d_a1)));
     } else {
-      return List<unsigned int>::cons(d_a0, insert_dec(x, d_a1));
+      return List<unsigned int>::cons(d_a0, insert_dec(x, *(d_a1)));
     }
   }
 }
 
-std::shared_ptr<List<unsigned int>>
-ComputationalProof::isort_dec(const std::shared_ptr<List<unsigned int>> &l) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+__attribute__((pure)) List<unsigned int>
+ComputationalProof::isort_dec(const List<unsigned int> &l) {
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return List<unsigned int>::nil();
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l->v());
-    return insert_dec(d_a0, isort_dec(d_a1));
+        std::get<typename List<unsigned int>::Cons>(l.v());
+    return insert_dec(d_a0, isort_dec(*(d_a1)));
   }
 }

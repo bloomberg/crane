@@ -8,33 +8,32 @@
 #include <variant>
 #include <vector>
 
-std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
-LoopifyTreePaths::map_cons(
-    const unsigned int x,
-    const std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> &ll) {
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _head{};
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> *_write = &_head;
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _loop_ll = ll;
+__attribute__((pure)) List<List<unsigned int>>
+LoopifyTreePaths::map_cons(unsigned int x, const List<List<unsigned int>> &ll) {
+  std::unique_ptr<List<List<unsigned int>>> _head{};
+  std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
+  List<List<unsigned int>> _loop_ll = ll;
   while (true) {
-    if (std::holds_alternative<
-            typename List<std::shared_ptr<List<unsigned int>>>::Nil>(
-            _loop_ll->v())) {
-      *_write = List<std::shared_ptr<List<unsigned int>>>::nil();
+    if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+            _loop_ll.v())) {
+      *(_write) = std::make_unique<List<List<unsigned int>>>(
+          List<List<unsigned int>>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-              _loop_ll->v());
-      auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
-          List<unsigned int>::cons(x, d_a0), nullptr);
-      *_write = _cell;
+          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll.v());
+      auto _cell = std::make_unique<List<List<unsigned int>>>(
+          typename List<List<unsigned int>>::Cons(
+              List<unsigned int>::cons(
+                  x, clone_as_value<List<unsigned int>>(d_a0)),
+              nullptr));
+      *(_write) = std::move(_cell);
       _write =
-          &std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-               _cell->v_mut())
+          &std::get<typename List<List<unsigned int>>::Cons>((*_write)->v_mut())
                .d_a1;
-      _loop_ll = d_a1;
+      _loop_ll = *(d_a1);
       continue;
     }
   }
-  return _head;
+  return std::move(*(_head));
 }

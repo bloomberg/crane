@@ -7,13 +7,13 @@
 #include <utility>
 #include <variant>
 
-__attribute__((pure)) Comparison NatOrdered::compare(const unsigned int _x0,
-                                                     const unsigned int _x1) {
+__attribute__((pure)) Comparison NatOrdered::compare(const unsigned int &_x0,
+                                                     const unsigned int &_x1) {
   return Nat::compare(_x0, _x1);
 }
 
-__attribute__((pure)) Comparison Nat::compare(const unsigned int n,
-                                              const unsigned int m) {
+__attribute__((pure)) Comparison Nat::compare(const unsigned int &n,
+                                              const unsigned int &m) {
   if (n <= 0) {
     if (m <= 0) {
       return Comparison::e_EQ;

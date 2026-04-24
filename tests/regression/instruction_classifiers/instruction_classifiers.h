@@ -7,7 +7,129 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 template <typename t_A> struct List {
   // TYPES
@@ -15,10 +137,11 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
+  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -26,26 +149,72 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  __attribute__((pure)) List<t_A> clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<t_A>(Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<t_A>(Cons{clone_as_value<t_A>(d_a0),
+                            clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
+    }
+  }
+
+  template <typename _CloneT0>
+  __attribute__((pure)) List<_CloneT0> clone_as() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<_CloneT0>(typename List<_CloneT0>::Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<_CloneT0>(typename List<_CloneT0>::Cons{
+          clone_as_value<_CloneT0>(d_a0),
+          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+    }
+  }
+
+  // CREATORS
+  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+
+  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+  // ACCESSORS
+  __attribute__((pure)) List<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = List<t_A>(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -130,6 +299,8 @@ struct InstructionClassifiers {
 
   public:
     // CREATORS
+    instr_acc() {}
+
     explicit instr_acc(LDM _v) : d_v_(std::move(_v)) {}
 
     explicit instr_acc(LD _v) : d_v_(std::move(_v)) {}
@@ -182,118 +353,175 @@ struct InstructionClassifiers {
 
     explicit instr_acc(NOP_acc _v) : d_v_(_v) {}
 
-    static std::shared_ptr<instr_acc> ldm(unsigned int a0) {
-      return std::make_shared<instr_acc>(LDM{std::move(a0)});
+    instr_acc(const instr_acc &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    instr_acc(instr_acc &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) instr_acc &operator=(const instr_acc &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instr_acc> ld(unsigned int a0) {
-      return std::make_shared<instr_acc>(LD{std::move(a0)});
+    __attribute__((pure)) instr_acc &operator=(instr_acc &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instr_acc> add(unsigned int a0) {
-      return std::make_shared<instr_acc>(ADD{std::move(a0)});
+    // ACCESSORS
+    __attribute__((pure)) instr_acc clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<LDM>(_sv.v())) {
+        const auto &[d_a0] = std::get<LDM>(_sv.v());
+        return instr_acc(LDM{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<LD>(_sv.v())) {
+        const auto &[d_a0] = std::get<LD>(_sv.v());
+        return instr_acc(LD{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<ADD>(_sv.v())) {
+        const auto &[d_a0] = std::get<ADD>(_sv.v());
+        return instr_acc(ADD{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<SUB>(_sv.v())) {
+        const auto &[d_a0] = std::get<SUB>(_sv.v());
+        return instr_acc(SUB{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<INC>(_sv.v())) {
+        const auto &[d_a0] = std::get<INC>(_sv.v());
+        return instr_acc(INC{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<XCH>(_sv.v())) {
+        const auto &[d_a0] = std::get<XCH>(_sv.v());
+        return instr_acc(XCH{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<BBL>(_sv.v())) {
+        const auto &[d_a0] = std::get<BBL>(_sv.v());
+        return instr_acc(BBL{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<SBM>(_sv.v())) {
+        return instr_acc(SBM{});
+      } else if (std::holds_alternative<RDM>(_sv.v())) {
+        return instr_acc(RDM{});
+      } else if (std::holds_alternative<RDR>(_sv.v())) {
+        return instr_acc(RDR{});
+      } else if (std::holds_alternative<ADM>(_sv.v())) {
+        return instr_acc(ADM{});
+      } else if (std::holds_alternative<RD0>(_sv.v())) {
+        return instr_acc(RD0{});
+      } else if (std::holds_alternative<RD1>(_sv.v())) {
+        return instr_acc(RD1{});
+      } else if (std::holds_alternative<RD2>(_sv.v())) {
+        return instr_acc(RD2{});
+      } else if (std::holds_alternative<RD3>(_sv.v())) {
+        return instr_acc(RD3{});
+      } else if (std::holds_alternative<CLB>(_sv.v())) {
+        return instr_acc(CLB{});
+      } else if (std::holds_alternative<CMA>(_sv.v())) {
+        return instr_acc(CMA{});
+      } else if (std::holds_alternative<IAC>(_sv.v())) {
+        return instr_acc(IAC{});
+      } else if (std::holds_alternative<DAC>(_sv.v())) {
+        return instr_acc(DAC{});
+      } else if (std::holds_alternative<RAL>(_sv.v())) {
+        return instr_acc(RAL{});
+      } else if (std::holds_alternative<RAR>(_sv.v())) {
+        return instr_acc(RAR{});
+      } else if (std::holds_alternative<TCC>(_sv.v())) {
+        return instr_acc(TCC{});
+      } else if (std::holds_alternative<TCS>(_sv.v())) {
+        return instr_acc(TCS{});
+      } else if (std::holds_alternative<DAA>(_sv.v())) {
+        return instr_acc(DAA{});
+      } else if (std::holds_alternative<KBP>(_sv.v())) {
+        return instr_acc(KBP{});
+      } else {
+        return instr_acc(NOP_acc{});
+      }
     }
 
-    static std::shared_ptr<instr_acc> sub(unsigned int a0) {
-      return std::make_shared<instr_acc>(SUB{std::move(a0)});
+    // CREATORS
+    __attribute__((pure)) static instr_acc ldm(unsigned int a0) {
+      return instr_acc(LDM{std::move(a0)});
     }
 
-    static std::shared_ptr<instr_acc> inc(unsigned int a0) {
-      return std::make_shared<instr_acc>(INC{std::move(a0)});
+    __attribute__((pure)) static instr_acc ld(unsigned int a0) {
+      return instr_acc(LD{std::move(a0)});
     }
 
-    static std::shared_ptr<instr_acc> xch(unsigned int a0) {
-      return std::make_shared<instr_acc>(XCH{std::move(a0)});
+    __attribute__((pure)) static instr_acc add(unsigned int a0) {
+      return instr_acc(ADD{std::move(a0)});
     }
 
-    static std::shared_ptr<instr_acc> bbl(unsigned int a0) {
-      return std::make_shared<instr_acc>(BBL{std::move(a0)});
+    __attribute__((pure)) static instr_acc sub(unsigned int a0) {
+      return instr_acc(SUB{std::move(a0)});
     }
 
-    static std::shared_ptr<instr_acc> sbm() {
-      return std::make_shared<instr_acc>(SBM{});
+    __attribute__((pure)) static instr_acc inc(unsigned int a0) {
+      return instr_acc(INC{std::move(a0)});
     }
 
-    static std::shared_ptr<instr_acc> rdm() {
-      return std::make_shared<instr_acc>(RDM{});
+    __attribute__((pure)) static instr_acc xch(unsigned int a0) {
+      return instr_acc(XCH{std::move(a0)});
     }
 
-    static std::shared_ptr<instr_acc> rdr() {
-      return std::make_shared<instr_acc>(RDR{});
+    __attribute__((pure)) static instr_acc bbl(unsigned int a0) {
+      return instr_acc(BBL{std::move(a0)});
     }
 
-    static std::shared_ptr<instr_acc> adm() {
-      return std::make_shared<instr_acc>(ADM{});
-    }
+    constexpr static instr_acc sbm() { return instr_acc(SBM{}); }
 
-    static std::shared_ptr<instr_acc> rd0() {
-      return std::make_shared<instr_acc>(RD0{});
-    }
+    constexpr static instr_acc rdm() { return instr_acc(RDM{}); }
 
-    static std::shared_ptr<instr_acc> rd1() {
-      return std::make_shared<instr_acc>(RD1{});
-    }
+    constexpr static instr_acc rdr() { return instr_acc(RDR{}); }
 
-    static std::shared_ptr<instr_acc> rd2() {
-      return std::make_shared<instr_acc>(RD2{});
-    }
+    constexpr static instr_acc adm() { return instr_acc(ADM{}); }
 
-    static std::shared_ptr<instr_acc> rd3() {
-      return std::make_shared<instr_acc>(RD3{});
-    }
+    constexpr static instr_acc rd0() { return instr_acc(RD0{}); }
 
-    static std::shared_ptr<instr_acc> clb() {
-      return std::make_shared<instr_acc>(CLB{});
-    }
+    constexpr static instr_acc rd1() { return instr_acc(RD1{}); }
 
-    static std::shared_ptr<instr_acc> cma() {
-      return std::make_shared<instr_acc>(CMA{});
-    }
+    constexpr static instr_acc rd2() { return instr_acc(RD2{}); }
 
-    static std::shared_ptr<instr_acc> iac() {
-      return std::make_shared<instr_acc>(IAC{});
-    }
+    constexpr static instr_acc rd3() { return instr_acc(RD3{}); }
 
-    static std::shared_ptr<instr_acc> dac() {
-      return std::make_shared<instr_acc>(DAC{});
-    }
+    constexpr static instr_acc clb() { return instr_acc(CLB{}); }
 
-    static std::shared_ptr<instr_acc> ral() {
-      return std::make_shared<instr_acc>(RAL{});
-    }
+    constexpr static instr_acc cma() { return instr_acc(CMA{}); }
 
-    static std::shared_ptr<instr_acc> rar() {
-      return std::make_shared<instr_acc>(RAR{});
-    }
+    constexpr static instr_acc iac() { return instr_acc(IAC{}); }
 
-    static std::shared_ptr<instr_acc> tcc() {
-      return std::make_shared<instr_acc>(TCC{});
-    }
+    constexpr static instr_acc dac() { return instr_acc(DAC{}); }
 
-    static std::shared_ptr<instr_acc> tcs() {
-      return std::make_shared<instr_acc>(TCS{});
-    }
+    constexpr static instr_acc ral() { return instr_acc(RAL{}); }
 
-    static std::shared_ptr<instr_acc> daa() {
-      return std::make_shared<instr_acc>(DAA{});
-    }
+    constexpr static instr_acc rar() { return instr_acc(RAR{}); }
 
-    static std::shared_ptr<instr_acc> kbp() {
-      return std::make_shared<instr_acc>(KBP{});
-    }
+    constexpr static instr_acc tcc() { return instr_acc(TCC{}); }
 
-    static std::shared_ptr<instr_acc> nop_acc() {
-      return std::make_shared<instr_acc>(NOP_acc{});
-    }
+    constexpr static instr_acc tcs() { return instr_acc(TCS{}); }
+
+    constexpr static instr_acc daa() { return instr_acc(DAA{}); }
+
+    constexpr static instr_acc kbp() { return instr_acc(KBP{}); }
+
+    constexpr static instr_acc nop_acc() { return instr_acc(NOP_acc{}); }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) instr_acc *operator->() { return this; }
+
+    __attribute__((pure)) const instr_acc *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = instr_acc(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) bool writes_acc() const {
-      if (std::holds_alternative<typename instr_acc::NOP_acc>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instr_acc::NOP_acc>(_sv.v())) {
         return false;
       } else {
         return true;
@@ -311,62 +539,63 @@ struct InstructionClassifiers {
                      const T1 f17, const T1 f18, const T1 f19, const T1 f20,
                      const T1 f21, const T1 f22, const T1 f23,
                      const T1 f24) const {
-      if (std::holds_alternative<typename instr_acc::LDM>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_acc::LDM>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instr_acc::LDM>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_acc::LDM>(_sv.v());
         return f(d_a0);
-      } else if (std::holds_alternative<typename instr_acc::LD>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_acc::LD>(this->v());
+      } else if (std::holds_alternative<typename instr_acc::LD>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_acc::LD>(_sv.v());
         return f0(d_a0);
-      } else if (std::holds_alternative<typename instr_acc::ADD>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_acc::ADD>(this->v());
+      } else if (std::holds_alternative<typename instr_acc::ADD>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_acc::ADD>(_sv.v());
         return f1(d_a0);
-      } else if (std::holds_alternative<typename instr_acc::SUB>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_acc::SUB>(this->v());
+      } else if (std::holds_alternative<typename instr_acc::SUB>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_acc::SUB>(_sv.v());
         return f2(d_a0);
-      } else if (std::holds_alternative<typename instr_acc::INC>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_acc::INC>(this->v());
+      } else if (std::holds_alternative<typename instr_acc::INC>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_acc::INC>(_sv.v());
         return f3(d_a0);
-      } else if (std::holds_alternative<typename instr_acc::XCH>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_acc::XCH>(this->v());
+      } else if (std::holds_alternative<typename instr_acc::XCH>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_acc::XCH>(_sv.v());
         return f4(d_a0);
-      } else if (std::holds_alternative<typename instr_acc::BBL>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_acc::BBL>(this->v());
+      } else if (std::holds_alternative<typename instr_acc::BBL>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_acc::BBL>(_sv.v());
         return f5(d_a0);
-      } else if (std::holds_alternative<typename instr_acc::SBM>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::SBM>(_sv.v())) {
         return f6;
-      } else if (std::holds_alternative<typename instr_acc::RDM>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::RDM>(_sv.v())) {
         return f7;
-      } else if (std::holds_alternative<typename instr_acc::RDR>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::RDR>(_sv.v())) {
         return f8;
-      } else if (std::holds_alternative<typename instr_acc::ADM>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::ADM>(_sv.v())) {
         return f9;
-      } else if (std::holds_alternative<typename instr_acc::RD0>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::RD0>(_sv.v())) {
         return f10;
-      } else if (std::holds_alternative<typename instr_acc::RD1>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::RD1>(_sv.v())) {
         return f11;
-      } else if (std::holds_alternative<typename instr_acc::RD2>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::RD2>(_sv.v())) {
         return f12;
-      } else if (std::holds_alternative<typename instr_acc::RD3>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::RD3>(_sv.v())) {
         return f13;
-      } else if (std::holds_alternative<typename instr_acc::CLB>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::CLB>(_sv.v())) {
         return f14;
-      } else if (std::holds_alternative<typename instr_acc::CMA>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::CMA>(_sv.v())) {
         return f15;
-      } else if (std::holds_alternative<typename instr_acc::IAC>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::IAC>(_sv.v())) {
         return f16;
-      } else if (std::holds_alternative<typename instr_acc::DAC>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::DAC>(_sv.v())) {
         return f17;
-      } else if (std::holds_alternative<typename instr_acc::RAL>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::RAL>(_sv.v())) {
         return f18;
-      } else if (std::holds_alternative<typename instr_acc::RAR>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::RAR>(_sv.v())) {
         return f19;
-      } else if (std::holds_alternative<typename instr_acc::TCC>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::TCC>(_sv.v())) {
         return f20;
-      } else if (std::holds_alternative<typename instr_acc::TCS>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::TCS>(_sv.v())) {
         return f21;
-      } else if (std::holds_alternative<typename instr_acc::DAA>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::DAA>(_sv.v())) {
         return f22;
-      } else if (std::holds_alternative<typename instr_acc::KBP>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::KBP>(_sv.v())) {
         return f23;
       } else {
         return f24;
@@ -384,62 +613,63 @@ struct InstructionClassifiers {
                       const T1 f17, const T1 f18, const T1 f19, const T1 f20,
                       const T1 f21, const T1 f22, const T1 f23,
                       const T1 f24) const {
-      if (std::holds_alternative<typename instr_acc::LDM>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_acc::LDM>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instr_acc::LDM>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_acc::LDM>(_sv.v());
         return f(d_a0);
-      } else if (std::holds_alternative<typename instr_acc::LD>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_acc::LD>(this->v());
+      } else if (std::holds_alternative<typename instr_acc::LD>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_acc::LD>(_sv.v());
         return f0(d_a0);
-      } else if (std::holds_alternative<typename instr_acc::ADD>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_acc::ADD>(this->v());
+      } else if (std::holds_alternative<typename instr_acc::ADD>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_acc::ADD>(_sv.v());
         return f1(d_a0);
-      } else if (std::holds_alternative<typename instr_acc::SUB>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_acc::SUB>(this->v());
+      } else if (std::holds_alternative<typename instr_acc::SUB>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_acc::SUB>(_sv.v());
         return f2(d_a0);
-      } else if (std::holds_alternative<typename instr_acc::INC>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_acc::INC>(this->v());
+      } else if (std::holds_alternative<typename instr_acc::INC>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_acc::INC>(_sv.v());
         return f3(d_a0);
-      } else if (std::holds_alternative<typename instr_acc::XCH>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_acc::XCH>(this->v());
+      } else if (std::holds_alternative<typename instr_acc::XCH>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_acc::XCH>(_sv.v());
         return f4(d_a0);
-      } else if (std::holds_alternative<typename instr_acc::BBL>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_acc::BBL>(this->v());
+      } else if (std::holds_alternative<typename instr_acc::BBL>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_acc::BBL>(_sv.v());
         return f5(d_a0);
-      } else if (std::holds_alternative<typename instr_acc::SBM>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::SBM>(_sv.v())) {
         return f6;
-      } else if (std::holds_alternative<typename instr_acc::RDM>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::RDM>(_sv.v())) {
         return f7;
-      } else if (std::holds_alternative<typename instr_acc::RDR>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::RDR>(_sv.v())) {
         return f8;
-      } else if (std::holds_alternative<typename instr_acc::ADM>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::ADM>(_sv.v())) {
         return f9;
-      } else if (std::holds_alternative<typename instr_acc::RD0>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::RD0>(_sv.v())) {
         return f10;
-      } else if (std::holds_alternative<typename instr_acc::RD1>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::RD1>(_sv.v())) {
         return f11;
-      } else if (std::holds_alternative<typename instr_acc::RD2>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::RD2>(_sv.v())) {
         return f12;
-      } else if (std::holds_alternative<typename instr_acc::RD3>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::RD3>(_sv.v())) {
         return f13;
-      } else if (std::holds_alternative<typename instr_acc::CLB>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::CLB>(_sv.v())) {
         return f14;
-      } else if (std::holds_alternative<typename instr_acc::CMA>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::CMA>(_sv.v())) {
         return f15;
-      } else if (std::holds_alternative<typename instr_acc::IAC>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::IAC>(_sv.v())) {
         return f16;
-      } else if (std::holds_alternative<typename instr_acc::DAC>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::DAC>(_sv.v())) {
         return f17;
-      } else if (std::holds_alternative<typename instr_acc::RAL>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::RAL>(_sv.v())) {
         return f18;
-      } else if (std::holds_alternative<typename instr_acc::RAR>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::RAR>(_sv.v())) {
         return f19;
-      } else if (std::holds_alternative<typename instr_acc::TCC>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::TCC>(_sv.v())) {
         return f20;
-      } else if (std::holds_alternative<typename instr_acc::TCS>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::TCS>(_sv.v())) {
         return f21;
-      } else if (std::holds_alternative<typename instr_acc::DAA>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::DAA>(_sv.v())) {
         return f22;
-      } else if (std::holds_alternative<typename instr_acc::KBP>(this->v())) {
+      } else if (std::holds_alternative<typename instr_acc::KBP>(_sv.v())) {
         return f23;
       } else {
         return f24;
@@ -447,22 +677,21 @@ struct InstructionClassifiers {
     }
   };
 
-  __attribute__((pure)) static unsigned int count_writes_acc(
-      const std::shared_ptr<List<std::shared_ptr<instr_acc>>> &prog);
+  __attribute__((pure)) static unsigned int
+  count_writes_acc(const List<instr_acc> &prog);
   static inline const unsigned int test_writes_acc =
-      count_writes_acc(List<std::shared_ptr<instr_acc>>::cons(
+      count_writes_acc(List<instr_acc>::cons(
           instr_acc::nop_acc(),
-          List<std::shared_ptr<instr_acc>>::cons(
+          List<instr_acc>::cons(
               instr_acc::ldm(9u),
-              List<std::shared_ptr<instr_acc>>::cons(
+              List<instr_acc>::cons(
                   instr_acc::rar(),
-                  List<std::shared_ptr<instr_acc>>::cons(
+                  List<instr_acc>::cons(
                       instr_acc::kbp(),
-                      List<std::shared_ptr<instr_acc>>::cons(
+                      List<instr_acc>::cons(
                           instr_acc::nop_acc(),
-                          List<std::shared_ptr<instr_acc>>::cons(
-                              instr_acc::add(1u),
-                              List<std::shared_ptr<instr_acc>>::nil())))))));
+                          List<instr_acc>::cons(instr_acc::add(1u),
+                                                List<instr_acc>::nil())))))));
 
   struct instr_ram {
     // TYPES
@@ -493,6 +722,8 @@ struct InstructionClassifiers {
 
   public:
     // CREATORS
+    instr_ram() {}
+
     explicit instr_ram(WRM _v) : d_v_(_v) {}
 
     explicit instr_ram(WMP _v) : d_v_(_v) {}
@@ -509,49 +740,87 @@ struct InstructionClassifiers {
 
     explicit instr_ram(ADD_ram _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<instr_ram> wrm() {
-      return std::make_shared<instr_ram>(WRM{});
+    instr_ram(const instr_ram &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    instr_ram(instr_ram &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) instr_ram &operator=(const instr_ram &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instr_ram> wmp() {
-      return std::make_shared<instr_ram>(WMP{});
+    __attribute__((pure)) instr_ram &operator=(instr_ram &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instr_ram> wr0() {
-      return std::make_shared<instr_ram>(WR0{});
+    // ACCESSORS
+    __attribute__((pure)) instr_ram clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<WRM>(_sv.v())) {
+        return instr_ram(WRM{});
+      } else if (std::holds_alternative<WMP>(_sv.v())) {
+        return instr_ram(WMP{});
+      } else if (std::holds_alternative<WR0>(_sv.v())) {
+        return instr_ram(WR0{});
+      } else if (std::holds_alternative<WR1>(_sv.v())) {
+        return instr_ram(WR1{});
+      } else if (std::holds_alternative<WR2>(_sv.v())) {
+        return instr_ram(WR2{});
+      } else if (std::holds_alternative<WR3>(_sv.v())) {
+        return instr_ram(WR3{});
+      } else if (std::holds_alternative<NOP_ram>(_sv.v())) {
+        return instr_ram(NOP_ram{});
+      } else {
+        const auto &[d_a0] = std::get<ADD_ram>(_sv.v());
+        return instr_ram(ADD_ram{clone_as_value<unsigned int>(d_a0)});
+      }
     }
 
-    static std::shared_ptr<instr_ram> wr1() {
-      return std::make_shared<instr_ram>(WR1{});
-    }
+    // CREATORS
+    constexpr static instr_ram wrm() { return instr_ram(WRM{}); }
 
-    static std::shared_ptr<instr_ram> wr2() {
-      return std::make_shared<instr_ram>(WR2{});
-    }
+    constexpr static instr_ram wmp() { return instr_ram(WMP{}); }
 
-    static std::shared_ptr<instr_ram> wr3() {
-      return std::make_shared<instr_ram>(WR3{});
-    }
+    constexpr static instr_ram wr0() { return instr_ram(WR0{}); }
 
-    static std::shared_ptr<instr_ram> nop_ram() {
-      return std::make_shared<instr_ram>(NOP_ram{});
-    }
+    constexpr static instr_ram wr1() { return instr_ram(WR1{}); }
 
-    static std::shared_ptr<instr_ram> add_ram(unsigned int a0) {
-      return std::make_shared<instr_ram>(ADD_ram{std::move(a0)});
+    constexpr static instr_ram wr2() { return instr_ram(WR2{}); }
+
+    constexpr static instr_ram wr3() { return instr_ram(WR3{}); }
+
+    constexpr static instr_ram nop_ram() { return instr_ram(NOP_ram{}); }
+
+    __attribute__((pure)) static instr_ram add_ram(unsigned int a0) {
+      return instr_ram(ADD_ram{std::move(a0)});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) instr_ram *operator->() { return this; }
+
+    __attribute__((pure)) const instr_ram *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = instr_ram(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) bool writes_ram() const {
-      if (std::holds_alternative<typename instr_ram::NOP_ram>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instr_ram::NOP_ram>(_sv.v())) {
         return false;
-      } else if (std::holds_alternative<typename instr_ram::ADD_ram>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instr_ram::ADD_ram>(_sv.v())) {
         return false;
       } else {
         return true;
@@ -561,23 +830,23 @@ struct InstructionClassifiers {
     template <typename T1, MapsTo<T1, unsigned int> F7>
     T1 instr_ram_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                      const T1 f3, const T1 f4, const T1 f5, F7 &&f6) const {
-      if (std::holds_alternative<typename instr_ram::WRM>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instr_ram::WRM>(_sv.v())) {
         return f;
-      } else if (std::holds_alternative<typename instr_ram::WMP>(this->v())) {
+      } else if (std::holds_alternative<typename instr_ram::WMP>(_sv.v())) {
         return f0;
-      } else if (std::holds_alternative<typename instr_ram::WR0>(this->v())) {
+      } else if (std::holds_alternative<typename instr_ram::WR0>(_sv.v())) {
         return f1;
-      } else if (std::holds_alternative<typename instr_ram::WR1>(this->v())) {
+      } else if (std::holds_alternative<typename instr_ram::WR1>(_sv.v())) {
         return f2;
-      } else if (std::holds_alternative<typename instr_ram::WR2>(this->v())) {
+      } else if (std::holds_alternative<typename instr_ram::WR2>(_sv.v())) {
         return f3;
-      } else if (std::holds_alternative<typename instr_ram::WR3>(this->v())) {
+      } else if (std::holds_alternative<typename instr_ram::WR3>(_sv.v())) {
         return f4;
-      } else if (std::holds_alternative<typename instr_ram::NOP_ram>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instr_ram::NOP_ram>(_sv.v())) {
         return f5;
       } else {
-        const auto &[d_a0] = std::get<typename instr_ram::ADD_ram>(this->v());
+        const auto &[d_a0] = std::get<typename instr_ram::ADD_ram>(_sv.v());
         return f6(d_a0);
       }
     }
@@ -585,44 +854,43 @@ struct InstructionClassifiers {
     template <typename T1, MapsTo<T1, unsigned int> F7>
     T1 instr_ram_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                       const T1 f3, const T1 f4, const T1 f5, F7 &&f6) const {
-      if (std::holds_alternative<typename instr_ram::WRM>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instr_ram::WRM>(_sv.v())) {
         return f;
-      } else if (std::holds_alternative<typename instr_ram::WMP>(this->v())) {
+      } else if (std::holds_alternative<typename instr_ram::WMP>(_sv.v())) {
         return f0;
-      } else if (std::holds_alternative<typename instr_ram::WR0>(this->v())) {
+      } else if (std::holds_alternative<typename instr_ram::WR0>(_sv.v())) {
         return f1;
-      } else if (std::holds_alternative<typename instr_ram::WR1>(this->v())) {
+      } else if (std::holds_alternative<typename instr_ram::WR1>(_sv.v())) {
         return f2;
-      } else if (std::holds_alternative<typename instr_ram::WR2>(this->v())) {
+      } else if (std::holds_alternative<typename instr_ram::WR2>(_sv.v())) {
         return f3;
-      } else if (std::holds_alternative<typename instr_ram::WR3>(this->v())) {
+      } else if (std::holds_alternative<typename instr_ram::WR3>(_sv.v())) {
         return f4;
-      } else if (std::holds_alternative<typename instr_ram::NOP_ram>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instr_ram::NOP_ram>(_sv.v())) {
         return f5;
       } else {
-        const auto &[d_a0] = std::get<typename instr_ram::ADD_ram>(this->v());
+        const auto &[d_a0] = std::get<typename instr_ram::ADD_ram>(_sv.v());
         return f6(d_a0);
       }
     }
   };
 
-  __attribute__((pure)) static unsigned int count_writes_ram(
-      const std::shared_ptr<List<std::shared_ptr<instr_ram>>> &prog);
+  __attribute__((pure)) static unsigned int
+  count_writes_ram(const List<instr_ram> &prog);
   static inline const unsigned int test_writes_ram =
-      count_writes_ram(List<std::shared_ptr<instr_ram>>::cons(
+      count_writes_ram(List<instr_ram>::cons(
           instr_ram::nop_ram(),
-          List<std::shared_ptr<instr_ram>>::cons(
+          List<instr_ram>::cons(
               instr_ram::wrm(),
-              List<std::shared_ptr<instr_ram>>::cons(
+              List<instr_ram>::cons(
                   instr_ram::add_ram(3u),
-                  List<std::shared_ptr<instr_ram>>::cons(
+                  List<instr_ram>::cons(
                       instr_ram::wr3(),
-                      List<std::shared_ptr<instr_ram>>::cons(
+                      List<instr_ram>::cons(
                           instr_ram::wmp(),
-                          List<std::shared_ptr<instr_ram>>::cons(
-                              instr_ram::nop_ram(),
-                              List<std::shared_ptr<instr_ram>>::nil())))))));
+                          List<instr_ram>::cons(instr_ram::nop_ram(),
+                                                List<instr_ram>::nil())))))));
 
   struct instr_regs {
     // TYPES
@@ -663,6 +931,8 @@ struct InstructionClassifiers {
 
   public:
     // CREATORS
+    instr_regs() {}
+
     explicit instr_regs(XCH_regs _v) : d_v_(std::move(_v)) {}
 
     explicit instr_regs(INC_regs _v) : d_v_(std::move(_v)) {}
@@ -677,45 +947,104 @@ struct InstructionClassifiers {
 
     explicit instr_regs(ADD_regs _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<instr_regs> xch_regs(unsigned int a0) {
-      return std::make_shared<instr_regs>(XCH_regs{std::move(a0)});
+    instr_regs(const instr_regs &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    instr_regs(instr_regs &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) instr_regs &operator=(const instr_regs &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instr_regs> inc_regs(unsigned int a0) {
-      return std::make_shared<instr_regs>(INC_regs{std::move(a0)});
+    __attribute__((pure)) instr_regs &operator=(instr_regs &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instr_regs> fim(unsigned int a0, unsigned int a1) {
-      return std::make_shared<instr_regs>(FIM{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    __attribute__((pure)) instr_regs clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<XCH_regs>(_sv.v())) {
+        const auto &[d_a0] = std::get<XCH_regs>(_sv.v());
+        return instr_regs(XCH_regs{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<INC_regs>(_sv.v())) {
+        const auto &[d_a0] = std::get<INC_regs>(_sv.v());
+        return instr_regs(INC_regs{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<FIM>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<FIM>(_sv.v());
+        return instr_regs(FIM{clone_as_value<unsigned int>(d_a0),
+                              clone_as_value<unsigned int>(d_a1)});
+      } else if (std::holds_alternative<FIN>(_sv.v())) {
+        const auto &[d_a0] = std::get<FIN>(_sv.v());
+        return instr_regs(FIN{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<ISZ>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<ISZ>(_sv.v());
+        return instr_regs(ISZ{clone_as_value<unsigned int>(d_a0),
+                              clone_as_value<unsigned int>(d_a1)});
+      } else if (std::holds_alternative<NOP_regs>(_sv.v())) {
+        return instr_regs(NOP_regs{});
+      } else {
+        const auto &[d_a0] = std::get<ADD_regs>(_sv.v());
+        return instr_regs(ADD_regs{clone_as_value<unsigned int>(d_a0)});
+      }
     }
 
-    static std::shared_ptr<instr_regs> fin(unsigned int a0) {
-      return std::make_shared<instr_regs>(FIN{std::move(a0)});
+    // CREATORS
+    __attribute__((pure)) static instr_regs xch_regs(unsigned int a0) {
+      return instr_regs(XCH_regs{std::move(a0)});
     }
 
-    static std::shared_ptr<instr_regs> isz(unsigned int a0, unsigned int a1) {
-      return std::make_shared<instr_regs>(ISZ{std::move(a0), std::move(a1)});
+    __attribute__((pure)) static instr_regs inc_regs(unsigned int a0) {
+      return instr_regs(INC_regs{std::move(a0)});
     }
 
-    static std::shared_ptr<instr_regs> nop_regs() {
-      return std::make_shared<instr_regs>(NOP_regs{});
+    __attribute__((pure)) static instr_regs fim(unsigned int a0,
+                                                unsigned int a1) {
+      return instr_regs(FIM{std::move(a0), std::move(a1)});
     }
 
-    static std::shared_ptr<instr_regs> add_regs(unsigned int a0) {
-      return std::make_shared<instr_regs>(ADD_regs{std::move(a0)});
+    __attribute__((pure)) static instr_regs fin(unsigned int a0) {
+      return instr_regs(FIN{std::move(a0)});
+    }
+
+    __attribute__((pure)) static instr_regs isz(unsigned int a0,
+                                                unsigned int a1) {
+      return instr_regs(ISZ{std::move(a0), std::move(a1)});
+    }
+
+    constexpr static instr_regs nop_regs() { return instr_regs(NOP_regs{}); }
+
+    __attribute__((pure)) static instr_regs add_regs(unsigned int a0) {
+      return instr_regs(ADD_regs{std::move(a0)});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) instr_regs *operator->() { return this; }
+
+    __attribute__((pure)) const instr_regs *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = instr_regs(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) bool writes_regs() const {
-      if (std::holds_alternative<typename instr_regs::NOP_regs>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instr_regs::NOP_regs>(_sv.v())) {
         return false;
       } else if (std::holds_alternative<typename instr_regs::ADD_regs>(
-                     this->v())) {
+                     _sv.v())) {
         return false;
       } else {
         return true;
@@ -728,29 +1057,28 @@ struct InstructionClassifiers {
         MapsTo<T1, unsigned int, unsigned int> F4, MapsTo<T1, unsigned int> F6>
     T1 instr_regs_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, const T1 f4,
                       F6 &&f5) const {
-      if (std::holds_alternative<typename instr_regs::XCH_regs>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_regs::XCH_regs>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instr_regs::XCH_regs>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_regs::XCH_regs>(_sv.v());
         return f(d_a0);
       } else if (std::holds_alternative<typename instr_regs::INC_regs>(
-                     this->v())) {
-        const auto &[d_a0] = std::get<typename instr_regs::INC_regs>(this->v());
+                     _sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_regs::INC_regs>(_sv.v());
         return f0(d_a0);
-      } else if (std::holds_alternative<typename instr_regs::FIM>(this->v())) {
-        const auto &[d_a0, d_a1] =
-            std::get<typename instr_regs::FIM>(this->v());
+      } else if (std::holds_alternative<typename instr_regs::FIM>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<typename instr_regs::FIM>(_sv.v());
         return f1(d_a0, d_a1);
-      } else if (std::holds_alternative<typename instr_regs::FIN>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_regs::FIN>(this->v());
+      } else if (std::holds_alternative<typename instr_regs::FIN>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_regs::FIN>(_sv.v());
         return f2(d_a0);
-      } else if (std::holds_alternative<typename instr_regs::ISZ>(this->v())) {
-        const auto &[d_a0, d_a1] =
-            std::get<typename instr_regs::ISZ>(this->v());
+      } else if (std::holds_alternative<typename instr_regs::ISZ>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<typename instr_regs::ISZ>(_sv.v());
         return f3(d_a0, d_a1);
       } else if (std::holds_alternative<typename instr_regs::NOP_regs>(
-                     this->v())) {
+                     _sv.v())) {
         return f4;
       } else {
-        const auto &[d_a0] = std::get<typename instr_regs::ADD_regs>(this->v());
+        const auto &[d_a0] = std::get<typename instr_regs::ADD_regs>(_sv.v());
         return f5(d_a0);
       }
     }
@@ -761,48 +1089,46 @@ struct InstructionClassifiers {
         MapsTo<T1, unsigned int, unsigned int> F4, MapsTo<T1, unsigned int> F6>
     T1 instr_regs_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, const T1 f4,
                        F6 &&f5) const {
-      if (std::holds_alternative<typename instr_regs::XCH_regs>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_regs::XCH_regs>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instr_regs::XCH_regs>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_regs::XCH_regs>(_sv.v());
         return f(d_a0);
       } else if (std::holds_alternative<typename instr_regs::INC_regs>(
-                     this->v())) {
-        const auto &[d_a0] = std::get<typename instr_regs::INC_regs>(this->v());
+                     _sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_regs::INC_regs>(_sv.v());
         return f0(d_a0);
-      } else if (std::holds_alternative<typename instr_regs::FIM>(this->v())) {
-        const auto &[d_a0, d_a1] =
-            std::get<typename instr_regs::FIM>(this->v());
+      } else if (std::holds_alternative<typename instr_regs::FIM>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<typename instr_regs::FIM>(_sv.v());
         return f1(d_a0, d_a1);
-      } else if (std::holds_alternative<typename instr_regs::FIN>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_regs::FIN>(this->v());
+      } else if (std::holds_alternative<typename instr_regs::FIN>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_regs::FIN>(_sv.v());
         return f2(d_a0);
-      } else if (std::holds_alternative<typename instr_regs::ISZ>(this->v())) {
-        const auto &[d_a0, d_a1] =
-            std::get<typename instr_regs::ISZ>(this->v());
+      } else if (std::holds_alternative<typename instr_regs::ISZ>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<typename instr_regs::ISZ>(_sv.v());
         return f3(d_a0, d_a1);
       } else if (std::holds_alternative<typename instr_regs::NOP_regs>(
-                     this->v())) {
+                     _sv.v())) {
         return f4;
       } else {
-        const auto &[d_a0] = std::get<typename instr_regs::ADD_regs>(this->v());
+        const auto &[d_a0] = std::get<typename instr_regs::ADD_regs>(_sv.v());
         return f5(d_a0);
       }
     }
   };
 
-  __attribute__((pure)) static unsigned int count_writes_regs(
-      const std::shared_ptr<List<std::shared_ptr<instr_regs>>> &prog);
+  __attribute__((pure)) static unsigned int
+  count_writes_regs(const List<instr_regs> &prog);
   static inline const unsigned int test_writes_regs =
-      count_writes_regs(List<std::shared_ptr<instr_regs>>::cons(
+      count_writes_regs(List<instr_regs>::cons(
           instr_regs::nop_regs(),
-          List<std::shared_ptr<instr_regs>>::cons(
+          List<instr_regs>::cons(
               instr_regs::fim(0u, 12u),
-              List<std::shared_ptr<instr_regs>>::cons(
+              List<instr_regs>::cons(
                   instr_regs::add_regs(1u),
-                  List<std::shared_ptr<instr_regs>>::cons(
+                  List<instr_regs>::cons(
                       instr_regs::inc_regs(7u),
-                      List<std::shared_ptr<instr_regs>>::cons(
-                          instr_regs::isz(1u, 2u),
-                          List<std::shared_ptr<instr_regs>>::nil()))))));
+                      List<instr_regs>::cons(instr_regs::isz(1u, 2u),
+                                             List<instr_regs>::nil()))))));
 
   struct instr_jump {
     // TYPES
@@ -847,6 +1173,8 @@ struct InstructionClassifiers {
 
   public:
     // CREATORS
+    instr_jump() {}
+
     explicit instr_jump(JCN _v) : d_v_(std::move(_v)) {}
 
     explicit instr_jump(JUN _v) : d_v_(std::move(_v)) {}
@@ -863,51 +1191,111 @@ struct InstructionClassifiers {
 
     explicit instr_jump(NOP_jump _v) : d_v_(_v) {}
 
-    static std::shared_ptr<instr_jump> jcn(unsigned int a0, unsigned int a1) {
-      return std::make_shared<instr_jump>(JCN{std::move(a0), std::move(a1)});
+    instr_jump(const instr_jump &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    instr_jump(instr_jump &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) instr_jump &operator=(const instr_jump &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instr_jump> jun(unsigned int a0) {
-      return std::make_shared<instr_jump>(JUN{std::move(a0)});
+    __attribute__((pure)) instr_jump &operator=(instr_jump &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instr_jump> jms(unsigned int a0) {
-      return std::make_shared<instr_jump>(JMS{std::move(a0)});
+    // ACCESSORS
+    __attribute__((pure)) instr_jump clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<JCN>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<JCN>(_sv.v());
+        return instr_jump(JCN{clone_as_value<unsigned int>(d_a0),
+                              clone_as_value<unsigned int>(d_a1)});
+      } else if (std::holds_alternative<JUN>(_sv.v())) {
+        const auto &[d_a0] = std::get<JUN>(_sv.v());
+        return instr_jump(JUN{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<JMS>(_sv.v())) {
+        const auto &[d_a0] = std::get<JMS>(_sv.v());
+        return instr_jump(JMS{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<JIN>(_sv.v())) {
+        const auto &[d_a0] = std::get<JIN>(_sv.v());
+        return instr_jump(JIN{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<BBL_jump>(_sv.v())) {
+        const auto &[d_a0] = std::get<BBL_jump>(_sv.v());
+        return instr_jump(BBL_jump{clone_as_value<unsigned int>(d_a0)});
+      } else if (std::holds_alternative<ISZ_jump>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<ISZ_jump>(_sv.v());
+        return instr_jump(ISZ_jump{clone_as_value<unsigned int>(d_a0),
+                                   clone_as_value<unsigned int>(d_a1)});
+      } else if (std::holds_alternative<ADD_jump>(_sv.v())) {
+        const auto &[d_a0] = std::get<ADD_jump>(_sv.v());
+        return instr_jump(ADD_jump{clone_as_value<unsigned int>(d_a0)});
+      } else {
+        return instr_jump(NOP_jump{});
+      }
     }
 
-    static std::shared_ptr<instr_jump> jin(unsigned int a0) {
-      return std::make_shared<instr_jump>(JIN{std::move(a0)});
-    }
-
-    static std::shared_ptr<instr_jump> bbl_jump(unsigned int a0) {
-      return std::make_shared<instr_jump>(BBL_jump{std::move(a0)});
-    }
-
-    static std::shared_ptr<instr_jump> isz_jump(unsigned int a0,
+    // CREATORS
+    __attribute__((pure)) static instr_jump jcn(unsigned int a0,
                                                 unsigned int a1) {
-      return std::make_shared<instr_jump>(
-          ISZ_jump{std::move(a0), std::move(a1)});
+      return instr_jump(JCN{std::move(a0), std::move(a1)});
     }
 
-    static std::shared_ptr<instr_jump> add_jump(unsigned int a0) {
-      return std::make_shared<instr_jump>(ADD_jump{std::move(a0)});
+    __attribute__((pure)) static instr_jump jun(unsigned int a0) {
+      return instr_jump(JUN{std::move(a0)});
     }
 
-    static std::shared_ptr<instr_jump> nop_jump() {
-      return std::make_shared<instr_jump>(NOP_jump{});
+    __attribute__((pure)) static instr_jump jms(unsigned int a0) {
+      return instr_jump(JMS{std::move(a0)});
     }
+
+    __attribute__((pure)) static instr_jump jin(unsigned int a0) {
+      return instr_jump(JIN{std::move(a0)});
+    }
+
+    __attribute__((pure)) static instr_jump bbl_jump(unsigned int a0) {
+      return instr_jump(BBL_jump{std::move(a0)});
+    }
+
+    __attribute__((pure)) static instr_jump isz_jump(unsigned int a0,
+                                                     unsigned int a1) {
+      return instr_jump(ISZ_jump{std::move(a0), std::move(a1)});
+    }
+
+    __attribute__((pure)) static instr_jump add_jump(unsigned int a0) {
+      return instr_jump(ADD_jump{std::move(a0)});
+    }
+
+    constexpr static instr_jump nop_jump() { return instr_jump(NOP_jump{}); }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) instr_jump *operator->() { return this; }
+
+    __attribute__((pure)) const instr_jump *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = instr_jump(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) bool is_jump() const {
-      if (std::holds_alternative<typename instr_jump::ADD_jump>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instr_jump::ADD_jump>(_sv.v())) {
         return false;
       } else if (std::holds_alternative<typename instr_jump::NOP_jump>(
-                     this->v())) {
+                     _sv.v())) {
         return false;
       } else {
         return true;
@@ -921,31 +1309,31 @@ struct InstructionClassifiers {
               MapsTo<T1, unsigned int> F6>
     T1 instr_jump_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                       F6 &&f5, const T1 f6) const {
-      if (std::holds_alternative<typename instr_jump::JCN>(this->v())) {
-        const auto &[d_a0, d_a1] =
-            std::get<typename instr_jump::JCN>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instr_jump::JCN>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<typename instr_jump::JCN>(_sv.v());
         return f(d_a0, d_a1);
-      } else if (std::holds_alternative<typename instr_jump::JUN>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_jump::JUN>(this->v());
+      } else if (std::holds_alternative<typename instr_jump::JUN>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_jump::JUN>(_sv.v());
         return f0(d_a0);
-      } else if (std::holds_alternative<typename instr_jump::JMS>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_jump::JMS>(this->v());
+      } else if (std::holds_alternative<typename instr_jump::JMS>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_jump::JMS>(_sv.v());
         return f1(d_a0);
-      } else if (std::holds_alternative<typename instr_jump::JIN>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_jump::JIN>(this->v());
+      } else if (std::holds_alternative<typename instr_jump::JIN>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_jump::JIN>(_sv.v());
         return f2(d_a0);
       } else if (std::holds_alternative<typename instr_jump::BBL_jump>(
-                     this->v())) {
-        const auto &[d_a0] = std::get<typename instr_jump::BBL_jump>(this->v());
+                     _sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_jump::BBL_jump>(_sv.v());
         return f3(d_a0);
       } else if (std::holds_alternative<typename instr_jump::ISZ_jump>(
-                     this->v())) {
+                     _sv.v())) {
         const auto &[d_a0, d_a1] =
-            std::get<typename instr_jump::ISZ_jump>(this->v());
+            std::get<typename instr_jump::ISZ_jump>(_sv.v());
         return f4(d_a0, d_a1);
       } else if (std::holds_alternative<typename instr_jump::ADD_jump>(
-                     this->v())) {
-        const auto &[d_a0] = std::get<typename instr_jump::ADD_jump>(this->v());
+                     _sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_jump::ADD_jump>(_sv.v());
         return f5(d_a0);
       } else {
         return f6;
@@ -959,31 +1347,31 @@ struct InstructionClassifiers {
               MapsTo<T1, unsigned int> F6>
     T1 instr_jump_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                        F6 &&f5, const T1 f6) const {
-      if (std::holds_alternative<typename instr_jump::JCN>(this->v())) {
-        const auto &[d_a0, d_a1] =
-            std::get<typename instr_jump::JCN>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename instr_jump::JCN>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<typename instr_jump::JCN>(_sv.v());
         return f(d_a0, d_a1);
-      } else if (std::holds_alternative<typename instr_jump::JUN>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_jump::JUN>(this->v());
+      } else if (std::holds_alternative<typename instr_jump::JUN>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_jump::JUN>(_sv.v());
         return f0(d_a0);
-      } else if (std::holds_alternative<typename instr_jump::JMS>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_jump::JMS>(this->v());
+      } else if (std::holds_alternative<typename instr_jump::JMS>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_jump::JMS>(_sv.v());
         return f1(d_a0);
-      } else if (std::holds_alternative<typename instr_jump::JIN>(this->v())) {
-        const auto &[d_a0] = std::get<typename instr_jump::JIN>(this->v());
+      } else if (std::holds_alternative<typename instr_jump::JIN>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_jump::JIN>(_sv.v());
         return f2(d_a0);
       } else if (std::holds_alternative<typename instr_jump::BBL_jump>(
-                     this->v())) {
-        const auto &[d_a0] = std::get<typename instr_jump::BBL_jump>(this->v());
+                     _sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_jump::BBL_jump>(_sv.v());
         return f3(d_a0);
       } else if (std::holds_alternative<typename instr_jump::ISZ_jump>(
-                     this->v())) {
+                     _sv.v())) {
         const auto &[d_a0, d_a1] =
-            std::get<typename instr_jump::ISZ_jump>(this->v());
+            std::get<typename instr_jump::ISZ_jump>(_sv.v());
         return f4(d_a0, d_a1);
       } else if (std::holds_alternative<typename instr_jump::ADD_jump>(
-                     this->v())) {
-        const auto &[d_a0] = std::get<typename instr_jump::ADD_jump>(this->v());
+                     _sv.v())) {
+        const auto &[d_a0] = std::get<typename instr_jump::ADD_jump>(_sv.v());
         return f5(d_a0);
       } else {
         return f6;
@@ -992,19 +1380,18 @@ struct InstructionClassifiers {
   };
 
   __attribute__((pure)) static unsigned int
-  count_jumps(const std::shared_ptr<List<std::shared_ptr<instr_jump>>> &prog);
+  count_jumps(const List<instr_jump> &prog);
   static inline const unsigned int test_jump_classifier =
-      count_jumps(List<std::shared_ptr<instr_jump>>::cons(
+      count_jumps(List<instr_jump>::cons(
           instr_jump::add_jump(0u),
-          List<std::shared_ptr<instr_jump>>::cons(
+          List<instr_jump>::cons(
               instr_jump::jcn(4u, 8u),
-              List<std::shared_ptr<instr_jump>>::cons(
+              List<instr_jump>::cons(
                   instr_jump::nop_jump(),
-                  List<std::shared_ptr<instr_jump>>::cons(
+                  List<instr_jump>::cons(
                       instr_jump::jms(33u),
-                      List<std::shared_ptr<instr_jump>>::cons(
-                          instr_jump::isz_jump(1u, 2u),
-                          List<std::shared_ptr<instr_jump>>::nil()))))));
+                      List<instr_jump>::cons(instr_jump::isz_jump(1u, 2u),
+                                             List<instr_jump>::nil()))))));
   static inline const std::pair<
       std::pair<std::pair<unsigned int, unsigned int>, unsigned int>,
       unsigned int>

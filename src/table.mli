@@ -255,6 +255,11 @@ val add_enum_inductive : GlobRef.t -> unit
 (** Check if inductive is enum. *)
 val is_enum_inductive : GlobRef.t -> bool
 
+(** Check if the inductive has any constructor field whose type refers
+    back to the same MutInd (recursive self-reference).  Such inductives
+    store self-refs as [shared_ptr] internally. *)
+val has_recursive_fields : GlobRef.t -> bool
+
 (** Check if an inductive packet qualifies as an enum based on its structure.
     Returns true if all constructors are nullary, no type parameters are kept,
     and at least one constructor exists. *)

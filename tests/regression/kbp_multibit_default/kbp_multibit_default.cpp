@@ -1,15 +1,14 @@
 #include <kbp_multibit_default.h>
 
-#include <memory>
 #include <type_traits>
 
-std::shared_ptr<KbpMultibitDefault::state> KbpMultibitDefault::execute_kbp(
-    const std::shared_ptr<KbpMultibitDefault::state> &s) {
+__attribute__((pure)) KbpMultibitDefault::state
+KbpMultibitDefault::execute_kbp(const KbpMultibitDefault::state &s) {
   unsigned int result;
-  if (s->acc <= 0) {
+  if (s.acc <= 0) {
     result = 0u;
   } else {
-    unsigned int n = s->acc - 1;
+    unsigned int n = s.acc - 1;
     if (n <= 0) {
       result = 1u;
     } else {
@@ -52,5 +51,5 @@ std::shared_ptr<KbpMultibitDefault::state> KbpMultibitDefault::execute_kbp(
       }
     }
   }
-  return std::make_shared<KbpMultibitDefault::state>(state{result});
+  return state{result};
 }

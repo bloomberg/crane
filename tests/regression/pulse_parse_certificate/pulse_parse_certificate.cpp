@@ -7,15 +7,15 @@
 #include <variant>
 
 __attribute__((pure)) std::optional<unsigned int>
-PulseParseCertificateCase::first_true(const std::shared_ptr<List<bool>> &xs) {
-  if (std::holds_alternative<typename List<bool>::Nil>(xs->v())) {
+PulseParseCertificateCase::first_true(const List<bool> &xs) {
+  if (std::holds_alternative<typename List<bool>::Nil>(xs.v())) {
     return std::optional<unsigned int>();
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs->v());
+    const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs.v());
     if (d_a0) {
       return std::make_optional<unsigned int>(0u);
     } else {
-      auto _cs = first_true(d_a1);
+      auto _cs = first_true(*(d_a1));
       if (_cs.has_value()) {
         const unsigned int &idx = *_cs;
         return std::make_optional<unsigned int>((idx + 1));
@@ -27,12 +27,12 @@ PulseParseCertificateCase::first_true(const std::shared_ptr<List<bool>> &xs) {
 }
 
 __attribute__((pure)) std::optional<unsigned int>
-PulseParseCertificateCase::last_true(const std::shared_ptr<List<bool>> &xs) {
-  if (std::holds_alternative<typename List<bool>::Nil>(xs->v())) {
+PulseParseCertificateCase::last_true(const List<bool> &xs) {
+  if (std::holds_alternative<typename List<bool>::Nil>(xs.v())) {
     return std::optional<unsigned int>();
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs->v());
-    auto _cs = last_true(d_a1);
+    const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs.v());
+    auto _cs = last_true(*(d_a1));
     if (_cs.has_value()) {
       const unsigned int &idx = *_cs;
       return std::make_optional<unsigned int>((idx + 1));
@@ -47,35 +47,33 @@ PulseParseCertificateCase::last_true(const std::shared_ptr<List<bool>> &xs) {
 }
 
 __attribute__((pure)) PulseParseCertificateCase::Runs
-PulseParseCertificateCase::trace_to_runs(
-    const std::shared_ptr<List<bool>> &xs) {
-  if (std::holds_alternative<typename List<bool>::Nil>(xs->v())) {
+PulseParseCertificateCase::trace_to_runs(const List<bool> &xs) {
+  if (std::holds_alternative<typename List<bool>::Nil>(xs.v())) {
     return List<unsigned int>::nil();
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs->v());
+    const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs.v());
     if (d_a0) {
-      return List<unsigned int>::cons(2u, trace_to_runs(d_a1));
+      return List<unsigned int>::cons(2u, trace_to_runs(*(d_a1)));
     } else {
-      return List<unsigned int>::cons(1u, trace_to_runs(d_a1));
+      return List<unsigned int>::cons(1u, trace_to_runs(*(d_a1)));
     }
   }
 }
 
 __attribute__((pure)) unsigned int
-PulseParseCertificateCase::pulse_base_from_runs(
-    const std::shared_ptr<List<unsigned int>> &rs) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(rs->v())) {
+PulseParseCertificateCase::pulse_base_from_runs(const List<unsigned int> &rs) {
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(rs.v())) {
     return 1u;
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(rs->v());
+        std::get<typename List<unsigned int>::Cons>(rs.v());
     return d_a0;
   }
 }
 
 __attribute__((pure)) PulseParseCertificateCase::PulseClass
-PulseParseCertificateCase::classify_run_with_base(const unsigned int base,
-                                                  const unsigned int n) {
+PulseParseCertificateCase::classify_run_with_base(unsigned int base,
+                                                  const unsigned int &n) {
   if ((base + 1) <= n) {
     return PulseClass::e_MARKLONG;
   } else {
@@ -83,10 +81,10 @@ PulseParseCertificateCase::classify_run_with_base(const unsigned int base,
   }
 }
 
-std::shared_ptr<List<PulseParseCertificateCase::PulseClass>>
+__attribute__((pure)) List<PulseParseCertificateCase::PulseClass>
 PulseParseCertificateCase::classify_runs_with_base(
-    const unsigned int base, const std::shared_ptr<List<unsigned int>> &rs) {
-  return rs->template map<PulseParseCertificateCase::PulseClass>(
+    unsigned int base, const List<unsigned int> &rs) {
+  return rs.template map<PulseParseCertificateCase::PulseClass>(
       [=](unsigned int _x0) mutable -> PulseParseCertificateCase::PulseClass {
         return classify_run_with_base(base, _x0);
       });
@@ -126,13 +124,13 @@ __attribute__((pure)) bool PulseParseCertificateCase::pulse_class_eqb(
 }
 
 __attribute__((pure)) bool PulseParseCertificateCase::pulse_class_list_eqb(
-    const std::shared_ptr<List<PulseParseCertificateCase::PulseClass>> &xs,
-    const std::shared_ptr<List<PulseParseCertificateCase::PulseClass>> &ys) {
+    const List<PulseParseCertificateCase::PulseClass> &xs,
+    const List<PulseParseCertificateCase::PulseClass> &ys) {
   if (std::holds_alternative<
-          typename List<PulseParseCertificateCase::PulseClass>::Nil>(xs->v())) {
+          typename List<PulseParseCertificateCase::PulseClass>::Nil>(xs.v())) {
     if (std::holds_alternative<
             typename List<PulseParseCertificateCase::PulseClass>::Nil>(
-            ys->v())) {
+            ys.v())) {
       return true;
     } else {
       return false;
@@ -140,40 +138,37 @@ __attribute__((pure)) bool PulseParseCertificateCase::pulse_class_list_eqb(
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<PulseParseCertificateCase::PulseClass>::Cons>(
-            xs->v());
+            xs.v());
     if (std::holds_alternative<
             typename List<PulseParseCertificateCase::PulseClass>::Nil>(
-            ys->v())) {
+            ys.v())) {
       return false;
     } else {
       const auto &[d_a00, d_a10] =
           std::get<typename List<PulseParseCertificateCase::PulseClass>::Cons>(
-              ys->v());
+              ys.v());
       return (pulse_class_eqb(d_a0, d_a00) &&
-              pulse_class_list_eqb(d_a1, d_a10));
+              pulse_class_list_eqb(*(d_a1), *(d_a10)));
     }
   }
 }
 
 __attribute__((pure)) bool
 PulseParseCertificateCase::pulse_parse_certificate_self_consistent(
-    const std::shared_ptr<PulseParseCertificateCase::PulseCertificate> &cert) {
+    const PulseParseCertificateCase::PulseCertificate &cert) {
   return (
-      (cert->certificate_base == pulse_base_from_runs(cert->certificate_runs) &&
-       cert->certificate_classes->length() ==
-           cert->certificate_runs->length()) &&
-      pulse_class_list_eqb(cert->certificate_classes,
-                           classify_runs_with_base(cert->certificate_base,
-                                                   cert->certificate_runs)));
+      (cert.certificate_base == pulse_base_from_runs(cert.certificate_runs) &&
+       cert.certificate_classes.length() == cert.certificate_runs.length()) &&
+      pulse_class_list_eqb(cert.certificate_classes,
+                           classify_runs_with_base(cert.certificate_base,
+                                                   cert.certificate_runs)));
 }
 
-std::shared_ptr<PulseParseCertificateCase::PulseCertificate>
-PulseParseCertificateCase::certify_trace(
-    const std::shared_ptr<List<bool>> &xs) {
-  std::shared_ptr<List<unsigned int>> runs = trace_to_runs(xs);
+__attribute__((pure)) PulseParseCertificateCase::PulseCertificate
+PulseParseCertificateCase::certify_trace(const List<bool> &xs) {
+  List<unsigned int> runs = trace_to_runs(xs);
   unsigned int base = pulse_base_from_runs(runs);
-  std::shared_ptr<List<PulseParseCertificateCase::PulseClass>> classes =
+  List<PulseParseCertificateCase::PulseClass> classes =
       classify_runs_with_base(base, runs);
-  return std::make_shared<PulseParseCertificateCase::PulseCertificate>(
-      PulseCertificate{first_true(xs), last_true(xs), runs, base, classes});
+  return PulseCertificate{first_true(xs), last_true(xs), runs, base, classes};
 }

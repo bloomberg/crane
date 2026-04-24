@@ -9,7 +9,129 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 template <typename t_A> struct List {
   // TYPES
@@ -17,10 +139,11 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
+  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -28,36 +151,83 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  __attribute__((pure)) List<t_A> clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<t_A>(Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<t_A>(Cons{clone_as_value<t_A>(d_a0),
+                            clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
+    }
+  }
+
+  template <typename _CloneT0>
+  __attribute__((pure)) List<_CloneT0> clone_as() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return List<_CloneT0>(typename List<_CloneT0>::Nil{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+      return List<_CloneT0>(typename List<_CloneT0>::Cons{
+          clone_as_value<_CloneT0>(d_a0),
+          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+    }
+  }
+
+  // CREATORS
+  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+
+  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
+  __attribute__((pure)) List<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = List<t_A>(); }
+
+  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return (d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      return ((*(d_a1)).length() + 1);
     }
   }
 };
@@ -69,12 +239,16 @@ struct FoldSequenceStateTraceCase {
     Real A;
     Real B;
     Real C;
+
+    __attribute__((pure)) Line *operator->() { return this; }
+
+    __attribute__((pure)) const Line *operator->() const { return this; }
   };
 
   struct Fold {
     // TYPES
     struct Fold_line_ctor {
-      std::shared_ptr<Line> d_a0;
+      Line d_a0;
     };
 
     using variant_t = std::variant<Fold_line_ctor>;
@@ -85,65 +259,101 @@ struct FoldSequenceStateTraceCase {
 
   public:
     // CREATORS
+    Fold() {}
+
     explicit Fold(Fold_line_ctor _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<Fold>
-    fold_line_ctor(const std::shared_ptr<Line> &a0) {
-      return std::make_shared<Fold>(Fold_line_ctor{a0});
+    Fold(const Fold &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    Fold(Fold &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) Fold &operator=(const Fold &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<Fold> fold_line_ctor(std::shared_ptr<Line> &&a0) {
-      return std::make_shared<Fold>(Fold_line_ctor{std::move(a0)});
+    __attribute__((pure)) Fold &operator=(Fold &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) Fold clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0] = std::get<Fold_line_ctor>(_sv.v());
+      return Fold(Fold_line_ctor{clone_as_value<Line>(d_a0)});
+    }
+
+    // CREATORS
+    constexpr static Fold fold_line_ctor(Line a0) {
+      return Fold(Fold_line_ctor{std::move(a0)});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) Fold *operator->() { return this; }
+
+    __attribute__((pure)) const Fold *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = Fold(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-    std::shared_ptr<Line> fold_line() const {
-      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(this->v());
+    __attribute__((pure)) Line fold_line() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(_sv.v());
       return d_a0;
     }
 
-    template <typename T1, MapsTo<T1, std::shared_ptr<Line>> F0>
-    T1 Fold_rec(F0 &&f) const {
-      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(this->v());
+    template <typename T1, MapsTo<T1, Line> F0> T1 Fold_rec(F0 &&f) const {
+      auto &&_sv = *(this);
+      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(_sv.v());
       return f(d_a0);
     }
 
-    template <typename T1, MapsTo<T1, std::shared_ptr<Line>> F0>
-    T1 Fold_rect(F0 &&f) const {
-      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(this->v());
+    template <typename T1, MapsTo<T1, Line> F0> T1 Fold_rect(F0 &&f) const {
+      auto &&_sv = *(this);
+      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(_sv.v());
       return f(d_a0);
     }
   };
 
-  static inline const std::shared_ptr<Line> line_xaxis = std::make_shared<Line>(
+  static inline const Line line_xaxis =
       Line{Real::from_z(INT64_C(0)), Real::from_z(INT64_C(1)),
-           Real::from_z(INT64_C(0))});
-  static inline const std::shared_ptr<Line> line_yaxis = std::make_shared<Line>(
+           Real::from_z(INT64_C(0))};
+  static inline const Line line_yaxis =
       Line{Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)),
-           Real::from_z(INT64_C(0))});
+           Real::from_z(INT64_C(0))};
   static inline const Point point_O =
       std::make_pair(Real::from_z(INT64_C(0)), Real::from_z(INT64_C(0)));
   static inline const Point point_X =
       std::make_pair(Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)));
   static inline const Point point_diag =
       std::make_pair(Real::from_z(INT64_C(1)), Real::from_z(INT64_C(1)));
-  static std::shared_ptr<Line> line_through(const std::pair<Real, Real> p1,
-                                            const std::pair<Real, Real> p2);
-  static std::shared_ptr<Line> perp_bisector(const std::pair<Real, Real> p1,
-                                             const std::pair<Real, Real> p2);
-  static std::shared_ptr<Line> perp_through(const std::pair<Real, Real> p,
-                                            const std::shared_ptr<Line> &l);
-  static std::shared_ptr<Fold> fold_O1(const std::pair<Real, Real> p1,
-                                       const std::pair<Real, Real> p2);
-  static std::shared_ptr<Fold> fold_O2(const std::pair<Real, Real> p1,
-                                       const std::pair<Real, Real> p2);
-  static std::shared_ptr<Fold> fold_O4(const std::pair<Real, Real> p,
-                                       const std::shared_ptr<Line> &l);
+  __attribute__((pure)) static Line
+  line_through(const std::pair<Real, Real> &p1,
+               const std::pair<Real, Real> &p2);
+  __attribute__((pure)) static Line
+  perp_bisector(const std::pair<Real, Real> &p1,
+                const std::pair<Real, Real> &p2);
+  __attribute__((pure)) static Line perp_through(const std::pair<Real, Real> &p,
+                                                 const Line &l);
+  __attribute__((pure)) static Fold fold_O1(const std::pair<Real, Real> &p1,
+                                            const std::pair<Real, Real> &p2);
+  __attribute__((pure)) static Fold fold_O2(const std::pair<Real, Real> &p1,
+                                            const std::pair<Real, Real> &p2);
+  __attribute__((pure)) static Fold fold_O4(const std::pair<Real, Real> &p,
+                                            const Line &l);
 
   struct FoldStep {
     // TYPES
@@ -159,7 +369,7 @@ struct FoldSequenceStateTraceCase {
 
     struct FS_O4 {
       Point d_a0;
-      std::shared_ptr<Line> d_a1;
+      Line d_a1;
     };
 
     using variant_t = std::variant<FS_O1, FS_O2, FS_O4>;
@@ -170,49 +380,90 @@ struct FoldSequenceStateTraceCase {
 
   public:
     // CREATORS
+    FoldStep() {}
+
     explicit FoldStep(FS_O1 _v) : d_v_(std::move(_v)) {}
 
     explicit FoldStep(FS_O2 _v) : d_v_(std::move(_v)) {}
 
     explicit FoldStep(FS_O4 _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<FoldStep> fs_o1(Point a0, Point a1) {
-      return std::make_shared<FoldStep>(FS_O1{std::move(a0), std::move(a1)});
+    FoldStep(const FoldStep &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    FoldStep(FoldStep &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) FoldStep &operator=(const FoldStep &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<FoldStep> fs_o2(Point a0, Point a1) {
-      return std::make_shared<FoldStep>(FS_O2{std::move(a0), std::move(a1)});
+    __attribute__((pure)) FoldStep &operator=(FoldStep &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<FoldStep> fs_o4(Point a0,
-                                           const std::shared_ptr<Line> &a1) {
-      return std::make_shared<FoldStep>(FS_O4{std::move(a0), a1});
+    // ACCESSORS
+    __attribute__((pure)) FoldStep clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<FS_O1>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<FS_O1>(_sv.v());
+        return FoldStep(
+            FS_O1{clone_as_value<Point>(d_a0), clone_as_value<Point>(d_a1)});
+      } else if (std::holds_alternative<FS_O2>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<FS_O2>(_sv.v());
+        return FoldStep(
+            FS_O2{clone_as_value<Point>(d_a0), clone_as_value<Point>(d_a1)});
+      } else {
+        const auto &[d_a0, d_a1] = std::get<FS_O4>(_sv.v());
+        return FoldStep(
+            FS_O4{clone_as_value<Point>(d_a0), clone_as_value<Line>(d_a1)});
+      }
     }
 
-    static std::shared_ptr<FoldStep> fs_o4(Point a0,
-                                           std::shared_ptr<Line> &&a1) {
-      return std::make_shared<FoldStep>(FS_O4{std::move(a0), std::move(a1)});
+    // CREATORS
+    constexpr static FoldStep fs_o1(Point a0, Point a1) {
+      return FoldStep(FS_O1{std::move(a0), std::move(a1)});
+    }
+
+    constexpr static FoldStep fs_o2(Point a0, Point a1) {
+      return FoldStep(FS_O2{std::move(a0), std::move(a1)});
+    }
+
+    constexpr static FoldStep fs_o4(Point a0, Line a1) {
+      return FoldStep(FS_O4{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) FoldStep *operator->() { return this; }
+
+    __attribute__((pure)) const FoldStep *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = FoldStep(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-    std::shared_ptr<Line> execute_fold_step() const {
-      if (std::holds_alternative<typename FoldStep::FS_O1>(this->v())) {
-        const auto &[d_a0, d_a1] =
-            std::get<typename FoldStep::FS_O1>(this->v());
-        return fold_O1(d_a0, d_a1)->fold_line();
-      } else if (std::holds_alternative<typename FoldStep::FS_O2>(this->v())) {
-        const auto &[d_a0, d_a1] =
-            std::get<typename FoldStep::FS_O2>(this->v());
-        return fold_O2(d_a0, d_a1)->fold_line();
+    __attribute__((pure)) Line execute_fold_step() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename FoldStep::FS_O1>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O1>(_sv.v());
+        return fold_O1(d_a0, d_a1).fold_line();
+      } else if (std::holds_alternative<typename FoldStep::FS_O2>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O2>(_sv.v());
+        return fold_O2(d_a0, d_a1).fold_line();
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename FoldStep::FS_O4>(this->v());
-        return fold_O4(d_a0, d_a1)->fold_line();
+        const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O4>(_sv.v());
+        return fold_O4(d_a0, d_a1).fold_line();
       }
     }
   };
@@ -220,17 +471,16 @@ struct FoldSequenceStateTraceCase {
   template <typename T1,
             MapsTo<T1, std::pair<Real, Real>, std::pair<Real, Real>> F0,
             MapsTo<T1, std::pair<Real, Real>, std::pair<Real, Real>> F1,
-            MapsTo<T1, std::pair<Real, Real>, std::shared_ptr<Line>> F2>
-  static T1 FoldStep_rect(F0 &&f, F1 &&f0, F2 &&f1,
-                          const std::shared_ptr<FoldStep> &f2) {
-    if (std::holds_alternative<typename FoldStep::FS_O1>(f2->v())) {
-      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O1>(f2->v());
+            MapsTo<T1, std::pair<Real, Real>, Line> F2>
+  static T1 FoldStep_rect(F0 &&f, F1 &&f0, F2 &&f1, const FoldStep &f2) {
+    if (std::holds_alternative<typename FoldStep::FS_O1>(f2.v())) {
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O1>(f2.v());
       return f(d_a0, d_a1);
-    } else if (std::holds_alternative<typename FoldStep::FS_O2>(f2->v())) {
-      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O2>(f2->v());
+    } else if (std::holds_alternative<typename FoldStep::FS_O2>(f2.v())) {
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O2>(f2.v());
       return f0(d_a0, d_a1);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O4>(f2->v());
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O4>(f2.v());
       return f1(d_a0, d_a1);
     }
   }
@@ -238,61 +488,59 @@ struct FoldSequenceStateTraceCase {
   template <typename T1,
             MapsTo<T1, std::pair<Real, Real>, std::pair<Real, Real>> F0,
             MapsTo<T1, std::pair<Real, Real>, std::pair<Real, Real>> F1,
-            MapsTo<T1, std::pair<Real, Real>, std::shared_ptr<Line>> F2>
-  static T1 FoldStep_rec(F0 &&f, F1 &&f0, F2 &&f1,
-                         const std::shared_ptr<FoldStep> &f2) {
-    if (std::holds_alternative<typename FoldStep::FS_O1>(f2->v())) {
-      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O1>(f2->v());
+            MapsTo<T1, std::pair<Real, Real>, Line> F2>
+  static T1 FoldStep_rec(F0 &&f, F1 &&f0, F2 &&f1, const FoldStep &f2) {
+    if (std::holds_alternative<typename FoldStep::FS_O1>(f2.v())) {
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O1>(f2.v());
       return f(d_a0, d_a1);
-    } else if (std::holds_alternative<typename FoldStep::FS_O2>(f2->v())) {
-      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O2>(f2->v());
+    } else if (std::holds_alternative<typename FoldStep::FS_O2>(f2.v())) {
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O2>(f2.v());
       return f0(d_a0, d_a1);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O4>(f2->v());
+      const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O4>(f2.v());
       return f1(d_a0, d_a1);
     }
   }
 
-  using FoldSequence = std::shared_ptr<List<std::shared_ptr<FoldStep>>>;
+  using FoldSequence = List<FoldStep>;
 
   struct ConstructionState {
-    std::shared_ptr<List<Point>> state_points;
-    std::shared_ptr<List<std::shared_ptr<Line>>> state_lines;
+    List<Point> state_points;
+    List<Line> state_lines;
+
+    __attribute__((pure)) ConstructionState *operator->() { return this; }
+
+    __attribute__((pure)) const ConstructionState *operator->() const {
+      return this;
+    }
   };
 
-  static inline const std::shared_ptr<ConstructionState> initial_state =
-      std::make_shared<ConstructionState>(ConstructionState{
-          List<std::pair<Real, Real>>::cons(
-              point_O, List<std::pair<Real, Real>>::cons(
-                           point_X, List<std::pair<Real, Real>>::nil())),
-          List<std::shared_ptr<Line>>::cons(
-              line_xaxis,
-              List<std::shared_ptr<Line>>::cons(
-                  line_yaxis, List<std::shared_ptr<Line>>::nil()))});
-  static std::shared_ptr<ConstructionState>
-  add_fold_to_state(const std::shared_ptr<ConstructionState> &st,
-                    const std::shared_ptr<FoldStep> &step);
-  static std::shared_ptr<ConstructionState>
-  execute_sequence(std::shared_ptr<ConstructionState> st,
-                   const std::shared_ptr<List<std::shared_ptr<FoldStep>>> &seq);
-  static inline const FoldSequence sample_sequence =
-      List<std::shared_ptr<FoldStep>>::cons(
-          FoldStep::fs_o1(point_O, point_diag),
-          List<std::shared_ptr<FoldStep>>::cons(
-              FoldStep::fs_o2(point_O, point_X),
-              List<std::shared_ptr<FoldStep>>::cons(
-                  FoldStep::fs_o4(point_diag, line_xaxis),
-                  List<std::shared_ptr<FoldStep>>::nil())));
-  static inline const std::shared_ptr<ConstructionState> sample_final_state =
+  static inline const ConstructionState initial_state = ConstructionState{
+      List<std::pair<Real, Real>>::cons(
+          point_O, List<std::pair<Real, Real>>::cons(
+                       point_X, List<std::pair<Real, Real>>::nil())),
+      List<Line>::cons(line_xaxis,
+                       List<Line>::cons(line_yaxis, List<Line>::nil()))};
+  __attribute__((pure)) static ConstructionState
+  add_fold_to_state(const ConstructionState &st, const FoldStep &step);
+  __attribute__((pure)) static ConstructionState
+  execute_sequence(ConstructionState st, const List<FoldStep> &seq);
+  static inline const FoldSequence sample_sequence = List<FoldStep>::cons(
+      FoldStep::fs_o1(point_O, point_diag),
+      List<FoldStep>::cons(
+          FoldStep::fs_o2(point_O, point_X),
+          List<FoldStep>::cons(FoldStep::fs_o4(point_diag, line_xaxis),
+                               List<FoldStep>::nil())));
+  static inline const ConstructionState sample_final_state =
       execute_sequence(initial_state, sample_sequence);
-  __attribute__((pure)) static unsigned int line_count_after_sample_sequence(
-      const std::shared_ptr<ConstructionState> &st);
+  __attribute__((pure)) static unsigned int
+  line_count_after_sample_sequence(const ConstructionState &st);
   static inline const unsigned int sample_sequence_length =
-      sample_sequence->length();
+      sample_sequence.length();
   static inline const unsigned int sample_line_count =
       line_count_after_sample_sequence(initial_state);
   static inline const unsigned int sample_point_count =
-      sample_final_state->state_points->length();
+      sample_final_state.state_points.length();
   static inline const bool sample_lines_nonempty = !(sample_line_count == 0u);
   static inline const bool sample_has_expected_lines = sample_line_count == 5u;
 };

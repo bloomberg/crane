@@ -10,36 +10,34 @@
 #include <variant>
 
 /// 1. Recursive function building a list from stdin lines
-std::shared_ptr<List<std::string>>
-EffectRecursiveList::read_n_lines(const unsigned int n) {
+List<std::string> EffectRecursiveList::read_n_lines(const unsigned int &n) {
   if (n <= 0) {
     return List<std::string>::nil();
   } else {
     unsigned int n_ = n - 1;
     std::string line;
     std::getline(std::cin, line);
-    std::shared_ptr<List<std::string>> rest = read_n_lines(n_);
+    List<std::string> rest = read_n_lines(n_);
     return List<std::string>::cons(line, rest);
   }
 }
 
 /// 3. Fold a list with effects, accumulating a result
-std::string
-EffectRecursiveList::fold_effect(const std::shared_ptr<List<std::string>> &xs,
-                                 const std::string acc) {
-  if (std::holds_alternative<typename List<std::string>::Nil>(xs->v())) {
+std::string EffectRecursiveList::fold_effect(const List<std::string> &xs,
+                                             const std::string acc) {
+  if (std::holds_alternative<typename List<std::string>::Nil>(xs.v())) {
     return acc;
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename List<std::string>::Cons>(xs->v());
+        std::get<typename List<std::string>::Cons>(xs.v());
     std::cout << d_a0 << '\n';
-    return fold_effect(d_a1, acc + " "s + d_a0);
+    return fold_effect(*(d_a1), acc + " "s + d_a0);
   }
 }
 
 /// 4. Read lines and store each in env with index
 unsigned int EffectRecursiveList::store_lines(const std::string prefix,
-                                              const unsigned int n) {
+                                              const unsigned int &n) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -53,26 +51,24 @@ unsigned int EffectRecursiveList::store_lines(const std::string prefix,
 }
 
 /// 5. Collect env values into a list
-std::shared_ptr<List<std::optional<std::string>>>
-EffectRecursiveList::collect_envs(
-    const std::shared_ptr<List<std::string>> &names) {
-  if (std::holds_alternative<typename List<std::string>::Nil>(names->v())) {
+List<std::optional<std::string>>
+EffectRecursiveList::collect_envs(const List<std::string> &names) {
+  if (std::holds_alternative<typename List<std::string>::Nil>(names.v())) {
     return List<std::optional<std::string>>::nil();
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename List<std::string>::Cons>(names->v());
+        std::get<typename List<std::string>::Cons>(names.v());
     std::optional<std::string> val = [&]() -> std::optional<std::string> {
       auto *v = std::getenv(d_a0.c_str());
       return v ? std::optional<std::string>(v) : std::optional<std::string>();
     }();
-    std::shared_ptr<List<std::optional<std::string>>> vals = collect_envs(d_a1);
+    List<std::optional<std::string>> vals = collect_envs(*(d_a1));
     return List<std::optional<std::string>>::cons(val, vals);
   }
 }
 
 /// 6. Read a line and prepend to existing list
-std::shared_ptr<List<std::string>>
-EffectRecursiveList::read_and_prepend(std::shared_ptr<List<std::string>> xs) {
+List<std::string> EffectRecursiveList::read_and_prepend(List<std::string> xs) {
   std::string line;
   std::getline(std::cin, line);
   return List<std::string>::cons(line, xs);

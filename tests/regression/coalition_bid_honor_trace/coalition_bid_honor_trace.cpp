@@ -6,124 +6,122 @@
 #include <utility>
 #include <variant>
 
-std::shared_ptr<Positive> Pos::succ(const std::shared_ptr<Positive> &x) {
-  if (std::holds_alternative<typename Positive::XI>(x->v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x->v());
-    return Positive::xo(succ(d_a0));
-  } else if (std::holds_alternative<typename Positive::XO>(x->v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x->v());
-    return Positive::xi(d_a0);
+__attribute__((pure)) Positive Pos::succ(const Positive &x) {
+  if (std::holds_alternative<typename Positive::XI>(x.v())) {
+    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
+    return Positive::xo(succ(*(d_a0)));
+  } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
+    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
+    return Positive::xi(*(d_a0));
   } else {
     return Positive::xo(Positive::xh());
   }
 }
 
-std::shared_ptr<Positive> Pos::add(const std::shared_ptr<Positive> &x,
-                                   const std::shared_ptr<Positive> &y) {
-  if (std::holds_alternative<typename Positive::XI>(x->v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x->v());
-    if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
-      return Positive::xo(add_carry(d_a0, d_a00));
-    } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
-      return Positive::xi(add(d_a0, d_a00));
+__attribute__((pure)) Positive Pos::add(const Positive &x, const Positive &y) {
+  if (std::holds_alternative<typename Positive::XI>(x.v())) {
+    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
+    if (std::holds_alternative<typename Positive::XI>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xo(add_carry(*(d_a0), *(d_a00)));
+    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xi(add(*(d_a0), *(d_a00)));
     } else {
-      return Positive::xo(succ(d_a0));
+      return Positive::xo(succ(*(d_a0)));
     }
-  } else if (std::holds_alternative<typename Positive::XO>(x->v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x->v());
-    if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
-      return Positive::xi(add(d_a0, d_a00));
-    } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
-      return Positive::xo(add(d_a0, d_a00));
+  } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
+    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
+    if (std::holds_alternative<typename Positive::XI>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xi(add(*(d_a0), *(d_a00)));
+    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xo(add(*(d_a0), *(d_a00)));
     } else {
-      return Positive::xi(d_a0);
+      return Positive::xi(*(d_a0));
     }
   } else {
-    if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
-      return Positive::xo(succ(d_a00));
-    } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
-      return Positive::xi(d_a00);
+    if (std::holds_alternative<typename Positive::XI>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xo(succ(*(d_a00)));
+    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xi(*(d_a00));
     } else {
       return Positive::xo(Positive::xh());
     }
   }
 }
 
-std::shared_ptr<Positive> Pos::add_carry(const std::shared_ptr<Positive> &x,
-                                         const std::shared_ptr<Positive> &y) {
-  if (std::holds_alternative<typename Positive::XI>(x->v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x->v());
-    if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
-      return Positive::xi(add_carry(d_a0, d_a00));
-    } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
-      return Positive::xo(add_carry(d_a0, d_a00));
+__attribute__((pure)) Positive Pos::add_carry(const Positive &x,
+                                              const Positive &y) {
+  if (std::holds_alternative<typename Positive::XI>(x.v())) {
+    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
+    if (std::holds_alternative<typename Positive::XI>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xi(add_carry(*(d_a0), *(d_a00)));
+    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xo(add_carry(*(d_a0), *(d_a00)));
     } else {
-      return Positive::xi(succ(d_a0));
+      return Positive::xi(succ(*(d_a0)));
     }
-  } else if (std::holds_alternative<typename Positive::XO>(x->v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x->v());
-    if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
-      return Positive::xo(add_carry(d_a0, d_a00));
-    } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
-      return Positive::xi(add(d_a0, d_a00));
+  } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
+    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
+    if (std::holds_alternative<typename Positive::XI>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xo(add_carry(*(d_a0), *(d_a00)));
+    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xi(add(*(d_a0), *(d_a00)));
     } else {
-      return Positive::xo(succ(d_a0));
+      return Positive::xo(succ(*(d_a0)));
     }
   } else {
-    if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
-      return Positive::xi(succ(d_a00));
-    } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
-      return Positive::xo(succ(d_a00));
+    if (std::holds_alternative<typename Positive::XI>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xi(succ(*(d_a00)));
+    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xo(succ(*(d_a00)));
     } else {
       return Positive::xi(Positive::xh());
     }
   }
 }
 
-std::shared_ptr<Positive> Pos::pred_double(const std::shared_ptr<Positive> &x) {
-  if (std::holds_alternative<typename Positive::XI>(x->v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x->v());
-    return Positive::xi(Positive::xo(d_a0));
-  } else if (std::holds_alternative<typename Positive::XO>(x->v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x->v());
-    return Positive::xi(pred_double(d_a0));
+__attribute__((pure)) Positive Pos::pred_double(const Positive &x) {
+  if (std::holds_alternative<typename Positive::XI>(x.v())) {
+    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
+    return Positive::xi(Positive::xo(*(d_a0)));
+  } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
+    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
+    return Positive::xi(pred_double(*(d_a0)));
   } else {
     return Positive::xh();
   }
 }
 
-__attribute__((pure)) bool Pos::eqb(const std::shared_ptr<Positive> &p,
-                                    const std::shared_ptr<Positive> &q) {
-  if (std::holds_alternative<typename Positive::XI>(p->v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(p->v());
-    if (std::holds_alternative<typename Positive::XI>(q->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(q->v());
-      return eqb(d_a0, d_a00);
+__attribute__((pure)) bool Pos::eqb(const Positive &p, const Positive &q) {
+  if (std::holds_alternative<typename Positive::XI>(p.v())) {
+    const auto &[d_a0] = std::get<typename Positive::XI>(p.v());
+    if (std::holds_alternative<typename Positive::XI>(q.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XI>(q.v());
+      return eqb(*(d_a0), *(d_a00));
     } else {
       return false;
     }
-  } else if (std::holds_alternative<typename Positive::XO>(p->v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(p->v());
-    if (std::holds_alternative<typename Positive::XO>(q->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(q->v());
-      return eqb(d_a0, d_a00);
+  } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
+    const auto &[d_a0] = std::get<typename Positive::XO>(p.v());
+    if (std::holds_alternative<typename Positive::XO>(q.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XO>(q.v());
+      return eqb(*(d_a0), *(d_a00));
     } else {
       return false;
     }
   } else {
-    if (std::holds_alternative<typename Positive::XH>(q->v())) {
+    if (std::holds_alternative<typename Positive::XH>(q.v())) {
       return true;
     } else {
       return false;
@@ -131,142 +129,125 @@ __attribute__((pure)) bool Pos::eqb(const std::shared_ptr<Positive> &p,
   }
 }
 
-std::shared_ptr<Z> BinInt::double_(const std::shared_ptr<Z> &x) {
-  if (std::holds_alternative<typename Z::Z0>(x->v())) {
+__attribute__((pure)) Z BinInt::double_(const Z &x) {
+  if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::z0();
-  } else if (std::holds_alternative<typename Z::Zpos>(x->v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x->v());
+  } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
+    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
     return Z::zpos(Positive::xo(d_a0));
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x->v());
+    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
     return Z::zneg(Positive::xo(d_a0));
   }
 }
 
-std::shared_ptr<Z> BinInt::succ_double(const std::shared_ptr<Z> &x) {
-  if (std::holds_alternative<typename Z::Z0>(x->v())) {
+__attribute__((pure)) Z BinInt::succ_double(const Z &x) {
+  if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::zpos(Positive::xh());
-  } else if (std::holds_alternative<typename Z::Zpos>(x->v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x->v());
+  } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
+    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
     return Z::zpos(Positive::xi(d_a0));
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x->v());
+    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
     return Z::zneg(Pos::pred_double(d_a0));
   }
 }
 
-std::shared_ptr<Z> BinInt::pred_double(const std::shared_ptr<Z> &x) {
-  if (std::holds_alternative<typename Z::Z0>(x->v())) {
+__attribute__((pure)) Z BinInt::pred_double(const Z &x) {
+  if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::zneg(Positive::xh());
-  } else if (std::holds_alternative<typename Z::Zpos>(x->v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x->v());
+  } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
+    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
     return Z::zpos(Pos::pred_double(d_a0));
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x->v());
+    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
     return Z::zneg(Positive::xi(d_a0));
   }
 }
 
-std::shared_ptr<Z> BinInt::pos_sub(const std::shared_ptr<Positive> &x,
-                                   const std::shared_ptr<Positive> &y) {
-  if (std::holds_alternative<typename Positive::XI>(x->v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x->v());
-    if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
-      return BinInt::double_(BinInt::pos_sub(d_a0, d_a00));
-    } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
-      return BinInt::succ_double(BinInt::pos_sub(d_a0, d_a00));
+__attribute__((pure)) Z BinInt::pos_sub(const Positive &x, const Positive &y) {
+  if (std::holds_alternative<typename Positive::XI>(x.v())) {
+    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
+    if (std::holds_alternative<typename Positive::XI>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
+      return BinInt::double_(BinInt::pos_sub(*(d_a0), *(d_a00)));
+    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
+      return BinInt::succ_double(BinInt::pos_sub(*(d_a0), *(d_a00)));
     } else {
-      return Z::zpos(Positive::xo(d_a0));
+      return Z::zpos(Positive::xo(*(d_a0)));
     }
-  } else if (std::holds_alternative<typename Positive::XO>(x->v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x->v());
-    if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
-      return BinInt::pred_double(BinInt::pos_sub(d_a0, d_a00));
-    } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
-      return BinInt::double_(BinInt::pos_sub(d_a0, d_a00));
+  } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
+    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
+    if (std::holds_alternative<typename Positive::XI>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
+      return BinInt::pred_double(BinInt::pos_sub(*(d_a0), *(d_a00)));
+    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
+      return BinInt::double_(BinInt::pos_sub(*(d_a0), *(d_a00)));
     } else {
-      return Z::zpos(Pos::pred_double(d_a0));
+      return Z::zpos(Pos::pred_double(*(d_a0)));
     }
   } else {
-    if (std::holds_alternative<typename Positive::XI>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y->v());
-      return Z::zneg(Positive::xo(d_a00));
-    } else if (std::holds_alternative<typename Positive::XO>(y->v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y->v());
-      return Z::zneg(Pos::pred_double(d_a00));
+    if (std::holds_alternative<typename Positive::XI>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
+      return Z::zneg(Positive::xo(*(d_a00)));
+    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
+      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
+      return Z::zneg(Pos::pred_double(*(d_a00)));
     } else {
       return Z::z0();
     }
   }
 }
 
-std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
-  if (std::holds_alternative<typename Z::Z0>(x->v())) {
+__attribute__((pure)) Z BinInt::add(Z x, Z y) {
+  if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return y;
-  } else if (std::holds_alternative<typename Z::Zpos>(x->v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x->v());
-    if (std::holds_alternative<typename Z::Z0>(y->v())) {
+  } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
+    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
+    if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y->v())) {
-      if (y.use_count() == 1) {
-        auto &_rf = std::get<typename Z::Zpos>(y->v_mut());
-        std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
-        _rf.d_a0 = Pos::add(d_a0, y_);
-        return y;
-      } else {
-        const auto &[d_a00] = std::get<typename Z::Zpos>(y->v());
-        return Z::zpos(Pos::add(d_a0, d_a00));
-      }
-
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
+      const auto &[d_a00] = std::get<typename Z::Zpos>(y.v());
+      return Z::zpos(Pos::add(d_a0, d_a00));
     } else {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(y->v());
+      const auto &[d_a00] = std::get<typename Z::Zneg>(y.v());
       return BinInt::pos_sub(d_a0, d_a00);
     }
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x->v());
-    if (std::holds_alternative<typename Z::Z0>(y->v())) {
+    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
+    if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y->v())) {
-      const auto &[d_a00] = std::get<typename Z::Zpos>(y->v());
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
+      const auto &[d_a00] = std::get<typename Z::Zpos>(y.v());
       return BinInt::pos_sub(d_a00, d_a0);
     } else {
-      if (y.use_count() == 1) {
-        auto &_rf = std::get<typename Z::Zneg>(y->v_mut());
-        std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
-        _rf.d_a0 = Pos::add(d_a0, y_);
-        return y;
-      } else {
-        const auto &[d_a00] = std::get<typename Z::Zneg>(y->v());
-        return Z::zneg(Pos::add(d_a0, d_a00));
-      }
+      const auto &[d_a00] = std::get<typename Z::Zneg>(y.v());
+      return Z::zneg(Pos::add(d_a0, d_a00));
     }
   }
 }
 
-__attribute__((pure)) bool BinInt::eqb(const std::shared_ptr<Z> &x,
-                                       const std::shared_ptr<Z> &y) {
-  if (std::holds_alternative<typename Z::Z0>(x->v())) {
-    if (std::holds_alternative<typename Z::Z0>(y->v())) {
+__attribute__((pure)) bool BinInt::eqb(const Z &x, const Z &y) {
+  if (std::holds_alternative<typename Z::Z0>(x.v())) {
+    if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return true;
     } else {
       return false;
     }
-  } else if (std::holds_alternative<typename Z::Zpos>(x->v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x->v());
-    if (std::holds_alternative<typename Z::Zpos>(y->v())) {
-      const auto &[d_a00] = std::get<typename Z::Zpos>(y->v());
+  } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
+    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
+    if (std::holds_alternative<typename Z::Zpos>(y.v())) {
+      const auto &[d_a00] = std::get<typename Z::Zpos>(y.v());
       return Pos::eqb(d_a0, d_a00);
     } else {
       return false;
     }
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x->v());
-    if (std::holds_alternative<typename Z::Zneg>(y->v())) {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(y->v());
+    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
+    if (std::holds_alternative<typename Z::Zneg>(y.v())) {
+      const auto &[d_a00] = std::get<typename Z::Zneg>(y.v());
       return Pos::eqb(d_a0, d_a00);
     } else {
       return false;
@@ -347,8 +328,8 @@ CoalitionBidHonorTraceCase::rank_le(const CoalitionBidHonorTraceCase::Rank r1,
 }
 
 __attribute__((pure)) bool CoalitionBidHonorTraceCase::may_issue_batchall(
-    const std::shared_ptr<CoalitionBidHonorTraceCase::Commander> &c) {
-  return rank_le(Rank::e_STARCAPTAIN, c->cmd_rank);
+    const CoalitionBidHonorTraceCase::Commander &c) {
+  return rank_le(Rank::e_STARCAPTAIN, c.cmd_rank);
 }
 
 __attribute__((pure)) unsigned int
@@ -387,12 +368,12 @@ __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_class_bonus(
 }
 
 __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_skill(
-    const std::shared_ptr<CoalitionBidHonorTraceCase::Unit> &u) {
-  return (u->unit_gunnery + u->unit_piloting);
+    const CoalitionBidHonorTraceCase::Unit &u) {
+  return (u.unit_gunnery + u.unit_piloting);
 }
 
 __attribute__((pure)) unsigned int
-CoalitionBidHonorTraceCase::skill_bv_multiplier_num(const unsigned int skill) {
+CoalitionBidHonorTraceCase::skill_bv_multiplier_num(const unsigned int &skill) {
   if (skill <= 4u) {
     return 6u;
   } else {
@@ -409,14 +390,14 @@ CoalitionBidHonorTraceCase::skill_bv_multiplier_num(const unsigned int skill) {
 }
 
 __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_base_bv(
-    const std::shared_ptr<CoalitionBidHonorTraceCase::Unit> &u) {
-  return (u->unit_tonnage * weight_class_value(u->unit_weight));
+    const CoalitionBidHonorTraceCase::Unit &u) {
+  return (u.unit_tonnage * weight_class_value(u.unit_weight));
 }
 
 __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_tech_bv(
-    const std::shared_ptr<CoalitionBidHonorTraceCase::Unit> &u) {
+    const CoalitionBidHonorTraceCase::Unit &u) {
   unsigned int base = unit_base_bv(u);
-  if (u->unit_is_clan) {
+  if (u.unit_is_clan) {
     return (base + (2u ? base / 2u : 0));
   } else {
     return base;
@@ -425,214 +406,179 @@ __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_tech_bv(
 
 __attribute__((pure)) unsigned int
 CoalitionBidHonorTraceCase::unit_battle_value(
-    const std::shared_ptr<CoalitionBidHonorTraceCase::Unit> &u) {
+    const CoalitionBidHonorTraceCase::Unit &u) {
   unsigned int tech_bv = unit_tech_bv(u);
   return (4u ? (tech_bv * skill_bv_multiplier_num(unit_skill(u))) / 4u : 0);
 }
 
 __attribute__((pure)) unsigned int
 CoalitionBidHonorTraceCase::unit_effective_combat_rating(
-    const std::shared_ptr<CoalitionBidHonorTraceCase::Unit> &u) {
-  return (unit_battle_value(u) + unit_class_bonus(u->unit_class));
+    const CoalitionBidHonorTraceCase::Unit &u) {
+  return (unit_battle_value(u) + unit_class_bonus(u.unit_class));
 }
 
-std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics>
+__attribute__((pure)) CoalitionBidHonorTraceCase::ForceMetrics
 CoalitionBidHonorTraceCase::unit_to_metrics(
-    const std::shared_ptr<CoalitionBidHonorTraceCase::Unit> &u) {
-  return std::make_shared<CoalitionBidHonorTraceCase::ForceMetrics>(
-      ForceMetrics{1u, u->unit_tonnage,
-                   [&]() -> unsigned int {
-                     if (u->unit_is_elite) {
-                       return 1u;
-                     } else {
-                       return 0u;
-                     }
-                   }(),
-                   [&]() -> unsigned int {
-                     if (u->unit_is_clan) {
-                       return 1u;
-                     } else {
-                       return 0u;
-                     }
-                   }(),
-                   unit_battle_value(u), unit_effective_combat_rating(u)});
+    const CoalitionBidHonorTraceCase::Unit &u) {
+  return ForceMetrics{1u,
+                      u.unit_tonnage,
+                      [=]() mutable -> unsigned int {
+                        if (u.unit_is_elite) {
+                          return 1u;
+                        } else {
+                          return 0u;
+                        }
+                      }(),
+                      [=]() mutable -> unsigned int {
+                        if (u.unit_is_clan) {
+                          return 1u;
+                        } else {
+                          return 0u;
+                        }
+                      }(),
+                      unit_battle_value(u),
+                      unit_effective_combat_rating(u)};
 }
 
-std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics>
+__attribute__((pure)) CoalitionBidHonorTraceCase::ForceMetrics
 CoalitionBidHonorTraceCase::metrics_add(
-    const std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics> &m1,
-    const std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics> &m2) {
-  return std::make_shared<CoalitionBidHonorTraceCase::ForceMetrics>(
-      ForceMetrics{(m1->fm_count + m2->fm_count),
-                   (m1->fm_tonnage + m2->fm_tonnage),
-                   (m1->fm_elite_count + m2->fm_elite_count),
-                   (m1->fm_clan_count + m2->fm_clan_count),
-                   (m1->fm_total_bv + m2->fm_total_bv),
-                   (m1->fm_total_ecr + m2->fm_total_ecr)});
+    const CoalitionBidHonorTraceCase::ForceMetrics &m1,
+    const CoalitionBidHonorTraceCase::ForceMetrics &m2) {
+  return ForceMetrics{(m1.fm_count + m2.fm_count),
+                      (m1.fm_tonnage + m2.fm_tonnage),
+                      (m1.fm_elite_count + m2.fm_elite_count),
+                      (m1.fm_clan_count + m2.fm_clan_count),
+                      (m1.fm_total_bv + m2.fm_total_bv),
+                      (m1.fm_total_ecr + m2.fm_total_ecr)};
 }
 
-std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics>
+__attribute__((pure)) CoalitionBidHonorTraceCase::ForceMetrics
 CoalitionBidHonorTraceCase::force_metrics(
-    const std::shared_ptr<
-        List<std::shared_ptr<CoalitionBidHonorTraceCase::Unit>>> &f) {
-  return f->template fold_right<
-      std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics>>(
-      [](const std::shared_ptr<CoalitionBidHonorTraceCase::Unit> &u,
-         const std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics> &acc) {
+    const List<CoalitionBidHonorTraceCase::Unit> &f) {
+  return f.template fold_right<CoalitionBidHonorTraceCase::ForceMetrics>(
+      [](const CoalitionBidHonorTraceCase::Unit &u,
+         const CoalitionBidHonorTraceCase::ForceMetrics &acc) {
         return metrics_add(unit_to_metrics(u), acc);
       },
       empty_metrics);
 }
 
 __attribute__((pure)) bool CoalitionBidHonorTraceCase::metrics_total_lt(
-    const std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics> &m1,
-    const std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics> &m2) {
-  return m1->fm_total_ecr < m2->fm_total_ecr;
+    const CoalitionBidHonorTraceCase::ForceMetrics &m1,
+    const CoalitionBidHonorTraceCase::ForceMetrics &m2) {
+  return m1.fm_total_ecr < m2.fm_total_ecr;
 }
 
 __attribute__((pure)) CoalitionBidHonorTraceCase::Force
 CoalitionBidHonorTraceCase::coalition_force(
-    const std::shared_ptr<
-        List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>>
-        &c) {
-  return c
-      ->template flat_map<std::shared_ptr<CoalitionBidHonorTraceCase::Unit>>(
-          [](const std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>
-                 &c0) { return c0->cm_force; });
+    const List<CoalitionBidHonorTraceCase::CoalitionMember> &c) {
+  return c.template flat_map<CoalitionBidHonorTraceCase::Unit>(
+      [](const CoalitionBidHonorTraceCase::CoalitionMember &c0) {
+        return c0.cm_force;
+      });
 }
 
-std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics>
+__attribute__((pure)) CoalitionBidHonorTraceCase::ForceMetrics
 CoalitionBidHonorTraceCase::coalition_metrics(
-    const std::shared_ptr<
-        List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>>
-        &c) {
+    const List<CoalitionBidHonorTraceCase::CoalitionMember> &c) {
   return force_metrics(coalition_force(c));
 }
 
 __attribute__((pure)) bool CoalitionBidHonorTraceCase::coalition_contains_clan(
-    const std::shared_ptr<
-        List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>> &c,
+    const List<CoalitionBidHonorTraceCase::CoalitionMember> &c,
     const CoalitionBidHonorTraceCase::Clan clan) {
-  return c->existsb(
-      [=](const std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>
-              &m) mutable { return clan_eqb(m->cm_clan, clan); });
+  return c.existsb(
+      [=](const CoalitionBidHonorTraceCase::CoalitionMember &m) mutable {
+        return clan_eqb(m.cm_clan, clan);
+      });
 }
 
 __attribute__((pure)) unsigned int
 CoalitionBidHonorTraceCase::coalition_tonnage(
-    const std::shared_ptr<
-        List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>>
-        &c) {
-  return coalition_metrics(c)->fm_tonnage;
+    const List<CoalitionBidHonorTraceCase::CoalitionMember> &c) {
+  return coalition_metrics(c).fm_tonnage;
 }
 
 __attribute__((pure)) CoalitionBidHonorTraceCase::Coalition
 CoalitionBidHonorTraceCase::update_coalition_force(
-    const std::shared_ptr<
-        List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>> &c,
-    const unsigned int idx,
-    std::shared_ptr<List<std::shared_ptr<CoalitionBidHonorTraceCase::Unit>>>
-        new_force) {
-  if (std::holds_alternative<typename List<
-          std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>::Nil>(
-          c->v())) {
-    return List<
-        std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>::nil();
+    const List<CoalitionBidHonorTraceCase::CoalitionMember> &c,
+    const unsigned int &idx, List<CoalitionBidHonorTraceCase::Unit> new_force) {
+  if (std::holds_alternative<
+          typename List<CoalitionBidHonorTraceCase::CoalitionMember>::Nil>(
+          c.v())) {
+    return List<CoalitionBidHonorTraceCase::CoalitionMember>::nil();
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<
-        std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>::Cons>(
-        c->v());
+    const auto &[d_a0, d_a1] = std::get<
+        typename List<CoalitionBidHonorTraceCase::CoalitionMember>::Cons>(
+        c.v());
     if (idx <= 0) {
-      return List<
-          std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>::
-          cons(std::make_shared<CoalitionBidHonorTraceCase::CoalitionMember>(
-                   CoalitionMember{d_a0->cm_clan, d_a0->cm_commander,
-                                   new_force}),
-               d_a1);
+      return List<CoalitionBidHonorTraceCase::CoalitionMember>::cons(
+          CoalitionMember{d_a0.cm_clan, d_a0.cm_commander, new_force}, *(d_a1));
     } else {
       unsigned int n = idx - 1;
-      return List<
-          std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>::
-          cons(d_a0, update_coalition_force(d_a1, n, new_force));
+      return List<CoalitionBidHonorTraceCase::CoalitionMember>::cons(
+          d_a0, update_coalition_force(*(d_a1), n, new_force));
     }
   }
 }
 
-std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics>
+__attribute__((pure)) CoalitionBidHonorTraceCase::ForceMetrics
 CoalitionBidHonorTraceCase::bid_metrics(
-    const std::shared_ptr<CoalitionBidHonorTraceCase::ForceBid> &b) {
-  return force_metrics(b->bid_force);
+    const CoalitionBidHonorTraceCase::ForceBid &b) {
+  return force_metrics(b.bid_force);
 }
 
-__attribute__((pure))
-std::optional<std::shared_ptr<CoalitionBidHonorTraceCase::Commander>>
+__attribute__((pure)) std::optional<CoalitionBidHonorTraceCase::Commander>
 CoalitionBidHonorTraceCase::coalition_lead_commander(
-    const std::shared_ptr<
-        List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>>
-        &c) {
-  if (std::holds_alternative<typename List<
-          std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>::Nil>(
-          c->v())) {
-    return std::optional<
-        std::shared_ptr<CoalitionBidHonorTraceCase::Commander>>();
+    const List<CoalitionBidHonorTraceCase::CoalitionMember> &c) {
+  if (std::holds_alternative<
+          typename List<CoalitionBidHonorTraceCase::CoalitionMember>::Nil>(
+          c.v())) {
+    return std::optional<CoalitionBidHonorTraceCase::Commander>();
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<
-        std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>::Cons>(
-        c->v());
-    return std::make_optional<
-        std::shared_ptr<CoalitionBidHonorTraceCase::Commander>>(
-        d_a0->cm_commander);
+    const auto &[d_a0, d_a1] = std::get<
+        typename List<CoalitionBidHonorTraceCase::CoalitionMember>::Cons>(
+        c.v());
+    return std::make_optional<CoalitionBidHonorTraceCase::Commander>(
+        d_a0.cm_commander);
   }
 }
 
-__attribute__((pure))
-std::optional<std::shared_ptr<CoalitionBidHonorTraceCase::ForceBid>>
+__attribute__((pure)) std::optional<CoalitionBidHonorTraceCase::ForceBid>
 CoalitionBidHonorTraceCase::coalition_to_bid(
-    const std::shared_ptr<
-        List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>> &c,
+    const List<CoalitionBidHonorTraceCase::CoalitionMember> &c,
     const CoalitionBidHonorTraceCase::Side side) {
   auto _cs = coalition_lead_commander(c);
   if (_cs.has_value()) {
-    const std::shared_ptr<CoalitionBidHonorTraceCase::Commander> &cmd = *_cs;
-    return std::make_optional<
-        std::shared_ptr<CoalitionBidHonorTraceCase::ForceBid>>(
-        std::make_shared<CoalitionBidHonorTraceCase::ForceBid>(
-            ForceBid{coalition_force(c), side, cmd}));
+    const CoalitionBidHonorTraceCase::Commander &cmd = *_cs;
+    return std::make_optional<CoalitionBidHonorTraceCase::ForceBid>(
+        ForceBid{coalition_force(c), side, cmd});
   } else {
-    return std::optional<
-        std::shared_ptr<CoalitionBidHonorTraceCase::ForceBid>>();
+    return std::optional<CoalitionBidHonorTraceCase::ForceBid>();
   }
 }
 
 __attribute__((pure)) CoalitionBidHonorTraceCase::Coalition
 CoalitionBidHonorTraceCase::apply_coalition_member_bid(
-    const std::shared_ptr<
-        List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>> &c,
-    const std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMemberBid>
-        &cbid) {
-  return update_coalition_force(c, cbid->cmb_member_index, cbid->cmb_new_force);
+    const List<CoalitionBidHonorTraceCase::CoalitionMember> &c,
+    const CoalitionBidHonorTraceCase::CoalitionMemberBid &cbid) {
+  return update_coalition_force(c, cbid.cmb_member_index, cbid.cmb_new_force);
 }
 
 __attribute__((pure)) bool
 CoalitionBidHonorTraceCase::valid_coalition_member_bid_b(
-    const std::shared_ptr<
-        List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>> &c,
-    const std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMemberBid>
-        &cbid) {
-  return (
-      cbid->cmb_member_index < c->length() &&
-      metrics_total_lt(
-          force_metrics(cbid->cmb_new_force),
-          force_metrics(
-              ListDef::template nth<CoalitionBidHonorTraceCase::Force>(
-                  cbid->cmb_member_index,
-                  c->template map<CoalitionBidHonorTraceCase::Force>(
-                      [](const std::shared_ptr<
-                          CoalitionBidHonorTraceCase::CoalitionMember> &c0) {
-                        return c0->cm_force;
-                      }),
-                  List<std::shared_ptr<CoalitionBidHonorTraceCase::Unit>>::
-                      nil()))));
+    const List<CoalitionBidHonorTraceCase::CoalitionMember> &c,
+    const CoalitionBidHonorTraceCase::CoalitionMemberBid &cbid) {
+  return (cbid.cmb_member_index < c.length() &&
+          metrics_total_lt(
+              force_metrics(cbid.cmb_new_force),
+              force_metrics(
+                  ListDef::template nth<CoalitionBidHonorTraceCase::Force>(
+                      cbid.cmb_member_index,
+                      c.template map<CoalitionBidHonorTraceCase::Force>(
+                          [](const CoalitionBidHonorTraceCase::CoalitionMember
+                                 &c0) { return c0.cm_force; }),
+                      List<CoalitionBidHonorTraceCase::Unit>::nil()))));
 }
 
 __attribute__((pure)) bool CoalitionBidHonorTraceCase::is_ready(
@@ -774,15 +720,10 @@ CoalitionBidHonorTraceCase::clear_ready(
 
 __attribute__((pure)) CoalitionBidHonorTraceCase::Force
 CoalitionBidHonorTraceCase::coalition_state_force(
-    const std::optional<std::shared_ptr<
-        List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>>>
-        cs,
-    std::shared_ptr<List<std::shared_ptr<CoalitionBidHonorTraceCase::Unit>>>
-        fallback) {
+    const std::optional<List<CoalitionBidHonorTraceCase::CoalitionMember>> &cs,
+    List<CoalitionBidHonorTraceCase::Unit> fallback) {
   if (cs.has_value()) {
-    const std::shared_ptr<
-        List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>> &c =
-        *cs;
+    const List<CoalitionBidHonorTraceCase::CoalitionMember> &c = *cs;
     return coalition_force(c);
   } else {
     return fallback;
@@ -791,72 +732,63 @@ CoalitionBidHonorTraceCase::coalition_state_force(
 
 __attribute__((pure)) CoalitionBidHonorTraceCase::Honor
 CoalitionBidHonorTraceCase::ledger_lookup(
-    const std::shared_ptr<List<std::pair<unsigned int, std::shared_ptr<Z>>>>
-        &ledger,
-    const unsigned int warrior_id) {
-  if (std::holds_alternative<
-          typename List<std::pair<unsigned int, std::shared_ptr<Z>>>::Nil>(
-          ledger->v())) {
+    const List<std::pair<unsigned int, Z>> &ledger,
+    const unsigned int &warrior_id) {
+  if (std::holds_alternative<typename List<std::pair<unsigned int, Z>>::Nil>(
+          ledger.v())) {
     return Z::z0();
   } else {
-    const auto &[d_a0, d_a1] = std::get<
-        typename List<std::pair<unsigned int, std::shared_ptr<Z>>>::Cons>(
-        ledger->v());
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<std::pair<unsigned int, Z>>::Cons>(ledger.v());
     const unsigned int &id = d_a0.first;
-    const std::shared_ptr<Z> &honor = d_a0.second;
+    const Z &honor = d_a0.second;
     if (id == warrior_id) {
       return honor;
     } else {
-      return ledger_lookup(d_a1, warrior_id);
+      return ledger_lookup(*(d_a1), warrior_id);
     }
   }
 }
 
 __attribute__((pure)) CoalitionBidHonorTraceCase::HonorLedger
 CoalitionBidHonorTraceCase::ledger_update_by_id(
-    const std::shared_ptr<List<std::pair<unsigned int, std::shared_ptr<Z>>>>
-        &ledger,
-    const unsigned int warrior_id, std::shared_ptr<Z> new_honor) {
-  if (std::holds_alternative<
-          typename List<std::pair<unsigned int, std::shared_ptr<Z>>>::Nil>(
-          ledger->v())) {
-    return List<std::pair<unsigned int, std::shared_ptr<Z>>>::cons(
+    const List<std::pair<unsigned int, Z>> &ledger, unsigned int warrior_id,
+    Z new_honor) {
+  if (std::holds_alternative<typename List<std::pair<unsigned int, Z>>::Nil>(
+          ledger.v())) {
+    return List<std::pair<unsigned int, Z>>::cons(
         std::make_pair(warrior_id, new_honor),
-        List<std::pair<unsigned int, std::shared_ptr<Z>>>::nil());
+        List<std::pair<unsigned int, Z>>::nil());
   } else {
-    const auto &[d_a0, d_a1] = std::get<
-        typename List<std::pair<unsigned int, std::shared_ptr<Z>>>::Cons>(
-        ledger->v());
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<std::pair<unsigned int, Z>>::Cons>(ledger.v());
     const unsigned int &id = d_a0.first;
-    const std::shared_ptr<Z> &honor = d_a0.second;
+    const Z &honor = d_a0.second;
     if (id == warrior_id) {
-      return List<std::pair<unsigned int, std::shared_ptr<Z>>>::cons(
-          std::make_pair(id, new_honor), d_a1);
+      return List<std::pair<unsigned int, Z>>::cons(
+          std::make_pair(id, new_honor), *(d_a1));
     } else {
-      return List<std::pair<unsigned int, std::shared_ptr<Z>>>::cons(
+      return List<std::pair<unsigned int, Z>>::cons(
           std::make_pair(id, honor),
-          ledger_update_by_id(d_a1, warrior_id, new_honor));
+          ledger_update_by_id(*(d_a1), warrior_id, new_honor));
     }
   }
 }
 
 __attribute__((pure)) CoalitionBidHonorTraceCase::HonorLedger
 CoalitionBidHonorTraceCase::update_honor(
-    const std::shared_ptr<List<std::pair<unsigned int, std::shared_ptr<Z>>>>
-        &ledger,
-    const std::shared_ptr<CoalitionBidHonorTraceCase::Commander> &actor,
-    const std::shared_ptr<Z> &delta) {
-  std::shared_ptr<Z> current = ledger_lookup(ledger, actor->cmd_id);
-  return ledger_update_by_id(ledger, actor->cmd_id,
-                             BinInt::add(std::move(current), delta));
+    const List<std::pair<unsigned int, Z>> &ledger,
+    const CoalitionBidHonorTraceCase::Commander &actor, const Z &delta) {
+  Z current = ledger_lookup(ledger, actor.cmd_id);
+  return ledger_update_by_id(ledger, actor.cmd_id, BinInt::add(current, delta));
 }
 
 __attribute__((pure)) CoalitionBidHonorTraceCase::Honor
 CoalitionBidHonorTraceCase::refusal_honor_delta(
-    const std::shared_ptr<CoalitionBidHonorTraceCase::RefusalReason> &r) {
+    const CoalitionBidHonorTraceCase::RefusalReason &r) {
   if (std::holds_alternative<typename CoalitionBidHonorTraceCase::
                                  RefusalReason::RefusalInsufficientRank>(
-          r->v())) {
+          r.v())) {
     return Z::z0();
   } else {
     return Z::zneg(Positive::xh());
@@ -865,33 +797,33 @@ CoalitionBidHonorTraceCase::refusal_honor_delta(
 
 __attribute__((pure)) CoalitionBidHonorTraceCase::Honor
 CoalitionBidHonorTraceCase::protocol_honor_delta(
-    const std::shared_ptr<CoalitionBidHonorTraceCase::ProtocolAction> &action) {
+    const CoalitionBidHonorTraceCase::ProtocolAction &action) {
   if (std::holds_alternative<
           typename CoalitionBidHonorTraceCase::ProtocolAction::ActChallenge>(
-          action->v())) {
+          action.v())) {
     return Z::zpos(Positive::xh());
   } else if (std::holds_alternative<typename CoalitionBidHonorTraceCase::
                                         ProtocolAction::ActRespond>(
-                 action->v())) {
+                 action.v())) {
     return Z::zpos(Positive::xh());
   } else if (std::holds_alternative<typename CoalitionBidHonorTraceCase::
                                         ProtocolAction::ActRefuse>(
-                 action->v())) {
+                 action.v())) {
     const auto &[d_reason] = std::get<
         typename CoalitionBidHonorTraceCase::ProtocolAction::ActRefuse>(
-        action->v());
+        action.v());
     return refusal_honor_delta(d_reason);
   } else if (std::holds_alternative<
                  typename CoalitionBidHonorTraceCase::ProtocolAction::ActClose>(
-                 action->v())) {
+                 action.v())) {
     return Z::zpos(Positive::xh());
   } else if (std::holds_alternative<typename CoalitionBidHonorTraceCase::
                                         ProtocolAction::ActWithdraw>(
-                 action->v())) {
+                 action.v())) {
     return Z::zneg(Positive::xo(Positive::xh()));
   } else if (std::holds_alternative<typename CoalitionBidHonorTraceCase::
                                         ProtocolAction::ActBreakBid>(
-                 action->v())) {
+                 action.v())) {
     return Z::zneg(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))));
   } else {
     return Z::z0();
@@ -900,13 +832,13 @@ CoalitionBidHonorTraceCase::protocol_honor_delta(
 
 __attribute__((pure)) CoalitionBidHonorTraceCase::HonorLedger
 CoalitionBidHonorTraceCase::apply_action_honor(
-    const std::shared_ptr<CoalitionBidHonorTraceCase::BatchallState> &state,
-    const std::shared_ptr<CoalitionBidHonorTraceCase::ProtocolAction> &action) {
-  auto _cs = state->bs_phase->action_actor_in_phase(action);
+    const CoalitionBidHonorTraceCase::BatchallState &state,
+    const CoalitionBidHonorTraceCase::ProtocolAction &action) {
+  auto _cs = state.bs_phase.action_actor_in_phase(action);
   if (_cs.has_value()) {
-    const std::shared_ptr<CoalitionBidHonorTraceCase::Commander> &actor = *_cs;
-    return update_honor(state->bs_honor, actor, protocol_honor_delta(action));
+    const CoalitionBidHonorTraceCase::Commander &actor = *_cs;
+    return update_honor(state.bs_honor, actor, protocol_honor_delta(action));
   } else {
-    return state->bs_honor;
+    return state.bs_honor;
   }
 }

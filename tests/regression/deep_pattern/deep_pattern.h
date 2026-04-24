@@ -7,18 +7,140 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 struct DeepPattern {
-  struct tree : public std::enable_shared_from_this<tree> {
+  struct tree {
     // TYPES
     struct Leaf {
       unsigned int d_a0;
     };
 
     struct Node {
-      std::shared_ptr<tree> d_a0;
-      std::shared_ptr<tree> d_a1;
+      std::unique_ptr<tree> d_a0;
+      std::unique_ptr<tree> d_a1;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -29,47 +151,89 @@ struct DeepPattern {
 
   public:
     // CREATORS
+    tree() {}
+
     explicit tree(Leaf _v) : d_v_(std::move(_v)) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<tree> leaf(unsigned int a0) {
-      return std::make_shared<tree>(Leaf{std::move(a0)});
+    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) tree &operator=(const tree &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(const std::shared_ptr<tree> &a0,
-                                      const std::shared_ptr<tree> &a1) {
-      return std::make_shared<tree>(Node{a0, a1});
+    __attribute__((pure)) tree &operator=(tree &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(std::shared_ptr<tree> &&a0,
-                                      std::shared_ptr<tree> &&a1) {
-      return std::make_shared<tree>(Node{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    __attribute__((pure)) tree clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Leaf>(_sv.v())) {
+        const auto &[d_a0] = std::get<Leaf>(_sv.v());
+        return tree(Leaf{clone_as_value<unsigned int>(d_a0)});
+      } else {
+        const auto &[d_a0, d_a1] = std::get<Node>(_sv.v());
+        return tree(Node{clone_as_value<std::unique_ptr<tree>>(d_a0),
+                         clone_as_value<std::unique_ptr<tree>>(d_a1)});
+      }
+    }
+
+    // CREATORS
+    __attribute__((pure)) static tree leaf(unsigned int a0) {
+      return tree(Leaf{std::move(a0)});
+    }
+
+    __attribute__((pure)) static tree node(const tree &a0, const tree &a1) {
+      return tree(Node{std::make_unique<tree>(a0.clone()),
+                       std::make_unique<tree>(a1.clone())});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) tree *operator->() { return this; }
+
+    __attribute__((pure)) const tree *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = tree(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int nested_let_match() const {
-      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        const auto &[d_a0] = std::get<typename tree::Leaf>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename tree::Leaf>(_sv.v());
         return d_a0;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename tree::Node>(this->v());
+        const auto &[d_a0, d_a1] = std::get<typename tree::Node>(_sv.v());
+        tree d_a0_value = clone_as_value<tree>(d_a0);
+        tree d_a1_value = clone_as_value<tree>(d_a1);
         unsigned int a = [&]() {
-          if (std::holds_alternative<typename tree::Leaf>(d_a0->v())) {
-            const auto &[d_a00] = std::get<typename tree::Leaf>(d_a0->v());
+          if (std::holds_alternative<typename tree::Leaf>(d_a0_value.v())) {
+            const auto &[d_a00] = std::get<typename tree::Leaf>(d_a0_value.v());
             return d_a00;
           } else {
             return 0u;
           }
         }();
         unsigned int b = [&]() {
-          if (std::holds_alternative<typename tree::Leaf>(d_a1->v())) {
-            const auto &[d_a01] = std::get<typename tree::Leaf>(d_a1->v());
+          if (std::holds_alternative<typename tree::Leaf>(d_a1_value.v())) {
+            const auto &[d_a01] = std::get<typename tree::Leaf>(d_a1_value.v());
             return d_a01;
           } else {
             return 0u;
@@ -82,21 +246,23 @@ struct DeepPattern {
     }
 
     __attribute__((pure)) unsigned int
-    conditional_match(const unsigned int target) const {
-      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        const auto &[d_a0] = std::get<typename tree::Leaf>(this->v());
+    conditional_match(const unsigned int &target) const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename tree::Leaf>(_sv.v());
         if (d_a0 == target) {
           return 100u;
         } else {
           return d_a0;
         }
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename tree::Node>(this->v());
-        if (this->has_value(target)) {
+        const auto &[d_a0, d_a1] = std::get<typename tree::Node>(_sv.v());
+        if ((*(this)).has_value(target)) {
           return 200u;
         } else {
-          if (std::holds_alternative<typename tree::Leaf>(d_a0->v())) {
-            const auto &[d_a00] = std::get<typename tree::Leaf>(d_a0->v());
+          auto &&_sv0 = *(d_a0);
+          if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
+            const auto &[d_a00] = std::get<typename tree::Leaf>(_sv0.v());
             return d_a00;
           } else {
             return 0u;
@@ -105,37 +271,39 @@ struct DeepPattern {
       }
     }
 
-    __attribute__((pure)) bool has_value(const unsigned int target) const {
-      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        const auto &[d_a0] = std::get<typename tree::Leaf>(this->v());
+    __attribute__((pure)) bool has_value(const unsigned int &target) const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename tree::Leaf>(_sv.v());
         return d_a0 == target;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename tree::Node>(this->v());
-        return (d_a0->has_value(target) || d_a1->has_value(target));
+        const auto &[d_a0, d_a1] = std::get<typename tree::Node>(_sv.v());
+        return ((*(d_a0)).has_value(target) || (*(d_a1)).has_value(target));
       }
     }
 
-    std::shared_ptr<tree> as_pattern_test() const {
-      return std::const_pointer_cast<tree>(this->shared_from_this());
-    }
+    __attribute__((pure)) tree as_pattern_test() const { return *(this); }
 
     __attribute__((pure)) unsigned int wildcard_with_bindings() const {
-      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        const auto &[d_a0] = std::get<typename tree::Leaf>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename tree::Leaf>(_sv.v());
         return d_a0;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename tree::Node>(this->v());
+        const auto &[d_a0, d_a1] = std::get<typename tree::Node>(_sv.v());
+        tree d_a0_value = clone_as_value<tree>(d_a0);
+        tree d_a1_value = clone_as_value<tree>(d_a1);
         unsigned int x = [&]() {
-          if (std::holds_alternative<typename tree::Leaf>(d_a0->v())) {
-            const auto &[d_a00] = std::get<typename tree::Leaf>(d_a0->v());
+          if (std::holds_alternative<typename tree::Leaf>(d_a0_value.v())) {
+            const auto &[d_a00] = std::get<typename tree::Leaf>(d_a0_value.v());
             return d_a00;
           } else {
             return 0u;
           }
         }();
         unsigned int y = [&]() {
-          if (std::holds_alternative<typename tree::Leaf>(d_a1->v())) {
-            const auto &[d_a01] = std::get<typename tree::Leaf>(d_a1->v());
+          if (std::holds_alternative<typename tree::Leaf>(d_a1_value.v())) {
+            const auto &[d_a01] = std::get<typename tree::Leaf>(d_a1_value.v());
             return d_a01;
           } else {
             return 0u;
@@ -145,39 +313,43 @@ struct DeepPattern {
       }
     }
 
-    __attribute__((pure)) unsigned int
-    multi_constructor(const std::shared_ptr<tree> &t2) const {
-      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        const auto &[d_a0] = std::get<typename tree::Leaf>(this->v());
-        if (std::holds_alternative<typename tree::Leaf>(t2->v())) {
-          const auto &[d_a00] = std::get<typename tree::Leaf>(t2->v());
+    __attribute__((pure)) unsigned int multi_constructor(const tree &t2) const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename tree::Leaf>(_sv.v());
+        if (std::holds_alternative<typename tree::Leaf>(t2.v())) {
+          const auto &[d_a00] = std::get<typename tree::Leaf>(t2.v());
           return (d_a0 + d_a00);
         } else {
-          const auto &[d_a00, d_a10] = std::get<typename tree::Node>(t2->v());
-          if (std::holds_alternative<typename tree::Leaf>(d_a00->v())) {
-            const auto &[d_a01] = std::get<typename tree::Leaf>(d_a00->v());
+          const auto &[d_a00, d_a10] = std::get<typename tree::Node>(t2.v());
+          auto &&_sv1 = *(d_a00);
+          if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
+            const auto &[d_a01] = std::get<typename tree::Leaf>(_sv1.v());
             return (d_a0 + d_a01);
           } else {
             return 0u;
           }
         }
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename tree::Node>(this->v());
-        if (std::holds_alternative<typename tree::Leaf>(d_a0->v())) {
-          const auto &[d_a00] = std::get<typename tree::Leaf>(d_a0->v());
-          if (std::holds_alternative<typename tree::Leaf>(d_a1->v())) {
-            const auto &[d_a01] = std::get<typename tree::Leaf>(d_a1->v());
-            if (std::holds_alternative<typename tree::Leaf>(t2->v())) {
-              const auto &[d_a02] = std::get<typename tree::Leaf>(t2->v());
+        const auto &[d_a0, d_a1] = std::get<typename tree::Node>(_sv.v());
+        auto &&_sv0 = *(d_a0);
+        if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
+          const auto &[d_a00] = std::get<typename tree::Leaf>(_sv0.v());
+          auto &&_sv1 = *(d_a1);
+          if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
+            const auto &[d_a01] = std::get<typename tree::Leaf>(_sv1.v());
+            if (std::holds_alternative<typename tree::Leaf>(t2.v())) {
+              const auto &[d_a02] = std::get<typename tree::Leaf>(t2.v());
               return (d_a00 + d_a02);
             } else {
               const auto &[d_a02, d_a12] =
-                  std::get<typename tree::Node>(t2->v());
-              if (std::holds_alternative<typename tree::Leaf>(d_a02->v())) {
-                const auto &[d_a03] = std::get<typename tree::Leaf>(d_a02->v());
-                if (std::holds_alternative<typename tree::Leaf>(d_a12->v())) {
-                  const auto &[d_a04] =
-                      std::get<typename tree::Leaf>(d_a12->v());
+                  std::get<typename tree::Node>(t2.v());
+              auto &&_sv3 = *(d_a02);
+              if (std::holds_alternative<typename tree::Leaf>(_sv3.v())) {
+                const auto &[d_a03] = std::get<typename tree::Leaf>(_sv3.v());
+                auto &&_sv4 = *(d_a12);
+                if (std::holds_alternative<typename tree::Leaf>(_sv4.v())) {
+                  const auto &[d_a04] = std::get<typename tree::Leaf>(_sv4.v());
                   return (((d_a00 + d_a01) + d_a03) + d_a04);
                 } else {
                   return 0u;
@@ -187,8 +359,8 @@ struct DeepPattern {
               }
             }
           } else {
-            if (std::holds_alternative<typename tree::Leaf>(t2->v())) {
-              const auto &[d_a02] = std::get<typename tree::Leaf>(t2->v());
+            if (std::holds_alternative<typename tree::Leaf>(t2.v())) {
+              const auto &[d_a02] = std::get<typename tree::Leaf>(t2.v());
               return (d_a00 + d_a02);
             } else {
               return 0u;
@@ -201,23 +373,28 @@ struct DeepPattern {
     }
 
     __attribute__((pure)) unsigned int deep_match() const {
-      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        const auto &[d_a0] = std::get<typename tree::Leaf>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename tree::Leaf>(_sv.v());
         return d_a0;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename tree::Node>(this->v());
-        if (std::holds_alternative<typename tree::Leaf>(d_a0->v())) {
-          const auto &[d_a00] = std::get<typename tree::Leaf>(d_a0->v());
-          if (std::holds_alternative<typename tree::Leaf>(d_a1->v())) {
-            const auto &[d_a01] = std::get<typename tree::Leaf>(d_a1->v());
+        const auto &[d_a0, d_a1] = std::get<typename tree::Node>(_sv.v());
+        auto &&_sv0 = *(d_a0);
+        if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
+          const auto &[d_a00] = std::get<typename tree::Leaf>(_sv0.v());
+          auto &&_sv1 = *(d_a1);
+          if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
+            const auto &[d_a01] = std::get<typename tree::Leaf>(_sv1.v());
             return (d_a00 + d_a01);
           } else {
             const auto &[d_a01, d_a11] =
-                std::get<typename tree::Node>(d_a1->v());
-            if (std::holds_alternative<typename tree::Leaf>(d_a01->v())) {
-              const auto &[d_a02] = std::get<typename tree::Leaf>(d_a01->v());
-              if (std::holds_alternative<typename tree::Leaf>(d_a11->v())) {
-                const auto &[d_a03] = std::get<typename tree::Leaf>(d_a11->v());
+                std::get<typename tree::Node>(_sv1.v());
+            auto &&_sv2 = *(d_a01);
+            if (std::holds_alternative<typename tree::Leaf>(_sv2.v())) {
+              const auto &[d_a02] = std::get<typename tree::Leaf>(_sv2.v());
+              auto &&_sv3 = *(d_a11);
+              if (std::holds_alternative<typename tree::Leaf>(_sv3.v())) {
+                const auto &[d_a03] = std::get<typename tree::Leaf>(_sv3.v());
                 return ((d_a00 + d_a02) + d_a03);
               } else {
                 return 0u;
@@ -227,23 +404,27 @@ struct DeepPattern {
             }
           }
         } else {
-          const auto &[d_a00, d_a10] = std::get<typename tree::Node>(d_a0->v());
-          if (std::holds_alternative<typename tree::Leaf>(d_a00->v())) {
-            const auto &[d_a01] = std::get<typename tree::Leaf>(d_a00->v());
-            if (std::holds_alternative<typename tree::Leaf>(d_a10->v())) {
-              const auto &[d_a02] = std::get<typename tree::Leaf>(d_a10->v());
-              if (std::holds_alternative<typename tree::Leaf>(d_a1->v())) {
-                const auto &[d_a03] = std::get<typename tree::Leaf>(d_a1->v());
+          const auto &[d_a00, d_a10] = std::get<typename tree::Node>(_sv0.v());
+          auto &&_sv1 = *(d_a00);
+          if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
+            const auto &[d_a01] = std::get<typename tree::Leaf>(_sv1.v());
+            auto &&_sv2 = *(d_a10);
+            if (std::holds_alternative<typename tree::Leaf>(_sv2.v())) {
+              const auto &[d_a02] = std::get<typename tree::Leaf>(_sv2.v());
+              auto &&_sv3 = *(d_a1);
+              if (std::holds_alternative<typename tree::Leaf>(_sv3.v())) {
+                const auto &[d_a03] = std::get<typename tree::Leaf>(_sv3.v());
                 return ((d_a01 + d_a02) + d_a03);
               } else {
                 const auto &[d_a03, d_a13] =
-                    std::get<typename tree::Node>(d_a1->v());
-                if (std::holds_alternative<typename tree::Leaf>(d_a03->v())) {
-                  const auto &[d_a04] =
-                      std::get<typename tree::Leaf>(d_a03->v());
-                  if (std::holds_alternative<typename tree::Leaf>(d_a13->v())) {
+                    std::get<typename tree::Node>(_sv3.v());
+                auto &&_sv4 = *(d_a03);
+                if (std::holds_alternative<typename tree::Leaf>(_sv4.v())) {
+                  const auto &[d_a04] = std::get<typename tree::Leaf>(_sv4.v());
+                  auto &&_sv5 = *(d_a13);
+                  if (std::holds_alternative<typename tree::Leaf>(_sv5.v())) {
                     const auto &[d_a05] =
-                        std::get<typename tree::Leaf>(d_a13->v());
+                        std::get<typename tree::Leaf>(_sv5.v());
                     return (((d_a01 + d_a02) + d_a04) + d_a05);
                   } else {
                     return 0u;
@@ -257,17 +438,20 @@ struct DeepPattern {
             }
           } else {
             const auto &[d_a01, d_a11] =
-                std::get<typename tree::Node>(d_a00->v());
-            if (std::holds_alternative<typename tree::Leaf>(d_a01->v())) {
-              const auto &[d_a02] = std::get<typename tree::Leaf>(d_a01->v());
-              if (std::holds_alternative<typename tree::Leaf>(d_a11->v())) {
-                const auto &[d_a03] = std::get<typename tree::Leaf>(d_a11->v());
-                if (std::holds_alternative<typename tree::Leaf>(d_a10->v())) {
-                  const auto &[d_a04] =
-                      std::get<typename tree::Leaf>(d_a10->v());
-                  if (std::holds_alternative<typename tree::Leaf>(d_a1->v())) {
+                std::get<typename tree::Node>(_sv1.v());
+            auto &&_sv2 = *(d_a01);
+            if (std::holds_alternative<typename tree::Leaf>(_sv2.v())) {
+              const auto &[d_a02] = std::get<typename tree::Leaf>(_sv2.v());
+              auto &&_sv3 = *(d_a11);
+              if (std::holds_alternative<typename tree::Leaf>(_sv3.v())) {
+                const auto &[d_a03] = std::get<typename tree::Leaf>(_sv3.v());
+                auto &&_sv4 = *(d_a10);
+                if (std::holds_alternative<typename tree::Leaf>(_sv4.v())) {
+                  const auto &[d_a04] = std::get<typename tree::Leaf>(_sv4.v());
+                  auto &&_sv5 = *(d_a1);
+                  if (std::holds_alternative<typename tree::Leaf>(_sv5.v())) {
                     const auto &[d_a05] =
-                        std::get<typename tree::Leaf>(d_a1->v());
+                        std::get<typename tree::Leaf>(_sv5.v());
                     return (((d_a02 + d_a03) + d_a04) + d_a05);
                   } else {
                     return 0u;
@@ -288,29 +472,31 @@ struct DeepPattern {
 
     template <
         typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, std::shared_ptr<tree>, T1, std::shared_ptr<tree>, T1> F1>
+        MapsTo<T1, std::unique_ptr<tree>, T1, std::unique_ptr<tree>, T1> F1>
     T1 tree_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        const auto &[d_a0] = std::get<typename tree::Leaf>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename tree::Leaf>(_sv.v());
         return f(d_a0);
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename tree::Node>(this->v());
-        return f0(d_a0, d_a0->template tree_rec<T1>(f, f0), d_a1,
-                  d_a1->template tree_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1] = std::get<typename tree::Node>(_sv.v());
+        return f0(*(d_a0), (*(d_a0)).template tree_rec<T1>(f, f0), *(d_a1),
+                  (*(d_a1)).template tree_rec<T1>(f, f0));
       }
     }
 
     template <
         typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, std::shared_ptr<tree>, T1, std::shared_ptr<tree>, T1> F1>
+        MapsTo<T1, std::unique_ptr<tree>, T1, std::unique_ptr<tree>, T1> F1>
     T1 tree_rect(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        const auto &[d_a0] = std::get<typename tree::Leaf>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename tree::Leaf>(_sv.v());
         return f(d_a0);
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename tree::Node>(this->v());
-        return f0(d_a0, d_a0->template tree_rect<T1>(f, f0), d_a1,
-                  d_a1->template tree_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1] = std::get<typename tree::Node>(_sv.v());
+        return f0(*(d_a0), (*(d_a0)).template tree_rect<T1>(f, f0), *(d_a1),
+                  (*(d_a1)).template tree_rect<T1>(f, f0));
       }
     }
   };
@@ -321,10 +507,11 @@ struct DeepPattern {
 
     struct Cons {
       t_A d_a0;
-      std::shared_ptr<list<t_A>> d_a1;
+      std::unique_ptr<list<t_A>> d_a1;
     };
 
     using variant_t = std::variant<Nil, Cons>;
+    using crane_element_type = t_A;
 
   private:
     // DATA
@@ -332,59 +519,108 @@ struct DeepPattern {
 
   public:
     // CREATORS
+    list() {}
+
     explicit list(Nil _v) : d_v_(_v) {}
 
     explicit list(Cons _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<list<t_A>> nil() {
-      return std::make_shared<list<t_A>>(Nil{});
+    list(const list<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    list(list<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) list<t_A> &operator=(const list<t_A> &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<list<t_A>>
-    cons(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
-      return std::make_shared<list<t_A>>(Cons{std::move(a0), a1});
+    __attribute__((pure)) list<t_A> &operator=(list<t_A> &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<list<t_A>> cons(t_A a0,
-                                           std::shared_ptr<list<t_A>> &&a1) {
-      return std::make_shared<list<t_A>>(Cons{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    __attribute__((pure)) list<t_A> clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Nil>(_sv.v())) {
+        return list<t_A>(Nil{});
+      } else {
+        const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+        return list<t_A>(
+            Cons{clone_as_value<t_A>(d_a0),
+                 clone_as_value<std::unique_ptr<list<t_A>>>(d_a1)});
+      }
+    }
+
+    template <typename _CloneT0>
+    __attribute__((pure)) list<_CloneT0> clone_as() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Nil>(_sv.v())) {
+        return list<_CloneT0>(typename list<_CloneT0>::Nil{});
+      } else {
+        const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
+        return list<_CloneT0>(typename list<_CloneT0>::Cons{
+            clone_as_value<_CloneT0>(d_a0),
+            clone_as_value<std::unique_ptr<list<_CloneT0>>>(d_a1)});
+      }
+    }
+
+    // CREATORS
+    __attribute__((pure)) static list<t_A> nil() { return list(Nil{}); }
+
+    __attribute__((pure)) static list<t_A> cons(t_A a0, const list<t_A> &a1) {
+      return list(Cons{std::move(a0), std::make_unique<list<t_A>>(a1.clone())});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) list<t_A> *operator->() { return this; }
+
+    __attribute__((pure)) const list<t_A> *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = list<t_A>(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, t_A, std::shared_ptr<list<t_A>>, T1> F1>
+    template <typename T1, MapsTo<T1, t_A, std::unique_ptr<list<t_A>>, T1> F1>
     T1 list_rec(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename list<t_A>::Nil>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename list<t_A>::Nil>(_sv.v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename list<t_A>::Cons>(this->v());
-        return f0(d_a0, d_a1, d_a1->template list_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1] = std::get<typename list<t_A>::Cons>(_sv.v());
+        return f0(d_a0, *(d_a1), (*(d_a1)).template list_rec<T1>(f, f0));
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, std::shared_ptr<list<t_A>>, T1> F1>
+    template <typename T1, MapsTo<T1, t_A, std::unique_ptr<list<t_A>>, T1> F1>
     T1 list_rect(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename list<t_A>::Nil>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename list<t_A>::Nil>(_sv.v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename list<t_A>::Cons>(this->v());
-        return f0(d_a0, d_a1, d_a1->template list_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1] = std::get<typename list<t_A>::Cons>(_sv.v());
+        return f0(d_a0, *(d_a1), (*(d_a1)).template list_rect<T1>(f, f0));
       }
     }
   };
 
   __attribute__((pure)) static unsigned int
-  list_deep_match(const std::shared_ptr<list<std::shared_ptr<tree>>> &l);
+  list_deep_match(const list<tree> &l);
   static inline const unsigned int test1 =
-      tree::node(tree::leaf(1u), tree::leaf(2u))->deep_match();
+      tree::node(tree::leaf(1u), tree::leaf(2u)).deep_match();
   static inline const unsigned int test2 =
-      tree::leaf(5u)->multi_constructor(tree::leaf(10u));
+      tree::leaf(5u).multi_constructor(tree::leaf(10u));
 };
 
 #endif // INCLUDED_DEEP_PATTERN

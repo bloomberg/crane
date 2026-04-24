@@ -7,8 +7,8 @@
 #include <utility>
 #include <variant>
 
-std::shared_ptr<NestedInd::rose<unsigned int>>
-NestedInd::leaf(const unsigned int n) {
+__attribute__((pure)) NestedInd::rose<unsigned int>
+NestedInd::leaf(unsigned int n) {
   return rose<unsigned int>::node(
-      n, custom_list<std::shared_ptr<NestedInd::rose<unsigned int>>>::cnil());
+      n, custom_list<NestedInd::rose<unsigned int>>::cnil());
 }

@@ -9,7 +9,7 @@
 #include <variant>
 
 /// 1. Bool match as value argument to set_env
-void EffectMatchArg::set_bool_value(const bool flag, const std::string key) {
+void EffectMatchArg::set_bool_value(const bool &flag, const std::string key) {
   setenv(
       key.c_str(),
       [&]() -> std::string {
@@ -25,7 +25,7 @@ void EffectMatchArg::set_bool_value(const bool flag, const std::string key) {
 }
 
 /// 2. Bool match as key argument to set_env
-void EffectMatchArg::set_bool_key(const bool flag, const std::string value) {
+void EffectMatchArg::set_bool_key(const bool &flag, const std::string value) {
   setenv(
       [&]() -> std::string {
         if (flag) {
@@ -41,7 +41,7 @@ void EffectMatchArg::set_bool_key(const bool flag, const std::string value) {
 
 /// 3. Option match result as argument to set_env
 void EffectMatchArg::set_option_value(const std::string key,
-                                      const std::optional<std::string> r) {
+                                      const std::optional<std::string> &r) {
   setenv(
       key.c_str(),
       [&]() -> std::string {
@@ -58,7 +58,7 @@ void EffectMatchArg::set_option_value(const std::string key,
 }
 
 /// 4. Bool match as argument to print_endline — exercises << precedence
-void EffectMatchArg::print_conditional(const bool flag) {
+void EffectMatchArg::print_conditional(const bool &flag) {
   std::cout << [&]() -> std::string {
     if (flag) {
       return "TRUE";
@@ -70,22 +70,22 @@ void EffectMatchArg::print_conditional(const bool flag) {
 }
 
 /// 5. Bool match as argument to get_env
-std::optional<std::string> EffectMatchArg::get_conditional(const bool flag) {
+std::optional<std::string> EffectMatchArg::get_conditional(const bool &flag) {
   return [&]() -> std::optional<std::string> {
-    auto *v = std::getenv([&]() -> std::string {
+    auto *v = std::getenv([=]() mutable -> std::string {
       if (flag) {
         return "KEY_A";
       } else {
         return "KEY_B";
       }
     }()
-                                       .c_str());
+                                               .c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
 }
 
 /// 6. Chained: match result passed to set_env then get_env
-std::optional<std::string> EffectMatchArg::round_trip_match(const bool flag) {
+std::optional<std::string> EffectMatchArg::round_trip_match(const bool &flag) {
   std::string key;
   if (flag) {
     key = "X";

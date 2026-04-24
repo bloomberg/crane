@@ -17,7 +17,7 @@
 /// independently read garbage from the same dangling reference.
 __attribute__((pure)) std::pair<std::function<unsigned int(unsigned int)>,
                                 std::function<unsigned int(unsigned int)>>
-ClosureNestedEscape::make_pair_fix(const unsigned int n) {
+ClosureNestedEscape::make_pair_fix(unsigned int n) {
   auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
   *add = [=](unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
@@ -36,5 +36,5 @@ ClosureNestedEscape::make_pair_fix(const unsigned int n) {
       return (n + (*mul)(x_));
     }
   };
-  return std::make_pair(*add, *mul);
+  return std::make_pair((*add), (*mul));
 }

@@ -3,11 +3,11 @@
 #include <type_traits>
 
 __attribute__((pure)) unsigned int
-WrapperDeclMerge::A::Nat::fa(const unsigned int n) {
+WrapperDeclMerge::A::Nat::fa(unsigned int n) {
   return n;
 }
 
 __attribute__((pure)) unsigned int
-WrapperDeclMerge::B::Nat::fb(const unsigned int n) {
+WrapperDeclMerge::B::Nat::fb(unsigned int n) {
   return (n + 1);
 }

@@ -10,11 +10,133 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 struct PeanoNat {
-  __attribute__((pure)) static bool even(const unsigned int n);
-  __attribute__((pure)) static unsigned int div2(const unsigned int n);
+  __attribute__((pure)) static bool even(const unsigned int &n);
+  __attribute__((pure)) static unsigned int div2(const unsigned int &n);
 };
 
 template <typename I, typename
@@ -30,8 +152,7 @@ concept FunctionalInduction = requires {
 struct Equations {
   template <MapsTo<unsigned int, std::pair<unsigned int, unsigned int>> F3>
   __attribute__((pure)) static unsigned int
-  gcd_clause_3(const unsigned int n, const unsigned int n0, const bool refine,
-               F3 &&gcd0) {
+  gcd_clause_3(unsigned int n, unsigned int n0, const bool &refine, F3 &&gcd0) {
     if (refine) {
       return gcd0(std::make_pair(
           (n + 1),
@@ -45,7 +166,7 @@ struct Equations {
 
   template <MapsTo<unsigned int, std::pair<unsigned int, unsigned int>> F1>
   __attribute__((pure)) static unsigned int
-  gcd_functional(const std::pair<unsigned int, unsigned int> p, F1 &&gcd0) {
+  gcd_functional(const std::pair<unsigned int, unsigned int> &p, F1 &&gcd0) {
     const unsigned int &n = p.first;
     const unsigned int &n0 = p.second;
     if (n <= 0) {
@@ -62,12 +183,11 @@ struct Equations {
   }
 
   __attribute__((pure)) static unsigned int
-  gcd(const std::pair<unsigned int, unsigned int> x);
+  gcd(const std::pair<unsigned int, unsigned int> &x);
   __attribute__((pure)) static unsigned int
-  gcd_unfold_clause_3(const unsigned int n, const unsigned int n0,
-                      const bool refine);
+  gcd_unfold_clause_3(unsigned int n, unsigned int n0, const bool &refine);
   __attribute__((pure)) static unsigned int
-  gcd_unfold(const std::pair<unsigned int, unsigned int> p);
+  gcd_unfold(const std::pair<unsigned int, unsigned int> &p);
   struct gcd_graph;
   struct gcd_clause_3_graph;
 
@@ -84,7 +204,7 @@ struct Equations {
     struct Gcd_graph_refinement_3 {
       unsigned int d_n;
       unsigned int d_n0;
-      std::shared_ptr<gcd_clause_3_graph> d_hind;
+      std::unique_ptr<gcd_clause_3_graph> d_hind;
     };
 
     using variant_t = std::variant<Gcd_graph_equation_1, Gcd_graph_equation_2,
@@ -96,36 +216,84 @@ struct Equations {
 
   public:
     // CREATORS
+    gcd_graph() {}
+
     explicit gcd_graph(Gcd_graph_equation_1 _v) : d_v_(std::move(_v)) {}
 
     explicit gcd_graph(Gcd_graph_equation_2 _v) : d_v_(std::move(_v)) {}
 
     explicit gcd_graph(Gcd_graph_refinement_3 _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<gcd_graph> gcd_graph_equation_1(unsigned int y) {
-      return std::make_shared<gcd_graph>(Gcd_graph_equation_1{std::move(y)});
+    gcd_graph(const gcd_graph &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    gcd_graph(gcd_graph &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) gcd_graph &operator=(const gcd_graph &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<gcd_graph> gcd_graph_equation_2(unsigned int n) {
-      return std::make_shared<gcd_graph>(Gcd_graph_equation_2{std::move(n)});
+    __attribute__((pure)) gcd_graph &operator=(gcd_graph &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<gcd_graph>
+    // ACCESSORS
+    __attribute__((pure)) gcd_graph clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Gcd_graph_equation_1>(_sv.v())) {
+        const auto &[d_y] = std::get<Gcd_graph_equation_1>(_sv.v());
+        return gcd_graph(
+            Gcd_graph_equation_1{clone_as_value<unsigned int>(d_y)});
+      } else if (std::holds_alternative<Gcd_graph_equation_2>(_sv.v())) {
+        const auto &[d_n] = std::get<Gcd_graph_equation_2>(_sv.v());
+        return gcd_graph(
+            Gcd_graph_equation_2{clone_as_value<unsigned int>(d_n)});
+      } else {
+        const auto &[d_n, d_n0, d_hind] =
+            std::get<Gcd_graph_refinement_3>(_sv.v());
+        return gcd_graph(Gcd_graph_refinement_3{
+            clone_as_value<unsigned int>(d_n),
+            clone_as_value<unsigned int>(d_n0),
+            clone_as_value<std::unique_ptr<gcd_clause_3_graph>>(d_hind)});
+      }
+    }
+
+    // CREATORS
+    __attribute__((pure)) static gcd_graph
+    gcd_graph_equation_1(unsigned int y) {
+      return gcd_graph(Gcd_graph_equation_1{std::move(y)});
+    }
+
+    __attribute__((pure)) static gcd_graph
+    gcd_graph_equation_2(unsigned int n) {
+      return gcd_graph(Gcd_graph_equation_2{std::move(n)});
+    }
+
+    __attribute__((pure)) static gcd_graph
     gcd_graph_refinement_3(unsigned int n, unsigned int n0,
-                           const std::shared_ptr<gcd_clause_3_graph> &hind) {
-      return std::make_shared<gcd_graph>(
-          Gcd_graph_refinement_3{std::move(n), std::move(n0), hind});
-    }
-
-    static std::shared_ptr<gcd_graph>
-    gcd_graph_refinement_3(unsigned int n, unsigned int n0,
-                           std::shared_ptr<gcd_clause_3_graph> &&hind) {
-      return std::make_shared<gcd_graph>(
-          Gcd_graph_refinement_3{std::move(n), std::move(n0), std::move(hind)});
+                           const gcd_clause_3_graph &hind) {
+      return gcd_graph(Gcd_graph_refinement_3{
+          std::move(n), std::move(n0),
+          std::make_unique<gcd_clause_3_graph>(hind.clone())});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    __attribute__((pure)) gcd_graph *operator->() { return this; }
+
+    __attribute__((pure)) const gcd_graph *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = gcd_graph(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -136,13 +304,13 @@ struct Equations {
     struct Gcd_clause_3_graph_equation_1 {
       unsigned int d_n;
       unsigned int d_n0;
-      std::shared_ptr<gcd_graph> d_hind;
+      std::unique_ptr<gcd_graph> d_hind;
     };
 
     struct Gcd_clause_3_graph_equation_2 {
       unsigned int d_n;
       unsigned int d_n0;
-      std::shared_ptr<gcd_graph> d_hind;
+      std::unique_ptr<gcd_graph> d_hind;
     };
 
     using variant_t = std::variant<Gcd_clause_3_graph_equation_1,
@@ -154,42 +322,87 @@ struct Equations {
 
   public:
     // CREATORS
+    gcd_clause_3_graph() {}
+
     explicit gcd_clause_3_graph(Gcd_clause_3_graph_equation_1 _v)
         : d_v_(std::move(_v)) {}
 
     explicit gcd_clause_3_graph(Gcd_clause_3_graph_equation_2 _v)
         : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<gcd_clause_3_graph>
+    gcd_clause_3_graph(const gcd_clause_3_graph &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    gcd_clause_3_graph(gcd_clause_3_graph &&_other)
+        : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) gcd_clause_3_graph &
+    operator=(const gcd_clause_3_graph &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
+    }
+
+    __attribute__((pure)) gcd_clause_3_graph &
+    operator=(gcd_clause_3_graph &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) gcd_clause_3_graph clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Gcd_clause_3_graph_equation_1>(_sv.v())) {
+        const auto &[d_n, d_n0, d_hind] =
+            std::get<Gcd_clause_3_graph_equation_1>(_sv.v());
+        return gcd_clause_3_graph(Gcd_clause_3_graph_equation_1{
+            clone_as_value<unsigned int>(d_n),
+            clone_as_value<unsigned int>(d_n0),
+            clone_as_value<std::unique_ptr<gcd_graph>>(d_hind)});
+      } else {
+        const auto &[d_n, d_n0, d_hind] =
+            std::get<Gcd_clause_3_graph_equation_2>(_sv.v());
+        return gcd_clause_3_graph(Gcd_clause_3_graph_equation_2{
+            clone_as_value<unsigned int>(d_n),
+            clone_as_value<unsigned int>(d_n0),
+            clone_as_value<std::unique_ptr<gcd_graph>>(d_hind)});
+      }
+    }
+
+    // CREATORS
+    __attribute__((pure)) static gcd_clause_3_graph
     gcd_clause_3_graph_equation_1(unsigned int n, unsigned int n0,
-                                  const std::shared_ptr<gcd_graph> &hind) {
-      return std::make_shared<gcd_clause_3_graph>(
-          Gcd_clause_3_graph_equation_1{std::move(n), std::move(n0), hind});
+                                  const gcd_graph &hind) {
+      return gcd_clause_3_graph(Gcd_clause_3_graph_equation_1{
+          std::move(n), std::move(n0),
+          std::make_unique<gcd_graph>(hind.clone())});
     }
 
-    static std::shared_ptr<gcd_clause_3_graph>
-    gcd_clause_3_graph_equation_1(unsigned int n, unsigned int n0,
-                                  std::shared_ptr<gcd_graph> &&hind) {
-      return std::make_shared<gcd_clause_3_graph>(Gcd_clause_3_graph_equation_1{
-          std::move(n), std::move(n0), std::move(hind)});
-    }
-
-    static std::shared_ptr<gcd_clause_3_graph>
+    __attribute__((pure)) static gcd_clause_3_graph
     gcd_clause_3_graph_equation_2(unsigned int n, unsigned int n0,
-                                  const std::shared_ptr<gcd_graph> &hind) {
-      return std::make_shared<gcd_clause_3_graph>(
-          Gcd_clause_3_graph_equation_2{std::move(n), std::move(n0), hind});
-    }
-
-    static std::shared_ptr<gcd_clause_3_graph>
-    gcd_clause_3_graph_equation_2(unsigned int n, unsigned int n0,
-                                  std::shared_ptr<gcd_graph> &&hind) {
-      return std::make_shared<gcd_clause_3_graph>(Gcd_clause_3_graph_equation_2{
-          std::move(n), std::move(n0), std::move(hind)});
+                                  const gcd_graph &hind) {
+      return gcd_clause_3_graph(Gcd_clause_3_graph_equation_2{
+          std::move(n), std::move(n0),
+          std::make_unique<gcd_graph>(hind.clone())});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    __attribute__((pure)) gcd_clause_3_graph *operator->() { return this; }
+
+    __attribute__((pure)) const gcd_clause_3_graph *operator->() const {
+      return this;
+    }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = gcd_clause_3_graph(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -198,44 +411,43 @@ struct Equations {
   template <typename T1, typename T2 = void, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int> F1, typename F2, typename F3, typename F4>
   static T1 gcd_graph_mut(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                          const std::pair<unsigned int, unsigned int> _x0,
-                          const unsigned int _x1,
-                          std::shared_ptr<gcd_graph> _x2) {
+                          std::pair<unsigned int, unsigned int> _x0,
+                          unsigned int _x1, gcd_graph _x2) {
     std::function<T1(std::pair<unsigned int, unsigned int>, unsigned int,
-                     std::shared_ptr<gcd_graph>)>
+                     gcd_graph)>
         f4;
     std::function<T2(unsigned int, unsigned int, bool, unsigned int,
-                     std::shared_ptr<gcd_clause_3_graph>)>
+                     gcd_clause_3_graph)>
         f5;
     f4 = [&](std::pair<unsigned int, unsigned int>, unsigned int,
-             std::shared_ptr<gcd_graph> g) -> T1 {
+             gcd_graph g) -> T1 {
       if (std::holds_alternative<typename gcd_graph::Gcd_graph_equation_1>(
-              g->v())) {
+              g.v())) {
         const auto &[d_y] =
-            std::get<typename gcd_graph::Gcd_graph_equation_1>(g->v());
+            std::get<typename gcd_graph::Gcd_graph_equation_1>(g.v());
         return f(d_y);
       } else if (std::holds_alternative<
-                     typename gcd_graph::Gcd_graph_equation_2>(g->v())) {
+                     typename gcd_graph::Gcd_graph_equation_2>(g.v())) {
         const auto &[d_n] =
-            std::get<typename gcd_graph::Gcd_graph_equation_2>(g->v());
+            std::get<typename gcd_graph::Gcd_graph_equation_2>(g.v());
         return f0(d_n);
       } else {
         const auto &[d_n, d_n0, d_hind] =
-            std::get<typename gcd_graph::Gcd_graph_refinement_3>(g->v());
-        return f1(d_n, d_n0, d_hind,
+            std::get<typename gcd_graph::Gcd_graph_refinement_3>(g.v());
+        return f1(d_n, d_n0, *(d_hind),
                   f5(d_n, d_n0, (d_n + 1) < (d_n0 + 1),
                      gcd_unfold_clause_3(d_n, d_n0, (d_n + 1) < (d_n0 + 1)),
-                     d_hind));
+                     *(d_hind)));
       }
     };
     f5 = [&](unsigned int, unsigned int, bool, unsigned int,
-             std::shared_ptr<gcd_clause_3_graph> g) -> T2 {
+             gcd_clause_3_graph g) -> T2 {
       if (std::holds_alternative<
               typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_1>(
-              g->v())) {
+              g.v())) {
         const auto &[d_n0, d_n00, d_hind0] = std::get<
-            typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_1>(g->v());
-        return f2(d_n0, d_n00, d_hind0,
+            typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_1>(g.v());
+        return f2(d_n0, d_n00, *(d_hind0),
                   f4(std::make_pair((d_n0 + 1),
                                     ((((d_n00 + 1) - (d_n0 + 1)) > (d_n00 + 1)
                                           ? 0
@@ -244,12 +456,12 @@ struct Equations {
                          (d_n0 + 1), ((((d_n00 + 1) - (d_n0 + 1)) > (d_n00 + 1)
                                            ? 0
                                            : ((d_n00 + 1) - (d_n0 + 1)))))),
-                     d_hind0));
+                     *(d_hind0)));
       } else {
         const auto &[d_n0, d_n00, d_hind0] = std::get<
-            typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_2>(g->v());
+            typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_2>(g.v());
         return f3(
-            d_n0, d_n00, d_hind0,
+            d_n0, d_n00, *(d_hind0),
             f4(std::make_pair(((((d_n0 + 1) - (d_n00 + 1)) > (d_n0 + 1)
                                     ? 0
                                     : ((d_n0 + 1) - (d_n00 + 1)))),
@@ -258,7 +470,7 @@ struct Equations {
                                         ? 0
                                         : ((d_n0 + 1) - (d_n00 + 1)))),
                                   (d_n00 + 1))),
-               d_hind0));
+               *(d_hind0)));
       }
     };
     return f4(_x0, _x1, _x2);
@@ -267,45 +479,43 @@ struct Equations {
   template <typename T1 = void, typename T2, typename F0, typename F1,
             typename F2, typename F3, typename F4>
   static T2 gcd_clause_3_graph_mut(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                                   const unsigned int _x0,
-                                   const unsigned int _x1, const bool _x2,
-                                   const unsigned int _x3,
-                                   std::shared_ptr<gcd_clause_3_graph> _x4) {
+                                   unsigned int _x0, unsigned int _x1, bool _x2,
+                                   unsigned int _x3, gcd_clause_3_graph _x4) {
     std::function<T1(std::pair<unsigned int, unsigned int>, unsigned int,
-                     std::shared_ptr<gcd_graph>)>
+                     gcd_graph)>
         f4;
     std::function<T2(unsigned int, unsigned int, bool, unsigned int,
-                     std::shared_ptr<gcd_clause_3_graph>)>
+                     gcd_clause_3_graph)>
         f5;
     f4 = [&](std::pair<unsigned int, unsigned int>, unsigned int,
-             std::shared_ptr<gcd_graph> g) -> T1 {
+             gcd_graph g) -> T1 {
       if (std::holds_alternative<typename gcd_graph::Gcd_graph_equation_1>(
-              g->v())) {
+              g.v())) {
         const auto &[d_y] =
-            std::get<typename gcd_graph::Gcd_graph_equation_1>(g->v());
+            std::get<typename gcd_graph::Gcd_graph_equation_1>(g.v());
         return f(d_y);
       } else if (std::holds_alternative<
-                     typename gcd_graph::Gcd_graph_equation_2>(g->v())) {
+                     typename gcd_graph::Gcd_graph_equation_2>(g.v())) {
         const auto &[d_n] =
-            std::get<typename gcd_graph::Gcd_graph_equation_2>(g->v());
+            std::get<typename gcd_graph::Gcd_graph_equation_2>(g.v());
         return f0(d_n);
       } else {
         const auto &[d_n, d_n0, d_hind] =
-            std::get<typename gcd_graph::Gcd_graph_refinement_3>(g->v());
-        return f1(d_n, d_n0, d_hind,
+            std::get<typename gcd_graph::Gcd_graph_refinement_3>(g.v());
+        return f1(d_n, d_n0, *(d_hind),
                   f5(d_n, d_n0, (d_n + 1) < (d_n0 + 1),
                      gcd_unfold_clause_3(d_n, d_n0, (d_n + 1) < (d_n0 + 1)),
-                     d_hind));
+                     *(d_hind)));
       }
     };
     f5 = [&](unsigned int, unsigned int, bool, unsigned int,
-             std::shared_ptr<gcd_clause_3_graph> g) -> T2 {
+             gcd_clause_3_graph g) -> T2 {
       if (std::holds_alternative<
               typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_1>(
-              g->v())) {
+              g.v())) {
         const auto &[d_n0, d_n00, d_hind0] = std::get<
-            typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_1>(g->v());
-        return f2(d_n0, d_n00, d_hind0,
+            typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_1>(g.v());
+        return f2(d_n0, d_n00, *(d_hind0),
                   f4(std::make_pair((d_n0 + 1),
                                     ((((d_n00 + 1) - (d_n0 + 1)) > (d_n00 + 1)
                                           ? 0
@@ -314,12 +524,12 @@ struct Equations {
                          (d_n0 + 1), ((((d_n00 + 1) - (d_n0 + 1)) > (d_n00 + 1)
                                            ? 0
                                            : ((d_n00 + 1) - (d_n0 + 1)))))),
-                     d_hind0));
+                     *(d_hind0)));
       } else {
         const auto &[d_n0, d_n00, d_hind0] = std::get<
-            typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_2>(g->v());
+            typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_2>(g.v());
         return f3(
-            d_n0, d_n00, d_hind0,
+            d_n0, d_n00, *(d_hind0),
             f4(std::make_pair(((((d_n0 + 1) - (d_n00 + 1)) > (d_n0 + 1)
                                     ? 0
                                     : ((d_n0 + 1) - (d_n00 + 1)))),
@@ -328,7 +538,7 @@ struct Equations {
                                         ? 0
                                         : ((d_n0 + 1) - (d_n00 + 1)))),
                                   (d_n00 + 1))),
-               d_hind0));
+               *(d_hind0)));
       }
     };
     return f5(_x0, _x1, _x2, _x3, _x4);
@@ -337,36 +547,35 @@ struct Equations {
   template <typename T1, typename T2 = void, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int> F1, typename F2, typename F3, typename F4>
   static T1 gcd_graph_rect(F0 &&_x0, F1 &&_x1, F2 &&_x2, F3 &&_x3, F4 &&_x4,
-                           const std::pair<unsigned int, unsigned int> _x5,
-                           const unsigned int _x6,
-                           const std::shared_ptr<gcd_graph> &_x7) {
+                           const std::pair<unsigned int, unsigned int> &_x5,
+                           const unsigned int &_x6, const gcd_graph &_x7) {
     return gcd_graph_mut<T1, T2>(_x0, _x1, _x2, _x3, _x4, _x5, _x6, _x7);
   }
 
-  static std::shared_ptr<gcd_graph>
-  gcd_graph_correct(const std::pair<unsigned int, unsigned int> x);
+  __attribute__((pure)) static gcd_graph
+  gcd_graph_correct(const std::pair<unsigned int, unsigned int> &x);
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int> F1,
             MapsTo<T1, unsigned int, unsigned int, T1> F2,
             MapsTo<T1, unsigned int, unsigned int, T1> F3>
   static T1 gcd_elim(F0 &&f, F1 &&f0, F2 &&f2, F3 &&f3,
-                     const std::pair<unsigned int, unsigned int> p) {
+                     std::pair<unsigned int, unsigned int> p) {
     return gcd_graph_mut(
         f, f0,
-        [=](const unsigned int, const unsigned int,
+        [=](const unsigned int &, const unsigned int &,
             const std::shared_ptr<gcd_clause_3_graph> &, const T1 x) mutable {
           const unsigned int &_x2 = p.first;
           const unsigned int &_x3 = p.second;
           return x;
         },
-        [=](const unsigned int n1, const unsigned int n2,
+        [=](const unsigned int &n1, const unsigned int &n2,
             const std::shared_ptr<gcd_graph> &) mutable {
           const unsigned int &_x0 = p.first;
           const unsigned int &_x1 = p.second;
           return [=](T1 _pa0) mutable { return f2(n1, n2, _pa0); };
         },
-        [=](const unsigned int n1, const unsigned int n2,
+        [=](const unsigned int &n1, const unsigned int &n2,
             const std::shared_ptr<gcd_graph> &) mutable {
           const unsigned int &_x0 = p.first;
           const unsigned int &_x1 = p.second;
@@ -378,15 +587,15 @@ struct Equations {
   template <typename F0, typename F1, typename F2, typename F3>
   static std::any
   FunctionalElimination_gcd(F0 &&_x0, F1 &&_x1, F2 &&_x2, F3 &&_x3,
-                            const std::pair<unsigned int, unsigned int> _x4) {
+                            const std::pair<unsigned int, unsigned int> &_x4) {
     return gcd_elim<F0>(_x0, _x1, _x2, _x3, _x4);
   }
 
   struct FunctionalInduction_gcd {
-    using fun_ind_prf_ty = std::function<std::shared_ptr<gcd_graph>(
-        std::pair<unsigned int, unsigned int>)>;
+    using fun_ind_prf_ty =
+        std::function<gcd_graph(std::pair<unsigned int, unsigned int>)>;
 
-    static std::shared_ptr<gcd_graph>
+    __attribute__((pure)) static gcd_graph
     fun_ind_prf(std::pair<unsigned int, unsigned int> a0) {
       return gcd_graph_correct(a0);
     }
@@ -399,7 +608,7 @@ struct Equations {
 
   template <MapsTo<unsigned int, unsigned int> F2>
   __attribute__((pure)) static unsigned int
-  collatz_steps_clause_3(const unsigned int n, const bool refine,
+  collatz_steps_clause_3(const unsigned int &n, const bool &refine,
                          F2 &&collatz_steps0) {
     if (refine) {
       return (collatz_steps0(PeanoNat::div2(n)) + 1);
@@ -410,7 +619,7 @@ struct Equations {
 
   template <MapsTo<unsigned int, unsigned int> F1>
   __attribute__((pure)) static unsigned int
-  collatz_steps_functional(const unsigned int n, F1 &&collatz_steps0) {
+  collatz_steps_functional(const unsigned int &n, F1 &&collatz_steps0) {
     if (n <= 0) {
       return 0u;
     } else {
@@ -425,11 +634,12 @@ struct Equations {
     }
   }
 
-  __attribute__((pure)) static unsigned int collatz_steps(const unsigned int x);
   __attribute__((pure)) static unsigned int
-  collatz_steps_unfold_clause_3(const unsigned int n, const bool refine);
+  collatz_steps(const unsigned int &x);
   __attribute__((pure)) static unsigned int
-  collatz_steps_unfold(const unsigned int n);
+  collatz_steps_unfold_clause_3(const unsigned int &n, const bool &refine);
+  __attribute__((pure)) static unsigned int
+  collatz_steps_unfold(const unsigned int &n);
   struct collatz_steps_graph;
   struct collatz_steps_clause_3_graph;
 
@@ -441,7 +651,7 @@ struct Equations {
 
     struct Collatz_steps_graph_refinement_3 {
       unsigned int d_n;
-      std::shared_ptr<collatz_steps_clause_3_graph> d_hind;
+      std::unique_ptr<collatz_steps_clause_3_graph> d_hind;
     };
 
     using variant_t = std::variant<Collatz_steps_graph_equation_1,
@@ -454,6 +664,8 @@ struct Equations {
 
   public:
     // CREATORS
+    collatz_steps_graph() {}
+
     explicit collatz_steps_graph(Collatz_steps_graph_equation_1 _v)
         : d_v_(_v) {}
 
@@ -463,35 +675,79 @@ struct Equations {
     explicit collatz_steps_graph(Collatz_steps_graph_refinement_3 _v)
         : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<collatz_steps_graph>
+    collatz_steps_graph(const collatz_steps_graph &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    collatz_steps_graph(collatz_steps_graph &&_other)
+        : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) collatz_steps_graph &
+    operator=(const collatz_steps_graph &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
+    }
+
+    __attribute__((pure)) collatz_steps_graph &
+    operator=(collatz_steps_graph &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) collatz_steps_graph clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Collatz_steps_graph_equation_1>(_sv.v())) {
+        return collatz_steps_graph(Collatz_steps_graph_equation_1{});
+      } else if (std::holds_alternative<Collatz_steps_graph_equation_2>(
+                     _sv.v())) {
+        return collatz_steps_graph(Collatz_steps_graph_equation_2{});
+      } else {
+        const auto &[d_n, d_hind] =
+            std::get<Collatz_steps_graph_refinement_3>(_sv.v());
+        return collatz_steps_graph(Collatz_steps_graph_refinement_3{
+            clone_as_value<unsigned int>(d_n),
+            clone_as_value<std::unique_ptr<collatz_steps_clause_3_graph>>(
+                d_hind)});
+      }
+    }
+
+    // CREATORS
+    __attribute__((pure)) static collatz_steps_graph
     collatz_steps_graph_equation_1() {
-      return std::make_shared<collatz_steps_graph>(
-          Collatz_steps_graph_equation_1{});
+      return collatz_steps_graph(Collatz_steps_graph_equation_1{});
     }
 
-    static std::shared_ptr<collatz_steps_graph>
+    __attribute__((pure)) static collatz_steps_graph
     collatz_steps_graph_equation_2() {
-      return std::make_shared<collatz_steps_graph>(
-          Collatz_steps_graph_equation_2{});
+      return collatz_steps_graph(Collatz_steps_graph_equation_2{});
     }
 
-    static std::shared_ptr<collatz_steps_graph>
-    collatz_steps_graph_refinement_3(
-        unsigned int n,
-        const std::shared_ptr<collatz_steps_clause_3_graph> &hind) {
-      return std::make_shared<collatz_steps_graph>(
-          Collatz_steps_graph_refinement_3{std::move(n), hind});
-    }
-
-    static std::shared_ptr<collatz_steps_graph>
-    collatz_steps_graph_refinement_3(
-        unsigned int n, std::shared_ptr<collatz_steps_clause_3_graph> &&hind) {
-      return std::make_shared<collatz_steps_graph>(
-          Collatz_steps_graph_refinement_3{std::move(n), std::move(hind)});
+    __attribute__((pure)) static collatz_steps_graph
+    collatz_steps_graph_refinement_3(unsigned int n,
+                                     const collatz_steps_clause_3_graph &hind) {
+      return collatz_steps_graph(Collatz_steps_graph_refinement_3{
+          std::move(n),
+          std::make_unique<collatz_steps_clause_3_graph>(hind.clone())});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    __attribute__((pure)) collatz_steps_graph *operator->() { return this; }
+
+    __attribute__((pure)) const collatz_steps_graph *operator->() const {
+      return this;
+    }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = collatz_steps_graph(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -501,12 +757,12 @@ struct Equations {
     // TYPES
     struct Collatz_steps_clause_3_graph_equation_1 {
       unsigned int d_n;
-      std::shared_ptr<collatz_steps_graph> d_hind;
+      std::unique_ptr<collatz_steps_graph> d_hind;
     };
 
     struct Collatz_steps_clause_3_graph_equation_2 {
       unsigned int d_n;
-      std::shared_ptr<collatz_steps_graph> d_hind;
+      std::unique_ptr<collatz_steps_graph> d_hind;
     };
 
     using variant_t = std::variant<Collatz_steps_clause_3_graph_equation_1,
@@ -518,6 +774,8 @@ struct Equations {
 
   public:
     // CREATORS
+    collatz_steps_clause_3_graph() {}
+
     explicit collatz_steps_clause_3_graph(
         Collatz_steps_clause_3_graph_equation_1 _v)
         : d_v_(std::move(_v)) {}
@@ -526,38 +784,85 @@ struct Equations {
         Collatz_steps_clause_3_graph_equation_2 _v)
         : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<collatz_steps_clause_3_graph>
-    collatz_steps_clause_3_graph_equation_1(
-        unsigned int n, const std::shared_ptr<collatz_steps_graph> &hind) {
-      return std::make_shared<collatz_steps_clause_3_graph>(
-          Collatz_steps_clause_3_graph_equation_1{std::move(n), hind});
+    collatz_steps_clause_3_graph(const collatz_steps_clause_3_graph &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    collatz_steps_clause_3_graph(collatz_steps_clause_3_graph &&_other)
+        : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) collatz_steps_clause_3_graph &
+    operator=(const collatz_steps_clause_3_graph &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<collatz_steps_clause_3_graph>
-    collatz_steps_clause_3_graph_equation_1(
-        unsigned int n, std::shared_ptr<collatz_steps_graph> &&hind) {
-      return std::make_shared<collatz_steps_clause_3_graph>(
-          Collatz_steps_clause_3_graph_equation_1{std::move(n),
-                                                  std::move(hind)});
+    __attribute__((pure)) collatz_steps_clause_3_graph &
+    operator=(collatz_steps_clause_3_graph &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<collatz_steps_clause_3_graph>
-    collatz_steps_clause_3_graph_equation_2(
-        unsigned int n, const std::shared_ptr<collatz_steps_graph> &hind) {
-      return std::make_shared<collatz_steps_clause_3_graph>(
-          Collatz_steps_clause_3_graph_equation_2{std::move(n), hind});
+    // ACCESSORS
+    __attribute__((pure)) collatz_steps_clause_3_graph clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Collatz_steps_clause_3_graph_equation_1>(
+              _sv.v())) {
+        const auto &[d_n, d_hind] =
+            std::get<Collatz_steps_clause_3_graph_equation_1>(_sv.v());
+        return collatz_steps_clause_3_graph(
+            Collatz_steps_clause_3_graph_equation_1{
+                clone_as_value<unsigned int>(d_n),
+                clone_as_value<std::unique_ptr<collatz_steps_graph>>(d_hind)});
+      } else {
+        const auto &[d_n, d_hind] =
+            std::get<Collatz_steps_clause_3_graph_equation_2>(_sv.v());
+        return collatz_steps_clause_3_graph(
+            Collatz_steps_clause_3_graph_equation_2{
+                clone_as_value<unsigned int>(d_n),
+                clone_as_value<std::unique_ptr<collatz_steps_graph>>(d_hind)});
+      }
     }
 
-    static std::shared_ptr<collatz_steps_clause_3_graph>
-    collatz_steps_clause_3_graph_equation_2(
-        unsigned int n, std::shared_ptr<collatz_steps_graph> &&hind) {
-      return std::make_shared<collatz_steps_clause_3_graph>(
-          Collatz_steps_clause_3_graph_equation_2{std::move(n),
-                                                  std::move(hind)});
+    // CREATORS
+    __attribute__((pure)) static collatz_steps_clause_3_graph
+    collatz_steps_clause_3_graph_equation_1(unsigned int n,
+                                            const collatz_steps_graph &hind) {
+      return collatz_steps_clause_3_graph(
+          Collatz_steps_clause_3_graph_equation_1{
+              std::move(n),
+              std::make_unique<collatz_steps_graph>(hind.clone())});
+    }
+
+    __attribute__((pure)) static collatz_steps_clause_3_graph
+    collatz_steps_clause_3_graph_equation_2(unsigned int n,
+                                            const collatz_steps_graph &hind) {
+      return collatz_steps_clause_3_graph(
+          Collatz_steps_clause_3_graph_equation_2{
+              std::move(n),
+              std::make_unique<collatz_steps_graph>(hind.clone())});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    __attribute__((pure)) collatz_steps_clause_3_graph *operator->() {
+      return this;
+    }
+
+    __attribute__((pure)) const collatz_steps_clause_3_graph *
+    operator->() const {
+      return this;
+    }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = collatz_steps_clause_3_graph(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -566,115 +871,105 @@ struct Equations {
   template <typename T1, typename T2 = void, typename F2, typename F3,
             typename F4>
   static T1 collatz_steps_graph_mut(const T1 f, const T1 f0, F2 &&f1, F3 &&f2,
-                                    F4 &&f3, const unsigned int _x0,
-                                    const unsigned int _x1,
-                                    std::shared_ptr<collatz_steps_graph> _x2) {
-    std::function<T1(unsigned int, unsigned int,
-                     std::shared_ptr<collatz_steps_graph>)>
-        f4;
+                                    F4 &&f3, unsigned int _x0, unsigned int _x1,
+                                    collatz_steps_graph _x2) {
+    std::function<T1(unsigned int, unsigned int, collatz_steps_graph)> f4;
     std::function<T2(unsigned int, bool, unsigned int,
-                     std::shared_ptr<collatz_steps_clause_3_graph>)>
+                     collatz_steps_clause_3_graph)>
         f5;
-    f4 = [&](unsigned int, unsigned int,
-             std::shared_ptr<collatz_steps_graph> c) -> T1 {
+    f4 = [&](unsigned int, unsigned int, collatz_steps_graph c) -> T1 {
       if (std::holds_alternative<
               typename collatz_steps_graph::Collatz_steps_graph_equation_1>(
-              c->v())) {
+              c.v())) {
         return f;
       } else if (std::holds_alternative<typename collatz_steps_graph::
                                             Collatz_steps_graph_equation_2>(
-                     c->v())) {
+                     c.v())) {
         return f0;
       } else {
         const auto &[d_n, d_hind] = std::get<
             typename collatz_steps_graph::Collatz_steps_graph_refinement_3>(
-            c->v());
-        return f1(d_n, d_hind,
+            c.v());
+        return f1(d_n, *(d_hind),
                   f5(d_n, PeanoNat::even(((d_n + 1) + 1)),
                      collatz_steps_unfold_clause_3(
                          d_n, PeanoNat::even(((d_n + 1) + 1))),
-                     d_hind));
+                     *(d_hind)));
       }
     };
     f5 = [&](unsigned int, bool, unsigned int,
-             std::shared_ptr<collatz_steps_clause_3_graph> c) -> T2 {
+             collatz_steps_clause_3_graph c) -> T2 {
       if (std::holds_alternative<typename collatz_steps_clause_3_graph::
                                      Collatz_steps_clause_3_graph_equation_1>(
-              c->v())) {
+              c.v())) {
         const auto &[d_n0, d_hind0] =
             std::get<typename collatz_steps_clause_3_graph::
-                         Collatz_steps_clause_3_graph_equation_1>(c->v());
-        return f2(d_n0, d_hind0,
+                         Collatz_steps_clause_3_graph_equation_1>(c.v());
+        return f2(d_n0, *(d_hind0),
                   f4(PeanoNat::div2(d_n0), collatz_steps(PeanoNat::div2(d_n0)),
-                     d_hind0));
+                     *(d_hind0)));
       } else {
         const auto &[d_n0, d_hind0] =
             std::get<typename collatz_steps_clause_3_graph::
-                         Collatz_steps_clause_3_graph_equation_2>(c->v());
-        return f3(
-            d_n0, d_hind0,
-            f4(((3u * d_n0) + 1u), collatz_steps(((3u * d_n0) + 1u)), d_hind0));
+                         Collatz_steps_clause_3_graph_equation_2>(c.v());
+        return f3(d_n0, *(d_hind0),
+                  f4(((3u * d_n0) + 1u), collatz_steps(((3u * d_n0) + 1u)),
+                     *(d_hind0)));
       }
     };
     return f4(_x0, _x1, _x2);
   }
 
-  template <
-      typename T1, typename T2,
-      MapsTo<T1, unsigned int, std::shared_ptr<collatz_steps_clause_3_graph>,
-             T2>
-          F2,
-      MapsTo<T2, unsigned int, std::shared_ptr<collatz_steps_graph>, T1> F3,
-      MapsTo<T2, unsigned int, std::shared_ptr<collatz_steps_graph>, T1> F4>
-  static T2 collatz_steps_clause_3_graph_mut(
-      const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
-      const unsigned int _x0, const bool _x1, const unsigned int _x2,
-      std::shared_ptr<collatz_steps_clause_3_graph> _x3) {
-    std::function<T1(unsigned int, unsigned int,
-                     std::shared_ptr<collatz_steps_graph>)>
-        f4;
+  template <typename T1, typename T2,
+            MapsTo<T1, unsigned int, collatz_steps_clause_3_graph, T2> F2,
+            MapsTo<T2, unsigned int, collatz_steps_graph, T1> F3,
+            MapsTo<T2, unsigned int, collatz_steps_graph, T1> F4>
+  static T2 collatz_steps_clause_3_graph_mut(const T1 f, const T1 f0, F2 &&f1,
+                                             F3 &&f2, F4 &&f3, unsigned int _x0,
+                                             bool _x1, unsigned int _x2,
+                                             collatz_steps_clause_3_graph _x3) {
+    std::function<T1(unsigned int, unsigned int, collatz_steps_graph)> f4;
     std::function<T2(unsigned int, bool, unsigned int,
-                     std::shared_ptr<collatz_steps_clause_3_graph>)>
+                     collatz_steps_clause_3_graph)>
         f5;
-    f4 = [&](unsigned int, unsigned int,
-             std::shared_ptr<collatz_steps_graph> c) -> T1 {
+    f4 = [&](unsigned int, unsigned int, collatz_steps_graph c) -> T1 {
       if (std::holds_alternative<
               typename collatz_steps_graph::Collatz_steps_graph_equation_1>(
-              c->v())) {
+              c.v())) {
         return f;
       } else if (std::holds_alternative<typename collatz_steps_graph::
                                             Collatz_steps_graph_equation_2>(
-                     c->v())) {
+                     c.v())) {
         return f0;
       } else {
         const auto &[d_n, d_hind] = std::get<
             typename collatz_steps_graph::Collatz_steps_graph_refinement_3>(
-            c->v());
-        return f1(d_n, d_hind,
+            c.v());
+        return f1(d_n, *(d_hind),
                   f5(d_n, PeanoNat::even(((d_n + 1) + 1)),
                      collatz_steps_unfold_clause_3(
                          d_n, PeanoNat::even(((d_n + 1) + 1))),
-                     d_hind));
+                     *(d_hind)));
       }
     };
     f5 = [&](unsigned int, bool, unsigned int,
-             std::shared_ptr<collatz_steps_clause_3_graph> c) -> T2 {
+             collatz_steps_clause_3_graph c) -> T2 {
       if (std::holds_alternative<typename collatz_steps_clause_3_graph::
                                      Collatz_steps_clause_3_graph_equation_1>(
-              c->v())) {
+              c.v())) {
         const auto &[d_n0, d_hind0] =
             std::get<typename collatz_steps_clause_3_graph::
-                         Collatz_steps_clause_3_graph_equation_1>(c->v());
-        return f2(d_n0, d_hind0,
+                         Collatz_steps_clause_3_graph_equation_1>(c.v());
+        return f2(d_n0, *(d_hind0),
                   f4(PeanoNat::div2(d_n0), collatz_steps(PeanoNat::div2(d_n0)),
-                     d_hind0));
+                     *(d_hind0)));
       } else {
         const auto &[d_n0, d_hind0] =
             std::get<typename collatz_steps_clause_3_graph::
-                         Collatz_steps_clause_3_graph_equation_2>(c->v());
-        return f3(
-            d_n0, d_hind0,
-            f4(((3u * d_n0) + 1u), collatz_steps(((3u * d_n0) + 1u)), d_hind0));
+                         Collatz_steps_clause_3_graph_equation_2>(c.v());
+        return f3(d_n0, *(d_hind0),
+                  f4(((3u * d_n0) + 1u), collatz_steps(((3u * d_n0) + 1u)),
+                     *(d_hind0)));
       }
     };
     return f5(_x0, _x1, _x2, _x3);
@@ -682,32 +977,32 @@ struct Equations {
 
   template <typename T1, typename T2 = void, typename F2, typename F3,
             typename F4>
-  static T1
-  collatz_steps_graph_rect(const T1 _x0, const T1 _x1, F2 &&_x2, F3 &&_x3,
-                           F4 &&_x4, const unsigned int _x5,
-                           const unsigned int _x6,
-                           const std::shared_ptr<collatz_steps_graph> &_x7) {
+  static T1 collatz_steps_graph_rect(const T1 _x0, const T1 _x1, F2 &&_x2,
+                                     F3 &&_x3, F4 &&_x4,
+                                     const unsigned int &_x5,
+                                     const unsigned int &_x6,
+                                     const collatz_steps_graph &_x7) {
     return collatz_steps_graph_mut<T1, T2>(_x0, _x1, _x2, _x3, _x4, _x5, _x6,
                                            _x7);
   }
 
-  static std::shared_ptr<collatz_steps_graph>
-  collatz_steps_graph_correct(const unsigned int x);
+  __attribute__((pure)) static collatz_steps_graph
+  collatz_steps_graph_correct(const unsigned int &x);
 
   template <typename T1, MapsTo<T1, unsigned int, T1> F2,
             MapsTo<T1, unsigned int, T1> F3>
   static T1 collatz_steps_elim(const T1 f, const T1 f0, F2 &&f2, F3 &&f3,
-                               const unsigned int n) {
+                               const unsigned int &n) {
     return collatz_steps_graph_mut(
         f, f0,
-        [](const unsigned int,
+        [](const unsigned int &,
            const std::shared_ptr<collatz_steps_clause_3_graph> &,
            const T1 x) { return x; },
-        [=](const unsigned int n0,
+        [=](const unsigned int &n0,
             const std::shared_ptr<collatz_steps_graph> &) mutable {
           return [=](T1 _pa0) mutable { return f2(n0, _pa0); };
         },
-        [=](const unsigned int n0,
+        [=](const unsigned int &n0,
             const std::shared_ptr<collatz_steps_graph> &) mutable {
           return [=](T1 _pa0) mutable { return f3(n0, _pa0); };
         },
@@ -718,15 +1013,15 @@ struct Equations {
   static std::any FunctionalElimination_collatz_steps(const std::any _x0,
                                                       const std::any _x1,
                                                       F2 &&_x2, F3 &&_x3,
-                                                      const unsigned int _x4) {
+                                                      const unsigned int &_x4) {
     return collatz_steps_elim<F2>(_x0, _x1, _x2, _x3, _x4);
   }
 
   struct FunctionalInduction_collatz_steps {
-    using fun_ind_prf_ty =
-        std::function<std::shared_ptr<collatz_steps_graph>(unsigned int)>;
+    using fun_ind_prf_ty = std::function<collatz_steps_graph(unsigned int)>;
 
-    static std::shared_ptr<collatz_steps_graph> fun_ind_prf(unsigned int a0) {
+    __attribute__((pure)) static collatz_steps_graph
+    fun_ind_prf(unsigned int a0) {
       return collatz_steps_graph_correct(a0);
     }
   };

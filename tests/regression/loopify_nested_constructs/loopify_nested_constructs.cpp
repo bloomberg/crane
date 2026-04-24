@@ -6,7 +6,7 @@
 #include <vector>
 
 __attribute__((pure)) unsigned int
-LoopifyNestedConstructs::multi_let(const unsigned int n) {
+LoopifyNestedConstructs::multi_let(const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
   };
@@ -24,7 +24,7 @@ LoopifyNestedConstructs::multi_let(const unsigned int n) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
@@ -36,7 +36,7 @@ LoopifyNestedConstructs::multi_let(const unsigned int n) {
         _stack.emplace_back(_Enter{n_});
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -44,8 +44,8 @@ LoopifyNestedConstructs::multi_let(const unsigned int n) {
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNestedConstructs::nested_if_fuel(const unsigned int fuel,
-                                        const unsigned int n) {
+LoopifyNestedConstructs::nested_if_fuel(const unsigned int &fuel,
+                                        const unsigned int &n) {
   unsigned int _result;
   unsigned int _loop_n = n;
   unsigned int _loop_fuel = fuel;
@@ -91,12 +91,12 @@ LoopifyNestedConstructs::nested_if_fuel(const unsigned int fuel,
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNestedConstructs::nested_if(const unsigned int n) {
+LoopifyNestedConstructs::nested_if(const unsigned int &n) {
   return nested_if_fuel(n, n);
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNestedConstructs::deep_nest(const unsigned int n) {
+LoopifyNestedConstructs::deep_nest(const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
   };
@@ -112,7 +112,7 @@ LoopifyNestedConstructs::deep_nest(const unsigned int n) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
@@ -122,7 +122,7 @@ LoopifyNestedConstructs::deep_nest(const unsigned int n) {
         _stack.emplace_back(_Enter{n_});
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       unsigned int inner = _result;
       unsigned int mid = (inner + 1u);
       _result = (mid * 2u);
@@ -132,7 +132,7 @@ LoopifyNestedConstructs::deep_nest(const unsigned int n) {
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNestedConstructs::let_nested(const unsigned int n) {
+LoopifyNestedConstructs::let_nested(const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
   };
@@ -150,7 +150,7 @@ LoopifyNestedConstructs::let_nested(const unsigned int n) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
@@ -161,7 +161,7 @@ LoopifyNestedConstructs::let_nested(const unsigned int n) {
         _stack.emplace_back(_Enter{n_});
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -169,8 +169,8 @@ LoopifyNestedConstructs::let_nested(const unsigned int n) {
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNestedConstructs::mod_pattern_fuel(const unsigned int fuel,
-                                          const unsigned int n) {
+LoopifyNestedConstructs::mod_pattern_fuel(const unsigned int &fuel,
+                                          const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
     const unsigned int fuel;
@@ -190,7 +190,7 @@ LoopifyNestedConstructs::mod_pattern_fuel(const unsigned int fuel,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
@@ -205,7 +205,7 @@ LoopifyNestedConstructs::mod_pattern_fuel(const unsigned int fuel,
         }
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _result = ((_f._s1 + _result) ? _f._s0 % (_f._s1 + _result) : _f._s0);
     }
   }
@@ -213,13 +213,13 @@ LoopifyNestedConstructs::mod_pattern_fuel(const unsigned int fuel,
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNestedConstructs::mod_pattern(const unsigned int n) {
+LoopifyNestedConstructs::mod_pattern(const unsigned int &n) {
   return mod_pattern_fuel(n, n);
 }
 
 __attribute__((pure))
 std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
-LoopifyNestedConstructs::tuple_constr(const unsigned int n) {
+LoopifyNestedConstructs::tuple_constr(const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
   };
@@ -237,7 +237,7 @@ LoopifyNestedConstructs::tuple_constr(const unsigned int n) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       if (n <= 0) {
         _result = std::make_pair(std::make_pair(0u, 0u), 0u);
@@ -247,7 +247,7 @@ LoopifyNestedConstructs::tuple_constr(const unsigned int n) {
         _stack.emplace_back(_Enter{n_});
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       const unsigned int n = _f._s0;
       const std::pair<unsigned int, unsigned int> &p = _result.first;
       const unsigned int &c = _result.second;
@@ -261,7 +261,7 @@ LoopifyNestedConstructs::tuple_constr(const unsigned int n) {
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNestedConstructs::alternating_ops(const unsigned int n) {
+LoopifyNestedConstructs::alternating_ops(const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
   };
@@ -283,7 +283,7 @@ LoopifyNestedConstructs::alternating_ops(const unsigned int n) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
@@ -298,10 +298,10 @@ LoopifyNestedConstructs::alternating_ops(const unsigned int n) {
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _result = (_f._s0 + _result);
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
+      auto _f = std::move(std::get<_Call2>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -309,8 +309,8 @@ LoopifyNestedConstructs::alternating_ops(const unsigned int n) {
 }
 
 __attribute__((pure)) bool
-LoopifyNestedConstructs::chained_comp_fuel(const unsigned int fuel,
-                                           const unsigned int n) {
+LoopifyNestedConstructs::chained_comp_fuel(const unsigned int &fuel,
+                                           const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
     const unsigned int fuel;
@@ -337,7 +337,7 @@ LoopifyNestedConstructs::chained_comp_fuel(const unsigned int fuel,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
@@ -352,11 +352,11 @@ LoopifyNestedConstructs::chained_comp_fuel(const unsigned int fuel,
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _stack.emplace_back(_Call2{_result});
       _stack.emplace_back(_Enter{_f._s0, _f._s1});
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
+      auto _f = std::move(std::get<_Call2>(_frame));
       _result = (_result && _f._s0);
     }
   }
@@ -364,7 +364,7 @@ LoopifyNestedConstructs::chained_comp_fuel(const unsigned int fuel,
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNestedConstructs::chained_comp(const unsigned int n) {
+LoopifyNestedConstructs::chained_comp(const unsigned int &n) {
   if (chained_comp_fuel((n * 2u), n)) {
     return 1u;
   } else {
@@ -373,7 +373,7 @@ LoopifyNestedConstructs::chained_comp(const unsigned int n) {
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNestedConstructs::compute_with_lets(const unsigned int n) {
+LoopifyNestedConstructs::compute_with_lets(const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
   };
@@ -395,7 +395,7 @@ LoopifyNestedConstructs::compute_with_lets(const unsigned int n) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
@@ -410,13 +410,13 @@ LoopifyNestedConstructs::compute_with_lets(const unsigned int n) {
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       unsigned int n__ = _f._s0;
       unsigned int x = _result;
       _stack.emplace_back(_Call2{x});
       _stack.emplace_back(_Enter{n__});
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
+      auto _f = std::move(std::get<_Call2>(_frame));
       unsigned int x = _f._s0;
       unsigned int y = _result;
       unsigned int z = (x + y);
@@ -427,7 +427,7 @@ LoopifyNestedConstructs::compute_with_lets(const unsigned int n) {
 }
 
 __attribute__((pure)) unsigned int
-LoopifyNestedConstructs::nested_match(const unsigned int n) {
+LoopifyNestedConstructs::nested_match(const unsigned int &n) {
   struct _Enter {
     const unsigned int n;
   };
@@ -445,7 +445,7 @@ LoopifyNestedConstructs::nested_match(const unsigned int n) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
@@ -460,7 +460,7 @@ LoopifyNestedConstructs::nested_match(const unsigned int n) {
         }
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Call1>(_frame));
       _result = (_f._s0 + _result);
     }
   }

@@ -1,13 +1,134 @@
 #ifndef INCLUDED_NAME_CLASH_LET_MATCH
 #define INCLUDED_NAME_CLASH_LET_MATCH
 
-#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 struct NameClashLetMatch {
   /// Tests for variable name clashes between let-bindings and match bindings.
@@ -29,52 +150,95 @@ struct NameClashLetMatch {
 
   public:
     // CREATORS
+    either() {}
+
     explicit either(Left _v) : d_v_(std::move(_v)) {}
 
     explicit either(Right _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<either> left(unsigned int a0) {
-      return std::make_shared<either>(Left{std::move(a0)});
+    either(const either &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    either(either &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) either &operator=(const either &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<either> right(unsigned int a0) {
-      return std::make_shared<either>(Right{std::move(a0)});
+    __attribute__((pure)) either &operator=(either &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) either clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Left>(_sv.v())) {
+        const auto &[d_a0] = std::get<Left>(_sv.v());
+        return either(Left{clone_as_value<unsigned int>(d_a0)});
+      } else {
+        const auto &[d_a0] = std::get<Right>(_sv.v());
+        return either(Right{clone_as_value<unsigned int>(d_a0)});
+      }
+    }
+
+    // CREATORS
+    __attribute__((pure)) static either left(unsigned int a0) {
+      return either(Left{std::move(a0)});
+    }
+
+    __attribute__((pure)) static either right(unsigned int a0) {
+      return either(Right{std::move(a0)});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) either *operator->() { return this; }
+
+    __attribute__((pure)) const either *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = either(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     /// Deeply nested let-match-let-match chain
-    __attribute__((pure)) unsigned int
-    deep_let_match(const std::shared_ptr<either> &e2,
-                   const std::shared_ptr<either> &e3) const {
+    __attribute__((pure)) unsigned int deep_let_match(const either &e2,
+                                                      const either &e3) const {
       unsigned int a = [&]() {
-        if (std::holds_alternative<typename either::Left>(this->v())) {
-          const auto &[d_a0] = std::get<typename either::Left>(this->v());
+        auto &&_sv = *(this);
+        if (std::holds_alternative<typename either::Left>(_sv.v())) {
+          const auto &[d_a0] = std::get<typename either::Left>(_sv.v());
           return d_a0;
         } else {
-          const auto &[d_a0] = std::get<typename either::Right>(this->v());
+          const auto &[d_a0] = std::get<typename either::Right>(_sv.v());
           return d_a0;
         }
       }();
       unsigned int b = [&]() {
-        if (std::holds_alternative<typename either::Left>(e2->v())) {
-          const auto &[d_a00] = std::get<typename either::Left>(e2->v());
+        if (std::holds_alternative<typename either::Left>(e2.v())) {
+          const auto &[d_a00] = std::get<typename either::Left>(e2.v());
           unsigned int z = [&]() {
-            if (std::holds_alternative<typename either::Left>(e3->v())) {
-              const auto &[d_a01] = std::get<typename either::Left>(e3->v());
+            if (std::holds_alternative<typename either::Left>(e3.v())) {
+              const auto &[d_a01] = std::get<typename either::Left>(e3.v());
               return d_a01;
             } else {
-              const auto &[d_a01] = std::get<typename either::Right>(e3->v());
+              const auto &[d_a01] = std::get<typename either::Right>(e3.v());
               return d_a01;
             }
           }();
           return (d_a00 + z);
         } else {
-          const auto &[d_a00] = std::get<typename either::Right>(e2->v());
+          const auto &[d_a00] = std::get<typename either::Right>(e2.v());
           return d_a00;
         }
       }();
@@ -82,23 +246,23 @@ struct NameClashLetMatch {
     }
 
     /// Two either values matched in sequence, same field names.
-    __attribute__((pure)) unsigned int
-    two_eithers(const std::shared_ptr<either> &e2) const {
+    __attribute__((pure)) unsigned int two_eithers(const either &e2) const {
       unsigned int v1 = [&]() {
-        if (std::holds_alternative<typename either::Left>(this->v())) {
-          const auto &[d_a0] = std::get<typename either::Left>(this->v());
+        auto &&_sv = *(this);
+        if (std::holds_alternative<typename either::Left>(_sv.v())) {
+          const auto &[d_a0] = std::get<typename either::Left>(_sv.v());
           return d_a0;
         } else {
-          const auto &[d_a0] = std::get<typename either::Right>(this->v());
+          const auto &[d_a0] = std::get<typename either::Right>(_sv.v());
           return (d_a0 * 2u);
         }
       }();
       unsigned int v2 = [&]() {
-        if (std::holds_alternative<typename either::Left>(e2->v())) {
-          const auto &[d_a00] = std::get<typename either::Left>(e2->v());
+        if (std::holds_alternative<typename either::Left>(e2.v())) {
+          const auto &[d_a00] = std::get<typename either::Left>(e2.v());
           return d_a00;
         } else {
-          const auto &[d_a00] = std::get<typename either::Right>(e2->v());
+          const auto &[d_a00] = std::get<typename either::Right>(e2.v());
           return (d_a00 * 3u);
         }
       }();
@@ -107,11 +271,12 @@ struct NameClashLetMatch {
 
     /// Match binding used in a nested let that shadows.
     __attribute__((pure)) unsigned int match_then_let() const {
-      if (std::holds_alternative<typename either::Left>(this->v())) {
-        const auto &[d_a0] = std::get<typename either::Left>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename either::Left>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename either::Left>(_sv.v());
         return (d_a0 + 1u);
       } else {
-        const auto &[d_a0] = std::get<typename either::Right>(this->v());
+        const auto &[d_a0] = std::get<typename either::Right>(_sv.v());
         return d_a0;
       }
     }
@@ -119,11 +284,12 @@ struct NameClashLetMatch {
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int> F1>
     T1 either_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename either::Left>(this->v())) {
-        const auto &[d_a0] = std::get<typename either::Left>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename either::Left>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename either::Left>(_sv.v());
         return f(d_a0);
       } else {
-        const auto &[d_a0] = std::get<typename either::Right>(this->v());
+        const auto &[d_a0] = std::get<typename either::Right>(_sv.v());
         return f0(d_a0);
       }
     }
@@ -131,11 +297,12 @@ struct NameClashLetMatch {
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int> F1>
     T1 either_rect(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename either::Left>(this->v())) {
-        const auto &[d_a0] = std::get<typename either::Left>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename either::Left>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename either::Left>(_sv.v());
         return f(d_a0);
       } else {
-        const auto &[d_a0] = std::get<typename either::Right>(this->v());
+        const auto &[d_a0] = std::get<typename either::Right>(_sv.v());
         return f0(d_a0);
       }
     }
@@ -157,31 +324,71 @@ struct NameClashLetMatch {
 
   public:
     // CREATORS
+    triple() {}
+
     explicit triple(MkTriple _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<triple> mktriple(unsigned int a0, unsigned int a1,
-                                            unsigned int a2) {
-      return std::make_shared<triple>(
-          MkTriple{std::move(a0), std::move(a1), std::move(a2)});
+    triple(const triple &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    triple(triple &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) triple &operator=(const triple &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
+    }
+
+    __attribute__((pure)) triple &operator=(triple &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) triple clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0, d_a1, d_a2] = std::get<MkTriple>(_sv.v());
+      return triple(MkTriple{clone_as_value<unsigned int>(d_a0),
+                             clone_as_value<unsigned int>(d_a1),
+                             clone_as_value<unsigned int>(d_a2)});
+    }
+
+    // CREATORS
+    __attribute__((pure)) static triple
+    mktriple(unsigned int a0, unsigned int a1, unsigned int a2) {
+      return triple(MkTriple{std::move(a0), std::move(a1), std::move(a2)});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) triple *operator->() { return this; }
+
+    __attribute__((pure)) const triple *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = triple(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     /// Match on a triple, then match on an either, same-ish names
     __attribute__((pure)) unsigned int
-    triple_then_either(const std::shared_ptr<either> &e) const {
+    triple_then_either(const either &e) const {
+      auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple::MkTriple>(this->v());
+          std::get<typename triple::MkTriple>(_sv.v());
       unsigned int from_either = [&]() {
-        if (std::holds_alternative<typename either::Left>(e->v())) {
-          const auto &[d_a00] = std::get<typename either::Left>(e->v());
+        if (std::holds_alternative<typename either::Left>(e.v())) {
+          const auto &[d_a00] = std::get<typename either::Left>(e.v());
           return d_a00;
         } else {
-          const auto &[d_a00] = std::get<typename either::Right>(e->v());
+          const auto &[d_a00] = std::get<typename either::Right>(e.v());
           return d_a00;
         }
       }();
@@ -191,27 +398,27 @@ struct NameClashLetMatch {
     template <typename T1,
               MapsTo<T1, unsigned int, unsigned int, unsigned int> F0>
     T1 triple_rec(F0 &&f) const {
+      auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple::MkTriple>(this->v());
+          std::get<typename triple::MkTriple>(_sv.v());
       return f(d_a0, d_a1, d_a2);
     }
 
     template <typename T1,
               MapsTo<T1, unsigned int, unsigned int, unsigned int> F0>
     T1 triple_rect(F0 &&f) const {
+      auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple::MkTriple>(this->v());
+          std::get<typename triple::MkTriple>(_sv.v());
       return f(d_a0, d_a1, d_a2);
     }
   };
 
   /// Variable name 'a' used in both let and match binding.
-  __attribute__((pure)) static unsigned int
-  let_shadows_match(const std::shared_ptr<either> &e);
+  __attribute__((pure)) static unsigned int let_shadows_match(const either &e);
   /// Match where the same variable name is used in multiple branches
-  __attribute__((pure)) static unsigned int
-  same_name_branches(const std::shared_ptr<either> &e,
-                     const std::shared_ptr<triple> &t);
+  __attribute__((pure)) static unsigned int same_name_branches(const either &e,
+                                                               const triple &t);
 };
 
 #endif // INCLUDED_NAME_CLASH_LET_MATCH

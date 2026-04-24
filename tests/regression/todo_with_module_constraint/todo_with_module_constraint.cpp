@@ -4,6 +4,6 @@
 #include <type_traits>
 
 __attribute__((pure)) TodoWithModuleConstraint::NatOuter::Inner::t
-TodoWithModuleConstraint::NatOuter::step(const unsigned int n) {
+TodoWithModuleConstraint::NatOuter::step(unsigned int n) {
   return (n + 1);
 }

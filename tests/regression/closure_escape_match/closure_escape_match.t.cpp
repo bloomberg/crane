@@ -5,7 +5,7 @@
 
 int main() {
   using L = ClosureEscapeMatch::mylist<unsigned int>;
-  using LL = ClosureEscapeMatch::mylist<std::shared_ptr<L>>;
+  using LL = ClosureEscapeMatch::mylist<L>;
 
   // --- make_prepender_opt ---
   // Extract a closure from a match (inside an option), then use it

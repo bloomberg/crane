@@ -4,20 +4,20 @@
 #include <utility>
 
 __attribute__((pure)) unsigned int
-PageAddress::addr12_of_nat(const unsigned int n) {
+PageAddress::addr12_of_nat(const unsigned int &n) {
   return (4096u ? n % 4096u : n);
 }
 
-__attribute__((pure)) unsigned int PageAddress::page_of(const unsigned int p) {
+__attribute__((pure)) unsigned int PageAddress::page_of(const unsigned int &p) {
   return (256u ? addr12_of_nat(p) / 256u : 0);
 }
 
 __attribute__((pure)) unsigned int
-PageAddress::page_base(const unsigned int p) {
+PageAddress::page_base(const unsigned int &p) {
   return (page_of(p) * 256u);
 }
 
 __attribute__((pure)) unsigned int
-PageAddress::branch_target(const unsigned int pc, const unsigned int off) {
+PageAddress::branch_target(const unsigned int &pc, const unsigned int &off) {
   return (page_base(addr12_of_nat((pc + 2u))) + (256u ? off % 256u : off));
 }

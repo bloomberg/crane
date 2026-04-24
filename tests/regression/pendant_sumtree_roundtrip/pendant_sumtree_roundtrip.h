@@ -11,7 +11,129 @@
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 template <typename t_A> struct List {
   // TYPES
@@ -19,10 +141,11 @@ template <typename t_A> struct List {
 
   struct Cons0 {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil0, Cons0>;
+  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -30,86 +153,138 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil0 _v) : d_v_(_v) {}
 
   explicit List(Cons0 _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil0() {
-    return std::make_shared<List<t_A>>(Nil0{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>>
-  cons0(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons0{std::move(a0), a1});
+  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons0(t_A a0,
-                                          std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons0{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  __attribute__((pure)) List<t_A> clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil0>(_sv.v())) {
+      return List<t_A>(Nil0{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons0>(_sv.v());
+      return List<t_A>(Cons0{clone_as_value<t_A>(d_a0),
+                             clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
+    }
+  }
+
+  template <typename _CloneT0>
+  __attribute__((pure)) List<_CloneT0> clone_as() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil0>(_sv.v())) {
+      return List<_CloneT0>(typename List<_CloneT0>::Nil0{});
+    } else {
+      const auto &[d_a0, d_a1] = std::get<Cons0>(_sv.v());
+      return List<_CloneT0>(typename List<_CloneT0>::Cons0{
+          clone_as_value<_CloneT0>(d_a0),
+          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+    }
+  }
+
+  // CREATORS
+  __attribute__((pure)) static List<t_A> nil0() { return List(Nil0{}); }
+
+  __attribute__((pure)) static List<t_A> cons0(t_A a0, const List<t_A> &a1) {
+    return List(Cons0{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
+  __attribute__((pure)) List<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = List<t_A>(); }
+
+  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <MapsTo<bool, t_A> F0>
   __attribute__((pure)) bool forallb(F0 &&f) const {
-    if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil0>(_sv.v())) {
       return true;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(this->v());
-      return (f(d_a0) && d_a1->forallb(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(_sv.v());
+      return (f(d_a0) && (*(d_a1)).forallb(f));
     }
   }
 
   template <typename T1, MapsTo<T1, t_A, T1> F0>
   T1 fold_right(F0 &&f, const T1 a0) const {
-    if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil0>(_sv.v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(this->v());
-      return f(d_a0, d_a1->template fold_right<T1>(f, a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(_sv.v());
+      return f(d_a0, (*(d_a1)).template fold_right<T1>(f, a0));
     }
   }
 
-  template <typename T1> std::shared_ptr<List<T1>> concat() const {
-    if (std::holds_alternative<typename List<std::shared_ptr<List<T1>>>::Nil0>(
-            this->v())) {
+  template <typename T1> __attribute__((pure)) List<T1> concat() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<List<T1>>::Nil0>(_sv.v())) {
       return List<T1>::nil0();
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<std::shared_ptr<List<T1>>>::Cons0>(this->v());
-      return d_a0->app(d_a1->template concat<T1>());
+          std::get<typename List<List<T1>>::Cons0>(_sv.v());
+      return clone_as_value<List<T1>>(d_a0).app(
+          (*(d_a1)).template concat<T1>());
     }
   }
 
   template <typename T1, MapsTo<T1, t_A> F0>
-  std::shared_ptr<List<T1>> map(F0 &&f) const {
-    if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
+  __attribute__((pure)) List<T1> map(F0 &&f) const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil0>(_sv.v())) {
       return List<T1>::nil0();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(this->v());
-      return List<T1>::cons0(f(d_a0), d_a1->template map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(_sv.v());
+      return List<T1>::cons0(f(d_a0), (*(d_a1)).template map<T1>(f));
     }
   }
 
   __attribute__((pure)) unsigned int length() const {
-    if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil0>(_sv.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(this->v());
-      return (d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(_sv.v());
+      return ((*(d_a1)).length() + 1);
     }
   }
 
-  std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
-    if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
+  __attribute__((pure)) List<t_A> app(List<t_A> m) const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil0>(_sv.v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(this->v());
-      return List<t_A>::cons0(d_a0, d_a1->app(m));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(_sv.v());
+      return List<t_A>::cons0(d_a0, (*(d_a1)).app(m));
     }
   }
 };
@@ -128,14 +303,58 @@ private:
 
 public:
   // CREATORS
+  Sig() {}
+
   explicit Sig(Exist _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<Sig<t_A>> exist(t_A x) {
-    return std::make_shared<Sig<t_A>>(Exist{std::move(x)});
+  Sig(const Sig<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  Sig(Sig<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) Sig<t_A> &operator=(const Sig<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
+  }
+
+  __attribute__((pure)) Sig<t_A> &operator=(Sig<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
+  }
+
+  // ACCESSORS
+  __attribute__((pure)) Sig<t_A> clone() const {
+    auto &&_sv = *(this);
+    const auto &[d_x] = std::get<Exist>(_sv.v());
+    return Sig<t_A>(Exist{clone_as_value<t_A>(d_x)});
+  }
+
+  template <typename _CloneT0>
+  __attribute__((pure)) Sig<_CloneT0> clone_as() const {
+    auto &&_sv = *(this);
+    const auto &[d_x] = std::get<Exist>(_sv.v());
+    return Sig<_CloneT0>(
+        typename Sig<_CloneT0>::Exist{clone_as_value<_CloneT0>(d_x)});
+  }
+
+  // CREATORS
+  __attribute__((pure)) static Sig<t_A> exist(t_A x) {
+    return Sig(Exist{std::move(x)});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+  // ACCESSORS
+  __attribute__((pure)) Sig<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const Sig<t_A> *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = Sig<t_A>(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -156,15 +375,62 @@ private:
 
 public:
   // CREATORS
+  SigT() {}
+
   explicit SigT(ExistT _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<SigT<t_A, t_P>> existt(t_A x, t_P a1) {
-    return std::make_shared<SigT<t_A, t_P>>(
-        ExistT{std::move(x), std::move(a1)});
+  SigT(const SigT<t_A, t_P> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  SigT(SigT<t_A, t_P> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) SigT<t_A, t_P> &
+  operator=(const SigT<t_A, t_P> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
+  }
+
+  __attribute__((pure)) SigT<t_A, t_P> &operator=(SigT<t_A, t_P> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
+  }
+
+  // ACCESSORS
+  __attribute__((pure)) SigT<t_A, t_P> clone() const {
+    auto &&_sv = *(this);
+    const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
+    return SigT<t_A, t_P>(
+        ExistT{clone_as_value<t_A>(d_x), clone_as_value<t_P>(d_a1)});
+  }
+
+  template <typename _CloneT0, typename _CloneT1>
+  __attribute__((pure)) SigT<_CloneT0, _CloneT1> clone_as() const {
+    auto &&_sv = *(this);
+    const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
+    return SigT<_CloneT0, _CloneT1>(typename SigT<_CloneT0, _CloneT1>::ExistT{
+        clone_as_value<_CloneT0>(d_x), clone_as_value<_CloneT1>(d_a1)});
+  }
+
+  // CREATORS
+  __attribute__((pure)) static SigT<t_A, t_P> existt(t_A x, t_P a1) {
+    return SigT(ExistT{std::move(x), std::move(a1)});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+  // ACCESSORS
+  __attribute__((pure)) SigT<t_A, t_P> *operator->() { return this; }
+
+  __attribute__((pure)) const SigT<t_A, t_P> *operator->() const {
+    return this;
+  }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = SigT<t_A, t_P>(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -177,7 +443,7 @@ template <typename t_A> struct T0 {
   struct Cons {
     t_A d_h;
     unsigned int d_n;
-    std::shared_ptr<T0<t_A>> d_a2;
+    std::unique_ptr<T0<t_A>> d_a2;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -188,27 +454,75 @@ private:
 
 public:
   // CREATORS
+  T0() {}
+
   explicit T0(Nil _v) : d_v_(_v) {}
 
   explicit T0(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<T0<t_A>> nil() {
-    return std::make_shared<T0<t_A>>(Nil{});
+  T0(const T0<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  T0(T0<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) T0<t_A> &operator=(const T0<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<T0<t_A>> cons(t_A h, unsigned int n,
-                                       const std::shared_ptr<T0<t_A>> &a2) {
-    return std::make_shared<T0<t_A>>(Cons{std::move(h), std::move(n), a2});
+  __attribute__((pure)) T0<t_A> &operator=(T0<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<T0<t_A>> cons(t_A h, unsigned int n,
-                                       std::shared_ptr<T0<t_A>> &&a2) {
-    return std::make_shared<T0<t_A>>(
-        Cons{std::move(h), std::move(n), std::move(a2)});
+  // ACCESSORS
+  __attribute__((pure)) T0<t_A> clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return T0<t_A>(Nil{});
+    } else {
+      const auto &[d_h, d_n, d_a2] = std::get<Cons>(_sv.v());
+      return T0<t_A>(Cons{clone_as_value<t_A>(d_h),
+                          clone_as_value<unsigned int>(d_n),
+                          clone_as_value<std::unique_ptr<T0<t_A>>>(d_a2)});
+    }
+  }
+
+  template <typename _CloneT0>
+  __attribute__((pure)) T0<_CloneT0> clone_as() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<Nil>(_sv.v())) {
+      return T0<_CloneT0>(typename T0<_CloneT0>::Nil{});
+    } else {
+      const auto &[d_h, d_n, d_a2] = std::get<Cons>(_sv.v());
+      return T0<_CloneT0>(typename T0<_CloneT0>::Cons{
+          clone_as_value<_CloneT0>(d_h), clone_as_value<unsigned int>(d_n),
+          clone_as_value<std::unique_ptr<T0<_CloneT0>>>(d_a2)});
+    }
+  }
+
+  // CREATORS
+  constexpr static T0<t_A> nil() { return T0(Nil{}); }
+
+  __attribute__((pure)) static T0<t_A> cons(t_A h, unsigned int n,
+                                            const T0<t_A> &a2) {
+    return T0(Cons{std::move(h), std::move(n),
+                   std::make_unique<T0<t_A>>(a2.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+  // ACCESSORS
+  __attribute__((pure)) T0<t_A> *operator->() { return this; }
+
+  __attribute__((pure)) const T0<t_A> *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = T0<t_A>(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -222,7 +536,7 @@ struct T {
 
   struct FS {
     unsigned int d_n;
-    std::shared_ptr<T> d_a1;
+    std::unique_ptr<T> d_a1;
   };
 
   using variant_t = std::variant<F1, FS>;
@@ -233,63 +547,101 @@ private:
 
 public:
   // CREATORS
+  T() {}
+
   explicit T(F1 _v) : d_v_(std::move(_v)) {}
 
   explicit T(FS _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<T> f1(unsigned int n) {
-    return std::make_shared<T>(F1{std::move(n)});
+  T(const T &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  T(T &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  __attribute__((pure)) T &operator=(const T &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<T> fs(unsigned int n, const std::shared_ptr<T> &a1) {
-    return std::make_shared<T>(FS{std::move(n), a1});
+  __attribute__((pure)) T &operator=(T &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<T> fs(unsigned int n, std::shared_ptr<T> &&a1) {
-    return std::make_shared<T>(FS{std::move(n), std::move(a1)});
+  // ACCESSORS
+  __attribute__((pure)) T clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<F1>(_sv.v())) {
+      const auto &[d_n] = std::get<F1>(_sv.v());
+      return T(F1{clone_as_value<unsigned int>(d_n)});
+    } else {
+      const auto &[d_n, d_a1] = std::get<FS>(_sv.v());
+      return T(FS{clone_as_value<unsigned int>(d_n),
+                  clone_as_value<std::unique_ptr<T>>(d_a1)});
+    }
+  }
+
+  // CREATORS
+  __attribute__((pure)) static T f1(unsigned int n) {
+    return T(F1{std::move(n)});
+  }
+
+  __attribute__((pure)) static T fs(unsigned int n, const T &a1) {
+    return T(FS{std::move(n), std::make_unique<T>(a1.clone())});
   }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
+  __attribute__((pure)) T *operator->() { return this; }
+
+  __attribute__((pure)) const T *operator->() const { return this; }
+
+  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
+
+  // MANIPULATORS
+  void reset() { *this = T(); }
+
+  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  std::shared_ptr<Sig<unsigned int>> to_nat(const unsigned int) const {
-    if (std::holds_alternative<typename T::F1>(this->v())) {
+  __attribute__((pure)) Sig<unsigned int> to_nat(const unsigned int &) const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename T::F1>(_sv.v())) {
       return Sig<unsigned int>::exist(0u);
     } else {
-      const auto &[d_n, d_a1] = std::get<typename T::FS>(this->v());
-      auto &&_sv0 = d_a1->to_nat(d_n);
+      const auto &[d_n, d_a1] = std::get<typename T::FS>(_sv.v());
+      auto &&_sv0 = (*(d_a1)).to_nat(d_n);
       const auto &[d_x0] =
-          std::get<typename Sig<unsigned int>::Exist>(_sv0->v());
+          std::get<typename Sig<unsigned int>::Exist>(_sv0.v());
       return Sig<unsigned int>::exist((d_x0 + 1));
     }
   }
 };
 
 struct Fin {
-  static std::shared_ptr<T> of_nat_lt(const unsigned int p,
-                                      const unsigned int n);
+  __attribute__((pure)) static T of_nat_lt(const unsigned int &p,
+                                           const unsigned int &n);
 };
 
 struct Vector {
   template <typename T1>
-  static std::shared_ptr<List<T1>> to_list(const unsigned int n,
-                                           const std::shared_ptr<T0<T1>> &v);
+  __attribute__((pure)) static List<T1> to_list(const unsigned int &n,
+                                                const T0<T1> &v);
 };
 
 struct Datatypes {
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
   __attribute__((pure)) static std::optional<T2>
-  option_map(F0 &&f, const std::optional<T1> o);
+  option_map(F0 &&f, const std::optional<T1> &o);
 };
 
 struct PendantSumtreeRoundtripCase {
-  using digit = std::shared_ptr<T>;
-  __attribute__((pure)) static unsigned int
-  digit_to_nat(const std::shared_ptr<T> &d);
-  __attribute__((pure)) static digit digit_of_nat(const unsigned int n);
+  using digit = T;
+  __attribute__((pure)) static unsigned int digit_to_nat(const T &d);
+  __attribute__((pure)) static digit digit_of_nat(const unsigned int &n);
   static inline const digit digit0 = digit_of_nat(0u);
   static inline const digit digit1 = digit_of_nat(1u);
   static inline const digit digit2 = digit_of_nat(2u);
@@ -299,22 +651,14 @@ struct PendantSumtreeRoundtripCase {
   static inline const digit digit6 = digit_of_nat(6u);
   static inline const digit digit7 = digit_of_nat(7u);
   static inline const digit digit9 = digit_of_nat(9u);
-  __attribute__((pure)) static unsigned int
-  value_digits(const unsigned int _x,
-               const std::shared_ptr<T0<std::shared_ptr<T>>> &ds);
-  __attribute__((pure)) static std::optional<std::shared_ptr<T0<digit>>>
-  list_to_vector_opt(const unsigned int n,
-                     const std::shared_ptr<List<std::shared_ptr<T>>> &xs);
-  static std::shared_ptr<List<std::shared_ptr<List<digit>>>> encode_multi(
-      const unsigned int n,
-      const std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>>
-          &nums);
-  __attribute__((pure)) static std::optional<
-      std::shared_ptr<List<std::shared_ptr<T0<digit>>>>>
-  decode_multi(
-      const unsigned int n,
-      const std::shared_ptr<List<std::shared_ptr<List<std::shared_ptr<T>>>>>
-          &segments);
+  __attribute__((pure)) static unsigned int value_digits(const unsigned int &_x,
+                                                         const T0<T> &ds);
+  __attribute__((pure)) static std::optional<T0<digit>>
+  list_to_vector_opt(const unsigned int &n, const List<T> &xs);
+  __attribute__((pure)) static List<List<digit>>
+  encode_multi(unsigned int n, const List<T0<T>> &nums);
+  __attribute__((pure)) static std::optional<List<T0<digit>>>
+  decode_multi(unsigned int n, const List<List<T>> &segments);
   enum class Twist { e_TS, e_TZ };
 
   template <typename T1>
@@ -422,43 +766,54 @@ struct PendantSumtreeRoundtripCase {
     Color cm_color;
     Twist cm_spin;
     Twist cm_ply;
+
+    __attribute__((pure)) CordMeta *operator->() { return this; }
+
+    __attribute__((pure)) const CordMeta *operator->() const { return this; }
   };
 
   struct CertifiedPendant {
-    std::shared_ptr<CordMeta> cp_meta;
-    std::shared_ptr<T0<digit>> cp_digits;
+    CordMeta cp_meta;
+    T0<digit> cp_digits;
+
+    __attribute__((pure)) CertifiedPendant *operator->() { return this; }
+
+    __attribute__((pure)) const CertifiedPendant *operator->() const {
+      return this;
+    }
   };
 
-  __attribute__((pure)) static std::optional<std::shared_ptr<T0<digit>>>
-  pendant_digits(const unsigned int n,
-                 const std::shared_ptr<CertifiedPendant> &p);
+  __attribute__((pure)) static std::optional<T0<digit>>
+  pendant_digits(const unsigned int &n, const CertifiedPendant &p);
   __attribute__((pure)) static std::optional<unsigned int>
-  pendant_value(const unsigned int n,
-                const std::shared_ptr<CertifiedPendant> &p);
-  using Ledger = std::shared_ptr<List<
-      std::shared_ptr<SigT<unsigned int, std::shared_ptr<CertifiedPendant>>>>>;
-  static std::shared_ptr<List<std::optional<unsigned int>>> ledger_values(
-      const std::shared_ptr<List<std::shared_ptr<
-          SigT<unsigned int, std::shared_ptr<CertifiedPendant>>>>> &l);
+  pendant_value(unsigned int n, const CertifiedPendant &p);
+  using Ledger = List<SigT<unsigned int, CertifiedPendant>>;
+  __attribute__((pure)) static List<std::optional<unsigned int>>
+  ledger_values(const List<SigT<unsigned int, CertifiedPendant>> &l);
 
   struct PendantGroup {
-    std::shared_ptr<CertifiedPendant> pg_top;
-    std::shared_ptr<List<std::shared_ptr<CertifiedPendant>>> pg_pendants;
+    CertifiedPendant pg_top;
+    List<CertifiedPendant> pg_pendants;
+
+    __attribute__((pure)) PendantGroup *operator->() { return this; }
+
+    __attribute__((pure)) const PendantGroup *operator->() const {
+      return this;
+    }
   };
 
-  __attribute__((pure)) static bool
-  group_sums_validb(const unsigned int n,
-                    const std::shared_ptr<PendantGroup> &g);
+  __attribute__((pure)) static bool group_sums_validb(unsigned int n,
+                                                      const PendantGroup &g);
 
   struct SumTree {
     // TYPES
     struct SumLeaf {
-      std::shared_ptr<CertifiedPendant> d_a0;
+      CertifiedPendant d_a0;
     };
 
     struct SumNode {
-      std::shared_ptr<CertifiedPendant> d_a0;
-      std::shared_ptr<List<std::shared_ptr<SumTree>>> d_a1;
+      CertifiedPendant d_a0;
+      List<std::unique_ptr<SumTree>> d_a1;
     };
 
     using variant_t = std::variant<SumLeaf, SumNode>;
@@ -469,150 +824,156 @@ struct PendantSumtreeRoundtripCase {
 
   public:
     // CREATORS
+    SumTree() {}
+
     explicit SumTree(SumLeaf _v) : d_v_(std::move(_v)) {}
 
     explicit SumTree(SumNode _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<SumTree>
-    sumleaf(const std::shared_ptr<CertifiedPendant> &a0) {
-      return std::make_shared<SumTree>(SumLeaf{a0});
+    SumTree(const SumTree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    SumTree(SumTree &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) SumTree &operator=(const SumTree &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<SumTree>
-    sumleaf(std::shared_ptr<CertifiedPendant> &&a0) {
-      return std::make_shared<SumTree>(SumLeaf{std::move(a0)});
+    __attribute__((pure)) SumTree &operator=(SumTree &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<SumTree>
-    sumnode(const std::shared_ptr<CertifiedPendant> &a0,
-            const std::shared_ptr<List<std::shared_ptr<SumTree>>> &a1) {
-      return std::make_shared<SumTree>(SumNode{a0, a1});
+    // ACCESSORS
+    __attribute__((pure)) SumTree clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<SumLeaf>(_sv.v())) {
+        const auto &[d_a0] = std::get<SumLeaf>(_sv.v());
+        return SumTree(SumLeaf{clone_as_value<CertifiedPendant>(d_a0)});
+      } else {
+        const auto &[d_a0, d_a1] = std::get<SumNode>(_sv.v());
+        return SumTree(
+            SumNode{clone_as_value<CertifiedPendant>(d_a0),
+                    clone_as_value<List<std::unique_ptr<SumTree>>>(d_a1)});
+      }
     }
 
-    static std::shared_ptr<SumTree>
-    sumnode(std::shared_ptr<CertifiedPendant> &&a0,
-            std::shared_ptr<List<std::shared_ptr<SumTree>>> &&a1) {
-      return std::make_shared<SumTree>(SumNode{std::move(a0), std::move(a1)});
+    // CREATORS
+    constexpr static SumTree sumleaf(CertifiedPendant a0) {
+      return SumTree(SumLeaf{std::move(a0)});
+    }
+
+    __attribute__((pure)) static SumTree sumnode(CertifiedPendant a0,
+                                                 List<SumTree> a1) {
+      return SumTree(SumNode{
+          std::move(a0), clone_as_value<List<std::unique_ptr<SumTree>>>(a1)});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) SumTree *operator->() { return this; }
+
+    __attribute__((pure)) const SumTree *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = SumTree(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<CertifiedPendant>> F1,
-            MapsTo<T1, std::shared_ptr<CertifiedPendant>,
-                   std::shared_ptr<List<std::shared_ptr<SumTree>>>>
-                F2>
-  static T1 SumTree_rect(const unsigned int, F1 &&f, F2 &&f0,
-                         const std::shared_ptr<SumTree> &s) {
-    if (std::holds_alternative<typename SumTree::SumLeaf>(s->v())) {
-      const auto &[d_a0] = std::get<typename SumTree::SumLeaf>(s->v());
+  template <typename T1, MapsTo<T1, CertifiedPendant> F1,
+            MapsTo<T1, CertifiedPendant, List<SumTree>> F2>
+  static T1 SumTree_rect(const unsigned int &, F1 &&f, F2 &&f0,
+                         const SumTree &s) {
+    if (std::holds_alternative<typename SumTree::SumLeaf>(s.v())) {
+      const auto &[d_a0] = std::get<typename SumTree::SumLeaf>(s.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename SumTree::SumNode>(s->v());
-      return f0(d_a0, d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename SumTree::SumNode>(s.v());
+      return f0(d_a0, clone_as_value<List<SumTree>>(d_a1));
     }
   }
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<CertifiedPendant>> F1,
-            MapsTo<T1, std::shared_ptr<CertifiedPendant>,
-                   std::shared_ptr<List<std::shared_ptr<SumTree>>>>
-                F2>
-  static T1 SumTree_rec(const unsigned int, F1 &&f, F2 &&f0,
-                        const std::shared_ptr<SumTree> &s) {
-    if (std::holds_alternative<typename SumTree::SumLeaf>(s->v())) {
-      const auto &[d_a0] = std::get<typename SumTree::SumLeaf>(s->v());
+  template <typename T1, MapsTo<T1, CertifiedPendant> F1,
+            MapsTo<T1, CertifiedPendant, List<SumTree>> F2>
+  static T1 SumTree_rec(const unsigned int &, F1 &&f, F2 &&f0,
+                        const SumTree &s) {
+    if (std::holds_alternative<typename SumTree::SumLeaf>(s.v())) {
+      const auto &[d_a0] = std::get<typename SumTree::SumLeaf>(s.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename SumTree::SumNode>(s->v());
-      return f0(d_a0, d_a1);
+      const auto &[d_a0, d_a1] = std::get<typename SumTree::SumNode>(s.v());
+      return f0(d_a0, clone_as_value<List<SumTree>>(d_a1));
     }
   }
 
-  static std::shared_ptr<CertifiedPendant>
-  sumtree_top(const unsigned int _x, const std::shared_ptr<SumTree> &st);
-  static std::shared_ptr<List<std::shared_ptr<CertifiedPendant>>>
-  sumtree_leaves(const unsigned int n, const std::shared_ptr<SumTree> &st);
-  __attribute__((pure)) static unsigned int
-  sumtree_depth(const unsigned int n, const std::shared_ptr<SumTree> &st);
-  __attribute__((pure)) static bool
-  sumtree_validb_aux(const unsigned int n, const unsigned int fuel,
-                     const std::shared_ptr<SumTree> &st);
-  __attribute__((pure)) static bool
-  sumtree_validb(const unsigned int n, const std::shared_ptr<SumTree> &st);
+  __attribute__((pure)) static CertifiedPendant
+  sumtree_top(const unsigned int &_x, const SumTree &st);
+  __attribute__((pure)) static List<CertifiedPendant>
+  sumtree_leaves(unsigned int n, const SumTree &st);
+  __attribute__((pure)) static unsigned int sumtree_depth(unsigned int n,
+                                                          const SumTree &st);
+  __attribute__((pure)) static bool sumtree_validb_aux(unsigned int n,
+                                                       const unsigned int &fuel,
+                                                       const SumTree &st);
+  __attribute__((pure)) static bool sumtree_validb(const unsigned int &n,
+                                                   const SumTree &st);
   __attribute__((pure)) static std::optional<unsigned int>
-  sumtree_leaf_total(const unsigned int n, const std::shared_ptr<SumTree> &st);
+  sumtree_leaf_total(unsigned int n, const SumTree &st);
+  __attribute__((pure)) static bool nat_list_eqb(const List<unsigned int> &xs,
+                                                 const List<unsigned int> &ys);
   __attribute__((pure)) static bool
-  nat_list_eqb(const std::shared_ptr<List<unsigned int>> &xs,
-               const std::shared_ptr<List<unsigned int>> &ys);
+  option_nat_eqb(const std::optional<unsigned int> &x,
+                 const std::optional<unsigned int> &y);
   __attribute__((pure)) static bool
-  option_nat_eqb(const std::optional<unsigned int> x,
-                 const std::optional<unsigned int> y);
-  __attribute__((pure)) static bool
-  option_nat_is_some(const std::optional<unsigned int> x);
-  static std::shared_ptr<T0<digit>> digit_vec1(std::shared_ptr<T> a);
-  static std::shared_ptr<T0<digit>>
-  digit_vec3(std::shared_ptr<T> a, std::shared_ptr<T> b, std::shared_ptr<T> c);
-  static inline const std::shared_ptr<CordMeta> sample_meta_a =
-      std::make_shared<CordMeta>(
-          CordMeta{Fiber::e_COTTON, Color::e_BROWN, Twist::e_TS, Twist::e_TZ});
-  static inline const std::shared_ptr<CordMeta> sample_meta_b =
-      std::make_shared<CordMeta>(
-          CordMeta{Fiber::e_CAMELID, Color::e_RED, Twist::e_TZ, Twist::e_TS});
-  static inline const std::shared_ptr<CordMeta> sample_meta_c =
-      std::make_shared<CordMeta>(
-          CordMeta{Fiber::e_COTTON, Color::e_BLUE, Twist::e_TS, Twist::e_TS});
-  static inline const std::shared_ptr<T0<digit>> digits_731 =
-      digit_vec3(digit1, digit3, digit7);
-  static inline const std::shared_ptr<T0<digit>> digits_462 =
-      digit_vec3(digit2, digit6, digit4);
-  static inline const std::shared_ptr<T0<digit>> digits_269 =
-      digit_vec3(digit9, digit6, digit2);
-  static inline const std::shared_ptr<T0<digit>> digits_200 =
-      digit_vec3(digit0, digit0, digit2);
-  static inline const std::shared_ptr<T0<digit>> digits_069 =
-      digit_vec3(digit9, digit6, digit0);
-  static inline const std::shared_ptr<T0<digit>> digits_5 = digit_vec1(digit5);
-  static inline const std::shared_ptr<CertifiedPendant> pendant_731 =
-      std::make_shared<CertifiedPendant>(
-          CertifiedPendant{sample_meta_a, digits_731});
-  static inline const std::shared_ptr<CertifiedPendant> pendant_462 =
-      std::make_shared<CertifiedPendant>(
-          CertifiedPendant{sample_meta_b, digits_462});
-  static inline const std::shared_ptr<CertifiedPendant> pendant_269 =
-      std::make_shared<CertifiedPendant>(
-          CertifiedPendant{sample_meta_c, digits_269});
-  static inline const std::shared_ptr<CertifiedPendant> pendant_200 =
-      std::make_shared<CertifiedPendant>(
-          CertifiedPendant{sample_meta_b, digits_200});
-  static inline const std::shared_ptr<CertifiedPendant> pendant_069 =
-      std::make_shared<CertifiedPendant>(
-          CertifiedPendant{sample_meta_c, digits_069});
-  static inline const std::shared_ptr<CertifiedPendant> pendant_5 =
-      std::make_shared<CertifiedPendant>(
-          CertifiedPendant{sample_meta_a, digits_5});
-  static inline const std::shared_ptr<List<std::shared_ptr<T0<digit>>>>
-      sample_multi_digits =
-          List<std::shared_ptr<T0<std::shared_ptr<T>>>>::cons0(
-              digits_731,
-              List<std::shared_ptr<T0<std::shared_ptr<T>>>>::cons0(
-                  digits_462,
-                  List<std::shared_ptr<T0<std::shared_ptr<T>>>>::cons0(
-                      digits_269,
-                      List<std::shared_ptr<T0<std::shared_ptr<T>>>>::nil0())));
+  option_nat_is_some(const std::optional<unsigned int> &x);
+  __attribute__((pure)) static T0<digit> digit_vec1(T a);
+  __attribute__((pure)) static T0<digit> digit_vec3(T a, T b, T c);
+  static inline const CordMeta sample_meta_a =
+      CordMeta{Fiber::e_COTTON, Color::e_BROWN, Twist::e_TS, Twist::e_TZ};
+  static inline const CordMeta sample_meta_b =
+      CordMeta{Fiber::e_CAMELID, Color::e_RED, Twist::e_TZ, Twist::e_TS};
+  static inline const CordMeta sample_meta_c =
+      CordMeta{Fiber::e_COTTON, Color::e_BLUE, Twist::e_TS, Twist::e_TS};
+  static inline const T0<digit> digits_731 = digit_vec3(digit1, digit3, digit7);
+  static inline const T0<digit> digits_462 = digit_vec3(digit2, digit6, digit4);
+  static inline const T0<digit> digits_269 = digit_vec3(digit9, digit6, digit2);
+  static inline const T0<digit> digits_200 = digit_vec3(digit0, digit0, digit2);
+  static inline const T0<digit> digits_069 = digit_vec3(digit9, digit6, digit0);
+  static inline const T0<digit> digits_5 = digit_vec1(digit5);
+  static inline const CertifiedPendant pendant_731 =
+      CertifiedPendant{sample_meta_a, digits_731};
+  static inline const CertifiedPendant pendant_462 =
+      CertifiedPendant{sample_meta_b, digits_462};
+  static inline const CertifiedPendant pendant_269 =
+      CertifiedPendant{sample_meta_c, digits_269};
+  static inline const CertifiedPendant pendant_200 =
+      CertifiedPendant{sample_meta_b, digits_200};
+  static inline const CertifiedPendant pendant_069 =
+      CertifiedPendant{sample_meta_c, digits_069};
+  static inline const CertifiedPendant pendant_5 =
+      CertifiedPendant{sample_meta_a, digits_5};
+  static inline const List<T0<digit>> sample_multi_digits = List<T0<T>>::cons0(
+      digits_731,
+      List<T0<T>>::cons0(digits_462,
+                         List<T0<T>>::cons0(digits_269, List<T0<T>>::nil0())));
   static inline const bool sample_multi_roundtrip_ok = []() -> bool {
     auto _cs = decode_multi(3u, encode_multi(3u, sample_multi_digits));
     if (_cs.has_value()) {
-      const std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>>
-          &decoded = *_cs;
+      const List<T0<T>> &decoded = *_cs;
       return nat_list_eqb(
-          decoded->template map<unsigned int>(
-              [](const std::shared_ptr<T0<digit>> &_x0) -> unsigned int {
-                return value_digits(3u, _x0);
-              }),
+          decoded.template map<unsigned int>([](T0<digit> _x0) -> unsigned int {
+            return value_digits(3u, _x0);
+          }),
           List<unsigned int>::cons0(
               731u, List<unsigned int>::cons0(
                         462u, List<unsigned int>::cons0(
@@ -621,45 +982,29 @@ struct PendantSumtreeRoundtripCase {
       return false;
     }
   }();
-  static inline const std::shared_ptr<PendantGroup> sample_group =
-      std::make_shared<PendantGroup>(PendantGroup{
-          pendant_731,
-          List<std::shared_ptr<CertifiedPendant>>::cons0(
-              pendant_462,
-              List<std::shared_ptr<CertifiedPendant>>::cons0(
-                  pendant_269,
-                  List<std::shared_ptr<CertifiedPendant>>::nil0()))});
-  static inline const std::shared_ptr<SumTree> sample_subtree =
-      SumTree::sumnode(pendant_269,
-                       List<std::shared_ptr<SumTree>>::cons0(
-                           SumTree::sumleaf(pendant_200),
-                           List<std::shared_ptr<SumTree>>::cons0(
-                               SumTree::sumleaf(pendant_069),
-                               List<std::shared_ptr<SumTree>>::nil0())));
-  static inline const std::shared_ptr<SumTree> sample_tree = SumTree::sumnode(
+  static inline const PendantGroup sample_group = PendantGroup{
       pendant_731,
-      List<std::shared_ptr<SumTree>>::cons0(
+      List<CertifiedPendant>::cons0(
+          pendant_462, List<CertifiedPendant>::cons0(
+                           pendant_269, List<CertifiedPendant>::nil0()))};
+  static inline const SumTree sample_subtree = SumTree::sumnode(
+      pendant_269,
+      List<SumTree>::cons0(SumTree::sumleaf(pendant_200),
+                           List<SumTree>::cons0(SumTree::sumleaf(pendant_069),
+                                                List<SumTree>::nil0())));
+  static inline const SumTree sample_tree = SumTree::sumnode(
+      pendant_731,
+      List<SumTree>::cons0(
           SumTree::sumleaf(pendant_462),
-          List<std::shared_ptr<SumTree>>::cons0(
-              sample_subtree, List<std::shared_ptr<SumTree>>::nil0())));
-  static inline const Ledger sample_ledger = List<
-      std::shared_ptr<SigT<unsigned int, std::shared_ptr<CertifiedPendant>>>>::
-      cons0(
-          SigT<unsigned int, std::shared_ptr<CertifiedPendant>>::existt(
-              3u, pendant_731),
-          List<std::shared_ptr<
-              SigT<unsigned int, std::shared_ptr<CertifiedPendant>>>>::
-              cons0(
-                  SigT<unsigned int, std::shared_ptr<CertifiedPendant>>::existt(
-                      3u, pendant_462),
-                  List<std::shared_ptr<
-                      SigT<unsigned int, std::shared_ptr<CertifiedPendant>>>>::
-                      cons0(SigT<unsigned int,
-                                 std::shared_ptr<CertifiedPendant>>::
-                                existt(1u, pendant_5),
-                            List<std::shared_ptr<SigT<
-                                unsigned int,
-                                std::shared_ptr<CertifiedPendant>>>>::nil0())));
+          List<SumTree>::cons0(sample_subtree, List<SumTree>::nil0())));
+  static inline const Ledger sample_ledger =
+      List<SigT<unsigned int, CertifiedPendant>>::cons0(
+          SigT<unsigned int, CertifiedPendant>::existt(3u, pendant_731),
+          List<SigT<unsigned int, CertifiedPendant>>::cons0(
+              SigT<unsigned int, CertifiedPendant>::existt(3u, pendant_462),
+              List<SigT<unsigned int, CertifiedPendant>>::cons0(
+                  SigT<unsigned int, CertifiedPendant>::existt(1u, pendant_5),
+                  List<SigT<unsigned int, CertifiedPendant>>::nil0())));
   static inline const bool sample_group_valid =
       group_sums_validb(3u, sample_group);
   static inline const bool sample_subtree_valid =
@@ -670,14 +1015,14 @@ struct PendantSumtreeRoundtripCase {
   static inline const unsigned int sample_tree_depth =
       sumtree_depth(3u, sample_tree);
   static inline const unsigned int sample_ledger_entry_count =
-      ledger_values(sample_ledger)->length();
+      ledger_values(sample_ledger).length();
   static inline const bool sample_ledger_all_present =
-      ledger_values(sample_ledger)->forallb(option_nat_is_some);
+      ledger_values(sample_ledger).forallb(option_nat_is_some);
 };
 
 template <typename T1, typename T2, MapsTo<T2, T1> F0>
 __attribute__((pure)) std::optional<T2>
-Datatypes::option_map(F0 &&f, const std::optional<T1> o) {
+Datatypes::option_map(F0 &&f, const std::optional<T1> &o) {
   if (o.has_value()) {
     const T1 &a = *o;
     return std::make_optional<T2>(f(a));
@@ -687,19 +1032,15 @@ Datatypes::option_map(F0 &&f, const std::optional<T1> o) {
 }
 
 template <typename T1>
-std::shared_ptr<List<T1>> Vector::to_list(const unsigned int n,
-                                          const std::shared_ptr<T0<T1>> &v) {
-  std::function<std::shared_ptr<List<T1>>(unsigned int, std::shared_ptr<T0<T1>>,
-                                          std::shared_ptr<List<T1>>)>
-      fold_right_fix;
-  fold_right_fix =
-      [&](unsigned int, std::shared_ptr<T0<T1>> v0,
-          std::shared_ptr<List<T1>> b) -> std::shared_ptr<List<T1>> {
-    if (std::holds_alternative<typename T0<T1>::Nil>(v0->v())) {
+__attribute__((pure)) List<T1> Vector::to_list(const unsigned int &n,
+                                               const T0<T1> &v) {
+  std::function<List<T1>(unsigned int, T0<T1>, List<T1>)> fold_right_fix;
+  fold_right_fix = [&](unsigned int, T0<T1> v0, List<T1> b) -> List<T1> {
+    if (std::holds_alternative<typename T0<T1>::Nil>(v0.v())) {
       return b;
     } else {
-      const auto &[d_h, d_n, d_a2] = std::get<typename T0<T1>::Cons>(v0->v());
-      return List<T1>::cons0(d_h, fold_right_fix(d_n, d_a2, b));
+      const auto &[d_h, d_n, d_a2] = std::get<typename T0<T1>::Cons>(v0.v());
+      return List<T1>::cons0(d_h, fold_right_fix(d_n, *(d_a2), b));
     }
   };
   return fold_right_fix(n, v, List<T1>::nil0());

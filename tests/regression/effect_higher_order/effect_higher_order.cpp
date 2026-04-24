@@ -11,8 +11,7 @@
 #include <variant>
 
 /// 5. Effectful callback passed as argument
-void EffectHigherOrder::greet_all(
-    const std::shared_ptr<List<std::string>> &names) {
+void EffectHigherOrder::greet_all(const List<std::string> &names) {
   for_each_str(
       [](const std::string name) {
         std::cout << "Hello, "s + name << '\n';
@@ -41,15 +40,15 @@ std::string EffectHigherOrder::lookup_or_ask(const std::string name) {
 }
 
 /// 7. Chain of lookups
-std::shared_ptr<List<std::string>>
-EffectHigherOrder::lookup_all(const std::shared_ptr<List<std::string>> &names) {
-  if (std::holds_alternative<typename List<std::string>::Nil>(names->v())) {
+List<std::string>
+EffectHigherOrder::lookup_all(const List<std::string> &names) {
+  if (std::holds_alternative<typename List<std::string>::Nil>(names.v())) {
     return List<std::string>::nil();
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename List<std::string>::Cons>(names->v());
+        std::get<typename List<std::string>::Cons>(names.v());
     std::string v = lookup_or_ask(d_a0);
-    std::shared_ptr<List<std::string>> vs = lookup_all(d_a1);
+    List<std::string> vs = lookup_all(*(d_a1));
     return List<std::string>::cons(v, vs);
   }
 }

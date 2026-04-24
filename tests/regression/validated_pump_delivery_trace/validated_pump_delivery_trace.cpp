@@ -7,13 +7,13 @@
 #include <variant>
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::bg_in_meter_range(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &bg) {
-  return (BG_METER_MIN <= bg->mg_dL_val && bg->mg_dL_val <= BG_METER_MAX);
+    const ValidatedPumpDeliveryTraceCase::Mg_dL &bg) {
+  return (BG_METER_MIN <= bg.mg_dL_val && bg.mg_dL_val <= BG_METER_MAX);
 }
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::carbs_reasonable(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Grams> &carbs) {
-  return carbs->grams_val <= CARBS_SANITY_MAX;
+    const ValidatedPumpDeliveryTraceCase::Grams &carbs) {
+  return carbs.grams_val <= CARBS_SANITY_MAX;
 }
 
 __attribute__((pure)) unsigned int
@@ -73,7 +73,7 @@ ValidatedPumpDeliveryTraceCase::icr_activity_modifier(
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Minutes
 ValidatedPumpDeliveryTraceCase::peak_time(
     const ValidatedPumpDeliveryTraceCase::InsulinType itype,
-    const unsigned int) {
+    const unsigned int &) {
   switch (itype) {
   case InsulinType::e_INSULIN_ASPART: {
     return 70u;
@@ -85,8 +85,8 @@ ValidatedPumpDeliveryTraceCase::peak_time(
 }
 
 __attribute__((pure)) unsigned int
-ValidatedPumpDeliveryTraceCase::div_ceil(const unsigned int a,
-                                         const unsigned int b) {
+ValidatedPumpDeliveryTraceCase::div_ceil(const unsigned int &a,
+                                         const unsigned int &b) {
   if (b == 0u) {
     return 0u;
   } else {
@@ -95,73 +95,65 @@ ValidatedPumpDeliveryTraceCase::div_ceil(const unsigned int a,
 }
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::event_time_valid(
-    const unsigned int now,
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent> &event) {
-  return event->be_time_minutes <= now;
+    const unsigned int &now,
+    const ValidatedPumpDeliveryTraceCase::BolusEvent &event) {
+  return event.be_time_minutes <= now;
 }
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::history_times_valid(
-    const unsigned int now,
-    const std::shared_ptr<
-        List<std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>>
-        &events) {
-  if (std::holds_alternative<typename List<
-          std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil>(
-          events->v())) {
+    const unsigned int &now,
+    const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events) {
+  if (std::holds_alternative<
+          typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Nil>(
+          events.v())) {
     return true;
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<
-        std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons>(
-        events->v());
-    return (event_time_valid(now, d_a0) && history_times_valid(now, d_a1));
+    const auto &[d_a0, d_a1] = std::get<
+        typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Cons>(
+        events.v());
+    return (event_time_valid(now, d_a0) && history_times_valid(now, *(d_a1)));
   }
 }
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::history_sorted_from(
-    const unsigned int prev,
-    const std::shared_ptr<
-        List<std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>>
-        &events) {
-  if (std::holds_alternative<typename List<
-          std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil>(
-          events->v())) {
+    const unsigned int &prev,
+    const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events) {
+  if (std::holds_alternative<
+          typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Nil>(
+          events.v())) {
     return true;
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<
-        std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons>(
-        events->v());
-    return (d_a0->be_time_minutes <= prev &&
-            history_sorted_from(d_a0->be_time_minutes, d_a1));
+    const auto &[d_a0, d_a1] = std::get<
+        typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Cons>(
+        events.v());
+    return (d_a0.be_time_minutes <= prev &&
+            history_sorted_from(d_a0.be_time_minutes, *(d_a1)));
   }
 }
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::history_sorted_desc(
-    const std::shared_ptr<
-        List<std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>>
-        &events) {
-  if (std::holds_alternative<typename List<
-          std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil>(
-          events->v())) {
+    const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events) {
+  if (std::holds_alternative<
+          typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Nil>(
+          events.v())) {
     return true;
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<
-        std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons>(
-        events->v());
-    return history_sorted_from(d_a0->be_time_minutes, d_a1);
+    const auto &[d_a0, d_a1] = std::get<
+        typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Cons>(
+        events.v());
+    return history_sorted_from(d_a0.be_time_minutes, *(d_a1));
   }
 }
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::history_valid(
-    const unsigned int now,
-    const std::shared_ptr<
-        List<std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>>
-        &events) {
+    const unsigned int &now,
+    const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events) {
   return (history_times_valid(now, events) && history_sorted_desc(events));
 }
 
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::bilinear_iob_fraction(
-    const unsigned int elapsed, const unsigned int dia,
+    const unsigned int &elapsed, const unsigned int &dia,
     const ValidatedPumpDeliveryTraceCase::InsulinType itype) {
   unsigned int pt = peak_time(itype, dia);
   if (dia == 0u) {
@@ -195,18 +187,18 @@ ValidatedPumpDeliveryTraceCase::bilinear_iob_fraction(
 
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::bilinear_iob_from_bolus(
-    const unsigned int now,
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent> &event,
-    const unsigned int dia,
+    const unsigned int &now,
+    const ValidatedPumpDeliveryTraceCase::BolusEvent &event,
+    const unsigned int &dia,
     const ValidatedPumpDeliveryTraceCase::InsulinType itype) {
-  if (now < event->be_time_minutes) {
+  if (now < event.be_time_minutes) {
     return 0u;
   } else {
     return div_ceil(
-        (event->be_dose_twentieths *
-         bilinear_iob_fraction((((now - event->be_time_minutes) > now
+        (event.be_dose_twentieths *
+         bilinear_iob_fraction((((now - event.be_time_minutes) > now
                                      ? 0
-                                     : (now - event->be_time_minutes))),
+                                     : (now - event.be_time_minutes))),
                                dia, itype)),
         100u);
   }
@@ -214,35 +206,32 @@ ValidatedPumpDeliveryTraceCase::bilinear_iob_from_bolus(
 
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::total_bilinear_iob(
-    const unsigned int now,
-    const std::shared_ptr<
-        List<std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>>
-        &events,
-    const unsigned int dia,
+    const unsigned int &now,
+    const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events,
+    const unsigned int &dia,
     const ValidatedPumpDeliveryTraceCase::InsulinType itype) {
-  if (std::holds_alternative<typename List<
-          std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil>(
-          events->v())) {
+  if (std::holds_alternative<
+          typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Nil>(
+          events.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<
-        std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons>(
-        events->v());
+    const auto &[d_a0, d_a1] = std::get<
+        typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Cons>(
+        events.v());
     return (bilinear_iob_from_bolus(now, d_a0, dia, itype) +
-            total_bilinear_iob(now, d_a1, dia, itype));
+            total_bilinear_iob(now, *(d_a1), dia, itype));
   }
 }
 
-std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL>
+__attribute__((pure)) ValidatedPumpDeliveryTraceCase::Mg_dL
 ValidatedPumpDeliveryTraceCase::apply_sensor_margin(
-    std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> bg,
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &target) {
-  if (target->mg_dL_val <= bg->mg_dL_val) {
-    return std::make_shared<ValidatedPumpDeliveryTraceCase::Mg_dL>(Mg_dL{
-        (((bg->mg_dL_val - (100u ? (bg->mg_dL_val * 15u) / 100u : 0)) >
-                  bg->mg_dL_val
-              ? 0
-              : (bg->mg_dL_val - (100u ? (bg->mg_dL_val * 15u) / 100u : 0))))});
+    ValidatedPumpDeliveryTraceCase::Mg_dL bg,
+    const ValidatedPumpDeliveryTraceCase::Mg_dL &target) {
+  if (target.mg_dL_val <= bg.mg_dL_val) {
+    return Mg_dL{((
+        (bg.mg_dL_val - (100u ? (bg.mg_dL_val * 15u) / 100u : 0)) > bg.mg_dL_val
+            ? 0
+            : (bg.mg_dL_val - (100u ? (bg.mg_dL_val * 15u) / 100u : 0))))};
   } else {
     return bg;
   }
@@ -250,12 +239,12 @@ ValidatedPumpDeliveryTraceCase::apply_sensor_margin(
 
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::adjusted_isf_tenths(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &bg,
-    const unsigned int base_isf_tenths) {
-  if (bg->mg_dL_val < 250u) {
+    const ValidatedPumpDeliveryTraceCase::Mg_dL &bg,
+    unsigned int base_isf_tenths) {
+  if (bg.mg_dL_val < 250u) {
     return base_isf_tenths;
   } else {
-    if (bg->mg_dL_val < 350u) {
+    if (bg.mg_dL_val < 350u) {
       return (100u ? (base_isf_tenths * 80u) / 100u : 0);
     } else {
       return (100u ? (base_isf_tenths * 60u) / 100u : 0);
@@ -265,22 +254,22 @@ ValidatedPumpDeliveryTraceCase::adjusted_isf_tenths(
 
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::correction_twentieths_full(
-    const unsigned int,
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &current_bg,
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &target_bg,
-    const unsigned int base_isf_tenths) {
+    const unsigned int &,
+    const ValidatedPumpDeliveryTraceCase::Mg_dL &current_bg,
+    const ValidatedPumpDeliveryTraceCase::Mg_dL &target_bg,
+    const unsigned int &base_isf_tenths) {
   unsigned int eff_isf = adjusted_isf_tenths(current_bg, base_isf_tenths);
   if (eff_isf == 0u) {
     return 0u;
   } else {
-    if (current_bg->mg_dL_val <= target_bg->mg_dL_val) {
+    if (current_bg.mg_dL_val <= target_bg.mg_dL_val) {
       return 0u;
     } else {
       return (eff_isf
-                  ? ((((current_bg->mg_dL_val - target_bg->mg_dL_val) >
-                               current_bg->mg_dL_val
+                  ? ((((current_bg.mg_dL_val - target_bg.mg_dL_val) >
+                               current_bg.mg_dL_val
                            ? 0
-                           : (current_bg->mg_dL_val - target_bg->mg_dL_val))) *
+                           : (current_bg.mg_dL_val - target_bg.mg_dL_val))) *
                      200u) /
                         eff_isf
                   : 0);
@@ -290,15 +279,14 @@ ValidatedPumpDeliveryTraceCase::correction_twentieths_full(
 
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::apply_reverse_correction_twentieths(
-    const unsigned int carb,
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &current_bg,
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &target_bg,
-    const unsigned int isf_tenths) {
-  if (current_bg->mg_dL_val < target_bg->mg_dL_val) {
+    unsigned int carb, const ValidatedPumpDeliveryTraceCase::Mg_dL &current_bg,
+    const ValidatedPumpDeliveryTraceCase::Mg_dL &target_bg,
+    const unsigned int &isf_tenths) {
+  if (current_bg.mg_dL_val < target_bg.mg_dL_val) {
     unsigned int reverse_drop =
-        (((target_bg->mg_dL_val - current_bg->mg_dL_val) > target_bg->mg_dL_val
+        (((target_bg.mg_dL_val - current_bg.mg_dL_val) > target_bg.mg_dL_val
               ? 0
-              : (target_bg->mg_dL_val - current_bg->mg_dL_val)));
+              : (target_bg.mg_dL_val - current_bg.mg_dL_val)));
     unsigned int reverse_units;
     if (isf_tenths == 0u) {
       reverse_units = 0u;
@@ -317,7 +305,7 @@ ValidatedPumpDeliveryTraceCase::apply_reverse_correction_twentieths(
 
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::predict_bg_drop_tenths(
-    const unsigned int iob_twentieths, const unsigned int isf_tenths) {
+    const unsigned int &iob_twentieths, const unsigned int &isf_tenths) {
   if (isf_tenths == 0u) {
     return 0u;
   } else {
@@ -327,39 +315,39 @@ ValidatedPumpDeliveryTraceCase::predict_bg_drop_tenths(
 
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::conservative_cob_rise(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Config> &cfg,
-    const unsigned int cob_grams) {
-  return (100u ? ((cob_grams * cfg->cfg_conservative_cob_absorption_percent) *
-                  cfg->cfg_bg_rise_per_gram) /
+    const ValidatedPumpDeliveryTraceCase::Config &cfg,
+    const unsigned int &cob_grams) {
+  return (100u ? ((cob_grams * cfg.cfg_conservative_cob_absorption_percent) *
+                  cfg.cfg_bg_rise_per_gram) /
                      100u
                : 0);
 }
 
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::predicted_eventual_bg_tenths(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Config> &cfg,
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &current_bg,
-    const unsigned int iob_twentieths, const unsigned int cob_grams,
-    const unsigned int isf_tenths) {
+    const ValidatedPumpDeliveryTraceCase::Config &cfg,
+    const ValidatedPumpDeliveryTraceCase::Mg_dL &current_bg,
+    const unsigned int &iob_twentieths, const unsigned int &cob_grams,
+    const unsigned int &isf_tenths) {
   unsigned int drop = predict_bg_drop_tenths(iob_twentieths, isf_tenths);
   unsigned int rise = conservative_cob_rise(cfg, cob_grams);
   unsigned int bg_after_drop;
-  if (current_bg->mg_dL_val <= drop) {
+  if (current_bg.mg_dL_val <= drop) {
     bg_after_drop = 0u;
   } else {
-    bg_after_drop = (((current_bg->mg_dL_val - drop) > current_bg->mg_dL_val
+    bg_after_drop = (((current_bg.mg_dL_val - drop) > current_bg.mg_dL_val
                           ? 0
-                          : (current_bg->mg_dL_val - drop)));
+                          : (current_bg.mg_dL_val - drop)));
   }
   return (bg_after_drop + rise);
 }
 
-std::shared_ptr<ValidatedPumpDeliveryTraceCase::SuspendDecision>
+__attribute__((pure)) ValidatedPumpDeliveryTraceCase::SuspendDecision
 ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Config> &cfg,
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &current_bg,
-    const unsigned int iob_twentieths, const unsigned int cob_grams,
-    const unsigned int isf_tenths, const unsigned int proposed) {
+    const ValidatedPumpDeliveryTraceCase::Config &cfg,
+    const ValidatedPumpDeliveryTraceCase::Mg_dL &current_bg,
+    const unsigned int &iob_twentieths, const unsigned int &cob_grams,
+    const unsigned int &isf_tenths, const unsigned int &proposed) {
   if (isf_tenths == 0u) {
     return SuspendDecision::suspend_withhold();
   } else {
@@ -369,26 +357,26 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
     if (pred < BG_LEVEL2_HYPO) {
       return SuspendDecision::suspend_withhold();
     } else {
-      if (pred < cfg->cfg_suspend_threshold_mg_dl) {
+      if (pred < cfg.cfg_suspend_threshold_mg_dl) {
         unsigned int rise_from_cob = conservative_cob_rise(cfg, cob_grams);
         unsigned int effective_target;
-        if (cfg->cfg_suspend_threshold_mg_dl <= rise_from_cob) {
+        if (cfg.cfg_suspend_threshold_mg_dl <= rise_from_cob) {
           effective_target = 0u;
         } else {
           effective_target =
-              (((cfg->cfg_suspend_threshold_mg_dl - rise_from_cob) >
-                        cfg->cfg_suspend_threshold_mg_dl
+              (((cfg.cfg_suspend_threshold_mg_dl - rise_from_cob) >
+                        cfg.cfg_suspend_threshold_mg_dl
                     ? 0
-                    : (cfg->cfg_suspend_threshold_mg_dl - rise_from_cob)));
+                    : (cfg.cfg_suspend_threshold_mg_dl - rise_from_cob)));
         }
         unsigned int safe_drop;
-        if (current_bg->mg_dL_val <= effective_target) {
+        if (current_bg.mg_dL_val <= effective_target) {
           safe_drop = 0u;
         } else {
-          safe_drop = (((current_bg->mg_dL_val - effective_target) >
-                                current_bg->mg_dL_val
-                            ? 0
-                            : (current_bg->mg_dL_val - effective_target)));
+          safe_drop =
+              (((current_bg.mg_dL_val - effective_target) > current_bg.mg_dL_val
+                    ? 0
+                    : (current_bg.mg_dL_val - effective_target)));
         }
         unsigned int safe_insulin =
             (isf_tenths ? (safe_drop * 200u) / isf_tenths : 0);
@@ -409,19 +397,17 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
 
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::apply_suspend(
-    const unsigned int proposed,
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::SuspendDecision>
-        &decision) {
+    unsigned int proposed,
+    const ValidatedPumpDeliveryTraceCase::SuspendDecision &decision) {
   if (std::holds_alternative<typename ValidatedPumpDeliveryTraceCase::
-                                 SuspendDecision::Suspend_None>(
-          decision->v())) {
+                                 SuspendDecision::Suspend_None>(decision.v())) {
     return proposed;
   } else if (std::holds_alternative<typename ValidatedPumpDeliveryTraceCase::
                                         SuspendDecision::Suspend_Reduce>(
-                 decision->v())) {
+                 decision.v())) {
     const auto &[d_a0] =
         std::get<typename ValidatedPumpDeliveryTraceCase::SuspendDecision::
-                     Suspend_Reduce>(decision->v());
+                     Suspend_Reduce>(decision.v());
     if (proposed <= d_a0) {
       return proposed;
     } else {
@@ -434,13 +420,13 @@ ValidatedPumpDeliveryTraceCase::apply_suspend(
 
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::pediatric_max_twentieths(
-    const unsigned int weight_kg) {
+    const unsigned int &weight_kg) {
   return (weight_kg * 10u);
 }
 
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
-ValidatedPumpDeliveryTraceCase::cap_pediatric(const unsigned int bolus,
-                                              const unsigned int weight_kg) {
+ValidatedPumpDeliveryTraceCase::cap_pediatric(unsigned int bolus,
+                                              const unsigned int &weight_kg) {
   if (bolus <= pediatric_max_twentieths(weight_kg)) {
     return bolus;
   } else {
@@ -449,19 +435,19 @@ ValidatedPumpDeliveryTraceCase::cap_pediatric(const unsigned int bolus,
 }
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::prec_params_valid(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionParams> &p) {
-  return (((((((20u <= p->prec_icr_tenths && p->prec_icr_tenths <= 1000u) &&
-               100u <= p->prec_isf_tenths) &&
-              p->prec_isf_tenths <= 4000u) &&
-             BG_HYPO <= p->prec_target_bg->mg_dL_val) &&
-            p->prec_target_bg->mg_dL_val <= BG_HYPER) &&
-           120u <= p->prec_dia) &&
-          p->prec_dia <= 360u);
+    const ValidatedPumpDeliveryTraceCase::PrecisionParams &p) {
+  return (((((((20u <= p.prec_icr_tenths && p.prec_icr_tenths <= 1000u) &&
+               100u <= p.prec_isf_tenths) &&
+              p.prec_isf_tenths <= 4000u) &&
+             BG_HYPO <= p.prec_target_bg.mg_dL_val) &&
+            p.prec_target_bg.mg_dL_val <= BG_HYPER) &&
+           120u <= p.prec_dia) &&
+          p.prec_dia <= 360u);
 }
 
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::carb_bolus_twentieths(
-    const unsigned int carbs_g, const unsigned int icr_tenths) {
+    const unsigned int &carbs_g, const unsigned int &icr_tenths) {
   if (icr_tenths == 0u) {
     return 0u;
   } else {
@@ -471,35 +457,33 @@ ValidatedPumpDeliveryTraceCase::carb_bolus_twentieths(
 
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionInput>
-        &input,
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionParams>
-        &params) {
+    const ValidatedPumpDeliveryTraceCase::PrecisionInput &input,
+    const ValidatedPumpDeliveryTraceCase::PrecisionParams &params) {
   unsigned int activity_isf =
-      (100u ? (params->prec_isf_tenths *
-               isf_activity_modifier(input->pi_activity)) /
+      (100u ? (params.prec_isf_tenths *
+               isf_activity_modifier(input.pi_activity)) /
                   100u
             : 0);
   unsigned int activity_icr =
-      (100u ? (params->prec_icr_tenths *
-               icr_activity_modifier(input->pi_activity)) /
+      (100u ? (params.prec_icr_tenths *
+               icr_activity_modifier(input.pi_activity)) /
                   100u
             : 0);
-  std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> eff_bg;
-  if (input->pi_use_sensor_margin) {
-    eff_bg = apply_sensor_margin(input->pi_current_bg, params->prec_target_bg);
+  ValidatedPumpDeliveryTraceCase::Mg_dL eff_bg;
+  if (input.pi_use_sensor_margin) {
+    eff_bg = apply_sensor_margin(input.pi_current_bg, params.prec_target_bg);
   } else {
-    eff_bg = input->pi_current_bg;
+    eff_bg = input.pi_current_bg;
   }
   unsigned int carb =
-      carb_bolus_twentieths(input->pi_carbs_g->grams_val, activity_icr);
+      carb_bolus_twentieths(input.pi_carbs_g.grams_val, activity_icr);
   unsigned int carb_adj = apply_reverse_correction_twentieths(
-      carb, eff_bg, params->prec_target_bg, activity_isf);
+      carb, eff_bg, params.prec_target_bg, activity_isf);
   unsigned int corr = correction_twentieths_full(
-      input->pi_now, std::move(eff_bg), params->prec_target_bg, activity_isf);
+      input.pi_now, eff_bg, params.prec_target_bg, activity_isf);
   unsigned int iob =
-      total_bilinear_iob(input->pi_now, input->pi_bolus_history,
-                         params->prec_dia, params->prec_insulin_type);
+      total_bilinear_iob(input.pi_now, input.pi_bolus_history, params.prec_dia,
+                         params.prec_insulin_type);
   unsigned int raw = (carb_adj + corr);
   if (raw <= iob) {
     return 0u;
@@ -509,58 +493,54 @@ ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
 }
 
 __attribute__((pure)) bool
-ValidatedPumpDeliveryTraceCase::time_reasonable(const unsigned int now) {
+ValidatedPumpDeliveryTraceCase::time_reasonable(const unsigned int &now) {
   return now <= 525600u;
 }
 
 __attribute__((pure)) bool
 ValidatedPumpDeliveryTraceCase::history_extraction_safe(
-    const std::shared_ptr<
-        List<std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>>
-        &events) {
+    const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events) {
   return (
-      events->length() <= 100u &&
-      events->forallb(
-          [](const std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>
-                 &e) { return e->be_dose_twentieths <= 500u; }));
+      events.length() <= 100u &&
+      events.forallb([](const ValidatedPumpDeliveryTraceCase::BolusEvent &e) {
+        return e.be_dose_twentieths <= 500u;
+      }));
 }
 
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::iob_high_threshold(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Config> &cfg) {
-  return cfg->cfg_iob_high_threshold_twentieths;
+    const ValidatedPumpDeliveryTraceCase::Config &cfg) {
+  return cfg.cfg_iob_high_threshold_twentieths;
 }
 
 __attribute__((pure)) bool
-ValidatedPumpDeliveryTraceCase::iob_dangerously_high(const unsigned int iob) {
+ValidatedPumpDeliveryTraceCase::iob_dangerously_high(const unsigned int &iob) {
   return iob_high_threshold(default_config) <= iob;
 }
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::bolus_too_soon(
-    const unsigned int now,
-    const std::shared_ptr<
-        List<std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>>
-        &history) {
-  if (std::holds_alternative<typename List<
-          std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil>(
-          history->v())) {
+    const unsigned int &now,
+    const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &history) {
+  if (std::holds_alternative<
+          typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Nil>(
+          history.v())) {
     return false;
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<
-        std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons>(
-        history->v());
-    if (now < d_a0->be_time_minutes) {
+    const auto &[d_a0, d_a1] = std::get<
+        typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Cons>(
+        history.v());
+    if (now < d_a0.be_time_minutes) {
       return false;
     } else {
-      return (((now - d_a0->be_time_minutes) > now
+      return (((now - d_a0.be_time_minutes) > now
                    ? 0
-                   : (now - d_a0->be_time_minutes))) < 15u;
+                   : (now - d_a0.be_time_minutes))) < 15u;
     }
   }
 }
 
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
-ValidatedPumpDeliveryTraceCase::cap_twentieths(const unsigned int t) {
+ValidatedPumpDeliveryTraceCase::cap_twentieths(unsigned int t) {
   if (t <= 500u) {
     return t;
   } else {
@@ -568,64 +548,61 @@ ValidatedPumpDeliveryTraceCase::cap_twentieths(const unsigned int t) {
   }
 }
 
-std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionResult>
+__attribute__((pure)) ValidatedPumpDeliveryTraceCase::PrecisionResult
 ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
-    std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionInput> input,
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionParams>
-        &params) {
+    ValidatedPumpDeliveryTraceCase::PrecisionInput input,
+    const ValidatedPumpDeliveryTraceCase::PrecisionParams &params) {
   if (!(prec_params_valid(params))) {
     return PrecisionResult::precerror(prec_error_invalid_params);
   } else {
-    if (!((bg_in_meter_range(input->pi_current_bg) &&
-           carbs_reasonable(input->pi_carbs_g)))) {
+    if (!((bg_in_meter_range(input.pi_current_bg) &&
+           carbs_reasonable(input.pi_carbs_g)))) {
       return PrecisionResult::precerror(prec_error_invalid_input);
     } else {
-      if (!(time_reasonable(input->pi_now))) {
+      if (!(time_reasonable(input.pi_now))) {
         return PrecisionResult::precerror(prec_error_invalid_time);
       } else {
-        if (!(history_valid(input->pi_now, input->pi_bolus_history))) {
+        if (!(history_valid(input.pi_now, input.pi_bolus_history))) {
           return PrecisionResult::precerror(prec_error_invalid_history);
         } else {
-          if (!(history_extraction_safe(input->pi_bolus_history))) {
+          if (!(history_extraction_safe(input.pi_bolus_history))) {
             return PrecisionResult::precerror(prec_error_extraction_unsafe);
           } else {
-            if (bolus_too_soon(input->pi_now, input->pi_bolus_history)) {
+            if (bolus_too_soon(input.pi_now, input.pi_bolus_history)) {
               return PrecisionResult::precerror(prec_error_stacking);
             } else {
-              if (input->pi_fault->fault_blocks_bolus()) {
+              if (input.pi_fault.fault_blocks_bolus()) {
                 return PrecisionResult::precerror(prec_error_fault);
               } else {
-                if (input->pi_current_bg->mg_dL_val < BG_HYPO) {
+                if (input.pi_current_bg.mg_dL_val < BG_HYPO) {
                   return PrecisionResult::precerror(prec_error_hypo);
                 } else {
                   unsigned int iob = total_bilinear_iob(
-                      input->pi_now, input->pi_bolus_history, params->prec_dia,
-                      params->prec_insulin_type);
+                      input.pi_now, input.pi_bolus_history, params.prec_dia,
+                      params.prec_insulin_type);
                   if ((iob_dangerously_high(iob) &&
-                       input->pi_carbs_g->grams_val == 0u)) {
+                       input.pi_carbs_g.grams_val == 0u)) {
                     return PrecisionResult::precerror(prec_error_iob_high);
                   } else {
                     unsigned int tdd_current =
-                        input->pi_bolus_history->template fold_left<
-                            unsigned int>(
-                            [=](const unsigned int acc,
-                                const std::shared_ptr<
-                                    ValidatedPumpDeliveryTraceCase::BolusEvent>
+                        input.pi_bolus_history.template fold_left<unsigned int>(
+                            [=](unsigned int acc,
+                                const ValidatedPumpDeliveryTraceCase::BolusEvent
                                     &e) mutable {
-                              if (((((input->pi_now - 1440u) > input->pi_now
+                              if (((((input.pi_now - 1440u) > input.pi_now
                                          ? 0
-                                         : (input->pi_now - 1440u))) <=
-                                       e->be_time_minutes &&
-                                   e->be_time_minutes <= input->pi_now)) {
-                                return (acc + e->be_dose_twentieths);
+                                         : (input.pi_now - 1440u))) <=
+                                       e.be_time_minutes &&
+                                   e.be_time_minutes <= input.pi_now)) {
+                                return (acc + e.be_dose_twentieths);
                               } else {
                                 return acc;
                               }
                             },
                             0u);
                     unsigned int tdd_limit;
-                    if (input->pi_weight_kg.has_value()) {
-                      const unsigned int &w = *input->pi_weight_kg;
+                    if (input.pi_weight_kg.has_value()) {
+                      const unsigned int &w = *input.pi_weight_kg;
                       tdd_limit = (w * ONE_UNIT);
                     } else {
                       tdd_limit = 5000u;
@@ -645,30 +622,28 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                                            : (tdd_limit - tdd_current)));
                       }
                       unsigned int activity_isf =
-                          (100u ? (params->prec_isf_tenths *
-                                   isf_activity_modifier(input->pi_activity)) /
+                          (100u ? (params.prec_isf_tenths *
+                                   isf_activity_modifier(input.pi_activity)) /
                                       100u
                                 : 0);
-                      std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL>
-                          eff_bg;
-                      if (input->pi_use_sensor_margin) {
-                        eff_bg = apply_sensor_margin(input->pi_current_bg,
-                                                     params->prec_target_bg);
+                      ValidatedPumpDeliveryTraceCase::Mg_dL eff_bg;
+                      if (input.pi_use_sensor_margin) {
+                        eff_bg = apply_sensor_margin(input.pi_current_bg,
+                                                     params.prec_target_bg);
                       } else {
-                        eff_bg = input->pi_current_bg;
+                        eff_bg = input.pi_current_bg;
                       }
-                      std::shared_ptr<
-                          ValidatedPumpDeliveryTraceCase::SuspendDecision>
+                      ValidatedPumpDeliveryTraceCase::SuspendDecision
                           suspend_decision = suspend_check_tenths_with_cob(
-                              default_config, std::move(eff_bg), iob,
-                              input->pi_carbs_g->grams_val, activity_isf,
+                              default_config, eff_bg, iob,
+                              input.pi_carbs_g.grams_val, activity_isf,
                               tdd_capped);
-                      unsigned int suspended = apply_suspend(
-                          tdd_capped, std::move(suspend_decision));
+                      unsigned int suspended =
+                          apply_suspend(tdd_capped, suspend_decision);
                       unsigned int adult_capped = cap_twentieths(suspended);
                       unsigned int capped;
-                      if (input->pi_weight_kg.has_value()) {
-                        const unsigned int &w = *input->pi_weight_kg;
+                      if (input.pi_weight_kg.has_value()) {
+                        const unsigned int &w = *input.pi_weight_kg;
                         capped = cap_pediatric(adult_capped, w);
                       } else {
                         capped = adult_capped;
@@ -690,13 +665,13 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
 __attribute__((pure))
 std::optional<ValidatedPumpDeliveryTraceCase::Insulin_twentieth>
 ValidatedPumpDeliveryTraceCase::prec_result_twentieths(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionResult> &r) {
+    const ValidatedPumpDeliveryTraceCase::PrecisionResult &r) {
   if (std::holds_alternative<
           typename ValidatedPumpDeliveryTraceCase::PrecisionResult::PrecOK>(
-          r->v())) {
+          r.v())) {
     const auto &[d_a0, d_a1] = std::get<
         typename ValidatedPumpDeliveryTraceCase::PrecisionResult::PrecOK>(
-        r->v());
+        r.v());
     return std::make_optional<unsigned int>(d_a0);
   } else {
     return std::optional<unsigned int>();
@@ -705,36 +680,34 @@ ValidatedPumpDeliveryTraceCase::prec_result_twentieths(
 
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::mmol_tenths_to_mg_dL(
-    const unsigned int mmol_tenths) {
+    const unsigned int &mmol_tenths) {
   return (10u ? (mmol_tenths * 18u) / 10u : 0);
 }
 
-std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionInput>
+__attribute__((pure)) ValidatedPumpDeliveryTraceCase::PrecisionInput
 ValidatedPumpDeliveryTraceCase::convert_mmol_input(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::MmolPrecisionInput>
-        &input) {
-  return std::make_shared<ValidatedPumpDeliveryTraceCase::PrecisionInput>(
-      PrecisionInput{
-          input->mpi_carbs_g,
-          std::make_shared<ValidatedPumpDeliveryTraceCase::Mg_dL>(
-              Mg_dL{mmol_tenths_to_mg_dL(input->mpi_current_bg_mmol_tenths)}),
-          input->mpi_now, input->mpi_bolus_history, input->mpi_activity,
-          input->mpi_use_sensor_margin, input->mpi_fault,
-          input->mpi_weight_kg});
+    const ValidatedPumpDeliveryTraceCase::MmolPrecisionInput &input) {
+  return PrecisionInput{
+      input.mpi_carbs_g,
+      Mg_dL{mmol_tenths_to_mg_dL(input.mpi_current_bg_mmol_tenths)},
+      input.mpi_now,
+      input.mpi_bolus_history,
+      input.mpi_activity,
+      input.mpi_use_sensor_margin,
+      input.mpi_fault,
+      input.mpi_weight_kg};
 }
 
-std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionResult>
+__attribute__((pure)) ValidatedPumpDeliveryTraceCase::PrecisionResult
 ValidatedPumpDeliveryTraceCase::validated_mmol_bolus(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::MmolPrecisionInput>
-        &input,
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionParams>
-        &params) {
+    const ValidatedPumpDeliveryTraceCase::MmolPrecisionInput &input,
+    const ValidatedPumpDeliveryTraceCase::PrecisionParams &params) {
   return validated_precision_bolus(convert_mmol_input(input), params);
 }
 
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::round_down_to_increment(
-    const unsigned int t, const unsigned int increment) {
+    unsigned int t, const unsigned int &increment) {
   if (increment == 0u) {
     return t;
   } else {
@@ -744,8 +717,7 @@ ValidatedPumpDeliveryTraceCase::round_down_to_increment(
 
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::apply_rounding(
-    const ValidatedPumpDeliveryTraceCase::RoundingMode mode,
-    const unsigned int t) {
+    const ValidatedPumpDeliveryTraceCase::RoundingMode mode, unsigned int t) {
   switch (mode) {
   case RoundingMode::e_ROUNDTWENTIETH: {
     return t;
@@ -768,14 +740,13 @@ __attribute__((pure))
 std::optional<ValidatedPumpDeliveryTraceCase::Insulin_twentieth>
 ValidatedPumpDeliveryTraceCase::final_delivery(
     const ValidatedPumpDeliveryTraceCase::RoundingMode mode,
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionResult>
-        &result) {
+    const ValidatedPumpDeliveryTraceCase::PrecisionResult &result) {
   if (std::holds_alternative<
           typename ValidatedPumpDeliveryTraceCase::PrecisionResult::PrecOK>(
-          result->v())) {
+          result.v())) {
     const auto &[d_a0, d_a1] = std::get<
         typename ValidatedPumpDeliveryTraceCase::PrecisionResult::PrecOK>(
-        result->v());
+        result.v());
     return std::make_optional<unsigned int>(apply_rounding(mode, d_a0));
   } else {
     return std::optional<unsigned int>();
@@ -783,23 +754,23 @@ ValidatedPumpDeliveryTraceCase::final_delivery(
 }
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::pump_can_deliver(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PumpState> &state,
-    const unsigned int dose) {
-  return (((!(state->ps_occlusion_detected) &&
-            dose <= state->ps_reservoir_twentieths) &&
+    const ValidatedPumpDeliveryTraceCase::PumpState &state,
+    const unsigned int &dose) {
+  return (((!(state.ps_occlusion_detected) &&
+            dose <= state.ps_reservoir_twentieths) &&
            dose <= 500u) &&
-          5u <= state->ps_battery_percent);
+          5u <= state.ps_battery_percent);
 }
 
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::reservoir_after_bolus(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PumpState> &state,
-    const unsigned int dose) {
-  if (dose <= state->ps_reservoir_twentieths) {
-    return (((state->ps_reservoir_twentieths - dose) >
-                     state->ps_reservoir_twentieths
-                 ? 0
-                 : (state->ps_reservoir_twentieths - dose)));
+    const ValidatedPumpDeliveryTraceCase::PumpState &state,
+    const unsigned int &dose) {
+  if (dose <= state.ps_reservoir_twentieths) {
+    return (
+        ((state.ps_reservoir_twentieths - dose) > state.ps_reservoir_twentieths
+             ? 0
+             : (state.ps_reservoir_twentieths - dose)));
   } else {
     return 0u;
   }
@@ -807,7 +778,7 @@ ValidatedPumpDeliveryTraceCase::reservoir_after_bolus(
 
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::option_nat_default(
-    const std::optional<unsigned int> x, const unsigned int d) {
+    const std::optional<unsigned int> &x, unsigned int d) {
   if (x.has_value()) {
     const unsigned int &v = *x;
     return v;
@@ -817,9 +788,9 @@ ValidatedPumpDeliveryTraceCase::option_nat_default(
 }
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::pump_accepts_result(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PumpState> &pump,
+    const ValidatedPumpDeliveryTraceCase::PumpState &pump,
     const ValidatedPumpDeliveryTraceCase::RoundingMode mode,
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionResult> &r) {
+    const ValidatedPumpDeliveryTraceCase::PrecisionResult &r) {
   auto _cs = final_delivery(mode, r);
   if (_cs.has_value()) {
     const unsigned int &dose = *_cs;
@@ -831,20 +802,20 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::pump_accepts_result(
 
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::pump_reservoir_after_result(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PumpState> &pump,
+    const ValidatedPumpDeliveryTraceCase::PumpState &pump,
     const ValidatedPumpDeliveryTraceCase::RoundingMode mode,
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionResult> &r) {
+    const ValidatedPumpDeliveryTraceCase::PrecisionResult &r) {
   auto _cs = final_delivery(mode, r);
   if (_cs.has_value()) {
     const unsigned int &dose = *_cs;
     return reservoir_after_bolus(pump, dose);
   } else {
-    return pump->ps_reservoir_twentieths;
+    return pump.ps_reservoir_twentieths;
   }
 }
 
-__attribute__((pure)) unsigned int Nat::tail_add(const unsigned int n,
-                                                 const unsigned int m) {
+__attribute__((pure)) unsigned int Nat::tail_add(const unsigned int &n,
+                                                 unsigned int m) {
   if (n <= 0) {
     return m;
   } else {
@@ -853,9 +824,8 @@ __attribute__((pure)) unsigned int Nat::tail_add(const unsigned int n,
   }
 }
 
-__attribute__((pure)) unsigned int Nat::tail_addmul(const unsigned int r,
-                                                    const unsigned int n,
-                                                    const unsigned int m) {
+__attribute__((pure)) unsigned int
+Nat::tail_addmul(unsigned int r, const unsigned int &n, const unsigned int &m) {
   if (n <= 0) {
     return r;
   } else {
@@ -864,143 +834,142 @@ __attribute__((pure)) unsigned int Nat::tail_addmul(const unsigned int r,
   }
 }
 
-__attribute__((pure)) unsigned int Nat::tail_mul(const unsigned int n,
-                                                 const unsigned int m) {
+__attribute__((pure)) unsigned int Nat::tail_mul(const unsigned int &n,
+                                                 const unsigned int &m) {
   return Nat::tail_addmul(0u, n, m);
 }
 
-__attribute__((pure)) unsigned int
-Nat::of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc) {
-  if (std::holds_alternative<typename Uint::Nil>(d->v())) {
+__attribute__((pure)) unsigned int Nat::of_uint_acc(const Uint &d,
+                                                    unsigned int acc) {
+  if (std::holds_alternative<typename Uint::Nil>(d.v())) {
     return acc;
-  } else if (std::holds_alternative<typename Uint::D0>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint::D0>(d->v());
-    return Nat::of_uint_acc(d_a0, Nat::tail_mul(10u, acc));
-  } else if (std::holds_alternative<typename Uint::D1>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint::D1>(d->v());
-    return Nat::of_uint_acc(d_a0, (Nat::tail_mul(10u, acc) + 1));
-  } else if (std::holds_alternative<typename Uint::D2>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint::D2>(d->v());
-    return Nat::of_uint_acc(d_a0, ((Nat::tail_mul(10u, acc) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint::D3>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint::D3>(d->v());
-    return Nat::of_uint_acc(d_a0, (((Nat::tail_mul(10u, acc) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint::D4>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint::D4>(d->v());
-    return Nat::of_uint_acc(d_a0,
+  } else if (std::holds_alternative<typename Uint::D0>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint::D0>(d.v());
+    return Nat::of_uint_acc(*(d_a0), Nat::tail_mul(10u, acc));
+  } else if (std::holds_alternative<typename Uint::D1>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint::D1>(d.v());
+    return Nat::of_uint_acc(*(d_a0), (Nat::tail_mul(10u, acc) + 1));
+  } else if (std::holds_alternative<typename Uint::D2>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint::D2>(d.v());
+    return Nat::of_uint_acc(*(d_a0), ((Nat::tail_mul(10u, acc) + 1) + 1));
+  } else if (std::holds_alternative<typename Uint::D3>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint::D3>(d.v());
+    return Nat::of_uint_acc(*(d_a0), (((Nat::tail_mul(10u, acc) + 1) + 1) + 1));
+  } else if (std::holds_alternative<typename Uint::D4>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint::D4>(d.v());
+    return Nat::of_uint_acc(*(d_a0),
                             ((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint::D5>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint::D5>(d->v());
+  } else if (std::holds_alternative<typename Uint::D5>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint::D5>(d.v());
     return Nat::of_uint_acc(
-        d_a0, (((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint::D6>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint::D6>(d->v());
+        *(d_a0), (((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1));
+  } else if (std::holds_alternative<typename Uint::D6>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint::D6>(d.v());
     return Nat::of_uint_acc(
-        d_a0, ((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint::D7>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint::D7>(d->v());
+        *(d_a0), ((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
+  } else if (std::holds_alternative<typename Uint::D7>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint::D7>(d.v());
     return Nat::of_uint_acc(
-        d_a0,
+        *(d_a0),
         (((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint::D8>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint::D8>(d->v());
+  } else if (std::holds_alternative<typename Uint::D8>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint::D8>(d.v());
     return Nat::of_uint_acc(
-        d_a0,
+        *(d_a0),
         ((((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
          1));
   } else {
-    const auto &[d_a0] = std::get<typename Uint::D9>(d->v());
+    const auto &[d_a0] = std::get<typename Uint::D9>(d.v());
     return Nat::of_uint_acc(
-        d_a0,
+        *(d_a0),
         (((((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
           1) +
          1));
   }
 }
 
-__attribute__((pure)) unsigned int
-Nat::of_uint(const std::shared_ptr<Uint> &d) {
+__attribute__((pure)) unsigned int Nat::of_uint(const Uint &d) {
   return Nat::of_uint_acc(d, 0u);
 }
 
-__attribute__((pure)) unsigned int
-Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
-  if (std::holds_alternative<typename Uint0::Nil0>(d->v())) {
+__attribute__((pure)) unsigned int Nat::of_hex_uint_acc(const Uint0 &d,
+                                                        unsigned int acc) {
+  if (std::holds_alternative<typename Uint0::Nil0>(d.v())) {
     return acc;
-  } else if (std::holds_alternative<typename Uint0::D10>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D10>(d->v());
-    return Nat::of_hex_uint_acc(d_a0, Nat::tail_mul(16u, acc));
-  } else if (std::holds_alternative<typename Uint0::D11>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D11>(d->v());
-    return Nat::of_hex_uint_acc(d_a0, (Nat::tail_mul(16u, acc) + 1));
-  } else if (std::holds_alternative<typename Uint0::D12>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D12>(d->v());
-    return Nat::of_hex_uint_acc(d_a0, ((Nat::tail_mul(16u, acc) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint0::D13>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D13>(d->v());
-    return Nat::of_hex_uint_acc(d_a0,
+  } else if (std::holds_alternative<typename Uint0::D10>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint0::D10>(d.v());
+    return Nat::of_hex_uint_acc(*(d_a0), Nat::tail_mul(16u, acc));
+  } else if (std::holds_alternative<typename Uint0::D11>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint0::D11>(d.v());
+    return Nat::of_hex_uint_acc(*(d_a0), (Nat::tail_mul(16u, acc) + 1));
+  } else if (std::holds_alternative<typename Uint0::D12>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint0::D12>(d.v());
+    return Nat::of_hex_uint_acc(*(d_a0), ((Nat::tail_mul(16u, acc) + 1) + 1));
+  } else if (std::holds_alternative<typename Uint0::D13>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint0::D13>(d.v());
+    return Nat::of_hex_uint_acc(*(d_a0),
                                 (((Nat::tail_mul(16u, acc) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint0::D14>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D14>(d->v());
+  } else if (std::holds_alternative<typename Uint0::D14>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint0::D14>(d.v());
     return Nat::of_hex_uint_acc(
-        d_a0, ((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint0::D15>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D15>(d->v());
+        *(d_a0), ((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1));
+  } else if (std::holds_alternative<typename Uint0::D15>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint0::D15>(d.v());
     return Nat::of_hex_uint_acc(
-        d_a0, (((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint0::D16>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D16>(d->v());
+        *(d_a0), (((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1));
+  } else if (std::holds_alternative<typename Uint0::D16>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint0::D16>(d.v());
     return Nat::of_hex_uint_acc(
-        d_a0, ((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint0::D17>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D17>(d->v());
+        *(d_a0), ((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
+  } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint0::D17>(d.v());
     return Nat::of_hex_uint_acc(
-        d_a0,
+        *(d_a0),
         (((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint0::D18>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D18>(d->v());
+  } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint0::D18>(d.v());
     return Nat::of_hex_uint_acc(
-        d_a0,
+        *(d_a0),
         ((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
          1));
-  } else if (std::holds_alternative<typename Uint0::D19>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D19>(d->v());
+  } else if (std::holds_alternative<typename Uint0::D19>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint0::D19>(d.v());
     return Nat::of_hex_uint_acc(
-        d_a0,
+        *(d_a0),
         (((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
           1) +
          1));
-  } else if (std::holds_alternative<typename Uint0::Da>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint0::Da>(d->v());
+  } else if (std::holds_alternative<typename Uint0::Da>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint0::Da>(d.v());
     return Nat::of_hex_uint_acc(
-        d_a0,
+        *(d_a0),
         ((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
            1) +
           1) +
          1));
-  } else if (std::holds_alternative<typename Uint0::Db>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint0::Db>(d->v());
+  } else if (std::holds_alternative<typename Uint0::Db>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint0::Db>(d.v());
     return Nat::of_hex_uint_acc(
-        d_a0,
+        *(d_a0),
         (((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
             1) +
            1) +
           1) +
          1));
-  } else if (std::holds_alternative<typename Uint0::Dc>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint0::Dc>(d->v());
+  } else if (std::holds_alternative<typename Uint0::Dc>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint0::Dc>(d.v());
     return Nat::of_hex_uint_acc(
-        d_a0,
+        *(d_a0),
         ((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
              1) +
             1) +
            1) +
           1) +
          1));
-  } else if (std::holds_alternative<typename Uint0::Dd>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint0::Dd>(d->v());
+  } else if (std::holds_alternative<typename Uint0::Dd>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint0::Dd>(d.v());
     return Nat::of_hex_uint_acc(
-        d_a0,
+        *(d_a0),
         (((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                1) +
               1) +
@@ -1009,10 +978,10 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
            1) +
           1) +
          1));
-  } else if (std::holds_alternative<typename Uint0::De>(d->v())) {
-    const auto &[d_a0] = std::get<typename Uint0::De>(d->v());
+  } else if (std::holds_alternative<typename Uint0::De>(d.v())) {
+    const auto &[d_a0] = std::get<typename Uint0::De>(d.v());
     return Nat::of_hex_uint_acc(
-        d_a0,
+        *(d_a0),
         ((((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                 1) +
                1) +
@@ -1023,9 +992,9 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
           1) +
          1));
   } else {
-    const auto &[d_a0] = std::get<typename Uint0::Df>(d->v());
+    const auto &[d_a0] = std::get<typename Uint0::Df>(d.v());
     return Nat::of_hex_uint_acc(
-        d_a0,
+        *(d_a0),
         (((((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                  1) +
                 1) +
@@ -1039,18 +1008,16 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
   }
 }
 
-__attribute__((pure)) unsigned int
-Nat::of_hex_uint(const std::shared_ptr<Uint0> &d) {
+__attribute__((pure)) unsigned int Nat::of_hex_uint(const Uint0 &d) {
   return Nat::of_hex_uint_acc(d, 0u);
 }
 
-__attribute__((pure)) unsigned int
-Nat::of_num_uint(const std::shared_ptr<Uint1> &d) {
-  if (std::holds_alternative<typename Uint1::UIntDecimal>(d->v())) {
-    const auto &[d_u] = std::get<typename Uint1::UIntDecimal>(d->v());
+__attribute__((pure)) unsigned int Nat::of_num_uint(const Uint1 &d) {
+  if (std::holds_alternative<typename Uint1::UIntDecimal>(d.v())) {
+    const auto &[d_u] = std::get<typename Uint1::UIntDecimal>(d.v());
     return Nat::of_uint(d_u);
   } else {
-    const auto &[d_u] = std::get<typename Uint1::UIntHexadecimal>(d->v());
+    const auto &[d_u] = std::get<typename Uint1::UIntHexadecimal>(d.v());
     return Nat::of_hex_uint(d_u);
   }
 }

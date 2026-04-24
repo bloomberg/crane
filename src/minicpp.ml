@@ -212,6 +212,14 @@ and smatch_branch = {
         printer emits [auto& id = std::get<smb_ctor_type>(scrut->v_mut())]
         before the body.  The condition is typically [use_count() == 1].
         [None] for branches without reuse. *)
+  smb_is_value_type : bool;
+    (** When [true], the scrutinee is a value type (not shared_ptr).
+        Affects binding style: value types use [.v()] / [.v_mut()],
+        pointer types use [->v()] / [->v_mut()]. *)
+  smb_is_owned : bool;
+    (** When [true], the scrutinee is owned (last use or explicit move).
+        Affects binding: owned value types use [auto [...] = std::move(std::get<T>(scrut.v_mut()))],
+        borrowed value types use [const auto& [...] = std::get<T>(scrut.v())]. *)
   smb_body : cpp_stmt list;
     (** Branch body statements.  When {!smb_field_bindings} is non-empty,
         field accesses use direct [CPPvar binding_name] references. *)
@@ -329,7 +337,9 @@ and method_field = {
 (** C++ type schema. The integer is the number of variables in the schema. *)
 type cpp_schema = int * cpp_type
 
-(** Construct a shared_ptr type wrapping an inductive type. *)
+(** Construct a shared_ptr type wrapping an inductive type (for recursive
+    self-references in constructor fields). Using shared_ptr keeps the value type
+    copyable; unique_ptr would require clone() generation. *)
 let ind_ty_ptr id vars = Tshared_ptr (Tglob (id, vars, []))
 
 (** Rvalue reference type [T&&].  Uses the double-{!Tref} encoding that the
@@ -484,6 +494,8 @@ let map_stmt
               smb_reuse =
                 Option.map (fun (cond, rf, stmts) ->
                   (fe cond, rf, List.map fs stmts)) br.smb_reuse;
+              smb_is_value_type = br.smb_is_value_type;
+              smb_is_owned = br.smb_is_owned;
               smb_body = List.map fs br.smb_body })
           branches,
         Option.map (List.map fs) default )

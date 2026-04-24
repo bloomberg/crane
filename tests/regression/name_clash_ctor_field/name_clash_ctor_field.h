@@ -1,13 +1,134 @@
 #ifndef INCLUDED_NAME_CLASH_CTOR_FIELD
 #define INCLUDED_NAME_CLASH_CTOR_FIELD
 
-#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
 template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+concept MapsTo = std::is_invocable_v<F &, Args &...>;
+
+template <typename T> struct is_unique_ptr : std::false_type {};
+
+template <typename T>
+struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
+  using element_type = T;
+};
+
+template <typename T> auto clone_value(const T &x) { return x; }
+
+template <typename T>
+std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
+  return x ? std::make_unique<T>(x->clone()) : nullptr;
+}
+
+template <typename T>
+std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
+  return x ? std::make_shared<T>(x->clone()) : nullptr;
+}
+
+template <typename Target, typename Source>
+Target clone_as_value(const Source &x) {
+  using TargetBare = std::remove_cvref_t<Target>;
+  using SourceBare = std::remove_cvref_t<Source>;
+  if constexpr (is_unique_ptr<TargetBare>::value) {
+    using Inner = typename is_unique_ptr<TargetBare>::element_type;
+    if constexpr (is_unique_ptr<SourceBare>::value) {
+      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires {
+                             typename Inner::crane_element_type;
+                             x->template clone_as<
+                                 typename Inner::crane_element_type>();
+                           }) {
+        return std::make_unique<Inner>(
+            x->template clone_as<typename Inner::crane_element_type>());
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_unique<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_unique<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_unique<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (is_shared_ptr<TargetBare>::value) {
+    using Inner = typename is_shared_ptr<TargetBare>::element_type;
+    if constexpr (is_shared_ptr<SourceBare>::value) {
+      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+      if (!x)
+        return nullptr;
+      if constexpr (std::is_same_v<Inner, SourceInner>) {
+        return clone_value(x);
+      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else if constexpr (is_unique_ptr<SourceBare>::value) {
+      if (!x)
+        return nullptr;
+      if constexpr (requires { x->template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x->template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x->clone());
+      }
+    } else {
+      if constexpr (std::is_same_v<Inner, SourceBare>) {
+        return std::make_shared<Inner>(x.clone());
+      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
+        return std::make_shared<Inner>(x.template clone_as<Inner>());
+      } else {
+        return std::make_shared<Inner>(x.clone());
+      }
+    }
+  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
+    return clone_value(x);
+  } else if constexpr (is_unique_ptr<SourceBare>::value) {
+    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (is_shared_ptr<SourceBare>::value) {
+    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
+    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
+      return x ? x->clone() : Target{};
+    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
+      return x->template clone_as<TargetBare>();
+    } else {
+      return Target(*x);
+    }
+  } else if constexpr (requires {
+                         typename TargetBare::crane_element_type;
+                         x.template clone_as<
+                             typename TargetBare::crane_element_type>();
+                       }) {
+    return x.template clone_as<typename TargetBare::crane_element_type>();
+  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
+    return x.template clone_as<TargetBare>();
+  } else {
+    return Target(x);
+  }
+}
 
 struct NameClashCtorField {
   /// Fields named like structured binding names: d_a0, d_a1
@@ -26,32 +147,75 @@ struct NameClashCtorField {
 
   public:
     // CREATORS
+    clash1() {}
+
     explicit clash1(C1 _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<clash1> c1(unsigned int d_a0, unsigned int d_a1) {
-      return std::make_shared<clash1>(C1{std::move(d_a0), std::move(d_a1)});
+    clash1(const clash1 &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    clash1(clash1 &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) clash1 &operator=(const clash1 &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
+    }
+
+    __attribute__((pure)) clash1 &operator=(clash1 &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) clash1 clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_d_a0, d_d_a1] = std::get<C1>(_sv.v());
+      return clash1(C1{clone_as_value<unsigned int>(d_d_a0),
+                       clone_as_value<unsigned int>(d_d_a1)});
+    }
+
+    // CREATORS
+    __attribute__((pure)) static clash1 c1(unsigned int d_a0,
+                                           unsigned int d_a1) {
+      return clash1(C1{std::move(d_a0), std::move(d_a1)});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) clash1 *operator->() { return this; }
+
+    __attribute__((pure)) const clash1 *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = clash1(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int sum_clash1() const {
-      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(this->v());
+      auto &&_sv = *(this);
+      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(_sv.v());
       return (d_d_a0 + d_d_a1);
     }
 
     template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
     T1 clash1_rec(F0 &&f) const {
-      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(this->v());
+      auto &&_sv = *(this);
+      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(_sv.v());
       return f(d_d_a0, d_d_a1);
     }
 
     template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
     T1 clash1_rect(F0 &&f) const {
-      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(this->v());
+      auto &&_sv = *(this);
+      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(_sv.v());
       return f(d_d_a0, d_d_a1);
     }
   };
@@ -75,30 +239,74 @@ struct NameClashCtorField {
 
   public:
     // CREATORS
+    clash2() {}
+
     explicit clash2(C2a _v) : d_v_(std::move(_v)) {}
 
     explicit clash2(C2b _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<clash2> c2a(unsigned int v) {
-      return std::make_shared<clash2>(C2a{std::move(v)});
+    clash2(const clash2 &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    clash2(clash2 &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) clash2 &operator=(const clash2 &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<clash2> c2b(unsigned int result) {
-      return std::make_shared<clash2>(C2b{std::move(result)});
+    __attribute__((pure)) clash2 &operator=(clash2 &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) clash2 clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<C2a>(_sv.v())) {
+        const auto &[d_v] = std::get<C2a>(_sv.v());
+        return clash2(C2a{clone_as_value<unsigned int>(d_v)});
+      } else {
+        const auto &[d_result] = std::get<C2b>(_sv.v());
+        return clash2(C2b{clone_as_value<unsigned int>(d_result)});
+      }
+    }
+
+    // CREATORS
+    __attribute__((pure)) static clash2 c2a(unsigned int v) {
+      return clash2(C2a{std::move(v)});
+    }
+
+    __attribute__((pure)) static clash2 c2b(unsigned int result) {
+      return clash2(C2b{std::move(result)});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) clash2 *operator->() { return this; }
+
+    __attribute__((pure)) const clash2 *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = clash2(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int get_clash2() const {
-      if (std::holds_alternative<typename clash2::C2a>(this->v())) {
-        const auto &[d_v] = std::get<typename clash2::C2a>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename clash2::C2a>(_sv.v())) {
+        const auto &[d_v] = std::get<typename clash2::C2a>(_sv.v());
         return d_v;
       } else {
-        const auto &[d_result] = std::get<typename clash2::C2b>(this->v());
+        const auto &[d_result] = std::get<typename clash2::C2b>(_sv.v());
         return d_result;
       }
     }
@@ -106,11 +314,12 @@ struct NameClashCtorField {
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int> F1>
     T1 clash2_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename clash2::C2a>(this->v())) {
-        const auto &[d_v] = std::get<typename clash2::C2a>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename clash2::C2a>(_sv.v())) {
+        const auto &[d_v] = std::get<typename clash2::C2a>(_sv.v());
         return f(d_v);
       } else {
-        const auto &[d_result] = std::get<typename clash2::C2b>(this->v());
+        const auto &[d_result] = std::get<typename clash2::C2b>(_sv.v());
         return f0(d_result);
       }
     }
@@ -118,11 +327,12 @@ struct NameClashCtorField {
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int> F1>
     T1 clash2_rect(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename clash2::C2a>(this->v())) {
-        const auto &[d_v] = std::get<typename clash2::C2a>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename clash2::C2a>(_sv.v())) {
+        const auto &[d_v] = std::get<typename clash2::C2a>(_sv.v());
         return f(d_v);
       } else {
-        const auto &[d_result] = std::get<typename clash2::C2b>(this->v());
+        const auto &[d_result] = std::get<typename clash2::C2b>(_sv.v());
         return f0(d_result);
       }
     }
@@ -144,32 +354,75 @@ struct NameClashCtorField {
 
   public:
     // CREATORS
+    pair_ind() {}
+
     explicit pair_ind(MkPair _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<pair_ind> mkpair(unsigned int a0, unsigned int a1) {
-      return std::make_shared<pair_ind>(MkPair{std::move(a0), std::move(a1)});
+    pair_ind(const pair_ind &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    pair_ind(pair_ind &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) pair_ind &operator=(const pair_ind &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
+    }
+
+    __attribute__((pure)) pair_ind &operator=(pair_ind &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) pair_ind clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0, d_a1] = std::get<MkPair>(_sv.v());
+      return pair_ind(MkPair{clone_as_value<unsigned int>(d_a0),
+                             clone_as_value<unsigned int>(d_a1)});
+    }
+
+    // CREATORS
+    __attribute__((pure)) static pair_ind mkpair(unsigned int a0,
+                                                 unsigned int a1) {
+      return pair_ind(MkPair{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) pair_ind *operator->() { return this; }
+
+    __attribute__((pure)) const pair_ind *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = pair_ind(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-    std::shared_ptr<pair_ind> swap_pair() const {
-      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(this->v());
+    __attribute__((pure)) pair_ind swap_pair() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(_sv.v());
       return pair_ind::mkpair(d_a1, d_a0);
     }
 
     template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
     T1 pair_ind_rec(F0 &&f) const {
-      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(this->v());
+      auto &&_sv = *(this);
+      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(_sv.v());
       return f(d_a0, d_a1);
     }
 
     template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
     T1 pair_ind_rect(F0 &&f) const {
-      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(this->v());
+      auto &&_sv = *(this);
+      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(_sv.v());
       return f(d_a0, d_a1);
     }
   };
@@ -178,7 +431,7 @@ struct NameClashCtorField {
   struct box {
     // TYPES
     struct Box0 {
-      std::shared_ptr<pair_ind> d_a0;
+      pair_ind d_a0;
     };
 
     struct EmptyBox {};
@@ -191,33 +444,68 @@ struct NameClashCtorField {
 
   public:
     // CREATORS
+    box() {}
+
     explicit box(Box0 _v) : d_v_(std::move(_v)) {}
 
     explicit box(EmptyBox _v) : d_v_(_v) {}
 
-    static std::shared_ptr<box> box0(const std::shared_ptr<pair_ind> &a0) {
-      return std::make_shared<box>(Box0{a0});
+    box(const box &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    box(box &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    __attribute__((pure)) box &operator=(const box &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<box> box0(std::shared_ptr<pair_ind> &&a0) {
-      return std::make_shared<box>(Box0{std::move(a0)});
+    __attribute__((pure)) box &operator=(box &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<box> emptybox() {
-      return std::make_shared<box>(EmptyBox{});
+    // ACCESSORS
+    __attribute__((pure)) box clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Box0>(_sv.v())) {
+        const auto &[d_a0] = std::get<Box0>(_sv.v());
+        return box(Box0{clone_as_value<pair_ind>(d_a0)});
+      } else {
+        return box(EmptyBox{});
+      }
     }
+
+    // CREATORS
+    constexpr static box box0(pair_ind a0) { return box(Box0{std::move(a0)}); }
+
+    constexpr static box emptybox() { return box(EmptyBox{}); }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
+    __attribute__((pure)) box *operator->() { return this; }
+
+    __attribute__((pure)) const box *operator->() const { return this; }
+
+    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
+
+    __attribute__((pure)) bool operator==(std::nullptr_t) const {
+      return false;
+    }
+
+    // MANIPULATORS
+    void reset() { *this = box(); }
+
+    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int unbox_sum() const {
-      if (std::holds_alternative<typename box::Box0>(this->v())) {
-        const auto &[d_a0] = std::get<typename box::Box0>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename box::Box0>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename box::Box0>(_sv.v());
         const auto &[d_a00, d_a10] =
-            std::get<typename pair_ind::MkPair>(d_a0->v());
+            std::get<typename pair_ind::MkPair>(d_a0.v());
         return (d_a00 + d_a10);
       } else {
         return 0u;
@@ -225,20 +513,20 @@ struct NameClashCtorField {
     }
   };
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<pair_ind>> F0>
-  static T1 box_rect(F0 &&f, const T1 f0, const std::shared_ptr<box> &b) {
-    if (std::holds_alternative<typename box::Box0>(b->v())) {
-      const auto &[d_a0] = std::get<typename box::Box0>(b->v());
+  template <typename T1, MapsTo<T1, pair_ind> F0>
+  static T1 box_rect(F0 &&f, const T1 f0, const box &b) {
+    if (std::holds_alternative<typename box::Box0>(b.v())) {
+      const auto &[d_a0] = std::get<typename box::Box0>(b.v());
       return f(d_a0);
     } else {
       return f0;
     }
   }
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<pair_ind>> F0>
-  static T1 box_rec(F0 &&f, const T1 f0, const std::shared_ptr<box> &b) {
-    if (std::holds_alternative<typename box::Box0>(b->v())) {
-      const auto &[d_a0] = std::get<typename box::Box0>(b->v());
+  template <typename T1, MapsTo<T1, pair_ind> F0>
+  static T1 box_rec(F0 &&f, const T1 f0, const box &b) {
+    if (std::holds_alternative<typename box::Box0>(b.v())) {
+      const auto &[d_a0] = std::get<typename box::Box0>(b.v());
       return f(d_a0);
     } else {
       return f0;

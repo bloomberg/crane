@@ -35,44 +35,42 @@ void aSsErT(bool condition, const char *message, int line) {
 
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-int nat_to_int(const std::shared_ptr<Nat> &n) {
+int nat_to_int(const Nat &n) {
   return std::visit(
       Overloaded{[](const Nat::O) -> int { return 0; },
-                 [](const Nat::S s) -> int { return 1 + nat_to_int(s.d_a0); }},
-      n->v());
+                 [](const Nat::S &s) -> int { return 1 + nat_to_int(*s.d_a0); }},
+      n.v());
 }
 
 template <typename A>
-std::vector<A> list_to_vec(const std::shared_ptr<List<A>> &l) {
+std::vector<A> list_to_vec(const List<A> &l) {
   std::vector<A> result;
-  auto cur = l;
+  const List<A> *current = &l;
   while (true) {
-    bool done = std::visit(
-        Overloaded{[&](const typename List<A>::Nil) -> bool { return true; },
-                   [&](const typename List<A>::Cons c) -> bool {
-                     result.push_back(c.d_a0);
-                     cur = c.d_a1;
-                     return false;
-                   }},
-        cur->v());
-    if (done)
+    if (std::holds_alternative<typename List<A>::Nil>(current->v())) {
       break;
+    }
+    const auto &[head, tail] = std::get<typename List<A>::Cons>(current->v());
+    result.push_back(head);
+    current = tail.get();
   }
   return result;
 }
 
-std::shared_ptr<Nat> int_to_nat(int x) {
-  if (x <= 0)
-    return Nat::o();
-  return Nat::s(int_to_nat(x - 1));
+Nat int_to_nat(int x) {
+  Nat result = Nat::o();
+  for (int i = 0; i < x; i++) {
+    result = Nat::s(std::move(result));
+  }
+  return result;
 }
 
-using NatColist = Colist<std::shared_ptr<Nat>>;
+using NatColist = Colist<Nat>;
 
 int main() {
   // Test 1: first_three should be [0, 1, 2]
   auto ft = NatColist::first_three();
-  auto vec = list_to_vec<std::shared_ptr<Nat>>(ft);
+  auto vec = list_to_vec<Nat>(ft);
   ASSERT(vec.size() == 3);
   ASSERT(nat_to_int(vec[0]) == 0);
   ASSERT(nat_to_int(vec[1]) == 1);
@@ -82,7 +80,7 @@ int main() {
   auto stream = NatColist::nats(Nat::o());
   // Converting 5 elements should work without stack overflow
   auto five = NatColist::list_of_colist(int_to_nat(5), stream);
-  auto vec5 = list_to_vec<std::shared_ptr<Nat>>(five);
+  auto vec5 = list_to_vec<Nat>(five);
   ASSERT(vec5.size() == 5);
   ASSERT(nat_to_int(vec5[0]) == 0);
   ASSERT(nat_to_int(vec5[1]) == 1);
@@ -93,7 +91,7 @@ int main() {
   // Test 3: nats starting from a non-zero value
   auto stream5 = NatColist::nats(int_to_nat(5));
   auto three = NatColist::list_of_colist(int_to_nat(3), stream5);
-  auto vec3 = list_to_vec<std::shared_ptr<Nat>>(three);
+  auto vec3 = list_to_vec<Nat>(three);
   ASSERT(vec3.size() == 3);
   ASSERT(nat_to_int(vec3[0]) == 5);
   ASSERT(nat_to_int(vec3[1]) == 6);

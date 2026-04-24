@@ -3,4 +3,4 @@
 #include <concepts>
 #include <type_traits>
 
-__attribute__((pure)) unsigned int N::to_nat(const unsigned int n) { return n; }
+__attribute__((pure)) unsigned int N::to_nat(unsigned int n) { return n; }
