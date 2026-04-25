@@ -32,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -347,10 +351,10 @@ struct RecordErasedProofFieldsCase {
       auto &&_sv = *(this);
       if (std::holds_alternative<TagPrimary>(_sv.v())) {
         const auto &[d_a0] = std::get<TagPrimary>(_sv.v());
-        return StoredTag(TagPrimary{clone_as_value<ItemKind>(d_a0)});
+        return StoredTag(TagPrimary{d_a0});
       } else {
         const auto &[d_a0] = std::get<TagSecondary>(_sv.v());
-        return StoredTag(TagSecondary{clone_as_value<ItemKind>(d_a0)});
+        return StoredTag(TagSecondary{d_a0});
       }
     }
 

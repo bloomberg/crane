@@ -1,5 +1,6 @@
 #include <wrapper_decl_merge.h>
 
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) unsigned int

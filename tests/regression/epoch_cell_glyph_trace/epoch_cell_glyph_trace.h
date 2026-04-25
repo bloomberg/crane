@@ -32,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -356,10 +360,10 @@ public:
       return Z(Z0{});
     } else if (std::holds_alternative<Zpos>(_sv.v())) {
       const auto &[d_a0] = std::get<Zpos>(_sv.v());
-      return Z(Zpos{clone_as_value<Positive>(d_a0)});
+      return Z(Zpos{d_a0});
     } else {
       const auto &[d_a0] = std::get<Zneg>(_sv.v());
-      return Z(Zneg{clone_as_value<Positive>(d_a0)});
+      return Z(Zneg{d_a0});
     }
   }
 

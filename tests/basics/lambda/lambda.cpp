@@ -1,5 +1,6 @@
 #include <lambda.h>
 
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) unsigned int Lambda::simple_lambda(unsigned int x) {

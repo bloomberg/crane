@@ -1,5 +1,6 @@
 #include <use_after_move.h>
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 

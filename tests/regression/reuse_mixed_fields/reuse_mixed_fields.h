@@ -1,6 +1,7 @@
 #ifndef INCLUDED_REUSE_MIXED_FIELDS
 #define INCLUDED_REUSE_MIXED_FIELDS
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -31,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -177,12 +182,10 @@ struct ReuseMixedFields {
       auto &&_sv = *(this);
       if (std::holds_alternative<AsNat>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<AsNat>(_sv.v());
-        return payload(AsNat{clone_as_value<unsigned int>(d_a0),
-                             clone_as_value<unsigned int>(d_a1)});
+        return payload(AsNat{d_a0, d_a1});
       } else {
         const auto &[d_a0, d_a1] = std::get<AsPair>(_sv.v());
-        return payload(AsPair{clone_as_value<unsigned int>(d_a0),
-                              clone_as_value<unsigned int>(d_a1)});
+        return payload(AsPair{d_a0, d_a1});
       }
     }
 

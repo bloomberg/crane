@@ -34,7 +34,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -184,8 +188,8 @@ struct SimpleLambdaFieldCapture {
         return mylist(Mynil{});
       } else {
         const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
-        return mylist(Mycons{clone_as_value<unsigned int>(d_a0),
-                             clone_as_value<std::unique_ptr<mylist>>(d_a1)});
+        return mylist(
+            Mycons{d_a0, clone_as_value<std::unique_ptr<mylist>>(d_a1)});
       }
     }
 
@@ -228,7 +232,8 @@ struct SimpleLambdaFieldCapture {
         return std::optional<std::function<unsigned int(unsigned int)>>();
       } else {
         const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
-        mylist d_a1_value = clone_as_value<mylist>(d_a1);
+        mylist d_a1_value =
+            clone_as_value<SimpleLambdaFieldCapture::mylist>(d_a1);
         return std::make_optional<std::function<unsigned int(unsigned int)>>(
             [=](const unsigned int &x) mutable {
               return ((x + d_a0) + d_a1_value.mylist_sum());
@@ -246,8 +251,7 @@ struct SimpleLambdaFieldCapture {
       }
     }
 
-    template <typename T1,
-              MapsTo<T1, unsigned int, std::unique_ptr<mylist>, T1> F1>
+    template <typename T1, MapsTo<T1, unsigned int, mylist, T1> F1>
     T1 mylist_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
@@ -258,8 +262,7 @@ struct SimpleLambdaFieldCapture {
       }
     }
 
-    template <typename T1,
-              MapsTo<T1, unsigned int, std::unique_ptr<mylist>, T1> F1>
+    template <typename T1, MapsTo<T1, unsigned int, mylist, T1> F1>
     T1 mylist_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
@@ -308,7 +311,7 @@ struct SimpleLambdaFieldCapture {
     __attribute__((pure)) tag clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<MkTag>(_sv.v());
-      return tag(MkTag{clone_as_value<unsigned int>(d_a0)});
+      return tag(MkTag{d_a0});
     }
 
     // CREATORS

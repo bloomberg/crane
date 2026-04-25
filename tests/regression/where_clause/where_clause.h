@@ -32,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -183,7 +187,7 @@ struct WhereClause {
       auto &&_sv = *(this);
       if (std::holds_alternative<Num>(_sv.v())) {
         const auto &[d_a0] = std::get<Num>(_sv.v());
-        return Expr(Num{clone_as_value<unsigned int>(d_a0)});
+        return Expr(Num{d_a0});
       } else if (std::holds_alternative<Plus>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<Plus>(_sv.v());
         return Expr(Plus{clone_as_value<std::unique_ptr<Expr>>(d_a0),
@@ -257,10 +261,9 @@ struct WhereClause {
       }
     }
 
-    template <
-        typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, std::unique_ptr<Expr>, T1, std::unique_ptr<Expr>, T1> F1,
-        MapsTo<T1, std::unique_ptr<Expr>, T1, std::unique_ptr<Expr>, T1> F2>
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, Expr, T1, Expr, T1> F1,
+              MapsTo<T1, Expr, T1, Expr, T1> F2>
     T1 Expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Expr::Num>(_sv.v())) {
@@ -277,10 +280,9 @@ struct WhereClause {
       }
     }
 
-    template <
-        typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, std::unique_ptr<Expr>, T1, std::unique_ptr<Expr>, T1> F1,
-        MapsTo<T1, std::unique_ptr<Expr>, T1, std::unique_ptr<Expr>, T1> F2>
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, Expr, T1, Expr, T1> F1,
+              MapsTo<T1, Expr, T1, Expr, T1> F2>
     T1 Expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Expr::Num>(_sv.v())) {
@@ -430,11 +432,8 @@ struct WhereClause {
       }
     }
 
-    template <
-        typename T1,
-        MapsTo<T1, std::unique_ptr<BExpr>, T1, std::unique_ptr<BExpr>, T1> F2,
-        MapsTo<T1, std::unique_ptr<BExpr>, T1, std::unique_ptr<BExpr>, T1> F3,
-        MapsTo<T1, std::unique_ptr<BExpr>, T1> F4>
+    template <typename T1, MapsTo<T1, BExpr, T1, BExpr, T1> F2,
+              MapsTo<T1, BExpr, T1, BExpr, T1> F3, MapsTo<T1, BExpr, T1> F4>
     T1 BExpr_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename BExpr::BTrue>(_sv.v())) {
@@ -455,11 +454,8 @@ struct WhereClause {
       }
     }
 
-    template <
-        typename T1,
-        MapsTo<T1, std::unique_ptr<BExpr>, T1, std::unique_ptr<BExpr>, T1> F2,
-        MapsTo<T1, std::unique_ptr<BExpr>, T1, std::unique_ptr<BExpr>, T1> F3,
-        MapsTo<T1, std::unique_ptr<BExpr>, T1> F4>
+    template <typename T1, MapsTo<T1, BExpr, T1, BExpr, T1> F2,
+              MapsTo<T1, BExpr, T1, BExpr, T1> F3, MapsTo<T1, BExpr, T1> F4>
     T1 BExpr_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename BExpr::BTrue>(_sv.v())) {
@@ -536,15 +532,14 @@ struct WhereClause {
       auto &&_sv = *(this);
       if (std::holds_alternative<ANum>(_sv.v())) {
         const auto &[d_a0] = std::get<ANum>(_sv.v());
-        return AExpr(ANum{clone_as_value<unsigned int>(d_a0)});
+        return AExpr(ANum{d_a0});
       } else if (std::holds_alternative<APlus>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<APlus>(_sv.v());
         return AExpr(APlus{clone_as_value<std::unique_ptr<AExpr>>(d_a0),
                            clone_as_value<std::unique_ptr<AExpr>>(d_a1)});
       } else {
         const auto &[d_a0, d_a1, d_a2] = std::get<AIf>(_sv.v());
-        return AExpr(AIf{clone_as_value<BExpr>(d_a0),
-                         clone_as_value<std::unique_ptr<AExpr>>(d_a1),
+        return AExpr(AIf{d_a0, clone_as_value<std::unique_ptr<AExpr>>(d_a1),
                          clone_as_value<std::unique_ptr<AExpr>>(d_a2)});
       }
     }
@@ -603,12 +598,9 @@ struct WhereClause {
       }
     }
 
-    template <
-        typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, std::unique_ptr<AExpr>, T1, std::unique_ptr<AExpr>, T1> F1,
-        MapsTo<T1, BExpr, std::unique_ptr<AExpr>, T1, std::unique_ptr<AExpr>,
-               T1>
-            F2>
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, AExpr, T1, AExpr, T1> F1,
+              MapsTo<T1, BExpr, AExpr, T1, AExpr, T1> F2>
     T1 AExpr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename AExpr::ANum>(_sv.v())) {
@@ -625,12 +617,9 @@ struct WhereClause {
       }
     }
 
-    template <
-        typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, std::unique_ptr<AExpr>, T1, std::unique_ptr<AExpr>, T1> F1,
-        MapsTo<T1, BExpr, std::unique_ptr<AExpr>, T1, std::unique_ptr<AExpr>,
-               T1>
-            F2>
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, AExpr, T1, AExpr, T1> F1,
+              MapsTo<T1, BExpr, AExpr, T1, AExpr, T1> F2>
     T1 AExpr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename AExpr::ANum>(_sv.v())) {

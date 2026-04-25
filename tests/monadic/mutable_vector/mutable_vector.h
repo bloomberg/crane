@@ -2,6 +2,7 @@
 #define INCLUDED_MUTABLE_VECTOR
 
 #include <cstdint>
+#include <memory>
 #include <type_traits>
 #include <variant>
 #include <vector>
@@ -32,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>

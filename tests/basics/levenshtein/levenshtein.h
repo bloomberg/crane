@@ -33,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -354,11 +358,7 @@ public:
     auto &&_sv = *(this);
     const auto &[d_a0, d_a1, d_a2, d_a3, d_a4, d_a5, d_a6, d_a7] =
         std::get<Ascii0>(_sv.v());
-    return Ascii(
-        Ascii0{clone_as_value<Bool0>(d_a0), clone_as_value<Bool0>(d_a1),
-               clone_as_value<Bool0>(d_a2), clone_as_value<Bool0>(d_a3),
-               clone_as_value<Bool0>(d_a4), clone_as_value<Bool0>(d_a5),
-               clone_as_value<Bool0>(d_a6), clone_as_value<Bool0>(d_a7)});
+    return Ascii(Ascii0{d_a0, d_a1, d_a2, d_a3, d_a4, d_a5, d_a6, d_a7});
   }
 
   // CREATORS
@@ -513,8 +513,8 @@ public:
       return String(EmptyString{});
     } else {
       const auto &[d_a0, d_a1] = std::get<String0>(_sv.v());
-      return String(String0{clone_as_value<Ascii>(d_a0),
-                            clone_as_value<std::unique_ptr<String>>(d_a1)});
+      return String(
+          String0{d_a0, clone_as_value<std::unique_ptr<String>>(d_a1)});
     }
   }
 
@@ -620,17 +620,13 @@ struct Levenshtein {
       auto &&_sv = *(this);
       if (std::holds_alternative<Insertion>(_sv.v())) {
         const auto &[d_a, d_s] = std::get<Insertion>(_sv.v());
-        return edit(
-            Insertion{clone_as_value<Ascii>(d_a), clone_as_value<String>(d_s)});
+        return edit(Insertion{d_a, d_s});
       } else if (std::holds_alternative<Deletion>(_sv.v())) {
         const auto &[d_a, d_s] = std::get<Deletion>(_sv.v());
-        return edit(
-            Deletion{clone_as_value<Ascii>(d_a), clone_as_value<String>(d_s)});
+        return edit(Deletion{d_a, d_s});
       } else {
         const auto &[d_a, d_a_1, d_neq] = std::get<Update>(_sv.v());
-        return edit(Update{clone_as_value<Ascii>(d_a),
-                           clone_as_value<Ascii>(d_a_1),
-                           clone_as_value<String>(d_neq)});
+        return edit(Update{d_a, d_a_1, d_neq});
       }
     }
 
@@ -762,18 +758,13 @@ struct Levenshtein {
         return chain(Empty{});
       } else if (std::holds_alternative<Skip>(_sv.v())) {
         const auto &[d_a, d_s, d_t, d_n, d_a4] = std::get<Skip>(_sv.v());
-        return chain(Skip{clone_as_value<Ascii>(d_a),
-                          clone_as_value<String>(d_s),
-                          clone_as_value<String>(d_t), clone_as_value<Nat>(d_n),
+        return chain(Skip{d_a, d_s, d_t, d_n,
                           clone_as_value<std::unique_ptr<chain>>(d_a4)});
       } else {
         const auto &[d_s, d_t, d_u, d_n, d_a4, d_a5] =
             std::get<Change>(_sv.v());
-        return chain(
-            Change{clone_as_value<String>(d_s), clone_as_value<String>(d_t),
-                   clone_as_value<String>(d_u), clone_as_value<Nat>(d_n),
-                   clone_as_value<edit>(d_a4),
-                   clone_as_value<std::unique_ptr<chain>>(d_a5)});
+        return chain(Change{d_s, d_t, d_u, d_n, d_a4,
+                            clone_as_value<std::unique_ptr<chain>>(d_a5)});
       }
     }
 
@@ -860,12 +851,8 @@ struct Levenshtein {
                            chain::skip(c, s1, s2, n, *(this)));
     }
 
-    template <
-        typename T1,
-        MapsTo<T1, Ascii, String, String, Nat, std::unique_ptr<chain>, T1> F1,
-        MapsTo<T1, String, String, String, Nat, edit, std::unique_ptr<chain>,
-               T1>
-            F2>
+    template <typename T1, MapsTo<T1, Ascii, String, String, Nat, chain, T1> F1,
+              MapsTo<T1, String, String, String, Nat, edit, chain, T1> F2>
     T1 chain_rec(const T1 f, F1 &&f0, F2 &&f1, const String &, const String &,
                  const Nat &) const {
       auto &&_sv = *(this);
@@ -884,12 +871,8 @@ struct Levenshtein {
       }
     }
 
-    template <
-        typename T1,
-        MapsTo<T1, Ascii, String, String, Nat, std::unique_ptr<chain>, T1> F1,
-        MapsTo<T1, String, String, String, Nat, edit, std::unique_ptr<chain>,
-               T1>
-            F2>
+    template <typename T1, MapsTo<T1, Ascii, String, String, Nat, chain, T1> F1,
+              MapsTo<T1, String, String, String, Nat, edit, chain, T1> F2>
     T1 chain_rect(const T1 f, F1 &&f0, F2 &&f1, const String &, const String &,
                   const Nat &) const {
       auto &&_sv = *(this);

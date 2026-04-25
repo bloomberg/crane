@@ -1,5 +1,6 @@
 #include <wrapper_collision_pos.h>
 
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) unsigned int

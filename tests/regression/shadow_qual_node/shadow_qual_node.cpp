@@ -1,5 +1,6 @@
 #include <shadow_qual_node.h>
 
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) ShadowQualNode::Node::Shadow

@@ -1,5 +1,6 @@
 #include <todo_extract_constant_noninline.h>
 
+#include <memory>
 #include <todo_extract_constant_noninline_support.h>
 #include <type_traits>
 

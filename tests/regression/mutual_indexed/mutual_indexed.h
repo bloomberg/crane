@@ -32,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -180,9 +184,8 @@ struct MutualIndexed {
         return EvenTree(ELeaf{});
       } else {
         const auto &[d_n, d_a1, d_a2] = std::get<ENode>(_sv.v());
-        return EvenTree(ENode{clone_as_value<unsigned int>(d_n),
-                              clone_as_value<unsigned int>(d_a1),
-                              clone_as_value<std::unique_ptr<OddTree>>(d_a2)});
+        return EvenTree(
+            ENode{d_n, d_a1, clone_as_value<std::unique_ptr<OddTree>>(d_a2)});
       }
     }
 
@@ -254,9 +257,8 @@ struct MutualIndexed {
     __attribute__((pure)) OddTree clone() const {
       auto &&_sv = *(this);
       const auto &[d_n, d_a1, d_a2] = std::get<ONode>(_sv.v());
-      return OddTree(ONode{clone_as_value<unsigned int>(d_n),
-                           clone_as_value<unsigned int>(d_a1),
-                           clone_as_value<std::unique_ptr<EvenTree>>(d_a2)});
+      return OddTree(
+          ONode{d_n, d_a1, clone_as_value<std::unique_ptr<EvenTree>>(d_a2)});
     }
 
     // CREATORS

@@ -1014,7 +1014,9 @@ LoopifySequences::group_fuel(const unsigned int &fuel,
           } else {
             auto _cell = std::make_unique<List<List<unsigned int>>>(
                 typename List<List<unsigned int>>::Cons(
-                    List<unsigned int>::cons(d_a0, List<unsigned int>::nil()),
+                    std::make_unique<List<List<unsigned int>>>(
+                        List<unsigned int>::cons(d_a0,
+                                                 List<unsigned int>::nil())),
                     nullptr));
             *(_write) = std::move(_cell);
             _write = &std::get<typename List<List<unsigned int>>::Cons>(

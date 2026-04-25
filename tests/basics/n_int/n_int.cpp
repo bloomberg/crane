@@ -1,5 +1,6 @@
 #include <n_int.h>
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 

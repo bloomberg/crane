@@ -1,6 +1,7 @@
 #include <typeclass_method_function_return_probe.h>
 
 #include <concepts>
+#include <memory>
 #include <type_traits>
 #include <utility>
 

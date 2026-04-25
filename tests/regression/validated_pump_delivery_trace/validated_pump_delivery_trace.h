@@ -33,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -755,10 +759,10 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<UIntDecimal>(_sv.v())) {
       const auto &[d_u] = std::get<UIntDecimal>(_sv.v());
-      return Uint1(UIntDecimal{clone_as_value<Uint>(d_u)});
+      return Uint1(UIntDecimal{d_u});
     } else {
       const auto &[d_u] = std::get<UIntHexadecimal>(_sv.v());
-      return Uint1(UIntHexadecimal{clone_as_value<Uint0>(d_u)});
+      return Uint1(UIntHexadecimal{d_u});
     }
   }
 
@@ -979,8 +983,7 @@ struct ValidatedPumpDeliveryTraceCase {
         return FaultStatus(Fault_Occlusion{});
       } else if (std::holds_alternative<Fault_LowReservoir>(_sv.v())) {
         const auto &[d_a0] = std::get<Fault_LowReservoir>(_sv.v());
-        return FaultStatus(
-            Fault_LowReservoir{clone_as_value<unsigned int>(d_a0)});
+        return FaultStatus(Fault_LowReservoir{d_a0});
       } else if (std::holds_alternative<Fault_BatteryLow>(_sv.v())) {
         return FaultStatus(Fault_BatteryLow{});
       } else {
@@ -1230,8 +1233,7 @@ struct ValidatedPumpDeliveryTraceCase {
         return SuspendDecision(Suspend_None{});
       } else if (std::holds_alternative<Suspend_Reduce>(_sv.v())) {
         const auto &[d_a0] = std::get<Suspend_Reduce>(_sv.v());
-        return SuspendDecision(
-            Suspend_Reduce{clone_as_value<Insulin_twentieth>(d_a0)});
+        return SuspendDecision(Suspend_Reduce{d_a0});
       } else {
         return SuspendDecision(Suspend_Withhold{});
       }
@@ -1417,11 +1419,10 @@ struct ValidatedPumpDeliveryTraceCase {
       auto &&_sv = *(this);
       if (std::holds_alternative<PrecOK>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<PrecOK>(_sv.v());
-        return PrecisionResult(PrecOK{clone_as_value<Insulin_twentieth>(d_a0),
-                                      clone_as_value<bool>(d_a1)});
+        return PrecisionResult(PrecOK{d_a0, d_a1});
       } else {
         const auto &[d_a0] = std::get<PrecError>(_sv.v());
-        return PrecisionResult(PrecError{clone_as_value<unsigned int>(d_a0)});
+        return PrecisionResult(PrecError{d_a0});
       }
     }
 

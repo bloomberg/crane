@@ -1,5 +1,6 @@
 #include <loopify_nested_constructs.h>
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>

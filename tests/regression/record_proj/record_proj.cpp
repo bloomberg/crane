@@ -1,5 +1,6 @@
 #include <record_proj.h>
 
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) unsigned int

@@ -46,7 +46,7 @@ int main() {
   ASSERT(LoopifyStrings::append(inter, nil) != nullptr);
 
   // intercalate
-  using UIntListList = List<std::shared_ptr<UIntList>>;
+  using UIntListList = List<List<unsigned int>>;
   auto ll_nil = UIntListList::nil();
   auto ll = UIntListList::cons(abc,
     UIntListList::cons(abc, ll_nil));

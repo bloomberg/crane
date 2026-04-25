@@ -1,5 +1,6 @@
 #include <crane_move_hunt.h>
 
+#include <memory>
 #include <toy_helpers.h>
 #include <type_traits>
 #include <utility>

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MODULE_TYPE_NAME_CLASH_PROBE
 #define INCLUDED_MODULE_TYPE_NAME_CLASH_PROBE
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -31,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -170,7 +175,7 @@ struct ModuleTypeNameClashProbe {
       __attribute__((pure)) t clone() const {
         auto &&_sv = *(this);
         const auto &[d_a0] = std::get<T0>(_sv.v());
-        return t(T0{clone_as_value<Bool0>(d_a0)});
+        return t(T0{d_a0});
       }
 
       // CREATORS
@@ -248,7 +253,7 @@ struct ModuleTypeNameClashProbe {
     __attribute__((pure)) M clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<MkM>(_sv.v());
-      return M(MkM{clone_as_value<Bool0>(d_a0)});
+      return M(MkM{d_a0});
     }
 
     // CREATORS

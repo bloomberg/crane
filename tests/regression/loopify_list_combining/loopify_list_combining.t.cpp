@@ -32,7 +32,7 @@ int main() {
   ASSERT(inter != nullptr);
 
   // intercalate
-  using ListList = List<std::shared_ptr<UIntList>>;
+  using ListList = List<List<unsigned int>>;
   auto ll_nil = ListList::nil();
   auto ll = ListList::cons(l3, ListList::cons(l4, ll_nil));
   auto sep = UIntList::cons(99u, nil);

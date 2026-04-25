@@ -63,9 +63,9 @@ int main() {
   ASSERT(filtered != nullptr);
 
   // merge_levels
-  auto ll_nil = List<std::shared_ptr<UIntList>>::nil();
-  auto ll = List<std::shared_ptr<UIntList>>::cons(l3,
-    List<std::shared_ptr<UIntList>>::cons(l3, ll_nil));
+  auto ll_nil = List<List<unsigned int>>::nil();
+  auto ll = List<List<unsigned int>>::cons(l3,
+    List<List<unsigned int>>::cons(l3, ll_nil));
   auto merged = LoopifySpecialRecursion::merge_levels(ll);
   ASSERT(merged != nullptr);
 

@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <embed_effect_helper.h>
+#include <memory>
 #include <string>
 #include <type_traits>
 #include <variant>
@@ -33,7 +34,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) int64_t ZIntTest::add_test(const int64_t &_x0,

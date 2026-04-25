@@ -33,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -242,7 +246,7 @@ struct RocqBug7228 {
     __attribute__((pure)) data clone() const {
       auto &&_sv = *(this);
       const auto &[d_t] = std::get<Data0>(_sv.v());
-      return data(Data0{clone_value(d_t)});
+      return data(Data0{d_t});
     }
 
     // CREATORS

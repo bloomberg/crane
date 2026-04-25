@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NAME_CLASH_CTOR_FIELD
 #define INCLUDED_NAME_CLASH_CTOR_FIELD
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -31,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -169,8 +174,7 @@ struct NameClashCtorField {
     __attribute__((pure)) clash1 clone() const {
       auto &&_sv = *(this);
       const auto &[d_d_a0, d_d_a1] = std::get<C1>(_sv.v());
-      return clash1(C1{clone_as_value<unsigned int>(d_d_a0),
-                       clone_as_value<unsigned int>(d_d_a1)});
+      return clash1(C1{d_d_a0, d_d_a1});
     }
 
     // CREATORS
@@ -264,10 +268,10 @@ struct NameClashCtorField {
       auto &&_sv = *(this);
       if (std::holds_alternative<C2a>(_sv.v())) {
         const auto &[d_v] = std::get<C2a>(_sv.v());
-        return clash2(C2a{clone_as_value<unsigned int>(d_v)});
+        return clash2(C2a{d_v});
       } else {
         const auto &[d_result] = std::get<C2b>(_sv.v());
-        return clash2(C2b{clone_as_value<unsigned int>(d_result)});
+        return clash2(C2b{d_result});
       }
     }
 
@@ -376,8 +380,7 @@ struct NameClashCtorField {
     __attribute__((pure)) pair_ind clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<MkPair>(_sv.v());
-      return pair_ind(MkPair{clone_as_value<unsigned int>(d_a0),
-                             clone_as_value<unsigned int>(d_a1)});
+      return pair_ind(MkPair{d_a0, d_a1});
     }
 
     // CREATORS
@@ -469,7 +472,7 @@ struct NameClashCtorField {
       auto &&_sv = *(this);
       if (std::holds_alternative<Box0>(_sv.v())) {
         const auto &[d_a0] = std::get<Box0>(_sv.v());
-        return box(Box0{clone_as_value<pair_ind>(d_a0)});
+        return box(Box0{d_a0});
       } else {
         return box(EmptyBox{});
       }

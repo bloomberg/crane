@@ -60,8 +60,9 @@ LoopifyListWindows::map_cons_helper(unsigned int x,
           std::get<typename List<List<unsigned int>>::Cons>(_loop_ll.v());
       auto _cell = std::make_unique<List<List<unsigned int>>>(
           typename List<List<unsigned int>>::Cons(
-              List<unsigned int>::cons(
-                  x, clone_as_value<List<unsigned int>>(d_a0)),
+              std::make_unique<List<List<unsigned int>>>(
+                  List<unsigned int>::cons(
+                      x, clone_as_value<List<unsigned int>>(d_a0))),
               nullptr));
       *(_write) = std::move(_cell);
       _write =
@@ -469,7 +470,9 @@ LoopifyListWindows::group_fuel(const unsigned int &fuel,
         const List<unsigned int> &rest = _cs.second;
         auto _cell = std::make_unique<List<List<unsigned int>>>(
             typename List<List<unsigned int>>::Cons(
-                List<unsigned int>::cons(d_a0, same), nullptr));
+                std::make_unique<List<List<unsigned int>>>(
+                    List<unsigned int>::cons(d_a0, same)),
+                nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<List<unsigned int>>::Cons>(
                       (*_write)->v_mut())

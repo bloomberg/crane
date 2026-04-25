@@ -1,5 +1,6 @@
 #include <bench_let_in.h>
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>

@@ -2,6 +2,7 @@
 
 #include <any>
 #include <concepts>
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) bool Bool::eqb(const bool &b1, const bool &b2) {

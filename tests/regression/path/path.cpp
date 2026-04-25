@@ -1,6 +1,7 @@
 #include <path.h>
 
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <type_traits>
 

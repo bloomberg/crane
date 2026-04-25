@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <memory>
 #include <type_traits>
 
 int64_t Clock::get_steady() {

@@ -34,7 +34,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -343,8 +347,7 @@ struct NestedInd {
       }
     }
 
-    template <typename T1,
-              MapsTo<T1, t_A, std::unique_ptr<custom_list<t_A>>, T1> F1>
+    template <typename T1, MapsTo<T1, t_A, custom_list<t_A>, T1> F1>
     T1 custom_list_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename custom_list<t_A>::Cnil>(_sv.v())) {
@@ -356,8 +359,7 @@ struct NestedInd {
       }
     }
 
-    template <typename T1,
-              MapsTo<T1, t_A, std::unique_ptr<custom_list<t_A>>, T1> F1>
+    template <typename T1, MapsTo<T1, t_A, custom_list<t_A>, T1> F1>
     T1 custom_list_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename custom_list<t_A>::Cnil>(_sv.v())) {
@@ -408,9 +410,7 @@ struct NestedInd {
     __attribute__((pure)) rose<t_A> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Node>(_sv.v());
-      return rose<t_A>(
-          Node{clone_as_value<t_A>(d_a0),
-               clone_as_value<custom_list<std::unique_ptr<rose<t_A>>>>(d_a1)});
+      return rose<t_A>(Node{clone_as_value<t_A>(d_a0), d_a1});
     }
 
     template <typename _CloneT0>
@@ -453,7 +453,8 @@ struct NestedInd {
     __attribute__((pure)) unsigned int children_count() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose<t_A>::Node>(_sv.v());
-      return clone_as_value<custom_list<rose<t_A>>>(d_a1).custom_list_length();
+      return clone_as_value<NestedInd::custom_list<NestedInd::rose<t_A>>>(d_a1)
+          .custom_list_length();
     }
 
     t_A root() const {
@@ -462,20 +463,22 @@ struct NestedInd {
       return d_a0;
     }
 
-    template <typename T1,
-              MapsTo<T1, t_A, custom_list<std::unique_ptr<rose<t_A>>>> F0>
+    template <typename T1, MapsTo<T1, t_A, custom_list<rose<t_A>>> F0>
     T1 rose_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose<t_A>::Node>(_sv.v());
-      return f(d_a0, clone_as_value<custom_list<rose<t_A>>>(d_a1));
+      return f(
+          d_a0,
+          clone_as_value<NestedInd::custom_list<NestedInd::rose<t_A>>>(d_a1));
     }
 
-    template <typename T1,
-              MapsTo<T1, t_A, custom_list<std::unique_ptr<rose<t_A>>>> F0>
+    template <typename T1, MapsTo<T1, t_A, custom_list<rose<t_A>>> F0>
     T1 rose_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose<t_A>::Node>(_sv.v());
-      return f(d_a0, clone_as_value<custom_list<rose<t_A>>>(d_a1));
+      return f(
+          d_a0,
+          clone_as_value<NestedInd::custom_list<NestedInd::rose<t_A>>>(d_a1));
     }
   };
 
@@ -548,13 +551,13 @@ struct NestedInd {
       auto &&_sv = *(this);
       if (std::holds_alternative<Lit>(_sv.v())) {
         const auto &[d_a0] = std::get<Lit>(_sv.v());
-        return expr(Lit{clone_as_value<unsigned int>(d_a0)});
+        return expr(Lit{d_a0});
       } else if (std::holds_alternative<Add>(_sv.v())) {
         const auto &[d_a0] = std::get<Add>(_sv.v());
-        return expr(Add{clone_as_value<List<std::unique_ptr<expr>>>(d_a0)});
+        return expr(Add{d_a0});
       } else {
         const auto &[d_a0] = std::get<Mul>(_sv.v());
-        return expr(Mul{clone_as_value<List<std::unique_ptr<expr>>>(d_a0)});
+        return expr(Mul{d_a0});
       }
     }
 
@@ -610,7 +613,7 @@ struct NestedInd {
               return List<expr>::cons(d_a0.lit_map(f), aux(*(d_a1)));
             }
           };
-          return aux(clone_as_value<List<expr>>(d_a0));
+          return aux(clone_as_value<List<NestedInd::expr>>(d_a0));
         }());
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
@@ -625,7 +628,7 @@ struct NestedInd {
               return List<expr>::cons(d_a0.lit_map(f), aux(*(d_a1)));
             }
           };
-          return aux(clone_as_value<List<expr>>(d_a0));
+          return aux(clone_as_value<List<NestedInd::expr>>(d_a0));
         }());
       }
     }
@@ -647,7 +650,7 @@ struct NestedInd {
             return d_a00.literals().app(aux(*(d_a10)));
           }
         };
-        return aux(clone_as_value<List<expr>>(d_a0));
+        return aux(clone_as_value<List<NestedInd::expr>>(d_a0));
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
         std::function<List<unsigned int>(List<expr>)> aux;
@@ -660,7 +663,7 @@ struct NestedInd {
             return d_a00.literals().app(aux(*(d_a10)));
           }
         };
-        return aux(clone_as_value<List<expr>>(d_a0));
+        return aux(clone_as_value<List<NestedInd::expr>>(d_a0));
       }
     }
 
@@ -681,7 +684,7 @@ struct NestedInd {
               return std::max(d_a0.expr_depth(), aux(*(d_a1)));
             }
           };
-          return aux(clone_as_value<List<expr>>(d_a0));
+          return aux(clone_as_value<List<NestedInd::expr>>(d_a0));
         }() + 1);
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
@@ -696,7 +699,7 @@ struct NestedInd {
               return std::max(d_a0.expr_depth(), aux(*(d_a1)));
             }
           };
-          return aux(clone_as_value<List<expr>>(d_a0));
+          return aux(clone_as_value<List<NestedInd::expr>>(d_a0));
         }() + 1);
       }
     }
@@ -718,7 +721,7 @@ struct NestedInd {
               return (d_a0.expr_size() + aux(*(d_a1)));
             }
           };
-          return aux(clone_as_value<List<expr>>(d_a0));
+          return aux(clone_as_value<List<NestedInd::expr>>(d_a0));
         }() + 1);
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
@@ -733,7 +736,7 @@ struct NestedInd {
               return (d_a0.expr_size() + aux(*(d_a1)));
             }
           };
-          return aux(clone_as_value<List<expr>>(d_a0));
+          return aux(clone_as_value<List<NestedInd::expr>>(d_a0));
         }() + 1);
       }
     }
@@ -755,7 +758,7 @@ struct NestedInd {
             return (d_a00.eval() + sum_all(*(d_a10)));
           }
         };
-        return sum_all(clone_as_value<List<expr>>(d_a0));
+        return sum_all(clone_as_value<List<NestedInd::expr>>(d_a0));
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
         std::function<unsigned int(List<expr>)> prod_all;
@@ -768,7 +771,7 @@ struct NestedInd {
             return (d_a00.eval() * prod_all(*(d_a10)));
           }
         };
-        return prod_all(clone_as_value<List<expr>>(d_a0));
+        return prod_all(clone_as_value<List<NestedInd::expr>>(d_a0));
       }
     }
 
@@ -782,10 +785,10 @@ struct NestedInd {
         return f(d_a0);
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
-        return f0(clone_as_value<List<expr>>(d_a0));
+        return f0(clone_as_value<List<NestedInd::expr>>(d_a0));
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
-        return f1(clone_as_value<List<expr>>(d_a0));
+        return f1(clone_as_value<List<NestedInd::expr>>(d_a0));
       }
     }
 
@@ -799,10 +802,10 @@ struct NestedInd {
         return f(d_a0);
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
-        return f0(clone_as_value<List<expr>>(d_a0));
+        return f0(clone_as_value<List<NestedInd::expr>>(d_a0));
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
-        return f1(clone_as_value<List<expr>>(d_a0));
+        return f1(clone_as_value<List<NestedInd::expr>>(d_a0));
       }
     }
   };

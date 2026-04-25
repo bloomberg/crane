@@ -32,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -200,8 +204,7 @@ struct LargeMutual {
       auto &&_sv = *(this);
       if (std::holds_alternative<SAssign>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<SAssign>(_sv.v());
-        return stmt(SAssign{clone_as_value<unsigned int>(d_a0),
-                            clone_as_value<std::unique_ptr<expr>>(d_a1)});
+        return stmt(SAssign{d_a0, clone_as_value<std::unique_ptr<expr>>(d_a1)});
       } else if (std::holds_alternative<SSeq>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<SSeq>(_sv.v());
         return stmt(SSeq{clone_as_value<std::unique_ptr<stmt>>(d_a0),
@@ -330,10 +333,10 @@ struct LargeMutual {
       auto &&_sv = *(this);
       if (std::holds_alternative<ENum>(_sv.v())) {
         const auto &[d_a0] = std::get<ENum>(_sv.v());
-        return expr(ENum{clone_as_value<unsigned int>(d_a0)});
+        return expr(ENum{d_a0});
       } else if (std::holds_alternative<EVar>(_sv.v())) {
         const auto &[d_a0] = std::get<EVar>(_sv.v());
-        return expr(EVar{clone_as_value<unsigned int>(d_a0)});
+        return expr(EVar{d_a0});
       } else if (std::holds_alternative<EAdd>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<EAdd>(_sv.v());
         return expr(EAdd{clone_as_value<std::unique_ptr<expr>>(d_a0),

@@ -33,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -270,10 +274,10 @@ struct ProgramWfProp {
       auto &&_sv = *(this);
       if (std::holds_alternative<JUN>(_sv.v())) {
         const auto &[d_a0] = std::get<JUN>(_sv.v());
-        return instruction(JUN{clone_as_value<unsigned int>(d_a0)});
+        return instruction(JUN{d_a0});
       } else if (std::holds_alternative<JMS>(_sv.v())) {
         const auto &[d_a0] = std::get<JMS>(_sv.v());
-        return instruction(JMS{clone_as_value<unsigned int>(d_a0)});
+        return instruction(JMS{d_a0});
       } else {
         return instruction(NOP{});
       }

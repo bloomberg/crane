@@ -34,7 +34,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -281,7 +285,7 @@ struct FoldSequenceStateTraceCase {
     __attribute__((pure)) Fold clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<Fold_line_ctor>(_sv.v());
-      return Fold(Fold_line_ctor{clone_as_value<Line>(d_a0)});
+      return Fold(Fold_line_ctor{d_a0});
     }
 
     // CREATORS
@@ -407,16 +411,13 @@ struct FoldSequenceStateTraceCase {
       auto &&_sv = *(this);
       if (std::holds_alternative<FS_O1>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<FS_O1>(_sv.v());
-        return FoldStep(
-            FS_O1{clone_as_value<Point>(d_a0), clone_as_value<Point>(d_a1)});
+        return FoldStep(FS_O1{d_a0, d_a1});
       } else if (std::holds_alternative<FS_O2>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<FS_O2>(_sv.v());
-        return FoldStep(
-            FS_O2{clone_as_value<Point>(d_a0), clone_as_value<Point>(d_a1)});
+        return FoldStep(FS_O2{d_a0, d_a1});
       } else {
         const auto &[d_a0, d_a1] = std::get<FS_O4>(_sv.v());
-        return FoldStep(
-            FS_O4{clone_as_value<Point>(d_a0), clone_as_value<Line>(d_a1)});
+        return FoldStep(FS_O4{d_a0, d_a1});
       }
     }
 

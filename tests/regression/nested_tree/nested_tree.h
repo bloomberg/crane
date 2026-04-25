@@ -33,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -401,7 +405,10 @@ struct NestedTree {
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree<T2>::Node>(t.v());
       return std::any_cast<T1>(
-          f0(d_a0, *(d_a1), tree_rect<T1, T2>(f, f0, *(d_a1))));
+          f0(d_a0, clone_as_value<NestedTree::tree<std::pair<T2, T2>>>(d_a1),
+             tree_rect<T1, T2>(
+                 f, f0,
+                 clone_as_value<NestedTree::tree<std::pair<T2, T2>>>(d_a1))));
     }
   }
 
@@ -412,7 +419,10 @@ struct NestedTree {
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree<T2>::Node>(t.v());
       return std::any_cast<T1>(
-          f0(d_a0, *(d_a1), tree_rec<T1, T2>(f, f0, *(d_a1))));
+          f0(d_a0, clone_as_value<NestedTree::tree<std::pair<T2, T2>>>(d_a1),
+             tree_rec<T1, T2>(
+                 f, f0,
+                 clone_as_value<NestedTree::tree<std::pair<T2, T2>>>(d_a1))));
     }
   }
 
@@ -459,14 +469,13 @@ _flatten_tree_go(F0 &&f, const NestedTree::template tree<T1> t0) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename NestedTree::template tree<T1>::Node>(t0.v());
-    NestedTree::template tree<std::pair<T1, T1>> d_a1_value =
-        clone_as_value<tree<std::pair<T1, T1>>>(d_a1);
     return List<List<T2>>::cons(
-        f(d_a0), _flatten_tree_go<T1, T2>(
-                     [=](std::pair<T1, T1> _x0) mutable -> List<T2> {
-                       return NestedTree::template lift<T1, T2>(f, _x0);
-                     },
-                     d_a1_value));
+        f(d_a0),
+        _flatten_tree_go<T1, T2>(
+            [=](std::pair<T1, T1> _x0) mutable -> List<T2> {
+              return NestedTree::template lift<T1, T2>(f, _x0);
+            },
+            clone_as_value<NestedTree::tree<std::pair<T1, T1>>>(d_a1)));
   }
 }
 

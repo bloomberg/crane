@@ -1,5 +1,6 @@
 #include <jms_bbl_roundtrip.h>
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 

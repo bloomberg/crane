@@ -36,7 +36,8 @@ ReuseLambdaCapture::add_length_to_each(ReuseLambdaCapture::mylist l,
             l.v())) {
       const auto &[d_a0, d_a1] =
           std::get<typename ReuseLambdaCapture::mylist::Mycons>(l.v());
-      ReuseLambdaCapture::mylist d_a1_value = clone_as_value<mylist>(d_a1);
+      ReuseLambdaCapture::mylist d_a1_value =
+          clone_as_value<ReuseLambdaCapture::mylist>(d_a1);
       return mylist::mycons(
           (d_a0 + 1u),
           map([=](const unsigned int &x) mutable { return (x + length(l)); },

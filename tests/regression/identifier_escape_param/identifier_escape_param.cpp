@@ -1,5 +1,6 @@
 #include <identifier_escape_param.h>
 
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) unsigned int

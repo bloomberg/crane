@@ -35,7 +35,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -191,16 +195,15 @@ struct FreeMonad {
       auto &&_sv = *(this);
       if (std::holds_alternative<Pure>(_sv.v())) {
         const auto &[d_a] = std::get<Pure>(_sv.v());
-        return IO(Pure{clone_value(d_a)});
+        return IO(Pure{d_a});
       } else if (std::holds_alternative<Bind>(_sv.v())) {
         const auto &[d_a, d_b] = std::get<Bind>(_sv.v());
-        return IO(
-            Bind{clone_as_value<std::unique_ptr<IO>>(d_a), clone_value(d_b)});
+        return IO(Bind{clone_as_value<std::unique_ptr<IO>>(d_a), d_b});
       } else if (std::holds_alternative<Get_line>(_sv.v())) {
         return IO(Get_line{});
       } else {
         const auto &[d_a0] = std::get<Print>(_sv.v());
-        return IO(Print{clone_as_value<std::string>(d_a0)});
+        return IO(Print{d_a0});
       }
     }
 
@@ -251,8 +254,8 @@ struct FreeMonad {
     } else if (std::holds_alternative<typename IO::Bind>(i.v())) {
       const auto &[d_a, d_b] = std::get<typename IO::Bind>(i.v());
       return std::any_cast<T1>(
-          f0(clone_as_value<IO>(d_a),
-             IO_rect<T1>(f, f0, f1, f2, clone_as_value<IO>(d_a)),
+          f0(clone_as_value<FreeMonad::IO>(d_a),
+             IO_rect<T1>(f, f0, f1, f2, clone_as_value<FreeMonad::IO>(d_a)),
              clone_value(d_b), [=](const std::any a) mutable {
                return IO_rect<T1>(f, f0, f1, f2, clone_value(d_b)(a));
              }));
@@ -272,8 +275,8 @@ struct FreeMonad {
     } else if (std::holds_alternative<typename IO::Bind>(i.v())) {
       const auto &[d_a, d_b] = std::get<typename IO::Bind>(i.v());
       return std::any_cast<T1>(
-          f0(clone_as_value<IO>(d_a),
-             IO_rec<T1>(f, f0, f1, f2, clone_as_value<IO>(d_a)),
+          f0(clone_as_value<FreeMonad::IO>(d_a),
+             IO_rec<T1>(f, f0, f1, f2, clone_as_value<FreeMonad::IO>(d_a)),
              clone_value(d_b), [=](const std::any a) mutable {
                return IO_rec<T1>(f, f0, f1, f2, clone_value(d_b)(a));
              }));

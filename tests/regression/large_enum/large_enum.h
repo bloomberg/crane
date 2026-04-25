@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LARGE_ENUM
 #define INCLUDED_LARGE_ENUM
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -31,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -329,7 +334,7 @@ struct LargeEnum {
       auto &&_sv = *(this);
       if (std::holds_alternative<TNum>(_sv.v())) {
         const auto &[d_a0] = std::get<TNum>(_sv.v());
-        return tok(TNum{clone_as_value<unsigned int>(d_a0)});
+        return tok(TNum{d_a0});
       } else if (std::holds_alternative<TPlus>(_sv.v())) {
         return tok(TPlus{});
       } else if (std::holds_alternative<TMinus>(_sv.v())) {
@@ -350,7 +355,7 @@ struct LargeEnum {
         return tok(TSemicolon{});
       } else if (std::holds_alternative<TIdent>(_sv.v())) {
         const auto &[d_a0] = std::get<TIdent>(_sv.v());
-        return tok(TIdent{clone_as_value<unsigned int>(d_a0)});
+        return tok(TIdent{d_a0});
       } else {
         return tok(TEOF{});
       }

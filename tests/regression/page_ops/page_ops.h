@@ -33,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -293,7 +297,7 @@ struct PageOps {
         return instruction(NOP{});
       } else {
         const auto &[d_a0] = std::get<LDM>(_sv.v());
-        return instruction(LDM{clone_as_value<unsigned int>(d_a0)});
+        return instruction(LDM{d_a0});
       }
     }
 

@@ -1,6 +1,7 @@
 #include <typeclass_function_field_probe.h>
 
 #include <concepts>
+#include <memory>
 #include <type_traits>
 #include <utility>
 

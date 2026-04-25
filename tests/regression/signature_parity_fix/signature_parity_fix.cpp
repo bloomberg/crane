@@ -1,6 +1,7 @@
 #include <signature_parity_fix.h>
 
 #include <functional>
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) unsigned int SignatureParityFix::f(unsigned int seed) {

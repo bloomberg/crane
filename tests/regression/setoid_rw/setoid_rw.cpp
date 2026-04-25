@@ -1,5 +1,6 @@
 #include <setoid_rw.h>
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 

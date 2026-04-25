@@ -32,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -204,7 +208,7 @@ public:
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  template <typename T1, MapsTo<T1, std::unique_ptr<Nat>, T1> F1>
+  template <typename T1, MapsTo<T1, Nat, T1> F1>
   T1 nat_rect(const T1 f, F1 &&f0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Nat::O>(_sv.v())) {
@@ -215,7 +219,7 @@ public:
     }
   }
 
-  template <typename T1, MapsTo<T1, std::unique_ptr<Nat>, T1> F1>
+  template <typename T1, MapsTo<T1, Nat, T1> F1>
   T1 nat_rec(const T1 f, F1 &&f0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Nat::O>(_sv.v())) {

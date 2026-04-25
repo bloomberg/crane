@@ -32,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -195,16 +199,14 @@ struct MutualRecursion {
       auto &&_sv = *(this);
       if (std::holds_alternative<Val>(_sv.v())) {
         const auto &[d_a0] = std::get<Val>(_sv.v());
-        return expr(Val{clone_as_value<unsigned int>(d_a0)});
+        return expr(Val{d_a0});
       } else if (std::holds_alternative<BinOp>(_sv.v())) {
         const auto &[d_a0, d_a1, d_a2] = std::get<BinOp>(_sv.v());
-        return expr(BinOp{clone_as_value<unsigned int>(d_a0),
-                          clone_as_value<std::unique_ptr<expr>>(d_a1),
+        return expr(BinOp{d_a0, clone_as_value<std::unique_ptr<expr>>(d_a1),
                           clone_as_value<std::unique_ptr<expr>>(d_a2)});
       } else {
         const auto &[d_a0, d_a1] = std::get<UnOp>(_sv.v());
-        return expr(UnOp{clone_as_value<unsigned int>(d_a0),
-                         clone_as_value<std::unique_ptr<expr>>(d_a1)});
+        return expr(UnOp{d_a0, clone_as_value<std::unique_ptr<expr>>(d_a1)});
       }
     }
 

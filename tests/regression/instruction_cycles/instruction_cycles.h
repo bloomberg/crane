@@ -32,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -285,8 +289,7 @@ struct InstructionCycles {
       auto &&_sv = *(this);
       if (std::holds_alternative<JCN1>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<JCN1>(_sv.v());
-        return instruction1(JCN1{clone_as_value<unsigned int>(d_a0),
-                                 clone_as_value<unsigned int>(d_a1)});
+        return instruction1(JCN1{d_a0, d_a1});
       } else {
         return instruction1(NOP1{});
       }
@@ -422,7 +425,7 @@ struct InstructionCycles {
       auto &&_sv = *(this);
       if (std::holds_alternative<JMS2>(_sv.v())) {
         const auto &[d_a0] = std::get<JMS2>(_sv.v());
-        return instruction2(JMS2{clone_as_value<unsigned int>(d_a0)});
+        return instruction2(JMS2{d_a0});
       } else {
         return instruction2(NOP2{});
       }
@@ -769,10 +772,10 @@ struct InstructionCycles {
         return instruction5(NOP5{});
       } else if (std::holds_alternative<JCN5>(_sv.v())) {
         const auto &[d_a0] = std::get<JCN5>(_sv.v());
-        return instruction5(JCN5{clone_as_value<unsigned int>(d_a0)});
+        return instruction5(JCN5{d_a0});
       } else {
         const auto &[d_a0] = std::get<INC5>(_sv.v());
-        return instruction5(INC5{clone_as_value<unsigned int>(d_a0)});
+        return instruction5(INC5{d_a0});
       }
     }
 

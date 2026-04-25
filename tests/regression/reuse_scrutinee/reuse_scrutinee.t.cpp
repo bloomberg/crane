@@ -29,7 +29,7 @@ int main() {
   std::visit(
       Overloaded{
           [](const RS::tree::Leaf) { std::cout << "Leaf"; },
-          [](const RS::tree::Node n) {
+          [](const RS::tree::Node &n) {
             std::cout << "Node(_, " << n.d_a1 << ", _)";
           }},
       rd.v());

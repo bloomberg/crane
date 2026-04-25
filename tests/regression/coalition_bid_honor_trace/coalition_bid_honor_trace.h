@@ -33,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -242,7 +246,7 @@ public:
     }
   }
 
-  template <typename T1, MapsTo<std::shared_ptr<List<T1>>, t_A> F0>
+  template <typename T1, MapsTo<List<T1>, t_A> F0>
   __attribute__((pure)) List<T1> flat_map(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
@@ -420,10 +424,10 @@ public:
       return Z(Z0{});
     } else if (std::holds_alternative<Zpos>(_sv.v())) {
       const auto &[d_a0] = std::get<Zpos>(_sv.v());
-      return Z(Zpos{clone_as_value<Positive>(d_a0)});
+      return Z(Zpos{d_a0});
     } else {
       const auto &[d_a0] = std::get<Zneg>(_sv.v());
-      return Z(Zneg{clone_as_value<Positive>(d_a0)});
+      return Z(Zneg{d_a0});
     }
   }
 
@@ -860,7 +864,7 @@ struct CoalitionBidHonorTraceCase {
         return Prize(PrizeHonor{});
       } else {
         const auto &[d_enclave_id] = std::get<PrizeEnclave>(_sv.v());
-        return Prize(PrizeEnclave{clone_as_value<unsigned int>(d_enclave_id)});
+        return Prize(PrizeEnclave{d_enclave_id});
       }
     }
 
@@ -961,12 +965,10 @@ struct CoalitionBidHonorTraceCase {
       if (std::holds_alternative<LocPlanetSurface>(_sv.v())) {
         const auto &[d_world_id, d_region_id] =
             std::get<LocPlanetSurface>(_sv.v());
-        return Location(
-            LocPlanetSurface{clone_as_value<unsigned int>(d_world_id),
-                             clone_as_value<unsigned int>(d_region_id)});
+        return Location(LocPlanetSurface{d_world_id, d_region_id});
       } else {
         const auto &[d_enclave_id] = std::get<LocEnclave>(_sv.v());
-        return Location(LocEnclave{clone_as_value<unsigned int>(d_enclave_id)});
+        return Location(LocEnclave{d_enclave_id});
       }
     }
 
@@ -1121,8 +1123,7 @@ struct CoalitionBidHonorTraceCase {
         return RefusalReason(RefusalInsufficientRank{});
       } else {
         const auto &[d_note] = std::get<RefusalOther>(_sv.v());
-        return RefusalReason(
-            RefusalOther{clone_as_value<unsigned int>(d_note)});
+        return RefusalReason(RefusalOther{d_note});
       }
     }
 
@@ -1271,34 +1272,30 @@ struct CoalitionBidHonorTraceCase {
       auto &&_sv = *(this);
       if (std::holds_alternative<ActChallenge>(_sv.v())) {
         const auto &[d_chal] = std::get<ActChallenge>(_sv.v());
-        return ProtocolAction(
-            ActChallenge{clone_as_value<BatchallChallenge>(d_chal)});
+        return ProtocolAction(ActChallenge{d_chal});
       } else if (std::holds_alternative<ActRespond>(_sv.v())) {
         const auto &[d_resp] = std::get<ActRespond>(_sv.v());
-        return ProtocolAction(
-            ActRespond{clone_as_value<BatchallResponse>(d_resp)});
+        return ProtocolAction(ActRespond{d_resp});
       } else if (std::holds_alternative<ActRefuse>(_sv.v())) {
         const auto &[d_reason] = std::get<ActRefuse>(_sv.v());
-        return ProtocolAction(
-            ActRefuse{clone_as_value<RefusalReason>(d_reason)});
+        return ProtocolAction(ActRefuse{d_reason});
       } else if (std::holds_alternative<ActBid>(_sv.v())) {
         const auto &[d_bid] = std::get<ActBid>(_sv.v());
-        return ProtocolAction(ActBid{clone_as_value<ForceBid>(d_bid)});
+        return ProtocolAction(ActBid{d_bid});
       } else if (std::holds_alternative<ActCoalitionBid>(_sv.v())) {
         const auto &[d_cbid] = std::get<ActCoalitionBid>(_sv.v());
-        return ProtocolAction(
-            ActCoalitionBid{clone_as_value<CoalitionMemberBid>(d_cbid)});
+        return ProtocolAction(ActCoalitionBid{d_cbid});
       } else if (std::holds_alternative<ActPass>(_sv.v())) {
         const auto &[d_side] = std::get<ActPass>(_sv.v());
-        return ProtocolAction(ActPass{clone_as_value<Side>(d_side)});
+        return ProtocolAction(ActPass{d_side});
       } else if (std::holds_alternative<ActClose>(_sv.v())) {
         return ProtocolAction(ActClose{});
       } else if (std::holds_alternative<ActWithdraw>(_sv.v())) {
         const auto &[d_side] = std::get<ActWithdraw>(_sv.v());
-        return ProtocolAction(ActWithdraw{clone_as_value<Side>(d_side)});
+        return ProtocolAction(ActWithdraw{d_side});
       } else {
         const auto &[d_side] = std::get<ActBreakBid>(_sv.v());
-        return ProtocolAction(ActBreakBid{clone_as_value<Side>(d_side)});
+        return ProtocolAction(ActBreakBid{d_side});
       }
     }
 
@@ -1606,44 +1603,30 @@ struct CoalitionBidHonorTraceCase {
         return BatchallPhase(PhaseIdle{});
       } else if (std::holds_alternative<PhaseChallenged>(_sv.v())) {
         const auto &[d_challenge] = std::get<PhaseChallenged>(_sv.v());
-        return BatchallPhase(
-            PhaseChallenged{clone_as_value<BatchallChallenge>(d_challenge)});
+        return BatchallPhase(PhaseChallenged{d_challenge});
       } else if (std::holds_alternative<PhaseResponded>(_sv.v())) {
         const auto &[d_challenge, d_response] =
             std::get<PhaseResponded>(_sv.v());
-        return BatchallPhase(
-            PhaseResponded{clone_as_value<BatchallChallenge>(d_challenge),
-                           clone_as_value<BatchallResponse>(d_response)});
+        return BatchallPhase(PhaseResponded{d_challenge, d_response});
       } else if (std::holds_alternative<PhaseBidding>(_sv.v())) {
         const auto &[d_challenge, d_response, d_attacker_bid, d_defender_bid,
                      d_attacker_coalition, d_defender_coalition, d_bid_history,
                      d_ready] = std::get<PhaseBidding>(_sv.v());
         return BatchallPhase(
-            PhaseBidding{clone_as_value<BatchallChallenge>(d_challenge),
-                         clone_as_value<BatchallResponse>(d_response),
-                         clone_as_value<ForceBid>(d_attacker_bid),
-                         clone_as_value<ForceBid>(d_defender_bid),
-                         clone_as_value<CoalitionState>(d_attacker_coalition),
-                         clone_as_value<CoalitionState>(d_defender_coalition),
-                         clone_as_value<List<ForceBid>>(d_bid_history),
-                         clone_as_value<ReadyStatus>(d_ready)});
+            PhaseBidding{d_challenge, d_response, d_attacker_bid,
+                         d_defender_bid, d_attacker_coalition,
+                         d_defender_coalition, d_bid_history, d_ready});
       } else if (std::holds_alternative<PhaseAgreed>(_sv.v())) {
         const auto &[d_challenge, d_response, d_final_attacker,
                      d_final_defender] = std::get<PhaseAgreed>(_sv.v());
-        return BatchallPhase(
-            PhaseAgreed{clone_as_value<BatchallChallenge>(d_challenge),
-                        clone_as_value<BatchallResponse>(d_response),
-                        clone_as_value<ForceBid>(d_final_attacker),
-                        clone_as_value<ForceBid>(d_final_defender)});
+        return BatchallPhase(PhaseAgreed{d_challenge, d_response,
+                                         d_final_attacker, d_final_defender});
       } else if (std::holds_alternative<PhaseRefused>(_sv.v())) {
         const auto &[d_challenge, d_reason] = std::get<PhaseRefused>(_sv.v());
-        return BatchallPhase(
-            PhaseRefused{clone_as_value<BatchallChallenge>(d_challenge),
-                         clone_as_value<RefusalReason>(d_reason)});
+        return BatchallPhase(PhaseRefused{d_challenge, d_reason});
       } else {
         const auto &[d_reason] = std::get<PhaseAborted>(_sv.v());
-        return BatchallPhase(
-            PhaseAborted{clone_as_value<ProtocolAction>(d_reason)});
+        return BatchallPhase(PhaseAborted{d_reason});
       }
     }
 

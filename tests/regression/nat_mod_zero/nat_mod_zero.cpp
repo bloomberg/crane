@@ -1,5 +1,6 @@
 #include <nat_mod_zero.h>
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 

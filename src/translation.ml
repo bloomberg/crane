@@ -699,7 +699,33 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty) = function
   | Tid_external (id, ts) ->
     Id.to_string id ^ "<" ^
     String.concat ", " (List.map (render_cpp_type_simple ~raw_inductives) ts) ^ ">"
-  | Tnamespace (_, t) -> render_cpp_type_simple ~raw_inductives t
+  | Tnamespace (g, t) ->
+    (* For local inductives whose names are eponymous with their parent module,
+       no qualification is needed.  For others, prepend the capitalized parent
+       module name (e.g., "NestedTree::tree").  We cannot use pp_global_name
+       here because it gives the raw Coq name ("list" → "list") instead of
+       the C++ struct name ("List"). *)
+    let inner = render_cpp_type_simple ~raw_inductives t in
+    let parent_ns =
+      match g with
+      | GlobRef.IndRef (kn, _) ->
+        ( match Names.MutInd.modpath kn with
+        | Names.ModPath.MPdot (_, label) ->
+          let parent = Names.Label.to_string label in
+          (* Strip template args before comparing: "List<t_A>" → "List" *)
+          let inner_base =
+            match String.index_opt inner '<' with
+            | Some i -> String.sub inner 0 i
+            | None -> inner
+          in
+          let cap_inner = Common.capitalize_last_component inner_base in
+          (* Eponymous: parent "List" = inner "List" → no qualification *)
+          if String.equal parent cap_inner then ""
+          else parent ^ "::"
+        | _ -> "" )
+      | _ -> ""
+    in
+    parent_ns ^ inner
   | Tmod (TMconst, t) -> "const " ^ render_cpp_type_simple ~raw_inductives t
   | Tmod (_, t) -> render_cpp_type_simple ~raw_inductives t
   | Tref t -> render_cpp_type_simple ~raw_inductives t ^ "&"
@@ -713,6 +739,28 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty) = function
   | Tunique_ptr t -> "std::unique_ptr<" ^ render_cpp_type_simple ~raw_inductives t ^ ">"
   | Tvoid -> "void"
   | _ -> "auto"
+
+(** Recursively wrap all [Tglob] inductive references with [Tnamespace] so that
+    [render_cpp_type_simple] produces fully-qualified names.  Used when the
+    rendered type will appear in a context where inductives may not be in scope
+    (e.g. clone_as_value template arguments in standalone free functions). *)
+let rec qualify_inductives = function
+  | Tglob (g, ts, es) ->
+    let core = Tglob (g, List.map qualify_inductives ts, es) in
+    ( match g with
+    | GlobRef.IndRef _ -> Tnamespace (g, core)
+    | _ -> core )
+  | Tnamespace (g, t) -> Tnamespace (g, qualify_inductives t)
+  | Tshared_ptr t -> Tshared_ptr (qualify_inductives t)
+  | Tunique_ptr t -> Tunique_ptr (qualify_inductives t)
+  | Tref t -> Tref (qualify_inductives t)
+  | Tmod (m, t) -> Tmod (m, qualify_inductives t)
+  | Tptr t -> Tptr (qualify_inductives t)
+  | Tfun (args, ret) ->
+    Tfun (List.map qualify_inductives args, qualify_inductives ret)
+  | Tid (id, ts) -> Tid (id, List.map qualify_inductives ts)
+  | Tid_external (id, ts) -> Tid_external (id, List.map qualify_inductives ts)
+  | t -> t
 
 let render_cpp_type_for_raw_template ?(raw_inductives = Refset'.empty) ty =
   Str.global_replace
@@ -729,7 +777,12 @@ let render_cpp_type_for_raw_template ?(raw_inductives = Refset'.empty) ty =
 let clone_helper_for_raw_template ty =
   let ty_s = render_cpp_type_for_raw_template ty in
   let ty_s = if String.equal ty_s "string" then "std::string" else ty_s in
-  if String.equal ty_s "auto" then "clone_value"
+  let has_auto =
+    String.equal ty_s "auto"
+    || (try ignore (Str.search_forward (Str.regexp "\\bauto\\b") ty_s 0); true
+        with Not_found -> false)
+  in
+  if has_auto then "clone_value"
   else "clone_as_value<" ^ ty_s ^ ">"
 
 (** Build a [CPPfun_call] for [ITree<R>::ret(...)].
@@ -1871,6 +1924,20 @@ let rec ml_body_returns_erased_field = function
 let rec ml_head_has_magic = function
   | Miniml.MLmagic _ -> true
   | MLapp (f, _) -> ml_head_has_magic f
+  | _ -> false
+
+(** Does a C++ type mention [unique_ptr] or [shared_ptr] anywhere in its
+    structure?  Used to decide whether a field-type / bare-type mismatch in
+    pattern matching is real (pointer wrapping) vs. superficial (namespace). *)
+let rec contains_shared_ptr_or_unique_ptr = function
+  | Tshared_ptr _ | Tunique_ptr _ -> true
+  | Tref t | Tmod (_, t) | Tptr t -> contains_shared_ptr_or_unique_ptr t
+  | Tid (_, args) | Tid_external (_, args) | Tglob (_, args, _) ->
+    List.exists contains_shared_ptr_or_unique_ptr args
+  | Tnamespace (_, t) -> contains_shared_ptr_or_unique_ptr t
+  | Tfun (args, ret) ->
+    List.exists contains_shared_ptr_or_unique_ptr args
+    || contains_shared_ptr_or_unique_ptr ret
   | _ -> false
 
 (** Convert ML type to C++ type. Handles custom types, inductives, type
@@ -4719,10 +4786,6 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
               container like List<shared_ptr<tree>> stores elements via
               template parameter t_A = shared_ptr<tree>. Direct struct
               fields (Tglob at def-site) are bare value types. *)
-        let is_unique_ptr =
-          field_is_self_or_mutual_ref_at_def i
-          && not (Table.is_coinductive ind_ref)
-        in
         (* Convert using empty ns.  For value-type self/mutual fields the
            expression substituted into the branch body is dereferenced, but the
            structured binding itself still has the stored field type
@@ -4738,9 +4801,43 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             tvars
             ml_ty
         in
+        (* A field is unique_ptr only for UNIFORM self-recursion.  Non-uniform
+           recursion (e.g. tree<pair<T,T>> inside tree<T>) uses shared_ptr.
+           Check def-site: if the self-referencing field has the same number
+           of type args as the inductive's parameter count, AND each arg is a
+           simple Tvar matching the parent's corresponding param, it's uniform. *)
+        let is_uniform_self_ref_at_def i =
+          match List.nth_opt def_site_field_tys i with
+          | Some (Miniml.Tglob (_, args, _))
+          | Some (Miniml.Tmeta {contents = Some (Miniml.Tglob (_, args, _))}) ->
+            let n_params = Table.get_ctor_num_param_vars cname in
+            List.length args = n_params
+            && List.for_all (fun (j, arg) ->
+              match arg with
+              | Miniml.Tvar k | Miniml.Tvar' k -> k = j + 1
+              | Miniml.Tmeta {contents = Some (Miniml.Tvar k)}
+              | Miniml.Tmeta {contents = Some (Miniml.Tvar' k)} -> k = j + 1
+              | _ -> false
+            ) (List.mapi (fun j a -> (j, a)) args)
+          | _ -> true  (* non-self: treat as uniform *)
+        in
+        let is_unique_ptr =
+          field_is_self_or_mutual_ref_at_def i
+          && not (Table.is_coinductive ind_ref)
+          && is_uniform_self_ref_at_def i
+        in
         let field_cpp_ty =
           if is_unique_ptr then Tunique_ptr bare_field_cpp_ty
-          else storage_field_cpp_ty
+          else
+            (* Use storage_field_cpp_ty but correct false-positive unique_ptr
+               wrapping: when storage says unique_ptr but the def-site check
+               says NOT a self-ref, use bare type instead.  This happens when
+               a type parameter is instantiated to the same inductive (e.g.
+               element List<T> inside List<List<T>>). *)
+            match storage_field_cpp_ty with
+            | Tunique_ptr _ when not (field_is_self_or_mutual_ref_at_def i) ->
+              bare_field_cpp_ty
+            | _ -> storage_field_cpp_ty
         in
         let used = dummies_arr.(i) in
         (binding_name, field_cpp_ty, is_unique_ptr, used))
@@ -4805,16 +4902,17 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             if is_uptr && branch_has_lambda then
               CPPvar (Id.of_string (Id.to_string binding_name ^ "_value"))
             else if is_uptr then CPPderef (CPPvar binding_name)
-            else if field_ty <> bare_ty then
+            else if field_ty <> bare_ty
+                    && contains_shared_ptr_or_unique_ptr field_ty then
               let bare_ty_s =
-                Str.global_replace
-                  (Str.regexp_string "Tree<")
-                  "tree<"
-                  (render_cpp_type_for_raw_template bare_ty)
+                render_cpp_type_for_raw_template (qualify_inductives bare_ty)
               in
               CPPfun_call
                 ( CPPraw
-                    (if String.equal bare_ty_s "auto" then "clone_value"
+                    (if String.equal bare_ty_s "auto"
+                        || (try ignore (Str.search_forward (Str.regexp "\\bauto\\b") bare_ty_s 0); true
+                            with Not_found -> false)
+                     then "clone_value"
                      else "clone_as_value<" ^ bare_ty_s ^ ">"),
                   [CPPvar binding_name] )
             else CPPvar binding_name
@@ -4841,7 +4939,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             in
             let clone =
               CPPfun_call
-                ( CPPraw (clone_helper_for_raw_template bare_ty),
+                ( CPPraw (clone_helper_for_raw_template (qualify_inductives bare_ty)),
                   [CPPvar binding_name] )
             in
             Some (Sasgn (value_id, Some bare_ty, clone))
@@ -10546,21 +10644,23 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      shared_ptr for the method's own type (value-type inductives are
      passed/returned by value, not by shared_ptr). *)
   let method_ns = Refset'.add name Refset'.empty in
-  let strip_top_level_self_ptr ty =
+  let rec strip_self_ptr ty =
     match ty with
     | Tshared_ptr (Tglob (g, _, _)) when
         not (Table.is_coinductive g) && not (is_enum_inductive g) ->
-      (* Strip shared_ptr wrapping for value-type inductives.
-         Coinductive and enum types keep their shared_ptr. *)
       (match ty with Tshared_ptr inner -> inner | _ -> ty)
     | Tunique_ptr (Tglob (g, _, _)) when
         not (Table.is_coinductive g) && not (is_enum_inductive g) ->
-      (* Value-type methods expose the self type by value/reference at the API
-         boundary; unique_ptr is only the internal representation for recursive
-         fields. *)
       (match ty with Tunique_ptr inner -> inner | _ -> ty)
+    | Tglob (r, args, es) ->
+      Tglob (r, List.map strip_self_ptr args, es)
+    | Tfun (args, ret) ->
+      Tfun (List.map strip_self_ptr args, strip_self_ptr ret)
+    | Tref t -> Tref (strip_self_ptr t)
+    | Tmod (m, t) -> Tmod (m, strip_self_ptr t)
     | _ -> ty
   in
+  let strip_top_level_self_ptr ty = strip_self_ptr ty in
   let ret_cpp =
     convert_ml_type_to_cpp_type
       (empty_env ())
@@ -11385,19 +11485,24 @@ let gen_ind_header_v2
                    let ctor_args =
                      List.map2
                        (fun (field_id, source_field_ty, _) target_field_ty ->
-                         let helper =
-                           match (source_field_ty, target_field_ty) with
-                           | Tshared_ptr _, Tshared_ptr _
-                             when source_field_ty = target_field_ty ->
-                             "clone_value"
-                           | _ -> clone_helper_for_raw_template target_field_ty
-                         in
                          match (source_field_ty, target_field_ty) with
                          | Tshared_ptr _, Tshared_ptr _
                            when source_field_ty <> target_field_ty ->
                            CPPraw "nullptr"
+                         | _ when source_field_ty = target_field_ty
+                                  && (match source_field_ty with
+                                      | Tshared_ptr _ | Tunique_ptr _
+                                      | Tvar _ -> false
+                                      | _ -> true) ->
+                           (* Same non-pointer, non-tvar type: plain copy *)
+                           CPPvar field_id
+                         | Tshared_ptr _, Tshared_ptr _
+                             when source_field_ty = target_field_ty ->
+                           CPPfun_call (CPPraw "clone_value", [CPPvar field_id])
                          | _ ->
-                           CPPfun_call (CPPraw helper, [CPPvar field_id]) )
+                           CPPfun_call
+                             ( CPPraw (clone_helper_for_raw_template target_field_ty),
+                               [CPPvar field_id] ) )
                        field_bindings
                        target_field_tys
                    in

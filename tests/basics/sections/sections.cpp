@@ -1,5 +1,6 @@
 #include <sections.h>
 
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) unsigned int Sections::add_n(const unsigned int &_x0,

@@ -1,6 +1,7 @@
 #include <string_match.h>
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <type_traits>
 

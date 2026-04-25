@@ -2,6 +2,7 @@
 
 #include <crane_real.h>
 #include <cstdint>
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) Real

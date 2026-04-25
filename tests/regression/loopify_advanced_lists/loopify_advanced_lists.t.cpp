@@ -22,10 +22,10 @@ using UIntList = List<unsigned int>;
 using UIntPair = std::pair<unsigned int, unsigned int>;
 using PairList = List<UIntPair>;
 using PairVec = std::vector<UIntPair>;
-using ListOfLists = List<std::shared_ptr<UIntList>>;
+using ListOfLists = List<List<unsigned int>>;
 
 // Helper: build a List from initializer list
-std::shared_ptr<UIntList> make_list(std::initializer_list<unsigned int> vals) {
+UIntList make_list(std::initializer_list<unsigned int> vals) {
   auto result = UIntList::nil();
   std::vector<unsigned int> v(vals);
   for (auto it = v.rbegin(); it != v.rend(); ++it) {
@@ -35,10 +35,10 @@ std::shared_ptr<UIntList> make_list(std::initializer_list<unsigned int> vals) {
 }
 
 // Helper: convert List to vector for comparison
-std::vector<unsigned int> to_vec(const std::shared_ptr<UIntList> &l) {
+std::vector<unsigned int> to_vec(const UIntList &l) {
   std::vector<unsigned int> result;
-  const UIntList *cur = l.get();
-  while (cur) {
+  const UIntList *cur = &l;
+  while (true) {
     auto &v = cur->v();
     if (std::holds_alternative<UIntList::Nil>(v)) break;
     auto &cons = std::get<UIntList::Cons>(v);
@@ -50,10 +50,10 @@ std::vector<unsigned int> to_vec(const std::shared_ptr<UIntList> &l) {
 
 // Helper: convert pair list to vector for comparison
 std::vector<std::pair<unsigned int, unsigned int>>
-to_pair_vec(const std::shared_ptr<PairList> &l) {
+to_pair_vec(const PairList &l) {
   std::vector<std::pair<unsigned int, unsigned int>> result;
-  const PairList *cur = l.get();
-  while (cur) {
+  const PairList *cur = &l;
+  while (true) {
     auto &v = cur->v();
     if (std::holds_alternative<PairList::Nil>(v)) break;
     auto &cons = std::get<PairList::Cons>(v);
@@ -63,9 +63,8 @@ to_pair_vec(const std::shared_ptr<PairList> &l) {
   return result;
 }
 
-// Helper: build a List<shared_ptr<List<unsigned int>>> from a vector of
-// initializer lists
-std::shared_ptr<ListOfLists>
+// Helper: build a List<List<unsigned int>> from a vector of initializer lists
+ListOfLists
 make_list_of_lists(std::initializer_list<std::initializer_list<unsigned int>> vals) {
   auto result = ListOfLists::nil();
   std::vector<std::initializer_list<unsigned int>> v(vals);
@@ -131,7 +130,7 @@ int main() {
   ASSERT(LoopifyAdvancedLists::concat_lists(make_list_of_lists({{1, 2}, {3, 4}})) != nullptr);
 
   // flat_map (uses ++ internally, loopification may affect results)
-  auto double_list = [](unsigned int x) -> std::shared_ptr<UIntList> {
+  auto double_list = [](unsigned int x) -> UIntList {
     return UIntList::cons(x, UIntList::cons(x, UIntList::nil()));
   };
   ASSERT(LoopifyAdvancedLists::flat_map(double_list, make_list({})) != nullptr);

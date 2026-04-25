@@ -1,6 +1,7 @@
 #include <pathological_record.h>
 
 #include <any>
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) unsigned int

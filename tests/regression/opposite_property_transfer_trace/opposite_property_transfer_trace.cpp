@@ -1,6 +1,7 @@
 #include <opposite_property_transfer_trace.h>
 
 #include <functional>
+#include <memory>
 #include <type_traits>
 #include <utility>
 

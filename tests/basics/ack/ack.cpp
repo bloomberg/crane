@@ -1,6 +1,7 @@
 #include <ack.h>
 
 #include <functional>
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) unsigned int Ack::ack(unsigned int m,

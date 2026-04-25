@@ -1,6 +1,7 @@
 #include <primitive_rec_typeclass.h>
 
 #include <concepts>
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) unsigned int

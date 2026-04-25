@@ -302,9 +302,9 @@ LoopifyTrees::sum_of_max_branches(const LoopifyTrees::tree<unsigned int> &t) {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
         LoopifyTrees::tree<unsigned int> d_a0_value =
-            clone_as_value<tree<unsigned int>>(d_a0);
+            clone_as_value<LoopifyTrees::tree<unsigned int>>(d_a0);
         LoopifyTrees::tree<unsigned int> d_a2_value =
-            clone_as_value<tree<unsigned int>>(d_a2);
+            clone_as_value<LoopifyTrees::tree<unsigned int>>(d_a2);
         _stack.emplace_back(_Call1{d_a1, d_a2_value});
         _stack.emplace_back(_Enter{d_a0_value});
       }
@@ -343,7 +343,7 @@ LoopifyTrees::sum_rose_list_fuel(const unsigned int &fuel,
   };
 
   struct _Call1 {
-    decltype(clone_as_value<List<rose>>(
+    decltype(clone_as_value<List<LoopifyTrees::rose>>(
         std::declval<List<std::unique_ptr<LoopifyTrees::rose>> &>())) _s0;
     unsigned int _s1;
     unsigned int _s2;
@@ -378,8 +378,8 @@ LoopifyTrees::sum_rose_list_fuel(const unsigned int &fuel,
               std::get<typename List<LoopifyTrees::rose>::Cons>(cs.v());
           const auto &[d_a00, d_a10] =
               std::get<typename LoopifyTrees::rose::RNode>(d_a0.v());
-          _stack.emplace_back(
-              _Call1{clone_as_value<List<rose>>(d_a10), f, d_a00});
+          _stack.emplace_back(_Call1{
+              clone_as_value<List<LoopifyTrees::rose>>(d_a10), f, d_a00});
           _stack.emplace_back(_Enter{*(d_a1), f});
         }
       }
@@ -405,7 +405,7 @@ LoopifyTrees::flatten_rose_list_fuel(const unsigned int &fuel,
   };
 
   struct _Call1 {
-    decltype(clone_as_value<List<rose>>(
+    decltype(clone_as_value<List<LoopifyTrees::rose>>(
         std::declval<List<std::unique_ptr<LoopifyTrees::rose>> &>())) _s0;
     unsigned int _s1;
     unsigned int _s2;
@@ -440,8 +440,8 @@ LoopifyTrees::flatten_rose_list_fuel(const unsigned int &fuel,
               std::get<typename List<LoopifyTrees::rose>::Cons>(cs.v());
           const auto &[d_a00, d_a10] =
               std::get<typename LoopifyTrees::rose::RNode>(d_a0.v());
-          _stack.emplace_back(
-              _Call1{clone_as_value<List<rose>>(d_a10), f, d_a00});
+          _stack.emplace_back(_Call1{
+              clone_as_value<List<LoopifyTrees::rose>>(d_a10), f, d_a00});
           _stack.emplace_back(_Enter{*(d_a1), f});
         }
       }
@@ -500,7 +500,8 @@ LoopifyTrees::depth_rose_list_fuel(const unsigned int &fuel,
           const auto &[d_a00, d_a10] =
               std::get<typename LoopifyTrees::rose::RNode>(d_a0.v());
           _stack.emplace_back(_Call1{d_a1, f});
-          _stack.emplace_back(_Enter{clone_as_value<List<rose>>(d_a10), f});
+          _stack.emplace_back(
+              _Enter{clone_as_value<List<LoopifyTrees::rose>>(d_a10), f});
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
@@ -834,8 +835,9 @@ LoopifyTrees::map_cons_to_all(unsigned int x,
           std::get<typename List<List<unsigned int>>::Cons>(_loop_lsts.v());
       auto _cell = std::make_unique<List<List<unsigned int>>>(
           typename List<List<unsigned int>>::Cons(
-              List<unsigned int>::cons(
-                  x, clone_as_value<List<unsigned int>>(d_a0)),
+              std::make_unique<List<List<unsigned int>>>(
+                  List<unsigned int>::cons(
+                      x, clone_as_value<List<unsigned int>>(d_a0))),
               nullptr));
       *(_write) = std::move(_cell);
       _write =
@@ -1130,9 +1132,9 @@ LoopifyTrees::tree_min_max(const LoopifyTrees::tree<unsigned int> &t) {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
         LoopifyTrees::tree<unsigned int> d_a0_value =
-            clone_as_value<tree<unsigned int>>(d_a0);
+            clone_as_value<LoopifyTrees::tree<unsigned int>>(d_a0);
         LoopifyTrees::tree<unsigned int> d_a2_value =
-            clone_as_value<tree<unsigned int>>(d_a2);
+            clone_as_value<LoopifyTrees::tree<unsigned int>>(d_a2);
         _stack.emplace_back(_Call1{d_a1, d_a2_value});
         _stack.emplace_back(_Enter{d_a0_value});
       }

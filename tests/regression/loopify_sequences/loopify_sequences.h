@@ -34,7 +34,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -296,8 +300,7 @@ struct LoopifySequences {
     };
 
     struct _Call1 {
-      decltype(clone_as_value<List<T1>>(
-          std::declval<std::unique_ptr<List<T1>> &>())) _s0;
+      List<T1> _s0;
       const List<T1> _s1;
     };
 
@@ -319,9 +322,9 @@ struct LoopifySequences {
               std::get<typename List<List<T1>>::Cons>(lists.v());
           auto &&_sv = *(d_a1);
           if (std::holds_alternative<typename List<List<T1>>::Nil>(_sv.v())) {
-            _result = clone_as_value<List<T1>>(d_a0);
+            _result = d_a0;
           } else {
-            _stack.emplace_back(_Call1{clone_as_value<List<T1>>(d_a0), sep});
+            _stack.emplace_back(_Call1{d_a0, sep});
             _stack.emplace_back(_Enter{*(d_a1)});
           }
         }
@@ -406,8 +409,7 @@ struct LoopifySequences {
             } else {
               const auto &[d_a0, d_a1] =
                   std::get<typename List<List<T1>>::Cons>(_loop_l.v());
-              auto &&_sv = clone_as_value<List<T1>>(d_a0);
-              if (std::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
+              if (std::holds_alternative<typename List<T1>::Nil>(d_a0.v())) {
                 _loop_l = *(d_a1);
               } else {
                 _result = false;
@@ -446,13 +448,12 @@ struct LoopifySequences {
                 } else {
                   const auto &[d_a00, d_a10] =
                       std::get<typename List<List<T1>>::Cons>(l.v());
-                  auto &&_sv1 = clone_as_value<List<T1>>(d_a00);
                   if (std::holds_alternative<typename List<T1>::Nil>(
-                          _sv1.v())) {
+                          d_a00.v())) {
                     _stack.emplace_back(_Enter{*(d_a10)});
                   } else {
                     const auto &[d_a01, d_a11] =
-                        std::get<typename List<T1>::Cons>(_sv1.v());
+                        std::get<typename List<T1>::Cons>(d_a00.v());
                     _stack.emplace_back(_Call1{d_a01});
                     _stack.emplace_back(_Enter{*(d_a10)});
                   }
@@ -489,13 +490,12 @@ struct LoopifySequences {
                 } else {
                   const auto &[d_a01, d_a11] =
                       std::get<typename List<List<T1>>::Cons>(l.v());
-                  auto &&_sv2 = clone_as_value<List<T1>>(d_a01);
                   if (std::holds_alternative<typename List<T1>::Nil>(
-                          _sv2.v())) {
+                          d_a01.v())) {
                     _stack.emplace_back(_Enter{*(d_a11)});
                   } else {
                     const auto &[d_a02, d_a12] =
-                        std::get<typename List<T1>::Cons>(_sv2.v());
+                        std::get<typename List<T1>::Cons>(d_a01.v());
                     _stack.emplace_back(_Call1{*(d_a12)});
                     _stack.emplace_back(_Enter{*(d_a11)});
                   }

@@ -33,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -180,8 +184,8 @@ struct AccumClosureCapture {
         return fn_list(FNil{});
       } else {
         const auto &[d_a0, d_a1] = std::get<FCons>(_sv.v());
-        return fn_list(FCons{clone_value(d_a0),
-                             clone_as_value<std::unique_ptr<fn_list>>(d_a1)});
+        return fn_list(
+            FCons{d_a0, clone_as_value<std::unique_ptr<fn_list>>(d_a1)});
       }
     }
 
@@ -224,9 +228,9 @@ struct AccumClosureCapture {
       }
     }
 
-    template <typename T1, MapsTo<T1, std::function<unsigned int(unsigned int)>,
-                                  std::unique_ptr<fn_list>, T1>
-                               F1>
+    template <
+        typename T1,
+        MapsTo<T1, std::function<unsigned int(unsigned int)>, fn_list, T1> F1>
     T1 fn_list_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
@@ -237,9 +241,9 @@ struct AccumClosureCapture {
       }
     }
 
-    template <typename T1, MapsTo<T1, std::function<unsigned int(unsigned int)>,
-                                  std::unique_ptr<fn_list>, T1>
-                               F1>
+    template <
+        typename T1,
+        MapsTo<T1, std::function<unsigned int(unsigned int)>, fn_list, T1> F1>
     T1 fn_list_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
@@ -296,8 +300,7 @@ struct AccumClosureCapture {
         return tree(Leaf{});
       } else {
         const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
-        return tree(Node{clone_as_value<std::unique_ptr<tree>>(d_a0),
-                         clone_as_value<unsigned int>(d_a1),
+        return tree(Node{clone_as_value<std::unique_ptr<tree>>(d_a0), d_a1,
                          clone_as_value<std::unique_ptr<tree>>(d_a2)});
       }
     }
@@ -367,9 +370,7 @@ struct AccumClosureCapture {
       }
     }
 
-    template <typename T1, MapsTo<T1, std::unique_ptr<tree>, T1, unsigned int,
-                                  std::unique_ptr<tree>, T1>
-                               F1>
+    template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
     T1 tree_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
@@ -381,9 +382,7 @@ struct AccumClosureCapture {
       }
     }
 
-    template <typename T1, MapsTo<T1, std::unique_ptr<tree>, T1, unsigned int,
-                                  std::unique_ptr<tree>, T1>
-                               F1>
+    template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
     T1 tree_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {

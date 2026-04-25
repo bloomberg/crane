@@ -35,7 +35,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -586,17 +590,15 @@ struct LoopifyLists {
               list<list<T1>>::cons(list<T1>::nil(), list<list<T1>>::nil());
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          list<T1> d_a1_value = clone_as_value<list<T1>>(d_a1);
+          list<T1> d_a1_value = clone_as_value<LoopifyLists::list<T1>>(d_a1);
           std::function<list<list<T1>>(list<list<T1>>)> map_cons;
           map_cons = [&](list<list<T1>> ys) -> list<list<T1>> {
             struct _Enter {
               list<list<T1>> ys;
             };
             struct _Call1 {
-              decltype(list<T1>::cons(
-                  std::declval<std::unique_ptr<list<T1>> &>(),
-                  clone_as_value<list<T1>>(
-                      std::declval<std::unique_ptr<list<T1>> &>()))) _s0;
+              decltype(list<T1>::cons(std::declval<list<T1> &>(),
+                                      std::declval<list<T1> &>())) _s0;
             };
             using _Frame = std::variant<_Enter, _Call1>;
             list<list<T1>> _result{};
@@ -615,8 +617,7 @@ struct LoopifyLists {
                 } else {
                   const auto &[d_a0, d_a1] =
                       std::get<typename list<list<T1>>::Cons>(ys.v());
-                  _stack.emplace_back(_Call1{
-                      list<T1>::cons(d_a0, clone_as_value<list<T1>>(d_a0))});
+                  _stack.emplace_back(_Call1{list<T1>::cons(d_a0, d_a0)});
                   _stack.emplace_back(_Enter{*(d_a1)});
                 }
               } else {
@@ -1238,12 +1239,11 @@ struct LoopifyLists {
               } else {
                 const auto &[d_a0, d_a1] =
                     std::get<typename list<list<T1>>::Cons>(l.v());
-                auto &&_sv0 = clone_as_value<list<T1>>(d_a0);
-                if (std::holds_alternative<typename list<T1>::Nil>(_sv0.v())) {
+                if (std::holds_alternative<typename list<T1>::Nil>(d_a0.v())) {
                   _result = list<T1>::nil();
                 } else {
                   const auto &[d_a00, d_a10] =
-                      std::get<typename list<T1>::Cons>(_sv0.v());
+                      std::get<typename list<T1>::Cons>(d_a0.v());
                   _stack.emplace_back(_Call1{d_a00});
                   _stack.emplace_back(_Enter{*(d_a1)});
                 }
@@ -1279,12 +1279,11 @@ struct LoopifyLists {
               } else {
                 const auto &[d_a00, d_a10] =
                     std::get<typename list<list<T1>>::Cons>(l.v());
-                auto &&_sv1 = clone_as_value<list<T1>>(d_a00);
-                if (std::holds_alternative<typename list<T1>::Nil>(_sv1.v())) {
+                if (std::holds_alternative<typename list<T1>::Nil>(d_a00.v())) {
                   _result = list<list<T1>>::nil();
                 } else {
                   const auto &[d_a01, d_a11] =
-                      std::get<typename list<T1>::Cons>(_sv1.v());
+                      std::get<typename list<T1>::Cons>(d_a00.v());
                   _stack.emplace_back(_Call1{*(d_a11)});
                   _stack.emplace_back(_Enter{*(d_a10)});
                 }
@@ -1302,8 +1301,7 @@ struct LoopifyLists {
         } else {
           const auto &[d_a01, d_a11] =
               std::get<typename list<list<T1>>::Cons>(_loop_m.v());
-          auto &&_sv = clone_as_value<list<T1>>(d_a01);
-          if (std::holds_alternative<typename list<T1>::Nil>(_sv.v())) {
+          if (std::holds_alternative<typename list<T1>::Nil>(d_a01.v())) {
             *(_write) = std::make_unique<list<list<T1>>>(list<list<T1>>::nil());
             break;
           } else {
@@ -1511,8 +1509,7 @@ struct LoopifyLists {
     };
 
     struct _Call1 {
-      decltype(clone_as_value<list<T1>>(
-          std::declval<std::unique_ptr<list<T1>> &>())) _s0;
+      list<T1> _s0;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -1531,7 +1528,8 @@ struct LoopifyLists {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename list<list<T1>>::Cons>(l.v());
-          list<list<T1>> d_a1_value = clone_as_value<list<list<T1>>>(d_a1);
+          list<list<T1>> d_a1_value =
+              clone_as_value<LoopifyLists::list<LoopifyLists::list<T1>>>(d_a1);
           std::function<list<T1>(list<T1>, list<T1>)> app;
           app = [&](list<T1> l1, list<T1> l2) -> list<T1> {
             struct _Enter {
@@ -1566,7 +1564,7 @@ struct LoopifyLists {
             }
             return _result;
           };
-          _stack.emplace_back(_Call1{clone_as_value<list<T1>>(d_a0)});
+          _stack.emplace_back(_Call1{d_a0});
           _stack.emplace_back(_Enter{d_a1_value});
         }
       } else {

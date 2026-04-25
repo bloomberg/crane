@@ -34,7 +34,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -290,11 +294,10 @@ struct LoopifyStructures {
       auto &&_sv = *(this);
       if (std::holds_alternative<Elem>(_sv.v())) {
         const auto &[d_a0] = std::get<Elem>(_sv.v());
-        return nested(Elem{clone_as_value<unsigned int>(d_a0)});
+        return nested(Elem{d_a0});
       } else {
         const auto &[d_a0] = std::get<NList>(_sv.v());
-        return nested(
-            NList{clone_as_value<List<std::unique_ptr<nested>>>(d_a0)});
+        return nested(NList{d_a0});
       }
     }
 
@@ -335,8 +338,8 @@ struct LoopifyStructures {
         return List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
       } else {
         const auto &[d_a0] = std::get<typename nested::NList>(_sv.v());
-        return flatten_nested_list_fuel(1000u,
-                                        clone_as_value<List<nested>>(d_a0));
+        return flatten_nested_list_fuel(
+            1000u, clone_as_value<List<LoopifyStructures::nested>>(d_a0));
       }
     }
 
@@ -348,7 +351,8 @@ struct LoopifyStructures {
       } else {
         const auto &[d_a0] = std::get<typename nested::NList>(_sv.v());
         return (
-            depth_nested_list_fuel(1000u, clone_as_value<List<nested>>(d_a0)) +
+            depth_nested_list_fuel(
+                1000u, clone_as_value<List<LoopifyStructures::nested>>(d_a0)) +
             1);
       }
     }
@@ -361,7 +365,8 @@ struct LoopifyStructures {
         return d_a0;
       } else {
         const auto &[d_a0] = std::get<typename nested::NList>(_sv.v());
-        return sum_nested_list_fuel(1000u, clone_as_value<List<nested>>(d_a0));
+        return sum_nested_list_fuel(
+            1000u, clone_as_value<List<LoopifyStructures::nested>>(d_a0));
       }
     }
 
@@ -374,7 +379,7 @@ struct LoopifyStructures {
         return f(d_a0);
       } else {
         const auto &[d_a0] = std::get<typename nested::NList>(_sv.v());
-        return f0(clone_as_value<List<nested>>(d_a0));
+        return f0(clone_as_value<List<LoopifyStructures::nested>>(d_a0));
       }
     }
 
@@ -387,7 +392,7 @@ struct LoopifyStructures {
         return f(d_a0);
       } else {
         const auto &[d_a0] = std::get<typename nested::NList>(_sv.v());
-        return f0(clone_as_value<List<nested>>(d_a0));
+        return f0(clone_as_value<List<LoopifyStructures::nested>>(d_a0));
       }
     }
   };
@@ -450,7 +455,7 @@ struct LoopifyStructures {
       auto &&_sv = *(this);
       if (std::holds_alternative<QLeaf>(_sv.v())) {
         const auto &[d_a0] = std::get<QLeaf>(_sv.v());
-        return quadtree(QLeaf{clone_as_value<unsigned int>(d_a0)});
+        return quadtree(QLeaf{d_a0});
       } else {
         const auto &[d_a0, d_a1, d_a2, d_a3] = std::get<Quad>(_sv.v());
         return quadtree(Quad{clone_as_value<std::unique_ptr<quadtree>>(d_a0),
@@ -618,10 +623,14 @@ struct LoopifyStructures {
           } else {
             const auto &[d_a0, d_a1, d_a2, d_a3] =
                 std::get<typename quadtree::Quad>(_sv.v());
-            quadtree d_a0_value = clone_as_value<quadtree>(d_a0);
-            quadtree d_a1_value = clone_as_value<quadtree>(d_a1);
-            quadtree d_a2_value = clone_as_value<quadtree>(d_a2);
-            quadtree d_a3_value = clone_as_value<quadtree>(d_a3);
+            quadtree d_a0_value =
+                clone_as_value<LoopifyStructures::quadtree>(d_a0);
+            quadtree d_a1_value =
+                clone_as_value<LoopifyStructures::quadtree>(d_a1);
+            quadtree d_a2_value =
+                clone_as_value<LoopifyStructures::quadtree>(d_a2);
+            quadtree d_a3_value =
+                clone_as_value<LoopifyStructures::quadtree>(d_a3);
             _stack.emplace_back(_Call1{d_a1_value, d_a2_value, d_a3_value});
             _stack.emplace_back(_Enter{d_a0_value.get()});
           }
@@ -762,9 +771,7 @@ struct LoopifyStructures {
 
     template <
         typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, std::unique_ptr<quadtree>, T1, std::unique_ptr<quadtree>, T1,
-               std::unique_ptr<quadtree>, T1, std::unique_ptr<quadtree>, T1>
-            F1>
+        MapsTo<T1, quadtree, T1, quadtree, T1, quadtree, T1, quadtree, T1> F1>
     T1 quadtree_rec(F0 &&f, F1 &&f0) const {
       const quadtree *_self = this;
 
@@ -860,9 +867,7 @@ struct LoopifyStructures {
 
     template <
         typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, std::unique_ptr<quadtree>, T1, std::unique_ptr<quadtree>, T1,
-               std::unique_ptr<quadtree>, T1, std::unique_ptr<quadtree>, T1>
-            F1>
+        MapsTo<T1, quadtree, T1, quadtree, T1, quadtree, T1, quadtree, T1> F1>
     T1 quadtree_rect(F0 &&f, F1 &&f0) const {
       const quadtree *_self = this;
 
@@ -1103,11 +1108,10 @@ struct LoopifyStructures {
       auto &&_sv = *(this);
       if (std::holds_alternative<LLeaf>(_sv.v())) {
         const auto &[d_a0] = std::get<LLeaf>(_sv.v());
-        return ltree(LLeaf{clone_as_value<unsigned int>(d_a0)});
+        return ltree(LLeaf{d_a0});
       } else {
         const auto &[d_a0, d_a1, d_a2] = std::get<LNode>(_sv.v());
-        return ltree(LNode{clone_as_value<unsigned int>(d_a0),
-                           clone_as_value<std::unique_ptr<ltree>>(d_a1),
+        return ltree(LNode{d_a0, clone_as_value<std::unique_ptr<ltree>>(d_a1),
                            clone_as_value<std::unique_ptr<ltree>>(d_a2)});
       }
     }
@@ -1221,9 +1225,7 @@ struct LoopifyStructures {
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int, std::unique_ptr<ltree>, T1,
-                     std::unique_ptr<ltree>, T1>
-                  F1>
+              MapsTo<T1, unsigned int, ltree, T1, ltree, T1> F1>
     T1 ltree_rec(F0 &&f, F1 &&f0) const {
       const ltree *_self = this;
 
@@ -1279,9 +1281,7 @@ struct LoopifyStructures {
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int, std::unique_ptr<ltree>, T1,
-                     std::unique_ptr<ltree>, T1>
-                  F1>
+              MapsTo<T1, unsigned int, ltree, T1, ltree, T1> F1>
     T1 ltree_rect(F0 &&f, F1 &&f0) const {
       const ltree *_self = this;
 

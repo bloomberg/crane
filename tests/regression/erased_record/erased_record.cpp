@@ -1,5 +1,6 @@
 #include <erased_record.h>
 
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) unsigned int

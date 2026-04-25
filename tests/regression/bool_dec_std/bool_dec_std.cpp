@@ -1,5 +1,6 @@
 #include <bool_dec_std.h>
 
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) bool BoolDecStd::eqb_dec(const bool &a, const bool &b) {

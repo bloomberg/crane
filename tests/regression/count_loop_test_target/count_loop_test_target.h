@@ -1,6 +1,7 @@
 #ifndef INCLUDED_COUNT_LOOP_TEST_TARGET
 #define INCLUDED_COUNT_LOOP_TEST_TARGET
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -31,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -174,8 +179,7 @@ struct CountLoopTestTarget {
       auto &&_sv = *(this);
       if (std::holds_alternative<ISZ>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<ISZ>(_sv.v());
-        return instruction(ISZ{clone_as_value<unsigned int>(d_a0),
-                               clone_as_value<unsigned int>(d_a1)});
+        return instruction(ISZ{d_a0, d_a1});
       } else {
         return instruction(NOP{});
       }

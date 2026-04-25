@@ -33,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -196,10 +200,10 @@ struct AxiomTypes {
       auto &&_sv = *(this);
       if (std::holds_alternative<AxConstr1>(_sv.v())) {
         const auto &[d_a0] = std::get<AxConstr1>(_sv.v());
-        return AxiomInductive(AxConstr1{clone_as_value<unsigned int>(d_a0)});
+        return AxiomInductive(AxConstr1{d_a0});
       } else {
         const auto &[d_a0] = std::get<AxConstr2>(_sv.v());
-        return AxiomInductive(AxConstr2{clone_as_value<MysteryType>(d_a0)});
+        return AxiomInductive(AxConstr2{d_a0});
       }
     }
 
@@ -355,7 +359,7 @@ struct AxiomTypes {
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, t_A, std::unique_ptr<list<t_A>>, T1> F1>
+    template <typename T1, MapsTo<T1, t_A, list<t_A>, T1> F1>
     T1 list_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename list<t_A>::Nil>(_sv.v())) {
@@ -366,7 +370,7 @@ struct AxiomTypes {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, std::unique_ptr<list<t_A>>, T1> F1>
+    template <typename T1, MapsTo<T1, t_A, list<t_A>, T1> F1>
     T1 list_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename list<t_A>::Nil>(_sv.v())) {

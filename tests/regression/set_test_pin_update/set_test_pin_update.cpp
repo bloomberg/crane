@@ -1,5 +1,6 @@
 #include <set_test_pin_update.h>
 
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) SetTestPinUpdate::state

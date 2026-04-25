@@ -79,7 +79,7 @@ LoopifyDecltype::sum_flagged(const List<LoopifyDecltype::item> &xs) {
         const auto &[d_a0, d_a1] =
             std::get<typename List<LoopifyDecltype::item>::Cons>(xs.v());
         List<LoopifyDecltype::item> d_a1_value =
-            clone_as_value<List<item>>(d_a1);
+            clone_as_value<List<LoopifyDecltype::item>>(d_a1);
         _stack.emplace_back(_Call1{[&]() -> unsigned int {
           if (d_a0.item_flag) {
             return d_a0.item_val;

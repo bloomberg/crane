@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) double PrimFloat::test_add(const double _x0,

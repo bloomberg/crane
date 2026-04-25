@@ -33,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -266,11 +270,10 @@ struct DepElim {
       auto &&_sv = *(this);
       if (std::holds_alternative<FZ>(_sv.v())) {
         const auto &[d_n] = std::get<FZ>(_sv.v());
-        return fin(FZ{clone_as_value<unsigned int>(d_n)});
+        return fin(FZ{d_n});
       } else {
         const auto &[d_n, d_a1] = std::get<FS>(_sv.v());
-        return fin(FS{clone_as_value<unsigned int>(d_n),
-                      clone_as_value<std::unique_ptr<fin>>(d_a1)});
+        return fin(FS{d_n, clone_as_value<std::unique_ptr<fin>>(d_a1)});
       }
     }
 
@@ -314,7 +317,7 @@ struct DepElim {
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int, std::unique_ptr<fin>, T1> F1>
+              MapsTo<T1, unsigned int, fin, T1> F1>
     T1 fin_rec(F0 &&f, F1 &&f0, const unsigned int &) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename fin::FZ>(_sv.v())) {
@@ -327,7 +330,7 @@ struct DepElim {
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int, std::unique_ptr<fin>, T1> F1>
+              MapsTo<T1, unsigned int, fin, T1> F1>
     T1 fin_rect(F0 &&f, F1 &&f0, const unsigned int &) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename fin::FZ>(_sv.v())) {
@@ -385,8 +388,7 @@ struct DepElim {
         return vec<t_A>(Vnil{});
       } else {
         const auto &[d_n, d_a1, d_a2] = std::get<Vcons>(_sv.v());
-        return vec<t_A>(Vcons{clone_as_value<unsigned int>(d_n),
-                              clone_as_value<t_A>(d_a1),
+        return vec<t_A>(Vcons{d_n, clone_as_value<t_A>(d_a1),
                               clone_as_value<std::unique_ptr<vec<t_A>>>(d_a2)});
       }
     }
@@ -399,7 +401,7 @@ struct DepElim {
       } else {
         const auto &[d_n, d_a1, d_a2] = std::get<Vcons>(_sv.v());
         return vec<_CloneT0>(typename vec<_CloneT0>::Vcons{
-            clone_as_value<unsigned int>(d_n), clone_as_value<_CloneT0>(d_a1),
+            d_n, clone_as_value<_CloneT0>(d_a1),
             clone_as_value<std::unique_ptr<vec<_CloneT0>>>(d_a2)});
       }
     }
@@ -479,8 +481,7 @@ struct DepElim {
       }
     }
 
-    template <typename T1,
-              MapsTo<T1, unsigned int, t_A, std::unique_ptr<vec<t_A>>, T1> F1>
+    template <typename T1, MapsTo<T1, unsigned int, t_A, vec<t_A>, T1> F1>
     T1 vec_rec(const T1 f, F1 &&f0, const unsigned int &) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
@@ -493,8 +494,7 @@ struct DepElim {
       }
     }
 
-    template <typename T1,
-              MapsTo<T1, unsigned int, t_A, std::unique_ptr<vec<t_A>>, T1> F1>
+    template <typename T1, MapsTo<T1, unsigned int, t_A, vec<t_A>, T1> F1>
     T1 vec_rect(const T1 f, F1 &&f0, const unsigned int &) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
@@ -549,7 +549,7 @@ struct DepElim {
       auto &&_sv = *(this);
       if (std::holds_alternative<Present>(_sv.v())) {
         const auto &[d_a0] = std::get<Present>(_sv.v());
-        return avail(Present{clone_as_value<unsigned int>(d_a0)});
+        return avail(Present{d_a0});
       } else {
         return avail(Absent{});
       }

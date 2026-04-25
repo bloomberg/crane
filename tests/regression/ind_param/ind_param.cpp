@@ -1,6 +1,7 @@
 #include <ind_param.h>
 
 #include <concepts>
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>

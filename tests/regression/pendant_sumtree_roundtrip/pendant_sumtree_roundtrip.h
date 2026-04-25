@@ -36,7 +36,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -481,8 +485,7 @@ public:
       return T0<t_A>(Nil{});
     } else {
       const auto &[d_h, d_n, d_a2] = std::get<Cons>(_sv.v());
-      return T0<t_A>(Cons{clone_as_value<t_A>(d_h),
-                          clone_as_value<unsigned int>(d_n),
+      return T0<t_A>(Cons{clone_as_value<t_A>(d_h), d_n,
                           clone_as_value<std::unique_ptr<T0<t_A>>>(d_a2)});
     }
   }
@@ -495,7 +498,7 @@ public:
     } else {
       const auto &[d_h, d_n, d_a2] = std::get<Cons>(_sv.v());
       return T0<_CloneT0>(typename T0<_CloneT0>::Cons{
-          clone_as_value<_CloneT0>(d_h), clone_as_value<unsigned int>(d_n),
+          clone_as_value<_CloneT0>(d_h), d_n,
           clone_as_value<std::unique_ptr<T0<_CloneT0>>>(d_a2)});
     }
   }
@@ -572,11 +575,10 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<F1>(_sv.v())) {
       const auto &[d_n] = std::get<F1>(_sv.v());
-      return T(F1{clone_as_value<unsigned int>(d_n)});
+      return T(F1{d_n});
     } else {
       const auto &[d_n, d_a1] = std::get<FS>(_sv.v());
-      return T(FS{clone_as_value<unsigned int>(d_n),
-                  clone_as_value<std::unique_ptr<T>>(d_a1)});
+      return T(FS{d_n, clone_as_value<std::unique_ptr<T>>(d_a1)});
     }
   }
 
@@ -849,12 +851,10 @@ struct PendantSumtreeRoundtripCase {
       auto &&_sv = *(this);
       if (std::holds_alternative<SumLeaf>(_sv.v())) {
         const auto &[d_a0] = std::get<SumLeaf>(_sv.v());
-        return SumTree(SumLeaf{clone_as_value<CertifiedPendant>(d_a0)});
+        return SumTree(SumLeaf{d_a0});
       } else {
         const auto &[d_a0, d_a1] = std::get<SumNode>(_sv.v());
-        return SumTree(
-            SumNode{clone_as_value<CertifiedPendant>(d_a0),
-                    clone_as_value<List<std::unique_ptr<SumTree>>>(d_a1)});
+        return SumTree(SumNode{d_a0, d_a1});
       }
     }
 
@@ -899,7 +899,9 @@ struct PendantSumtreeRoundtripCase {
       return f(d_a0);
     } else {
       const auto &[d_a0, d_a1] = std::get<typename SumTree::SumNode>(s.v());
-      return f0(d_a0, clone_as_value<List<SumTree>>(d_a1));
+      return f0(
+          d_a0,
+          clone_as_value<List<PendantSumtreeRoundtripCase::SumTree>>(d_a1));
     }
   }
 
@@ -912,7 +914,9 @@ struct PendantSumtreeRoundtripCase {
       return f(d_a0);
     } else {
       const auto &[d_a0, d_a1] = std::get<typename SumTree::SumNode>(s.v());
-      return f0(d_a0, clone_as_value<List<SumTree>>(d_a1));
+      return f0(
+          d_a0,
+          clone_as_value<List<PendantSumtreeRoundtripCase::SumTree>>(d_a1));
     }
   }
 

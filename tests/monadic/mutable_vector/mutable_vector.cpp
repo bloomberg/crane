@@ -1,6 +1,7 @@
 #include <mutable_vector.h>
 
 #include <cstdint>
+#include <memory>
 #include <type_traits>
 #include <variant>
 #include <vector>

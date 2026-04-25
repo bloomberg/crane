@@ -960,7 +960,7 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::count_total_lunar(
         typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Cons>(
         es.v());
     List<EpochCellGlyphTraceCase::HistoricalEclipse> d_a1_value =
-        clone_as_value<List<HistoricalEclipse>>(d_a1);
+        clone_as_value<List<EpochCellGlyphTraceCase::HistoricalEclipse>>(d_a1);
     unsigned int count_here = [&]() {
       switch (d_a0.he_category) {
       case EclipseCategory::e_EC_TOTALLUNAR: {
@@ -987,7 +987,7 @@ EpochCellGlyphTraceCase::count_visible_total_lunar(
         typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Cons>(
         es.v());
     List<EpochCellGlyphTraceCase::HistoricalEclipse> d_a1_value =
-        clone_as_value<List<HistoricalEclipse>>(d_a1);
+        clone_as_value<List<EpochCellGlyphTraceCase::HistoricalEclipse>>(d_a1);
     unsigned int count_here = [&]() {
       switch (d_a0.he_category) {
       case EclipseCategory::e_EC_TOTALLUNAR: {

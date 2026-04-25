@@ -2,6 +2,7 @@
 #define INCLUDED_IND_PARAM
 
 #include <concepts>
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -32,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -185,10 +190,10 @@ struct IndParam {
         auto &&_sv = *(this);
         if (std::holds_alternative<Ok>(_sv.v())) {
           const auto &[d_a0] = std::get<Ok>(_sv.v());
-          return result(Ok{clone_as_value<T>(d_a0)});
+          return result(Ok{d_a0});
         } else {
           const auto &[d_a0] = std::get<Err>(_sv.v());
-          return result(Err{clone_as_value<unsigned int>(d_a0)});
+          return result(Err{d_a0});
         }
       }
 
@@ -330,11 +335,10 @@ struct IndParam {
           return t(Empty{});
         } else if (std::holds_alternative<Single>(_sv.v())) {
           const auto &[d_a0] = std::get<Single>(_sv.v());
-          return t(Single{clone_as_value<elem>(d_a0)});
+          return t(Single{d_a0});
         } else {
           const auto &[d_a0, d_a1] = std::get<Pair>(_sv.v());
-          return t(
-              Pair{clone_as_value<elem>(d_a0), clone_as_value<elem>(d_a1)});
+          return t(Pair{d_a0, d_a1});
         }
       }
 

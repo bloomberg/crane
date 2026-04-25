@@ -1,5 +1,6 @@
 #include <prim_proj.h>
 
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) PrimProj::point

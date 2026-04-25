@@ -33,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -188,7 +192,7 @@ template <Elem E> struct Container {
         return maybe(Nothing{});
       } else {
         const auto &[d_a0] = std::get<Just>(_sv.v());
-        return maybe(Just{clone_as_value<unsigned int>(d_a0)});
+        return maybe(Just{d_a0});
       }
     }
 
@@ -284,8 +288,7 @@ template <Elem E> struct Container {
         return mlist(MNil{});
       } else {
         const auto &[d_a0, d_a1] = std::get<MCons>(_sv.v());
-        return mlist(MCons{clone_as_value<maybe>(d_a0),
-                           clone_as_value<std::unique_ptr<mlist>>(d_a1)});
+        return mlist(MCons{d_a0, clone_as_value<std::unique_ptr<mlist>>(d_a1)});
       }
     }
 
@@ -380,10 +383,10 @@ template <Elem E> struct Container {
       auto &&_sv = *(this);
       if (std::holds_alternative<Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<Leaf>(_sv.v());
-        return mtree(Leaf{clone_as_value<maybe>(d_a0)});
+        return mtree(Leaf{d_a0});
       } else {
         const auto &[d_a0] = std::get<Node>(_sv.v());
-        return mtree(Node{clone_as_value<mlist>(d_a0)});
+        return mtree(Node{d_a0});
       }
     }
 

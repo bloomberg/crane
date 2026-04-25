@@ -33,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -174,7 +178,7 @@ struct ClosureInCtor {
       auto &&_sv = *(this);
       if (std::holds_alternative<Box0>(_sv.v())) {
         const auto &[d_a0] = std::get<Box0>(_sv.v());
-        return box(Box0{clone_value(d_a0)});
+        return box(Box0{d_a0});
       } else {
         return box(Empty{});
       }

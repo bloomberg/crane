@@ -780,7 +780,11 @@ let spec_header si () =
        }\n\n\
        template <typename T>\n\
        std::shared_ptr<T> clone_value(const std::shared_ptr<T>& x) {\n\
-      \  return x ? std::make_shared<T>(x->clone()) : nullptr;\n\
+      \  if constexpr (requires { x->clone(); }) {\n\
+      \    return x ? std::make_shared<T>(x->clone()) : nullptr;\n\
+      \  } else {\n\
+      \    return x;\n\
+      \  }\n\
        }\n\n\
        template <typename Target, typename Source>\n\
        Target clone_as_value(const Source& x) {\n\
@@ -1153,10 +1157,14 @@ let print_structure_to_file (fn, si, mo) dry struc =
   set_phase Pre;
   ignore (d.pp_struct struc);
   ignore (d.pp_hstruct struc);
-  (* The MapsTo concept boilerplate always emitted by spec_header
-     uses std::is_invocable_r_v, which requires <type_traits>. *)
-  if Table.std_lib () <> "BDE" then
+  (* The boilerplate always emitted by spec_header (MapsTo concept,
+     is_unique_ptr/is_shared_ptr traits, clone_value/clone_as_value helpers)
+     uses std::is_invocable_r_v (<type_traits>) and std::unique_ptr/
+     std::shared_ptr (<memory>). *)
+  if Table.std_lib () <> "BDE" then begin
     Cpp_state.require_header "type_traits";
+    Cpp_state.require_header "memory"
+  end;
   let opened = opened_libraries () in
   (* Print the implementation *)
   let cout = if dry then None else Option.map open_out fn in

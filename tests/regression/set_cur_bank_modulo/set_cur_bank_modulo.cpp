@@ -1,5 +1,6 @@
 #include <set_cur_bank_modulo.h>
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 

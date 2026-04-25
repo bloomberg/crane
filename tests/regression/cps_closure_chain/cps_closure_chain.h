@@ -33,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -178,8 +182,7 @@ struct CpsClosureChain {
         return tree(Leaf{});
       } else {
         const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
-        return tree(Node{clone_as_value<std::unique_ptr<tree>>(d_a0),
-                         clone_as_value<unsigned int>(d_a1),
+        return tree(Node{clone_as_value<std::unique_ptr<tree>>(d_a0), d_a1,
                          clone_as_value<std::unique_ptr<tree>>(d_a2)});
       }
     }
@@ -257,8 +260,8 @@ struct CpsClosureChain {
       return k(0u);
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      tree d_a0_value = clone_as_value<tree>(d_a0);
-      tree d_a2_value = clone_as_value<tree>(d_a2);
+      tree d_a0_value = clone_as_value<CpsClosureChain::tree>(d_a0);
+      tree d_a2_value = clone_as_value<CpsClosureChain::tree>(d_a2);
       return tree_sum_cps(d_a0_value, [=](unsigned int left_sum) mutable {
         return tree_sum_cps(d_a2_value,
                             [=](const unsigned int &right_sum) mutable {
@@ -295,8 +298,8 @@ struct CpsClosureChain {
       return k(base);
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      tree d_a0_value = clone_as_value<tree>(d_a0);
-      tree d_a2_value = clone_as_value<tree>(d_a2);
+      tree d_a0_value = clone_as_value<CpsClosureChain::tree>(d_a0);
+      tree d_a2_value = clone_as_value<CpsClosureChain::tree>(d_a2);
       return tree_fold_cps(
           d_a0_value, base, combine, [=](unsigned int left_result) mutable {
             return tree_fold_cps(

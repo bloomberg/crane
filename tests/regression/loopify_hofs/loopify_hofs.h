@@ -35,7 +35,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -1476,7 +1480,9 @@ struct LoopifyHofs {
             } else {
               auto _cell = std::make_unique<List<List<unsigned int>>>(
                   typename List<List<unsigned int>>::Cons(
-                      List<unsigned int>::cons(d_a0, List<unsigned int>::nil()),
+                      std::make_unique<List<List<unsigned int>>>(
+                          List<unsigned int>::cons(d_a0,
+                                                   List<unsigned int>::nil())),
                       nullptr));
               *(_write) = std::move(_cell);
               _write = &std::get<typename List<List<unsigned int>>::Cons>(

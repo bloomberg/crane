@@ -81,10 +81,10 @@ int main() {
   ASSERT(LoopifyTail::member(5000u, big) == true);
   ASSERT(LoopifyTail::fold_left(sum_fn, 0u, big) == 49995000u);
 
-  // Iteratively destroy the big list to avoid shared_ptr destructor
-  // stack overflow (a known limitation of shared_ptr for deep lists)
+  // Iteratively destroy the big list to avoid destructor
+  // stack overflow (a known limitation for deep lists)
   while (std::holds_alternative<List::Cons>(big.v_mut())) {
-    auto next = std::get<List::Cons>(big.v_mut()).d_a1;
+    auto next = std::move(std::get<List::Cons>(big.v_mut()).d_a1);
     big = std::move(*next);
   }
 

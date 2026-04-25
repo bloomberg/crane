@@ -28,7 +28,8 @@ NestedMatchClosure::make_combiner(const NestedMatchClosure::tree &t) {
   } else {
     const auto &[d_a0, d_a1, d_a2] =
         std::get<typename NestedMatchClosure::tree::Node>(t.v());
-    NestedMatchClosure::tree d_a0_value = clone_as_value<tree>(d_a0);
+    NestedMatchClosure::tree d_a0_value =
+        clone_as_value<NestedMatchClosure::tree>(d_a0);
     if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(
             d_a0_value.v())) {
       return std::make_optional<std::function<unsigned int(unsigned int)>>(
@@ -60,14 +61,16 @@ NestedMatchClosure::make_deep_combiner(const NestedMatchClosure::tree &t) {
   } else {
     const auto &[d_a0, d_a1, d_a2] =
         std::get<typename NestedMatchClosure::tree::Node>(t.v());
-    NestedMatchClosure::tree d_a0_value = clone_as_value<tree>(d_a0);
+    NestedMatchClosure::tree d_a0_value =
+        clone_as_value<NestedMatchClosure::tree>(d_a0);
     if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(
             d_a0_value.v())) {
       return std::optional<std::function<unsigned int(unsigned int)>>();
     } else {
       const auto &[d_a00, d_a10, d_a20] =
           std::get<typename NestedMatchClosure::tree::Node>(d_a0_value.v());
-      NestedMatchClosure::tree d_a00_value = clone_as_value<tree>(d_a00);
+      NestedMatchClosure::tree d_a00_value =
+          clone_as_value<NestedMatchClosure::tree>(d_a00);
       if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(
               d_a00_value.v())) {
         return std::optional<std::function<unsigned int(unsigned int)>>();
@@ -103,8 +106,10 @@ NestedMatchClosure::make_param_combiner(const NestedMatchClosure::tree &t,
   } else {
     const auto &[d_a0, d_a1, d_a2] =
         std::get<typename NestedMatchClosure::tree::Node>(t.v());
-    NestedMatchClosure::tree d_a0_value = clone_as_value<tree>(d_a0);
-    NestedMatchClosure::tree d_a2_value = clone_as_value<tree>(d_a2);
+    NestedMatchClosure::tree d_a0_value =
+        clone_as_value<NestedMatchClosure::tree>(d_a0);
+    NestedMatchClosure::tree d_a2_value =
+        clone_as_value<NestedMatchClosure::tree>(d_a2);
     auto go = std::make_shared<std::function<unsigned int(unsigned int)>>();
     *go = [=](unsigned int x) mutable -> unsigned int {
       if (x <= 0) {

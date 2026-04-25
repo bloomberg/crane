@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NAME_CLASH_LET_MATCH
 #define INCLUDED_NAME_CLASH_LET_MATCH
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -31,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -175,10 +180,10 @@ struct NameClashLetMatch {
       auto &&_sv = *(this);
       if (std::holds_alternative<Left>(_sv.v())) {
         const auto &[d_a0] = std::get<Left>(_sv.v());
-        return either(Left{clone_as_value<unsigned int>(d_a0)});
+        return either(Left{d_a0});
       } else {
         const auto &[d_a0] = std::get<Right>(_sv.v());
-        return either(Right{clone_as_value<unsigned int>(d_a0)});
+        return either(Right{d_a0});
       }
     }
 
@@ -346,9 +351,7 @@ struct NameClashLetMatch {
     __attribute__((pure)) triple clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] = std::get<MkTriple>(_sv.v());
-      return triple(MkTriple{clone_as_value<unsigned int>(d_a0),
-                             clone_as_value<unsigned int>(d_a1),
-                             clone_as_value<unsigned int>(d_a2)});
+      return triple(MkTriple{d_a0, d_a1, d_a2});
     }
 
     // CREATORS

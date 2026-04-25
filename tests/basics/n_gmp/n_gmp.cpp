@@ -1,6 +1,7 @@
 #include <n_gmp.h>
 
 #include <gmpxx.h>
+#include <memory>
 #include <type_traits>
 #include <utility>
 

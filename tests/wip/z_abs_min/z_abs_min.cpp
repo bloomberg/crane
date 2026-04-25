@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <memory>
 #include <type_traits>
 
 /// In Rocq, Z.abs is total: Z.abs z is always non-negative.

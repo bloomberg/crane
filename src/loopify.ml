@@ -1224,6 +1224,10 @@ type tmc_cell_alloc = {
       (** [(index, expr)] for non-recursive arguments *)
   tca_n_args : int;
       (** Total number of constructor arguments *)
+  tca_uptr_field_idxs : int list;
+      (** Field indices that are stored as [unique_ptr] in the struct
+          (self-referencing fields).  Used by {!build_cell_call} to
+          wrap value-type args in [make_unique] for direct struct construction. *)
 }
 
 (** Information about a single TMC-eligible branch: a return expression of the
@@ -1707,6 +1711,31 @@ let rec try_tmc_decompose check expr =
         (fun (i, a) -> if i <> idx then Some (i, a) else None)
         indexed
     in
+    (* Detect which field positions hold self-referencing values (unique_ptr in
+       the struct).  A field is self-referencing if its arg is:
+       (a) a factory call for the same type, or
+       (b) a direct recursive call (variable or application). *)
+    let uptr_idxs_from_factory =
+      List.filter_map
+        (fun (i, a) ->
+          let a' = match a with CPPmove e -> e | e -> e in
+          match is_ctor_factory_call a' with
+          | Some _ -> Some i
+          | None -> None)
+        indexed
+    in
+    let uptr_idxs_from_recursive =
+      List.filter_map
+        (fun (i, a) ->
+          match check a with
+          | Some _ -> Some i
+          | None -> None)
+        indexed
+    in
+    let uptr_idxs =
+      List.sort_uniq compare
+        (uptr_idxs_from_factory @ uptr_idxs_from_recursive)
+    in
     let make_cell idx = {
       tca_factory =
         CPPqualified (type_expr, Id.of_string factory_s);
@@ -1715,6 +1744,7 @@ let rec try_tmc_decompose check expr =
       tca_rec_field_idx = idx;
       tca_non_rec_args = non_rec_of idx;
       tca_n_args = n_args;
+      tca_uptr_field_idxs = uptr_idxs;
     } in
     (* Find which args are direct recursive calls *)
     let direct =
@@ -1945,7 +1975,15 @@ let build_cell_call ~vt_ret pp_expr cell =
       if i = cell.tca_rec_field_idx then CPPraw "nullptr"
       else
         match List.assoc_opt i cell.tca_non_rec_args with
-        | Some e -> e
+        | Some e ->
+          (* For value-type return, non-rec args at unique_ptr field positions
+             need wrapping in make_unique.  The struct field is unique_ptr<T>
+             but the factory-produced value is bare T. *)
+          if vt_ret <> None && List.mem i cell.tca_uptr_field_idxs then
+            (match vt_ret with
+             | Some ret_ty -> CPPfun_call (CPPmk_unique ret_ty, [e])
+             | None -> e)
+          else e
         | None ->
           (* This shouldn't happen if the analysis is correct *)
           CPPraw "std::any{}" )

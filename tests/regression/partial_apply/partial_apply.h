@@ -34,7 +34,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -292,16 +296,15 @@ struct PartialApply {
     __attribute__((pure)) tagged<t_A> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Tag>(_sv.v());
-      return tagged<t_A>(
-          Tag{clone_as_value<unsigned int>(d_a0), clone_as_value<t_A>(d_a1)});
+      return tagged<t_A>(Tag{d_a0, clone_as_value<t_A>(d_a1)});
     }
 
     template <typename _CloneT0>
     __attribute__((pure)) tagged<_CloneT0> clone_as() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Tag>(_sv.v());
-      return tagged<_CloneT0>(typename tagged<_CloneT0>::Tag{
-          clone_as_value<unsigned int>(d_a0), clone_as_value<_CloneT0>(d_a1)});
+      return tagged<_CloneT0>(
+          typename tagged<_CloneT0>::Tag{d_a0, clone_as_value<_CloneT0>(d_a1)});
     }
 
     // CREATORS

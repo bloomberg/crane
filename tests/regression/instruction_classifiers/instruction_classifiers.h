@@ -32,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -372,25 +376,25 @@ struct InstructionClassifiers {
       auto &&_sv = *(this);
       if (std::holds_alternative<LDM>(_sv.v())) {
         const auto &[d_a0] = std::get<LDM>(_sv.v());
-        return instr_acc(LDM{clone_as_value<unsigned int>(d_a0)});
+        return instr_acc(LDM{d_a0});
       } else if (std::holds_alternative<LD>(_sv.v())) {
         const auto &[d_a0] = std::get<LD>(_sv.v());
-        return instr_acc(LD{clone_as_value<unsigned int>(d_a0)});
+        return instr_acc(LD{d_a0});
       } else if (std::holds_alternative<ADD>(_sv.v())) {
         const auto &[d_a0] = std::get<ADD>(_sv.v());
-        return instr_acc(ADD{clone_as_value<unsigned int>(d_a0)});
+        return instr_acc(ADD{d_a0});
       } else if (std::holds_alternative<SUB>(_sv.v())) {
         const auto &[d_a0] = std::get<SUB>(_sv.v());
-        return instr_acc(SUB{clone_as_value<unsigned int>(d_a0)});
+        return instr_acc(SUB{d_a0});
       } else if (std::holds_alternative<INC>(_sv.v())) {
         const auto &[d_a0] = std::get<INC>(_sv.v());
-        return instr_acc(INC{clone_as_value<unsigned int>(d_a0)});
+        return instr_acc(INC{d_a0});
       } else if (std::holds_alternative<XCH>(_sv.v())) {
         const auto &[d_a0] = std::get<XCH>(_sv.v());
-        return instr_acc(XCH{clone_as_value<unsigned int>(d_a0)});
+        return instr_acc(XCH{d_a0});
       } else if (std::holds_alternative<BBL>(_sv.v())) {
         const auto &[d_a0] = std::get<BBL>(_sv.v());
-        return instr_acc(BBL{clone_as_value<unsigned int>(d_a0)});
+        return instr_acc(BBL{d_a0});
       } else if (std::holds_alternative<SBM>(_sv.v())) {
         return instr_acc(SBM{});
       } else if (std::holds_alternative<RDM>(_sv.v())) {
@@ -773,7 +777,7 @@ struct InstructionClassifiers {
         return instr_ram(NOP_ram{});
       } else {
         const auto &[d_a0] = std::get<ADD_ram>(_sv.v());
-        return instr_ram(ADD_ram{clone_as_value<unsigned int>(d_a0)});
+        return instr_ram(ADD_ram{d_a0});
       }
     }
 
@@ -967,26 +971,24 @@ struct InstructionClassifiers {
       auto &&_sv = *(this);
       if (std::holds_alternative<XCH_regs>(_sv.v())) {
         const auto &[d_a0] = std::get<XCH_regs>(_sv.v());
-        return instr_regs(XCH_regs{clone_as_value<unsigned int>(d_a0)});
+        return instr_regs(XCH_regs{d_a0});
       } else if (std::holds_alternative<INC_regs>(_sv.v())) {
         const auto &[d_a0] = std::get<INC_regs>(_sv.v());
-        return instr_regs(INC_regs{clone_as_value<unsigned int>(d_a0)});
+        return instr_regs(INC_regs{d_a0});
       } else if (std::holds_alternative<FIM>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<FIM>(_sv.v());
-        return instr_regs(FIM{clone_as_value<unsigned int>(d_a0),
-                              clone_as_value<unsigned int>(d_a1)});
+        return instr_regs(FIM{d_a0, d_a1});
       } else if (std::holds_alternative<FIN>(_sv.v())) {
         const auto &[d_a0] = std::get<FIN>(_sv.v());
-        return instr_regs(FIN{clone_as_value<unsigned int>(d_a0)});
+        return instr_regs(FIN{d_a0});
       } else if (std::holds_alternative<ISZ>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<ISZ>(_sv.v());
-        return instr_regs(ISZ{clone_as_value<unsigned int>(d_a0),
-                              clone_as_value<unsigned int>(d_a1)});
+        return instr_regs(ISZ{d_a0, d_a1});
       } else if (std::holds_alternative<NOP_regs>(_sv.v())) {
         return instr_regs(NOP_regs{});
       } else {
         const auto &[d_a0] = std::get<ADD_regs>(_sv.v());
-        return instr_regs(ADD_regs{clone_as_value<unsigned int>(d_a0)});
+        return instr_regs(ADD_regs{d_a0});
       }
     }
 
@@ -1211,27 +1213,25 @@ struct InstructionClassifiers {
       auto &&_sv = *(this);
       if (std::holds_alternative<JCN>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<JCN>(_sv.v());
-        return instr_jump(JCN{clone_as_value<unsigned int>(d_a0),
-                              clone_as_value<unsigned int>(d_a1)});
+        return instr_jump(JCN{d_a0, d_a1});
       } else if (std::holds_alternative<JUN>(_sv.v())) {
         const auto &[d_a0] = std::get<JUN>(_sv.v());
-        return instr_jump(JUN{clone_as_value<unsigned int>(d_a0)});
+        return instr_jump(JUN{d_a0});
       } else if (std::holds_alternative<JMS>(_sv.v())) {
         const auto &[d_a0] = std::get<JMS>(_sv.v());
-        return instr_jump(JMS{clone_as_value<unsigned int>(d_a0)});
+        return instr_jump(JMS{d_a0});
       } else if (std::holds_alternative<JIN>(_sv.v())) {
         const auto &[d_a0] = std::get<JIN>(_sv.v());
-        return instr_jump(JIN{clone_as_value<unsigned int>(d_a0)});
+        return instr_jump(JIN{d_a0});
       } else if (std::holds_alternative<BBL_jump>(_sv.v())) {
         const auto &[d_a0] = std::get<BBL_jump>(_sv.v());
-        return instr_jump(BBL_jump{clone_as_value<unsigned int>(d_a0)});
+        return instr_jump(BBL_jump{d_a0});
       } else if (std::holds_alternative<ISZ_jump>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<ISZ_jump>(_sv.v());
-        return instr_jump(ISZ_jump{clone_as_value<unsigned int>(d_a0),
-                                   clone_as_value<unsigned int>(d_a1)});
+        return instr_jump(ISZ_jump{d_a0, d_a1});
       } else if (std::holds_alternative<ADD_jump>(_sv.v())) {
         const auto &[d_a0] = std::get<ADD_jump>(_sv.v());
-        return instr_jump(ADD_jump{clone_as_value<unsigned int>(d_a0)});
+        return instr_jump(ADD_jump{d_a0});
       } else {
         return instr_jump(NOP_jump{});
       }

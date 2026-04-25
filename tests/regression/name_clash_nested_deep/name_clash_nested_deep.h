@@ -32,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -178,8 +182,8 @@ struct NameClashNestedDeep {
         return mylist(MyNil{});
       } else {
         const auto &[d_a0, d_a1] = std::get<MyCons>(_sv.v());
-        return mylist(MyCons{clone_as_value<unsigned int>(d_a0),
-                             clone_as_value<std::unique_ptr<mylist>>(d_a1)});
+        return mylist(
+            MyCons{d_a0, clone_as_value<std::unique_ptr<mylist>>(d_a1)});
       }
     }
 

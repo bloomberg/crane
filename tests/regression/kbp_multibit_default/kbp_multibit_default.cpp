@@ -1,5 +1,6 @@
 #include <kbp_multibit_default.h>
 
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) KbpMultibitDefault::state

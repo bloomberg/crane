@@ -1,5 +1,6 @@
 #include <nested_record_update_qual.h>
 
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) NestedRecordUpdateQual::Shadow

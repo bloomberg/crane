@@ -1,5 +1,6 @@
 #include <todo_inline_custom_symbol.h>
 
+#include <memory>
 #include <todo_inline_custom_symbol_support.h>
 #include <type_traits>
 

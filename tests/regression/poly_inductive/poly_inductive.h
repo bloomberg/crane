@@ -32,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -573,9 +577,7 @@ struct PolyInductive {
     }
 
     template <typename T1, MapsTo<T1, t_A> F0,
-              MapsTo<T1, std::unique_ptr<ptree<t_A>>, T1,
-                     std::unique_ptr<ptree<t_A>>, T1>
-                  F1>
+              MapsTo<T1, ptree<t_A>, T1, ptree<t_A>, T1> F1>
     T1 ptree_rec(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename ptree<t_A>::PLeaf>(_sv.v())) {
@@ -590,9 +592,7 @@ struct PolyInductive {
     }
 
     template <typename T1, MapsTo<T1, t_A> F0,
-              MapsTo<T1, std::unique_ptr<ptree<t_A>>, T1,
-                     std::unique_ptr<ptree<t_A>>, T1>
-                  F1>
+              MapsTo<T1, ptree<t_A>, T1, ptree<t_A>, T1> F1>
     T1 ptree_rect(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename ptree<t_A>::PLeaf>(_sv.v())) {

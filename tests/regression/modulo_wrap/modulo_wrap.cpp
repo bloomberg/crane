@@ -1,5 +1,6 @@
 #include <modulo_wrap.h>
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 

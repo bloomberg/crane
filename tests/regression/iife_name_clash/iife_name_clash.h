@@ -1,6 +1,7 @@
 #ifndef INCLUDED_IIFE_NAME_CLASH
 #define INCLUDED_IIFE_NAME_CLASH
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -31,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -172,7 +177,7 @@ struct IifeNameClash {
       auto &&_sv = *(this);
       if (std::holds_alternative<Wrap>(_sv.v())) {
         const auto &[d_n] = std::get<Wrap>(_sv.v());
-        return wrapper(Wrap{clone_as_value<unsigned int>(d_n)});
+        return wrapper(Wrap{d_n});
       } else {
         return wrapper(Empty{});
       }

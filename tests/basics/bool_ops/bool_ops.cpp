@@ -1,5 +1,6 @@
 #include <bool_ops.h>
 
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) bool BoolOps::my_negb(const bool &b) {

@@ -32,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -262,9 +266,7 @@ struct MutualRecord {
     __attribute__((pure)) department clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Mk_department>(_sv.v());
-      return department(
-          Mk_department{clone_as_value<unsigned int>(d_a0),
-                        clone_as_value<List<std::unique_ptr<employee>>>(d_a1)});
+      return department(Mk_department{d_a0, d_a1});
     }
 
     // CREATORS
@@ -332,8 +334,7 @@ struct MutualRecord {
     __attribute__((pure)) employee clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Mk_employee>(_sv.v());
-      return employee(Mk_employee{clone_as_value<unsigned int>(d_a0),
-                                  clone_as_value<unsigned int>(d_a1)});
+      return employee(Mk_employee{d_a0, d_a1});
     }
 
     // CREATORS
@@ -367,14 +368,14 @@ struct MutualRecord {
   static T1 department_rect(F0 &&f, const department &d) {
     const auto &[d_a0, d_a1] =
         std::get<typename department::Mk_department>(d.v());
-    return f(d_a0, clone_as_value<List<employee>>(d_a1));
+    return f(d_a0, clone_as_value<List<MutualRecord::employee>>(d_a1));
   }
 
   template <typename T1, MapsTo<T1, unsigned int, List<employee>> F0>
   static T1 department_rec(F0 &&f, const department &d) {
     const auto &[d_a0, d_a1] =
         std::get<typename department::Mk_department>(d.v());
-    return f(d_a0, clone_as_value<List<employee>>(d_a1));
+    return f(d_a0, clone_as_value<List<MutualRecord::employee>>(d_a1));
   }
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>

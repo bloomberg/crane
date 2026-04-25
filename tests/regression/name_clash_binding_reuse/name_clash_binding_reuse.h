@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NAME_CLASH_BINDING_REUSE
 #define INCLUDED_NAME_CLASH_BINDING_REUSE
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -31,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -171,8 +176,7 @@ struct NameClashBindingReuse {
     __attribute__((pure)) pair_nat clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<MkPairNat>(_sv.v());
-      return pair_nat(MkPairNat{clone_as_value<unsigned int>(d_a0),
-                                clone_as_value<unsigned int>(d_a1)});
+      return pair_nat(MkPairNat{d_a0, d_a1});
     }
 
     // CREATORS
@@ -296,9 +300,7 @@ struct NameClashBindingReuse {
     __attribute__((pure)) triple_nat clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] = std::get<MkTripleNat>(_sv.v());
-      return triple_nat(MkTripleNat{clone_as_value<unsigned int>(d_a0),
-                                    clone_as_value<unsigned int>(d_a1),
-                                    clone_as_value<unsigned int>(d_a2)});
+      return triple_nat(MkTripleNat{d_a0, d_a1, d_a2});
     }
 
     // CREATORS

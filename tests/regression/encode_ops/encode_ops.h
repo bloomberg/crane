@@ -32,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -321,14 +325,13 @@ struct EncodeOps {
         return instruction1(DAA{});
       } else if (std::holds_alternative<FIM>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<FIM>(_sv.v());
-        return instruction1(FIM{clone_as_value<unsigned int>(d_a0),
-                                clone_as_value<unsigned int>(d_a1)});
+        return instruction1(FIM{d_a0, d_a1});
       } else if (std::holds_alternative<JUN>(_sv.v())) {
         const auto &[d_a0] = std::get<JUN>(_sv.v());
-        return instruction1(JUN{clone_as_value<unsigned int>(d_a0)});
+        return instruction1(JUN{d_a0});
       } else if (std::holds_alternative<LDM1>(_sv.v())) {
         const auto &[d_a0] = std::get<LDM1>(_sv.v());
-        return instruction1(LDM1{clone_as_value<unsigned int>(d_a0)});
+        return instruction1(LDM1{d_a0});
       } else if (std::holds_alternative<NOP1>(_sv.v())) {
         return instruction1(NOP1{});
       } else if (std::holds_alternative<RDM>(_sv.v())) {
@@ -561,7 +564,7 @@ struct EncodeOps {
         return instruction2(NOP2{});
       } else {
         const auto &[d_a0] = std::get<LDM2>(_sv.v());
-        return instruction2(LDM2{clone_as_value<unsigned int>(d_a0)});
+        return instruction2(LDM2{d_a0});
       }
     }
 
@@ -684,7 +687,7 @@ struct EncodeOps {
         return instruction3(NOP3{});
       } else {
         const auto &[d_a0] = std::get<LDM3>(_sv.v());
-        return instruction3(LDM3{clone_as_value<unsigned int>(d_a0)});
+        return instruction3(LDM3{d_a0});
       }
     }
 

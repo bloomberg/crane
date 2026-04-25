@@ -843,7 +843,7 @@ LoopifyLists::flatten_nested_fuel(
       } else {
         const auto &[d_a0, d_a1] = std::get<typename LoopifyLists::list<
             LoopifyLists::list<unsigned int>>::Cons>(_loop_l.v());
-        auto &&_sv0 = clone_as_value<list<unsigned int>>(d_a0);
+        auto &&_sv0 = clone_as_value<LoopifyLists::list<unsigned int>>(d_a0);
         if (std::holds_alternative<
                 typename LoopifyLists::list<unsigned int>::Nil>(_sv0.v())) {
           LoopifyLists::list<LoopifyLists::list<unsigned int>> _next_l =
@@ -882,7 +882,7 @@ __attribute__((pure)) unsigned int LoopifyLists::sum_list_lengths(
   };
 
   struct _Call1 {
-    decltype(len_list(clone_as_value<list<unsigned int>>(
+    decltype(len_list(clone_as_value<LoopifyLists::list<unsigned int>>(
         std::declval<std::shared_ptr<LoopifyLists::list<unsigned int>> &>())))
         _s0;
   };
@@ -904,8 +904,8 @@ __attribute__((pure)) unsigned int LoopifyLists::sum_list_lengths(
       } else {
         const auto &[d_a0, d_a1] = std::get<typename LoopifyLists::list<
             LoopifyLists::list<unsigned int>>::Cons>(l.v());
-        _stack.emplace_back(
-            _Call1{len_list(clone_as_value<list<unsigned int>>(d_a0))});
+        _stack.emplace_back(_Call1{
+            len_list(clone_as_value<LoopifyLists::list<unsigned int>>(d_a0))});
         _stack.emplace_back(_Enter{*(d_a1)});
       }
     } else {
@@ -1227,7 +1227,9 @@ LoopifyLists::group_fuel(const unsigned int &fuel,
                   LoopifyLists::list<LoopifyLists::list<unsigned int>>>(
                   list<LoopifyLists::list<unsigned int>>::cons(
                       list<unsigned int>::cons(
-                          d_a0, clone_as_value<list<unsigned int>>(d_a01)),
+                          d_a0,
+                          clone_as_value<LoopifyLists::list<unsigned int>>(
+                              d_a01)),
                       *(d_a11)));
               break;
             }
@@ -1235,7 +1237,10 @@ LoopifyLists::group_fuel(const unsigned int &fuel,
             auto _cell = std::make_unique<
                 LoopifyLists::list<LoopifyLists::list<unsigned int>>>(
                 typename list<LoopifyLists::list<unsigned int>>::Cons(
-                    list<unsigned int>::cons(d_a0, list<unsigned int>::nil()),
+                    std::make_unique<
+                        LoopifyLists::list<LoopifyLists::list<unsigned int>>>(
+                        list<unsigned int>::cons(d_a0,
+                                                 list<unsigned int>::nil())),
                     nullptr));
             *(_write) = std::move(_cell);
             _write =
@@ -1794,7 +1799,7 @@ LoopifyLists::minmax(const LoopifyLists::list<unsigned int> &l) {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(l.v());
         LoopifyLists::list<unsigned int> d_a1_value =
-            clone_as_value<list<unsigned int>>(d_a1);
+            clone_as_value<LoopifyLists::list<unsigned int>>(d_a1);
         if (std::holds_alternative<
                 typename LoopifyLists::list<unsigned int>::Nil>(
                 d_a1_value.v())) {
@@ -1890,7 +1895,7 @@ LoopifyLists::intercalate(
   };
 
   struct _Call1 {
-    decltype(clone_as_value<list<unsigned int>>(
+    decltype(clone_as_value<LoopifyLists::list<unsigned int>>(
         std::declval<std::shared_ptr<LoopifyLists::list<unsigned int>> &>()))
         _s0;
     const LoopifyLists::list<unsigned int> _s1;
@@ -1917,10 +1922,10 @@ LoopifyLists::intercalate(
         auto &&_sv = *(d_a1);
         if (std::holds_alternative<typename LoopifyLists::list<
                 LoopifyLists::list<unsigned int>>::Nil>(_sv.v())) {
-          _result = clone_as_value<list<unsigned int>>(d_a0);
+          _result = clone_as_value<LoopifyLists::list<unsigned int>>(d_a0);
         } else {
-          _stack.emplace_back(
-              _Call1{clone_as_value<list<unsigned int>>(d_a0), sep});
+          _stack.emplace_back(_Call1{
+              clone_as_value<LoopifyLists::list<unsigned int>>(d_a0), sep});
           _stack.emplace_back(_Enter{*(d_a1)});
         }
       }

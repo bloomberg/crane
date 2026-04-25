@@ -32,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -488,22 +492,22 @@ struct GetPairBoundProp {
         return instr(NOP{});
       } else if (std::holds_alternative<LDM>(_sv.v())) {
         const auto &[d_n] = std::get<LDM>(_sv.v());
-        return instr(LDM{clone_as_value<unsigned int>(d_n)});
+        return instr(LDM{d_n});
       } else if (std::holds_alternative<LD>(_sv.v())) {
         const auto &[d_r] = std::get<LD>(_sv.v());
-        return instr(LD{clone_as_value<unsigned int>(d_r)});
+        return instr(LD{d_r});
       } else if (std::holds_alternative<XCH>(_sv.v())) {
         const auto &[d_r] = std::get<XCH>(_sv.v());
-        return instr(XCH{clone_as_value<unsigned int>(d_r)});
+        return instr(XCH{d_r});
       } else if (std::holds_alternative<INC>(_sv.v())) {
         const auto &[d_r] = std::get<INC>(_sv.v());
-        return instr(INC{clone_as_value<unsigned int>(d_r)});
+        return instr(INC{d_r});
       } else if (std::holds_alternative<ADD>(_sv.v())) {
         const auto &[d_r] = std::get<ADD>(_sv.v());
-        return instr(ADD{clone_as_value<unsigned int>(d_r)});
+        return instr(ADD{d_r});
       } else if (std::holds_alternative<SUB>(_sv.v())) {
         const auto &[d_r] = std::get<SUB>(_sv.v());
-        return instr(SUB{clone_as_value<unsigned int>(d_r)});
+        return instr(SUB{d_r});
       } else if (std::holds_alternative<IAC>(_sv.v())) {
         return instr(IAC{});
       } else if (std::holds_alternative<DAC>(_sv.v())) {
@@ -532,34 +536,31 @@ struct GetPairBoundProp {
         return instr(KBP{});
       } else if (std::holds_alternative<JUN>(_sv.v())) {
         const auto &[d_a] = std::get<JUN>(_sv.v());
-        return instr(JUN{clone_as_value<unsigned int>(d_a)});
+        return instr(JUN{d_a});
       } else if (std::holds_alternative<JMS>(_sv.v())) {
         const auto &[d_a] = std::get<JMS>(_sv.v());
-        return instr(JMS{clone_as_value<unsigned int>(d_a)});
+        return instr(JMS{d_a});
       } else if (std::holds_alternative<JCN>(_sv.v())) {
         const auto &[d_c, d_a] = std::get<JCN>(_sv.v());
-        return instr(JCN{clone_as_value<unsigned int>(d_c),
-                         clone_as_value<unsigned int>(d_a)});
+        return instr(JCN{d_c, d_a});
       } else if (std::holds_alternative<FIM>(_sv.v())) {
         const auto &[d_r, d_d] = std::get<FIM>(_sv.v());
-        return instr(FIM{clone_as_value<unsigned int>(d_r),
-                         clone_as_value<unsigned int>(d_d)});
+        return instr(FIM{d_r, d_d});
       } else if (std::holds_alternative<SRC>(_sv.v())) {
         const auto &[d_r] = std::get<SRC>(_sv.v());
-        return instr(SRC{clone_as_value<unsigned int>(d_r)});
+        return instr(SRC{d_r});
       } else if (std::holds_alternative<FIN>(_sv.v())) {
         const auto &[d_r] = std::get<FIN>(_sv.v());
-        return instr(FIN{clone_as_value<unsigned int>(d_r)});
+        return instr(FIN{d_r});
       } else if (std::holds_alternative<JIN>(_sv.v())) {
         const auto &[d_r] = std::get<JIN>(_sv.v());
-        return instr(JIN{clone_as_value<unsigned int>(d_r)});
+        return instr(JIN{d_r});
       } else if (std::holds_alternative<ISZ>(_sv.v())) {
         const auto &[d_r, d_a] = std::get<ISZ>(_sv.v());
-        return instr(ISZ{clone_as_value<unsigned int>(d_r),
-                         clone_as_value<unsigned int>(d_a)});
+        return instr(ISZ{d_r, d_a});
       } else {
         const auto &[d_d] = std::get<BBL>(_sv.v());
-        return instr(BBL{clone_as_value<unsigned int>(d_d)});
+        return instr(BBL{d_d});
       }
     }
 

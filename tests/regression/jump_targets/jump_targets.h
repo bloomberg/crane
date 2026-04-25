@@ -33,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -283,10 +287,10 @@ struct JumpTargets {
       auto &&_sv = *(this);
       if (std::holds_alternative<JUN_coll>(_sv.v())) {
         const auto &[d_a0] = std::get<JUN_coll>(_sv.v());
-        return instr_collection(JUN_coll{clone_as_value<unsigned int>(d_a0)});
+        return instr_collection(JUN_coll{d_a0});
       } else if (std::holds_alternative<JMS_coll>(_sv.v())) {
         const auto &[d_a0] = std::get<JMS_coll>(_sv.v());
-        return instr_collection(JMS_coll{clone_as_value<unsigned int>(d_a0)});
+        return instr_collection(JMS_coll{d_a0});
       } else {
         return instr_collection(NOP_coll{});
       }
@@ -446,10 +450,10 @@ struct JumpTargets {
       auto &&_sv = *(this);
       if (std::holds_alternative<JUN_reg>(_sv.v())) {
         const auto &[d_a0] = std::get<JUN_reg>(_sv.v());
-        return instr_region(JUN_reg{clone_as_value<unsigned int>(d_a0)});
+        return instr_region(JUN_reg{d_a0});
       } else if (std::holds_alternative<JMS_reg>(_sv.v())) {
         const auto &[d_a0] = std::get<JMS_reg>(_sv.v());
-        return instr_region(JMS_reg{clone_as_value<unsigned int>(d_a0)});
+        return instr_region(JMS_reg{d_a0});
       } else {
         return instr_region(NOP_reg{});
       }
@@ -599,10 +603,10 @@ struct JumpTargets {
       auto &&_sv = *(this);
       if (std::holds_alternative<JUN_jms>(_sv.v())) {
         const auto &[d_a0] = std::get<JUN_jms>(_sv.v());
-        return instr_jms(JUN_jms{clone_as_value<unsigned int>(d_a0)});
+        return instr_jms(JUN_jms{d_a0});
       } else if (std::holds_alternative<JMS_jms>(_sv.v())) {
         const auto &[d_a0] = std::get<JMS_jms>(_sv.v());
-        return instr_jms(JMS_jms{clone_as_value<unsigned int>(d_a0)});
+        return instr_jms(JMS_jms{d_a0});
       } else {
         return instr_jms(NOP_jms{});
       }
@@ -735,10 +739,10 @@ struct JumpTargets {
       auto &&_sv = *(this);
       if (std::holds_alternative<JUN_jun>(_sv.v())) {
         const auto &[d_a0] = std::get<JUN_jun>(_sv.v());
-        return instr_jun(JUN_jun{clone_as_value<unsigned int>(d_a0)});
+        return instr_jun(JUN_jun{d_a0});
       } else if (std::holds_alternative<JMS_jun>(_sv.v())) {
         const auto &[d_a0] = std::get<JMS_jun>(_sv.v());
-        return instr_jun(JMS_jun{clone_as_value<unsigned int>(d_a0)});
+        return instr_jun(JMS_jun{d_a0});
       } else {
         return instr_jun(NOP_jun{});
       }

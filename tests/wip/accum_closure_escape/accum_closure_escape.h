@@ -33,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -244,7 +248,7 @@ struct AccumClosureEscape {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, std::unique_ptr<mylist<t_A>>, T1> F1>
+    template <typename T1, MapsTo<T1, t_A, mylist<t_A>, T1> F1>
     T1 mylist_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
@@ -256,7 +260,7 @@ struct AccumClosureEscape {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, std::unique_ptr<mylist<t_A>>, T1> F1>
+    template <typename T1, MapsTo<T1, t_A, mylist<t_A>, T1> F1>
     T1 mylist_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
@@ -315,8 +319,7 @@ struct AccumClosureEscape {
         return tree(TLeaf{});
       } else {
         const auto &[d_a0, d_a1, d_a2] = std::get<TNode>(_sv.v());
-        return tree(TNode{clone_as_value<std::unique_ptr<tree>>(d_a0),
-                          clone_as_value<unsigned int>(d_a1),
+        return tree(TNode{clone_as_value<std::unique_ptr<tree>>(d_a0), d_a1,
                           clone_as_value<std::unique_ptr<tree>>(d_a2)});
       }
     }
@@ -360,8 +363,8 @@ struct AccumClosureEscape {
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename tree::TNode>(_sv.v());
-        tree d_a0_value = clone_as_value<tree>(d_a0);
-        tree d_a2_value = clone_as_value<tree>(d_a2);
+        tree d_a0_value = clone_as_value<AccumClosureEscape::tree>(d_a0);
+        tree d_a2_value = clone_as_value<AccumClosureEscape::tree>(d_a2);
         return mylist<std::function<unsigned int(unsigned int)>>::mycons(
             [=](const unsigned int &x) mutable { return (d_a1 + x); },
             d_a0_value.tree_to_adders().mylist_append(
@@ -382,9 +385,7 @@ struct AccumClosureEscape {
       }
     }
 
-    template <typename T1, MapsTo<T1, std::unique_ptr<tree>, T1, unsigned int,
-                                  std::unique_ptr<tree>, T1>
-                               F1>
+    template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
     T1 tree_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::TLeaf>(_sv.v())) {
@@ -397,9 +398,7 @@ struct AccumClosureEscape {
       }
     }
 
-    template <typename T1, MapsTo<T1, std::unique_ptr<tree>, T1, unsigned int,
-                                  std::unique_ptr<tree>, T1>
-                               F1>
+    template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
     T1 tree_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::TLeaf>(_sv.v())) {
@@ -464,7 +463,7 @@ struct AccumClosureEscape {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<unsigned int>::Mycons>(l.v());
         mylist<unsigned int> d_a1_value =
-            clone_as_value<mylist<unsigned int>>(d_a1);
+            clone_as_value<AccumClosureEscape::mylist<unsigned int>>(d_a1);
         return [=](unsigned int _x0) mutable -> unsigned int {
           return compose_from_list(
               d_a1_value,

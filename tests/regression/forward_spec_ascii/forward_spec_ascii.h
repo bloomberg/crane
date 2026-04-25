@@ -1,6 +1,7 @@
 #ifndef INCLUDED_FORWARD_SPEC_ASCII
 #define INCLUDED_FORWARD_SPEC_ASCII
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -31,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -174,10 +179,10 @@ struct ForwardSpecAscii {
       auto &&_sv = *(this);
       if (std::holds_alternative<ANode>(_sv.v())) {
         const auto &[d_a0] = std::get<ANode>(_sv.v());
-        return node(ANode{clone_as_value<unsigned int>(d_a0)});
+        return node(ANode{d_a0});
       } else {
         const auto &[d_a0] = std::get<BNode>(_sv.v());
-        return node(BNode{clone_as_value<unsigned int>(d_a0)});
+        return node(BNode{d_a0});
       }
     }
 

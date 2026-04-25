@@ -1,6 +1,7 @@
 #include <coercions.h>
 
 #include <functional>
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) unsigned int Coercions::bool_to_nat(const bool &b) {

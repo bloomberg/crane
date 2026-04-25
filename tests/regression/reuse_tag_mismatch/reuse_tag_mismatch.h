@@ -1,6 +1,7 @@
 #ifndef INCLUDED_REUSE_TAG_MISMATCH
 #define INCLUDED_REUSE_TAG_MISMATCH
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -31,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -187,10 +192,10 @@ struct ReuseTagMismatch {
       auto &&_sv = *(this);
       if (std::holds_alternative<GoUp>(_sv.v())) {
         const auto &[d_a0] = std::get<GoUp>(_sv.v());
-        return direction(GoUp{clone_as_value<unsigned int>(d_a0)});
+        return direction(GoUp{d_a0});
       } else {
         const auto &[d_a0] = std::get<GoDown>(_sv.v());
-        return direction(GoDown{clone_as_value<unsigned int>(d_a0)});
+        return direction(GoDown{d_a0});
       }
     }
 

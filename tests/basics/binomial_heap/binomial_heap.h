@@ -34,7 +34,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -268,8 +272,7 @@ struct BinomialHeap {
       auto &&_sv = *(this);
       if (std::holds_alternative<Node>(_sv.v())) {
         const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
-        return tree(Node{clone_as_value<key>(d_a0),
-                         clone_as_value<std::unique_ptr<tree>>(d_a1),
+        return tree(Node{d_a0, clone_as_value<std::unique_ptr<tree>>(d_a1),
                          clone_as_value<std::unique_ptr<tree>>(d_a2)});
       } else {
         return tree(Leaf{});
@@ -341,8 +344,8 @@ struct BinomialHeap {
   unzip(const tree &t, const std::function<List<tree>(List<tree>)> cont) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      tree d_a1_value = clone_as_value<tree>(d_a1);
-      tree d_a2_value = clone_as_value<tree>(d_a2);
+      tree d_a1_value = clone_as_value<BinomialHeap::tree>(d_a1);
+      tree d_a2_value = clone_as_value<BinomialHeap::tree>(d_a2);
       std::function<List<tree>(List<tree>)> f =
           [=](const List<tree> &q) mutable {
             return List<tree>::cons(tree::node(d_a0, d_a1_value, tree::leaf()),

@@ -34,7 +34,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -790,8 +794,10 @@ struct LoopifyTrees {
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree<t_A>::Node>(_sv.v());
-            tree<t_A> d_a0_value = clone_as_value<tree<t_A>>(d_a0);
-            tree<t_A> d_a2_value = clone_as_value<tree<t_A>>(d_a2);
+            tree<t_A> d_a0_value =
+                clone_as_value<LoopifyTrees::tree<t_A>>(d_a0);
+            tree<t_A> d_a2_value =
+                clone_as_value<LoopifyTrees::tree<t_A>>(d_a2);
             _stack.emplace_back(_Call1{d_a2_value});
             _stack.emplace_back(_Enter{d_a0_value.get()});
           }
@@ -817,9 +823,7 @@ struct LoopifyTrees {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, std::unique_ptr<tree<t_A>>, T1, t_A,
-                                  std::unique_ptr<tree<t_A>>, T1>
-                               F1>
+    template <typename T1, MapsTo<T1, tree<t_A>, T1, t_A, tree<t_A>, T1> F1>
     T1 tree_rec(const T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -873,9 +877,7 @@ struct LoopifyTrees {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, std::unique_ptr<tree<t_A>>, T1, t_A,
-                                  std::unique_ptr<tree<t_A>>, T1>
-                               F1>
+    template <typename T1, MapsTo<T1, tree<t_A>, T1, t_A, tree<t_A>, T1> F1>
     T1 tree_rect(const T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -994,7 +996,7 @@ struct LoopifyTrees {
         return ternary(TNode{clone_as_value<std::unique_ptr<ternary>>(d_a0),
                              clone_as_value<std::unique_ptr<ternary>>(d_a1),
                              clone_as_value<std::unique_ptr<ternary>>(d_a2),
-                             clone_as_value<unsigned int>(d_a3)});
+                             d_a3});
       }
     }
 
@@ -1070,9 +1072,9 @@ struct LoopifyTrees {
           } else {
             const auto &[d_a0, d_a1, d_a2, d_a3] =
                 std::get<typename ternary::TNode>(_sv.v());
-            ternary d_a0_value = clone_as_value<ternary>(d_a0);
-            ternary d_a1_value = clone_as_value<ternary>(d_a1);
-            ternary d_a2_value = clone_as_value<ternary>(d_a2);
+            ternary d_a0_value = clone_as_value<LoopifyTrees::ternary>(d_a0);
+            ternary d_a1_value = clone_as_value<LoopifyTrees::ternary>(d_a1);
+            ternary d_a2_value = clone_as_value<LoopifyTrees::ternary>(d_a2);
             _stack.emplace_back(_Call1{d_a1_value, d_a2_value});
             _stack.emplace_back(_Enter{d_a0_value.get()});
           }
@@ -1178,10 +1180,9 @@ struct LoopifyTrees {
       return _result;
     }
 
-    template <typename T1,
-              MapsTo<T1, std::unique_ptr<ternary>, T1, std::unique_ptr<ternary>,
-                     T1, std::unique_ptr<ternary>, T1, unsigned int>
-                  F1>
+    template <
+        typename T1,
+        MapsTo<T1, ternary, T1, ternary, T1, ternary, T1, unsigned int> F1>
     T1 ternary_rec(const T1 f, F1 &&f0) const {
       const ternary *_self = this;
 
@@ -1255,10 +1256,9 @@ struct LoopifyTrees {
       return _result;
     }
 
-    template <typename T1,
-              MapsTo<T1, std::unique_ptr<ternary>, T1, std::unique_ptr<ternary>,
-                     T1, std::unique_ptr<ternary>, T1, unsigned int>
-                  F1>
+    template <
+        typename T1,
+        MapsTo<T1, ternary, T1, ternary, T1, ternary, T1, unsigned int> F1>
     T1 ternary_rect(const T1 f, F1 &&f0) const {
       const ternary *_self = this;
 
@@ -1371,8 +1371,7 @@ struct LoopifyTrees {
     __attribute__((pure)) rose clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<RNode>(_sv.v());
-      return rose(RNode{clone_as_value<unsigned int>(d_a0),
-                        clone_as_value<List<std::unique_ptr<rose>>>(d_a1)});
+      return rose(RNode{d_a0, d_a1});
     }
 
     // CREATORS
@@ -1405,7 +1404,8 @@ struct LoopifyTrees {
     __attribute__((pure)) unsigned int rose_depth() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
-      return (depth_rose_list_fuel(1000u, clone_as_value<List<rose>>(d_a1)) +
+      return (depth_rose_list_fuel(
+                  1000u, clone_as_value<List<LoopifyTrees::rose>>(d_a1)) +
               1);
     }
 
@@ -1414,8 +1414,8 @@ struct LoopifyTrees {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
       return List<unsigned int>::cons(
-          d_a0,
-          flatten_rose_list_fuel(1000u, clone_as_value<List<rose>>(d_a1)));
+          d_a0, flatten_rose_list_fuel(
+                    1000u, clone_as_value<List<LoopifyTrees::rose>>(d_a1)));
     }
 
     /// rose_map f t applies f to all values in a rose tree.
@@ -1425,7 +1425,8 @@ struct LoopifyTrees {
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
       return rose::rnode(
           f(d_a0),
-          map_rose_list_fuel(1000u, f, clone_as_value<List<rose>>(d_a1)));
+          map_rose_list_fuel(1000u, f,
+                             clone_as_value<List<LoopifyTrees::rose>>(d_a1)));
     }
 
     /// rose_sum t sums all values in a rose tree.
@@ -1433,7 +1434,8 @@ struct LoopifyTrees {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
       return (d_a0 +
-              sum_rose_list_fuel(1000u, clone_as_value<List<rose>>(d_a1)));
+              sum_rose_list_fuel(
+                  1000u, clone_as_value<List<LoopifyTrees::rose>>(d_a1)));
     }
 
     template <typename T1,
@@ -1441,7 +1443,7 @@ struct LoopifyTrees {
     T1 rose_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
-      return f(d_a0, clone_as_value<List<rose>>(d_a1));
+      return f(d_a0, clone_as_value<List<LoopifyTrees::rose>>(d_a1));
     }
 
     template <typename T1,
@@ -1449,7 +1451,7 @@ struct LoopifyTrees {
     T1 rose_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
-      return f(d_a0, clone_as_value<List<rose>>(d_a1));
+      return f(d_a0, clone_as_value<List<LoopifyTrees::rose>>(d_a1));
     }
   };
 
@@ -1468,7 +1470,7 @@ struct LoopifyTrees {
     };
 
     struct _Call1 {
-      decltype(clone_as_value<List<rose>>(
+      decltype(clone_as_value<List<LoopifyTrees::rose>>(
           std::declval<List<std::unique_ptr<rose>> &>())) _s0;
       unsigned int _s1;
       unsigned int _s2;
@@ -1502,8 +1504,8 @@ struct LoopifyTrees {
                 std::get<typename List<rose>::Cons>(cs.v());
             const auto &[d_a00, d_a10] =
                 std::get<typename rose::RNode>(d_a0.v());
-            _stack.emplace_back(
-                _Call1{clone_as_value<List<rose>>(d_a10), g, f(d_a00)});
+            _stack.emplace_back(_Call1{
+                clone_as_value<List<LoopifyTrees::rose>>(d_a10), g, f(d_a00)});
             _stack.emplace_back(_Enter{*(d_a1), g});
           }
         }
@@ -1661,7 +1663,7 @@ struct LoopifyTrees {
       auto &&_sv = *(this);
       if (std::holds_alternative<QLeaf>(_sv.v())) {
         const auto &[d_a0] = std::get<QLeaf>(_sv.v());
-        return quadtree(QLeaf{clone_as_value<unsigned int>(d_a0)});
+        return quadtree(QLeaf{d_a0});
       } else {
         const auto &[d_a0, d_a1, d_a2, d_a3] = std::get<Quad>(_sv.v());
         return quadtree(Quad{clone_as_value<std::unique_ptr<quadtree>>(d_a0),
@@ -1853,9 +1855,7 @@ struct LoopifyTrees {
 
     template <
         typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, std::unique_ptr<quadtree>, T1, std::unique_ptr<quadtree>, T1,
-               std::unique_ptr<quadtree>, T1, std::unique_ptr<quadtree>, T1>
-            F1>
+        MapsTo<T1, quadtree, T1, quadtree, T1, quadtree, T1, quadtree, T1> F1>
     T1 quadtree_rec(F0 &&f, F1 &&f0) const {
       const quadtree *_self = this;
 
@@ -1951,9 +1951,7 @@ struct LoopifyTrees {
 
     template <
         typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, std::unique_ptr<quadtree>, T1, std::unique_ptr<quadtree>, T1,
-               std::unique_ptr<quadtree>, T1, std::unique_ptr<quadtree>, T1>
-            F1>
+        MapsTo<T1, quadtree, T1, quadtree, T1, quadtree, T1, quadtree, T1> F1>
     T1 quadtree_rect(F0 &&f, F1 &&f0) const {
       const quadtree *_self = this;
 
@@ -2098,7 +2096,7 @@ struct LoopifyTrees {
       auto &&_sv = *(this);
       if (std::holds_alternative<SLeaf>(_sv.v())) {
         const auto &[d_a0] = std::get<SLeaf>(_sv.v());
-        return simple_tree(SLeaf{clone_as_value<unsigned int>(d_a0)});
+        return simple_tree(SLeaf{d_a0});
       } else {
         const auto &[d_a0, d_a1] = std::get<SNode>(_sv.v());
         return simple_tree(
@@ -2254,9 +2252,7 @@ struct LoopifyTrees {
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, std::unique_ptr<simple_tree>, T1,
-                     std::unique_ptr<simple_tree>, T1>
-                  F1>
+              MapsTo<T1, simple_tree, T1, simple_tree, T1> F1>
     T1 simple_tree_rec(F0 &&f, F1 &&f0) const {
       const simple_tree *_self = this;
 
@@ -2310,9 +2306,7 @@ struct LoopifyTrees {
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, std::unique_ptr<simple_tree>, T1,
-                     std::unique_ptr<simple_tree>, T1>
-                  F1>
+              MapsTo<T1, simple_tree, T1, simple_tree, T1> F1>
     T1 simple_tree_rect(F0 &&f, F1 &&f0) const {
       const simple_tree *_self = this;
 

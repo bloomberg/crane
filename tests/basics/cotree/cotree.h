@@ -34,7 +34,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -396,9 +400,7 @@ struct Cotree {
     __attribute__((pure)) tree<t_A> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Node>(_sv.v());
-      return tree<t_A>(
-          Node{clone_as_value<t_A>(d_a0),
-               clone_as_value<List<std::unique_ptr<tree<t_A>>>>(d_a1)});
+      return tree<t_A>(Node{clone_as_value<t_A>(d_a0), d_a1});
     }
 
     template <typename _CloneT0>
@@ -440,13 +442,13 @@ struct Cotree {
   template <typename T1, typename T2, MapsTo<T2, T1, List<tree<T1>>> F0>
   static T2 tree_rect(F0 &&f, const tree<T1> &t) {
     const auto &[d_a0, d_a1] = std::get<typename tree<T1>::Node>(t.v());
-    return f(d_a0, clone_as_value<List<tree<T1>>>(d_a1));
+    return f(d_a0, clone_as_value<List<Cotree::tree<T1>>>(d_a1));
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1, List<tree<T1>>> F0>
   static T2 tree_rec(F0 &&f, const tree<T1> &t) {
     const auto &[d_a0, d_a1] = std::get<typename tree<T1>::Node>(t.v());
-    return f(d_a0, clone_as_value<List<tree<T1>>>(d_a1));
+    return f(d_a0, clone_as_value<List<Cotree::tree<T1>>>(d_a1));
   }
 
   template <typename T1> static T1 tree_root(const tree<T1> &t) {
@@ -538,7 +540,7 @@ struct Cotree {
           return (tree_size<T1>(d_a0) + aux(*(d_a1)));
         }
       };
-      return aux(clone_as_value<List<tree<T1>>>(d_a1));
+      return aux(clone_as_value<List<Cotree::tree<T1>>>(d_a1));
     }() + 1);
   }
 

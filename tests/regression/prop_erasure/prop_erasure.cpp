@@ -1,5 +1,6 @@
 #include <prop_erasure.h>
 
+#include <memory>
 #include <type_traits>
 
 __attribute__((pure)) unsigned int PropErasure::with_proof_arg(unsigned int n) {

@@ -1,5 +1,6 @@
 #include <unsound_axioms.h>
 
+#include <memory>
 #include <stdexcept>
 #include <type_traits>
 #include <variant>

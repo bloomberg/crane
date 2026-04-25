@@ -32,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -241,7 +245,7 @@ struct MatchRefAfterMove {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, std::unique_ptr<mylist<t_A>>, T1> F1>
+    template <typename T1, MapsTo<T1, t_A, mylist<t_A>, T1> F1>
     T1 mylist_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
@@ -253,7 +257,7 @@ struct MatchRefAfterMove {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, std::unique_ptr<mylist<t_A>>, T1> F1>
+    template <typename T1, MapsTo<T1, t_A, mylist<t_A>, T1> F1>
     T1 mylist_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {

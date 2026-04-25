@@ -1,5 +1,6 @@
 #include <large_enum.h>
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>

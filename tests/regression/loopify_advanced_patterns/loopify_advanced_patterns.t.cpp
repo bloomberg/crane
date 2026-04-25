@@ -17,7 +17,7 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 using UIntList = List<unsigned int>;
-using ShapeList = List<std::shared_ptr<LoopifyAdvancedPatterns::shape>>;
+using ShapeList = List<LoopifyAdvancedPatterns::shape>;
 using TripleList = List<std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>;
 
 int main() {

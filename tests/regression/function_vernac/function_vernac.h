@@ -34,7 +34,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -366,17 +370,14 @@ struct FunctionVernac {
       auto &&_sv = *(this);
       if (std::holds_alternative<R_div2_0>(_sv.v())) {
         const auto &[d_n] = std::get<R_div2_0>(_sv.v());
-        return R_div2(R_div2_0{clone_as_value<unsigned int>(d_n)});
+        return R_div2(R_div2_0{d_n});
       } else if (std::holds_alternative<R_div2_1>(_sv.v())) {
         const auto &[d_n] = std::get<R_div2_1>(_sv.v());
-        return R_div2(R_div2_1{clone_as_value<unsigned int>(d_n)});
+        return R_div2(R_div2_1{d_n});
       } else {
         const auto &[d_n, d_p, d_a2, d__res] = std::get<R_div2_2>(_sv.v());
-        return R_div2(
-            R_div2_2{clone_as_value<unsigned int>(d_n),
-                     clone_as_value<unsigned int>(d_p),
-                     clone_as_value<unsigned int>(d_a2),
-                     clone_as_value<std::unique_ptr<R_div2>>(d__res)});
+        return R_div2(R_div2_2{
+            d_n, d_p, d_a2, clone_as_value<std::unique_ptr<R_div2>>(d__res)});
       }
     }
 
@@ -416,11 +417,9 @@ struct FunctionVernac {
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1,
-              MapsTo<T1, unsigned int, unsigned int, unsigned int,
-                     std::unique_ptr<R_div2>, T1>
-                  F2>
+    template <
+        typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, unsigned int> F1,
+        MapsTo<T1, unsigned int, unsigned int, unsigned int, R_div2, T1> F2>
     T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int &,
                   const unsigned int &) const {
       auto &&_sv = *(this);
@@ -433,17 +432,16 @@ struct FunctionVernac {
       } else {
         const auto &[d_n, d_p, d_a2, d__res] =
             std::get<typename R_div2::R_div2_2>(_sv.v());
-        return f1(d_n, d_p, d_a2, clone_as_value<R_div2>(d__res),
-                  clone_as_value<R_div2>(d__res).template R_div2_rec<T1>(
-                      f, f0, f1, d_p, d_a2));
+        return f1(d_n, d_p, d_a2,
+                  clone_as_value<FunctionVernac::R_div2>(d__res),
+                  clone_as_value<FunctionVernac::R_div2>(d__res)
+                      .template R_div2_rec<T1>(f, f0, f1, d_p, d_a2));
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1,
-              MapsTo<T1, unsigned int, unsigned int, unsigned int,
-                     std::unique_ptr<R_div2>, T1>
-                  F2>
+    template <
+        typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, unsigned int> F1,
+        MapsTo<T1, unsigned int, unsigned int, unsigned int, R_div2, T1> F2>
     T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int &,
                    const unsigned int &) const {
       auto &&_sv = *(this);
@@ -456,9 +454,10 @@ struct FunctionVernac {
       } else {
         const auto &[d_n, d_p, d_a2, d__res] =
             std::get<typename R_div2::R_div2_2>(_sv.v());
-        return f1(d_n, d_p, d_a2, clone_as_value<R_div2>(d__res),
-                  clone_as_value<R_div2>(d__res).template R_div2_rect<T1>(
-                      f, f0, f1, d_p, d_a2));
+        return f1(d_n, d_p, d_a2,
+                  clone_as_value<FunctionVernac::R_div2>(d__res),
+                  clone_as_value<FunctionVernac::R_div2>(d__res)
+                      .template R_div2_rect<T1>(f, f0, f1, d_p, d_a2));
       }
     }
   };
@@ -563,16 +562,12 @@ struct FunctionVernac {
       auto &&_sv = *(this);
       if (std::holds_alternative<R_list_sum_0>(_sv.v())) {
         const auto &[d_l] = std::get<R_list_sum_0>(_sv.v());
-        return R_list_sum(
-            R_list_sum_0{clone_as_value<List<unsigned int>>(d_l)});
+        return R_list_sum(R_list_sum_0{d_l});
       } else {
         const auto &[d_l, d_x, d_xs, d_a3, d__res] =
             std::get<R_list_sum_1>(_sv.v());
         return R_list_sum(
-            R_list_sum_1{clone_as_value<List<unsigned int>>(d_l),
-                         clone_as_value<unsigned int>(d_x),
-                         clone_as_value<List<unsigned int>>(d_xs),
-                         clone_as_value<unsigned int>(d_a3),
+            R_list_sum_1{d_l, d_x, d_xs, d_a3,
                          clone_as_value<std::unique_ptr<R_list_sum>>(d__res)});
       }
     }
@@ -612,7 +607,7 @@ struct FunctionVernac {
 
     template <typename T1, MapsTo<T1, List<unsigned int>> F0,
               MapsTo<T1, List<unsigned int>, unsigned int, List<unsigned int>,
-                     unsigned int, std::unique_ptr<R_list_sum>, T1>
+                     unsigned int, R_list_sum, T1>
                   F1>
     T1 R_list_sum_rec(F0 &&f, F1 &&f0, const List<unsigned int> &,
                       const unsigned int &) const {
@@ -624,16 +619,16 @@ struct FunctionVernac {
       } else {
         const auto &[d_l, d_x, d_xs, d_a3, d__res] =
             std::get<typename R_list_sum::R_list_sum_1>(_sv.v());
-        return f0(
-            d_l, d_x, d_xs, d_a3, clone_as_value<R_list_sum>(d__res),
-            clone_as_value<R_list_sum>(d__res).template R_list_sum_rec<T1>(
-                f, f0, d_xs, d_a3));
+        return f0(d_l, d_x, d_xs, d_a3,
+                  clone_as_value<FunctionVernac::R_list_sum>(d__res),
+                  clone_as_value<FunctionVernac::R_list_sum>(d__res)
+                      .template R_list_sum_rec<T1>(f, f0, d_xs, d_a3));
       }
     }
 
     template <typename T1, MapsTo<T1, List<unsigned int>> F0,
               MapsTo<T1, List<unsigned int>, unsigned int, List<unsigned int>,
-                     unsigned int, std::unique_ptr<R_list_sum>, T1>
+                     unsigned int, R_list_sum, T1>
                   F1>
     T1 R_list_sum_rect(F0 &&f, F1 &&f0, const List<unsigned int> &,
                        const unsigned int &) const {
@@ -645,10 +640,10 @@ struct FunctionVernac {
       } else {
         const auto &[d_l, d_x, d_xs, d_a3, d__res] =
             std::get<typename R_list_sum::R_list_sum_1>(_sv.v());
-        return f0(
-            d_l, d_x, d_xs, d_a3, clone_as_value<R_list_sum>(d__res),
-            clone_as_value<R_list_sum>(d__res).template R_list_sum_rect<T1>(
-                f, f0, d_xs, d_a3));
+        return f0(d_l, d_x, d_xs, d_a3,
+                  clone_as_value<FunctionVernac::R_list_sum>(d__res),
+                  clone_as_value<FunctionVernac::R_list_sum>(d__res)
+                      .template R_list_sum_rect<T1>(f, f0, d_xs, d_a3));
       }
     }
   };

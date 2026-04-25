@@ -1,5 +1,6 @@
 #include <reuse_tag_mismatch.h>
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>

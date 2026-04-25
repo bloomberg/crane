@@ -33,7 +33,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -288,7 +292,7 @@ struct DeepPatterns {
         return outer(OLeft{clone_as_value<std::unique_ptr<inner>>(d_a0)});
       } else {
         const auto &[d_a0] = std::get<ORight>(_sv.v());
-        return outer(ORight{clone_as_value<unsigned int>(d_a0)});
+        return outer(ORight{d_a0});
       }
     }
 
@@ -365,10 +369,10 @@ struct DeepPatterns {
       auto &&_sv = *(this);
       if (std::holds_alternative<ILeft>(_sv.v())) {
         const auto &[d_a0] = std::get<ILeft>(_sv.v());
-        return inner(ILeft{clone_as_value<unsigned int>(d_a0)});
+        return inner(ILeft{d_a0});
       } else {
         const auto &[d_a0] = std::get<IRight>(_sv.v());
-        return inner(IRight{clone_as_value<bool>(d_a0)});
+        return inner(IRight{d_a0});
       }
     }
 
@@ -636,7 +640,7 @@ struct DeepPatterns {
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, t_A, std::unique_ptr<mylist<t_A>>, T1> F1>
+    template <typename T1, MapsTo<T1, t_A, mylist<t_A>, T1> F1>
     T1 mylist_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Nil>(_sv.v())) {
@@ -648,7 +652,7 @@ struct DeepPatterns {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, std::unique_ptr<mylist<t_A>>, T1> F1>
+    template <typename T1, MapsTo<T1, t_A, mylist<t_A>, T1> F1>
     T1 mylist_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Nil>(_sv.v())) {

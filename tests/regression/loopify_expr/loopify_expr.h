@@ -34,7 +34,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -289,7 +293,7 @@ struct LoopifyExpr {
       auto &&_sv = *(this);
       if (std::holds_alternative<Val>(_sv.v())) {
         const auto &[d_a0] = std::get<Val>(_sv.v());
-        return expr(Val{clone_as_value<unsigned int>(d_a0)});
+        return expr(Val{d_a0});
       } else if (std::holds_alternative<Succ>(_sv.v())) {
         const auto &[d_a0] = std::get<Succ>(_sv.v());
         return expr(Succ{clone_as_value<std::unique_ptr<expr>>(d_a0)});
@@ -1206,14 +1210,10 @@ struct LoopifyExpr {
       return _result;
     }
 
-    template <
-        typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, std::unique_ptr<expr>, T1> F1,
-        MapsTo<T1, std::unique_ptr<expr>, T1, std::unique_ptr<expr>, T1> F2,
-        MapsTo<T1, std::unique_ptr<expr>, T1, std::unique_ptr<expr>, T1> F3,
-        MapsTo<T1, std::unique_ptr<expr>, T1, std::unique_ptr<expr>, T1,
-               std::unique_ptr<expr>, T1>
-            F4>
+    template <typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, expr, T1> F1,
+              MapsTo<T1, expr, T1, expr, T1> F2,
+              MapsTo<T1, expr, T1, expr, T1> F3,
+              MapsTo<T1, expr, T1, expr, T1, expr, T1> F4>
     T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       const expr *_self = this;
 
@@ -1341,14 +1341,10 @@ struct LoopifyExpr {
       return _result;
     }
 
-    template <
-        typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, std::unique_ptr<expr>, T1> F1,
-        MapsTo<T1, std::unique_ptr<expr>, T1, std::unique_ptr<expr>, T1> F2,
-        MapsTo<T1, std::unique_ptr<expr>, T1, std::unique_ptr<expr>, T1> F3,
-        MapsTo<T1, std::unique_ptr<expr>, T1, std::unique_ptr<expr>, T1,
-               std::unique_ptr<expr>, T1>
-            F4>
+    template <typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, expr, T1> F1,
+              MapsTo<T1, expr, T1, expr, T1> F2,
+              MapsTo<T1, expr, T1, expr, T1> F3,
+              MapsTo<T1, expr, T1, expr, T1, expr, T1> F4>
     T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       const expr *_self = this;
 
@@ -1531,7 +1527,7 @@ struct LoopifyExpr {
       auto &&_sv = *(this);
       if (std::holds_alternative<Lit>(_sv.v())) {
         const auto &[d_a0] = std::get<Lit>(_sv.v());
-        return simple_expr(Lit{clone_as_value<unsigned int>(d_a0)});
+        return simple_expr(Lit{d_a0});
       } else if (std::holds_alternative<Plus>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<Plus>(_sv.v());
         return simple_expr(
@@ -1736,13 +1732,8 @@ struct LoopifyExpr {
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, std::unique_ptr<simple_expr>, T1,
-                     std::unique_ptr<simple_expr>, T1>
-                  F1,
-              MapsTo<T1, std::unique_ptr<simple_expr>, T1,
-                     std::unique_ptr<simple_expr>, T1,
-                     std::unique_ptr<simple_expr>, T1>
-                  F2>
+              MapsTo<T1, simple_expr, T1, simple_expr, T1> F1,
+              MapsTo<T1, simple_expr, T1, simple_expr, T1, simple_expr, T1> F2>
     T1 simple_expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       const simple_expr *_self = this;
 
@@ -1839,13 +1830,8 @@ struct LoopifyExpr {
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, std::unique_ptr<simple_expr>, T1,
-                     std::unique_ptr<simple_expr>, T1>
-                  F1,
-              MapsTo<T1, std::unique_ptr<simple_expr>, T1,
-                     std::unique_ptr<simple_expr>, T1,
-                     std::unique_ptr<simple_expr>, T1>
-                  F2>
+              MapsTo<T1, simple_expr, T1, simple_expr, T1> F1,
+              MapsTo<T1, simple_expr, T1, simple_expr, T1, simple_expr, T1> F2>
     T1 simple_expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       const simple_expr *_self = this;
 
@@ -1992,13 +1978,13 @@ struct LoopifyExpr {
       auto &&_sv = *(this);
       if (std::holds_alternative<Circle>(_sv.v())) {
         const auto &[d_a0] = std::get<Circle>(_sv.v());
-        return shape(Circle{clone_as_value<unsigned int>(d_a0)});
+        return shape(Circle{d_a0});
       } else if (std::holds_alternative<Square>(_sv.v())) {
         const auto &[d_a0] = std::get<Square>(_sv.v());
-        return shape(Square{clone_as_value<unsigned int>(d_a0)});
+        return shape(Square{d_a0});
       } else {
         const auto &[d_a0] = std::get<Triangle>(_sv.v());
-        return shape(Triangle{clone_as_value<unsigned int>(d_a0)});
+        return shape(Triangle{d_a0});
       }
     }
 
@@ -2130,7 +2116,7 @@ struct LoopifyExpr {
       auto &&_sv = *(this);
       if (std::holds_alternative<CLit>(_sv.v())) {
         const auto &[d_a0] = std::get<CLit>(_sv.v());
-        return cond_expr(CLit{clone_as_value<unsigned int>(d_a0)});
+        return cond_expr(CLit{d_a0});
       } else if (std::holds_alternative<CPlus>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<CPlus>(_sv.v());
         return cond_expr(
@@ -2334,14 +2320,9 @@ struct LoopifyExpr {
       return _result;
     }
 
-    template <
-        typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, std::unique_ptr<cond_expr>, T1, std::unique_ptr<cond_expr>,
-               T1>
-            F1,
-        MapsTo<T1, std::unique_ptr<cond_expr>, T1, std::unique_ptr<cond_expr>,
-               T1, std::unique_ptr<cond_expr>, T1>
-            F2>
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, cond_expr, T1, cond_expr, T1> F1,
+              MapsTo<T1, cond_expr, T1, cond_expr, T1, cond_expr, T1> F2>
     T1 cond_expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       const cond_expr *_self = this;
 
@@ -2437,14 +2418,9 @@ struct LoopifyExpr {
       return _result;
     }
 
-    template <
-        typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, std::unique_ptr<cond_expr>, T1, std::unique_ptr<cond_expr>,
-               T1>
-            F1,
-        MapsTo<T1, std::unique_ptr<cond_expr>, T1, std::unique_ptr<cond_expr>,
-               T1, std::unique_ptr<cond_expr>, T1>
-            F2>
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, cond_expr, T1, cond_expr, T1> F1,
+              MapsTo<T1, cond_expr, T1, cond_expr, T1, cond_expr, T1> F2>
     T1 cond_expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       const cond_expr *_self = this;
 

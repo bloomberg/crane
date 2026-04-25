@@ -35,7 +35,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -243,18 +247,15 @@ struct Equations {
       auto &&_sv = *(this);
       if (std::holds_alternative<Gcd_graph_equation_1>(_sv.v())) {
         const auto &[d_y] = std::get<Gcd_graph_equation_1>(_sv.v());
-        return gcd_graph(
-            Gcd_graph_equation_1{clone_as_value<unsigned int>(d_y)});
+        return gcd_graph(Gcd_graph_equation_1{d_y});
       } else if (std::holds_alternative<Gcd_graph_equation_2>(_sv.v())) {
         const auto &[d_n] = std::get<Gcd_graph_equation_2>(_sv.v());
-        return gcd_graph(
-            Gcd_graph_equation_2{clone_as_value<unsigned int>(d_n)});
+        return gcd_graph(Gcd_graph_equation_2{d_n});
       } else {
         const auto &[d_n, d_n0, d_hind] =
             std::get<Gcd_graph_refinement_3>(_sv.v());
         return gcd_graph(Gcd_graph_refinement_3{
-            clone_as_value<unsigned int>(d_n),
-            clone_as_value<unsigned int>(d_n0),
+            d_n, d_n0,
             clone_as_value<std::unique_ptr<gcd_clause_3_graph>>(d_hind)});
       }
     }
@@ -355,16 +356,12 @@ struct Equations {
         const auto &[d_n, d_n0, d_hind] =
             std::get<Gcd_clause_3_graph_equation_1>(_sv.v());
         return gcd_clause_3_graph(Gcd_clause_3_graph_equation_1{
-            clone_as_value<unsigned int>(d_n),
-            clone_as_value<unsigned int>(d_n0),
-            clone_as_value<std::unique_ptr<gcd_graph>>(d_hind)});
+            d_n, d_n0, clone_as_value<std::unique_ptr<gcd_graph>>(d_hind)});
       } else {
         const auto &[d_n, d_n0, d_hind] =
             std::get<Gcd_clause_3_graph_equation_2>(_sv.v());
         return gcd_clause_3_graph(Gcd_clause_3_graph_equation_2{
-            clone_as_value<unsigned int>(d_n),
-            clone_as_value<unsigned int>(d_n0),
-            clone_as_value<std::unique_ptr<gcd_graph>>(d_hind)});
+            d_n, d_n0, clone_as_value<std::unique_ptr<gcd_graph>>(d_hind)});
       }
     }
 
@@ -705,9 +702,8 @@ struct Equations {
         const auto &[d_n, d_hind] =
             std::get<Collatz_steps_graph_refinement_3>(_sv.v());
         return collatz_steps_graph(Collatz_steps_graph_refinement_3{
-            clone_as_value<unsigned int>(d_n),
-            clone_as_value<std::unique_ptr<collatz_steps_clause_3_graph>>(
-                d_hind)});
+            d_n, clone_as_value<std::unique_ptr<collatz_steps_clause_3_graph>>(
+                     d_hind)});
       }
     }
 
@@ -811,14 +807,14 @@ struct Equations {
             std::get<Collatz_steps_clause_3_graph_equation_1>(_sv.v());
         return collatz_steps_clause_3_graph(
             Collatz_steps_clause_3_graph_equation_1{
-                clone_as_value<unsigned int>(d_n),
+                d_n,
                 clone_as_value<std::unique_ptr<collatz_steps_graph>>(d_hind)});
       } else {
         const auto &[d_n, d_hind] =
             std::get<Collatz_steps_clause_3_graph_equation_2>(_sv.v());
         return collatz_steps_clause_3_graph(
             Collatz_steps_clause_3_graph_equation_2{
-                clone_as_value<unsigned int>(d_n),
+                d_n,
                 clone_as_value<std::unique_ptr<collatz_steps_graph>>(d_hind)});
       }
     }

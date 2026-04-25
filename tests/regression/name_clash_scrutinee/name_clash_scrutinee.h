@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NAME_CLASH_SCRUTINEE
 #define INCLUDED_NAME_CLASH_SCRUTINEE
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -31,7 +32,11 @@ std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
 
 template <typename T>
 std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
-  return x ? std::make_shared<T>(x->clone()) : nullptr;
+  if constexpr (requires { x->clone(); }) {
+    return x ? std::make_shared<T>(x->clone()) : nullptr;
+  } else {
+    return x;
+  }
 }
 
 template <typename Target, typename Source>
@@ -211,11 +216,10 @@ struct NameClashScrutinee {
       auto &&_sv = *(this);
       if (std::holds_alternative<Circle>(_sv.v())) {
         const auto &[d_a0] = std::get<Circle>(_sv.v());
-        return shape(Circle{clone_as_value<unsigned int>(d_a0)});
+        return shape(Circle{d_a0});
       } else {
         const auto &[d_a0, d_a1] = std::get<Square>(_sv.v());
-        return shape(Square{clone_as_value<unsigned int>(d_a0),
-                            clone_as_value<unsigned int>(d_a1)});
+        return shape(Square{d_a0, d_a1});
       }
     }
 
@@ -385,8 +389,7 @@ struct NameClashScrutinee {
       auto &&_sv = *(this);
       if (std::holds_alternative<Wrap>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<Wrap>(_sv.v());
-        return wrapper(
-            Wrap{clone_as_value<color>(d_a0), clone_as_value<shape>(d_a1)});
+        return wrapper(Wrap{d_a0, d_a1});
       } else {
         return wrapper(Empty{});
       }

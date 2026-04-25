@@ -1,5 +1,6 @@
 #include <opcode_operand_decode.h>
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 
