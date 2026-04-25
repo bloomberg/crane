@@ -208,7 +208,7 @@ public:
 };
 
 struct Opaque {
-  __attribute__((pure)) static unsigned int safe_pred(const unsigned int &n);
+  static unsigned int safe_pred(const unsigned int &n);
   __attribute__((pure)) static unsigned int pred_of_succ(unsigned int n);
   __attribute__((pure)) static bool nat_eq_dec(const unsigned int &n,
                                                const unsigned int &x);

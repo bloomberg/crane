@@ -135,8 +135,7 @@ Target clone_as_value(const Source &x) {
 }
 
 struct TodoExtractConstantNoninline {
-  __attribute__((pure)) static unsigned int
-  foreign_inc(const unsigned int &_x0);
+  static unsigned int foreign_inc(const unsigned int &_x0);
   static inline const unsigned int test_value = foreign_inc(4u);
   static inline const unsigned int twice_value = foreign_inc(foreign_inc(2u));
 };

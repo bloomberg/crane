@@ -496,7 +496,10 @@ struct LoopifyTmc {
         std::get<typename list<T1>::Cons>(_cell->v_mut()).d_a1 =
             std::move(_cell1);
         *(_write) = std::move(_cell);
-        _write = &std::get<typename list<T1>::Cons>((*_write)->v_mut()).d_a1;
+        _write = &std::get<typename list<T1>::Cons>(
+                      std::get<typename list<T1>::Cons>((*_write)->v_mut())
+                          .d_a1->v_mut())
+                      .d_a1;
         _loop_l = *(d_a1);
         continue;
       }

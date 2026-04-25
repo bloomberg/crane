@@ -4,7 +4,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 __attribute__((pure)) HofTreeLoopify::tree<unsigned int>
 HofTreeLoopify::depth_tree(unsigned int n) {

@@ -1213,6 +1213,26 @@ let rec collect_tvars_ast acc = function
    |MLfloat _
    |MLstring _ -> acc
 
+(** True when evaluating an ML AST may throw through an extracted axiom or
+    exception. Functions whose bodies can throw must not be marked
+    [__attribute__((pure))]: Clang may otherwise move calls across local
+    exception handlers or discard them when their result is unused. *)
+let rec ast_may_throw = function
+  | MLaxiom _ | MLexn _ -> true
+  | MLglob (r, _) -> Table.is_axiom_value r
+  | MLlam (_, _, body) -> ast_may_throw body
+  | MLletin (_, _, a, b) -> ast_may_throw a || ast_may_throw b
+  | MLcons (_, _, args) -> List.exists ast_may_throw args
+  | MLcase (_, e, brs) ->
+    ast_may_throw e
+    || Array.exists (fun (_, _, _, body) -> ast_may_throw body) brs
+  | MLfix (_, _, funs, _) -> Array.exists ast_may_throw funs
+  | MLapp (f, args) -> ast_may_throw f || List.exists ast_may_throw args
+  | MLmagic a -> ast_may_throw a
+  | MLparray (arr, def) -> Array.exists ast_may_throw arr || ast_may_throw def
+  | MLtuple args -> List.exists ast_may_throw args
+  | MLrel _ | MLdummy _ | MLuint _ | MLfloat _ | MLstring _ -> false
+
 (** Check if an ML type contains any unresolved type variable or placeholder.
     Returns true for Tvar, Tvar', unresolved Tmeta, and Tunknown. Used to guard
     Tvar substitution: we only substitute with fully concrete types. *)
@@ -2826,7 +2846,9 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           in
           (* Create tvar names for the template lambda *)
           let tvar_name i = "_T" ^ string_of_int i in
-          (* Render an ML type as a C++ type string using local tvar names *)
+          (* Render an ML type as a C++ value type string using local tvar
+             names. Inductives must stay bare values here; recursive ownership
+             is represented only inside constructor fields. *)
           let rec render_ml_ty = function
             | Miniml.Tvar i | Miniml.Tvar' i -> tvar_name i
             | Miniml.Tarr (t1, t2) ->
@@ -2877,6 +2899,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
               in
               subst 0;
               Buffer.contents buf
+            | Miniml.Tdummy _ -> "std::any"
             | Miniml.Tglob (g, ts, _) ->
               let is_ind =
                 match g with
@@ -2886,20 +2909,13 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
               let base =
                 Common.pp_global_name (if is_ind then Type else Term) g
               in
-              let type_str =
-                if ts = [] then
-                  base
-                else
-                  base
-                  ^ "<"
-                  ^ String.concat ", " (List.map render_ml_ty ts)
-                  ^ ">"
-              in
-              if is_ind && not (Table.is_enum_inductive g) then
-                "std::shared_ptr<" ^ type_str ^ ">"
+              if ts = [] then
+                base
               else
-                type_str
-            | Miniml.Tdummy _ -> "std::any"
+                base
+                ^ "<"
+                ^ String.concat ", " (List.map render_ml_ty ts)
+                ^ ">"
             | _ -> "auto"
           in
           if non_deducible_tvars <> [] && not (IntSet.is_empty deducible_set)
@@ -8679,7 +8695,7 @@ let gen_dfun n b cty ty temps =
   (* Suppress __attribute__((pure)) for functions whose ML return type is
      monadic — these perform side effects even though the C++ return type
      may look pure after type erasure. *)
-  let no_pure = is_monadic_ml_type (ml_codomain ty) in
+  let no_pure = is_monadic_ml_type (ml_codomain ty) || ast_may_throw b in
   (* Determine itree extraction mode from the monad template string.
      Reified mode preserves [itree E R] as [shared_ptr<ITree<R>>]; sequential
      mode erases to [R].  We detect reified by checking whether the monad

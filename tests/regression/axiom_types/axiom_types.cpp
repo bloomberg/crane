@@ -1,5 +1,6 @@
 #include <axiom_types.h>
 
+#include <any>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -23,8 +24,7 @@ AxiomTypes::MysteryType AxiomTypes::use_axiom(const std::monostate &) {
   return mystery_function(mystery_value());
 }
 
-__attribute__((pure)) AxiomTypes::AxiomRecord
-AxiomTypes::make_axiom_record(const std::monostate &) {
+AxiomTypes::AxiomRecord AxiomTypes::make_axiom_record(const std::monostate &) {
   return AxiomRecord{42u, mystery_value()};
 }
 
@@ -33,7 +33,7 @@ AxiomTypes::extract_axiom_field(const AxiomTypes::AxiomRecord &r) {
   return r.axiom_field;
 }
 
-__attribute__((pure)) AxiomTypes::AxiomInductive
+AxiomTypes::AxiomInductive
 AxiomTypes::use_axiom_inductive(const std::monostate &) {
   return AxiomInductive::axconstr2(mystery_value());
 }
@@ -47,7 +47,7 @@ AxiomTypes::MysteryType AxiomTypes::nested_axiom(const std::monostate &) {
   return axiom_identity(mystery_function(axiom_identity(mystery_value())));
 }
 
-__attribute__((pure)) AxiomTypes::list<AxiomTypes::MysteryType>
+AxiomTypes::list<AxiomTypes::MysteryType>
 AxiomTypes::axiom_list(const std::monostate &) {
   return list<AxiomTypes::MysteryType>::cons(
       mystery_value(), list<AxiomTypes::MysteryType>::cons(

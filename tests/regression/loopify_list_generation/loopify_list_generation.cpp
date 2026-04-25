@@ -51,7 +51,10 @@ LoopifyListGeneration::stutter(const List<unsigned int> &l) {
           std::move(_cell1);
       *(_write) = std::move(_cell);
       _write =
-          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
+          &std::get<typename List<unsigned int>::Cons>(
+               std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+                   .d_a1->v_mut())
+               .d_a1;
       _loop_l = *(d_a1);
       continue;
     }
@@ -193,7 +196,9 @@ LoopifyListGeneration::repeat_with_sep(unsigned int sep, const unsigned int &n,
             std::move(_cell1);
         *(_write) = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+            &std::get<typename List<unsigned int>::Cons>(
+                 std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+                     .d_a1->v_mut())
                  .d_a1;
         _loop_n = n_;
         continue;

@@ -383,8 +383,7 @@ PendantSumtreeRoundtripCase::digit_vec3(T a, T b, T c) {
                      T0<T>::cons(b, 1u, T0<T>::cons(c, 0u, T0<T>::nil())));
 }
 
-__attribute__((pure)) T Fin::of_nat_lt(const unsigned int &p,
-                                       const unsigned int &n) {
+T Fin::of_nat_lt(const unsigned int &p, const unsigned int &n) {
   if (n <= 0) {
     throw std::logic_error("absurd case");
   } else {

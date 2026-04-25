@@ -6,7 +6,7 @@
 #include <utility>
 #include <variant>
 
-__attribute__((pure)) unsigned int Opaque::safe_pred(const unsigned int &n) {
+unsigned int Opaque::safe_pred(const unsigned int &n) {
   if (n <= 0) {
     throw std::logic_error("absurd case");
   } else {

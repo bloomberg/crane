@@ -19,8 +19,7 @@ ExtractDirectives::transform(const unsigned int &base, const unsigned int &x) {
   return scale(base, offset(base, x));
 }
 
-__attribute__((pure)) unsigned int
-ExtractDirectives::safe_pred(const unsigned int &n) {
+unsigned int ExtractDirectives::safe_pred(const unsigned int &n) {
   if (n <= 0) {
     throw std::logic_error("absurd case");
   } else {

@@ -59,7 +59,9 @@ LoopifyListCombining::intersperse(unsigned int sep,
             std::move(_cell1);
         *(_write) = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+            &std::get<typename List<unsigned int>::Cons>(
+                 std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+                     .d_a1->v_mut())
                  .d_a1;
         _loop_l = *(d_a1);
         continue;
@@ -227,7 +229,9 @@ LoopifyListCombining::interleave_two(List<unsigned int> l1,
             std::move(_cell1);
         *(_write) = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+            &std::get<typename List<unsigned int>::Cons>(
+                 std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+                     .d_a1->v_mut())
                  .d_a1;
         List<unsigned int> _next_l2 = *(d_a10);
         List<unsigned int> _next_l1 = *(d_a1);

@@ -7,7 +7,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
@@ -282,106 +281,50 @@ struct LoopifyCoindColist {
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
   static std::shared_ptr<colist<T2>>
   comap(F0 &&f, const std::shared_ptr<colist<T1>> &l) {
-    struct _Enter {
-      const std::shared_ptr<colist<T1>> l;
-    };
-
-    using _Frame = std::variant<_Enter>;
-    std::shared_ptr<colist<T2>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const std::shared_ptr<colist<T1>> l = _f.l;
-      if (std::holds_alternative<typename colist<T1>::Conil>(l->v())) {
-        _result = colist<T2>::lazy_([]() -> std::shared_ptr<colist<T2>> {
-          return colist<T2>::conil();
-        });
-      } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename colist<T1>::Cocons>(l->v());
-        _result =
-            colist<T2>::lazy_([=]() mutable -> std::shared_ptr<colist<T2>> {
-              return colist<T2>::cocons(f(d_a0), comap<T1, T2>(f, d_a1));
-            });
-      }
+    if (std::holds_alternative<typename colist<T1>::Conil>(l->v())) {
+      return colist<T2>::lazy_(
+          []() -> std::shared_ptr<colist<T2>> { return colist<T2>::conil(); });
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename colist<T1>::Cocons>(l->v());
+      return colist<T2>::lazy_([=]() mutable -> std::shared_ptr<colist<T2>> {
+        return colist<T2>::cocons(f(d_a0), comap<T1, T2>(f, d_a1));
+      });
     }
-    return _result;
   }
 
   template <typename T1>
   static std::shared_ptr<colist<T1>>
   cotake(const unsigned int &n, const std::shared_ptr<colist<T1>> &l) {
-    struct _Enter {
-      const std::shared_ptr<colist<T1>> l;
-      const unsigned int n;
-    };
-
-    using _Frame = std::variant<_Enter>;
-    std::shared_ptr<colist<T1>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{l, n});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const std::shared_ptr<colist<T1>> l = _f.l;
-      const unsigned int n = _f.n;
-      if (n <= 0) {
-        _result = colist<T1>::lazy_([]() -> std::shared_ptr<colist<T1>> {
+    if (n <= 0) {
+      return colist<T1>::lazy_(
+          []() -> std::shared_ptr<colist<T1>> { return colist<T1>::conil(); });
+    } else {
+      unsigned int n_ = n - 1;
+      if (std::holds_alternative<typename colist<T1>::Conil>(l->v())) {
+        return colist<T1>::lazy_([]() -> std::shared_ptr<colist<T1>> {
           return colist<T1>::conil();
         });
       } else {
-        unsigned int n_ = n - 1;
-        if (std::holds_alternative<typename colist<T1>::Conil>(l->v())) {
-          _result = colist<T1>::lazy_([]() -> std::shared_ptr<colist<T1>> {
-            return colist<T1>::conil();
-          });
-        } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename colist<T1>::Cocons>(l->v());
-          _result =
-              colist<T1>::lazy_([=]() mutable -> std::shared_ptr<colist<T1>> {
-                return colist<T1>::cocons(d_a0, cotake<T1>(n_, d_a1));
-              });
-        }
+        const auto &[d_a0, d_a1] =
+            std::get<typename colist<T1>::Cocons>(l->v());
+        return colist<T1>::lazy_([=]() mutable -> std::shared_ptr<colist<T1>> {
+          return colist<T1>::cocons(d_a0, cotake<T1>(n_, d_a1));
+        });
       }
     }
-    return _result;
   }
 
   template <typename T1>
   static std::shared_ptr<colist<T1>> from_list(const List<T1> &l) {
-    struct _Enter {
-      const List<T1> l;
-    };
-
-    using _Frame = std::variant<_Enter>;
-    std::shared_ptr<colist<T1>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const List<T1> l = _f.l;
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-        _result = colist<T1>::lazy_([]() -> std::shared_ptr<colist<T1>> {
-          return colist<T1>::conil();
-        });
-      } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-        _result = colist<T1>::lazy_([&]() -> std::shared_ptr<colist<T1>> {
-          return colist<T1>::cocons(d_a0, from_list<T1>(*(d_a1)));
-        });
-      }
+    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
+      return colist<T1>::lazy_(
+          []() -> std::shared_ptr<colist<T1>> { return colist<T1>::conil(); });
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
+      return colist<T1>::lazy_([&]() -> std::shared_ptr<colist<T1>> {
+        return colist<T1>::cocons(d_a0, from_list<T1>(*(d_a1)));
+      });
     }
-    return _result;
   }
 
   template <typename T1>

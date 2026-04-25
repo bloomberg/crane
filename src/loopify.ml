@@ -1174,6 +1174,13 @@ let has_n_call_expr n check body =
 (** Check whether any return has 2+ recursive calls (multi-recursion). *)
 let has_multi_call_expr check body = has_n_call_expr 2 check body
 
+let has_higher_order_template_param tparams =
+  List.exists
+    (function
+      | TTfun _ | TTconcept _ -> true
+      | _ -> false )
+    (List.map fst tparams)
+
 (** {3 Expression decomposition}
 
     Analyze a return expression to find how the recursive call result is used.
@@ -1711,31 +1718,6 @@ let rec try_tmc_decompose check expr =
         (fun (i, a) -> if i <> idx then Some (i, a) else None)
         indexed
     in
-    (* Detect which field positions hold self-referencing values (unique_ptr in
-       the struct).  A field is self-referencing if its arg is:
-       (a) a factory call for the same type, or
-       (b) a direct recursive call (variable or application). *)
-    let uptr_idxs_from_factory =
-      List.filter_map
-        (fun (i, a) ->
-          let a' = match a with CPPmove e -> e | e -> e in
-          match is_ctor_factory_call a' with
-          | Some _ -> Some i
-          | None -> None)
-        indexed
-    in
-    let uptr_idxs_from_recursive =
-      List.filter_map
-        (fun (i, a) ->
-          match check a with
-          | Some _ -> Some i
-          | None -> None)
-        indexed
-    in
-    let uptr_idxs =
-      List.sort_uniq compare
-        (uptr_idxs_from_factory @ uptr_idxs_from_recursive)
-    in
     let make_cell idx = {
       tca_factory =
         CPPqualified (type_expr, Id.of_string factory_s);
@@ -1744,7 +1726,7 @@ let rec try_tmc_decompose check expr =
       tca_rec_field_idx = idx;
       tca_non_rec_args = non_rec_of idx;
       tca_n_args = n_args;
-      tca_uptr_field_idxs = uptr_idxs;
+      tca_uptr_field_idxs = [idx];
     } in
     (* Find which args are direct recursive calls *)
     let direct =
@@ -2050,24 +2032,50 @@ let build_tmc_branch_stmts ~vt_ret pp_expr ti br varying shadow_params =
   let patch = patch_tmc_dest ~vt_ret pp_expr ti (CPPvar (List.hd cell_names)) in
   (* 4. Advance _write to the recursive field of the innermost cell.
         Generates: _write = &std::get<typename Type::Ctor>(inner->v_mut()).field; *)
-  let innermost_name = List.rev cell_names |> List.hd in
-  let innermost_cell =
-    match vt_ret with
-    | Some _ -> CPPraw "(*_write)"
-    | None -> CPPvar innermost_name
-  in
   let inner_ti = List.rev br.tmc_cells |> List.hd in
   let field_idx = inner_ti.tca_n_args - 1 - inner_ti.tca_rec_field_idx in
   let field_id = Common.lookup_ctor_field_name inner_ti.tca_ctor_name field_idx in
-  let type_str = pp_expr inner_ti.tca_type_expr in
-  let get_expr =
-    CPPraw ("std::get<typename " ^ type_str ^ "::" ^ inner_ti.tca_ctor_name ^ ">")
-  in
-  let v_mut = CPPmethod_call (innermost_cell, Id.of_string "v_mut", []) in
   let update_write =
-    Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_write"),
-                     CPPunop ("&", CPPget (CPPfun_call (get_expr, [v_mut]),
-                                           field_id))))
+    match vt_ret with
+    | Some _ ->
+      let rec ptr_to_cell current_ptr = function
+        | [] | [_] -> current_ptr
+        | cell :: rest ->
+          let field_idx = cell.tca_n_args - 1 - cell.tca_rec_field_idx in
+          let field_id = Common.lookup_ctor_field_name cell.tca_ctor_name field_idx in
+          let type_str = pp_expr cell.tca_type_expr in
+          let field =
+            "std::get<typename " ^ type_str ^ "::" ^ cell.tca_ctor_name
+            ^ ">(" ^ current_ptr ^ "->v_mut())." ^ Id.to_string field_id
+          in
+          ptr_to_cell field rest
+      in
+      let innermost_ptr = ptr_to_cell "(*_write)" br.tmc_cells in
+      let type_str = pp_expr inner_ti.tca_type_expr in
+      Sexpr
+        (CPPbinop
+           ( "=",
+             CPPvar (Id.of_string "_write"),
+             CPPraw
+               ( "&std::get<typename " ^ type_str ^ "::"
+                 ^ inner_ti.tca_ctor_name ^ ">(" ^ innermost_ptr
+                 ^ "->v_mut())." ^ Id.to_string field_id ) ))
+    | None ->
+      let innermost_name = List.rev cell_names |> List.hd in
+      let type_str = pp_expr inner_ti.tca_type_expr in
+      let get_expr =
+        CPPraw
+          ("std::get<typename " ^ type_str ^ "::" ^ inner_ti.tca_ctor_name ^ ">")
+      in
+      let v_mut =
+        CPPmethod_call (CPPvar innermost_name, Id.of_string "v_mut", [])
+      in
+      Sexpr
+        (CPPbinop
+           ( "=",
+             CPPvar (Id.of_string "_write"),
+             CPPunop
+               ("&", CPPget (CPPfun_call (get_expr, [v_mut]), field_id)) ))
   in
   (* 5. Shadow variable updates *)
   let shadow_updates =
@@ -2751,9 +2759,12 @@ let make_cont_bindings ~offset cont_vars cont_types =
     (fun i id ->
       let ty = List.nth cont_types i in
       let ty_opt = if ty = Tunknown then None else Some ty in
-      Sasgn (id, ty_opt,
-             CPPmember (CPPvar (Id.of_string "_f"),
-                        Id.of_string ("_s" ^ string_of_int (offset + i)))))
+      let field_expr =
+        CPPmember (CPPvar (Id.of_string "_f"),
+                   Id.of_string ("_s" ^ string_of_int (offset + i)))
+      in
+      let rhs = match ty with Tunique_ptr _ -> CPPmove field_expr | _ -> field_expr in
+      Sasgn (id, ty_opt, rhs))
     cont_vars
 
 (** Build a type environment from continuation variables and their types,
@@ -2817,7 +2828,7 @@ let clone_for_frame ty expr =
   match ty with
   | Tunique_ptr inner ->
     CPPfun_call (CPPmk_unique inner,
-                 [CPPmethod_call (CPPderef expr, Id.of_string "clone", [])])
+                 [CPPmethod_call (expr, Id.of_string "clone", [])])
   | _ -> expr
 
 (** Apply [clone_for_frame] to parallel type and expression lists. *)
@@ -3430,8 +3441,9 @@ let rec rewrite_enter_lambda_return
       in
       register_frame frames_ref ~name:call_name ~saved_types:all_types
         ~saved_exprs:all_saved ~env ~handler;
+      let all_saved_conv = clone_for_frame_list all_types all_saved in
       [
-        make_stack_push (CPPstruct_id (Id.of_string call_name, [], all_saved));
+        make_stack_push (CPPstruct_id (Id.of_string call_name, [], all_saved_conv));
         make_stack_push
           (CPPstruct_id
              (Id.of_string "_Enter", [], filter_by_mask varying d.d_rec_args) );
@@ -3606,11 +3618,12 @@ let rec rewrite_enter_lambda_return
           let n_saved = List.length d.d_saved in
           let saved_types = infer_saved_types tparams env d.d_saved in
           let handler = build_decompose_handler d n_saved in
+          let saved_exprs_conv = clone_for_frame_list saved_types d.d_saved in
           register_frame frames_ref ~name:call_name ~saved_types
-            ~saved_exprs:d.d_saved ~env ~handler;
+            ~saved_exprs:saved_exprs_conv ~env ~handler;
           let push_call =
             make_stack_push
-              (CPPstruct_id (Id.of_string call_name, [], d.d_saved))
+              (CPPstruct_id (Id.of_string call_name, [], saved_exprs_conv))
           in
           let push_enter =
             make_stack_push
@@ -3798,7 +3811,9 @@ let rec rewrite_enter_lambda_return
       | None ->
       (* Double decomposition failed — try N-call decomposition *)
       match decompose_all_calls check e with
-      | Some acd when List.length acd.acd_calls >= 2 ->
+      | Some acd
+        when List.length acd.acd_calls >= 2
+             && not (has_higher_order_template_param tparams) ->
         gen_chained_call_frames
           check
           varying
@@ -4020,8 +4035,9 @@ let rec rewrite_enter_lambda_return
         in
         register_frame frames_ref ~name:call_name ~saved_types
           ~saved_exprs:d.d_saved ~env ~handler;
+        let saved_exprs_conv = clone_for_frame_list saved_types d.d_saved in
         let push_call =
-          make_stack_push (CPPstruct_id (Id.of_string call_name, [], d.d_saved))
+          make_stack_push (CPPstruct_id (Id.of_string call_name, [], saved_exprs_conv))
         in
         let push_enter =
           make_stack_push
@@ -4260,10 +4276,11 @@ and rewrite_enter_stmts
       in
       let all_saved = saved @ cont_saved in
       let all_types = types @ cont_types in
+      let all_saved_conv = clone_for_frame_list all_types all_saved in
       register_frame frames_ref ~name:call_name ~saved_types:all_types
-        ~saved_exprs:all_saved ~env ~handler;
+        ~saved_exprs:all_saved_conv ~env ~handler;
       [
-        make_stack_push (CPPstruct_id (Id.of_string call_name, [], all_saved));
+        make_stack_push (CPPstruct_id (Id.of_string call_name, [], all_saved_conv));
         make_stack_push (make_enter_frame enter_args);
       ]
     in
@@ -4340,6 +4357,9 @@ and rewrite_enter_stmts
           infer_saved_types tparams env (second_varying @ dd.dd_saved)
           @ cont_types
         in
+        let call1_saved_exprs_conv =
+          clone_for_frame_list call1_saved_types call1_saved_exprs
+        in
         let n_second = List.length second_varying in
         let call1_handler =
           let second_args = frame_fields n_second in
@@ -4357,11 +4377,11 @@ and rewrite_enter_stmts
           ]
         in
         register_frame frames_ref ~name:call1_name
-          ~saved_types:call1_saved_types ~saved_exprs:call1_saved_exprs
+          ~saved_types:call1_saved_types ~saved_exprs:call1_saved_exprs_conv
           ~env ~handler:call1_handler;
         [
           make_stack_push
-            (CPPstruct_id (Id.of_string call1_name, [], call1_saved_exprs));
+            (CPPstruct_id (Id.of_string call1_name, [], call1_saved_exprs_conv));
           make_stack_push
             (make_enter_frame (filter_by_mask varying dd.dd_first_args));
         ]
@@ -5654,6 +5674,37 @@ let has_lazy_body body =
     when Id.to_string lazy_id = "lazy_" -> true
   | _ -> false
 
+let rec expr_contains_lazy_factory = function
+  | CPPfun_call (CPPqualified (_, lazy_id), _) when Id.to_string lazy_id = "lazy_" ->
+    true
+  | e ->
+    let found = ref false in
+    let mark_expr e' =
+      if expr_contains_lazy_factory e' then found := true;
+      e'
+    in
+    let mark_stmt s =
+      if stmt_contains_lazy_factory s then found := true;
+      s
+    in
+    ignore (map_expr mark_expr mark_stmt Fun.id e);
+    !found
+and stmt_contains_lazy_factory s =
+  let found = ref false in
+  let mark_expr e =
+    if expr_contains_lazy_factory e then found := true;
+    e
+  in
+  let mark_stmt s' =
+    if stmt_contains_lazy_factory s' then found := true;
+    s'
+  in
+  ignore (map_stmt mark_expr mark_stmt Fun.id s);
+  !found
+
+let body_contains_lazy_factory body =
+  List.exists stmt_contains_lazy_factory body
+
 (** Transform a top-level function definition by loopifying its body.
 
     This is the main entry point for loopifying a [Dfundef]. The transformation
@@ -5699,7 +5750,7 @@ let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure
      the full rationale).  We still run [loopify_inner_lambdas] to handle
      any nested [std::function] fixpoints inside the lazy thunk. *)
   let body =
-    if has_lazy_body body then
+    if has_lazy_body body || body_contains_lazy_factory body then
       loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body
     else
       (* Normal (non-lazy) function — existing path *)
@@ -5709,6 +5760,11 @@ let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure
         | No_recursion -> body
         | Tail_recursion -> transform_tail check pp_type params ret_ty body
         | Nontail_recursion ->
+          if has_higher_order_template_param tparams
+             && count_calls_stmts check body >= 2
+          then
+            body
+          else
           ( match try_tmc_classify check body with
           | Some ti ->
             transform_tmc check pp_expr ti params ret_ty body

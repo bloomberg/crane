@@ -301,7 +301,7 @@ public:
 
 struct PString {
   __attribute__((pure)) static std::string nat_to_string(const Nat &n);
-  __attribute__((pure)) static int nat_to_int(const Nat &n);
+  static int nat_to_int(const Nat &n);
 
   template <typename T1, MapsTo<std::string, T1> F0>
   __attribute__((pure)) static std::string list_to_string(F0 &&p,

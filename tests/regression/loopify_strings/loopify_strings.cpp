@@ -58,7 +58,9 @@ LoopifyStrings::join_with(unsigned int sep, const List<unsigned int> &l) {
             std::move(_cell1);
         *(_write) = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+            &std::get<typename List<unsigned int>::Cons>(
+                 std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+                     .d_a1->v_mut())
                  .d_a1;
         _loop_l = *(d_a1);
         continue;
@@ -324,7 +326,9 @@ LoopifyStrings::intersperse(unsigned int sep, const List<unsigned int> &l) {
             std::move(_cell1);
         *(_write) = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+            &std::get<typename List<unsigned int>::Cons>(
+                 std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+                     .d_a1->v_mut())
                  .d_a1;
         _loop_l = *(d_a1);
         continue;

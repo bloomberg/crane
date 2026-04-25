@@ -5,7 +5,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
@@ -789,322 +788,90 @@ struct HofTreeLoopify {
   template <typename T1, typename T2,
             MapsTo<T2, tree<T1>, T2, T1, tree<T1>, T2> F1>
   static T2 tree_rect(const T2 f, F1 &&f0, const tree<T1> &t) {
-    struct _Enter {
-      const tree<T1> t;
-    };
-
-    struct _Call1 {
-      tree<T1> _s0;
-      tree<T1> _s1;
-      T1 _s2;
-      tree<T1> _s3;
-    };
-
-    struct _Call2 {
-      T2 _s0;
-      tree<T1> _s1;
-      T1 _s2;
-      tree<T1> _s3;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const tree<T1> t = _f.t;
-        if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
-          _result = f;
-        } else {
-          const auto &[d_a0, d_a1, d_a2] =
-              std::get<typename tree<T1>::Node>(t.v());
-          _stack.emplace_back(_Call1{*(d_a0), *(d_a2), d_a1, *(d_a0)});
-          _stack.emplace_back(_Enter{*(d_a2)});
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-        _stack.emplace_back(_Enter{_f._s0});
-      } else {
-        auto _f = std::move(std::get<_Call2>(_frame));
-        _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-      }
+    if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
+      return f;
+    } else {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree<T1>::Node>(t.v());
+      return f0(*(d_a0), tree_rect<T1, T2>(f, f0, *(d_a0)), d_a1, *(d_a2),
+                tree_rect<T1, T2>(f, f0, *(d_a2)));
     }
-    return _result;
   }
 
   template <typename T1, typename T2,
             MapsTo<T2, tree<T1>, T2, T1, tree<T1>, T2> F1>
   static T2 tree_rec(const T2 f, F1 &&f0, const tree<T1> &t) {
-    struct _Enter {
-      const tree<T1> t;
-    };
-
-    struct _Call1 {
-      tree<T1> _s0;
-      tree<T1> _s1;
-      T1 _s2;
-      tree<T1> _s3;
-    };
-
-    struct _Call2 {
-      T2 _s0;
-      tree<T1> _s1;
-      T1 _s2;
-      tree<T1> _s3;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const tree<T1> t = _f.t;
-        if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
-          _result = f;
-        } else {
-          const auto &[d_a0, d_a1, d_a2] =
-              std::get<typename tree<T1>::Node>(t.v());
-          _stack.emplace_back(_Call1{*(d_a0), *(d_a2), d_a1, *(d_a0)});
-          _stack.emplace_back(_Enter{*(d_a2)});
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-        _stack.emplace_back(_Enter{_f._s0});
-      } else {
-        auto _f = std::move(std::get<_Call2>(_frame));
-        _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-      }
+    if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
+      return f;
+    } else {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree<T1>::Node>(t.v());
+      return f0(*(d_a0), tree_rec<T1, T2>(f, f0, *(d_a0)), d_a1, *(d_a2),
+                tree_rec<T1, T2>(f, f0, *(d_a2)));
     }
-    return _result;
   }
 
   __attribute__((pure)) static tree<unsigned int> depth_tree(unsigned int n);
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
   __attribute__((pure)) static tree<T2> tree_map(F0 &&f, const tree<T1> &t) {
-    struct _Enter {
-      const tree<T1> t;
-    };
-
-    struct _Call1 {
-      tree<T1> _s0;
-      T2 _s1;
-    };
-
-    struct _Call2 {
-      tree<T2> _s0;
-      T2 _s1;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    tree<T2> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const tree<T1> t = _f.t;
-        if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
-          _result = tree<T2>::leaf();
-        } else {
-          const auto &[d_a0, d_a1, d_a2] =
-              std::get<typename tree<T1>::Node>(t.v());
-          _stack.emplace_back(_Call1{*(d_a0), f(d_a1)});
-          _stack.emplace_back(_Enter{*(d_a2)});
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        _stack.emplace_back(_Call2{_result, _f._s1});
-        _stack.emplace_back(_Enter{_f._s0});
-      } else {
-        auto _f = std::move(std::get<_Call2>(_frame));
-        _result = tree<T2>::node(_result, _f._s1, _f._s0);
-      }
+    if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
+      return tree<T2>::leaf();
+    } else {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree<T1>::Node>(t.v());
+      return tree<T2>::node(tree_map<T1, T2>(f, *(d_a0)), f(d_a1),
+                            tree_map<T1, T2>(f, *(d_a2)));
     }
-    return _result;
   }
 
   template <typename T1, typename T2, MapsTo<T2, T2, T1, T2> F1>
   static T2 tree_fold(const T2 base, F1 &&f, const tree<T1> &t) {
-    struct _Enter {
-      const tree<T1> t;
-    };
-
-    struct _Call1 {
-      tree<T1> _s0;
-      T1 _s1;
-    };
-
-    struct _Call2 {
-      T2 _s0;
-      T1 _s1;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const tree<T1> t = _f.t;
-        if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
-          _result = base;
-        } else {
-          const auto &[d_a0, d_a1, d_a2] =
-              std::get<typename tree<T1>::Node>(t.v());
-          _stack.emplace_back(_Call1{*(d_a0), d_a1});
-          _stack.emplace_back(_Enter{*(d_a2)});
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        _stack.emplace_back(_Call2{_result, _f._s1});
-        _stack.emplace_back(_Enter{_f._s0});
-      } else {
-        auto _f = std::move(std::get<_Call2>(_frame));
-        _result = f(_result, _f._s1, _f._s0);
-      }
+    if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
+      return base;
+    } else {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree<T1>::Node>(t.v());
+      return f(tree_fold<T1, T2>(base, f, *(d_a0)), d_a1,
+               tree_fold<T1, T2>(base, f, *(d_a2)));
     }
-    return _result;
   }
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
   __attribute__((pure)) static tree<T3>
   tree_zip_with(F0 &&f, const tree<T1> &t1, const tree<T2> &t2) {
-    struct _Enter {
-      const tree<T2> t2;
-      const tree<T1> t1;
-    };
-
-    struct _Call1 {
-      tree<T2> _s0;
-      tree<T1> _s1;
-      T3 _s2;
-    };
-
-    struct _Call2 {
-      tree<T3> _s0;
-      T3 _s1;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    tree<T3> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{t2, t1});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const tree<T2> t2 = _f.t2;
-        const tree<T1> t1 = _f.t1;
-        if (std::holds_alternative<typename tree<T1>::Leaf>(t1.v())) {
-          _result = tree<T3>::leaf();
-        } else {
-          const auto &[d_a0, d_a1, d_a2] =
-              std::get<typename tree<T1>::Node>(t1.v());
-          if (std::holds_alternative<typename tree<T2>::Leaf>(t2.v())) {
-            _result = tree<T3>::leaf();
-          } else {
-            const auto &[d_a00, d_a10, d_a20] =
-                std::get<typename tree<T2>::Node>(t2.v());
-            _stack.emplace_back(_Call1{*(d_a00), *(d_a0), f(d_a1, d_a10)});
-            _stack.emplace_back(_Enter{*(d_a20), *(d_a2)});
-          }
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        _stack.emplace_back(_Call2{_result, _f._s2});
-        _stack.emplace_back(_Enter{_f._s0, _f._s1});
+    if (std::holds_alternative<typename tree<T1>::Leaf>(t1.v())) {
+      return tree<T3>::leaf();
+    } else {
+      const auto &[d_a0, d_a1, d_a2] =
+          std::get<typename tree<T1>::Node>(t1.v());
+      if (std::holds_alternative<typename tree<T2>::Leaf>(t2.v())) {
+        return tree<T3>::leaf();
       } else {
-        auto _f = std::move(std::get<_Call2>(_frame));
-        _result = tree<T3>::node(_result, _f._s1, _f._s0);
+        const auto &[d_a00, d_a10, d_a20] =
+            std::get<typename tree<T2>::Node>(t2.v());
+        return tree<T3>::node(tree_zip_with<T1, T2, T3>(f, *(d_a0), *(d_a00)),
+                              f(d_a1, d_a10),
+                              tree_zip_with<T1, T2, T3>(f, *(d_a2), *(d_a20)));
       }
     }
-    return _result;
   }
 
   template <typename T1, typename T2, typename T3,
             MapsTo<std::pair<T3, T2>, T3, T1> F0>
   __attribute__((pure)) static std::pair<T3, tree<T2>>
   tree_map_accum(F0 &&f, const T3 acc, const tree<T1> &t) {
-    struct _Enter {
-      const tree<T1> t;
-      const T3 acc;
-    };
-
-    struct _Call1 {
-      T1 _s0;
-      std::unique_ptr<tree<T1>> _s1;
-      F0 _s2;
-    };
-
-    struct _Call2 {
-      tree<T2> _s0;
-      T2 _s1;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    std::pair<T3, tree<T2>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{t, acc});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const tree<T1> t = _f.t;
-        const T3 acc = _f.acc;
-        if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
-          _result = std::make_pair(acc, tree<T2>::leaf());
-        } else {
-          const auto &[d_a0, d_a1, d_a2] =
-              std::get<typename tree<T1>::Node>(t.v());
-          _stack.emplace_back(_Call1{d_a1, d_a2, f});
-          _stack.emplace_back(_Enter{*(d_a0), acc});
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        T1 d_a1 = _f._s0;
-        std::unique_ptr<tree<T1>> d_a2 = _f._s1;
-        F0 f = _f._s2;
-        const T3 &acc1 = _result.first;
-        const tree<T2> &l_ = _result.second;
-        auto _cs1 = f(acc1, d_a1);
-        const T3 &acc2 = _cs1.first;
-        const T2 &x_ = _cs1.second;
-        _stack.emplace_back(_Call2{l_, x_});
-        _stack.emplace_back(_Enter{*(d_a2), acc2});
-      } else {
-        auto _f = std::move(std::get<_Call2>(_frame));
-        tree<T2> l_ = _f._s0;
-        T2 x_ = _f._s1;
-        const T3 &acc3 = _result.first;
-        const tree<T2> &r_ = _result.second;
-        _result = std::make_pair(acc3, tree<T2>::node(l_, x_, r_));
-      }
+    if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
+      return std::make_pair(acc, tree<T2>::leaf());
+    } else {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree<T1>::Node>(t.v());
+      auto _cs = tree_map_accum<T1, T2, T3>(f, acc, *(d_a0));
+      const T3 &acc1 = _cs.first;
+      const tree<T2> &l_ = _cs.second;
+      auto _cs1 = f(acc1, d_a1);
+      const T3 &acc2 = _cs1.first;
+      const T2 &x_ = _cs1.second;
+      auto _cs2 = tree_map_accum<T1, T2, T3>(f, acc2, *(d_a2));
+      const T3 &acc3 = _cs2.first;
+      const tree<T2> &r_ = _cs2.second;
+      return std::make_pair(acc3, tree<T2>::node(l_, x_, r_));
     }
-    return _result;
   }
 
   static inline const tree<unsigned int> small_tree = tree<unsigned int>::node(

@@ -1130,7 +1130,9 @@ LoopifyLists::interleave(LoopifyLists::list<unsigned int> l1,
             std::move(_cell1);
         *(_write) = std::move(_cell);
         _write =
-            &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
+            &std::get<typename list<unsigned int>::Cons>(
+                 std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
+                     .d_a1->v_mut())
                  .d_a1;
         LoopifyLists::list<unsigned int> _next_l2 = *(d_a10);
         LoopifyLists::list<unsigned int> _next_l1 = *(d_a1);

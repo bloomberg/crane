@@ -671,7 +671,10 @@ LoopifyTrees::extract_tree_children(
         *(_write) = std::move(_cell);
         _write =
             &std::get<typename List<LoopifyTrees::tree<unsigned int>>::Cons>(
-                 (*_write)->v_mut())
+                 std::get<
+                     typename List<LoopifyTrees::tree<unsigned int>>::Cons>(
+                     (*_write)->v_mut())
+                     .d_a1->v_mut())
                  .d_a1;
         _loop_ts = *(d_a1);
         continue;

@@ -141,7 +141,7 @@ struct ExtractDirectives {
                                                   const unsigned int &x);
   __attribute__((pure)) static unsigned int transform(const unsigned int &base,
                                                       const unsigned int &x);
-  __attribute__((pure)) static unsigned int safe_pred(const unsigned int &n);
+  static unsigned int safe_pred(const unsigned int &n);
   static inline const unsigned int test_offset = offset(10u, 5u);
   static inline const unsigned int test_scale = scale(3u, 4u);
   static inline const unsigned int test_transform = transform(2u, 3u);

@@ -624,8 +624,7 @@ public:
 };
 
 struct Fin {
-  __attribute__((pure)) static T of_nat_lt(const unsigned int &p,
-                                           const unsigned int &n);
+  static T of_nat_lt(const unsigned int &p, const unsigned int &n);
 };
 
 struct Vector {

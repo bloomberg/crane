@@ -52,6 +52,7 @@ Tree build_deep_tree(unsigned int depth) {
 bool survives(void (*test_fn)()) {
   pid_t pid = fork();
   if (pid == 0) {
+    alarm(10);
     test_fn();
     _exit(0);
   }

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_AXIOM_TYPES
 #define INCLUDED_AXIOM_TYPES
 
+#include <any>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -151,8 +152,7 @@ struct AxiomTypes {
     __attribute__((pure)) const AxiomRecord *operator->() const { return this; }
   };
 
-  __attribute__((pure)) static AxiomRecord
-  make_axiom_record(const std::monostate &_x);
+  static AxiomRecord make_axiom_record(const std::monostate &_x);
   static MysteryType extract_axiom_field(const AxiomRecord &r);
 
   struct AxiomInductive {
@@ -263,8 +263,7 @@ struct AxiomTypes {
     }
   }
 
-  __attribute__((pure)) static AxiomInductive
-  use_axiom_inductive(const std::monostate &_x);
+  static AxiomInductive use_axiom_inductive(const std::monostate &_x);
   static MysteryType axiom_identity(const MysteryType x);
   static MysteryType nested_axiom(const std::monostate &_x);
 
@@ -382,8 +381,7 @@ struct AxiomTypes {
     }
   };
 
-  __attribute__((pure)) static list<MysteryType>
-  axiom_list(const std::monostate &_x);
+  static list<MysteryType> axiom_list(const std::monostate &_x);
 
   template <typename T1> static T1 poly_axiom(const T1 x) { return x; }
 

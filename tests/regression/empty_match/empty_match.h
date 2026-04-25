@@ -296,7 +296,7 @@ struct EmptyMatch {
       handle_left<unsigned int>(test_either);
 
   template <typename T1, typename T2>
-  constexpr static either<T1, T2> complex_absurd(const empty &) {
+  static either<T1, T2> complex_absurd(const empty &) {
     throw std::logic_error("absurd case");
   }
 };

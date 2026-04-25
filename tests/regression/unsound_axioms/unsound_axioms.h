@@ -173,9 +173,8 @@ struct UnsoundAxioms {
   extract_proof_computation(const ProofRec &pr);
   __attribute__((pure)) static bool use_type_eq(unsigned int n);
   static Rec impossible_rec();
-  __attribute__((pure)) static unsigned int
-  use_impossible(const std::monostate &_x);
-  __attribute__((pure)) static unsigned int from_false(const Rec &_x);
+  static unsigned int use_impossible(const std::monostate &_x);
+  static unsigned int from_false(const Rec &_x);
   static unsigned int prop_as_type();
   __attribute__((pure)) static unsigned int use_prop_as_type(const Rec &r);
 };

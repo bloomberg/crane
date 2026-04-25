@@ -295,8 +295,8 @@ struct ToString {
 };
 
 struct Tokenizer {
-  __attribute__((pure)) static std::pair<
-      std::optional<std::basic_string_view<char>>, std::basic_string_view<char>>
+  static std::pair<std::optional<std::basic_string_view<char>>,
+                   std::basic_string_view<char>>
   next_token(const std::basic_string_view<char> input,
              const std::basic_string_view<char> soft,
              const std::basic_string_view<char> hard);

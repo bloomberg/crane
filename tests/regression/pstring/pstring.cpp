@@ -15,7 +15,7 @@ __attribute__((pure)) std::string PString::nat_to_string(const Nat &n) {
   }
 }
 
-__attribute__((pure)) int PString::nat_to_int(const Nat &n) {
+int PString::nat_to_int(const Nat &n) {
   if (std::holds_alternative<typename Nat::O>(n.v())) {
     return 0;
   } else {

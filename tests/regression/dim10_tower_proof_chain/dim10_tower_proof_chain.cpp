@@ -8,10 +8,8 @@
 #include <utility>
 #include <variant>
 
-__attribute__((pure)) Dim10TowerProofChainCase::nat_le
-Dim10TowerProofChainCase::nat_le_of_lt(const unsigned int &n,
-                                       const unsigned int &m,
-                                       const std::any _H) {
+Dim10TowerProofChainCase::nat_le Dim10TowerProofChainCase::nat_le_of_lt(
+    const unsigned int &n, const unsigned int &m, const std::any _H) {
   if (n <= 0) {
     if (m <= 0) {
       return std::monostate{};

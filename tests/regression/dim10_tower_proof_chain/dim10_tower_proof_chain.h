@@ -217,8 +217,8 @@ public:
 struct Dim10TowerProofChainCase {
   using nat_lt = std::any;
   using nat_le = std::any;
-  __attribute__((pure)) static nat_le
-  nat_le_of_lt(const unsigned int &n, const unsigned int &m, const std::any _H);
+  static nat_le nat_le_of_lt(const unsigned int &n, const unsigned int &m,
+                             const std::any _H);
 
   struct QPos {
     unsigned int qpos_num;
