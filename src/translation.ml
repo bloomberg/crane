@@ -638,7 +638,8 @@ let resolve_varref_id s =
     C++ struct name with standard mappings (e.g. [prod] → [std::pair]).
     [~with_option] controls whether [option] maps to [std::optional] (only
     meaningful for zero-argument occurrences). *)
-let resolve_indref_base ~raw_inductives ~with_option r =
+let resolve_indref_base ?(no_custom_inductives = Refset'.empty)
+    ~raw_inductives ~with_option r =
   if Refset'.mem r raw_inductives then
     Common.pp_global_name Type r
   else
@@ -653,8 +654,9 @@ let resolve_indref_base ~raw_inductives ~with_option r =
         | _ -> false )
       | _ -> false
     in
-    if String.equal base "prod" then "std::pair"
-    else if with_option
+    let skip_custom = Refset'.mem r no_custom_inductives in
+    if (not skip_custom) && String.equal base "prod" then "std::pair"
+    else if (not skip_custom) && with_option
          && (String.equal base "option" || String.equal base "Option")
     then "std::optional"
     else if parent_is_cap || String.equal base "nat" then cap
@@ -691,7 +693,8 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
       | _ ->
       match r with
       | GlobRef.IndRef _ ->
-        resolve_indref_base ~raw_inductives ~with_option:(ts = []) r
+        resolve_indref_base ~no_custom_inductives ~raw_inductives
+          ~with_option:(ts = []) r
       | GlobRef.VarRef id -> resolve_varref_id (Id.to_string id)
       | _ -> Common.pp_global_name Type r
     in
@@ -799,9 +802,11 @@ let render_cpp_type_for_raw_template ?(raw_inductives = Refset'.empty)
           "int64_t"
           (render_cpp_type_simple ~raw_inductives ~no_custom_inductives ty)))
 
-(** Compute the clone function name for a given type: either the generic
-    [clone_value] (when the rendered type contains [auto] and thus cannot be
-    a template argument) or the type-directed [clone_as_value<T>]. *)
+(** Return the clone function name for deep-copying a value of the given
+    type.  When the rendered type is concrete (no [auto]), returns
+    ["clone_as_value<T>"] for type-directed conversion (e.g.
+    [unique_ptr<T>] to [T]).  Falls back to ["clone_value"] when the
+    type contains [auto]. *)
 let clone_helper_for_raw_template ty =
   let ty_s = render_cpp_type_for_raw_template ty in
   let ty_s =
@@ -823,21 +828,105 @@ let clone_helper_for_raw_template ty =
   if has_auto then "clone_value"
   else "clone_as_value<" ^ ty_s ^ ">"
 
-(** Build a [CPPfun_call] that deep-copies [expr] using the appropriate
-    clone strategy for [ty].  All inductive references are namespace-qualified
-    so the call works outside the defining struct. *)
-let clone_as_cpp_type ty expr =
-  CPPfun_call
-    (CPPraw (clone_helper_for_raw_template (qualify_inductives ty)), [expr])
+(** Return [true] if the C++ type contains any unresolved type variable
+    ([Tvar] or [Tauto]).  Used by {!gen_clone_field_expr} to decide whether
+    a field's clone can be inlined or must use the generic
+    [clone_as_value<T>] template. *)
+let rec contains_tvar = function
+  | Tvar _ | Tauto -> true
+  | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts) ->
+    List.exists contains_tvar ts
+  | Tshared_ptr t | Tunique_ptr t | Tref t | Tptr t
+  | Tmod (_, t) | Tnamespace (_, t) ->
+    contains_tvar t
+  | Tfun (args, ret) ->
+    List.exists contains_tvar args || contains_tvar ret
+  | Tvariant ts -> List.exists contains_tvar ts
+  | _ -> false
 
-(** Like {!clone_as_cpp_type}, but inductives in [raw_inductives] are left
-    unqualified (they are already in scope at the call site). *)
-let clone_as_cpp_type_scoped ?(raw_inductives = Refset'.empty) ty expr =
-  let skip g = Refset'.mem g raw_inductives in
-  CPPfun_call
-    (CPPraw
-       (clone_helper_for_raw_template (qualify_inductives ~skip ty)),
-     [expr])
+(** Return [true] if the C++ type contains [Tunique_ptr] anywhere in its
+    structure.  Types containing unique_ptr are not copy-constructible
+    (e.g. [optional<unique_ptr<T>>]), so they need element-wise cloning
+    rather than a plain copy. *)
+let rec contains_unique_ptr = function
+  | Tunique_ptr _ -> true
+  | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts) ->
+    List.exists contains_unique_ptr ts
+  | Tshared_ptr t | Tref t | Tptr t
+  | Tmod (_, t) | Tnamespace (_, t) ->
+    contains_unique_ptr t
+  | Tfun (args, ret) ->
+    List.exists contains_unique_ptr args || contains_unique_ptr ret
+  | Tvariant ts -> List.exists contains_unique_ptr ts
+  | _ -> false
+
+(** Generate inline C++ clone code for a constructor field, converting
+    from [src_ty] to [dst_ty].  Dispatches at OCaml generation time rather
+    than deferring to C++ [if constexpr].
+
+    When the wrapper structure is known (e.g. [unique_ptr], containers),
+    emits direct inline code.  Falls back to [clone_as_value<T>(expr)]
+    only when the field type itself is a bare type variable ([Tvar]). *)
+let gen_clone_field_expr ~src_ty ~dst_ty expr =
+  let render ty = render_cpp_type_for_raw_template (qualify_inductives ty) in
+  let mk_clone_as_value ty e =
+    CPPfun_call
+      (CPPraw (clone_helper_for_raw_template (qualify_inductives ty)), [e])
+  in
+  if src_ty = dst_ty then
+    (* ---- Same type: just deep-copy ---- *)
+    match src_ty with
+    | Tunique_ptr _ ->
+      (* unique_ptr<T>: clone_value overload handles null check + make_unique *)
+      CPPfun_call (CPPraw "clone_value", [expr])
+    | Tvar _ | Tauto ->
+      (* Type variable or auto: use clone_value which handles unique_ptr
+         (t_A could be instantiated as unique_ptr<T> at template level) *)
+      CPPfun_call (CPPraw "clone_value", [expr])
+    | _ when contains_unique_ptr src_ty ->
+      (* Contains unique_ptr (e.g. optional<unique_ptr<T>>): not copyable,
+         must clone element-wise via clone_as_value *)
+      mk_clone_as_value dst_ty expr
+    | _ ->
+      (* Concrete or shared_ptr: copy ctor handles it *)
+      expr
+  else
+    (* ---- Different types: dispatch on wrapper structure ---- *)
+    match (src_ty, dst_ty) with
+    | Tunique_ptr _src_inner, Tunique_ptr dst_inner ->
+      (* unique_ptr<T> → unique_ptr<U>: null check, dereference inner.
+         The copy/converting constructor handles type conversion. *)
+      let dst_inner_s = render dst_inner in
+      (match expr with
+      | CPPvar id ->
+        let field_s = Id.to_string id in
+        CPPraw
+          (field_s ^ " ? std::make_unique<" ^ dst_inner_s ^ ">(*"
+           ^ field_s ^ ") : nullptr")
+      | _ ->
+        mk_clone_as_value dst_ty expr)
+    | Tunique_ptr _, _ when not (contains_tvar dst_ty) ->
+      (* unique_ptr<T> → T: dereference (copy ctor deep-copies) *)
+      CPPderef expr
+    | _, Tunique_ptr inner when not (contains_tvar src_ty) ->
+      (* T → unique_ptr<T>: wrap in make_unique *)
+      CPPfun_call (CPPmk_unique inner, [expr])
+    | Tglob (g1, _src_ts, _), Tglob (g2, _dst_ts, _)
+      when GlobRef.CanOrd.equal g1 g2 && _src_ts <> _dst_ts
+           && not (Table.is_inline_custom g1) ->
+      (* Same Crane container, different element types.
+         Use converting constructor: TargetType(source_expr). *)
+      let dst_type_s = render dst_ty in
+      CPPfun_call (CPPraw dst_type_s, [expr])
+    | (Tvar _ | Tauto), _ | _, (Tvar _ | Tauto) ->
+      (* Bare type variable: must defer to generic C++ template *)
+      mk_clone_as_value dst_ty expr
+    | _ when contains_tvar dst_ty || contains_tvar src_ty ->
+      (* Types contain tvars in sub-structure: fall back *)
+      mk_clone_as_value dst_ty expr
+    | _ ->
+      (* Fully concrete, different types: conversion via clone_as_value *)
+      mk_clone_as_value dst_ty expr
 
 (** Build a [CPPfun_call] for [ITree<R>::ret(...)].
     When [r_cpp] is [Tvoid], generates [ITree<void>::ret()]. *)
@@ -2014,21 +2103,21 @@ let rec contains_shared_ptr_or_unique_ptr = function
     || contains_shared_ptr_or_unique_ptr ret
   | _ -> false
 
-(** Wrap [expr] with a clone call when [storage_ty] and [api_ty] differ
-    due to pointer wrapping.  Converts from API form to storage form
-    (e.g. bare value → [shared_ptr]).  No-op when the types match or
-    neither involves smart pointers. *)
+(** Wrap [expr] when [storage_ty] and [api_ty] differ due to pointer
+    wrapping.  Converts from API form to storage form (e.g. bare value →
+    [unique_ptr]).  No-op when the types match or neither involves smart
+    pointers. *)
 let wrap_storage_expr ~storage_ty ~api_ty expr =
   if storage_ty <> api_ty && contains_shared_ptr_or_unique_ptr storage_ty then
-    clone_as_cpp_type storage_ty expr
+    gen_clone_field_expr ~src_ty:api_ty ~dst_ty:storage_ty expr
   else
     expr
 
 (** Like {!wrap_storage_expr} but converts from storage form to API form
-    (e.g. [shared_ptr] → bare value). *)
+    (e.g. [unique_ptr] → bare value). *)
 let wrap_api_expr ~storage_ty ~api_ty expr =
   if storage_ty <> api_ty && contains_shared_ptr_or_unique_ptr storage_ty then
-    clone_as_cpp_type api_ty expr
+    gen_clone_field_expr ~src_ty:storage_ty ~dst_ty:api_ty expr
   else
     expr
 
@@ -3486,10 +3575,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
                 | Tglob (g, _, _) -> Some g | _ -> None in
               ( match inner_g with
               | Some g when Refset'.mem g tctx.method_self_ns ->
-                CPPfun_call
-                  ( CPPmk_unique inner,
-                    [CPPfun_call (CPPmember (expr, Id.of_string "clone"), [])]
-                  )
+                CPPfun_call (CPPmk_unique inner, [expr])
               | _ -> expr )
             | _ -> expr
             with Failure _ | Invalid_argument _ -> expr )
@@ -5066,18 +5152,10 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             else if is_uptr then CPPderef (CPPvar binding_name)
             else if field_ty <> bare_ty
                     && contains_shared_ptr_or_unique_ptr field_ty then
-              let bare_ty_s =
-                render_cpp_type_for_raw_template (qualify_inductives bare_ty)
-              in
-              CPPfun_call
-                ( CPPraw
-                    (if String.equal bare_ty_s "auto"
-                        || (try ignore (Str.search_forward (Str.regexp "\\bauto\\b") bare_ty_s 0); true
-                            with Not_found -> false)
-                     then "clone_value"
-                     else "clone_as_value<" ^ bare_ty_s ^ ">"),
-                  [CPPvar binding_name] )
-            else CPPvar binding_name
+              gen_clone_field_expr ~src_ty:field_ty ~dst_ty:bare_ty
+                (CPPvar binding_name)
+            else
+              CPPvar binding_name
           in
           List.map (local_var_subst_stmt var_name subst_expr) stmts
         else
@@ -5100,9 +5178,9 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
               Id.of_string (Id.to_string binding_name ^ "_value")
             in
             let clone =
-              CPPfun_call
-                ( CPPraw (clone_helper_for_raw_template (qualify_inductives bare_ty)),
-                  [CPPvar binding_name] )
+              gen_clone_field_expr
+                ~src_ty:(Tunique_ptr bare_ty) ~dst_ty:bare_ty
+                (CPPvar binding_name)
             in
             Some (Sasgn (value_id, Some bare_ty, clone))
           else None
@@ -7635,8 +7713,7 @@ let gen_record_cpp name fields ind =
           (function
             | Fvar' (field_ref, field_ty), _, _ ->
               Some
-                (clone_as_cpp_type
-                   field_ty
+                (gen_clone_field_expr ~src_ty:field_ty ~dst_ty:field_ty
                    (CPPget' (CPPderef CPPthis, field_ref)))
             | _ -> None)
           l
@@ -11531,9 +11608,9 @@ let gen_ind_header_v2
                         if _storage_arg = api_arg then
                           arg_var
                         else
-                          CPPfun_call
-                            ( CPPraw (clone_helper_for_raw_template api_arg),
-                              [arg_var] ) )
+                          gen_clone_field_expr
+                            ~src_ty:_storage_arg ~dst_ty:api_arg
+                            arg_var )
                       (List.combine storage_args api_args)
                   in
                   let call = CPPfun_call (var, List.rev call_args) in
@@ -11541,10 +11618,9 @@ let gen_ind_header_v2
                     if storage_ret = api_ret then
                       call
                     else
-                      CPPfun_call
-                        ( CPPraw
-                            (clone_helper_for_raw_template storage_ret),
-                          [call] )
+                      gen_clone_field_expr
+                        ~src_ty:api_ret ~dst_ty:storage_ret
+                        call
                   in
                   CPPlambda
                     ( List.rev lambda_params,
@@ -11553,15 +11629,11 @@ let gen_ind_header_v2
                       true )
                 | _ when storage_ty = api_ty -> CPPmove var
                 | _ ->
-                  CPPfun_call
-                    ( CPPraw (clone_helper_for_raw_template storage_ty),
-                      [var] )
+                  gen_clone_field_expr
+                    ~src_ty:api_ty ~dst_ty:storage_ty var
               end
               | Tunique_ptr inner when not is_coinductive ->
-                CPPfun_call
-                  ( CPPmk_unique inner,
-                    [CPPfun_call (CPPmember (var, Id.of_string "clone"), [])]
-                  )
+                CPPfun_call (CPPmk_unique inner, [var])
               | Tshared_ptr _ when not is_coinductive ->
                 CPPraw
                   ("(static_cast<void>("
@@ -11569,9 +11641,8 @@ let gen_ind_header_v2
                   ^ "), nullptr)")
               | _ when storage_ty = api_ty -> CPPmove var
               | _ ->
-                CPPfun_call
-                  ( CPPraw (clone_helper_for_raw_template storage_ty),
-                    [var] ) )
+                gen_clone_field_expr
+                  ~src_ty:api_ty ~dst_ty:storage_ty var )
             cpp_tys
         in
         let ctor_struct =
@@ -11697,24 +11768,9 @@ let gen_ind_header_v2
                    let ctor_args =
                      List.map2
                        (fun (field_id, source_field_ty, _) target_field_ty ->
-                         match (source_field_ty, target_field_ty) with
-                         | Tshared_ptr _, Tshared_ptr _
-                           when source_field_ty <> target_field_ty ->
-                           CPPraw "nullptr"
-                         | _ when source_field_ty = target_field_ty
-                                  && (match source_field_ty with
-                                      | Tshared_ptr _ | Tunique_ptr _
-                                      | Tvar _ -> false
-                                      | _ -> true) ->
-                           (* Same non-pointer, non-tvar type: plain copy *)
-                           CPPvar field_id
-                         | Tshared_ptr _, Tshared_ptr _
-                             when source_field_ty = target_field_ty ->
-                           CPPfun_call (CPPraw "clone_value", [CPPvar field_id])
-                         | _ ->
-                           CPPfun_call
-                             ( CPPraw (clone_helper_for_raw_template target_field_ty),
-                               [CPPvar field_id] ) )
+                         gen_clone_field_expr
+                           ~src_ty:source_field_ty ~dst_ty:target_field_ty
+                           (CPPvar field_id))
                        field_bindings
                        target_field_tys
                    in
@@ -11756,7 +11812,6 @@ let gen_ind_header_v2
                    })
                  tys)
           in
-          let clone_branches = mk_clone_branches vars ty_vars in
           let clone_method =
             ( Fmethod
                 {
@@ -11764,7 +11819,7 @@ let gen_ind_header_v2
                   mf_tparams = [];
                   mf_ret_type = self_ty;
                   mf_params = [];
-                  mf_body = [Smatch (clone_branches, None)];
+                  mf_body = [Smatch (mk_clone_branches vars ty_vars, None)];
                   mf_is_const = true;
                   mf_is_static = false;
                   mf_this_pos = 0;
@@ -11772,38 +11827,6 @@ let gen_ind_header_v2
                 },
               VPublic,
               SAccessors )
-          in
-          let clone_as_method =
-            match vars with
-            | [] -> []
-            | _ ->
-              let target_vars =
-                List.mapi
-                  (fun i _ -> Id.of_string ("_CloneT" ^ string_of_int i))
-                  vars
-              in
-              let target_ty_vars =
-                List.mapi (fun i x -> Tvar (i, Some x)) target_vars
-              in
-              let target_self_ty = Tglob (name, target_ty_vars, []) in
-              [
-                ( Fmethod
-                    {
-                      mf_name = Id.of_string "clone_as";
-                      mf_tparams =
-                        List.map (fun v -> (TTtypename, v)) target_vars;
-                      mf_ret_type = target_self_ty;
-                      mf_params = [];
-                      mf_body =
-                        [Smatch (mk_clone_branches target_vars target_ty_vars, None)];
-                      mf_is_const = true;
-                      mf_is_static = false;
-                      mf_this_pos = 0;
-                      mf_no_pure = false;
-                    },
-                  VPublic,
-                  SAccessors );
-              ]
           in
           let copy_ctor =
             let cloned_v =
@@ -11835,10 +11858,7 @@ let gen_ind_header_v2
                   mf_ret_type = Tref self_ty;
                   mf_params = [(other_id, Tref (Tmod (TMconst, self_ty)))];
                   mf_body =
-                    [
-                      Sraw
-                        "d_v_ = std::move(_other.clone().d_v_);\nreturn *this;";
-                    ];
+                    [Sraw "d_v_ = std::move(_other.clone().d_v_);\nreturn *this;"];
                   mf_is_const = false;
                   mf_is_static = false;
                   mf_this_pos = 0;
@@ -11864,8 +11884,176 @@ let gen_ind_header_v2
               VPublic,
               SCreators )
           in
+          (* Converting constructor for polymorphic types.
+             template <typename _U>
+             explicit List(const List<_U>& _other) { ... }
+             Enables type conversion between different element type
+             instantiations, replacing the old clone_as method. *)
+          let converting_ctor =
+            let all_fields_empty =
+              Array.for_all (fun tys_list -> tys_list = []) tys
+            in
+            if vars = [] || all_fields_empty then []
+            else
+              let render_ty ty =
+                render_cpp_type_for_raw_template
+                  ~no_custom_inductives:(Refset'.add name Refset'.empty)
+                  (qualify_inductives
+                     ~skip:(fun g -> GlobRef.CanOrd.equal g name)
+                     ty)
+              in
+              let n_vars = List.length vars in
+              let u_var_names =
+                List.mapi
+                  (fun i _ ->
+                    Id.of_string
+                      (if n_vars = 1 then "_U"
+                       else "_U" ^ string_of_int i))
+                  vars
+              in
+              let u_tys =
+                List.mapi (fun i x -> Tvar (i, Some x)) u_var_names
+              in
+              let source_ty = Tglob (name, u_tys, []) in
+              let source_type_s = render_ty source_ty in
+              let struct_local_name = "%SELF%" in
+              let template_params =
+                String.concat ", "
+                  (List.map
+                     (fun u -> "typename " ^ Id.to_string u)
+                     u_var_names)
+              in
+              let n_ctors = Array.length cnames in
+              let gen_branch i tys_list =
+                let c = cnames.(i) in
+                let cname_id = ctor_struct_id_of_ref ~fallback_idx:i c in
+                let ctor_struct_name =
+                  ctor_struct_name_of_ref ~fallback_idx:i c
+                in
+                let cname_s = Id.to_string cname_id in
+                let source_ctor_s =
+                  "typename " ^ source_type_s ^ "::" ^ cname_s
+                in
+                let field_info =
+                  List.mapi
+                    (fun j ty ->
+                      let field_id =
+                        lookup_ctor_field_name ctor_struct_name j
+                      in
+                      let src_fty =
+                        convert_ml_type_to_cpp_type (empty_env ())
+                          (Refset'.add name Refset'.empty)
+                          u_var_names ty
+                      in
+                      let dst_fty =
+                        convert_ml_type_to_cpp_type (empty_env ())
+                          (Refset'.add name Refset'.empty)
+                          vars ty
+                      in
+                      (field_id, src_fty, dst_fty))
+                    tys_list
+                in
+                let convert_field (field_id, src_fty, dst_fty) =
+                  let field_s = Id.to_string field_id in
+                  if src_fty = dst_fty then
+                    match src_fty with
+                    | Tunique_ptr _ | Tvar _ | Tauto ->
+                      "clone_value(" ^ field_s ^ ")"
+                    | _ when contains_unique_ptr src_fty ->
+                      "clone_as_value<" ^ render_ty dst_fty ^ ">("
+                      ^ field_s ^ ")"
+                    | _ -> field_s
+                  else
+                    match (src_fty, dst_fty) with
+                    | Tunique_ptr _, Tunique_ptr dst_inner ->
+                      let dst_inner_s = render_ty dst_inner in
+                      field_s ^ " ? std::make_unique<" ^ dst_inner_s
+                      ^ ">(*" ^ field_s ^ ") : nullptr"
+                    | Tglob (g1, _, _), Tglob (g2, _, _)
+                      when GlobRef.CanOrd.equal g1 g2 ->
+                      render_ty dst_fty ^ "(" ^ field_s ^ ")"
+                    | _ ->
+                      "clone_as_value<" ^ render_ty dst_fty ^ ">("
+                      ^ field_s ^ ")"
+                in
+                ( source_ctor_s,
+                  cname_s,
+                  field_info,
+                  List.map convert_field field_info )
+              in
+              let branches =
+                List.init n_ctors (fun i -> gen_branch i tys.(i))
+              in
+              let buf = Buffer.create 256 in
+              Buffer.add_string buf
+                ("template <" ^ template_params ^ ">\n");
+              Buffer.add_string buf
+                ("explicit " ^ struct_local_name ^ "(const "
+                 ^ source_type_s ^ "& _other) {\n");
+              if n_ctors = 1 then begin
+                let source_ctor_s, cname_s, field_info, converted =
+                  List.hd branches
+                in
+                match field_info with
+                | [] ->
+                  Buffer.add_string buf
+                    ("  d_v_ = " ^ cname_s ^ "{};\n")
+                | _ ->
+                  let bindings =
+                    String.concat ", "
+                      (List.map
+                         (fun (id, _, _) -> Id.to_string id)
+                         field_info)
+                  in
+                  Buffer.add_string buf
+                    ("  const auto& [" ^ bindings
+                     ^ "] = std::get<" ^ source_ctor_s
+                     ^ ">(_other.v());\n");
+                  Buffer.add_string buf
+                    ("  d_v_ = " ^ cname_s ^ "{"
+                     ^ String.concat ", " converted ^ "};\n")
+              end
+              else begin
+                List.iteri
+                  (fun idx
+                       (source_ctor_s, cname_s, field_info, converted) ->
+                    let is_last = idx = n_ctors - 1 in
+                    if idx = 0 then
+                      Buffer.add_string buf
+                        ("  if (std::holds_alternative<" ^ source_ctor_s
+                         ^ ">(_other.v())) {\n")
+                    else if is_last then
+                      Buffer.add_string buf "  } else {\n"
+                    else
+                      Buffer.add_string buf
+                        ("  } else if (std::holds_alternative<"
+                         ^ source_ctor_s ^ ">(_other.v())) {\n");
+                    match field_info with
+                    | [] ->
+                      Buffer.add_string buf
+                        ("    d_v_ = " ^ cname_s ^ "{};\n")
+                    | _ ->
+                      let bindings =
+                        String.concat ", "
+                          (List.map
+                             (fun (id, _, _) -> Id.to_string id)
+                             field_info)
+                      in
+                      Buffer.add_string buf
+                        ("    const auto& [" ^ bindings
+                         ^ "] = std::get<" ^ source_ctor_s
+                         ^ ">(_other.v());\n");
+                      Buffer.add_string buf
+                        ("    d_v_ = " ^ cname_s ^ "{"
+                         ^ String.concat ", " converted ^ "};\n"))
+                  branches;
+                Buffer.add_string buf "  }\n"
+              end;
+              Buffer.add_string buf "}";
+              [(Fraw (Buffer.contents buf), VPublic, SCreators)]
+          in
           [copy_ctor; move_ctor; copy_assign; move_assign; clone_method]
-          @ clone_as_method
+          @ converting_ctor
       in
 
       (* Add public accessor for v_ to enable pattern matching from outside *)

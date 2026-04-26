@@ -20,155 +20,46 @@ struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
-template <typename T> struct is_shared_ptr : std::false_type {};
-
-template <typename T>
-struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> struct is_optional : std::false_type {};
-
-template <typename T> struct is_optional<std::optional<T>> : std::true_type {
-  using element_type = T;
-};
-
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
 std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  return x ? std::make_unique<T>(x->clone()) : nullptr;
-}
-
-template <typename T>
-std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
   if constexpr (requires { x->clone(); }) {
-    return x ? std::make_shared<T>(x->clone()) : nullptr;
+    return x ? std::make_unique<T>(x->clone()) : nullptr;
   } else {
-    return x;
+    return x ? std::make_unique<T>(*x) : nullptr;
   }
 }
 
 template <typename Target, typename Source>
 Target clone_as_value(const Source &x) {
-  using TargetBare = std::remove_cvref_t<Target>;
-  using SourceBare = std::remove_cvref_t<Source>;
-  if constexpr (is_unique_ptr<TargetBare>::value) {
-    using Inner = typename is_unique_ptr<TargetBare>::element_type;
-    if constexpr (is_unique_ptr<SourceBare>::value) {
-      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
-      if (!x)
-        return nullptr;
-      if constexpr (std::is_same_v<Inner, SourceInner>) {
-        return clone_value(x);
-      } else if constexpr (requires {
-                             typename Inner::crane_element_type;
-                             x->template clone_as<
-                                 typename Inner::crane_element_type>();
-                           }) {
-        return std::make_unique<Inner>(
-            x->template clone_as<typename Inner::crane_element_type>());
-      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
-        return std::make_unique<Inner>(x->template clone_as<Inner>());
-      } else {
-        return std::make_unique<Inner>(x->clone());
-      }
+  using T = std::remove_cvref_t<Target>;
+  using S = std::remove_cvref_t<Source>;
+  if constexpr (requires(const S &s) {
+                  s.has_value();
+                  *s;
+                }) {
+    if (!x.has_value())
+      return T{};
+    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
+    return T{clone_as_value<TInner>(*x)};
+  } else if constexpr (std::is_same_v<T, S>) {
+    if constexpr (is_unique_ptr<T>::value) {
+      return clone_value(x);
+    } else if constexpr (requires { x.clone(); }) {
+      return x.clone();
     } else {
-      if constexpr (requires { x.clone(); }) {
-        return std::make_unique<Inner>(x.clone());
-      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
-        if constexpr (requires { x.clone(); }) {
-          return std::make_unique<Inner>(x.clone());
-        } else {
-          return std::make_unique<Inner>(x);
-        }
-      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
-        return std::make_unique<Inner>(x.template clone_as<Inner>());
-      } else {
-        if constexpr (requires { x.clone(); }) {
-          return std::make_unique<Inner>(x.clone());
-        } else {
-          return std::make_unique<Inner>(x);
-        }
-      }
+      return x;
     }
-  } else if constexpr (is_optional<TargetBare>::value) {
-    using Inner = typename is_optional<TargetBare>::element_type;
-    if constexpr (is_optional<SourceBare>::value) {
-      if (!x)
-        return std::nullopt;
-      return Target{clone_as_value<Inner>(*x)};
-    } else {
-      return Target{clone_as_value<Inner>(x)};
-    }
-  } else if constexpr (is_shared_ptr<TargetBare>::value) {
-    using Inner = typename is_shared_ptr<TargetBare>::element_type;
-    if constexpr (is_shared_ptr<SourceBare>::value) {
-      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
-      if (!x)
-        return nullptr;
-      if constexpr (std::is_same_v<Inner, SourceInner>) {
-        return clone_value(x);
-      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
-        return std::make_shared<Inner>(x->template clone_as<Inner>());
-      } else {
-        return std::make_shared<Inner>(x->clone());
-      }
-    } else if constexpr (is_unique_ptr<SourceBare>::value) {
-      if (!x)
-        return nullptr;
-      if constexpr (requires { x->template clone_as<Inner>(); }) {
-        return std::make_shared<Inner>(x->template clone_as<Inner>());
-      } else {
-        return std::make_shared<Inner>(x->clone());
-      }
-    } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
-        return std::make_shared<Inner>(x.clone());
-      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
-        return std::make_shared<Inner>(x.template clone_as<Inner>());
-      } else {
-        return std::make_shared<Inner>(x.clone());
-      }
-    }
-  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
-    return clone_value(x);
-  } else if constexpr (is_unique_ptr<SourceBare>::value) {
-    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
-    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      if (!x)
-        return Target{};
-      if constexpr (requires { x->clone(); }) {
-        return x->clone();
-      } else {
-        return *x;
-      }
-    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
-      return x->template clone_as<TargetBare>();
-    } else if constexpr (requires { x->clone(); }) {
-      return x->clone();
-    } else {
-      return Target(*x);
-    }
-  } else if constexpr (is_shared_ptr<SourceBare>::value) {
-    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
-    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
-    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
-      return x->template clone_as<TargetBare>();
-    } else {
-      return Target(*x);
-    }
-  } else if constexpr (requires {
-                         typename TargetBare::crane_element_type;
-                         x.template clone_as<
-                             typename TargetBare::crane_element_type>();
-                       }) {
-    return x.template clone_as<typename TargetBare::crane_element_type>();
-  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
-    return x.template clone_as<TargetBare>();
+  } else if constexpr (is_unique_ptr<S>::value) {
+    if (!x)
+      return T{};
+    return clone_as_value<T>(*x);
+  } else if constexpr (is_unique_ptr<T>::value) {
+    using Inner = typename is_unique_ptr<T>::element_type;
+    return std::make_unique<Inner>(clone_as_value<Inner>(x));
   } else {
-    return Target(x);
+    return T(x);
   }
 }
 
@@ -217,29 +108,25 @@ public:
       return List<t_A>(Nil0{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons0>(_sv.v());
-      return List<t_A>(Cons0{clone_as_value<t_A>(d_a0),
-                             clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
-    }
-  }
-
-  template <typename _CloneT0>
-  __attribute__((pure)) List<_CloneT0> clone_as() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil0>(_sv.v())) {
-      return List<_CloneT0>(typename List<_CloneT0>::Nil0{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons0>(_sv.v());
-      return List<_CloneT0>(typename List<_CloneT0>::Cons0{
-          clone_as_value<_CloneT0>(d_a0),
-          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+      return List<t_A>(Cons0{clone_value(d_a0), clone_value(d_a1)});
     }
   }
 
   // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil0>(_other.v())) {
+      d_v_ = Nil0{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons0>(_other.v());
+      d_v_ = Cons0{clone_as_value<t_A>(d_a0),
+                   d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
   __attribute__((pure)) static List<t_A> nil0() { return List(Nil0{}); }
 
   __attribute__((pure)) static List<t_A> cons0(t_A a0, const List<t_A> &a1) {
-    return List(Cons0{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
+    return List(Cons0{std::move(a0), std::make_unique<List<t_A>>(a1)});
   }
 
   // MANIPULATORS
@@ -363,18 +250,15 @@ public:
   __attribute__((pure)) Sig<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist>(_sv.v());
-    return Sig<t_A>(Exist{clone_as_value<t_A>(d_x)});
-  }
-
-  template <typename _CloneT0>
-  __attribute__((pure)) Sig<_CloneT0> clone_as() const {
-    auto &&_sv = *(this);
-    const auto &[d_x] = std::get<Exist>(_sv.v());
-    return Sig<_CloneT0>(
-        typename Sig<_CloneT0>::Exist{clone_as_value<_CloneT0>(d_x)});
+    return Sig<t_A>(Exist{clone_value(d_x)});
   }
 
   // CREATORS
+  template <typename _U> explicit Sig(const Sig<_U> &_other) {
+    const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
+    d_v_ = Exist{clone_as_value<t_A>(d_x)};
+  }
+
   __attribute__((pure)) static Sig<t_A> exist(t_A x) {
     return Sig(Exist{std::move(x)});
   }
@@ -436,19 +320,17 @@ public:
   __attribute__((pure)) SigT<t_A, t_P> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
-    return SigT<t_A, t_P>(
-        ExistT{clone_as_value<t_A>(d_x), clone_as_value<t_P>(d_a1)});
-  }
-
-  template <typename _CloneT0, typename _CloneT1>
-  __attribute__((pure)) SigT<_CloneT0, _CloneT1> clone_as() const {
-    auto &&_sv = *(this);
-    const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
-    return SigT<_CloneT0, _CloneT1>(typename SigT<_CloneT0, _CloneT1>::ExistT{
-        clone_as_value<_CloneT0>(d_x), clone_as_value<_CloneT1>(d_a1)});
+    return SigT<t_A, t_P>(ExistT{clone_value(d_x), clone_value(d_a1)});
   }
 
   // CREATORS
+  template <typename _U0, typename _U1>
+  explicit SigT(const SigT<_U0, _U1> &_other) {
+    const auto &[d_x, d_a1] =
+        std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
+    d_v_ = ExistT{clone_as_value<t_A>(d_x), clone_as_value<t_P>(d_a1)};
+  }
+
   __attribute__((pure)) static SigT<t_A, t_P> existt(t_A x, t_P a1) {
     return SigT(ExistT{std::move(x), std::move(a1)});
   }
@@ -520,31 +402,27 @@ public:
       return T0<t_A>(Nil{});
     } else {
       const auto &[d_h, d_n, d_a2] = std::get<Cons>(_sv.v());
-      return T0<t_A>(Cons{clone_as_value<t_A>(d_h), d_n,
-                          clone_as_value<std::unique_ptr<T0<t_A>>>(d_a2)});
-    }
-  }
-
-  template <typename _CloneT0>
-  __attribute__((pure)) T0<_CloneT0> clone_as() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return T0<_CloneT0>(typename T0<_CloneT0>::Nil{});
-    } else {
-      const auto &[d_h, d_n, d_a2] = std::get<Cons>(_sv.v());
-      return T0<_CloneT0>(typename T0<_CloneT0>::Cons{
-          clone_as_value<_CloneT0>(d_h), d_n,
-          clone_as_value<std::unique_ptr<T0<_CloneT0>>>(d_a2)});
+      return T0<t_A>(Cons{clone_value(d_h), d_n, clone_value(d_a2)});
     }
   }
 
   // CREATORS
+  template <typename _U> explicit T0(const T0<_U> &_other) {
+    if (std::holds_alternative<typename T0<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_h, d_n, d_a2] =
+          std::get<typename T0<_U>::Cons>(_other.v());
+      d_v_ = Cons{clone_as_value<t_A>(d_h), d_n,
+                  d_a2 ? std::make_unique<T0<t_A>>(*d_a2) : nullptr};
+    }
+  }
+
   constexpr static T0<t_A> nil() { return T0(Nil{}); }
 
   __attribute__((pure)) static T0<t_A> cons(t_A h, unsigned int n,
                                             const T0<t_A> &a2) {
-    return T0(Cons{std::move(h), std::move(n),
-                   std::make_unique<T0<t_A>>(a2.clone())});
+    return T0(Cons{std::move(h), std::move(n), std::make_unique<T0<t_A>>(a2)});
   }
 
   // MANIPULATORS
@@ -613,7 +491,7 @@ public:
       return T(F1{d_n});
     } else {
       const auto &[d_n, d_a1] = std::get<FS>(_sv.v());
-      return T(FS{d_n, clone_as_value<std::unique_ptr<T>>(d_a1)});
+      return T(FS{d_n, clone_value(d_a1)});
     }
   }
 
@@ -623,7 +501,7 @@ public:
   }
 
   __attribute__((pure)) static T fs(unsigned int n, const T &a1) {
-    return T(FS{std::move(n), std::make_unique<T>(a1.clone())});
+    return T(FS{std::move(n), std::make_unique<T>(a1)});
   }
 
   // MANIPULATORS
@@ -809,10 +687,8 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     __attribute__((pure)) CordMeta clone() const {
-      return CordMeta{clone_as_value<Fiber>((*(this)).cm_fiber),
-                      clone_as_value<Color>((*(this)).cm_color),
-                      clone_as_value<Twist>((*(this)).cm_spin),
-                      clone_as_value<Twist>((*(this)).cm_ply)};
+      return CordMeta{(*(this)).cm_fiber, (*(this)).cm_color, (*(this)).cm_spin,
+                      (*(this)).cm_ply};
     }
   };
 
@@ -828,8 +704,7 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     __attribute__((pure)) CertifiedPendant clone() const {
-      return CertifiedPendant{clone_as_value<CordMeta>((*(this)).cp_meta),
-                              clone_as_value<T0<digit>>((*(this)).cp_digits)};
+      return CertifiedPendant{(*(this)).cp_meta, (*(this)).cp_digits};
     }
   };
 
@@ -853,9 +728,7 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     __attribute__((pure)) PendantGroup clone() const {
-      return PendantGroup{
-          clone_as_value<CertifiedPendant>((*(this)).pg_top),
-          clone_as_value<List<CertifiedPendant>>((*(this)).pg_pendants)};
+      return PendantGroup{(*(this)).pg_top, (*(this)).pg_pendants};
     }
   };
 
@@ -909,7 +782,11 @@ struct PendantSumtreeRoundtripCase {
         return SumTree(SumLeaf{d_a0});
       } else {
         const auto &[d_a0, d_a1] = std::get<SumNode>(_sv.v());
-        return SumTree(SumNode{d_a0, d_a1});
+        return SumTree(SumNode{
+            d_a0,
+            clone_as_value<
+                List<std::unique_ptr<PendantSumtreeRoundtripCase::SumTree>>>(
+                d_a1)});
       }
     }
 
@@ -921,7 +798,10 @@ struct PendantSumtreeRoundtripCase {
     __attribute__((pure)) static SumTree sumnode(CertifiedPendant a0,
                                                  List<SumTree> a1) {
       return SumTree(SumNode{
-          std::move(a0), clone_as_value<List<std::unique_ptr<SumTree>>>(a1)});
+          std::move(a0),
+          clone_as_value<
+              List<std::unique_ptr<PendantSumtreeRoundtripCase::SumTree>>>(
+              a1)});
     }
 
     // MANIPULATORS

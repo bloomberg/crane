@@ -17,155 +17,46 @@ struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
-template <typename T> struct is_shared_ptr : std::false_type {};
-
-template <typename T>
-struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> struct is_optional : std::false_type {};
-
-template <typename T> struct is_optional<std::optional<T>> : std::true_type {
-  using element_type = T;
-};
-
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
 std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  return x ? std::make_unique<T>(x->clone()) : nullptr;
-}
-
-template <typename T>
-std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
   if constexpr (requires { x->clone(); }) {
-    return x ? std::make_shared<T>(x->clone()) : nullptr;
+    return x ? std::make_unique<T>(x->clone()) : nullptr;
   } else {
-    return x;
+    return x ? std::make_unique<T>(*x) : nullptr;
   }
 }
 
 template <typename Target, typename Source>
 Target clone_as_value(const Source &x) {
-  using TargetBare = std::remove_cvref_t<Target>;
-  using SourceBare = std::remove_cvref_t<Source>;
-  if constexpr (is_unique_ptr<TargetBare>::value) {
-    using Inner = typename is_unique_ptr<TargetBare>::element_type;
-    if constexpr (is_unique_ptr<SourceBare>::value) {
-      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
-      if (!x)
-        return nullptr;
-      if constexpr (std::is_same_v<Inner, SourceInner>) {
-        return clone_value(x);
-      } else if constexpr (requires {
-                             typename Inner::crane_element_type;
-                             x->template clone_as<
-                                 typename Inner::crane_element_type>();
-                           }) {
-        return std::make_unique<Inner>(
-            x->template clone_as<typename Inner::crane_element_type>());
-      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
-        return std::make_unique<Inner>(x->template clone_as<Inner>());
-      } else {
-        return std::make_unique<Inner>(x->clone());
-      }
+  using T = std::remove_cvref_t<Target>;
+  using S = std::remove_cvref_t<Source>;
+  if constexpr (requires(const S &s) {
+                  s.has_value();
+                  *s;
+                }) {
+    if (!x.has_value())
+      return T{};
+    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
+    return T{clone_as_value<TInner>(*x)};
+  } else if constexpr (std::is_same_v<T, S>) {
+    if constexpr (is_unique_ptr<T>::value) {
+      return clone_value(x);
+    } else if constexpr (requires { x.clone(); }) {
+      return x.clone();
     } else {
-      if constexpr (requires { x.clone(); }) {
-        return std::make_unique<Inner>(x.clone());
-      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
-        if constexpr (requires { x.clone(); }) {
-          return std::make_unique<Inner>(x.clone());
-        } else {
-          return std::make_unique<Inner>(x);
-        }
-      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
-        return std::make_unique<Inner>(x.template clone_as<Inner>());
-      } else {
-        if constexpr (requires { x.clone(); }) {
-          return std::make_unique<Inner>(x.clone());
-        } else {
-          return std::make_unique<Inner>(x);
-        }
-      }
+      return x;
     }
-  } else if constexpr (is_optional<TargetBare>::value) {
-    using Inner = typename is_optional<TargetBare>::element_type;
-    if constexpr (is_optional<SourceBare>::value) {
-      if (!x)
-        return std::nullopt;
-      return Target{clone_as_value<Inner>(*x)};
-    } else {
-      return Target{clone_as_value<Inner>(x)};
-    }
-  } else if constexpr (is_shared_ptr<TargetBare>::value) {
-    using Inner = typename is_shared_ptr<TargetBare>::element_type;
-    if constexpr (is_shared_ptr<SourceBare>::value) {
-      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
-      if (!x)
-        return nullptr;
-      if constexpr (std::is_same_v<Inner, SourceInner>) {
-        return clone_value(x);
-      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
-        return std::make_shared<Inner>(x->template clone_as<Inner>());
-      } else {
-        return std::make_shared<Inner>(x->clone());
-      }
-    } else if constexpr (is_unique_ptr<SourceBare>::value) {
-      if (!x)
-        return nullptr;
-      if constexpr (requires { x->template clone_as<Inner>(); }) {
-        return std::make_shared<Inner>(x->template clone_as<Inner>());
-      } else {
-        return std::make_shared<Inner>(x->clone());
-      }
-    } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
-        return std::make_shared<Inner>(x.clone());
-      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
-        return std::make_shared<Inner>(x.template clone_as<Inner>());
-      } else {
-        return std::make_shared<Inner>(x.clone());
-      }
-    }
-  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
-    return clone_value(x);
-  } else if constexpr (is_unique_ptr<SourceBare>::value) {
-    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
-    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      if (!x)
-        return Target{};
-      if constexpr (requires { x->clone(); }) {
-        return x->clone();
-      } else {
-        return *x;
-      }
-    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
-      return x->template clone_as<TargetBare>();
-    } else if constexpr (requires { x->clone(); }) {
-      return x->clone();
-    } else {
-      return Target(*x);
-    }
-  } else if constexpr (is_shared_ptr<SourceBare>::value) {
-    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
-    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
-    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
-      return x->template clone_as<TargetBare>();
-    } else {
-      return Target(*x);
-    }
-  } else if constexpr (requires {
-                         typename TargetBare::crane_element_type;
-                         x.template clone_as<
-                             typename TargetBare::crane_element_type>();
-                       }) {
-    return x.template clone_as<typename TargetBare::crane_element_type>();
-  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
-    return x.template clone_as<TargetBare>();
+  } else if constexpr (is_unique_ptr<S>::value) {
+    if (!x)
+      return T{};
+    return clone_as_value<T>(*x);
+  } else if constexpr (is_unique_ptr<T>::value) {
+    using Inner = typename is_unique_ptr<T>::element_type;
+    return std::make_unique<Inner>(clone_as_value<Inner>(x));
   } else {
-    return Target(x);
+    return T(x);
   }
 }
 
@@ -214,29 +105,25 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{clone_as_value<t_A>(d_a0),
-                            clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
-    }
-  }
-
-  template <typename _CloneT0>
-  __attribute__((pure)) List<_CloneT0> clone_as() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<_CloneT0>(typename List<_CloneT0>::Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<_CloneT0>(typename List<_CloneT0>::Cons{
-          clone_as_value<_CloneT0>(d_a0),
-          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+      return List<t_A>(Cons{clone_value(d_a0), clone_value(d_a1)});
     }
   }
 
   // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ = Cons{clone_as_value<t_A>(d_a0),
+                  d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
   __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
+    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
   }
 
   // MANIPULATORS
@@ -306,10 +193,10 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<XI>(_sv.v())) {
       const auto &[d_a0] = std::get<XI>(_sv.v());
-      return Positive(XI{clone_as_value<std::unique_ptr<Positive>>(d_a0)});
+      return Positive(XI{clone_value(d_a0)});
     } else if (std::holds_alternative<XO>(_sv.v())) {
       const auto &[d_a0] = std::get<XO>(_sv.v());
-      return Positive(XO{clone_as_value<std::unique_ptr<Positive>>(d_a0)});
+      return Positive(XO{clone_value(d_a0)});
     } else {
       return Positive(XH{});
     }
@@ -317,11 +204,11 @@ public:
 
   // CREATORS
   __attribute__((pure)) static Positive xi(const Positive &a0) {
-    return Positive(XI{std::make_unique<Positive>(a0.clone())});
+    return Positive(XI{std::make_unique<Positive>(a0)});
   }
 
   __attribute__((pure)) static Positive xo(const Positive &a0) {
-    return Positive(XO{std::make_unique<Positive>(a0.clone())});
+    return Positive(XO{std::make_unique<Positive>(a0)});
   }
 
   __attribute__((pure)) static Positive xh() { return Positive(XH{}); }
@@ -493,8 +380,7 @@ struct Q {
 
   // ACCESSORS
   __attribute__((pure)) Q clone() const {
-    return Q{clone_as_value<Z>((*(this)).Qnum),
-             clone_as_value<Positive>((*(this)).Qden)};
+    return Q{(*(this)).Qnum, (*(this)).Qden};
   }
 };
 
@@ -687,13 +573,10 @@ struct EpochCellGlyphTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) MechanismState clone() const {
-      return MechanismState{clone_as_value<Z>((*(this)).crank_position),
-                            clone_as_value<Z>((*(this)).metonic_dial),
-                            clone_as_value<Z>((*(this)).saros_dial),
-                            clone_as_value<Z>((*(this)).callippic_dial),
-                            clone_as_value<Z>((*(this)).exeligmos_dial),
-                            clone_as_value<Z>((*(this)).games_dial),
-                            clone_as_value<Z>((*(this)).zodiac_position)};
+      return MechanismState{(*(this)).crank_position, (*(this)).metonic_dial,
+                            (*(this)).saros_dial,     (*(this)).callippic_dial,
+                            (*(this)).exeligmos_dial, (*(this)).games_dial,
+                            (*(this)).zodiac_position};
     }
   };
 
@@ -805,14 +688,10 @@ struct EpochCellGlyphTraceCase {
     // ACCESSORS
     __attribute__((pure)) HistoricalEclipse clone() const {
       return HistoricalEclipse{
-          clone_as_value<Z>((*(this)).he_year),
-          clone_as_value<Z>((*(this)).he_month),
-          clone_as_value<Z>((*(this)).he_day),
-          clone_as_value<EclipseCategory>((*(this)).he_category),
-          clone_as_value<Z>((*(this)).he_saros_series),
-          clone_as_value<Z>((*(this)).he_saros_member),
-          clone_as_value<Q>((*(this)).he_magnitude),
-          clone_as_value<bool>((*(this)).he_visible_mediterranean)};
+          (*(this)).he_year,         (*(this)).he_month,
+          (*(this)).he_day,          (*(this)).he_category,
+          (*(this)).he_saros_series, (*(this)).he_saros_member,
+          (*(this)).he_magnitude,    (*(this)).he_visible_mediterranean};
     }
   };
   enum class DialGlyph {
@@ -1012,11 +891,8 @@ struct EpochCellGlyphTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) EpochReading clone() const {
-      return EpochReading{
-          clone_as_value<MechanismState>((*(this)).reading_state),
-          clone_as_value<HistoricalEclipse>((*(this)).reading_eclipse),
-          clone_as_value<Z>((*(this)).reading_cell),
-          clone_as_value<DialGlyph>((*(this)).reading_glyph)};
+      return EpochReading{(*(this)).reading_state, (*(this)).reading_eclipse,
+                          (*(this)).reading_cell, (*(this)).reading_glyph};
     }
   };
 
@@ -1041,10 +917,8 @@ struct EpochCellGlyphTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) ValidEpoch clone() const {
-      return ValidEpoch{
-          clone_as_value<Z>((*(this)).ve_year),
-          clone_as_value<Z>((*(this)).ve_month),
-          clone_as_value<HistoricalEclipse>((*(this)).ve_eclipse)};
+      return ValidEpoch{(*(this)).ve_year, (*(this)).ve_month,
+                        (*(this)).ve_eclipse};
     }
   };
 

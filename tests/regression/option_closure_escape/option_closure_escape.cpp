@@ -57,8 +57,7 @@ OptionClosureEscape::match_pair(const OptionClosureEscape::tree &t) {
   } else {
     const auto &[d_a0, d_a1, d_a2] =
         std::get<typename OptionClosureEscape::tree::Node>(t.v());
-    OptionClosureEscape::tree d_a0_value =
-        clone_as_value<OptionClosureEscape::tree>(d_a0);
+    OptionClosureEscape::tree d_a0_value = *(d_a0);
     return std::make_pair(
         [=](unsigned int _x0) mutable -> unsigned int {
           return sum_values(d_a0_value, _x0);

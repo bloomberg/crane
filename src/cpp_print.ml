@@ -2234,6 +2234,18 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       | None -> str "UNKNOWN_STRUCT"
     in
     h (sname ++ str "() = delete;")
+  | Fraw s ->
+    (* Replace %SELF% placeholder with actual struct name if available *)
+    let s =
+      match struct_name with
+      | Some sn ->
+        Str.global_replace
+          (Str.regexp_string "%SELF%")
+          (Pp.string_of_ppcmds sn)
+          s
+      | None -> s
+    in
+    str s
 
 (** Helper to print fields with visibility and section tag grouping *)
 and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) env fields =

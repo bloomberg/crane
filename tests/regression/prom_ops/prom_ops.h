@@ -17,155 +17,46 @@ struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
-template <typename T> struct is_shared_ptr : std::false_type {};
-
-template <typename T>
-struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> struct is_optional : std::false_type {};
-
-template <typename T> struct is_optional<std::optional<T>> : std::true_type {
-  using element_type = T;
-};
-
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
 std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  return x ? std::make_unique<T>(x->clone()) : nullptr;
-}
-
-template <typename T>
-std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
   if constexpr (requires { x->clone(); }) {
-    return x ? std::make_shared<T>(x->clone()) : nullptr;
+    return x ? std::make_unique<T>(x->clone()) : nullptr;
   } else {
-    return x;
+    return x ? std::make_unique<T>(*x) : nullptr;
   }
 }
 
 template <typename Target, typename Source>
 Target clone_as_value(const Source &x) {
-  using TargetBare = std::remove_cvref_t<Target>;
-  using SourceBare = std::remove_cvref_t<Source>;
-  if constexpr (is_unique_ptr<TargetBare>::value) {
-    using Inner = typename is_unique_ptr<TargetBare>::element_type;
-    if constexpr (is_unique_ptr<SourceBare>::value) {
-      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
-      if (!x)
-        return nullptr;
-      if constexpr (std::is_same_v<Inner, SourceInner>) {
-        return clone_value(x);
-      } else if constexpr (requires {
-                             typename Inner::crane_element_type;
-                             x->template clone_as<
-                                 typename Inner::crane_element_type>();
-                           }) {
-        return std::make_unique<Inner>(
-            x->template clone_as<typename Inner::crane_element_type>());
-      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
-        return std::make_unique<Inner>(x->template clone_as<Inner>());
-      } else {
-        return std::make_unique<Inner>(x->clone());
-      }
+  using T = std::remove_cvref_t<Target>;
+  using S = std::remove_cvref_t<Source>;
+  if constexpr (requires(const S &s) {
+                  s.has_value();
+                  *s;
+                }) {
+    if (!x.has_value())
+      return T{};
+    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
+    return T{clone_as_value<TInner>(*x)};
+  } else if constexpr (std::is_same_v<T, S>) {
+    if constexpr (is_unique_ptr<T>::value) {
+      return clone_value(x);
+    } else if constexpr (requires { x.clone(); }) {
+      return x.clone();
     } else {
-      if constexpr (requires { x.clone(); }) {
-        return std::make_unique<Inner>(x.clone());
-      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
-        if constexpr (requires { x.clone(); }) {
-          return std::make_unique<Inner>(x.clone());
-        } else {
-          return std::make_unique<Inner>(x);
-        }
-      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
-        return std::make_unique<Inner>(x.template clone_as<Inner>());
-      } else {
-        if constexpr (requires { x.clone(); }) {
-          return std::make_unique<Inner>(x.clone());
-        } else {
-          return std::make_unique<Inner>(x);
-        }
-      }
+      return x;
     }
-  } else if constexpr (is_optional<TargetBare>::value) {
-    using Inner = typename is_optional<TargetBare>::element_type;
-    if constexpr (is_optional<SourceBare>::value) {
-      if (!x)
-        return std::nullopt;
-      return Target{clone_as_value<Inner>(*x)};
-    } else {
-      return Target{clone_as_value<Inner>(x)};
-    }
-  } else if constexpr (is_shared_ptr<TargetBare>::value) {
-    using Inner = typename is_shared_ptr<TargetBare>::element_type;
-    if constexpr (is_shared_ptr<SourceBare>::value) {
-      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
-      if (!x)
-        return nullptr;
-      if constexpr (std::is_same_v<Inner, SourceInner>) {
-        return clone_value(x);
-      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
-        return std::make_shared<Inner>(x->template clone_as<Inner>());
-      } else {
-        return std::make_shared<Inner>(x->clone());
-      }
-    } else if constexpr (is_unique_ptr<SourceBare>::value) {
-      if (!x)
-        return nullptr;
-      if constexpr (requires { x->template clone_as<Inner>(); }) {
-        return std::make_shared<Inner>(x->template clone_as<Inner>());
-      } else {
-        return std::make_shared<Inner>(x->clone());
-      }
-    } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
-        return std::make_shared<Inner>(x.clone());
-      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
-        return std::make_shared<Inner>(x.template clone_as<Inner>());
-      } else {
-        return std::make_shared<Inner>(x.clone());
-      }
-    }
-  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
-    return clone_value(x);
-  } else if constexpr (is_unique_ptr<SourceBare>::value) {
-    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
-    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      if (!x)
-        return Target{};
-      if constexpr (requires { x->clone(); }) {
-        return x->clone();
-      } else {
-        return *x;
-      }
-    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
-      return x->template clone_as<TargetBare>();
-    } else if constexpr (requires { x->clone(); }) {
-      return x->clone();
-    } else {
-      return Target(*x);
-    }
-  } else if constexpr (is_shared_ptr<SourceBare>::value) {
-    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
-    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
-    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
-      return x->template clone_as<TargetBare>();
-    } else {
-      return Target(*x);
-    }
-  } else if constexpr (requires {
-                         typename TargetBare::crane_element_type;
-                         x.template clone_as<
-                             typename TargetBare::crane_element_type>();
-                       }) {
-    return x.template clone_as<typename TargetBare::crane_element_type>();
-  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
-    return x.template clone_as<TargetBare>();
+  } else if constexpr (is_unique_ptr<S>::value) {
+    if (!x)
+      return T{};
+    return clone_as_value<T>(*x);
+  } else if constexpr (is_unique_ptr<T>::value) {
+    using Inner = typename is_unique_ptr<T>::element_type;
+    return std::make_unique<Inner>(clone_as_value<Inner>(x));
   } else {
-    return Target(x);
+    return T(x);
   }
 }
 
@@ -214,29 +105,25 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{clone_as_value<t_A>(d_a0),
-                            clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
-    }
-  }
-
-  template <typename _CloneT0>
-  __attribute__((pure)) List<_CloneT0> clone_as() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<_CloneT0>(typename List<_CloneT0>::Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<_CloneT0>(typename List<_CloneT0>::Cons{
-          clone_as_value<_CloneT0>(d_a0),
-          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+      return List<t_A>(Cons{clone_value(d_a0), clone_value(d_a1)});
     }
   }
 
   // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ = Cons{clone_as_value<t_A>(d_a0),
+                  d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
   __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
+    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
   }
 
   // MANIPULATORS
@@ -312,8 +199,7 @@ struct PromOps {
 
     // ACCESSORS
     __attribute__((pure)) state1 clone() const {
-      return state1{clone_as_value<unsigned int>((*(this)).prom_data1),
-                    clone_as_value<bool>((*(this)).prom_enable1)};
+      return state1{(*(this)).prom_data1, (*(this)).prom_enable1};
     }
   };
 
@@ -333,10 +219,8 @@ struct PromOps {
 
     // ACCESSORS
     __attribute__((pure)) state2 clone() const {
-      return state2{clone_as_value<unsigned int>((*(this)).acc2),
-                    clone_as_value<unsigned int>((*(this)).prom_addr2),
-                    clone_as_value<unsigned int>((*(this)).prom_data2),
-                    clone_as_value<bool>((*(this)).prom_enable2)};
+      return state2{(*(this)).acc2, (*(this)).prom_addr2, (*(this)).prom_data2,
+                    (*(this)).prom_enable2};
     }
   };
 
@@ -367,21 +251,12 @@ struct PromOps {
 
     // ACCESSORS
     __attribute__((pure)) state3 clone() const {
-      return state3{clone_as_value<unsigned int>((*(this)).acc3),
-                    clone_as_value<List<unsigned int>>((*(this)).regs3),
-                    clone_as_value<bool>((*(this)).carry3),
-                    clone_as_value<unsigned int>((*(this)).pc3),
-                    clone_as_value<List<unsigned int>>((*(this)).stack3),
-                    clone_as_value<List<unsigned int>>((*(this)).ram_sys3),
-                    clone_as_value<unsigned int>((*(this)).cur_bank3),
-                    clone_as_value<unsigned int>((*(this)).sel_ram3),
-                    clone_as_value<List<unsigned int>>((*(this)).rom_ports3),
-                    clone_as_value<unsigned int>((*(this)).sel_rom3),
-                    clone_as_value<List<unsigned int>>((*(this)).rom3),
-                    clone_as_value<bool>((*(this)).test_pin3),
-                    clone_as_value<unsigned int>((*(this)).prom_addr3),
-                    clone_as_value<unsigned int>((*(this)).prom_data3),
-                    clone_as_value<bool>((*(this)).prom_enable3)};
+      return state3{
+          (*(this)).acc3,       (*(this)).regs3,      (*(this)).carry3,
+          (*(this)).pc3,        (*(this)).stack3,     (*(this)).ram_sys3,
+          (*(this)).cur_bank3,  (*(this)).sel_ram3,   (*(this)).rom_ports3,
+          (*(this)).sel_rom3,   (*(this)).rom3,       (*(this)).test_pin3,
+          (*(this)).prom_addr3, (*(this)).prom_data3, (*(this)).prom_enable3};
     }
   };
 
@@ -466,12 +341,9 @@ struct PromOps {
 
     // ACCESSORS
     __attribute__((pure)) state5 clone() const {
-      return state5{clone_as_value<unsigned int>((*(this)).acc5),
-                    clone_as_value<List<unsigned int>>((*(this)).regs5),
-                    clone_as_value<List<unsigned int>>((*(this)).rom5),
-                    clone_as_value<unsigned int>((*(this)).prom_addr5),
-                    clone_as_value<unsigned int>((*(this)).prom_data5),
-                    clone_as_value<bool>((*(this)).prom_enable5)};
+      return state5{(*(this)).acc5,       (*(this)).regs5,
+                    (*(this)).rom5,       (*(this)).prom_addr5,
+                    (*(this)).prom_data5, (*(this)).prom_enable5};
     }
   };
 
@@ -515,10 +387,8 @@ struct PromOps {
 
     // ACCESSORS
     __attribute__((pure)) state6 clone() const {
-      return state6{clone_as_value<List<unsigned int>>((*(this)).rom6),
-                    clone_as_value<unsigned int>((*(this)).prom_addr6),
-                    clone_as_value<unsigned int>((*(this)).prom_data6),
-                    clone_as_value<bool>((*(this)).prom_enable6)};
+      return state6{(*(this)).rom6, (*(this)).prom_addr6, (*(this)).prom_data6,
+                    (*(this)).prom_enable6};
     }
   };
 
@@ -549,11 +419,8 @@ struct PromOps {
 
     // ACCESSORS
     __attribute__((pure)) state7 clone() const {
-      return state7{clone_as_value<List<unsigned int>>((*(this)).regs7),
-                    clone_as_value<List<unsigned int>>((*(this)).ram_sys7),
-                    clone_as_value<unsigned int>((*(this)).prom_addr7),
-                    clone_as_value<unsigned int>((*(this)).prom_data7),
-                    clone_as_value<bool>((*(this)).prom_enable7)};
+      return state7{(*(this)).regs7, (*(this)).ram_sys7, (*(this)).prom_addr7,
+                    (*(this)).prom_data7, (*(this)).prom_enable7};
     }
   };
 
@@ -585,11 +452,8 @@ struct PromOps {
 
     // ACCESSORS
     __attribute__((pure)) state8 clone() const {
-      return state8{clone_as_value<List<unsigned int>>((*(this)).regs8),
-                    clone_as_value<List<unsigned int>>((*(this)).ram_sys8),
-                    clone_as_value<unsigned int>((*(this)).prom_addr8),
-                    clone_as_value<unsigned int>((*(this)).prom_data8),
-                    clone_as_value<bool>((*(this)).prom_enable8)};
+      return state8{(*(this)).regs8, (*(this)).ram_sys8, (*(this)).prom_addr8,
+                    (*(this)).prom_data8, (*(this)).prom_enable8};
     }
   };
 
@@ -619,10 +483,8 @@ struct PromOps {
 
     // ACCESSORS
     __attribute__((pure)) state9 clone() const {
-      return state9{clone_as_value<List<unsigned int>>((*(this)).rom9),
-                    clone_as_value<unsigned int>((*(this)).prom_addr9),
-                    clone_as_value<unsigned int>((*(this)).prom_data9),
-                    clone_as_value<bool>((*(this)).prom_enable9)};
+      return state9{(*(this)).rom9, (*(this)).prom_addr9, (*(this)).prom_data9,
+                    (*(this)).prom_enable9};
     }
   };
 
@@ -660,17 +522,11 @@ struct PromOps {
 
     // ACCESSORS
     __attribute__((pure)) state10 clone() const {
-      return state10{clone_as_value<List<unsigned int>>((*(this)).regs10),
-                     clone_as_value<List<unsigned int>>((*(this)).rom10),
-                     clone_as_value<unsigned int>((*(this)).acc10),
-                     clone_as_value<unsigned int>((*(this)).pc10),
-                     clone_as_value<List<unsigned int>>((*(this)).stack10),
-                     clone_as_value<unsigned int>((*(this)).cur_bank10),
-                     clone_as_value<List<unsigned int>>((*(this)).rom_ports10),
-                     clone_as_value<unsigned int>((*(this)).sel_rom10),
-                     clone_as_value<unsigned int>((*(this)).prom_addr10),
-                     clone_as_value<unsigned int>((*(this)).prom_data10),
-                     clone_as_value<bool>((*(this)).prom_enable10)};
+      return state10{
+          (*(this)).regs10,      (*(this)).rom10,        (*(this)).acc10,
+          (*(this)).pc10,        (*(this)).stack10,      (*(this)).cur_bank10,
+          (*(this)).rom_ports10, (*(this)).sel_rom10,    (*(this)).prom_addr10,
+          (*(this)).prom_data10, (*(this)).prom_enable10};
     }
   };
 
@@ -778,10 +634,8 @@ struct PromOps {
 
     // ACCESSORS
     __attribute__((pure)) state11 clone() const {
-      return state11{clone_as_value<List<unsigned int>>((*(this)).rom11),
-                     clone_as_value<unsigned int>((*(this)).prom_addr11),
-                     clone_as_value<unsigned int>((*(this)).prom_data11),
-                     clone_as_value<bool>((*(this)).prom_enable11)};
+      return state11{(*(this)).rom11, (*(this)).prom_addr11,
+                     (*(this)).prom_data11, (*(this)).prom_enable11};
     }
   };
 

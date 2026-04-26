@@ -320,6 +320,8 @@ and cpp_field =
   | Fnested_using of Id.t * cpp_type
   (* Deleted default constructor: ctor() = delete *)
   | Fdeleted_ctor
+  (* Raw C++ field declaration (e.g., converting constructors) *)
+  | Fraw of string
 
 (** Method field descriptor for struct methods. *)
 and method_field = {

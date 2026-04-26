@@ -636,8 +636,7 @@ LoopifySequences::string_subsequences(const List<unsigned int> &s) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(s.v());
-        List<unsigned int> d_a1_value =
-            clone_as_value<List<unsigned int>>(d_a1);
+        List<unsigned int> d_a1_value = *(d_a1);
         _stack.emplace_back(_Call1{d_a0});
         _stack.emplace_back(_Enter{d_a1_value});
       }

@@ -17,155 +17,46 @@ struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
-template <typename T> struct is_shared_ptr : std::false_type {};
-
-template <typename T>
-struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> struct is_optional : std::false_type {};
-
-template <typename T> struct is_optional<std::optional<T>> : std::true_type {
-  using element_type = T;
-};
-
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
 std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  return x ? std::make_unique<T>(x->clone()) : nullptr;
-}
-
-template <typename T>
-std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
   if constexpr (requires { x->clone(); }) {
-    return x ? std::make_shared<T>(x->clone()) : nullptr;
+    return x ? std::make_unique<T>(x->clone()) : nullptr;
   } else {
-    return x;
+    return x ? std::make_unique<T>(*x) : nullptr;
   }
 }
 
 template <typename Target, typename Source>
 Target clone_as_value(const Source &x) {
-  using TargetBare = std::remove_cvref_t<Target>;
-  using SourceBare = std::remove_cvref_t<Source>;
-  if constexpr (is_unique_ptr<TargetBare>::value) {
-    using Inner = typename is_unique_ptr<TargetBare>::element_type;
-    if constexpr (is_unique_ptr<SourceBare>::value) {
-      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
-      if (!x)
-        return nullptr;
-      if constexpr (std::is_same_v<Inner, SourceInner>) {
-        return clone_value(x);
-      } else if constexpr (requires {
-                             typename Inner::crane_element_type;
-                             x->template clone_as<
-                                 typename Inner::crane_element_type>();
-                           }) {
-        return std::make_unique<Inner>(
-            x->template clone_as<typename Inner::crane_element_type>());
-      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
-        return std::make_unique<Inner>(x->template clone_as<Inner>());
-      } else {
-        return std::make_unique<Inner>(x->clone());
-      }
+  using T = std::remove_cvref_t<Target>;
+  using S = std::remove_cvref_t<Source>;
+  if constexpr (requires(const S &s) {
+                  s.has_value();
+                  *s;
+                }) {
+    if (!x.has_value())
+      return T{};
+    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
+    return T{clone_as_value<TInner>(*x)};
+  } else if constexpr (std::is_same_v<T, S>) {
+    if constexpr (is_unique_ptr<T>::value) {
+      return clone_value(x);
+    } else if constexpr (requires { x.clone(); }) {
+      return x.clone();
     } else {
-      if constexpr (requires { x.clone(); }) {
-        return std::make_unique<Inner>(x.clone());
-      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
-        if constexpr (requires { x.clone(); }) {
-          return std::make_unique<Inner>(x.clone());
-        } else {
-          return std::make_unique<Inner>(x);
-        }
-      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
-        return std::make_unique<Inner>(x.template clone_as<Inner>());
-      } else {
-        if constexpr (requires { x.clone(); }) {
-          return std::make_unique<Inner>(x.clone());
-        } else {
-          return std::make_unique<Inner>(x);
-        }
-      }
+      return x;
     }
-  } else if constexpr (is_optional<TargetBare>::value) {
-    using Inner = typename is_optional<TargetBare>::element_type;
-    if constexpr (is_optional<SourceBare>::value) {
-      if (!x)
-        return std::nullopt;
-      return Target{clone_as_value<Inner>(*x)};
-    } else {
-      return Target{clone_as_value<Inner>(x)};
-    }
-  } else if constexpr (is_shared_ptr<TargetBare>::value) {
-    using Inner = typename is_shared_ptr<TargetBare>::element_type;
-    if constexpr (is_shared_ptr<SourceBare>::value) {
-      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
-      if (!x)
-        return nullptr;
-      if constexpr (std::is_same_v<Inner, SourceInner>) {
-        return clone_value(x);
-      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
-        return std::make_shared<Inner>(x->template clone_as<Inner>());
-      } else {
-        return std::make_shared<Inner>(x->clone());
-      }
-    } else if constexpr (is_unique_ptr<SourceBare>::value) {
-      if (!x)
-        return nullptr;
-      if constexpr (requires { x->template clone_as<Inner>(); }) {
-        return std::make_shared<Inner>(x->template clone_as<Inner>());
-      } else {
-        return std::make_shared<Inner>(x->clone());
-      }
-    } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
-        return std::make_shared<Inner>(x.clone());
-      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
-        return std::make_shared<Inner>(x.template clone_as<Inner>());
-      } else {
-        return std::make_shared<Inner>(x.clone());
-      }
-    }
-  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
-    return clone_value(x);
-  } else if constexpr (is_unique_ptr<SourceBare>::value) {
-    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
-    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      if (!x)
-        return Target{};
-      if constexpr (requires { x->clone(); }) {
-        return x->clone();
-      } else {
-        return *x;
-      }
-    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
-      return x->template clone_as<TargetBare>();
-    } else if constexpr (requires { x->clone(); }) {
-      return x->clone();
-    } else {
-      return Target(*x);
-    }
-  } else if constexpr (is_shared_ptr<SourceBare>::value) {
-    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
-    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
-    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
-      return x->template clone_as<TargetBare>();
-    } else {
-      return Target(*x);
-    }
-  } else if constexpr (requires {
-                         typename TargetBare::crane_element_type;
-                         x.template clone_as<
-                             typename TargetBare::crane_element_type>();
-                       }) {
-    return x.template clone_as<typename TargetBare::crane_element_type>();
-  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
-    return x.template clone_as<TargetBare>();
+  } else if constexpr (is_unique_ptr<S>::value) {
+    if (!x)
+      return T{};
+    return clone_as_value<T>(*x);
+  } else if constexpr (is_unique_ptr<T>::value) {
+    using Inner = typename is_unique_ptr<T>::element_type;
+    return std::make_unique<Inner>(clone_as_value<Inner>(x));
   } else {
-    return Target(x);
+    return T(x);
   }
 }
 
@@ -214,29 +105,25 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{clone_as_value<t_A>(d_a0),
-                            clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
-    }
-  }
-
-  template <typename _CloneT0>
-  __attribute__((pure)) List<_CloneT0> clone_as() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<_CloneT0>(typename List<_CloneT0>::Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<_CloneT0>(typename List<_CloneT0>::Cons{
-          clone_as_value<_CloneT0>(d_a0),
-          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+      return List<t_A>(Cons{clone_value(d_a0), clone_value(d_a1)});
     }
   }
 
   // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ = Cons{clone_as_value<t_A>(d_a0),
+                  d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
   __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
+    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
   }
 
   // MANIPULATORS
@@ -369,10 +256,10 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<XI>(_sv.v())) {
       const auto &[d_a0] = std::get<XI>(_sv.v());
-      return Positive(XI{clone_as_value<std::unique_ptr<Positive>>(d_a0)});
+      return Positive(XI{clone_value(d_a0)});
     } else if (std::holds_alternative<XO>(_sv.v())) {
       const auto &[d_a0] = std::get<XO>(_sv.v());
-      return Positive(XO{clone_as_value<std::unique_ptr<Positive>>(d_a0)});
+      return Positive(XO{clone_value(d_a0)});
     } else {
       return Positive(XH{});
     }
@@ -380,11 +267,11 @@ public:
 
   // CREATORS
   __attribute__((pure)) static Positive xi(const Positive &a0) {
-    return Positive(XI{std::make_unique<Positive>(a0.clone())});
+    return Positive(XI{std::make_unique<Positive>(a0)});
   }
 
   __attribute__((pure)) static Positive xo(const Positive &a0) {
-    return Positive(XO{std::make_unique<Positive>(a0.clone())});
+    return Positive(XO{std::make_unique<Positive>(a0)});
   }
 
   __attribute__((pure)) static Positive xh() { return Positive(XH{}); }
@@ -608,10 +495,8 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) Commander clone() const {
-      return Commander{clone_as_value<unsigned int>((*(this)).cmd_id),
-                       clone_as_value<Clan>((*(this)).cmd_clan),
-                       clone_as_value<Rank>((*(this)).cmd_rank),
-                       clone_as_value<bool>((*(this)).cmd_bloodnamed)};
+      return Commander{(*(this)).cmd_id, (*(this)).cmd_clan, (*(this)).cmd_rank,
+                       (*(this)).cmd_bloodnamed};
     }
   };
 
@@ -711,14 +596,10 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) Unit clone() const {
-      return Unit{clone_as_value<unsigned int>((*(this)).unit_id),
-                  clone_as_value<UnitClass>((*(this)).unit_class),
-                  clone_as_value<WeightClass>((*(this)).unit_weight),
-                  clone_as_value<unsigned int>((*(this)).unit_tonnage),
-                  clone_as_value<unsigned int>((*(this)).unit_gunnery),
-                  clone_as_value<unsigned int>((*(this)).unit_piloting),
-                  clone_as_value<bool>((*(this)).unit_is_elite),
-                  clone_as_value<bool>((*(this)).unit_is_clan)};
+      return Unit{(*(this)).unit_id,       (*(this)).unit_class,
+                  (*(this)).unit_weight,   (*(this)).unit_tonnage,
+                  (*(this)).unit_gunnery,  (*(this)).unit_piloting,
+                  (*(this)).unit_is_elite, (*(this)).unit_is_clan};
     }
   };
 
@@ -748,13 +629,9 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) ForceMetrics clone() const {
-      return ForceMetrics{
-          clone_as_value<unsigned int>((*(this)).fm_count),
-          clone_as_value<unsigned int>((*(this)).fm_tonnage),
-          clone_as_value<unsigned int>((*(this)).fm_elite_count),
-          clone_as_value<unsigned int>((*(this)).fm_clan_count),
-          clone_as_value<unsigned int>((*(this)).fm_total_bv),
-          clone_as_value<unsigned int>((*(this)).fm_total_ecr)};
+      return ForceMetrics{(*(this)).fm_count,       (*(this)).fm_tonnage,
+                          (*(this)).fm_elite_count, (*(this)).fm_clan_count,
+                          (*(this)).fm_total_bv,    (*(this)).fm_total_ecr};
     }
   };
 
@@ -809,9 +686,8 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) CoalitionMember clone() const {
-      return CoalitionMember{clone_as_value<Clan>((*(this)).cm_clan),
-                             clone_as_value<Commander>((*(this)).cm_commander),
-                             clone_as_value<Force>((*(this)).cm_force)};
+      return CoalitionMember{(*(this)).cm_clan, (*(this)).cm_commander,
+                             (*(this)).cm_force};
     }
   };
 
@@ -838,10 +714,8 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) CoalitionMemberBid clone() const {
-      return CoalitionMemberBid{
-          clone_as_value<unsigned int>((*(this)).cmb_member_index),
-          clone_as_value<Force>((*(this)).cmb_new_force),
-          clone_as_value<Side>((*(this)).cmb_side)};
+      return CoalitionMemberBid{(*(this)).cmb_member_index,
+                                (*(this)).cmb_new_force, (*(this)).cmb_side};
     }
   };
 
@@ -860,9 +734,8 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) ForceBid clone() const {
-      return ForceBid{clone_as_value<Force>((*(this)).bid_force),
-                      clone_as_value<Side>((*(this)).bid_side),
-                      clone_as_value<Commander>((*(this)).bid_commander)};
+      return ForceBid{(*(this)).bid_force, (*(this)).bid_side,
+                      (*(this)).bid_commander};
     }
   };
 
@@ -1134,8 +1007,8 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) BattleContext clone() const {
-      return BattleContext{clone_as_value<bool>((*(this)).ctx_hegira_allowed),
-                           clone_as_value<bool>((*(this)).ctx_circle_present)};
+      return BattleContext{(*(this)).ctx_hegira_allowed,
+                           (*(this)).ctx_circle_present};
     }
   };
 
@@ -1160,15 +1033,10 @@ struct CoalitionBidHonorTraceCase {
     // ACCESSORS
     __attribute__((pure)) BatchallChallenge clone() const {
       return BatchallChallenge{
-          clone_as_value<Commander>((*(this)).chal_challenger),
-          clone_as_value<Clan>((*(this)).chal_clan),
-          clone_as_value<CoalitionBidHonorTraceCase::Prize>(
-              (*(this)).chal_prize),
-          clone_as_value<Force>((*(this)).chal_initial_force),
-          clone_as_value<CoalitionBidHonorTraceCase::Location>(
-              (*(this)).chal_location),
-          clone_as_value<TrialType>((*(this)).chal_trial_type),
-          clone_as_value<BattleContext>((*(this)).chal_context)};
+          (*(this)).chal_challenger, (*(this)).chal_clan,
+          (*(this)).chal_prize,      (*(this)).chal_initial_force,
+          (*(this)).chal_location,   (*(this)).chal_trial_type,
+          (*(this)).chal_context};
     }
   };
 
@@ -1185,10 +1053,8 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) BatchallResponse clone() const {
-      return BatchallResponse{
-          clone_as_value<Commander>((*(this)).resp_defender),
-          clone_as_value<Clan>((*(this)).resp_clan),
-          clone_as_value<Force>((*(this)).resp_force)};
+      return BatchallResponse{(*(this)).resp_defender, (*(this)).resp_clan,
+                              (*(this)).resp_force};
     }
   };
 
@@ -2074,10 +1940,7 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) BatchallState clone() const {
-      return BatchallState{
-          clone_as_value<CoalitionBidHonorTraceCase::BatchallPhase>(
-              (*(this)).bs_phase),
-          clone_as_value<HonorLedger>((*(this)).bs_honor)};
+      return BatchallState{(*(this)).bs_phase, (*(this)).bs_honor};
     }
   };
 

@@ -13,12 +13,12 @@
 /// closure types.
 __attribute__((pure)) Nat
 FunctionReturnBranchProbe::make_adder(const Nat &n, const Nat &_x0) {
-  return [=]() mutable -> std::function<Nat(Nat)> {
+  return [&]() -> std::function<Nat(Nat)> {
     if (std::holds_alternative<typename Nat::O>(n.v())) {
       return [](Nat x) { return x; };
     } else {
       const auto &[d_a0] = std::get<typename Nat::S>(n.v());
-      Nat d_a0_value = clone_as_value<Nat>(d_a0);
+      Nat d_a0_value = *(d_a0);
       std::function<Nat(Nat)> f = [=](Nat _x0) mutable -> Nat {
         return make_adder(d_a0_value, _x0);
       };

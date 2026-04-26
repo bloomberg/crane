@@ -19,155 +19,46 @@ struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
-template <typename T> struct is_shared_ptr : std::false_type {};
-
-template <typename T>
-struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> struct is_optional : std::false_type {};
-
-template <typename T> struct is_optional<std::optional<T>> : std::true_type {
-  using element_type = T;
-};
-
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
 std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  return x ? std::make_unique<T>(x->clone()) : nullptr;
-}
-
-template <typename T>
-std::shared_ptr<T> clone_value(const std::shared_ptr<T> &x) {
   if constexpr (requires { x->clone(); }) {
-    return x ? std::make_shared<T>(x->clone()) : nullptr;
+    return x ? std::make_unique<T>(x->clone()) : nullptr;
   } else {
-    return x;
+    return x ? std::make_unique<T>(*x) : nullptr;
   }
 }
 
 template <typename Target, typename Source>
 Target clone_as_value(const Source &x) {
-  using TargetBare = std::remove_cvref_t<Target>;
-  using SourceBare = std::remove_cvref_t<Source>;
-  if constexpr (is_unique_ptr<TargetBare>::value) {
-    using Inner = typename is_unique_ptr<TargetBare>::element_type;
-    if constexpr (is_unique_ptr<SourceBare>::value) {
-      using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
-      if (!x)
-        return nullptr;
-      if constexpr (std::is_same_v<Inner, SourceInner>) {
-        return clone_value(x);
-      } else if constexpr (requires {
-                             typename Inner::crane_element_type;
-                             x->template clone_as<
-                                 typename Inner::crane_element_type>();
-                           }) {
-        return std::make_unique<Inner>(
-            x->template clone_as<typename Inner::crane_element_type>());
-      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
-        return std::make_unique<Inner>(x->template clone_as<Inner>());
-      } else {
-        return std::make_unique<Inner>(x->clone());
-      }
+  using T = std::remove_cvref_t<Target>;
+  using S = std::remove_cvref_t<Source>;
+  if constexpr (requires(const S &s) {
+                  s.has_value();
+                  *s;
+                }) {
+    if (!x.has_value())
+      return T{};
+    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
+    return T{clone_as_value<TInner>(*x)};
+  } else if constexpr (std::is_same_v<T, S>) {
+    if constexpr (is_unique_ptr<T>::value) {
+      return clone_value(x);
+    } else if constexpr (requires { x.clone(); }) {
+      return x.clone();
     } else {
-      if constexpr (requires { x.clone(); }) {
-        return std::make_unique<Inner>(x.clone());
-      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
-        if constexpr (requires { x.clone(); }) {
-          return std::make_unique<Inner>(x.clone());
-        } else {
-          return std::make_unique<Inner>(x);
-        }
-      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
-        return std::make_unique<Inner>(x.template clone_as<Inner>());
-      } else {
-        if constexpr (requires { x.clone(); }) {
-          return std::make_unique<Inner>(x.clone());
-        } else {
-          return std::make_unique<Inner>(x);
-        }
-      }
+      return x;
     }
-  } else if constexpr (is_optional<TargetBare>::value) {
-    using Inner = typename is_optional<TargetBare>::element_type;
-    if constexpr (is_optional<SourceBare>::value) {
-      if (!x)
-        return std::nullopt;
-      return Target{clone_as_value<Inner>(*x)};
-    } else {
-      return Target{clone_as_value<Inner>(x)};
-    }
-  } else if constexpr (is_shared_ptr<TargetBare>::value) {
-    using Inner = typename is_shared_ptr<TargetBare>::element_type;
-    if constexpr (is_shared_ptr<SourceBare>::value) {
-      using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
-      if (!x)
-        return nullptr;
-      if constexpr (std::is_same_v<Inner, SourceInner>) {
-        return clone_value(x);
-      } else if constexpr (requires { x->template clone_as<Inner>(); }) {
-        return std::make_shared<Inner>(x->template clone_as<Inner>());
-      } else {
-        return std::make_shared<Inner>(x->clone());
-      }
-    } else if constexpr (is_unique_ptr<SourceBare>::value) {
-      if (!x)
-        return nullptr;
-      if constexpr (requires { x->template clone_as<Inner>(); }) {
-        return std::make_shared<Inner>(x->template clone_as<Inner>());
-      } else {
-        return std::make_shared<Inner>(x->clone());
-      }
-    } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
-        return std::make_shared<Inner>(x.clone());
-      } else if constexpr (requires { x.template clone_as<Inner>(); }) {
-        return std::make_shared<Inner>(x.template clone_as<Inner>());
-      } else {
-        return std::make_shared<Inner>(x.clone());
-      }
-    }
-  } else if constexpr (std::is_same_v<TargetBare, SourceBare>) {
-    return clone_value(x);
-  } else if constexpr (is_unique_ptr<SourceBare>::value) {
-    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
-    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      if (!x)
-        return Target{};
-      if constexpr (requires { x->clone(); }) {
-        return x->clone();
-      } else {
-        return *x;
-      }
-    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
-      return x->template clone_as<TargetBare>();
-    } else if constexpr (requires { x->clone(); }) {
-      return x->clone();
-    } else {
-      return Target(*x);
-    }
-  } else if constexpr (is_shared_ptr<SourceBare>::value) {
-    using SourceInner = typename is_shared_ptr<SourceBare>::element_type;
-    if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
-    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
-      return x->template clone_as<TargetBare>();
-    } else {
-      return Target(*x);
-    }
-  } else if constexpr (requires {
-                         typename TargetBare::crane_element_type;
-                         x.template clone_as<
-                             typename TargetBare::crane_element_type>();
-                       }) {
-    return x.template clone_as<typename TargetBare::crane_element_type>();
-  } else if constexpr (requires { x.template clone_as<TargetBare>(); }) {
-    return x.template clone_as<TargetBare>();
+  } else if constexpr (is_unique_ptr<S>::value) {
+    if (!x)
+      return T{};
+    return clone_as_value<T>(*x);
+  } else if constexpr (is_unique_ptr<T>::value) {
+    using Inner = typename is_unique_ptr<T>::element_type;
+    return std::make_unique<Inner>(clone_as_value<Inner>(x));
   } else {
-    return Target(x);
+    return T(x);
   }
 }
 
@@ -216,29 +107,25 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{clone_as_value<t_A>(d_a0),
-                            clone_as_value<std::unique_ptr<List<t_A>>>(d_a1)});
-    }
-  }
-
-  template <typename _CloneT0>
-  __attribute__((pure)) List<_CloneT0> clone_as() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<_CloneT0>(typename List<_CloneT0>::Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<_CloneT0>(typename List<_CloneT0>::Cons{
-          clone_as_value<_CloneT0>(d_a0),
-          clone_as_value<std::unique_ptr<List<_CloneT0>>>(d_a1)});
+      return List<t_A>(Cons{clone_value(d_a0), clone_value(d_a1)});
     }
   }
 
   // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ = Cons{clone_as_value<t_A>(d_a0),
+                  d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
   __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1.clone())});
+    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
   }
 
   // MANIPULATORS
@@ -331,33 +218,29 @@ struct LoopifyTrees {
       } else {
         const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
         return tree<t_A>(
-            Node{clone_as_value<std::unique_ptr<tree<t_A>>>(d_a0),
-                 clone_as_value<t_A>(d_a1),
-                 clone_as_value<std::unique_ptr<tree<t_A>>>(d_a2)});
-      }
-    }
-
-    template <typename _CloneT0>
-    __attribute__((pure)) tree<_CloneT0> clone_as() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
-        return tree<_CloneT0>(typename tree<_CloneT0>::Leaf{});
-      } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
-        return tree<_CloneT0>(typename tree<_CloneT0>::Node{
-            clone_as_value<std::unique_ptr<tree<_CloneT0>>>(d_a0),
-            clone_as_value<_CloneT0>(d_a1),
-            clone_as_value<std::unique_ptr<tree<_CloneT0>>>(d_a2)});
+            Node{clone_value(d_a0), clone_value(d_a1), clone_value(d_a2)});
       }
     }
 
     // CREATORS
+    template <typename _U> explicit tree(const tree<_U> &_other) {
+      if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
+        d_v_ = Leaf{};
+      } else {
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree<_U>::Node>(_other.v());
+        d_v_ = Node{d_a0 ? std::make_unique<tree<t_A>>(*d_a0) : nullptr,
+                    clone_as_value<t_A>(d_a1),
+                    d_a2 ? std::make_unique<tree<t_A>>(*d_a2) : nullptr};
+      }
+    }
+
     __attribute__((pure)) static tree<t_A> leaf() { return tree(Leaf{}); }
 
     __attribute__((pure)) static tree<t_A> node(const tree<t_A> &a0, t_A a1,
                                                 const tree<t_A> &a2) {
-      return tree(Node{std::make_unique<tree<t_A>>(a0.clone()), std::move(a1),
-                       std::make_unique<tree<t_A>>(a2.clone())});
+      return tree(Node{std::make_unique<tree<t_A>>(a0), std::move(a1),
+                       std::make_unique<tree<t_A>>(a2)});
     }
 
     // MANIPULATORS
@@ -953,10 +836,8 @@ struct LoopifyTrees {
         return ternary(TLeaf{});
       } else {
         const auto &[d_a0, d_a1, d_a2, d_a3] = std::get<TNode>(_sv.v());
-        return ternary(TNode{clone_as_value<std::unique_ptr<ternary>>(d_a0),
-                             clone_as_value<std::unique_ptr<ternary>>(d_a1),
-                             clone_as_value<std::unique_ptr<ternary>>(d_a2),
-                             d_a3});
+        return ternary(TNode{clone_value(d_a0), clone_value(d_a1),
+                             clone_value(d_a2), d_a3});
       }
     }
 
@@ -967,10 +848,9 @@ struct LoopifyTrees {
                                                const ternary &a1,
                                                const ternary &a2,
                                                unsigned int a3) {
-      return ternary(TNode{std::make_unique<ternary>(a0.clone()),
-                           std::make_unique<ternary>(a1.clone()),
-                           std::make_unique<ternary>(a2.clone()),
-                           std::move(a3)});
+      return ternary(TNode{std::make_unique<ternary>(a0),
+                           std::make_unique<ternary>(a1),
+                           std::make_unique<ternary>(a2), std::move(a3)});
     }
 
     // MANIPULATORS
@@ -1276,13 +1156,16 @@ struct LoopifyTrees {
     __attribute__((pure)) rose clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<RNode>(_sv.v());
-      return rose(RNode{d_a0, d_a1});
+      return rose(RNode{
+          d_a0,
+          clone_as_value<List<std::unique_ptr<LoopifyTrees::rose>>>(d_a1)});
     }
 
     // CREATORS
     __attribute__((pure)) static rose rnode(unsigned int a0, List<rose> a1) {
-      return rose(RNode{std::move(a0),
-                        clone_as_value<List<std::unique_ptr<rose>>>(a1)});
+      return rose(
+          RNode{std::move(a0),
+                clone_as_value<List<std::unique_ptr<LoopifyTrees::rose>>>(a1)});
     }
 
     // MANIPULATORS
@@ -1499,10 +1382,8 @@ struct LoopifyTrees {
         return quadtree(QLeaf{d_a0});
       } else {
         const auto &[d_a0, d_a1, d_a2, d_a3] = std::get<Quad>(_sv.v());
-        return quadtree(Quad{clone_as_value<std::unique_ptr<quadtree>>(d_a0),
-                             clone_as_value<std::unique_ptr<quadtree>>(d_a1),
-                             clone_as_value<std::unique_ptr<quadtree>>(d_a2),
-                             clone_as_value<std::unique_ptr<quadtree>>(d_a3)});
+        return quadtree(Quad{clone_value(d_a0), clone_value(d_a1),
+                             clone_value(d_a2), clone_value(d_a3)});
       }
     }
 
@@ -1515,10 +1396,9 @@ struct LoopifyTrees {
                                                const quadtree &a1,
                                                const quadtree &a2,
                                                const quadtree &a3) {
-      return quadtree(Quad{std::make_unique<quadtree>(a0.clone()),
-                           std::make_unique<quadtree>(a1.clone()),
-                           std::make_unique<quadtree>(a2.clone()),
-                           std::make_unique<quadtree>(a3.clone())});
+      return quadtree(
+          Quad{std::make_unique<quadtree>(a0), std::make_unique<quadtree>(a1),
+               std::make_unique<quadtree>(a2), std::make_unique<quadtree>(a3)});
     }
 
     // MANIPULATORS
@@ -1932,9 +1812,7 @@ struct LoopifyTrees {
         return simple_tree(SLeaf{d_a0});
       } else {
         const auto &[d_a0, d_a1] = std::get<SNode>(_sv.v());
-        return simple_tree(
-            SNode{clone_as_value<std::unique_ptr<simple_tree>>(d_a0),
-                  clone_as_value<std::unique_ptr<simple_tree>>(d_a1)});
+        return simple_tree(SNode{clone_value(d_a0), clone_value(d_a1)});
       }
     }
 
@@ -1945,8 +1823,8 @@ struct LoopifyTrees {
 
     __attribute__((pure)) static simple_tree snode(const simple_tree &a0,
                                                    const simple_tree &a1) {
-      return simple_tree(SNode{std::make_unique<simple_tree>(a0.clone()),
-                               std::make_unique<simple_tree>(a1.clone())});
+      return simple_tree(SNode{std::make_unique<simple_tree>(a0),
+                               std::make_unique<simple_tree>(a1)});
     }
 
     // MANIPULATORS

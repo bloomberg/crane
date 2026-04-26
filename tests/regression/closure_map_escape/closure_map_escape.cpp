@@ -31,8 +31,7 @@ ClosureMapEscape::map_to_adders(
     const auto &[d_a0, d_a1] =
         std::get<typename ClosureMapEscape::mylist<unsigned int>::Mycons>(
             l.v());
-    ClosureMapEscape::mylist<unsigned int> d_a1_value =
-        clone_as_value<ClosureMapEscape::mylist<unsigned int>>(d_a1);
+    ClosureMapEscape::mylist<unsigned int> d_a1_value = *(d_a1);
     auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
     *add = [=](unsigned int x) mutable -> unsigned int {
       if (x <= 0) {

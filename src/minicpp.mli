@@ -328,6 +328,7 @@ and cpp_field =
       (** Nested struct definition with visibility-annotated fields *)
   | Fnested_using of Id.t * cpp_type  (** Nested using type alias declaration *)
   | Fdeleted_ctor  (** Deleted default constructor: ctor() = delete *)
+  | Fraw of string  (** Raw C++ field declaration *)
 
 (** Method descriptor record. *)
 and method_field = {

@@ -65,8 +65,7 @@ LoopifyAlgorithms::sieve_fuel(const unsigned int &fuel, List<unsigned int> l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-        List<unsigned int> d_a1_value =
-            clone_as_value<List<unsigned int>>(d_a1);
+        List<unsigned int> d_a1_value = *(d_a1);
         std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
             filter_multiples;
         filter_multiples = [&](unsigned int p,
@@ -300,8 +299,7 @@ LoopifyAlgorithms::nub_aux(const List<unsigned int> &l,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-        List<unsigned int> d_a1_value =
-            clone_as_value<List<unsigned int>>(d_a1);
+        List<unsigned int> d_a1_value = *(d_a1);
         std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
             filter_out;
         filter_out = [&](unsigned int val,
