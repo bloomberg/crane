@@ -2,6 +2,7 @@
 #define INCLUDED_HOF_TREE_LOOPIFY
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

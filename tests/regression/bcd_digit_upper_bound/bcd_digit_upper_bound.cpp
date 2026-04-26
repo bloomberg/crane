@@ -1,6 +1,7 @@
 #include <bcd_digit_upper_bound.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 __attribute__((pure)) bool

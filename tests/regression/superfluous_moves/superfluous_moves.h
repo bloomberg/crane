@@ -2,6 +2,7 @@
 #define INCLUDED_SUPERFLUOUS_MOVES
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

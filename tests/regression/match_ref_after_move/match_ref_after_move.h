@@ -2,6 +2,7 @@
 #define INCLUDED_MATCH_REF_AFTER_MOVE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

@@ -2,6 +2,7 @@
 #define INCLUDED_NESTED_RECORD_UPDATE_QUAL
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

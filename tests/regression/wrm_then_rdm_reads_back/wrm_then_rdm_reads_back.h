@@ -2,6 +2,7 @@
 #define INCLUDED_WRM_THEN_RDM_READS_BACK
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

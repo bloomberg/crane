@@ -2,6 +2,7 @@
 #define INCLUDED_NO_MAPPING_EVENT_PROBE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

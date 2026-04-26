@@ -2,6 +2,7 @@
 #define INCLUDED_JIN_USES_PAIR_FOR_JUMP
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

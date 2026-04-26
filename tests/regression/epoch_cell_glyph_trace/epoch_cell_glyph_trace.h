@@ -2,6 +2,7 @@
 #define INCLUDED_EPOCH_CELL_GLYPH_TRACE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

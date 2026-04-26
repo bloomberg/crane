@@ -1,6 +1,7 @@
 #include <let_pair_shadow.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

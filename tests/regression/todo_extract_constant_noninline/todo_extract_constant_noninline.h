@@ -2,6 +2,7 @@
 #define INCLUDED_TODO_EXTRACT_CONSTANT_NONINLINE
 
 #include <memory>
+#include <optional>
 #include <todo_extract_constant_noninline_support.h>
 #include <type_traits>
 

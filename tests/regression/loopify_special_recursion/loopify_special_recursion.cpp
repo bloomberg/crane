@@ -1,6 +1,7 @@
 #include <loopify_special_recursion.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

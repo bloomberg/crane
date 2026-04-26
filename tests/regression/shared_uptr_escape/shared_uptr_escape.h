@@ -2,6 +2,7 @@
 #define INCLUDED_SHARED_UPTR_ESCAPE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

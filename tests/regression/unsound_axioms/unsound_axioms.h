@@ -2,6 +2,7 @@
 #define INCLUDED_UNSOUND_AXIOMS
 
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <variant>

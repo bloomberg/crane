@@ -2,6 +2,7 @@
 #define INCLUDED_UNIVERSE_POLY
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

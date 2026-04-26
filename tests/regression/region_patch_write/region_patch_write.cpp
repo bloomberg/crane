@@ -1,6 +1,7 @@
 #include <region_patch_write.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

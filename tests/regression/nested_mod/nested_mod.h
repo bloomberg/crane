@@ -2,6 +2,7 @@
 #define INCLUDED_NESTED_MOD
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

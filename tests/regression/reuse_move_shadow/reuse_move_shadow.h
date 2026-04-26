@@ -2,6 +2,7 @@
 #define INCLUDED_REUSE_MOVE_SHADOW
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

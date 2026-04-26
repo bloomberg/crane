@@ -2,6 +2,7 @@
 #define INCLUDED_RESET_STATE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

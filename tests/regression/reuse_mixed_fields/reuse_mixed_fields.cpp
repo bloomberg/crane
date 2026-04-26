@@ -1,6 +1,7 @@
 #include <reuse_mixed_fields.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

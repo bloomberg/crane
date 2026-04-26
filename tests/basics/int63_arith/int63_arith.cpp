@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 __attribute__((pure)) int64_t Int63Arith::i_abs(const int64_t x) {

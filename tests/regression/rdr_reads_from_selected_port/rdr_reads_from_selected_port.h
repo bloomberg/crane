@@ -2,6 +2,7 @@
 #define INCLUDED_RDR_READS_FROM_SELECTED_PORT
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

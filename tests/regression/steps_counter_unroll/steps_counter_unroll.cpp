@@ -1,6 +1,7 @@
 #include <steps_counter_unroll.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 

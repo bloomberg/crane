@@ -2,6 +2,7 @@
 #define INCLUDED_MODULE_TYPE_NAME_CLASH_PROBE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

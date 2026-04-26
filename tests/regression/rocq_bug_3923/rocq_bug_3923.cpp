@@ -2,5 +2,6 @@
 
 #include <concepts>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>

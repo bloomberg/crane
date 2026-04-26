@@ -2,6 +2,7 @@
 #define INCLUDED_MOVE_CAPTURE_REUSE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

@@ -2,6 +2,7 @@
 #define INCLUDED_EMPTY_SYSTEM_BANK_COUNT
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

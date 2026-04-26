@@ -1,6 +1,7 @@
 #include <port_write_nibble_mask.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 

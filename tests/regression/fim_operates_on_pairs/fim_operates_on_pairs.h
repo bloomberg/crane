@@ -2,6 +2,7 @@
 #define INCLUDED_FIM_OPERATES_ON_PAIRS
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

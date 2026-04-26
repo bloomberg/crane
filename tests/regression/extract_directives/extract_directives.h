@@ -2,6 +2,7 @@
 #define INCLUDED_EXTRACT_DIRECTIVES
 
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 

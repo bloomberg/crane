@@ -2,6 +2,7 @@
 #define INCLUDED_DEEP_DESTRUCT
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

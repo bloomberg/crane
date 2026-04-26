@@ -2,6 +2,7 @@
 #define INCLUDED_WRAPPER_COLLISION_POS
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

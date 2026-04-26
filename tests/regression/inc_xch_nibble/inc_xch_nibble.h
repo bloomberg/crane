@@ -2,6 +2,7 @@
 #define INCLUDED_INC_XCH_NIBBLE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

@@ -2,6 +2,7 @@
 #define INCLUDED_LOAD_PROGRAM_HEAD_WRITE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

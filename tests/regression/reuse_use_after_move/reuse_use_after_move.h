@@ -2,6 +2,7 @@
 #define INCLUDED_REUSE_USE_AFTER_MOVE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

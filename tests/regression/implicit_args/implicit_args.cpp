@@ -1,6 +1,7 @@
 #include <implicit_args.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

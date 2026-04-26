@@ -2,6 +2,7 @@
 #define INCLUDED_SRC_WRR_UPDATES_ROM_PORT
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

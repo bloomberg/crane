@@ -2,6 +2,7 @@
 #define INCLUDED_COUNT_LOOP_TEST_TARGET
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

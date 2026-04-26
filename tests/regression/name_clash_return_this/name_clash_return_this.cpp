@@ -1,6 +1,7 @@
 #include <name_clash_return_this.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

@@ -1,6 +1,7 @@
 #include <qualified_record_shadow.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 __attribute__((pure)) QualifiedRecordShadow::Shadow

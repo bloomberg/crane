@@ -2,6 +2,7 @@
 #define INCLUDED_BCD_DIGIT_UPPER_BOUND
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

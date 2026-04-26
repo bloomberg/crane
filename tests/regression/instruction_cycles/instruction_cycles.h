@@ -2,6 +2,7 @@
 #define INCLUDED_INSTRUCTION_CYCLES
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

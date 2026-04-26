@@ -2,6 +2,7 @@
 #define INCLUDED_CTOR_ESCAPE_COLLISION
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 

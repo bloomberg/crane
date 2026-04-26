@@ -1,6 +1,7 @@
 #include <timing_preserves_wf_simple.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 

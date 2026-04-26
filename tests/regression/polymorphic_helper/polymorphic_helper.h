@@ -2,6 +2,7 @@
 #define INCLUDED_POLYMORPHIC_HELPER
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

@@ -1,6 +1,7 @@
 #include <iife_name_clash.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

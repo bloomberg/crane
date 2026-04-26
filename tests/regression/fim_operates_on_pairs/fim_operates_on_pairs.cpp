@@ -1,6 +1,7 @@
 #include <fim_operates_on_pairs.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

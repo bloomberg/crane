@@ -2,6 +2,7 @@
 #define INCLUDED_ROCQ_BUG_16288
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

@@ -1,6 +1,7 @@
 #include <valid_program_byte_reject.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

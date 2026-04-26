@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <embed_effect_helper.h>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <variant>

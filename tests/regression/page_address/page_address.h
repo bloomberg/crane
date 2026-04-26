@@ -2,6 +2,7 @@
 #define INCLUDED_PAGE_ADDRESS
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 

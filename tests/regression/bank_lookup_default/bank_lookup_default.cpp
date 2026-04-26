@@ -1,6 +1,7 @@
 #include <bank_lookup_default.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

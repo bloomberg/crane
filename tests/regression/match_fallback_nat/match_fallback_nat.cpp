@@ -1,6 +1,7 @@
 #include <match_fallback_nat.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

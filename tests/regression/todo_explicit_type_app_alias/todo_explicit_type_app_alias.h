@@ -2,6 +2,7 @@
 #define INCLUDED_TODO_EXPLICIT_TYPE_APP_ALIAS
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

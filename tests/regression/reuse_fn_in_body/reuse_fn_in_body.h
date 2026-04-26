@@ -2,6 +2,7 @@
 #define INCLUDED_REUSE_FN_IN_BODY
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

@@ -2,6 +2,7 @@
 #define INCLUDED_UPDATE_NTH_BOUNDS
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

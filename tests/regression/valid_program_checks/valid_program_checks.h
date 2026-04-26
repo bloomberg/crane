@@ -2,6 +2,7 @@
 #define INCLUDED_VALID_PROGRAM_CHECKS
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

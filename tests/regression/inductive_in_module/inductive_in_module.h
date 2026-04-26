@@ -2,6 +2,7 @@
 #define INCLUDED_INDUCTIVE_IN_MODULE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

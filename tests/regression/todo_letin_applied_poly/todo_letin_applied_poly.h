@@ -2,6 +2,7 @@
 #define INCLUDED_TODO_LETIN_APPLIED_POLY
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

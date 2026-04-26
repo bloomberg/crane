@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 void RocqBug14843::M::f1(const Unit) { return; }

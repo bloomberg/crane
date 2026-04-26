@@ -1,6 +1,7 @@
 #include <wrr_preserves_other_ports.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

@@ -2,6 +2,7 @@
 #define INCLUDED_QUALIFIED_RECORD_SHADOW
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

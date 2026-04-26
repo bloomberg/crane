@@ -2,6 +2,7 @@
 #define INCLUDED_N_INT
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 

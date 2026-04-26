@@ -2,6 +2,7 @@
 #define INCLUDED_COMPUTATIONAL_PROOF
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

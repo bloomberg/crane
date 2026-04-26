@@ -2,6 +2,7 @@
 #define INCLUDED_EVEN_LENGTH_BYTE_VALIDATION
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

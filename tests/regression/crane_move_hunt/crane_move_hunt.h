@@ -2,6 +2,7 @@
 #define INCLUDED_CRANE_MOVE_HUNT
 
 #include <memory>
+#include <optional>
 #include <toy_helpers.h>
 #include <type_traits>
 #include <utility>

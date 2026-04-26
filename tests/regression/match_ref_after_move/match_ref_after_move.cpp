@@ -1,6 +1,7 @@
 #include <match_ref_after_move.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

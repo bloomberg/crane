@@ -1,6 +1,7 @@
 #include <extract_directives.h>
 
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 

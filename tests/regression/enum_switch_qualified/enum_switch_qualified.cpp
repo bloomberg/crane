@@ -1,6 +1,7 @@
 #include <enum_switch_qualified.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 

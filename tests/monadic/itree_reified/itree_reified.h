@@ -4,6 +4,7 @@
 #include <any>
 #include <crane_itree.h>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <variant>

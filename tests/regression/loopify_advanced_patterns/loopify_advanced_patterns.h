@@ -2,6 +2,7 @@
 #define INCLUDED_LOOPIFY_ADVANCED_PATTERNS
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

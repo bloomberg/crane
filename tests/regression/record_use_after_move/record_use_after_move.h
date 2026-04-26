@@ -2,6 +2,7 @@
 #define INCLUDED_RECORD_USE_AFTER_MOVE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

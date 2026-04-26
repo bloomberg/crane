@@ -1,6 +1,7 @@
 #include <reuse_move_shadow.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

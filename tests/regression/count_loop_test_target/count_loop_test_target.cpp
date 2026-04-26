@@ -1,6 +1,7 @@
 #include <count_loop_test_target.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

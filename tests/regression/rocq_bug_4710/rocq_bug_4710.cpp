@@ -1,6 +1,7 @@
 #include <rocq_bug_4710.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 __attribute__((pure)) unsigned int

@@ -1,6 +1,7 @@
 #include <rdr_reads_from_selected_port.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <variant>
 #include <vector>

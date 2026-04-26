@@ -2,6 +2,7 @@
 #define INCLUDED_JMS_BBL_ROUNDTRIP
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 

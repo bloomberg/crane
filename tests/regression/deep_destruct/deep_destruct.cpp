@@ -1,6 +1,7 @@
 #include <deep_destruct.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

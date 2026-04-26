@@ -2,6 +2,7 @@
 #define INCLUDED_REGION_PATCH_WRITE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

@@ -2,6 +2,7 @@
 #define INCLUDED_EMPTY_MATCH
 
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>

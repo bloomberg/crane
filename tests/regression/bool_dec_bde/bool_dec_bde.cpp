@@ -1,6 +1,7 @@
 #include <bool_dec_bde.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 __attribute__((pure)) bool BoolDecBde::eqb_dec(const bool &a, const bool &b) {

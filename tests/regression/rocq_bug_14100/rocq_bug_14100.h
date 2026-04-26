@@ -2,6 +2,7 @@
 #define INCLUDED_ROCQ_BUG_14100
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

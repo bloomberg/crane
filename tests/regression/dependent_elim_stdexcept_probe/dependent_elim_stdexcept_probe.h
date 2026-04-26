@@ -2,6 +2,7 @@
 #define INCLUDED_DEPENDENT_ELIM_STDEXCEPT_PROBE
 
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>

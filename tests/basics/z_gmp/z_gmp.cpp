@@ -2,6 +2,7 @@
 
 #include <gmpxx.h>
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 __attribute__((pure)) mpz_class ZGMPTest::add_test(const mpz_class &_x0,

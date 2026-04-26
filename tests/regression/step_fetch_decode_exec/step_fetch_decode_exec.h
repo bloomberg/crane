@@ -2,6 +2,7 @@
 #define INCLUDED_STEP_FETCH_DECODE_EXEC
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

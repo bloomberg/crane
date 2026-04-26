@@ -2,6 +2,7 @@
 #define INCLUDED_STEPS_COUNTER_UNROLL
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <stm_adapter.h>
 #include <type_traits>
 #include <utility>

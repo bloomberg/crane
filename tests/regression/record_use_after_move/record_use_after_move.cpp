@@ -1,6 +1,7 @@
 #include <record_use_after_move.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 __attribute__((pure)) RecordUseAfterMove::box

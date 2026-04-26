@@ -2,6 +2,7 @@
 #define INCLUDED_DROP_HEAD_DEFAULT
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

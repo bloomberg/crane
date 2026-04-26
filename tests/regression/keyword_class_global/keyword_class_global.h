@@ -2,6 +2,7 @@
 #define INCLUDED_KEYWORD_CLASS_GLOBAL
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

@@ -140,7 +140,7 @@ class SkipList {
     typedef SkipListPairHandle<KEY, DATA> PairHandle;
 
   private:
-    bsl::shared_ptr< ::SkipList<KEY, DATA> > d_impl;
+    ::SkipList<KEY, DATA> d_impl;
 
     // Comparison functions for KEY type
     static bool keyLt(const KEY& a, const KEY& b) { return a < b; }
@@ -167,11 +167,11 @@ class SkipList {
 
     /// Create a new empty SkipList.
     SkipList()
+    : d_impl(atomic([] {
+          return ::SkipList<int, int>::template create<KEY, DATA>(KEY{},
+                                                                  DATA{});
+      }))
     {
-        d_impl = atomic([] {
-            return ::SkipList<int, int>::template create<KEY, DATA>(KEY{},
-                                                                    DATA{});
-        });
     }
 
     /// Destroy this SkipList.
@@ -184,7 +184,7 @@ class SkipList {
     {
         atomic([&] {
             unsigned int level = randomLevel();
-            auto result = d_impl->bde_add(keyLt, keyEq, key, data, level);
+            auto result = d_impl.bde_add(keyLt, keyEq, key, data, level);
             if (newFrontFlag) {
                 *newFrontFlag = result.second;
             }
@@ -199,7 +199,7 @@ class SkipList {
     {
         atomic([&] {
             unsigned int level = randomLevel();
-            auto addResult = d_impl->bde_add(keyLt, keyEq, key, data, level);
+            auto addResult = d_impl.bde_add(keyLt, keyEq, key, data, level);
             if (result) {
                 *result = PairHandle(this, wrapNode(addResult.first));
             }
@@ -218,7 +218,7 @@ class SkipList {
         return atomic([&]() -> int {
             unsigned int level = randomLevel();
             auto         result =
-                         d_impl->bde_addUnique(keyLt, keyEq, key, data, level);
+                         d_impl.bde_addUnique(keyLt, keyEq, key, data, level);
             auto status = result.first.first;
             if (newFrontFlag && status == e_SUCCESS) {
                 *newFrontFlag = result.second;
@@ -237,7 +237,7 @@ class SkipList {
         return atomic([&]() -> int {
             unsigned int level = randomLevel();
             auto         addResult =
-                         d_impl->bde_addUnique(keyLt, keyEq, key, data, level);
+                         d_impl.bde_addUnique(keyLt, keyEq, key, data, level);
             auto status = addResult.first.first;
             if (status == e_SUCCESS && result &&
                 addResult.first.second.has_value()) {
@@ -287,7 +287,7 @@ class SkipList {
     int popFront(PairHandle *item = nullptr)
     {
         return atomic([&]() -> int {
-            auto result = d_impl->bde_popFront();
+            auto result = d_impl.bde_popFront();
             if (result.first == e_SUCCESS && item &&
                 result.second.has_value()) {
                 *item = PairHandle(this, wrapNode(*result.second));
@@ -303,7 +303,7 @@ class SkipList {
         if (!reference)
             return e_NOT_FOUND;
         return atomic([&]() -> int {
-            return d_impl->bde_remove(keyLt, keyEq, reference->node());
+            return d_impl.bde_remove(keyLt, keyEq, reference->node());
         });
     }
 
@@ -311,7 +311,7 @@ class SkipList {
     int removeAll()
     {
         return atomic([&]() -> int {
-            return static_cast<int>(d_impl->bde_removeAll());
+            return static_cast<int>(d_impl.bde_removeAll());
         });
     }
 
@@ -322,7 +322,7 @@ class SkipList {
     int back(PairHandle *back) const
     {
         return atomic([&]() -> int {
-            auto result = d_impl->bde_back();
+            auto result = d_impl.bde_back();
             if (result.first == e_SUCCESS && back &&
                 result.second.has_value()) {
                 *back = PairHandle(const_cast<SkipList *>(this),
@@ -336,7 +336,7 @@ class SkipList {
     bool exists(const KEY& key) const
     {
         return atomic([&]() -> bool {
-            return d_impl->bde_exists(keyLt, keyEq, key);
+            return d_impl.bde_exists(keyLt, keyEq, key);
         });
     }
 
@@ -345,7 +345,7 @@ class SkipList {
     int front(PairHandle *front) const
     {
         return atomic([&]() -> int {
-            auto result = d_impl->bde_front();
+            auto result = d_impl.bde_front();
             if (result.first == e_SUCCESS && front &&
                 result.second.has_value()) {
                 *front = PairHandle(const_cast<SkipList *>(this),
@@ -359,7 +359,7 @@ class SkipList {
     bool isEmpty() const
     {
         return atomic([&]() -> bool {
-            return d_impl->bde_isEmpty();
+            return d_impl.bde_isEmpty();
         });
     }
 
@@ -367,7 +367,7 @@ class SkipList {
     int length() const
     {
         return atomic([&]() -> int {
-            return static_cast<int>(d_impl->bde_length());
+            return static_cast<int>(d_impl.bde_length());
         });
     }
 
@@ -378,7 +378,7 @@ class SkipList {
     int find(PairHandle *item, const KEY& key) const
     {
         return atomic([&]() -> int {
-            auto result = d_impl->bde_find(keyLt, keyEq, key);
+            auto result = d_impl.bde_find(keyLt, keyEq, key);
             if (result.first == e_SUCCESS && item &&
                 result.second.has_value()) {
                 *item = PairHandle(const_cast<SkipList *>(this),
@@ -398,7 +398,7 @@ class SkipList {
     int findLowerBound(PairHandle *item, const KEY& key) const
     {
         return atomic([&]() -> int {
-            auto result = d_impl->bde_findLowerBound(keyLt, key);
+            auto result = d_impl.bde_findLowerBound(keyLt, key);
             if (result.first == e_SUCCESS && item &&
                 result.second.has_value()) {
                 *item = PairHandle(const_cast<SkipList *>(this),
@@ -417,7 +417,7 @@ class SkipList {
     int findUpperBound(PairHandle *item, const KEY& key) const
     {
         return atomic([&]() -> int {
-            auto result = d_impl->bde_findUpperBound(keyLt, keyEq, key);
+            auto result = d_impl.bde_findUpperBound(keyLt, keyEq, key);
             if (result.first == e_SUCCESS && item &&
                 result.second.has_value()) {
                 *item = PairHandle(const_cast<SkipList *>(this),
@@ -459,7 +459,7 @@ class SkipList {
         if (!reference)
             return e_NOT_FOUND;
         return atomic([&]() -> int {
-            auto result = d_impl->bde_previous(keyEq, reference->node());
+            auto result = d_impl.bde_previous(keyEq, reference->node());
             if (result.first == e_SUCCESS && prevPair &&
                 result.second.has_value()) {
                 *prevPair = PairHandle(const_cast<SkipList *>(this),

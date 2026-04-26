@@ -2,6 +2,7 @@
 #define INCLUDED_OPCODE_OPERAND_DECODE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 

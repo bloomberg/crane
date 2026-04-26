@@ -2,6 +2,7 @@
 #define INCLUDED_SUM
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

@@ -2,6 +2,7 @@
 #define INCLUDED_PORT_WRITE_NIBBLE_MASK
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 

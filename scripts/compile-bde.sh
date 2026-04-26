@@ -101,7 +101,7 @@ exec clang++ \
     -Wno-unused-local-typedef -Wno-shorten-64-to-32 \
     -Wno-unused-variable -Wno-unused-value \
     -Wno-constant-conversion -Wno-sign-conversion \
-    -Wno-c11-extensions -Wno-dtor-name -Werror \
+    -Wno-c11-extensions -Wno-dtor-name -Wno-nontrivial-memcall -Werror \
     $SANITIZE_FLAGS \
     $BDE_CFLAGS \
     $SOURCES \

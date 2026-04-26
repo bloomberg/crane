@@ -1,6 +1,7 @@
 #include <hof_tree_loopify.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

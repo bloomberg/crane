@@ -1,6 +1,7 @@
 #include <even_length_byte_validation.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

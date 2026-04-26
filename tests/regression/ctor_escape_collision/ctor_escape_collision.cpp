@@ -1,6 +1,7 @@
 #include <ctor_escape_collision.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 

@@ -2,6 +2,7 @@
 #define INCLUDED_SRC_USES_PAIR_VALUE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

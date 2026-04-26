@@ -2,6 +2,7 @@
 #define INCLUDED_NAME_CLASH_SCOPE_LEAK
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

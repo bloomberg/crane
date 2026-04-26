@@ -1,6 +1,7 @@
 #include <valid_layout_window.h>
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 __attribute__((pure)) bool

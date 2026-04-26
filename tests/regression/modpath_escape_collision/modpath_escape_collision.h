@@ -2,6 +2,7 @@
 #define INCLUDED_MODPATH_ESCAPE_COLLISION
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

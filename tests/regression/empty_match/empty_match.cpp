@@ -1,6 +1,7 @@
 #include <empty_match.h>
 
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>

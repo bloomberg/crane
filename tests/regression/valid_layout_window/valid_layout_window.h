@@ -2,6 +2,7 @@
 #define INCLUDED_VALID_LAYOUT_WINDOW
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 template <typename F, typename R, typename... Args>

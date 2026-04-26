@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 __attribute__((pure)) FixInRecord::fn_box

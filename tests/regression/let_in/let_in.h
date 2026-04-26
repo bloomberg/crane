@@ -2,6 +2,7 @@
 #define INCLUDED_LET_IN
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

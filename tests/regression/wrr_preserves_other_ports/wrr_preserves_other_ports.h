@@ -2,6 +2,7 @@
 #define INCLUDED_WRR_PRESERVES_OTHER_PORTS
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
