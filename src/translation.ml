@@ -597,9 +597,7 @@ let extract_itree_result_ml (ml_ty : ml_type) : ml_type =
 let mk_itree_type (r_cpp : cpp_type) : cpp_type =
   Tshared_ptr (Tid_external (Id.of_string "ITree", [r_cpp]))
 
-(** Render a C++ type as a plain string, for use in raw [ITree<R>]
-    qualified expressions.  Handles the common types that appear as ITree
-    result types; falls back to ["auto"] for unknown shapes. *)
+(** True if [base] ends with ["Tree"] (possibly namespace-qualified). *)
 let cpp_name_is_tree base =
   String.equal base "tree"
   || String.equal base "Tree"
@@ -611,133 +609,94 @@ let cpp_name_is_tree base =
       "Tree"
   | _ -> false
 
-let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
-    ?(no_custom_inductives = Refset'.empty) = function
-  | Tid (id, []) ->
-    let s = Id.to_string id in
-    if String.equal s "int0" then "int64_t"
-    else if String.equal s "string" then "std::string"
-    else if
-      String.equal s "dummy_type"
-      || String.equal s "dummy_prop"
-      || String.equal s "dummy_implicit"
-    then "std::any"
-    else s
-  | Tid (id, ts) ->
-    (let s = Id.to_string id in
-     if String.equal s "int0" then "int64_t"
-     else if String.equal s "string" then "std::string"
-     else if
-       String.equal s "dummy_type"
+(** Map well-known identifier names to their C++ equivalents.
+    Returns [None] for ordinary (non-special) identifiers. *)
+let resolve_special_id s =
+  if String.equal s "int0" then Some "int64_t"
+  else if String.equal s "string" then Some "std::string"
+  else if String.equal s "dummy_type"
        || String.equal s "dummy_prop"
        || String.equal s "dummy_implicit"
-     then "std::any"
-     else s) ^ "<" ^
-    String.concat ", "
-      (List.map (render_cpp_type_simple ~raw_inductives ~no_custom_inductives) ts)
-    ^ ">"
-  | Tglob (r, [], _) ->
-    (match Table.find_custom_opt r with
-    | Some s
-      when (not (Refset'.mem r no_custom_inductives))
-           && Table.to_inline r && not (String.contains s '%') ->
-      s
-    | _ ->
-    match r with
-    | GlobRef.IndRef _ ->
-      if Refset'.mem r raw_inductives then
-        Common.pp_global_name Type r
-      else
-        let base = Common.pp_global_name Type r in
-        let cap = Common.capitalize_last_component base in
-        let parent_is_cap =
-          match r with
-          | GlobRef.IndRef (kn, _) ->
-            ( match Names.MutInd.modpath kn with
-            | Names.ModPath.MPdot (_, label) ->
-              String.equal cap (Names.Label.to_string label)
-            | _ -> false )
-          | _ -> false
-        in
-        if String.equal base "prod" then "std::pair"
-        else if String.equal base "option" || String.equal base "Option" then
-          "std::optional"
-        else if parent_is_cap || String.equal base "nat"
-        then cap
-        else if
-          List.exists
-            (Environ.QGlobRef.equal Environ.empty_env r)
-            (get_local_inductives ())
-        then Common.pp_global Type r
-        else cap
-    | GlobRef.VarRef id ->
-      let s = Id.to_string id in
-      if String.equal s "int0" then "int64_t"
-      else if String.equal s "string" then "std::string"
-      else if
-        String.equal s "dummy_type"
-        || String.equal s "dummy_prop"
-        || String.equal s "dummy_implicit"
-      then "std::any"
-      else if String.equal s "prod" || String.equal s "Prod" then "std::pair"
-      else if String.equal s "option" || String.equal s "Option" then "std::optional"
-      else if String.equal s "list" then "List"
-      else s
-    | _ -> Common.pp_global_name Type r)
+  then Some "std::any"
+  else None
+
+(** Resolve a [VarRef] identifier to its C++ type name.
+    Extends {!resolve_special_id} with additional known aliases
+    like [prod] → [std::pair], [option] → [std::optional]. *)
+let resolve_varref_id s =
+  match resolve_special_id s with
+  | Some r -> r
+  | None ->
+    if String.equal s "prod" || String.equal s "Prod" then "std::pair"
+    else if String.equal s "option" || String.equal s "Option" then
+      "std::optional"
+    else if String.equal s "list" then "List"
+    else s
+
+(** Resolve an [IndRef] to its base C++ type name.  When the reference is
+    in [raw_inductives], returns the raw Coq name; otherwise computes the
+    C++ struct name with standard mappings (e.g. [prod] → [std::pair]).
+    [~with_option] controls whether [option] maps to [std::optional] (only
+    meaningful for zero-argument occurrences). *)
+let resolve_indref_base ~raw_inductives ~with_option r =
+  if Refset'.mem r raw_inductives then
+    Common.pp_global_name Type r
+  else
+    let base = Common.pp_global_name Type r in
+    let cap = Common.capitalize_last_component base in
+    let parent_is_cap =
+      match r with
+      | GlobRef.IndRef (kn, _) ->
+        ( match Names.MutInd.modpath kn with
+        | Names.ModPath.MPdot (_, label) ->
+          String.equal cap (Names.Label.to_string label)
+        | _ -> false )
+      | _ -> false
+    in
+    if String.equal base "prod" then "std::pair"
+    else if with_option
+         && (String.equal base "option" || String.equal base "Option")
+    then "std::optional"
+    else if parent_is_cap || String.equal base "nat" then cap
+    else if
+      List.exists
+        (Environ.QGlobRef.equal Environ.empty_env r)
+        (get_local_inductives ())
+    then Common.pp_global Type r
+    else cap
+
+(** Render a C++ type as a plain string.  Used in [ITree<R>] qualified
+    expressions, [clone_as_value<T>] template arguments, and anywhere a
+    type must be serialised to a raw string.  Handles common built-in
+    types; falls back to ["auto"] for unknown shapes. *)
+let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
+    ?(no_custom_inductives = Refset'.empty) ty =
+  let render = render_cpp_type_simple ~raw_inductives ~no_custom_inductives in
+  let with_args base ts =
+    match ts with [] -> base | _ ->
+    base ^ "<" ^ String.concat ", " (List.map render ts) ^ ">"
+  in
+  match ty with
+  | Tid (id, ts) ->
+    let s = Id.to_string id in
+    let base = match resolve_special_id s with Some r -> r | None -> s in
+    with_args base ts
   | Tglob (r, ts, _) ->
-    (match Table.find_custom_opt r with
-    | Some s
-      when (not (Refset'.mem r no_custom_inductives))
-           && Table.to_inline r && not (String.contains s '%') ->
-      s
-    | _ ->
-    match r with
-    | GlobRef.IndRef _ ->
-      if Refset'.mem r raw_inductives then
-        Common.pp_global_name Type r
-      else
-        let base = Common.pp_global_name Type r in
-        let cap = Common.capitalize_last_component base in
-        let parent_is_cap =
-          match r with
-          | GlobRef.IndRef (kn, _) ->
-            ( match Names.MutInd.modpath kn with
-            | Names.ModPath.MPdot (_, label) ->
-              String.equal cap (Names.Label.to_string label)
-            | _ -> false )
-          | _ -> false
-        in
-        if String.equal base "prod" then "std::pair"
-        else if parent_is_cap || String.equal base "nat"
-        then cap
-        else if
-          List.exists
-            (Environ.QGlobRef.equal Environ.empty_env r)
-            (get_local_inductives ())
-        then Common.pp_global Type r
-        else cap
-    | GlobRef.VarRef id ->
-      let s = Id.to_string id in
-      if String.equal s "int0" then "int64_t"
-      else if String.equal s "string" then "std::string"
-      else if
-        String.equal s "dummy_type"
-        || String.equal s "dummy_prop"
-        || String.equal s "dummy_implicit"
-      then "std::any"
-      else if String.equal s "prod" || String.equal s "Prod" then "std::pair"
-      else if String.equal s "list" then "List"
-      else s
-    | _ -> Common.pp_global_name Type r) ^ "<" ^
-    String.concat ", "
-      (List.map (render_cpp_type_simple ~raw_inductives ~no_custom_inductives) ts)
-    ^ ">"
-  | Tid_external (id, []) -> Id.to_string id
-  | Tid_external (id, ts) ->
-    Id.to_string id ^ "<" ^
-    String.concat ", "
-      (List.map (render_cpp_type_simple ~raw_inductives ~no_custom_inductives) ts)
-    ^ ">"
+    let base =
+      match Table.find_custom_opt r with
+      | Some s
+        when (not (Refset'.mem r no_custom_inductives))
+             && Table.to_inline r && not (String.contains s '%') ->
+        s
+      | _ ->
+      match r with
+      | GlobRef.IndRef _ ->
+        resolve_indref_base ~raw_inductives ~with_option:(ts = []) r
+      | GlobRef.VarRef id -> resolve_varref_id (Id.to_string id)
+      | _ -> Common.pp_global_name Type r
+    in
+    with_args base ts
+  | Tid_external (id, ts) -> with_args (Id.to_string id) ts
   | Tnamespace (g, t) ->
     (* For local inductives whose names are eponymous with their parent module,
        no qualification is needed.  For others, prepend the capitalized parent
@@ -760,12 +719,9 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
             Names.Label.to_string label ^ "::" ^ enum_name
           | _ -> enum_name )
         | _ -> enum_name )
-    else if not (get_record_fields g == []) then
-      render_cpp_type_simple ~raw_inductives ~no_custom_inductives t
+    else if not (get_record_fields g == []) then render t
     else
-    let inner =
-      render_cpp_type_simple ~raw_inductives ~no_custom_inductives t
-    in
+    let inner = render t in
     let parent_ns =
       match g with
       | GlobRef.IndRef (kn, _) ->
@@ -786,82 +742,50 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
       | _ -> ""
     in
     parent_ns ^ inner
-  | Tmod (TMconst, t) ->
-    "const " ^ render_cpp_type_simple ~raw_inductives ~no_custom_inductives t
-  | Tmod (_, t) ->
-    render_cpp_type_simple ~raw_inductives ~no_custom_inductives t
-  | Tref t ->
-    render_cpp_type_simple ~raw_inductives ~no_custom_inductives t ^ "&"
-  | Tptr t ->
-    render_cpp_type_simple ~raw_inductives ~no_custom_inductives t ^ "*"
+  | Tmod (TMconst, t) -> "const " ^ render t
+  | Tmod (_, t) -> render t
+  | Tref t -> render t ^ "&"
+  | Tptr t -> render t ^ "*"
   | Tvar (_, Some n) ->
     let s = Id.to_string n in
-    if String.equal s "int0" then "int64_t"
-    else if String.equal s "string" then "std::string"
-    else s
-  | Tshared_ptr t ->
-    "std::shared_ptr<"
-    ^ render_cpp_type_simple ~raw_inductives ~no_custom_inductives t
-    ^ ">"
-  | Tunique_ptr t ->
-    "std::unique_ptr<"
-    ^ render_cpp_type_simple ~raw_inductives ~no_custom_inductives t
-    ^ ">"
+    ( match resolve_special_id s with Some r -> r | None -> s )
+  | Tshared_ptr t -> "std::shared_ptr<" ^ render t ^ ">"
+  | Tunique_ptr t -> "std::unique_ptr<" ^ render t ^ ">"
   | Tvoid -> "void"
   | _ -> "auto"
 
-(** Recursively wrap all [Tglob] inductive references with [Tnamespace] so that
-    [render_cpp_type_simple] produces fully-qualified names.  Used when the
-    rendered type will appear in a context where inductives may not be in scope
-    (e.g. clone_as_value template arguments in standalone free functions). *)
-let rec qualify_inductives = function
+(** Recursively wrap [Tglob] inductive references with [Tnamespace] so that
+    [render_cpp_type_simple] produces fully-qualified names.  The [~skip]
+    predicate controls which references are left unwrapped: [qualify_inductives]
+    wraps all inductives, while [qualify_inductives ~skip:(Refset'.mem g set)]
+    leaves members of [set] bare.  Used when the rendered type will appear in
+    a context where inductives may not be in scope (e.g. [clone_as_value]
+    template arguments in standalone free functions). *)
+let rec qualify_inductives ?(skip = fun _ -> false) = function
   | Tglob (g, ts, es) ->
-    let core = Tglob (g, List.map qualify_inductives ts, es) in
+    let core = Tglob (g, List.map (qualify_inductives ~skip) ts, es) in
     ( match g with
+    | GlobRef.IndRef _ when skip g -> core
     | GlobRef.IndRef _ -> Tnamespace (g, core)
     | _ -> core )
-  | Tnamespace (g, t) -> Tnamespace (g, qualify_inductives t)
-  | Tshared_ptr t -> Tshared_ptr (qualify_inductives t)
-  | Tunique_ptr t -> Tunique_ptr (qualify_inductives t)
-  | Tref t -> Tref (qualify_inductives t)
-  | Tmod (m, t) -> Tmod (m, qualify_inductives t)
-  | Tptr t -> Tptr (qualify_inductives t)
+  | Tnamespace (g, t) -> Tnamespace (g, qualify_inductives ~skip t)
+  | Tshared_ptr t -> Tshared_ptr (qualify_inductives ~skip t)
+  | Tunique_ptr t -> Tunique_ptr (qualify_inductives ~skip t)
+  | Tref t -> Tref (qualify_inductives ~skip t)
+  | Tmod (m, t) -> Tmod (m, qualify_inductives ~skip t)
+  | Tptr t -> Tptr (qualify_inductives ~skip t)
   | Tfun (args, ret) ->
-    Tfun (List.map qualify_inductives args, qualify_inductives ret)
-  | Tid (id, ts) -> Tid (id, List.map qualify_inductives ts)
-  | Tid_external (id, ts) -> Tid_external (id, List.map qualify_inductives ts)
-  | t -> t
-
-let rec qualify_inductives_for_raw_inductives raw_inductives = function
-  | Tglob (g, ts, es) ->
-    let ts = List.map (qualify_inductives_for_raw_inductives raw_inductives) ts in
-    let core = Tglob (g, ts, es) in
-    ( match g with
-    | GlobRef.IndRef _ when Refset'.mem g raw_inductives -> core
-    | GlobRef.IndRef _ -> Tnamespace (g, core)
-    | _ -> core )
-  | Tnamespace (g, t) ->
-    Tnamespace (g, qualify_inductives_for_raw_inductives raw_inductives t)
-  | Tshared_ptr t ->
-    Tshared_ptr (qualify_inductives_for_raw_inductives raw_inductives t)
-  | Tunique_ptr t ->
-    Tunique_ptr (qualify_inductives_for_raw_inductives raw_inductives t)
-  | Tref t -> Tref (qualify_inductives_for_raw_inductives raw_inductives t)
-  | Tmod (m, t) ->
-    Tmod (m, qualify_inductives_for_raw_inductives raw_inductives t)
-  | Tptr t -> Tptr (qualify_inductives_for_raw_inductives raw_inductives t)
-  | Tfun (args, ret) ->
-    Tfun
-      ( List.map (qualify_inductives_for_raw_inductives raw_inductives) args,
-        qualify_inductives_for_raw_inductives raw_inductives ret )
-  | Tid (id, ts) ->
-    Tid (id, List.map (qualify_inductives_for_raw_inductives raw_inductives) ts)
+    Tfun (List.map (qualify_inductives ~skip) args,
+          qualify_inductives ~skip ret)
+  | Tid (id, ts) -> Tid (id, List.map (qualify_inductives ~skip) ts)
   | Tid_external (id, ts) ->
-    Tid_external
-      ( id,
-        List.map (qualify_inductives_for_raw_inductives raw_inductives) ts )
+    Tid_external (id, List.map (qualify_inductives ~skip) ts)
   | t -> t
 
+(** Render a C++ type as a string suitable for use in raw C++ template
+    arguments, applying post-hoc fixups for names that
+    {!render_cpp_type_simple} emits in Coq form rather than C++ form
+    (e.g. [int0] → [int64_t], [Uint64_t] → [Uint0]). *)
 let render_cpp_type_for_raw_template ?(raw_inductives = Refset'.empty)
     ?(no_custom_inductives = Refset'.empty) ty =
   Str.global_replace
@@ -875,6 +799,9 @@ let render_cpp_type_for_raw_template ?(raw_inductives = Refset'.empty)
           "int64_t"
           (render_cpp_type_simple ~raw_inductives ~no_custom_inductives ty)))
 
+(** Compute the clone function name for a given type: either the generic
+    [clone_value] (when the rendered type contains [auto] and thus cannot be
+    a template argument) or the type-directed [clone_as_value<T>]. *)
 let clone_helper_for_raw_template ty =
   let ty_s = render_cpp_type_for_raw_template ty in
   let ty_s =
@@ -896,15 +823,20 @@ let clone_helper_for_raw_template ty =
   if has_auto then "clone_value"
   else "clone_as_value<" ^ ty_s ^ ">"
 
+(** Build a [CPPfun_call] that deep-copies [expr] using the appropriate
+    clone strategy for [ty].  All inductive references are namespace-qualified
+    so the call works outside the defining struct. *)
 let clone_as_cpp_type ty expr =
   CPPfun_call
     (CPPraw (clone_helper_for_raw_template (qualify_inductives ty)), [expr])
 
+(** Like {!clone_as_cpp_type}, but inductives in [raw_inductives] are left
+    unqualified (they are already in scope at the call site). *)
 let clone_as_cpp_type_scoped ?(raw_inductives = Refset'.empty) ty expr =
+  let skip g = Refset'.mem g raw_inductives in
   CPPfun_call
     (CPPraw
-       (clone_helper_for_raw_template
-          (qualify_inductives_for_raw_inductives raw_inductives ty)),
+       (clone_helper_for_raw_template (qualify_inductives ~skip ty)),
      [expr])
 
 (** Build a [CPPfun_call] for [ITree<R>::ret(...)].
@@ -2082,12 +2014,18 @@ let rec contains_shared_ptr_or_unique_ptr = function
     || contains_shared_ptr_or_unique_ptr ret
   | _ -> false
 
+(** Wrap [expr] with a clone call when [storage_ty] and [api_ty] differ
+    due to pointer wrapping.  Converts from API form to storage form
+    (e.g. bare value → [shared_ptr]).  No-op when the types match or
+    neither involves smart pointers. *)
 let wrap_storage_expr ~storage_ty ~api_ty expr =
   if storage_ty <> api_ty && contains_shared_ptr_or_unique_ptr storage_ty then
     clone_as_cpp_type storage_ty expr
   else
     expr
 
+(** Like {!wrap_storage_expr} but converts from storage form to API form
+    (e.g. [shared_ptr] → bare value). *)
 let wrap_api_expr ~storage_ty ~api_ty expr =
   if storage_ty <> api_ty && contains_shared_ptr_or_unique_ptr storage_ty then
     clone_as_cpp_type api_ty expr

@@ -576,20 +576,27 @@ let rec expr_has_recursive_branch_dependency check expr =
    |CPPfloat _
    |CPPrequires _ -> false
 
+(** True when [expr] contains a recursive call (counted by
+    {!count_calls_expr}) or a branch-dependency on one (detected by
+    {!expr_has_recursive_branch_dependency}).  Factored out because this
+    combined check appears in every scrutinee/condition position of
+    {!has_recursive_branch_dependency}. *)
+and expr_has_call_or_branch_dep check expr =
+  count_calls_expr check expr > 0
+  || expr_has_recursive_branch_dependency check expr
+
 and has_recursive_branch_dependency check stmts =
   List.exists
     (function
       | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) | Sderef_asgn (_, e) ->
         expr_has_recursive_branch_dependency check e
       | Sif (cond, then_br, else_br) ->
-        count_calls_expr check cond > 0
-        || expr_has_recursive_branch_dependency check cond
+        expr_has_call_or_branch_dep check cond
         || has_recursive_branch_dependency check then_br
         || has_recursive_branch_dependency check else_br
       | Sswitch (scrut, _, branches, default) ->
         let branch_bodies = List.map snd branches in
-        count_calls_expr check scrut > 0
-        || expr_has_recursive_branch_dependency check scrut
+        expr_has_call_or_branch_dep check scrut
         || List.exists (has_recursive_branch_dependency check) branch_bodies
         ||
         (match default with
@@ -597,23 +604,15 @@ and has_recursive_branch_dependency check stmts =
         | None -> false)
       | Scustom_case (_, scrut, _, branches, _) ->
         let branch_bodies = List.map (fun (_, _, body) -> body) branches in
-        count_calls_expr check scrut > 0
-        || expr_has_recursive_branch_dependency check scrut
+        expr_has_call_or_branch_dep check scrut
         || List.exists (has_recursive_branch_dependency check) branch_bodies
       | Smatch (branches, default) ->
         let branch_has_recursive_scrut br =
-          count_calls_expr check br.smb_scrutinee > 0
-          || expr_has_recursive_branch_dependency check br.smb_scrutinee
-          || List.exists
-               (fun e ->
-                 count_calls_expr check e > 0
-                 || expr_has_recursive_branch_dependency check e)
-               br.smb_extra_conds
+          expr_has_call_or_branch_dep check br.smb_scrutinee
+          || List.exists (expr_has_call_or_branch_dep check) br.smb_extra_conds
           ||
           match br.smb_reuse with
-          | Some (cond, _, _) ->
-            count_calls_expr check cond > 0
-            || expr_has_recursive_branch_dependency check cond
+          | Some (cond, _, _) -> expr_has_call_or_branch_dep check cond
           | None -> false
         in
         List.exists branch_has_recursive_scrut branches
@@ -1297,6 +1296,10 @@ let has_n_call_expr n check body =
 (** Check whether any return has 2+ recursive calls (multi-recursion). *)
 let has_multi_call_expr check body = has_n_call_expr 2 check body
 
+(** True if any template parameter is higher-order (a function type or
+    concept constraint).  Such parameters prevent TMC because the loopified
+    version would need to forward the higher-order param into the stack
+    frame, which complicates template instantiation. *)
 let has_higher_order_template_param tparams =
   List.exists
     (function
