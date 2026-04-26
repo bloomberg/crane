@@ -583,21 +583,21 @@ struct LoopifyStructures {
       };
 
       struct _Call1 {
-        quadtree _s0;
-        quadtree _s1;
-        quadtree _s2;
+        std::unique_ptr<quadtree> _s0;
+        std::unique_ptr<quadtree> _s1;
+        std::unique_ptr<quadtree> _s2;
       };
 
       struct _Call2 {
         unsigned int _s0;
-        quadtree _s1;
-        quadtree _s2;
+        std::unique_ptr<quadtree> _s1;
+        std::unique_ptr<quadtree> _s2;
       };
 
       struct _Call3 {
         unsigned int _s0;
         unsigned int _s1;
-        quadtree _s2;
+        std::unique_ptr<quadtree> _s2;
       };
 
       struct _Call4 {
@@ -623,41 +623,39 @@ struct LoopifyStructures {
           } else {
             const auto &[d_a0, d_a1, d_a2, d_a3] =
                 std::get<typename quadtree::Quad>(_sv.v());
-            quadtree d_a0_value =
-                clone_as_value<LoopifyStructures::quadtree>(d_a0);
-            quadtree d_a1_value =
-                clone_as_value<LoopifyStructures::quadtree>(d_a1);
-            quadtree d_a2_value =
-                clone_as_value<LoopifyStructures::quadtree>(d_a2);
-            quadtree d_a3_value =
-                clone_as_value<LoopifyStructures::quadtree>(d_a3);
-            _stack.emplace_back(_Call1{d_a1_value, d_a2_value, d_a3_value});
-            _stack.emplace_back(_Enter{d_a0_value.get()});
+            _stack.emplace_back(
+                _Call1{std::make_unique<quadtree>(d_a1->clone()),
+                       std::make_unique<quadtree>(d_a2->clone()),
+                       std::make_unique<quadtree>(d_a3->clone())});
+            _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           auto _f = std::move(std::get<_Call1>(_frame));
-          quadtree d_a1_value = _f._s0;
-          quadtree d_a2_value = _f._s1;
-          quadtree d_a3_value = _f._s2;
+          std::unique_ptr<quadtree> d_a1 = std::move(_f._s0);
+          std::unique_ptr<quadtree> d_a2 = std::move(_f._s1);
+          std::unique_ptr<quadtree> d_a3 = std::move(_f._s2);
           unsigned int d1 = _result;
-          _stack.emplace_back(_Call2{d1, d_a2_value, d_a3_value});
-          _stack.emplace_back(_Enter{d_a1_value.get()});
+          _stack.emplace_back(
+              _Call2{d1, std::make_unique<quadtree>(d_a2->clone()),
+                     std::make_unique<quadtree>(d_a3->clone())});
+          _stack.emplace_back(_Enter{d_a1.get()});
         } else if (std::holds_alternative<_Call2>(_frame)) {
           auto _f = std::move(std::get<_Call2>(_frame));
           unsigned int d1 = _f._s0;
-          quadtree d_a2_value = _f._s1;
-          quadtree d_a3_value = _f._s2;
+          std::unique_ptr<quadtree> d_a2 = std::move(_f._s1);
+          std::unique_ptr<quadtree> d_a3 = std::move(_f._s2);
           unsigned int d2 = _result;
-          _stack.emplace_back(_Call3{d1, d2, d_a3_value});
-          _stack.emplace_back(_Enter{d_a2_value.get()});
+          _stack.emplace_back(
+              _Call3{d1, d2, std::make_unique<quadtree>(d_a3->clone())});
+          _stack.emplace_back(_Enter{d_a2.get()});
         } else if (std::holds_alternative<_Call3>(_frame)) {
           auto _f = std::move(std::get<_Call3>(_frame));
           unsigned int d1 = _f._s0;
           unsigned int d2 = _f._s1;
-          quadtree d_a3_value = _f._s2;
+          std::unique_ptr<quadtree> d_a3 = std::move(_f._s2);
           unsigned int d3 = _result;
           _stack.emplace_back(_Call4{d1, d2, d3});
-          _stack.emplace_back(_Enter{d_a3_value.get()});
+          _stack.emplace_back(_Enter{d_a3.get()});
         } else {
           auto _f = std::move(std::get<_Call4>(_frame));
           unsigned int d1 = _f._s0;
@@ -991,36 +989,19 @@ struct LoopifyStructures {
   template <MapsTo<std::optional<unsigned int>, unsigned int> F0>
   __attribute__((pure)) static List<unsigned int>
   map_opt(F0 &&f, const List<unsigned int> &l) {
-    std::unique_ptr<List<unsigned int>> _head{};
-    std::unique_ptr<List<unsigned int>> *_write = &_head;
-    List<unsigned int> _loop_l = l;
-    while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
-        *(_write) =
-            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
-        break;
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+      return List<unsigned int>::nil();
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l.v());
+      auto _cs = f(d_a0);
+      if (_cs.has_value()) {
+        const unsigned int &y = *_cs;
+        return List<unsigned int>::cons(y, map_opt(f, *(d_a1)));
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-        auto _cs = f(d_a0);
-        if (_cs.has_value()) {
-          const unsigned int &y = *_cs;
-          auto _cell = std::make_unique<List<unsigned int>>(
-              typename List<unsigned int>::Cons(y, nullptr));
-          *(_write) = std::move(_cell);
-          _write =
-              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1;
-          _loop_l = *(d_a1);
-          continue;
-        } else {
-          _loop_l = *(d_a1);
-          continue;
-        }
+        return map_opt(f, *(d_a1));
       }
     }
-    return std::move(*(_head));
   }
 
   /// filter_map p f l filters and maps in one pass.
@@ -1028,34 +1009,17 @@ struct LoopifyStructures {
             MapsTo<unsigned int, unsigned int> F1>
   __attribute__((pure)) static List<unsigned int>
   filter_map(F0 &&p, F1 &&f, const List<unsigned int> &l) {
-    std::unique_ptr<List<unsigned int>> _head{};
-    std::unique_ptr<List<unsigned int>> *_write = &_head;
-    List<unsigned int> _loop_l = l;
-    while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
-        *(_write) =
-            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
-        break;
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+      return List<unsigned int>::nil();
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l.v());
+      if (p(d_a0)) {
+        return List<unsigned int>::cons(f(d_a0), filter_map(p, f, *(d_a1)));
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-        if (p(d_a0)) {
-          auto _cell = std::make_unique<List<unsigned int>>(
-              typename List<unsigned int>::Cons(f(d_a0), nullptr));
-          *(_write) = std::move(_cell);
-          _write =
-              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1;
-          _loop_l = *(d_a1);
-          continue;
-        } else {
-          _loop_l = *(d_a1);
-          continue;
-        }
+        return filter_map(p, f, *(d_a1));
       }
     }
-    return std::move(*(_head));
   }
 
   /// find_first_some l finds first Some value in list of options.

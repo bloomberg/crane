@@ -4861,6 +4861,10 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   in
   let field_bindings_arr = Array.of_list field_bindings in
   let rec expr_has_lambda = function
+    | CPPfun_call (CPPlambda (_, _, body, _), _) ->
+      (* IIFE: lambda is invoked immediately, so reference captures are safe.
+         Only check the lambda body for nested non-IIFE lambdas. *)
+      List.exists stmt_has_lambda body
     | CPPlambda _ -> true
     | e ->
       let found = ref false in

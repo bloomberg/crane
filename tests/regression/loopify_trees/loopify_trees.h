@@ -647,8 +647,8 @@ struct LoopifyTrees {
               const auto &[d_a00, d_a10, d_a20] =
                   std::get<typename tree<T1>::Node>(t2.v());
               _stack.emplace_back(
-                  _Call1{std::make_unique<tree<T1>>(*(d_a20)->clone()),
-                         std::make_unique<tree<t_A>>(*(d_a2)->clone())});
+                  _Call1{std::make_unique<tree<T1>>(d_a20->clone()),
+                         std::make_unique<tree<t_A>>(d_a2->clone())});
               _stack.emplace_back(_Enter{d_a0.get(), *(d_a00)});
             }
           }
@@ -770,7 +770,7 @@ struct LoopifyTrees {
       };
 
       struct _Call1 {
-        tree<t_A> _s0;
+        std::unique_ptr<tree<t_A>> _s0;
       };
 
       struct _Call2 {
@@ -794,19 +794,16 @@ struct LoopifyTrees {
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree<t_A>::Node>(_sv.v());
-            tree<t_A> d_a0_value =
-                clone_as_value<LoopifyTrees::tree<t_A>>(d_a0);
-            tree<t_A> d_a2_value =
-                clone_as_value<LoopifyTrees::tree<t_A>>(d_a2);
-            _stack.emplace_back(_Call1{d_a2_value});
-            _stack.emplace_back(_Enter{d_a0_value.get()});
+            _stack.emplace_back(
+                _Call1{std::make_unique<tree<t_A>>(d_a2->clone())});
+            _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           auto _f = std::move(std::get<_Call1>(_frame));
-          tree<t_A> d_a2_value = _f._s0;
+          std::unique_ptr<tree<t_A>> d_a2 = std::move(_f._s0);
           unsigned int lh = _result;
           _stack.emplace_back(_Call2{lh});
-          _stack.emplace_back(_Enter{d_a2_value.get()});
+          _stack.emplace_back(_Enter{d_a2.get()});
         } else {
           auto _f = std::move(std::get<_Call2>(_frame));
           unsigned int lh = _f._s0;
@@ -1041,13 +1038,13 @@ struct LoopifyTrees {
       };
 
       struct _Call1 {
-        ternary _s0;
-        ternary _s1;
+        std::unique_ptr<ternary> _s0;
+        std::unique_ptr<ternary> _s1;
       };
 
       struct _Call2 {
         unsigned int _s0;
-        ternary _s1;
+        std::unique_ptr<ternary> _s1;
       };
 
       struct _Call3 {
@@ -1072,26 +1069,26 @@ struct LoopifyTrees {
           } else {
             const auto &[d_a0, d_a1, d_a2, d_a3] =
                 std::get<typename ternary::TNode>(_sv.v());
-            ternary d_a0_value = clone_as_value<LoopifyTrees::ternary>(d_a0);
-            ternary d_a1_value = clone_as_value<LoopifyTrees::ternary>(d_a1);
-            ternary d_a2_value = clone_as_value<LoopifyTrees::ternary>(d_a2);
-            _stack.emplace_back(_Call1{d_a1_value, d_a2_value});
-            _stack.emplace_back(_Enter{d_a0_value.get()});
+            _stack.emplace_back(
+                _Call1{std::make_unique<ternary>(d_a1->clone()),
+                       std::make_unique<ternary>(d_a2->clone())});
+            _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           auto _f = std::move(std::get<_Call1>(_frame));
-          ternary d_a1_value = _f._s0;
-          ternary d_a2_value = _f._s1;
+          std::unique_ptr<ternary> d_a1 = std::move(_f._s0);
+          std::unique_ptr<ternary> d_a2 = std::move(_f._s1);
           unsigned int d1 = _result;
-          _stack.emplace_back(_Call2{d1, d_a2_value});
-          _stack.emplace_back(_Enter{d_a1_value.get()});
+          _stack.emplace_back(
+              _Call2{d1, std::make_unique<ternary>(d_a2->clone())});
+          _stack.emplace_back(_Enter{d_a1.get()});
         } else if (std::holds_alternative<_Call2>(_frame)) {
           auto _f = std::move(std::get<_Call2>(_frame));
           unsigned int d1 = _f._s0;
-          ternary d_a2_value = _f._s1;
+          std::unique_ptr<ternary> d_a2 = std::move(_f._s1);
           unsigned int d2 = _result;
           _stack.emplace_back(_Call3{d1, d2});
-          _stack.emplace_back(_Enter{d_a2_value.get()});
+          _stack.emplace_back(_Enter{d_a2.get()});
         } else {
           auto _f = std::move(std::get<_Call3>(_frame));
           unsigned int d1 = _f._s0;
@@ -1464,61 +1461,23 @@ struct LoopifyTrees {
   template <MapsTo<unsigned int, unsigned int> F1>
   __attribute__((pure)) static List<rose>
   map_rose_list_fuel(const unsigned int &fuel, F1 &&f, const List<rose> &cs) {
-    struct _Enter {
-      const List<rose> cs;
-      const unsigned int fuel;
-    };
-
-    struct _Call1 {
-      decltype(clone_as_value<List<LoopifyTrees::rose>>(
-          std::declval<List<std::unique_ptr<rose>> &>())) _s0;
-      unsigned int _s1;
-      unsigned int _s2;
-    };
-
-    struct _Call2 {
-      List<rose> _s0;
-      unsigned int _s1;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    List<rose> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{cs, fuel});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const List<rose> cs = _f.cs;
-        const unsigned int fuel = _f.fuel;
-        if (fuel <= 0) {
-          _result = List<rose>::nil();
-        } else {
-          unsigned int g = fuel - 1;
-          if (std::holds_alternative<typename List<rose>::Nil>(cs.v())) {
-            _result = List<rose>::nil();
-          } else {
-            const auto &[d_a0, d_a1] =
-                std::get<typename List<rose>::Cons>(cs.v());
-            const auto &[d_a00, d_a10] =
-                std::get<typename rose::RNode>(d_a0.v());
-            _stack.emplace_back(_Call1{
-                clone_as_value<List<LoopifyTrees::rose>>(d_a10), g, f(d_a00)});
-            _stack.emplace_back(_Enter{*(d_a1), g});
-          }
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        _stack.emplace_back(_Call2{_result, _f._s2});
-        _stack.emplace_back(_Enter{_f._s0, _f._s1});
+    if (fuel <= 0) {
+      return List<rose>::nil();
+    } else {
+      unsigned int g = fuel - 1;
+      if (std::holds_alternative<typename List<rose>::Nil>(cs.v())) {
+        return List<rose>::nil();
       } else {
-        auto _f = std::move(std::get<_Call2>(_frame));
-        _result = List<rose>::cons(rose::rnode(_f._s1, _result), _f._s0);
+        const auto &[d_a0, d_a1] = std::get<typename List<rose>::Cons>(cs.v());
+        const auto &[d_a00, d_a10] = std::get<typename rose::RNode>(d_a0.v());
+        return List<rose>::cons(
+            rose::rnode(
+                f(d_a00),
+                map_rose_list_fuel(
+                    g, f, clone_as_value<List<LoopifyTrees::rose>>(d_a10))),
+            map_rose_list_fuel(g, f, *(d_a1)));
       }
     }
-    return _result;
   }
 
   /// Helper: flatten a list of rose trees to a flat list of nats.
@@ -1570,51 +1529,17 @@ struct LoopifyTrees {
   template <MapsTo<bool, unsigned int> F0>
   __attribute__((pure)) static bool or_search(F0 &&p,
                                               const tree<unsigned int> &t) {
-    struct _Enter {
-      const tree<unsigned int> t;
-    };
-
-    struct _Call1 {
-      tree<unsigned int> _s0;
-    };
-
-    struct _Call2 {
-      bool _s0;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const tree<unsigned int> t = _f.t;
-        if (std::holds_alternative<typename tree<unsigned int>::Leaf>(t.v())) {
-          _result = false;
-        } else {
-          const auto &[d_a0, d_a1, d_a2] =
-              std::get<typename tree<unsigned int>::Node>(t.v());
-          if (p(d_a1)) {
-            _result = true;
-          } else {
-            _stack.emplace_back(_Call1{*(d_a0)});
-            _stack.emplace_back(_Enter{*(d_a2)});
-          }
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        _stack.emplace_back(_Call2{_result});
-        _stack.emplace_back(_Enter{_f._s0});
+    if (std::holds_alternative<typename tree<unsigned int>::Leaf>(t.v())) {
+      return false;
+    } else {
+      const auto &[d_a0, d_a1, d_a2] =
+          std::get<typename tree<unsigned int>::Node>(t.v());
+      if (p(d_a1)) {
+        return true;
       } else {
-        auto _f = std::move(std::get<_Call2>(_frame));
-        _result = (_result || _f._s0);
+        return (or_search(p, *(d_a0)) || or_search(p, *(d_a2)));
       }
     }
-    return _result;
   }
 
   struct quadtree {

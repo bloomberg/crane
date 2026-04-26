@@ -500,61 +500,30 @@ struct LoopifyPatterns {
   __attribute__((pure)) static list<unsigned int>
   merge_by_fuel(const unsigned int &fuel, F1 &&cmp, list<unsigned int> l1,
                 list<unsigned int> l2) {
-    std::unique_ptr<list<unsigned int>> _head{};
-    std::unique_ptr<list<unsigned int>> *_write = &_head;
-    list<unsigned int> _loop_l2 = std::move(l2);
-    list<unsigned int> _loop_l1 = std::move(l1);
-    unsigned int _loop_fuel = fuel;
-    while (true) {
-      if (_loop_fuel <= 0) {
-        *(_write) = std::make_unique<list<unsigned int>>(_loop_l1);
-        break;
+    if (fuel <= 0) {
+      return l1;
+    } else {
+      unsigned int f = fuel - 1;
+      if (std::holds_alternative<typename list<unsigned int>::Nil>(l1.v())) {
+        return l2;
       } else {
-        unsigned int f = _loop_fuel - 1;
-        if (std::holds_alternative<typename list<unsigned int>::Nil>(
-                _loop_l1.v())) {
-          *(_write) = std::make_unique<list<unsigned int>>(_loop_l2);
-          break;
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<unsigned int>::Cons>(l1.v());
+        if (std::holds_alternative<typename list<unsigned int>::Nil>(l2.v())) {
+          return l1;
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename list<unsigned int>::Cons>(_loop_l1.v());
-          if (std::holds_alternative<typename list<unsigned int>::Nil>(
-                  _loop_l2.v())) {
-            *(_write) = std::make_unique<list<unsigned int>>(_loop_l1);
-            break;
+          const auto &[d_a00, d_a10] =
+              std::get<typename list<unsigned int>::Cons>(l2.v());
+          if (cmp(d_a0, d_a00) <= 0u) {
+            return list<unsigned int>::cons(d_a0,
+                                            merge_by_fuel(f, cmp, *(d_a1), l2));
           } else {
-            const auto &[d_a00, d_a10] =
-                std::get<typename list<unsigned int>::Cons>(_loop_l2.v());
-            if (cmp(d_a0, d_a00) <= 0u) {
-              auto _cell = std::make_unique<list<unsigned int>>(
-                  typename list<unsigned int>::Cons(d_a0, nullptr));
-              *(_write) = std::move(_cell);
-              _write = &std::get<typename list<unsigned int>::Cons>(
-                            (*_write)->v_mut())
-                            .d_a1;
-              list<unsigned int> _next_l1 = *(d_a1);
-              unsigned int _next_fuel = f;
-              _loop_l1 = std::move(_next_l1);
-              _loop_fuel = std::move(_next_fuel);
-              continue;
-            } else {
-              auto _cell = std::make_unique<list<unsigned int>>(
-                  typename list<unsigned int>::Cons(d_a00, nullptr));
-              *(_write) = std::move(_cell);
-              _write = &std::get<typename list<unsigned int>::Cons>(
-                            (*_write)->v_mut())
-                            .d_a1;
-              list<unsigned int> _next_l2 = *(d_a10);
-              unsigned int _next_fuel = f;
-              _loop_l2 = std::move(_next_l2);
-              _loop_fuel = std::move(_next_fuel);
-              continue;
-            }
+            return list<unsigned int>::cons(
+                d_a00, merge_by_fuel(f, cmp, l1, *(d_a10)));
           }
         }
       }
     }
-    return std::move(*(_head));
   }
 
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
@@ -705,41 +674,18 @@ struct LoopifyPatterns {
   __attribute__((pure)) static list<unsigned int>
   filter_map_indexed_aux(F0 &&p, F1 &&f, const list<unsigned int> &l,
                          unsigned int idx) {
-    std::unique_ptr<list<unsigned int>> _head{};
-    std::unique_ptr<list<unsigned int>> *_write = &_head;
-    unsigned int _loop_idx = std::move(idx);
-    list<unsigned int> _loop_l = l;
-    while (true) {
-      if (std::holds_alternative<typename list<unsigned int>::Nil>(
-              _loop_l.v())) {
-        *(_write) =
-            std::make_unique<list<unsigned int>>(list<unsigned int>::nil());
-        break;
+    if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
+      return list<unsigned int>::nil();
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename list<unsigned int>::Cons>(l.v());
+      if (p(idx, d_a0)) {
+        return list<unsigned int>::cons(
+            f(d_a0), filter_map_indexed_aux(p, f, *(d_a1), (idx + 1)));
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename list<unsigned int>::Cons>(_loop_l.v());
-        if (p(_loop_idx, d_a0)) {
-          auto _cell = std::make_unique<list<unsigned int>>(
-              typename list<unsigned int>::Cons(f(d_a0), nullptr));
-          *(_write) = std::move(_cell);
-          _write =
-              &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1;
-          unsigned int _next_idx = (_loop_idx + 1);
-          list<unsigned int> _next_l = *(d_a1);
-          _loop_idx = std::move(_next_idx);
-          _loop_l = std::move(_next_l);
-          continue;
-        } else {
-          unsigned int _next_idx = (_loop_idx + 1);
-          list<unsigned int> _next_l = *(d_a1);
-          _loop_idx = std::move(_next_idx);
-          _loop_l = std::move(_next_l);
-          continue;
-        }
+        return filter_map_indexed_aux(p, f, *(d_a1), (idx + 1));
       }
     }
-    return std::move(*(_head));
   }
 
   template <MapsTo<bool, unsigned int, unsigned int> F0,

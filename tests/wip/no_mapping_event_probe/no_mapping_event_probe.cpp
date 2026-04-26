@@ -25,7 +25,6 @@ void NoMappingEventProbe::loop(unsigned int x, unsigned int y,
     return;
   } else {
     const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(cells.v());
-    List<bool> d_a1_value = clone_as_value<List<bool>>(d_a1);
     [&]() -> void {
       if (d_a0) {
         draw_revealed_tile(x, y);
@@ -35,7 +34,7 @@ void NoMappingEventProbe::loop(unsigned int x, unsigned int y,
         return;
       }
     }();
-    loop((x + cell_size), y, d_a1_value);
+    loop((x + cell_size), y, *(d_a1));
     return;
   }
 }

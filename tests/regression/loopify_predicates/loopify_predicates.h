@@ -380,67 +380,33 @@ struct LoopifyPredicates {
   template <MapsTo<bool, unsigned int> F0>
   __attribute__((pure)) static List<unsigned int>
   filter(F0 &&p, const List<unsigned int> &l) {
-    std::unique_ptr<List<unsigned int>> _head{};
-    std::unique_ptr<List<unsigned int>> *_write = &_head;
-    List<unsigned int> _loop_l = l;
-    while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
-        *(_write) =
-            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
-        break;
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+      return List<unsigned int>::nil();
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l.v());
+      if (p(d_a0)) {
+        return List<unsigned int>::cons(d_a0, filter(p, *(d_a1)));
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-        if (p(d_a0)) {
-          auto _cell = std::make_unique<List<unsigned int>>(
-              typename List<unsigned int>::Cons(d_a0, nullptr));
-          *(_write) = std::move(_cell);
-          _write =
-              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1;
-          _loop_l = *(d_a1);
-          continue;
-        } else {
-          _loop_l = *(d_a1);
-          continue;
-        }
+        return filter(p, *(d_a1));
       }
     }
-    return std::move(*(_head));
   }
 
   template <MapsTo<bool, unsigned int> F0>
   __attribute__((pure)) static List<unsigned int>
   reject(F0 &&p, const List<unsigned int> &l) {
-    std::unique_ptr<List<unsigned int>> _head{};
-    std::unique_ptr<List<unsigned int>> *_write = &_head;
-    List<unsigned int> _loop_l = l;
-    while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
-        *(_write) =
-            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
-        break;
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+      return List<unsigned int>::nil();
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l.v());
+      if (p(d_a0)) {
+        return reject(p, *(d_a1));
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-        if (p(d_a0)) {
-          _loop_l = *(d_a1);
-          continue;
-        } else {
-          auto _cell = std::make_unique<List<unsigned int>>(
-              typename List<unsigned int>::Cons(d_a0, nullptr));
-          *(_write) = std::move(_cell);
-          _write =
-              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1;
-          _loop_l = *(d_a1);
-          continue;
-        }
+        return List<unsigned int>::cons(d_a0, reject(p, *(d_a1)));
       }
     }
-    return std::move(*(_head));
   }
 
   template <MapsTo<bool, unsigned int> F0>
@@ -556,41 +522,18 @@ struct LoopifyPredicates {
   template <MapsTo<bool, unsigned int> F0>
   __attribute__((pure)) static List<unsigned int>
   find_indices_aux(F0 &&p, const List<unsigned int> &l, unsigned int idx) {
-    std::unique_ptr<List<unsigned int>> _head{};
-    std::unique_ptr<List<unsigned int>> *_write = &_head;
-    unsigned int _loop_idx = std::move(idx);
-    List<unsigned int> _loop_l = l;
-    while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
-        *(_write) =
-            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
-        break;
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+      return List<unsigned int>::nil();
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l.v());
+      if (p(d_a0)) {
+        return List<unsigned int>::cons(
+            idx, find_indices_aux(p, *(d_a1), (idx + 1u)));
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-        if (p(d_a0)) {
-          auto _cell = std::make_unique<List<unsigned int>>(
-              typename List<unsigned int>::Cons(_loop_idx, nullptr));
-          *(_write) = std::move(_cell);
-          _write =
-              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1;
-          unsigned int _next_idx = (_loop_idx + 1u);
-          List<unsigned int> _next_l = *(d_a1);
-          _loop_idx = std::move(_next_idx);
-          _loop_l = std::move(_next_l);
-          continue;
-        } else {
-          unsigned int _next_idx = (_loop_idx + 1u);
-          List<unsigned int> _next_l = *(d_a1);
-          _loop_idx = std::move(_next_idx);
-          _loop_l = std::move(_next_l);
-          continue;
-        }
+        return find_indices_aux(p, *(d_a1), (idx + 1u));
       }
     }
-    return std::move(*(_head));
   }
 
   template <MapsTo<bool, unsigned int> F0>

@@ -389,32 +389,18 @@ struct LoopifyOption {
   /// map_opt f l applies f and keeps only Some results.
   template <typename T1, typename T2, MapsTo<std::optional<T2>, T1> F0>
   __attribute__((pure)) static list<T2> map_opt(F0 &&f, const list<T1> &l) {
-    std::unique_ptr<list<T2>> _head{};
-    std::unique_ptr<list<T2>> *_write = &_head;
-    list<T1> _loop_l = l;
-    while (true) {
-      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l.v())) {
-        *(_write) = std::make_unique<list<T2>>(list<T2>::nil());
-        break;
+    if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
+      return list<T2>::nil();
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
+      auto _cs = f(d_a0);
+      if (_cs.has_value()) {
+        const T2 &y = *_cs;
+        return list<T2>::cons(y, map_opt<T1, T2>(f, *(d_a1)));
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename list<T1>::Cons>(_loop_l.v());
-        auto _cs = f(d_a0);
-        if (_cs.has_value()) {
-          const T2 &y = *_cs;
-          auto _cell =
-              std::make_unique<list<T2>>(typename list<T2>::Cons(y, nullptr));
-          *(_write) = std::move(_cell);
-          _write = &std::get<typename list<T2>::Cons>((*_write)->v_mut()).d_a1;
-          _loop_l = *(d_a1);
-          continue;
-        } else {
-          _loop_l = *(d_a1);
-          continue;
-        }
+        return map_opt<T1, T2>(f, *(d_a1));
       }
     }
-    return std::move(*(_head));
   }
 
   /// find_index p l returns the index of the first match, or None.

@@ -152,15 +152,13 @@ LoopifyPairs::min_max(const LoopifyPairs::list<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPairs::list<unsigned int>::Cons>(l.v());
-        LoopifyPairs::list<unsigned int> d_a1_value =
-            clone_as_value<LoopifyPairs::list<unsigned int>>(d_a1);
+        auto &&_sv = *(d_a1);
         if (std::holds_alternative<
-                typename LoopifyPairs::list<unsigned int>::Nil>(
-                d_a1_value.v())) {
+                typename LoopifyPairs::list<unsigned int>::Nil>(_sv.v())) {
           _result = std::make_pair(d_a0, d_a0);
         } else {
           _stack.emplace_back(_Call1{d_a0});
-          _stack.emplace_back(_Enter{d_a1_value});
+          _stack.emplace_back(_Enter{*(d_a1)});
         }
       }
     } else {

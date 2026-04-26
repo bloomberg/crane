@@ -36,8 +36,6 @@ LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<LoopifyExpr::shape>::Cons>(l.v());
-        List<LoopifyExpr::shape> d_a1_value =
-            clone_as_value<List<LoopifyExpr::shape>>(d_a1);
         unsigned int val = [&]() {
           if (std::holds_alternative<typename LoopifyExpr::shape::Circle>(
                   d_a0.v())) {
@@ -56,7 +54,7 @@ LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
           }
         }();
         _stack.emplace_back(_Call1{val});
-        _stack.emplace_back(_Enter{d_a1_value});
+        _stack.emplace_back(_Enter{*(d_a1)});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));

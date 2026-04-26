@@ -33,7 +33,6 @@ LoopifyDecltype::count_true(const List<bool> &xs) {
         _result = 0u;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs.v());
-        List<bool> d_a1_value = clone_as_value<List<bool>>(d_a1);
         _stack.emplace_back(_Call1{[&]() -> unsigned int {
           if (d_a0) {
             return 1u;
@@ -41,7 +40,7 @@ LoopifyDecltype::count_true(const List<bool> &xs) {
             return 0u;
           }
         }()});
-        _stack.emplace_back(_Enter{d_a1_value});
+        _stack.emplace_back(_Enter{*(d_a1)});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -78,8 +77,6 @@ LoopifyDecltype::sum_flagged(const List<LoopifyDecltype::item> &xs) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<LoopifyDecltype::item>::Cons>(xs.v());
-        List<LoopifyDecltype::item> d_a1_value =
-            clone_as_value<List<LoopifyDecltype::item>>(d_a1);
         _stack.emplace_back(_Call1{[&]() -> unsigned int {
           if (d_a0.item_flag) {
             return d_a0.item_val;
@@ -87,7 +84,7 @@ LoopifyDecltype::sum_flagged(const List<LoopifyDecltype::item> &xs) {
             return 0u;
           }
         }()});
-        _stack.emplace_back(_Enter{d_a1_value});
+        _stack.emplace_back(_Enter{*(d_a1)});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));

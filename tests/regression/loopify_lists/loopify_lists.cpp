@@ -1239,10 +1239,7 @@ LoopifyLists::group_fuel(const unsigned int &fuel,
             auto _cell = std::make_unique<
                 LoopifyLists::list<LoopifyLists::list<unsigned int>>>(
                 typename list<LoopifyLists::list<unsigned int>>::Cons(
-                    std::make_unique<
-                        LoopifyLists::list<LoopifyLists::list<unsigned int>>>(
-                        list<unsigned int>::cons(d_a0,
-                                                 list<unsigned int>::nil())),
+                    list<unsigned int>::cons(d_a0, list<unsigned int>::nil()),
                     nullptr));
             *(_write) = std::move(_cell);
             _write =
@@ -1800,15 +1797,13 @@ LoopifyLists::minmax(const LoopifyLists::list<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(l.v());
-        LoopifyLists::list<unsigned int> d_a1_value =
-            clone_as_value<LoopifyLists::list<unsigned int>>(d_a1);
+        auto &&_sv = *(d_a1);
         if (std::holds_alternative<
-                typename LoopifyLists::list<unsigned int>::Nil>(
-                d_a1_value.v())) {
+                typename LoopifyLists::list<unsigned int>::Nil>(_sv.v())) {
           _result = std::make_pair(d_a0, d_a0);
         } else {
           _stack.emplace_back(_Call1{d_a0});
-          _stack.emplace_back(_Enter{d_a1_value});
+          _stack.emplace_back(_Enter{*(d_a1)});
         }
       }
     } else {

@@ -959,8 +959,6 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::count_total_lunar(
     const auto &[d_a0, d_a1] = std::get<
         typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Cons>(
         es.v());
-    List<EpochCellGlyphTraceCase::HistoricalEclipse> d_a1_value =
-        clone_as_value<List<EpochCellGlyphTraceCase::HistoricalEclipse>>(d_a1);
     unsigned int count_here = [&]() {
       switch (d_a0.he_category) {
       case EclipseCategory::e_EC_TOTALLUNAR: {
@@ -971,7 +969,7 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::count_total_lunar(
       }
       }
     }();
-    return (count_here + count_total_lunar(d_a1_value));
+    return (count_here + count_total_lunar(*(d_a1)));
   }
 }
 
@@ -986,8 +984,6 @@ EpochCellGlyphTraceCase::count_visible_total_lunar(
     const auto &[d_a0, d_a1] = std::get<
         typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Cons>(
         es.v());
-    List<EpochCellGlyphTraceCase::HistoricalEclipse> d_a1_value =
-        clone_as_value<List<EpochCellGlyphTraceCase::HistoricalEclipse>>(d_a1);
     unsigned int count_here = [&]() {
       switch (d_a0.he_category) {
       case EclipseCategory::e_EC_TOTALLUNAR: {
@@ -1002,7 +998,7 @@ EpochCellGlyphTraceCase::count_visible_total_lunar(
       }
       }
     }();
-    return (count_here + count_visible_total_lunar(d_a1_value));
+    return (count_here + count_visible_total_lunar(*(d_a1)));
   }
 }
 

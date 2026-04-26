@@ -357,30 +357,16 @@ struct LoopifyTmc {
   /// filter f l keeps elements satisfying f. Mixed tail + TMC branches.
   template <typename T1, MapsTo<bool, T1> F0>
   __attribute__((pure)) static list<T1> filter(F0 &&f, const list<T1> &l) {
-    std::unique_ptr<list<T1>> _head{};
-    std::unique_ptr<list<T1>> *_write = &_head;
-    list<T1> _loop_l = l;
-    while (true) {
-      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l.v())) {
-        *(_write) = std::make_unique<list<T1>>(list<T1>::nil());
-        break;
+    if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
+      return list<T1>::nil();
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
+      if (f(d_a0)) {
+        return list<T1>::cons(d_a0, filter<T1>(f, *(d_a1)));
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename list<T1>::Cons>(_loop_l.v());
-        if (f(d_a0)) {
-          auto _cell = std::make_unique<list<T1>>(
-              typename list<T1>::Cons(d_a0, nullptr));
-          *(_write) = std::move(_cell);
-          _write = &std::get<typename list<T1>::Cons>((*_write)->v_mut()).d_a1;
-          _loop_l = *(d_a1);
-          continue;
-        } else {
-          _loop_l = *(d_a1);
-          continue;
-        }
+        return filter<T1>(f, *(d_a1));
       }
     }
-    return std::move(*(_head));
   }
 
   /// snoc l x appends x at the end. TMC, base case allocates a cell.

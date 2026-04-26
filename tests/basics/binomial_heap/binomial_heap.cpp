@@ -152,8 +152,6 @@ BinomialHeap::find_max_helper(unsigned int current,
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<BinomialHeap::tree>::Cons>(q.v());
-    List<BinomialHeap::tree> d_a1_value =
-        clone_as_value<List<BinomialHeap::tree>>(d_a1);
     if (std::holds_alternative<typename BinomialHeap::tree::Node>(d_a0.v())) {
       const auto &[d_a00, d_a10, d_a20] =
           std::get<typename BinomialHeap::tree::Node>(d_a0.v());
@@ -165,9 +163,9 @@ BinomialHeap::find_max_helper(unsigned int current,
               return current;
             }
           }(),
-          d_a1_value);
+          *(d_a1));
     } else {
-      return find_max_helper(current, d_a1_value);
+      return find_max_helper(current, *(d_a1));
     }
   }
 }

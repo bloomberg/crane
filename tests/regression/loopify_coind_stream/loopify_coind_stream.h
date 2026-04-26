@@ -7,7 +7,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
@@ -335,28 +334,12 @@ struct LoopifyCoindStream {
 
   template <typename T1, typename T2, MapsTo<std::pair<T1, T2>, T2> F0>
   static std::shared_ptr<stream<T1>> unfold(F0 &&f, const T2 seed) {
-    struct _Enter {
-      const T2 seed;
-    };
-
-    using _Frame = std::variant<_Enter>;
-    std::shared_ptr<stream<T1>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{seed});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const T2 seed = _f.seed;
-      auto _cs = f(seed);
-      const T1 &a = _cs.first;
-      const T2 &s_ = _cs.second;
-      _result = stream<T1>::lazy_([=]() mutable -> std::shared_ptr<stream<T1>> {
-        return stream<T1>::scons(a, unfold<T1, T2>(f, s_));
-      });
-    }
-    return _result;
+    auto _cs = f(seed);
+    const T1 &a = _cs.first;
+    const T2 &s_ = _cs.second;
+    return stream<T1>::lazy_([=]() mutable -> std::shared_ptr<stream<T1>> {
+      return stream<T1>::scons(a, unfold<T1, T2>(f, s_));
+    });
   }
 
   static inline const std::shared_ptr<stream<unsigned int>> nats =

@@ -70,7 +70,11 @@ __attribute__((pure)) unsigned int LoopifySearch::knapsack_fuel(
           if (capacity < weight) {
             _stack.emplace_back(_Enter{*(d_a1), capacity, f});
           } else {
-            _stack.emplace_back(_Call1{capacity, d_a1, f, value, weight});
+            _stack.emplace_back(_Call1{
+                capacity,
+                std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
+                    d_a1->clone()),
+                f, value, weight});
             _stack.emplace_back(_Enter{
                 *(d_a1),
                 (((capacity - weight) > capacity ? 0 : (capacity - weight))),
@@ -82,19 +86,23 @@ __attribute__((pure)) unsigned int LoopifySearch::knapsack_fuel(
       auto _f = std::move(std::get<_Call1>(_frame));
       const unsigned int capacity = _f._s0;
       std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> d_a1 =
-          _f._s1;
+          std::move(_f._s1);
       unsigned int f = _f._s2;
       unsigned int value = _f._s3;
       unsigned int weight = _f._s4;
       unsigned int _cond0 = _result;
-      _stack.emplace_back(_Call2{_cond0, capacity, d_a1, f, value, weight});
+      _stack.emplace_back(
+          _Call2{_cond0, capacity,
+                 std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
+                     d_a1->clone()),
+                 f, value, weight});
       _stack.emplace_back(_Enter{*(d_a1), capacity, f});
     } else if (std::holds_alternative<_Call2>(_frame)) {
       auto _f = std::move(std::get<_Call2>(_frame));
       unsigned int _cond0 = _f._s0;
       const unsigned int capacity = _f._s1;
       std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> d_a1 =
-          _f._s2;
+          std::move(_f._s2);
       unsigned int f = _f._s3;
       unsigned int value = _f._s4;
       unsigned int weight = _f._s5;
@@ -579,14 +587,16 @@ LoopifySearch::subset_sum_fuel(const unsigned int &fuel,
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Call1{d_a0, d_a1, f, target});
+          _stack.emplace_back(
+              _Call1{d_a0, std::make_unique<List<unsigned int>>(d_a1->clone()),
+                     f, target});
           _stack.emplace_back(_Enter{*(d_a1), target, f});
         }
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
       unsigned int d_a0 = _f._s0;
-      std::unique_ptr<List<unsigned int>> d_a1 = _f._s1;
+      std::unique_ptr<List<unsigned int>> d_a1 = std::move(_f._s1);
       unsigned int f = _f._s2;
       const unsigned int target = _f._s3;
       bool without = _result;
@@ -1100,9 +1110,8 @@ LoopifySearch::map_cons(unsigned int x, const List<List<unsigned int>> &lsts) {
           std::get<typename List<List<unsigned int>>::Cons>(_loop_lsts.v());
       auto _cell = std::make_unique<List<List<unsigned int>>>(
           typename List<List<unsigned int>>::Cons(
-              std::make_unique<List<List<unsigned int>>>(
-                  List<unsigned int>::cons(
-                      x, clone_as_value<List<unsigned int>>(d_a0))),
+              List<unsigned int>::cons(
+                  x, clone_as_value<List<unsigned int>>(d_a0)),
               nullptr));
       *(_write) = std::move(_cell);
       _write =

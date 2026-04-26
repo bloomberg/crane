@@ -970,12 +970,13 @@ struct LoopifyTreeVariants {
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename leaf_tree::LNode>(_sv.v());
-            _stack.emplace_back(_Call1{d_a1});
+            _stack.emplace_back(
+                _Call1{std::make_unique<leaf_tree>(d_a1->clone())});
             _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           auto _f = std::move(std::get<_Call1>(_frame));
-          std::unique_ptr<leaf_tree> d_a1 = _f._s0;
+          std::unique_ptr<leaf_tree> d_a1 = std::move(_f._s0);
           unsigned int lmax = _result;
           _stack.emplace_back(_Call2{lmax});
           _stack.emplace_back(_Enter{d_a1.get()});

@@ -132,7 +132,10 @@ __attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
           } else {
             const auto &[d_a00] =
                 std::get<typename LoopifyStructures::nested::NList>(d_a0.v());
-            _stack.emplace_back(_Call2{d_a1, f});
+            _stack.emplace_back(
+                _Call2{std::make_unique<List<LoopifyStructures::nested>>(
+                           d_a1->clone()),
+                       f});
             _stack.emplace_back(_Enter{
                 clone_as_value<List<LoopifyStructures::nested>>(d_a00), f});
           }
@@ -148,7 +151,7 @@ __attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
       }
     } else if (std::holds_alternative<_Call2>(_frame)) {
       auto _f = std::move(std::get<_Call2>(_frame));
-      std::unique_ptr<List<LoopifyStructures::nested>> d_a1 = _f._s0;
+      std::unique_ptr<List<LoopifyStructures::nested>> d_a1 = std::move(_f._s0);
       unsigned int f = _f._s1;
       unsigned int d = (_result + 1);
       _stack.emplace_back(_Call3{d});

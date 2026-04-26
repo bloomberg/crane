@@ -23,9 +23,8 @@ LoopifyListSubsequences::map_cons_helper(unsigned int x,
           std::get<typename List<List<unsigned int>>::Cons>(_loop_ll.v());
       auto _cell = std::make_unique<List<List<unsigned int>>>(
           typename List<List<unsigned int>>::Cons(
-              std::make_unique<List<List<unsigned int>>>(
-                  List<unsigned int>::cons(
-                      x, clone_as_value<List<unsigned int>>(d_a0))),
+              List<unsigned int>::cons(
+                  x, clone_as_value<List<unsigned int>>(d_a0)),
               nullptr));
       *(_write) = std::move(_cell);
       _write =

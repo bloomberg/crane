@@ -14,15 +14,13 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_acc(
     const auto &[d_a0, d_a1] =
         std::get<typename List<InstructionClassifiers::instr_acc>::Cons>(
             prog.v());
-    List<InstructionClassifiers::instr_acc> d_a1_value =
-        clone_as_value<List<InstructionClassifiers::instr_acc>>(d_a1);
     return ([&]() -> unsigned int {
       if (d_a0.writes_acc()) {
         return 1u;
       } else {
         return 0u;
       }
-    }() + count_writes_acc(d_a1_value));
+    }() + count_writes_acc(*(d_a1)));
   }
 }
 
@@ -35,15 +33,13 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_ram(
     const auto &[d_a0, d_a1] =
         std::get<typename List<InstructionClassifiers::instr_ram>::Cons>(
             prog.v());
-    List<InstructionClassifiers::instr_ram> d_a1_value =
-        clone_as_value<List<InstructionClassifiers::instr_ram>>(d_a1);
     return ([&]() -> unsigned int {
       if (d_a0.writes_ram()) {
         return 1u;
       } else {
         return 0u;
       }
-    }() + count_writes_ram(d_a1_value));
+    }() + count_writes_ram(*(d_a1)));
   }
 }
 
@@ -56,15 +52,13 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_regs(
     const auto &[d_a0, d_a1] =
         std::get<typename List<InstructionClassifiers::instr_regs>::Cons>(
             prog.v());
-    List<InstructionClassifiers::instr_regs> d_a1_value =
-        clone_as_value<List<InstructionClassifiers::instr_regs>>(d_a1);
     return ([&]() -> unsigned int {
       if (d_a0.writes_regs()) {
         return 1u;
       } else {
         return 0u;
       }
-    }() + count_writes_regs(d_a1_value));
+    }() + count_writes_regs(*(d_a1)));
   }
 }
 
@@ -77,14 +71,12 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_jumps(
     const auto &[d_a0, d_a1] =
         std::get<typename List<InstructionClassifiers::instr_jump>::Cons>(
             prog.v());
-    List<InstructionClassifiers::instr_jump> d_a1_value =
-        clone_as_value<List<InstructionClassifiers::instr_jump>>(d_a1);
     return ([&]() -> unsigned int {
       if (d_a0.is_jump()) {
         return 1u;
       } else {
         return 0u;
       }
-    }() + count_jumps(d_a1_value));
+    }() + count_jumps(*(d_a1)));
   }
 }

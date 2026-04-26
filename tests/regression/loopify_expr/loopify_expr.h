@@ -1175,7 +1175,8 @@ struct LoopifyExpr {
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename expr::Cond>(_sv.v());
-            _stack.emplace_back(_Call6{d_a1, d_a2});
+            _stack.emplace_back(_Call6{std::make_unique<expr>(d_a1->clone()),
+                                       std::make_unique<expr>(d_a2->clone())});
             _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
@@ -1197,8 +1198,8 @@ struct LoopifyExpr {
           _result = (_result * _f._s0);
         } else {
           auto _f = std::move(std::get<_Call6>(_frame));
-          std::unique_ptr<expr> d_a1 = _f._s0;
-          std::unique_ptr<expr> d_a2 = _f._s1;
+          std::unique_ptr<expr> d_a1 = std::move(_f._s0);
+          std::unique_ptr<expr> d_a2 = std::move(_f._s1);
           unsigned int _cond0 = _result;
           if (0u < _cond0) {
             _stack.emplace_back(_Enter{d_a1.get()});
@@ -1706,7 +1707,9 @@ struct LoopifyExpr {
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename simple_expr::IfPos>(_sv.v());
-            _stack.emplace_back(_Call3{d_a1, d_a2});
+            _stack.emplace_back(
+                _Call3{std::make_unique<simple_expr>(d_a1->clone()),
+                       std::make_unique<simple_expr>(d_a2->clone())});
             _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
@@ -1718,8 +1721,8 @@ struct LoopifyExpr {
           _result = (_result + _f._s0);
         } else {
           auto _f = std::move(std::get<_Call3>(_frame));
-          std::unique_ptr<simple_expr> d_a1 = _f._s0;
-          std::unique_ptr<simple_expr> d_a2 = _f._s1;
+          std::unique_ptr<simple_expr> d_a1 = std::move(_f._s0);
+          std::unique_ptr<simple_expr> d_a2 = std::move(_f._s1);
           unsigned int _cond0 = _result;
           if (0u < _cond0) {
             _stack.emplace_back(_Enter{d_a1.get()});
@@ -2295,7 +2298,9 @@ struct LoopifyExpr {
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename cond_expr::CCond>(_sv.v());
-            _stack.emplace_back(_Call3{d_a1, d_a2});
+            _stack.emplace_back(
+                _Call3{std::make_unique<cond_expr>(d_a1->clone()),
+                       std::make_unique<cond_expr>(d_a2->clone())});
             _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
@@ -2307,8 +2312,8 @@ struct LoopifyExpr {
           _result = (_result + _f._s0);
         } else {
           auto _f = std::move(std::get<_Call3>(_frame));
-          std::unique_ptr<cond_expr> d_a1 = _f._s0;
-          std::unique_ptr<cond_expr> d_a2 = _f._s1;
+          std::unique_ptr<cond_expr> d_a1 = std::move(_f._s0);
+          std::unique_ptr<cond_expr> d_a2 = std::move(_f._s1);
           unsigned int _cond0 = _result;
           if (0u < _cond0) {
             _stack.emplace_back(_Enter{d_a1.get()});

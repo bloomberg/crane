@@ -225,19 +225,19 @@ struct DeepPattern {
         return d_a0;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename tree::Node>(_sv.v());
-        tree d_a0_value = clone_as_value<DeepPattern::tree>(d_a0);
-        tree d_a1_value = clone_as_value<DeepPattern::tree>(d_a1);
         unsigned int a = [&]() {
-          if (std::holds_alternative<typename tree::Leaf>(d_a0_value.v())) {
-            const auto &[d_a00] = std::get<typename tree::Leaf>(d_a0_value.v());
+          auto &&_sv0 = *(d_a0);
+          if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
+            const auto &[d_a00] = std::get<typename tree::Leaf>(_sv0.v());
             return d_a00;
           } else {
             return 0u;
           }
         }();
         unsigned int b = [&]() {
-          if (std::holds_alternative<typename tree::Leaf>(d_a1_value.v())) {
-            const auto &[d_a01] = std::get<typename tree::Leaf>(d_a1_value.v());
+          auto &&_sv1 = *(d_a1);
+          if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
+            const auto &[d_a01] = std::get<typename tree::Leaf>(_sv1.v());
             return d_a01;
           } else {
             return 0u;
@@ -295,19 +295,19 @@ struct DeepPattern {
         return d_a0;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename tree::Node>(_sv.v());
-        tree d_a0_value = clone_as_value<DeepPattern::tree>(d_a0);
-        tree d_a1_value = clone_as_value<DeepPattern::tree>(d_a1);
         unsigned int x = [&]() {
-          if (std::holds_alternative<typename tree::Leaf>(d_a0_value.v())) {
-            const auto &[d_a00] = std::get<typename tree::Leaf>(d_a0_value.v());
+          auto &&_sv0 = *(d_a0);
+          if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
+            const auto &[d_a00] = std::get<typename tree::Leaf>(_sv0.v());
             return d_a00;
           } else {
             return 0u;
           }
         }();
         unsigned int y = [&]() {
-          if (std::holds_alternative<typename tree::Leaf>(d_a1_value.v())) {
-            const auto &[d_a01] = std::get<typename tree::Leaf>(d_a1_value.v());
+          auto &&_sv1 = *(d_a1);
+          if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
+            const auto &[d_a01] = std::get<typename tree::Leaf>(_sv1.v());
             return d_a01;
           } else {
             return 0u;

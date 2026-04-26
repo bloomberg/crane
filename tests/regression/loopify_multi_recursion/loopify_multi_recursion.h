@@ -247,186 +247,34 @@ struct LoopifyMultiRecursion {
       typename T1, MapsTo<T1, unsigned int> F0,
       MapsTo<T1, quadtree, T1, quadtree, T1, quadtree, T1, quadtree, T1> F1>
   static T1 quadtree_rect(F0 &&f, F1 &&f0, const quadtree &q) {
-    struct _Enter {
-      const quadtree q;
-    };
-
-    struct _Call1 {
-      const quadtree _s0;
-      const quadtree _s1;
-      const quadtree _s2;
-      quadtree _s3;
-      quadtree _s4;
-      quadtree _s5;
-      quadtree _s6;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      const quadtree _s1;
-      const quadtree _s2;
-      quadtree _s3;
-      quadtree _s4;
-      quadtree _s5;
-      quadtree _s6;
-    };
-
-    struct _Call3 {
-      T1 _s0;
-      T1 _s1;
-      const quadtree _s2;
-      quadtree _s3;
-      quadtree _s4;
-      quadtree _s5;
-      quadtree _s6;
-    };
-
-    struct _Call4 {
-      T1 _s0;
-      T1 _s1;
-      T1 _s2;
-      quadtree _s3;
-      quadtree _s4;
-      quadtree _s5;
-      quadtree _s6;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{q});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const quadtree q = _f.q;
-        if (std::holds_alternative<typename quadtree::QLeaf>(q.v())) {
-          const auto &[d_a0] = std::get<typename quadtree::QLeaf>(q.v());
-          _result = f(d_a0);
-        } else {
-          const auto &[d_a0, d_a1, d_a2, d_a3] =
-              std::get<typename quadtree::QQuad>(q.v());
-          _stack.emplace_back(_Call1{*(d_a2), *(d_a1), *(d_a0), *(d_a3),
-                                     *(d_a2), *(d_a1), *(d_a0)});
-          _stack.emplace_back(_Enter{*(d_a3)});
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        _stack.emplace_back(
-            _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
-        _stack.emplace_back(_Enter{_f._s0});
-      } else if (std::holds_alternative<_Call2>(_frame)) {
-        auto _f = std::move(std::get<_Call2>(_frame));
-        _stack.emplace_back(
-            _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
-        _stack.emplace_back(_Enter{_f._s1});
-      } else if (std::holds_alternative<_Call3>(_frame)) {
-        auto _f = std::move(std::get<_Call3>(_frame));
-        _stack.emplace_back(
-            _Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4, _f._s5, _f._s6});
-        _stack.emplace_back(_Enter{_f._s2});
-      } else {
-        auto _f = std::move(std::get<_Call4>(_frame));
-        _result =
-            f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1, _f._s3, _f._s0);
-      }
+    if (std::holds_alternative<typename quadtree::QLeaf>(q.v())) {
+      const auto &[d_a0] = std::get<typename quadtree::QLeaf>(q.v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0, d_a1, d_a2, d_a3] =
+          std::get<typename quadtree::QQuad>(q.v());
+      return f0(*(d_a0), quadtree_rect<T1>(f, f0, *(d_a0)), *(d_a1),
+                quadtree_rect<T1>(f, f0, *(d_a1)), *(d_a2),
+                quadtree_rect<T1>(f, f0, *(d_a2)), *(d_a3),
+                quadtree_rect<T1>(f, f0, *(d_a3)));
     }
-    return _result;
   }
 
   template <
       typename T1, MapsTo<T1, unsigned int> F0,
       MapsTo<T1, quadtree, T1, quadtree, T1, quadtree, T1, quadtree, T1> F1>
   static T1 quadtree_rec(F0 &&f, F1 &&f0, const quadtree &q) {
-    struct _Enter {
-      const quadtree q;
-    };
-
-    struct _Call1 {
-      const quadtree _s0;
-      const quadtree _s1;
-      const quadtree _s2;
-      quadtree _s3;
-      quadtree _s4;
-      quadtree _s5;
-      quadtree _s6;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      const quadtree _s1;
-      const quadtree _s2;
-      quadtree _s3;
-      quadtree _s4;
-      quadtree _s5;
-      quadtree _s6;
-    };
-
-    struct _Call3 {
-      T1 _s0;
-      T1 _s1;
-      const quadtree _s2;
-      quadtree _s3;
-      quadtree _s4;
-      quadtree _s5;
-      quadtree _s6;
-    };
-
-    struct _Call4 {
-      T1 _s0;
-      T1 _s1;
-      T1 _s2;
-      quadtree _s3;
-      quadtree _s4;
-      quadtree _s5;
-      quadtree _s6;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{q});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const quadtree q = _f.q;
-        if (std::holds_alternative<typename quadtree::QLeaf>(q.v())) {
-          const auto &[d_a0] = std::get<typename quadtree::QLeaf>(q.v());
-          _result = f(d_a0);
-        } else {
-          const auto &[d_a0, d_a1, d_a2, d_a3] =
-              std::get<typename quadtree::QQuad>(q.v());
-          _stack.emplace_back(_Call1{*(d_a2), *(d_a1), *(d_a0), *(d_a3),
-                                     *(d_a2), *(d_a1), *(d_a0)});
-          _stack.emplace_back(_Enter{*(d_a3)});
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        _stack.emplace_back(
-            _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
-        _stack.emplace_back(_Enter{_f._s0});
-      } else if (std::holds_alternative<_Call2>(_frame)) {
-        auto _f = std::move(std::get<_Call2>(_frame));
-        _stack.emplace_back(
-            _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
-        _stack.emplace_back(_Enter{_f._s1});
-      } else if (std::holds_alternative<_Call3>(_frame)) {
-        auto _f = std::move(std::get<_Call3>(_frame));
-        _stack.emplace_back(
-            _Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4, _f._s5, _f._s6});
-        _stack.emplace_back(_Enter{_f._s2});
-      } else {
-        auto _f = std::move(std::get<_Call4>(_frame));
-        _result =
-            f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1, _f._s3, _f._s0);
-      }
+    if (std::holds_alternative<typename quadtree::QLeaf>(q.v())) {
+      const auto &[d_a0] = std::get<typename quadtree::QLeaf>(q.v());
+      return f(d_a0);
+    } else {
+      const auto &[d_a0, d_a1, d_a2, d_a3] =
+          std::get<typename quadtree::QQuad>(q.v());
+      return f0(*(d_a0), quadtree_rec<T1>(f, f0, *(d_a0)), *(d_a1),
+                quadtree_rec<T1>(f, f0, *(d_a1)), *(d_a2),
+                quadtree_rec<T1>(f, f0, *(d_a2)), *(d_a3),
+                quadtree_rec<T1>(f, f0, *(d_a3)));
     }
-    return _result;
   }
 
   __attribute__((pure)) static unsigned int

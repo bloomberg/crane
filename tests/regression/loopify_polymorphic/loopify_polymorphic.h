@@ -460,30 +460,16 @@ struct LoopifyPolymorphic {
 
   template <typename T1, MapsTo<bool, T1> F0>
   __attribute__((pure)) static List<T1> poly_filter(F0 &&p, const List<T1> &l) {
-    std::unique_ptr<List<T1>> _head{};
-    std::unique_ptr<List<T1>> *_write = &_head;
-    List<T1> _loop_l = l;
-    while (true) {
-      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l.v())) {
-        *(_write) = std::make_unique<List<T1>>(List<T1>::nil());
-        break;
+    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
+      return List<T1>::nil();
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
+      if (p(d_a0)) {
+        return List<T1>::cons(d_a0, poly_filter<T1>(p, *(d_a1)));
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<T1>::Cons>(_loop_l.v());
-        if (p(d_a0)) {
-          auto _cell = std::make_unique<List<T1>>(
-              typename List<T1>::Cons(d_a0, nullptr));
-          *(_write) = std::move(_cell);
-          _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).d_a1;
-          _loop_l = *(d_a1);
-          continue;
-        } else {
-          _loop_l = *(d_a1);
-          continue;
-        }
+        return poly_filter<T1>(p, *(d_a1));
       }
     }
-    return std::move(*(_head));
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>

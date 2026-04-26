@@ -359,37 +359,20 @@ struct LoopifyFolds {
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
   __attribute__((pure)) static List<unsigned int>
   scanr(F0 &&f, unsigned int acc, const List<unsigned int> &l) {
-    struct _Enter {
-      const List<unsigned int> l;
-    };
-
-    using _Frame = std::variant<_Enter>;
-    List<unsigned int> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-        _result = List<unsigned int>::cons(acc, List<unsigned int>::nil());
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+      return List<unsigned int>::cons(acc, List<unsigned int>::nil());
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l.v());
+      auto &&_sv0 = scanr(f, acc, *(d_a1));
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
+        return List<unsigned int>::cons(acc, List<unsigned int>::nil());
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(l.v());
-        auto &&_sv0 = scanr(f, acc, *(d_a1));
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _sv0.v())) {
-          _result = List<unsigned int>::cons(acc, List<unsigned int>::nil());
-        } else {
-          const auto &[d_a00, d_a10] =
-              std::get<typename List<unsigned int>::Cons>(_sv0.v());
-          _result = List<unsigned int>::cons(f(d_a0, d_a00), *(d_a10));
-        }
+        const auto &[d_a00, d_a10] =
+            std::get<typename List<unsigned int>::Cons>(_sv0.v());
+        return List<unsigned int>::cons(f(d_a0, d_a00), *(d_a10));
       }
     }
-    return _result;
   }
 
   template <MapsTo<unsigned int, unsigned int, unsigned int> F1>

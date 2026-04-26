@@ -123,19 +123,19 @@ LoopifySpecialRecursion::remove_if_sum_even(const List<unsigned int> &l) {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-      List<unsigned int> d_a1_value = clone_as_value<List<unsigned int>>(d_a1);
       unsigned int next_val = [&]() {
+        auto &&_sv0 = *(d_a1);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                d_a1_value.v())) {
+                _sv0.v())) {
           return 0u;
         } else {
           const auto &[d_a00, d_a10] =
-              std::get<typename List<unsigned int>::Cons>(d_a1_value.v());
+              std::get<typename List<unsigned int>::Cons>(_sv0.v());
           return d_a00;
         }
       }();
       if ((2u ? (d_a0 + next_val) % 2u : (d_a0 + next_val)) == 0u) {
-        _loop_l = d_a1_value;
+        _loop_l = *(d_a1);
         continue;
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
@@ -144,7 +144,7 @@ LoopifySpecialRecursion::remove_if_sum_even(const List<unsigned int> &l) {
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l = d_a1_value;
+        _loop_l = *(d_a1);
         continue;
       }
     }

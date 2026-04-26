@@ -364,62 +364,30 @@ struct LoopifySorting {
   __attribute__((pure)) static List<unsigned int>
   merge_by_fuel(const unsigned int &fuel, F1 &&cmp, List<unsigned int> l1,
                 List<unsigned int> l2) {
-    std::unique_ptr<List<unsigned int>> _head{};
-    std::unique_ptr<List<unsigned int>> *_write = &_head;
-    List<unsigned int> _loop_l2 = std::move(l2);
-    List<unsigned int> _loop_l1 = std::move(l1);
-    unsigned int _loop_fuel = fuel;
-    while (true) {
-      if (_loop_fuel <= 0) {
-        *(_write) =
-            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
-        break;
+    if (fuel <= 0) {
+      return List<unsigned int>::nil();
+    } else {
+      unsigned int f = fuel - 1;
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
+        return l2;
       } else {
-        unsigned int f = _loop_fuel - 1;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _loop_l1.v())) {
-          *(_write) = std::make_unique<List<unsigned int>>(_loop_l2);
-          break;
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l1.v());
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
+          return l1;
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(_loop_l1.v());
-          if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  _loop_l2.v())) {
-            *(_write) = std::make_unique<List<unsigned int>>(_loop_l1);
-            break;
+          const auto &[d_a00, d_a10] =
+              std::get<typename List<unsigned int>::Cons>(l2.v());
+          if (cmp(d_a0, d_a00)) {
+            return List<unsigned int>::cons(d_a0,
+                                            merge_by_fuel(f, cmp, *(d_a1), l2));
           } else {
-            const auto &[d_a00, d_a10] =
-                std::get<typename List<unsigned int>::Cons>(_loop_l2.v());
-            if (cmp(d_a0, d_a00)) {
-              auto _cell = std::make_unique<List<unsigned int>>(
-                  typename List<unsigned int>::Cons(d_a0, nullptr));
-              *(_write) = std::move(_cell);
-              _write = &std::get<typename List<unsigned int>::Cons>(
-                            (*_write)->v_mut())
-                            .d_a1;
-              List<unsigned int> _next_l1 = *(d_a1);
-              unsigned int _next_fuel = f;
-              _loop_l1 = std::move(_next_l1);
-              _loop_fuel = std::move(_next_fuel);
-              continue;
-            } else {
-              auto _cell = std::make_unique<List<unsigned int>>(
-                  typename List<unsigned int>::Cons(d_a00, nullptr));
-              *(_write) = std::move(_cell);
-              _write = &std::get<typename List<unsigned int>::Cons>(
-                            (*_write)->v_mut())
-                            .d_a1;
-              List<unsigned int> _next_l2 = *(d_a10);
-              unsigned int _next_fuel = f;
-              _loop_l2 = std::move(_next_l2);
-              _loop_fuel = std::move(_next_fuel);
-              continue;
-            }
+            return List<unsigned int>::cons(
+                d_a00, merge_by_fuel(f, cmp, l1, *(d_a10)));
           }
         }
       }
     }
-    return std::move(*(_head));
   }
 
   template <MapsTo<bool, unsigned int, unsigned int> F0>

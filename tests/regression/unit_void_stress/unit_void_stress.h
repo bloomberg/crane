@@ -272,13 +272,12 @@ struct UnitVoidStress {
       return List<std::monostate>::nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      List<T1> d_a1_value = clone_as_value<List<T1>>(d_a1);
       return List<std::monostate>::cons(
           [&]() {
             f(d_a0);
             return std::monostate{};
           }(),
-          map_void<T1>(f, d_a1_value));
+          map_void<T1>(f, *(d_a1)));
     }
   }
 
