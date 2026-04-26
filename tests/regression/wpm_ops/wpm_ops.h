@@ -23,6 +23,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -64,13 +70,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -107,9 +132,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -263,6 +296,14 @@ struct WpmOps {
     __attribute__((pure)) state1 *operator->() { return this; }
 
     __attribute__((pure)) const state1 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state1 clone() const {
+      return state1{clone_as_value<List<unsigned int>>((*(this)).rom1),
+                    clone_as_value<unsigned int>((*(this)).prom_addr1),
+                    clone_as_value<unsigned int>((*(this)).prom_data1),
+                    clone_as_value<bool>((*(this)).prom_enable1)};
+    }
   };
 
   __attribute__((pure)) static state1 execute_wpm1(const state1 &s);
@@ -290,6 +331,15 @@ struct WpmOps {
     __attribute__((pure)) state2 *operator->() { return this; }
 
     __attribute__((pure)) const state2 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state2 clone() const {
+      return state2{clone_as_value<List<unsigned int>>((*(this)).ram_sys2),
+                    clone_as_value<List<unsigned int>>((*(this)).rom2),
+                    clone_as_value<unsigned int>((*(this)).prom_addr2),
+                    clone_as_value<unsigned int>((*(this)).prom_data2),
+                    clone_as_value<bool>((*(this)).prom_enable2)};
+    }
   };
 
   __attribute__((pure)) static state2 execute_wpm2(const state2 &s);
@@ -315,6 +365,15 @@ struct WpmOps {
     __attribute__((pure)) state3 *operator->() { return this; }
 
     __attribute__((pure)) const state3 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state3 clone() const {
+      return state3{clone_as_value<List<unsigned int>>((*(this)).regs3),
+                    clone_as_value<List<unsigned int>>((*(this)).rom3),
+                    clone_as_value<unsigned int>((*(this)).prom_addr3),
+                    clone_as_value<unsigned int>((*(this)).prom_data3),
+                    clone_as_value<bool>((*(this)).prom_enable3)};
+    }
   };
 
   __attribute__((pure)) static state3 execute_wpm3(const state3 &s);
@@ -339,6 +398,14 @@ struct WpmOps {
     __attribute__((pure)) state4 *operator->() { return this; }
 
     __attribute__((pure)) const state4 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state4 clone() const {
+      return state4{clone_as_value<List<unsigned int>>((*(this)).rom4),
+                    clone_as_value<unsigned int>((*(this)).prom_addr4),
+                    clone_as_value<unsigned int>((*(this)).prom_data4),
+                    clone_as_value<bool>((*(this)).prom_enable4)};
+    }
   };
 
   __attribute__((pure)) static state4 execute_wpm4(const state4 &s);
@@ -361,6 +428,14 @@ struct WpmOps {
     __attribute__((pure)) state5 *operator->() { return this; }
 
     __attribute__((pure)) const state5 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state5 clone() const {
+      return state5{clone_as_value<List<unsigned int>>((*(this)).rom5),
+                    clone_as_value<unsigned int>((*(this)).prom_addr5),
+                    clone_as_value<unsigned int>((*(this)).prom_data5),
+                    clone_as_value<bool>((*(this)).prom_enable5)};
+    }
   };
 
   __attribute__((pure)) static state5 execute_wpm5(const state5 &s);
@@ -384,6 +459,14 @@ struct WpmOps {
     __attribute__((pure)) state6 *operator->() { return this; }
 
     __attribute__((pure)) const state6 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state6 clone() const {
+      return state6{clone_as_value<List<unsigned int>>((*(this)).rom6),
+                    clone_as_value<unsigned int>((*(this)).prom_addr6),
+                    clone_as_value<unsigned int>((*(this)).prom_data6),
+                    clone_as_value<bool>((*(this)).prom_enable6)};
+    }
   };
 
   __attribute__((pure)) static state6 execute_wpm6(const state6 &s);

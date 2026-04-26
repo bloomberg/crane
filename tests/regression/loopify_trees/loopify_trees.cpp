@@ -270,65 +270,22 @@ LoopifyTrees::count_paths(const LoopifyTrees::tree<unsigned int> &t,
 /// sum_of_max_branches sums maximum values along each path.
 __attribute__((pure)) unsigned int
 LoopifyTrees::sum_of_max_branches(const LoopifyTrees::tree<unsigned int> &t) {
-  struct _Enter {
-    const LoopifyTrees::tree<unsigned int> t;
-  };
-
-  struct _Call1 {
-    unsigned int _s0;
-    std::unique_ptr<LoopifyTrees::tree<unsigned int>> _s1;
-  };
-
-  struct _Call2 {
-    unsigned int _s0;
-    unsigned int _s1;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
-  unsigned int _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(16);
-  _stack.emplace_back(_Enter{t});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyTrees::tree<unsigned int> t = _f.t;
-      if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(t.v())) {
-        _result = 0u;
+  if (std::holds_alternative<typename LoopifyTrees::tree<unsigned int>::Leaf>(
+          t.v())) {
+    return 0u;
+  } else {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
+    unsigned int lsum = sum_of_max_branches(*(d_a0));
+    unsigned int rsum = sum_of_max_branches(*(d_a2));
+    return (d_a1 + [&]() -> unsigned int {
+      if (lsum <= rsum) {
+        return rsum;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
-        _stack.emplace_back(_Call1{
-            d_a1,
-            std::make_unique<LoopifyTrees::tree<unsigned int>>(d_a2->clone())});
-        _stack.emplace_back(_Enter{*(d_a0)});
+        return lsum;
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a1 = _f._s0;
-      std::unique_ptr<LoopifyTrees::tree<unsigned int>> d_a2 =
-          std::move(_f._s1);
-      unsigned int lsum = _result;
-      _stack.emplace_back(_Call2{d_a1, lsum});
-      _stack.emplace_back(_Enter{*(d_a2)});
-    } else {
-      auto _f = std::move(std::get<_Call2>(_frame));
-      unsigned int d_a1 = _f._s0;
-      unsigned int lsum = _f._s1;
-      unsigned int rsum = _result;
-      _result = (d_a1 + [&]() -> unsigned int {
-        if (lsum <= rsum) {
-          return rsum;
-        } else {
-          return lsum;
-        }
-      }());
-    }
+    }());
   }
-  return _result;
 }
 
 /// Helper: sum all values in a list of rose trees (processes both tree and
@@ -460,69 +417,30 @@ LoopifyTrees::flatten_rose_list_fuel(const unsigned int &fuel,
 __attribute__((pure)) unsigned int
 LoopifyTrees::depth_rose_list_fuel(const unsigned int &fuel,
                                    const List<LoopifyTrees::rose> &cs) {
-  struct _Enter {
-    const List<LoopifyTrees::rose> cs;
-    const unsigned int fuel;
-  };
-
-  struct _Call1 {
-    std::unique_ptr<List<LoopifyTrees::rose>> _s0;
-    unsigned int _s1;
-  };
-
-  struct _Call2 {
-    unsigned int _s0;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
-  unsigned int _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(16);
-  _stack.emplace_back(_Enter{cs, fuel});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyTrees::rose> cs = _f.cs;
-      const unsigned int fuel = _f.fuel;
-      if (fuel <= 0) {
-        _result = 0u;
-      } else {
-        unsigned int f = fuel - 1;
-        if (std::holds_alternative<typename List<LoopifyTrees::rose>::Nil>(
-                cs.v())) {
-          _result = 0u;
-        } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<LoopifyTrees::rose>::Cons>(cs.v());
-          const auto &[d_a00, d_a10] =
-              std::get<typename LoopifyTrees::rose::RNode>(d_a0.v());
-          _stack.emplace_back(_Call1{
-              std::make_unique<List<LoopifyTrees::rose>>(d_a1->clone()), f});
-          _stack.emplace_back(
-              _Enter{clone_as_value<List<LoopifyTrees::rose>>(d_a10), f});
-        }
-      }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      std::unique_ptr<List<LoopifyTrees::rose>> d_a1 = std::move(_f._s0);
-      unsigned int f = _f._s1;
-      unsigned int d = (_result + 1);
-      _stack.emplace_back(_Call2{d});
-      _stack.emplace_back(_Enter{*(d_a1), f});
+  if (fuel <= 0) {
+    return 0u;
+  } else {
+    unsigned int f = fuel - 1;
+    if (std::holds_alternative<typename List<LoopifyTrees::rose>::Nil>(
+            cs.v())) {
+      return 0u;
     } else {
-      auto _f = std::move(std::get<_Call2>(_frame));
-      unsigned int d = _f._s0;
-      unsigned int rest_max = _result;
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<LoopifyTrees::rose>::Cons>(cs.v());
+      const auto &[d_a00, d_a10] =
+          std::get<typename LoopifyTrees::rose::RNode>(d_a0.v());
+      unsigned int d =
+          (depth_rose_list_fuel(
+               f, clone_as_value<List<LoopifyTrees::rose>>(d_a10)) +
+           1);
+      unsigned int rest_max = depth_rose_list_fuel(f, *(d_a1));
       if (d <= rest_max) {
-        _result = rest_max;
+        return rest_max;
       } else {
-        _result = d;
+        return d;
       }
     }
   }
-  return _result;
 }
 
 /// tree_max t1 t2 element-wise maximum of two trees.
@@ -735,63 +653,20 @@ LoopifyTrees::tree_levels(LoopifyTrees::tree<unsigned int> t) {
 /// count_nodes t returns tuple (node_count, sum_of_values).
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
 LoopifyTrees::count_nodes(const LoopifyTrees::tree<unsigned int> &t) {
-  struct _Enter {
-    const LoopifyTrees::tree<unsigned int> t;
-  };
-
-  struct _Call1 {
-    unsigned int _s0;
-    std::unique_ptr<LoopifyTrees::tree<unsigned int>> _s1;
-  };
-
-  struct _Call2 {
-    unsigned int _s0;
-    unsigned int _s1;
-    unsigned int _s2;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
-  std::pair<unsigned int, unsigned int> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(16);
-  _stack.emplace_back(_Enter{t});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyTrees::tree<unsigned int> t = _f.t;
-      if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(t.v())) {
-        _result = std::make_pair(0u, 0u);
-      } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
-        _stack.emplace_back(_Call1{
-            d_a1,
-            std::make_unique<LoopifyTrees::tree<unsigned int>>(d_a2->clone())});
-        _stack.emplace_back(_Enter{*(d_a0)});
-      }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a1 = _f._s0;
-      std::unique_ptr<LoopifyTrees::tree<unsigned int>> d_a2 =
-          std::move(_f._s1);
-      const unsigned int &lc = _result.first;
-      const unsigned int &ls = _result.second;
-      _stack.emplace_back(_Call2{d_a1, lc, ls});
-      _stack.emplace_back(_Enter{*(d_a2)});
-    } else {
-      auto _f = std::move(std::get<_Call2>(_frame));
-      unsigned int d_a1 = _f._s0;
-      unsigned int lc = _f._s1;
-      unsigned int ls = _f._s2;
-      const unsigned int &rc = _result.first;
-      const unsigned int &rs = _result.second;
-      _result = std::make_pair(((lc + rc) + 1), (d_a1 + (ls + rs)));
-    }
+  if (std::holds_alternative<typename LoopifyTrees::tree<unsigned int>::Leaf>(
+          t.v())) {
+    return std::make_pair(0u, 0u);
+  } else {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
+    auto _cs = count_nodes(*(d_a0));
+    const unsigned int &lc = _cs.first;
+    const unsigned int &ls = _cs.second;
+    auto _cs1 = count_nodes(*(d_a2));
+    const unsigned int &rc = _cs1.first;
+    const unsigned int &rs = _cs1.second;
+    return std::make_pair(((lc + rc) + 1), (d_a1 + (ls + rs)));
   }
-  return _result;
 }
 
 /// Helper: append two lists of lists.
@@ -1104,79 +979,36 @@ LoopifyTrees::max3(unsigned int a, unsigned int b, unsigned int c) {
 /// tree_min_max t finds minimum and maximum values in tree.
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
 LoopifyTrees::tree_min_max(const LoopifyTrees::tree<unsigned int> &t) {
-  struct _Enter {
-    const LoopifyTrees::tree<unsigned int> t;
-  };
-
-  struct _Call1 {
-    unsigned int _s0;
-    std::unique_ptr<LoopifyTrees::tree<unsigned int>> _s1;
-  };
-
-  struct _Call2 {
-    unsigned int _s0;
-    unsigned int _s1;
-    unsigned int _s2;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
-  std::pair<unsigned int, unsigned int> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(16);
-  _stack.emplace_back(_Enter{t});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyTrees::tree<unsigned int> t = _f.t;
-      if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(t.v())) {
-        _result = std::make_pair(0u, 0u);
-      } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
-        _stack.emplace_back(_Call1{
-            d_a1,
-            std::make_unique<LoopifyTrees::tree<unsigned int>>(d_a2->clone())});
-        _stack.emplace_back(_Enter{*(d_a0)});
-      }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a1 = _f._s0;
-      std::unique_ptr<LoopifyTrees::tree<unsigned int>> d_a2 =
-          std::move(_f._s1);
-      const unsigned int &lmin = _result.first;
-      const unsigned int &lmax = _result.second;
-      _stack.emplace_back(_Call2{d_a1, lmax, lmin});
-      _stack.emplace_back(_Enter{*(d_a2)});
-    } else {
-      auto _f = std::move(std::get<_Call2>(_frame));
-      unsigned int d_a1 = _f._s0;
-      unsigned int lmax = _f._s1;
-      unsigned int lmin = _f._s2;
-      const unsigned int &rmin = _result.first;
-      const unsigned int &rmax = _result.second;
-      _result = std::make_pair(min3(
-                                   [&]() -> unsigned int {
-                                     if (lmin == 0u) {
-                                       return d_a1;
-                                     } else {
-                                       return lmin;
-                                     }
-                                   }(),
-                                   [&]() -> unsigned int {
-                                     if (rmin == 0u) {
-                                       return d_a1;
-                                     } else {
-                                       return rmin;
-                                     }
-                                   }(),
-                                   d_a1),
-                               max3(lmax, rmax, d_a1));
-    }
+  if (std::holds_alternative<typename LoopifyTrees::tree<unsigned int>::Leaf>(
+          t.v())) {
+    return std::make_pair(0u, 0u);
+  } else {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
+    auto _cs = tree_min_max(*(d_a0));
+    const unsigned int &lmin = _cs.first;
+    const unsigned int &lmax = _cs.second;
+    auto _cs1 = tree_min_max(*(d_a2));
+    const unsigned int &rmin = _cs1.first;
+    const unsigned int &rmax = _cs1.second;
+    return std::make_pair(min3(
+                              [&]() -> unsigned int {
+                                if (lmin == 0u) {
+                                  return d_a1;
+                                } else {
+                                  return lmin;
+                                }
+                              }(),
+                              [&]() -> unsigned int {
+                                if (rmin == 0u) {
+                                  return d_a1;
+                                } else {
+                                  return rmin;
+                                }
+                              }(),
+                              d_a1),
+                          max3(lmax, rmax, d_a1));
   }
-  return _result;
 }
 
 /// all_paths_sum t sums all root-to-leaf path sums.

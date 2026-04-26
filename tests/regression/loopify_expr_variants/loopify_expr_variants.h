@@ -24,6 +24,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -65,13 +71,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -108,9 +133,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -444,72 +477,22 @@ struct LoopifyExprVariants {
 
     __attribute__((pure)) unsigned int eval_cond() const {
       const cond_expr *_self = this;
-
-      struct _Enter {
-        const cond_expr *_self;
-      };
-
-      struct _Call1 {
-        cond_expr *_s0;
-      };
-
-      struct _Call2 {
-        unsigned int _s0;
-      };
-
-      struct _Call3 {
-        std::unique_ptr<cond_expr> _s0;
-        std::unique_ptr<cond_expr> _s1;
-      };
-
-      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
-      unsigned int _result{};
-      std::vector<_Frame> _stack;
-      _stack.reserve(16);
-      _stack.emplace_back(_Enter{_self});
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const cond_expr *_self = _f._self;
-          auto &&_sv = *(_self);
-          if (std::holds_alternative<typename cond_expr::Lit>(_sv.v())) {
-            const auto &[d_a0] = std::get<typename cond_expr::Lit>(_sv.v());
-            _result = d_a0;
-          } else if (std::holds_alternative<typename cond_expr::Add>(_sv.v())) {
-            const auto &[d_a0, d_a1] =
-                std::get<typename cond_expr::Add>(_sv.v());
-            _stack.emplace_back(_Call1{d_a0.get()});
-            _stack.emplace_back(_Enter{d_a1.get()});
-          } else {
-            const auto &[d_a0, d_a1, d_a2] =
-                std::get<typename cond_expr::Cond>(_sv.v());
-            _stack.emplace_back(
-                _Call3{std::make_unique<cond_expr>(d_a1->clone()),
-                       std::make_unique<cond_expr>(d_a2->clone())});
-            _stack.emplace_back(_Enter{d_a0.get()});
-          }
-        } else if (std::holds_alternative<_Call1>(_frame)) {
-          auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(_Call2{_result});
-          _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_Call2>(_frame)) {
-          auto _f = std::move(std::get<_Call2>(_frame));
-          _result = (_result + _f._s0);
+      auto &&_sv = *(_self);
+      if (std::holds_alternative<typename cond_expr::Lit>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename cond_expr::Lit>(_sv.v());
+        return d_a0;
+      } else if (std::holds_alternative<typename cond_expr::Add>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<typename cond_expr::Add>(_sv.v());
+        return ((*(d_a0)).eval_cond() + (*(d_a1)).eval_cond());
+      } else {
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename cond_expr::Cond>(_sv.v());
+        if (0u < (*(d_a0)).eval_cond()) {
+          return (*(d_a1)).eval_cond();
         } else {
-          auto _f = std::move(std::get<_Call3>(_frame));
-          std::unique_ptr<cond_expr> d_a1 = std::move(_f._s0);
-          std::unique_ptr<cond_expr> d_a2 = std::move(_f._s1);
-          unsigned int _cond0 = _result;
-          if (0u < _cond0) {
-            _stack.emplace_back(_Enter{d_a1.get()});
-          } else {
-            _stack.emplace_back(_Enter{d_a2.get()});
-          }
+          return (*(d_a2)).eval_cond();
         }
       }
-      return _result;
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -926,100 +909,26 @@ struct LoopifyExprVariants {
 
     __attribute__((pure)) unsigned int eval_arith() const {
       const arith_expr *_self = this;
-
-      struct _Enter {
-        const arith_expr *_self;
-      };
-
-      struct _Call1 {
-        arith_expr *_s0;
-      };
-
-      struct _Call2 {
-        unsigned int _s0;
-      };
-
-      struct _Call3 {
-        arith_expr *_s0;
-      };
-
-      struct _Call4 {
-        unsigned int _s0;
-      };
-
-      struct _Call5 {
-        std::unique_ptr<arith_expr> _s0;
-      };
-
-      struct _Call6 {
-        decltype((std::declval<unsigned int &>() + 1)) _s0;
-      };
-
-      using _Frame =
-          std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5, _Call6>;
-      unsigned int _result{};
-      std::vector<_Frame> _stack;
-      _stack.reserve(16);
-      _stack.emplace_back(_Enter{_self});
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const arith_expr *_self = _f._self;
-          auto &&_sv = *(_self);
-          if (std::holds_alternative<typename arith_expr::ANum>(_sv.v())) {
-            const auto &[d_a0] = std::get<typename arith_expr::ANum>(_sv.v());
-            _result = d_a0;
-          } else if (std::holds_alternative<typename arith_expr::AAdd>(
-                         _sv.v())) {
-            const auto &[d_a0, d_a1] =
-                std::get<typename arith_expr::AAdd>(_sv.v());
-            _stack.emplace_back(_Call1{d_a0.get()});
-            _stack.emplace_back(_Enter{d_a1.get()});
-          } else if (std::holds_alternative<typename arith_expr::AMul>(
-                         _sv.v())) {
-            const auto &[d_a0, d_a1] =
-                std::get<typename arith_expr::AMul>(_sv.v());
-            _stack.emplace_back(_Call3{d_a0.get()});
-            _stack.emplace_back(_Enter{d_a1.get()});
-          } else {
-            const auto &[d_a0, d_a1] =
-                std::get<typename arith_expr::ADiv>(_sv.v());
-            _stack.emplace_back(
-                _Call5{std::make_unique<arith_expr>(d_a0->clone())});
-            _stack.emplace_back(_Enter{d_a1.get()});
-          }
-        } else if (std::holds_alternative<_Call1>(_frame)) {
-          auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(_Call2{_result});
-          _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_Call2>(_frame)) {
-          auto _f = std::move(std::get<_Call2>(_frame));
-          _result = (_result + _f._s0);
-        } else if (std::holds_alternative<_Call3>(_frame)) {
-          auto _f = std::move(std::get<_Call3>(_frame));
-          _stack.emplace_back(_Call4{_result});
-          _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_Call4>(_frame)) {
-          auto _f = std::move(std::get<_Call4>(_frame));
-          _result = (_result * _f._s0);
-        } else if (std::holds_alternative<_Call5>(_frame)) {
-          auto _f = std::move(std::get<_Call5>(_frame));
-          std::unique_ptr<arith_expr> d_a0 = std::move(_f._s0);
-          if (_result <= 0) {
-            _result = 0u;
-          } else {
-            unsigned int n = _result - 1;
-            _stack.emplace_back(_Call6{(n + 1)});
-            _stack.emplace_back(_Enter{d_a0.get()});
-          }
+      auto &&_sv = *(_self);
+      if (std::holds_alternative<typename arith_expr::ANum>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename arith_expr::ANum>(_sv.v());
+        return d_a0;
+      } else if (std::holds_alternative<typename arith_expr::AAdd>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<typename arith_expr::AAdd>(_sv.v());
+        return ((*(d_a0)).eval_arith() + (*(d_a1)).eval_arith());
+      } else if (std::holds_alternative<typename arith_expr::AMul>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<typename arith_expr::AMul>(_sv.v());
+        return ((*(d_a0)).eval_arith() * (*(d_a1)).eval_arith());
+      } else {
+        const auto &[d_a0, d_a1] = std::get<typename arith_expr::ADiv>(_sv.v());
+        auto _cs = (*(d_a1)).eval_arith();
+        if (_cs <= 0) {
+          return 0u;
         } else {
-          auto _f = std::move(std::get<_Call6>(_frame));
-          _result = (_f._s0 ? _result / _f._s0 : 0);
+          unsigned int n = _cs - 1;
+          return ((n + 1) ? (*(d_a0)).eval_arith() / (n + 1) : 0);
         }
       }
-      return _result;
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -1361,266 +1270,230 @@ struct LoopifyExprVariants {
 
     __attribute__((pure)) bool_expr simplify_bool() const {
       const bool_expr *_self = this;
-
-      struct _Enter {
-        const bool_expr *_self;
-      };
-
-      using _Frame = std::variant<_Enter>;
-      bool_expr _result{};
-      std::vector<_Frame> _stack;
-      _stack.reserve(16);
-      _stack.emplace_back(_Enter{_self});
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const bool_expr *_self = _f._self;
-        auto &&_sv = *(_self);
-        if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
-          _result = bool_expr::btrue();
-        } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                       _sv.v())) {
-          _result = bool_expr::bfalse();
-        } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv.v())) {
-          const auto &[d_a0, d_a1] =
-              std::get<typename bool_expr::BAnd>(_sv.v());
-          auto &&_sv0 = (*(d_a0)).simplify_bool();
-          if (std::holds_alternative<typename bool_expr::BTrue>(_sv0.v())) {
-            auto &&_sv1 = (*(d_a1)).simplify_bool();
-            if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
-              _result = bool_expr::btrue();
-            } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                           _sv1.v())) {
-              _result = bool_expr::bfalse();
-            } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                           _sv1.v())) {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename bool_expr::BAnd>(_sv1.v());
-              _result = bool_expr::band(*(d_a01), *(d_a11));
-            } else if (std::holds_alternative<typename bool_expr::BOr>(
-                           _sv1.v())) {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename bool_expr::BOr>(_sv1.v());
-              _result = bool_expr::bor(*(d_a01), *(d_a11));
-            } else {
-              const auto &[d_a01] =
-                  std::get<typename bool_expr::BNot>(_sv1.v());
-              _result = bool_expr::bnot(*(d_a01));
-            }
+      auto &&_sv = *(_self);
+      if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
+        return bool_expr::btrue();
+      } else if (std::holds_alternative<typename bool_expr::BFalse>(_sv.v())) {
+        return bool_expr::bfalse();
+      } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<typename bool_expr::BAnd>(_sv.v());
+        auto &&_sv0 = (*(d_a0)).simplify_bool();
+        if (std::holds_alternative<typename bool_expr::BTrue>(_sv0.v())) {
+          auto &&_sv1 = (*(d_a1)).simplify_bool();
+          if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
+            return bool_expr::btrue();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _sv0.v())) {
-            _result = bool_expr::bfalse();
+                         _sv1.v())) {
+            return bool_expr::bfalse();
           } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _sv0.v())) {
-            const auto &[d_a00, d_a10] =
-                std::get<typename bool_expr::BAnd>(_sv0.v());
-            bool_expr a_ = bool_expr::band(*(d_a00), *(d_a10));
-            auto &&_sv1 = (*(d_a1)).simplify_bool();
-            if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
-              _result = a_;
-            } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                           _sv1.v())) {
-              _result = bool_expr::bfalse();
-            } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                           _sv1.v())) {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename bool_expr::BAnd>(_sv1.v());
-              _result =
-                  bool_expr::band(a_, bool_expr::band(*(d_a01), *(d_a11)));
-            } else if (std::holds_alternative<typename bool_expr::BOr>(
-                           _sv1.v())) {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename bool_expr::BOr>(_sv1.v());
-              _result = bool_expr::band(a_, bool_expr::bor(*(d_a01), *(d_a11)));
-            } else {
-              const auto &[d_a01] =
-                  std::get<typename bool_expr::BNot>(_sv1.v());
-              _result = bool_expr::band(a_, bool_expr::bnot(*(d_a01)));
-            }
+                         _sv1.v())) {
+            const auto &[d_a01, d_a11] =
+                std::get<typename bool_expr::BAnd>(_sv1.v());
+            return bool_expr::band(*(d_a01), *(d_a11));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _sv0.v())) {
-            const auto &[d_a00, d_a10] =
-                std::get<typename bool_expr::BOr>(_sv0.v());
-            bool_expr a_ = bool_expr::bor(*(d_a00), *(d_a10));
-            auto &&_sv1 = (*(d_a1)).simplify_bool();
-            if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
-              _result = a_;
-            } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                           _sv1.v())) {
-              _result = bool_expr::bfalse();
-            } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                           _sv1.v())) {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename bool_expr::BAnd>(_sv1.v());
-              _result =
-                  bool_expr::band(a_, bool_expr::band(*(d_a01), *(d_a11)));
-            } else if (std::holds_alternative<typename bool_expr::BOr>(
-                           _sv1.v())) {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename bool_expr::BOr>(_sv1.v());
-              _result = bool_expr::band(a_, bool_expr::bor(*(d_a01), *(d_a11)));
-            } else {
-              const auto &[d_a01] =
-                  std::get<typename bool_expr::BNot>(_sv1.v());
-              _result = bool_expr::band(a_, bool_expr::bnot(*(d_a01)));
-            }
+                         _sv1.v())) {
+            const auto &[d_a01, d_a11] =
+                std::get<typename bool_expr::BOr>(_sv1.v());
+            return bool_expr::bor(*(d_a01), *(d_a11));
           } else {
-            const auto &[d_a00] = std::get<typename bool_expr::BNot>(_sv0.v());
-            bool_expr a_ = bool_expr::bnot(*(d_a00));
-            auto &&_sv1 = (*(d_a1)).simplify_bool();
-            if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
-              _result = a_;
-            } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                           _sv1.v())) {
-              _result = bool_expr::bfalse();
-            } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                           _sv1.v())) {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename bool_expr::BAnd>(_sv1.v());
-              _result =
-                  bool_expr::band(a_, bool_expr::band(*(d_a01), *(d_a11)));
-            } else if (std::holds_alternative<typename bool_expr::BOr>(
-                           _sv1.v())) {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename bool_expr::BOr>(_sv1.v());
-              _result = bool_expr::band(a_, bool_expr::bor(*(d_a01), *(d_a11)));
-            } else {
-              const auto &[d_a01] =
-                  std::get<typename bool_expr::BNot>(_sv1.v());
-              _result = bool_expr::band(a_, bool_expr::bnot(*(d_a01)));
-            }
+            const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
+            return bool_expr::bnot(*(d_a01));
           }
-        } else if (std::holds_alternative<typename bool_expr::BOr>(_sv.v())) {
-          const auto &[d_a0, d_a1] = std::get<typename bool_expr::BOr>(_sv.v());
-          auto &&_sv0 = (*(d_a0)).simplify_bool();
-          if (std::holds_alternative<typename bool_expr::BTrue>(_sv0.v())) {
-            _result = bool_expr::btrue();
+        } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                       _sv0.v())) {
+          return bool_expr::bfalse();
+        } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv0.v())) {
+          const auto &[d_a00, d_a10] =
+              std::get<typename bool_expr::BAnd>(_sv0.v());
+          bool_expr a_ = bool_expr::band(*(d_a00), *(d_a10));
+          auto &&_sv1 = (*(d_a1)).simplify_bool();
+          if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
+            return a_;
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _sv0.v())) {
-            auto &&_sv1 = (*(d_a1)).simplify_bool();
-            if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
-              _result = bool_expr::btrue();
-            } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                           _sv1.v())) {
-              _result = bool_expr::bfalse();
-            } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                           _sv1.v())) {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename bool_expr::BAnd>(_sv1.v());
-              _result = bool_expr::band(*(d_a01), *(d_a11));
-            } else if (std::holds_alternative<typename bool_expr::BOr>(
-                           _sv1.v())) {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename bool_expr::BOr>(_sv1.v());
-              _result = bool_expr::bor(*(d_a01), *(d_a11));
-            } else {
-              const auto &[d_a01] =
-                  std::get<typename bool_expr::BNot>(_sv1.v());
-              _result = bool_expr::bnot(*(d_a01));
-            }
+                         _sv1.v())) {
+            return bool_expr::bfalse();
           } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _sv0.v())) {
-            const auto &[d_a00, d_a10] =
-                std::get<typename bool_expr::BAnd>(_sv0.v());
-            bool_expr a_ = bool_expr::band(*(d_a00), *(d_a10));
-            auto &&_sv1 = (*(d_a1)).simplify_bool();
-            if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
-              _result = bool_expr::btrue();
-            } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                           _sv1.v())) {
-              _result = a_;
-            } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                           _sv1.v())) {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename bool_expr::BAnd>(_sv1.v());
-              _result = bool_expr::bor(a_, bool_expr::band(*(d_a01), *(d_a11)));
-            } else if (std::holds_alternative<typename bool_expr::BOr>(
-                           _sv1.v())) {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename bool_expr::BOr>(_sv1.v());
-              _result = bool_expr::bor(a_, bool_expr::bor(*(d_a01), *(d_a11)));
-            } else {
-              const auto &[d_a01] =
-                  std::get<typename bool_expr::BNot>(_sv1.v());
-              _result = bool_expr::bor(a_, bool_expr::bnot(*(d_a01)));
-            }
+                         _sv1.v())) {
+            const auto &[d_a01, d_a11] =
+                std::get<typename bool_expr::BAnd>(_sv1.v());
+            return bool_expr::band(a_, bool_expr::band(*(d_a01), *(d_a11)));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _sv0.v())) {
-            const auto &[d_a00, d_a10] =
-                std::get<typename bool_expr::BOr>(_sv0.v());
-            bool_expr a_ = bool_expr::bor(*(d_a00), *(d_a10));
-            auto &&_sv1 = (*(d_a1)).simplify_bool();
-            if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
-              _result = bool_expr::btrue();
-            } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                           _sv1.v())) {
-              _result = a_;
-            } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                           _sv1.v())) {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename bool_expr::BAnd>(_sv1.v());
-              _result = bool_expr::bor(a_, bool_expr::band(*(d_a01), *(d_a11)));
-            } else if (std::holds_alternative<typename bool_expr::BOr>(
-                           _sv1.v())) {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename bool_expr::BOr>(_sv1.v());
-              _result = bool_expr::bor(a_, bool_expr::bor(*(d_a01), *(d_a11)));
-            } else {
-              const auto &[d_a01] =
-                  std::get<typename bool_expr::BNot>(_sv1.v());
-              _result = bool_expr::bor(a_, bool_expr::bnot(*(d_a01)));
-            }
+                         _sv1.v())) {
+            const auto &[d_a01, d_a11] =
+                std::get<typename bool_expr::BOr>(_sv1.v());
+            return bool_expr::band(a_, bool_expr::bor(*(d_a01), *(d_a11)));
           } else {
-            const auto &[d_a00] = std::get<typename bool_expr::BNot>(_sv0.v());
-            bool_expr a_ = bool_expr::bnot(*(d_a00));
-            auto &&_sv1 = (*(d_a1)).simplify_bool();
-            if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
-              _result = bool_expr::btrue();
-            } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                           _sv1.v())) {
-              _result = a_;
-            } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                           _sv1.v())) {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename bool_expr::BAnd>(_sv1.v());
-              _result = bool_expr::bor(a_, bool_expr::band(*(d_a01), *(d_a11)));
-            } else if (std::holds_alternative<typename bool_expr::BOr>(
-                           _sv1.v())) {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename bool_expr::BOr>(_sv1.v());
-              _result = bool_expr::bor(a_, bool_expr::bor(*(d_a01), *(d_a11)));
-            } else {
-              const auto &[d_a01] =
-                  std::get<typename bool_expr::BNot>(_sv1.v());
-              _result = bool_expr::bor(a_, bool_expr::bnot(*(d_a01)));
-            }
+            const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
+            return bool_expr::band(a_, bool_expr::bnot(*(d_a01)));
+          }
+        } else if (std::holds_alternative<typename bool_expr::BOr>(_sv0.v())) {
+          const auto &[d_a00, d_a10] =
+              std::get<typename bool_expr::BOr>(_sv0.v());
+          bool_expr a_ = bool_expr::bor(*(d_a00), *(d_a10));
+          auto &&_sv1 = (*(d_a1)).simplify_bool();
+          if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
+            return a_;
+          } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                         _sv1.v())) {
+            return bool_expr::bfalse();
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(
+                         _sv1.v())) {
+            const auto &[d_a01, d_a11] =
+                std::get<typename bool_expr::BAnd>(_sv1.v());
+            return bool_expr::band(a_, bool_expr::band(*(d_a01), *(d_a11)));
+          } else if (std::holds_alternative<typename bool_expr::BOr>(
+                         _sv1.v())) {
+            const auto &[d_a01, d_a11] =
+                std::get<typename bool_expr::BOr>(_sv1.v());
+            return bool_expr::band(a_, bool_expr::bor(*(d_a01), *(d_a11)));
+          } else {
+            const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
+            return bool_expr::band(a_, bool_expr::bnot(*(d_a01)));
           }
         } else {
-          const auto &[d_a0] = std::get<typename bool_expr::BNot>(_sv.v());
-          auto &&_sv0 = (*(d_a0)).simplify_bool();
-          if (std::holds_alternative<typename bool_expr::BTrue>(_sv0.v())) {
-            _result = bool_expr::bfalse();
+          const auto &[d_a00] = std::get<typename bool_expr::BNot>(_sv0.v());
+          bool_expr a_ = bool_expr::bnot(*(d_a00));
+          auto &&_sv1 = (*(d_a1)).simplify_bool();
+          if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
+            return a_;
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _sv0.v())) {
-            _result = bool_expr::btrue();
+                         _sv1.v())) {
+            return bool_expr::bfalse();
           } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _sv0.v())) {
-            const auto &[d_a00, d_a10] =
-                std::get<typename bool_expr::BAnd>(_sv0.v());
-            _result = bool_expr::bnot(bool_expr::band(*(d_a00), *(d_a10)));
+                         _sv1.v())) {
+            const auto &[d_a01, d_a11] =
+                std::get<typename bool_expr::BAnd>(_sv1.v());
+            return bool_expr::band(a_, bool_expr::band(*(d_a01), *(d_a11)));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _sv0.v())) {
-            const auto &[d_a00, d_a10] =
-                std::get<typename bool_expr::BOr>(_sv0.v());
-            _result = bool_expr::bnot(bool_expr::bor(*(d_a00), *(d_a10)));
+                         _sv1.v())) {
+            const auto &[d_a01, d_a11] =
+                std::get<typename bool_expr::BOr>(_sv1.v());
+            return bool_expr::band(a_, bool_expr::bor(*(d_a01), *(d_a11)));
           } else {
-            const auto &[d_a00] = std::get<typename bool_expr::BNot>(_sv0.v());
-            _result = bool_expr::bnot(bool_expr::bnot(*(d_a00)));
+            const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
+            return bool_expr::band(a_, bool_expr::bnot(*(d_a01)));
           }
         }
+      } else if (std::holds_alternative<typename bool_expr::BOr>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<typename bool_expr::BOr>(_sv.v());
+        auto &&_sv0 = (*(d_a0)).simplify_bool();
+        if (std::holds_alternative<typename bool_expr::BTrue>(_sv0.v())) {
+          return bool_expr::btrue();
+        } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                       _sv0.v())) {
+          auto &&_sv1 = (*(d_a1)).simplify_bool();
+          if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
+            return bool_expr::btrue();
+          } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                         _sv1.v())) {
+            return bool_expr::bfalse();
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(
+                         _sv1.v())) {
+            const auto &[d_a01, d_a11] =
+                std::get<typename bool_expr::BAnd>(_sv1.v());
+            return bool_expr::band(*(d_a01), *(d_a11));
+          } else if (std::holds_alternative<typename bool_expr::BOr>(
+                         _sv1.v())) {
+            const auto &[d_a01, d_a11] =
+                std::get<typename bool_expr::BOr>(_sv1.v());
+            return bool_expr::bor(*(d_a01), *(d_a11));
+          } else {
+            const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
+            return bool_expr::bnot(*(d_a01));
+          }
+        } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv0.v())) {
+          const auto &[d_a00, d_a10] =
+              std::get<typename bool_expr::BAnd>(_sv0.v());
+          bool_expr a_ = bool_expr::band(*(d_a00), *(d_a10));
+          auto &&_sv1 = (*(d_a1)).simplify_bool();
+          if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
+            return bool_expr::btrue();
+          } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                         _sv1.v())) {
+            return a_;
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(
+                         _sv1.v())) {
+            const auto &[d_a01, d_a11] =
+                std::get<typename bool_expr::BAnd>(_sv1.v());
+            return bool_expr::bor(a_, bool_expr::band(*(d_a01), *(d_a11)));
+          } else if (std::holds_alternative<typename bool_expr::BOr>(
+                         _sv1.v())) {
+            const auto &[d_a01, d_a11] =
+                std::get<typename bool_expr::BOr>(_sv1.v());
+            return bool_expr::bor(a_, bool_expr::bor(*(d_a01), *(d_a11)));
+          } else {
+            const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
+            return bool_expr::bor(a_, bool_expr::bnot(*(d_a01)));
+          }
+        } else if (std::holds_alternative<typename bool_expr::BOr>(_sv0.v())) {
+          const auto &[d_a00, d_a10] =
+              std::get<typename bool_expr::BOr>(_sv0.v());
+          bool_expr a_ = bool_expr::bor(*(d_a00), *(d_a10));
+          auto &&_sv1 = (*(d_a1)).simplify_bool();
+          if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
+            return bool_expr::btrue();
+          } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                         _sv1.v())) {
+            return a_;
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(
+                         _sv1.v())) {
+            const auto &[d_a01, d_a11] =
+                std::get<typename bool_expr::BAnd>(_sv1.v());
+            return bool_expr::bor(a_, bool_expr::band(*(d_a01), *(d_a11)));
+          } else if (std::holds_alternative<typename bool_expr::BOr>(
+                         _sv1.v())) {
+            const auto &[d_a01, d_a11] =
+                std::get<typename bool_expr::BOr>(_sv1.v());
+            return bool_expr::bor(a_, bool_expr::bor(*(d_a01), *(d_a11)));
+          } else {
+            const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
+            return bool_expr::bor(a_, bool_expr::bnot(*(d_a01)));
+          }
+        } else {
+          const auto &[d_a00] = std::get<typename bool_expr::BNot>(_sv0.v());
+          bool_expr a_ = bool_expr::bnot(*(d_a00));
+          auto &&_sv1 = (*(d_a1)).simplify_bool();
+          if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
+            return bool_expr::btrue();
+          } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                         _sv1.v())) {
+            return a_;
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(
+                         _sv1.v())) {
+            const auto &[d_a01, d_a11] =
+                std::get<typename bool_expr::BAnd>(_sv1.v());
+            return bool_expr::bor(a_, bool_expr::band(*(d_a01), *(d_a11)));
+          } else if (std::holds_alternative<typename bool_expr::BOr>(
+                         _sv1.v())) {
+            const auto &[d_a01, d_a11] =
+                std::get<typename bool_expr::BOr>(_sv1.v());
+            return bool_expr::bor(a_, bool_expr::bor(*(d_a01), *(d_a11)));
+          } else {
+            const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
+            return bool_expr::bor(a_, bool_expr::bnot(*(d_a01)));
+          }
+        }
+      } else {
+        const auto &[d_a0] = std::get<typename bool_expr::BNot>(_sv.v());
+        auto &&_sv0 = (*(d_a0)).simplify_bool();
+        if (std::holds_alternative<typename bool_expr::BTrue>(_sv0.v())) {
+          return bool_expr::bfalse();
+        } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                       _sv0.v())) {
+          return bool_expr::btrue();
+        } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv0.v())) {
+          const auto &[d_a00, d_a10] =
+              std::get<typename bool_expr::BAnd>(_sv0.v());
+          return bool_expr::bnot(bool_expr::band(*(d_a00), *(d_a10)));
+        } else if (std::holds_alternative<typename bool_expr::BOr>(_sv0.v())) {
+          const auto &[d_a00, d_a10] =
+              std::get<typename bool_expr::BOr>(_sv0.v());
+          return bool_expr::bnot(bool_expr::bor(*(d_a00), *(d_a10)));
+        } else {
+          const auto &[d_a00] = std::get<typename bool_expr::BNot>(_sv0.v());
+          return bool_expr::bnot(bool_expr::bnot(*(d_a00)));
+        }
       }
-      return _result;
     }
 
     __attribute__((pure)) bool eval_bool() const {

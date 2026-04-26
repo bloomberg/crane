@@ -23,6 +23,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -64,13 +70,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -107,9 +132,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -252,6 +285,17 @@ struct ResetState {
     __attribute__((pure)) state_full *operator->() { return this; }
 
     __attribute__((pure)) const state_full *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state_full clone() const {
+      return state_full{clone_as_value<unsigned int>((*(this)).acc),
+                        clone_as_value<List<unsigned int>>((*(this)).regs_full),
+                        clone_as_value<bool>((*(this)).carry),
+                        clone_as_value<unsigned int>((*(this)).pc_full),
+                        clone_as_value<List<unsigned int>>((*(this)).stack),
+                        clone_as_value<List<unsigned int>>((*(this)).ram_sys),
+                        clone_as_value<List<unsigned int>>((*(this)).rom)};
+    }
   };
 
   struct state_minimal {
@@ -265,6 +309,16 @@ struct ResetState {
 
     __attribute__((pure)) const state_minimal *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) state_minimal clone() const {
+      return state_minimal{
+          clone_as_value<List<unsigned int>>((*(this)).regs_minimal),
+          clone_as_value<bool>((*(this)).carry_minimal),
+          clone_as_value<unsigned int>((*(this)).pc_minimal),
+          clone_as_value<List<unsigned int>>((*(this)).ram_sys_minimal),
+          clone_as_value<List<unsigned int>>((*(this)).rom_minimal)};
     }
   };
 

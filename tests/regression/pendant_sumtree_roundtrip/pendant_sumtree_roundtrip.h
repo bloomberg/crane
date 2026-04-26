@@ -27,6 +27,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -68,13 +74,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -111,9 +136,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -300,6 +333,7 @@ template <typename t_A> struct Sig {
   };
 
   using variant_t = std::variant<Exist>;
+  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -451,6 +485,7 @@ template <typename t_A> struct T0 {
   };
 
   using variant_t = std::variant<Nil, Cons>;
+  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -771,6 +806,14 @@ struct PendantSumtreeRoundtripCase {
     __attribute__((pure)) CordMeta *operator->() { return this; }
 
     __attribute__((pure)) const CordMeta *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) CordMeta clone() const {
+      return CordMeta{clone_as_value<Fiber>((*(this)).cm_fiber),
+                      clone_as_value<Color>((*(this)).cm_color),
+                      clone_as_value<Twist>((*(this)).cm_spin),
+                      clone_as_value<Twist>((*(this)).cm_ply)};
+    }
   };
 
   struct CertifiedPendant {
@@ -781,6 +824,12 @@ struct PendantSumtreeRoundtripCase {
 
     __attribute__((pure)) const CertifiedPendant *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) CertifiedPendant clone() const {
+      return CertifiedPendant{clone_as_value<CordMeta>((*(this)).cp_meta),
+                              clone_as_value<T0<digit>>((*(this)).cp_digits)};
     }
   };
 
@@ -800,6 +849,13 @@ struct PendantSumtreeRoundtripCase {
 
     __attribute__((pure)) const PendantGroup *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) PendantGroup clone() const {
+      return PendantGroup{
+          clone_as_value<CertifiedPendant>((*(this)).pg_top),
+          clone_as_value<List<CertifiedPendant>>((*(this)).pg_pendants)};
     }
   };
 

@@ -22,6 +22,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -63,13 +69,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -106,9 +131,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -143,6 +176,13 @@ struct PathologicalRecord {
     __attribute__((pure)) Rec *operator->() { return this; }
 
     __attribute__((pure)) const Rec *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) Rec clone() const {
+      return Rec{clone_as_value<unsigned int>((*(this)).f1),
+                 clone_as_value<unsigned int>((*(this)).f2),
+                 clone_as_value<unsigned int>((*(this)).f3)};
+    }
   };
 
   __attribute__((pure)) static unsigned int hof_access(const Rec &r);
@@ -169,6 +209,15 @@ struct PathologicalRecord {
     __attribute__((pure)) BigRec *operator->() { return this; }
 
     __attribute__((pure)) const BigRec *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) BigRec clone() const {
+      return BigRec{clone_as_value<unsigned int>((*(this)).bf1),
+                    clone_as_value<unsigned int>((*(this)).bf2),
+                    clone_as_value<unsigned int>((*(this)).bf3),
+                    clone_as_value<unsigned int>((*(this)).bf4),
+                    clone_as_value<unsigned int>((*(this)).bf5)};
+    }
   };
 
   __attribute__((pure)) static unsigned int scrambled_access(const BigRec &r);

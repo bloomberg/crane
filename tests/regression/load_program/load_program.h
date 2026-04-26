@@ -23,6 +23,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -64,13 +70,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -107,9 +132,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -270,6 +303,14 @@ struct LoadProgram {
     __attribute__((pure)) state *operator->() { return this; }
 
     __attribute__((pure)) const state *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state clone() const {
+      return state{clone_as_value<List<unsigned int>>((*(this)).rom),
+                   clone_as_value<unsigned int>((*(this)).prom_addr),
+                   clone_as_value<unsigned int>((*(this)).prom_data),
+                   clone_as_value<bool>((*(this)).prom_enable)};
+    }
   };
 
   struct state_extended {
@@ -286,6 +327,18 @@ struct LoadProgram {
     __attribute__((pure)) const state_extended *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) state_extended clone() const {
+      return state_extended{
+          clone_as_value<unsigned int>((*(this)).regs_len),
+          clone_as_value<List<unsigned int>>((*(this)).rom_ext),
+          clone_as_value<unsigned int>((*(this)).pc),
+          clone_as_value<unsigned int>((*(this)).stack_len),
+          clone_as_value<unsigned int>((*(this)).prom_addr_ext),
+          clone_as_value<unsigned int>((*(this)).prom_data_ext),
+          clone_as_value<bool>((*(this)).prom_enable_ext)};
+    }
   };
 
   struct state_simple {
@@ -296,6 +349,12 @@ struct LoadProgram {
 
     __attribute__((pure)) const state_simple *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) state_simple clone() const {
+      return state_simple{clone_as_value<List<unsigned int>>((*(this)).rom_),
+                          clone_as_value<unsigned int>((*(this)).ptr_)};
     }
   };
 

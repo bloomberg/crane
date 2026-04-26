@@ -8,58 +8,42 @@
 
 __attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
 LoopifyListTransforms::run_length_encode(const List<unsigned int> &l) {
-  struct _Enter {
-    const List<unsigned int> l;
-  };
-
-  using _Frame = std::variant<_Enter>;
-  List<std::pair<unsigned int, unsigned int>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    auto _f = std::move(std::get<_Enter>(_frame));
-    const List<unsigned int> l = _f.l;
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-      _result = List<std::pair<unsigned int, unsigned int>>::nil();
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+    return List<std::pair<unsigned int, unsigned int>>::nil();
+  } else {
+    const auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(l.v());
+    auto &&_sv = *(d_a1);
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
+      return List<std::pair<unsigned int, unsigned int>>::cons(
+          std::make_pair(d_a0, 1u),
+          List<std::pair<unsigned int, unsigned int>>::nil());
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v());
-      auto &&_sv = *(d_a1);
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-        _result = List<std::pair<unsigned int, unsigned int>>::cons(
+      auto &&_sv1 = run_length_encode(*(d_a1));
+      if (std::holds_alternative<
+              typename List<std::pair<unsigned int, unsigned int>>::Nil>(
+              _sv1.v())) {
+        return List<std::pair<unsigned int, unsigned int>>::cons(
             std::make_pair(d_a0, 1u),
             List<std::pair<unsigned int, unsigned int>>::nil());
       } else {
-        auto &&_sv1 = run_length_encode(*(d_a1));
-        if (std::holds_alternative<
-                typename List<std::pair<unsigned int, unsigned int>>::Nil>(
-                _sv1.v())) {
-          _result = List<std::pair<unsigned int, unsigned int>>::cons(
-              std::make_pair(d_a0, 1u),
-              List<std::pair<unsigned int, unsigned int>>::nil());
+        const auto &[d_a01, d_a11] = std::get<
+            typename List<std::pair<unsigned int, unsigned int>>::Cons>(
+            _sv1.v());
+        const unsigned int &y = d_a01.first;
+        const unsigned int &n = d_a01.second;
+        if (d_a0 == y) {
+          return List<std::pair<unsigned int, unsigned int>>::cons(
+              std::make_pair(y, (n + 1u)), *(d_a11));
         } else {
-          const auto &[d_a01, d_a11] = std::get<
-              typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-              _sv1.v());
-          const unsigned int &y = d_a01.first;
-          const unsigned int &n = d_a01.second;
-          if (d_a0 == y) {
-            _result = List<std::pair<unsigned int, unsigned int>>::cons(
-                std::make_pair(y, (n + 1u)), *(d_a11));
-          } else {
-            _result = List<std::pair<unsigned int, unsigned int>>::cons(
-                std::make_pair(d_a0, 1u),
-                List<std::pair<unsigned int, unsigned int>>::cons(
-                    std::make_pair(y, n), *(d_a11)));
-          }
+          return List<std::pair<unsigned int, unsigned int>>::cons(
+              std::make_pair(d_a0, 1u),
+              List<std::pair<unsigned int, unsigned int>>::cons(
+                  std::make_pair(y, n), *(d_a11)));
         }
       }
     }
   }
-  return _result;
 }
 
 __attribute__((pure)) List<unsigned int>

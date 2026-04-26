@@ -18,8 +18,10 @@ HofTreeLoopify::depth_tree(unsigned int n) {
     } else {
       unsigned int m = _loop_n - 1;
       auto _cell = std::make_unique<HofTreeLoopify::tree<unsigned int>>(
-          typename tree<unsigned int>::Node(nullptr, _loop_n,
-                                            tree<unsigned int>::leaf()));
+          typename tree<unsigned int>::Node(
+              nullptr, _loop_n,
+              std::make_unique<HofTreeLoopify::tree<unsigned int>>(
+                  tree<unsigned int>::leaf())));
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename tree<unsigned int>::Node>((*_write)->v_mut()).d_a0;

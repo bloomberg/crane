@@ -25,6 +25,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -66,13 +72,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -109,9 +134,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -266,6 +299,12 @@ struct RecordFieldPatterns {
     __attribute__((pure)) Point *operator->() { return this; }
 
     __attribute__((pure)) const Point *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) Point clone() const {
+      return Point{clone_as_value<unsigned int>((*(this)).px),
+                   clone_as_value<unsigned int>((*(this)).py)};
+    }
   };
 
   __attribute__((pure)) static unsigned int classify_point(const Point &p);
@@ -297,6 +336,12 @@ struct RecordFieldPatterns {
     __attribute__((pure)) ScaledPoint *operator->() { return this; }
 
     __attribute__((pure)) const ScaledPoint *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) ScaledPoint clone() const {
+      return ScaledPoint{clone_as_value<unsigned int>((*(this)).sp_x),
+                         clone_as_value<unsigned int>((*(this)).sp_y)};
+    }
   };
 
   __attribute__((pure)) static unsigned int
@@ -332,6 +377,12 @@ struct RecordFieldPatterns {
     __attribute__((pure)) Segment *operator->() { return this; }
 
     __attribute__((pure)) const Segment *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) Segment clone() const {
+      return Segment{clone_as_value<Point>((*(this)).seg_start),
+                     clone_as_value<Point>((*(this)).seg_end)};
+    }
   };
 
   __attribute__((pure)) static unsigned int segment_length_sq(const Segment &s);
@@ -344,6 +395,13 @@ struct RecordFieldPatterns {
     __attribute__((pure)) Bounded *operator->() { return this; }
 
     __attribute__((pure)) const Bounded *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) Bounded clone() const {
+      return Bounded{clone_as_value<unsigned int>((*(this)).lo),
+                     clone_as_value<unsigned int>((*(this)).hi),
+                     clone_as_value<unsigned int>((*(this)).mid)};
+    }
   };
 
   __attribute__((pure)) static unsigned int bounded_range(const Bounded &b);
@@ -360,6 +418,12 @@ struct RecordFieldPatterns {
     __attribute__((pure)) Container *operator->() { return this; }
 
     __attribute__((pure)) const Container *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) Container clone() const {
+      return Container{clone_value((*(this)).elem),
+                       clone_as_value<unsigned int>((*(this)).count)};
+    }
   };
 
   using elem_type = std::any;

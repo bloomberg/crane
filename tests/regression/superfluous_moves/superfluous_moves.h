@@ -23,6 +23,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -64,13 +70,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -107,9 +132,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -232,6 +265,11 @@ struct SuperfluousMoves {
     __attribute__((pure)) position *operator->() { return this; }
 
     __attribute__((pure)) const position *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) position clone() const {
+      return position{clone_as_value<unsigned int>((*(this)).px)};
+    }
   };
   /// Small mode enum to force a switch in the extracted C++.
   enum class Mode { e_CHASE, e_FRIGHTENED };
@@ -273,6 +311,13 @@ struct SuperfluousMoves {
     __attribute__((pure)) game_state *operator->() { return this; }
 
     __attribute__((pure)) const game_state *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) game_state clone() const {
+      return game_state{clone_as_value<position>((*(this)).pacpos),
+                        clone_as_value<List<position>>((*(this)).ghosts),
+                        clone_as_value<unsigned int>((*(this)).lives)};
+    }
   };
 
   /// Reduced loop state with only the three fields relevant to the bug.
@@ -284,6 +329,14 @@ struct SuperfluousMoves {
     __attribute__((pure)) loop_state *operator->() { return this; }
 
     __attribute__((pure)) const loop_state *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) loop_state clone() const {
+      return loop_state{
+          clone_as_value<game_state>((*(this)).ls_game),
+          clone_as_value<position>((*(this)).ls_prev_pac),
+          clone_as_value<List<position>>((*(this)).ls_prev_ghosts)};
+    }
   };
 
   /// Identity tick so the reproducer stays minimal while keeping the same

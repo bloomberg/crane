@@ -25,6 +25,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -66,13 +72,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -109,9 +134,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -890,6 +923,12 @@ struct ValidatedVirtualCrossmatchTraceCase {
     __attribute__((pure)) HLAAllele *operator->() { return this; }
 
     __attribute__((pure)) const HLAAllele *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) HLAAllele clone() const {
+      return HLAAllele{clone_as_value<HLALocus>((*(this)).hla_locus),
+                       clone_as_value<unsigned int>((*(this)).hla_group)};
+    }
   };
 
   __attribute__((pure)) static bool hla_allele_eq_dec(const HLAAllele &x,
@@ -903,6 +942,12 @@ struct ValidatedVirtualCrossmatchTraceCase {
     __attribute__((pure)) HLATyping *operator->() { return this; }
 
     __attribute__((pure)) const HLATyping *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) HLATyping clone() const {
+      return HLATyping{
+          clone_as_value<List<HLAAllele>>((*(this)).hla_typed_alleles)};
+    }
   };
 
   struct HLAEpitope {
@@ -913,6 +958,13 @@ struct ValidatedVirtualCrossmatchTraceCase {
     __attribute__((pure)) HLAEpitope *operator->() { return this; }
 
     __attribute__((pure)) const HLAEpitope *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) HLAEpitope clone() const {
+      return HLAEpitope{clone_as_value<unsigned int>((*(this)).epitope_id),
+                        clone_as_value<HLALocus>((*(this)).epitope_locus),
+                        clone_as_value<bool>((*(this)).epitope_immunogenic)};
+    }
   };
 
   __attribute__((pure)) static bool epitope_eq_dec(const HLAEpitope &x,
@@ -944,6 +996,14 @@ struct ValidatedVirtualCrossmatchTraceCase {
     __attribute__((pure)) const EpitopeAntibody *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) EpitopeAntibody clone() const {
+      return EpitopeAntibody{
+          clone_as_value<HLAEpitope>((*(this)).ab_epitope),
+          clone_as_value<unsigned int>((*(this)).ab_mfi),
+          clone_as_value<bool>((*(this)).ab_complement_fixing)};
+    }
   };
 
   struct VirtualXMProfile {
@@ -956,6 +1016,15 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     __attribute__((pure)) const VirtualXMProfile *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) VirtualXMProfile clone() const {
+      return VirtualXMProfile{
+          clone_as_value<List<EpitopeAntibody>>((*(this)).vxm_epitope_abs),
+          clone_as_value<unsigned int>((*(this)).vxm_current_pra),
+          clone_as_value<unsigned int>((*(this)).vxm_peak_pra),
+          clone_as_value<unsigned int>((*(this)).vxm_sensitization_events)};
     }
   };
 
@@ -972,6 +1041,17 @@ struct ValidatedVirtualCrossmatchTraceCase {
     __attribute__((pure)) const MFIThresholdConfig *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) MFIThresholdConfig clone() const {
+      return MFIThresholdConfig{
+          clone_as_value<unsigned int>((*(this)).mfi_cfg_negative),
+          clone_as_value<unsigned int>((*(this)).mfi_cfg_weak_positive),
+          clone_as_value<unsigned int>((*(this)).mfi_cfg_moderate),
+          clone_as_value<unsigned int>((*(this)).mfi_cfg_strong),
+          clone_as_value<unsigned int>((*(this)).mfi_cfg_lab_id),
+          clone_as_value<bool>((*(this)).mfi_cfg_validated)};
+    }
   };
 
   __attribute__((pure)) static bool
@@ -986,6 +1066,12 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     __attribute__((pure)) const ValidatedMFIConfig *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) ValidatedMFIConfig clone() const {
+      return ValidatedMFIConfig{
+          clone_as_value<MFIThresholdConfig>((*(this)).vmc_config)};
     }
   };
 
@@ -1271,6 +1357,14 @@ struct ValidatedVirtualCrossmatchTraceCase {
     __attribute__((pure)) const CrossmatchWithUncertainty *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) CrossmatchWithUncertainty clone() const {
+      return CrossmatchWithUncertainty{
+          clone_as_value<CrossmatchResult>((*(this)).xmu_result),
+          clone_as_value<unsigned int>((*(this)).xmu_method),
+          clone_as_value<TestConfidence>((*(this)).xmu_confidence)};
+    }
   };
 
   __attribute__((pure)) static bool
@@ -1289,6 +1383,18 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     __attribute__((pure)) const SafeTransfusionOrder *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) SafeTransfusionOrder clone() const {
+      return SafeTransfusionOrder{
+          clone_as_value<unsigned int>((*(this)).sto_recipient_id),
+          clone_as_value<unsigned int>((*(this)).sto_product_id),
+          clone_as_value<bool>((*(this)).sto_compatibility_check),
+          clone_as_value<CrossmatchWithUncertainty>((*(this)).sto_crossmatch),
+          clone_as_value<unsigned int>((*(this)).sto_sample_collection_time),
+          clone_as_value<unsigned int>((*(this)).sto_authorized_by),
+          clone_as_value<bool>((*(this)).sto_emergency_release)};
     }
   };
 

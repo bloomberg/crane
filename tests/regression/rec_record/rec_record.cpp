@@ -20,8 +20,9 @@ RecRecord::rlist_sum(const RecRecord::rlist<unsigned int> &l) {
 
 __attribute__((pure)) unsigned int
 RecRecord::rnode_depth(const RecRecord::RNode &r) {
-  if (r.rn_next.has_value()) {
-    const RecRecord::RNode &next = *r.rn_next;
+  auto _cs = clone_as_value<std::optional<RNode>>(r.rn_next);
+  if (_cs.has_value()) {
+    const RecRecord::RNode &next = *_cs;
     return (rnode_depth(next) + 1);
   } else {
     return 1u;

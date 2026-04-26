@@ -13,114 +13,40 @@
 __attribute__((pure)) unsigned int LoopifySearch::knapsack_fuel(
     const unsigned int &fuel, const unsigned int &capacity,
     const List<std::pair<unsigned int, unsigned int>> &items) {
-  struct _Enter {
-    const List<std::pair<unsigned int, unsigned int>> items;
-    const unsigned int capacity;
-    const unsigned int fuel;
-  };
-
-  struct _Call1 {
-    const unsigned int _s0;
-    std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _s1;
-    unsigned int _s2;
-    unsigned int _s3;
-    unsigned int _s4;
-  };
-
-  struct _Call2 {
-    unsigned int _s0;
-    const unsigned int _s1;
-    std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _s2;
-    unsigned int _s3;
-    unsigned int _s4;
-    unsigned int _s5;
-  };
-
-  struct _Call3 {
-    unsigned int _s0;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
-  unsigned int _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(16);
-  _stack.emplace_back(_Enter{items, capacity, fuel});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const List<std::pair<unsigned int, unsigned int>> items = _f.items;
-      const unsigned int capacity = _f.capacity;
-      const unsigned int fuel = _f.fuel;
-      if (fuel <= 0) {
-        _result = 0u;
-      } else {
-        unsigned int f = fuel - 1;
-        if (std::holds_alternative<
-                typename List<std::pair<unsigned int, unsigned int>>::Nil>(
-                items.v())) {
-          _result = 0u;
-        } else {
-          const auto &[d_a0, d_a1] = std::get<
-              typename List<std::pair<unsigned int, unsigned int>>::Cons>(
+  if (fuel <= 0) {
+    return 0u;
+  } else {
+    unsigned int f = fuel - 1;
+    if (std::holds_alternative<
+            typename List<std::pair<unsigned int, unsigned int>>::Nil>(
+            items.v())) {
+      return 0u;
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
               items.v());
-          const unsigned int &weight = d_a0.first;
-          const unsigned int &value = d_a0.second;
-          if (capacity < weight) {
-            _stack.emplace_back(_Enter{*(d_a1), capacity, f});
-          } else {
-            _stack.emplace_back(_Call1{
-                capacity,
-                std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
-                    d_a1->clone()),
-                f, value, weight});
-            _stack.emplace_back(_Enter{
-                *(d_a1),
-                (((capacity - weight) > capacity ? 0 : (capacity - weight))),
-                f});
-          }
+      const unsigned int &weight = d_a0.first;
+      const unsigned int &value = d_a0.second;
+      if (capacity < weight) {
+        return knapsack_fuel(f, capacity, *(d_a1));
+      } else {
+        if (knapsack_fuel(f, capacity, *(d_a1)) <=
+            (value +
+             knapsack_fuel(
+                 f,
+                 (((capacity - weight) > capacity ? 0 : (capacity - weight))),
+                 *(d_a1)))) {
+          return (value + knapsack_fuel(f,
+                                        (((capacity - weight) > capacity
+                                              ? 0
+                                              : (capacity - weight))),
+                                        *(d_a1)));
+        } else {
+          return knapsack_fuel(f, capacity, *(d_a1));
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      const unsigned int capacity = _f._s0;
-      std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> d_a1 =
-          std::move(_f._s1);
-      unsigned int f = _f._s2;
-      unsigned int value = _f._s3;
-      unsigned int weight = _f._s4;
-      unsigned int _cond0 = _result;
-      _stack.emplace_back(
-          _Call2{_cond0, capacity,
-                 std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
-                     d_a1->clone()),
-                 f, value, weight});
-      _stack.emplace_back(_Enter{*(d_a1), capacity, f});
-    } else if (std::holds_alternative<_Call2>(_frame)) {
-      auto _f = std::move(std::get<_Call2>(_frame));
-      unsigned int _cond0 = _f._s0;
-      const unsigned int capacity = _f._s1;
-      std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> d_a1 =
-          std::move(_f._s2);
-      unsigned int f = _f._s3;
-      unsigned int value = _f._s4;
-      unsigned int weight = _f._s5;
-      unsigned int _cond1 = _result;
-      if (_cond1 <= (value + _cond0)) {
-        _stack.emplace_back(_Call3{value});
-        _stack.emplace_back(_Enter{
-            *(d_a1),
-            (((capacity - weight) > capacity ? 0 : (capacity - weight))), f});
-      } else {
-        _stack.emplace_back(_Enter{*(d_a1), capacity, f});
-      }
-    } else {
-      auto _f = std::move(std::get<_Call3>(_frame));
-      _result = (_f._s0 + _result);
     }
   }
-  return _result;
 }
 
 __attribute__((pure)) unsigned int LoopifySearch::knapsack(
@@ -552,67 +478,28 @@ __attribute__((pure)) bool
 LoopifySearch::subset_sum_fuel(const unsigned int &fuel,
                                const unsigned int &target,
                                const List<unsigned int> &l) {
-  struct _Enter {
-    const List<unsigned int> l;
-    const unsigned int target;
-    const unsigned int fuel;
-  };
-
-  struct _Call1 {
-    unsigned int _s0;
-    std::unique_ptr<List<unsigned int>> _s1;
-    unsigned int _s2;
-    const unsigned int _s3;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1>;
-  bool _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(16);
-  _stack.emplace_back(_Enter{l, target, fuel});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
-      const unsigned int target = _f.target;
-      const unsigned int fuel = _f.fuel;
-      if (fuel <= 0) {
-        _result = false;
-      } else {
-        unsigned int f = fuel - 1;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-          _result = target == 0u;
-        } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(
-              _Call1{d_a0, std::make_unique<List<unsigned int>>(d_a1->clone()),
-                     f, target});
-          _stack.emplace_back(_Enter{*(d_a1), target, f});
-        }
-      }
+  if (fuel <= 0) {
+    return false;
+  } else {
+    unsigned int f = fuel - 1;
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+      return target == 0u;
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
-      std::unique_ptr<List<unsigned int>> d_a1 = std::move(_f._s1);
-      unsigned int f = _f._s2;
-      const unsigned int target = _f._s3;
-      bool without = _result;
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l.v());
+      bool without = subset_sum_fuel(f, target, *(d_a1));
       if (without) {
-        _result = true;
+        return true;
       } else {
         if (d_a0 <= target) {
-          _stack.emplace_back(_Enter{
-              *(d_a1), (((target - d_a0) > target ? 0 : (target - d_a0))), f});
+          return subset_sum_fuel(
+              f, (((target - d_a0) > target ? 0 : (target - d_a0))), *(d_a1));
         } else {
-          _result = false;
+          return false;
         }
       }
     }
   }
-  return _result;
 }
 
 __attribute__((pure)) bool

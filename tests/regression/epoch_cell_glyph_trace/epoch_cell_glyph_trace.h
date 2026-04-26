@@ -23,6 +23,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -64,13 +70,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -107,9 +132,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -456,6 +489,12 @@ struct Q {
   __attribute__((pure)) Q *operator->() { return this; }
 
   __attribute__((pure)) const Q *operator->() const { return this; }
+
+  // ACCESSORS
+  __attribute__((pure)) Q clone() const {
+    return Q{clone_as_value<Z>((*(this)).Qnum),
+             clone_as_value<Positive>((*(this)).Qden)};
+  }
 };
 
 struct QArith_base {
@@ -644,6 +683,17 @@ struct EpochCellGlyphTraceCase {
     __attribute__((pure)) const MechanismState *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) MechanismState clone() const {
+      return MechanismState{clone_as_value<Z>((*(this)).crank_position),
+                            clone_as_value<Z>((*(this)).metonic_dial),
+                            clone_as_value<Z>((*(this)).saros_dial),
+                            clone_as_value<Z>((*(this)).callippic_dial),
+                            clone_as_value<Z>((*(this)).exeligmos_dial),
+                            clone_as_value<Z>((*(this)).games_dial),
+                            clone_as_value<Z>((*(this)).zodiac_position)};
+    }
   };
 
   static inline const MechanismState initial_state = MechanismState{
@@ -749,6 +799,19 @@ struct EpochCellGlyphTraceCase {
 
     __attribute__((pure)) const HistoricalEclipse *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) HistoricalEclipse clone() const {
+      return HistoricalEclipse{
+          clone_as_value<Z>((*(this)).he_year),
+          clone_as_value<Z>((*(this)).he_month),
+          clone_as_value<Z>((*(this)).he_day),
+          clone_as_value<EclipseCategory>((*(this)).he_category),
+          clone_as_value<Z>((*(this)).he_saros_series),
+          clone_as_value<Z>((*(this)).he_saros_member),
+          clone_as_value<Q>((*(this)).he_magnitude),
+          clone_as_value<bool>((*(this)).he_visible_mediterranean)};
     }
   };
   enum class DialGlyph {
@@ -945,6 +1008,15 @@ struct EpochCellGlyphTraceCase {
     __attribute__((pure)) const EpochReading *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) EpochReading clone() const {
+      return EpochReading{
+          clone_as_value<MechanismState>((*(this)).reading_state),
+          clone_as_value<HistoricalEclipse>((*(this)).reading_eclipse),
+          clone_as_value<Z>((*(this)).reading_cell),
+          clone_as_value<DialGlyph>((*(this)).reading_glyph)};
+    }
   };
 
   __attribute__((pure)) static EpochReading
@@ -965,6 +1037,14 @@ struct EpochCellGlyphTraceCase {
     __attribute__((pure)) ValidEpoch *operator->() { return this; }
 
     __attribute__((pure)) const ValidEpoch *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) ValidEpoch clone() const {
+      return ValidEpoch{
+          clone_as_value<Z>((*(this)).ve_year),
+          clone_as_value<Z>((*(this)).ve_month),
+          clone_as_value<HistoricalEclipse>((*(this)).ve_eclipse)};
+    }
   };
 
   static inline const ValidEpoch epoch_205_bc_valid = ValidEpoch{

@@ -24,6 +24,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -65,13 +71,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -108,9 +133,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -262,6 +295,12 @@ struct RamStateOps {
     __attribute__((pure)) ram_reg *operator->() { return this; }
 
     __attribute__((pure)) const ram_reg *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) ram_reg clone() const {
+      return ram_reg{clone_as_value<List<unsigned int>>((*(this)).reg_main),
+                     clone_as_value<List<unsigned int>>((*(this)).reg_status)};
+    }
   };
 
   struct ram_chip {
@@ -271,6 +310,12 @@ struct RamStateOps {
     __attribute__((pure)) ram_chip *operator->() { return this; }
 
     __attribute__((pure)) const ram_chip *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) ram_chip clone() const {
+      return ram_chip{clone_as_value<List<ram_reg>>((*(this)).chip_regs),
+                      clone_as_value<unsigned int>((*(this)).chip_port)};
+    }
   };
 
   struct ram_bank {
@@ -279,6 +324,11 @@ struct RamStateOps {
     __attribute__((pure)) ram_bank *operator->() { return this; }
 
     __attribute__((pure)) const ram_bank *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) ram_bank clone() const {
+      return ram_bank{clone_as_value<List<ram_chip>>((*(this)).bank_chips)};
+    }
   };
 
   struct ram_sel {
@@ -290,6 +340,14 @@ struct RamStateOps {
     __attribute__((pure)) ram_sel *operator->() { return this; }
 
     __attribute__((pure)) const ram_sel *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) ram_sel clone() const {
+      return ram_sel{clone_as_value<unsigned int>((*(this)).sel_bank),
+                     clone_as_value<unsigned int>((*(this)).sel_chip),
+                     clone_as_value<unsigned int>((*(this)).sel_reg),
+                     clone_as_value<unsigned int>((*(this)).sel_char)};
+    }
   };
 
   struct state {
@@ -305,6 +363,18 @@ struct RamStateOps {
     __attribute__((pure)) state *operator->() { return this; }
 
     __attribute__((pure)) const state *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state clone() const {
+      return state{clone_as_value<List<unsigned int>>((*(this)).state_regs),
+                   clone_as_value<unsigned int>((*(this)).state_acc),
+                   clone_as_value<bool>((*(this)).state_carry),
+                   clone_as_value<unsigned int>((*(this)).state_pc),
+                   clone_as_value<List<unsigned int>>((*(this)).state_stack),
+                   clone_as_value<List<ram_bank>>((*(this)).state_ram),
+                   clone_as_value<ram_sel>((*(this)).state_sel),
+                   clone_as_value<List<unsigned int>>((*(this)).state_rom)};
+    }
   };
 
   static inline const ram_reg empty_reg =

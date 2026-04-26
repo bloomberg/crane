@@ -24,6 +24,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -65,13 +71,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -108,9 +133,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -572,6 +605,14 @@ struct CoalitionBidHonorTraceCase {
     __attribute__((pure)) Commander *operator->() { return this; }
 
     __attribute__((pure)) const Commander *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) Commander clone() const {
+      return Commander{clone_as_value<unsigned int>((*(this)).cmd_id),
+                       clone_as_value<Clan>((*(this)).cmd_clan),
+                       clone_as_value<Rank>((*(this)).cmd_rank),
+                       clone_as_value<bool>((*(this)).cmd_bloodnamed)};
+    }
   };
 
   __attribute__((pure)) static bool may_issue_batchall(const Commander &c);
@@ -667,6 +708,18 @@ struct CoalitionBidHonorTraceCase {
     __attribute__((pure)) Unit *operator->() { return this; }
 
     __attribute__((pure)) const Unit *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) Unit clone() const {
+      return Unit{clone_as_value<unsigned int>((*(this)).unit_id),
+                  clone_as_value<UnitClass>((*(this)).unit_class),
+                  clone_as_value<WeightClass>((*(this)).unit_weight),
+                  clone_as_value<unsigned int>((*(this)).unit_tonnage),
+                  clone_as_value<unsigned int>((*(this)).unit_gunnery),
+                  clone_as_value<unsigned int>((*(this)).unit_piloting),
+                  clone_as_value<bool>((*(this)).unit_is_elite),
+                  clone_as_value<bool>((*(this)).unit_is_clan)};
+    }
   };
 
   __attribute__((pure)) static unsigned int unit_skill(const Unit &u);
@@ -691,6 +744,17 @@ struct CoalitionBidHonorTraceCase {
 
     __attribute__((pure)) const ForceMetrics *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) ForceMetrics clone() const {
+      return ForceMetrics{
+          clone_as_value<unsigned int>((*(this)).fm_count),
+          clone_as_value<unsigned int>((*(this)).fm_tonnage),
+          clone_as_value<unsigned int>((*(this)).fm_elite_count),
+          clone_as_value<unsigned int>((*(this)).fm_clan_count),
+          clone_as_value<unsigned int>((*(this)).fm_total_bv),
+          clone_as_value<unsigned int>((*(this)).fm_total_ecr)};
     }
   };
 
@@ -742,6 +806,13 @@ struct CoalitionBidHonorTraceCase {
     __attribute__((pure)) const CoalitionMember *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) CoalitionMember clone() const {
+      return CoalitionMember{clone_as_value<Clan>((*(this)).cm_clan),
+                             clone_as_value<Commander>((*(this)).cm_commander),
+                             clone_as_value<Force>((*(this)).cm_force)};
+    }
   };
 
   using Coalition = List<CoalitionMember>;
@@ -764,6 +835,14 @@ struct CoalitionBidHonorTraceCase {
     __attribute__((pure)) const CoalitionMemberBid *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) CoalitionMemberBid clone() const {
+      return CoalitionMemberBid{
+          clone_as_value<unsigned int>((*(this)).cmb_member_index),
+          clone_as_value<Force>((*(this)).cmb_new_force),
+          clone_as_value<Side>((*(this)).cmb_side)};
+    }
   };
 
   __attribute__((pure)) static Coalition
@@ -778,6 +857,13 @@ struct CoalitionBidHonorTraceCase {
     __attribute__((pure)) ForceBid *operator->() { return this; }
 
     __attribute__((pure)) const ForceBid *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) ForceBid clone() const {
+      return ForceBid{clone_as_value<Force>((*(this)).bid_force),
+                      clone_as_value<Side>((*(this)).bid_side),
+                      clone_as_value<Commander>((*(this)).bid_commander)};
+    }
   };
 
   __attribute__((pure)) static ForceMetrics bid_metrics(const ForceBid &b);
@@ -1045,6 +1131,12 @@ struct CoalitionBidHonorTraceCase {
     __attribute__((pure)) const BattleContext *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) BattleContext clone() const {
+      return BattleContext{clone_as_value<bool>((*(this)).ctx_hegira_allowed),
+                           clone_as_value<bool>((*(this)).ctx_circle_present)};
+    }
   };
 
   static inline const BattleContext standard_possession_context =
@@ -1064,6 +1156,20 @@ struct CoalitionBidHonorTraceCase {
     __attribute__((pure)) const BatchallChallenge *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) BatchallChallenge clone() const {
+      return BatchallChallenge{
+          clone_as_value<Commander>((*(this)).chal_challenger),
+          clone_as_value<Clan>((*(this)).chal_clan),
+          clone_as_value<CoalitionBidHonorTraceCase::Prize>(
+              (*(this)).chal_prize),
+          clone_as_value<Force>((*(this)).chal_initial_force),
+          clone_as_value<CoalitionBidHonorTraceCase::Location>(
+              (*(this)).chal_location),
+          clone_as_value<TrialType>((*(this)).chal_trial_type),
+          clone_as_value<BattleContext>((*(this)).chal_context)};
+    }
   };
 
   struct BatchallResponse {
@@ -1075,6 +1181,14 @@ struct CoalitionBidHonorTraceCase {
 
     __attribute__((pure)) const BatchallResponse *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) BatchallResponse clone() const {
+      return BatchallResponse{
+          clone_as_value<Commander>((*(this)).resp_defender),
+          clone_as_value<Clan>((*(this)).resp_clan),
+          clone_as_value<Force>((*(this)).resp_force)};
     }
   };
 
@@ -1956,6 +2070,14 @@ struct CoalitionBidHonorTraceCase {
 
     __attribute__((pure)) const BatchallState *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) BatchallState clone() const {
+      return BatchallState{
+          clone_as_value<CoalitionBidHonorTraceCase::BatchallPhase>(
+              (*(this)).bs_phase),
+          clone_as_value<HonorLedger>((*(this)).bs_honor)};
     }
   };
 

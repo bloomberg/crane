@@ -1176,88 +1176,49 @@ __attribute__((pure)) unsigned int LoopifyLists::lookup(
 __attribute__((pure)) LoopifyLists::list<LoopifyLists::list<unsigned int>>
 LoopifyLists::group_fuel(const unsigned int &fuel,
                          const LoopifyLists::list<unsigned int> &l) {
-  std::unique_ptr<LoopifyLists::list<LoopifyLists::list<unsigned int>>> _head{};
-  std::unique_ptr<LoopifyLists::list<LoopifyLists::list<unsigned int>>>
-      *_write = &_head;
-  LoopifyLists::list<unsigned int> _loop_l = l;
-  unsigned int _loop_fuel = fuel;
-  while (true) {
-    if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<
-          LoopifyLists::list<LoopifyLists::list<unsigned int>>>(
-          list<LoopifyLists::list<unsigned int>>::nil());
-      break;
+  if (fuel <= 0) {
+    return list<LoopifyLists::list<unsigned int>>::nil();
+  } else {
+    unsigned int f = fuel - 1;
+    if (std::holds_alternative<typename LoopifyLists::list<unsigned int>::Nil>(
+            l.v())) {
+      return list<LoopifyLists::list<unsigned int>>::nil();
     } else {
-      unsigned int f = _loop_fuel - 1;
+      const auto &[d_a0, d_a1] =
+          std::get<typename LoopifyLists::list<unsigned int>::Cons>(l.v());
+      auto &&_sv0 = *(d_a1);
       if (std::holds_alternative<
-              typename LoopifyLists::list<unsigned int>::Nil>(_loop_l.v())) {
-        *(_write) = std::make_unique<
-            LoopifyLists::list<LoopifyLists::list<unsigned int>>>(
+              typename LoopifyLists::list<unsigned int>::Nil>(_sv0.v())) {
+        return list<LoopifyLists::list<unsigned int>>::cons(
+            list<unsigned int>::cons(d_a0, list<unsigned int>::nil()),
             list<LoopifyLists::list<unsigned int>>::nil());
-        break;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename LoopifyLists::list<unsigned int>::Cons>(
-                _loop_l.v());
-        auto &&_sv0 = *(d_a1);
-        if (std::holds_alternative<
-                typename LoopifyLists::list<unsigned int>::Nil>(_sv0.v())) {
-          *(_write) = std::make_unique<
-              LoopifyLists::list<LoopifyLists::list<unsigned int>>>(
-              list<LoopifyLists::list<unsigned int>>::cons(
-                  list<unsigned int>::cons(d_a0, list<unsigned int>::nil()),
-                  list<LoopifyLists::list<unsigned int>>::nil()));
-          break;
-        } else {
-          const auto &[d_a00, d_a10] =
-              std::get<typename LoopifyLists::list<unsigned int>::Cons>(
-                  _sv0.v());
-          if (d_a0 == d_a00) {
-            auto &&_sv1 = group_fuel(f, *(d_a1));
-            if (std::holds_alternative<typename LoopifyLists::list<
-                    LoopifyLists::list<unsigned int>>::Nil>(_sv1.v())) {
-              *(_write) = std::make_unique<
-                  LoopifyLists::list<LoopifyLists::list<unsigned int>>>(
-                  list<LoopifyLists::list<unsigned int>>::cons(
-                      list<unsigned int>::cons(d_a0, list<unsigned int>::nil()),
-                      list<LoopifyLists::list<unsigned int>>::nil()));
-              break;
-            } else {
-              const auto &[d_a01, d_a11] = std::get<typename LoopifyLists::list<
-                  LoopifyLists::list<unsigned int>>::Cons>(_sv1.v());
-              *(_write) = std::make_unique<
-                  LoopifyLists::list<LoopifyLists::list<unsigned int>>>(
-                  list<LoopifyLists::list<unsigned int>>::cons(
-                      list<unsigned int>::cons(
-                          d_a0,
-                          clone_as_value<LoopifyLists::list<unsigned int>>(
-                              d_a01)),
-                      *(d_a11)));
-              break;
-            }
+        const auto &[d_a00, d_a10] =
+            std::get<typename LoopifyLists::list<unsigned int>::Cons>(_sv0.v());
+        if (d_a0 == d_a00) {
+          auto &&_sv1 = group_fuel(f, *(d_a1));
+          if (std::holds_alternative<typename LoopifyLists::list<
+                  LoopifyLists::list<unsigned int>>::Nil>(_sv1.v())) {
+            return list<LoopifyLists::list<unsigned int>>::cons(
+                list<unsigned int>::cons(d_a0, list<unsigned int>::nil()),
+                list<LoopifyLists::list<unsigned int>>::nil());
           } else {
-            auto _cell = std::make_unique<
-                LoopifyLists::list<LoopifyLists::list<unsigned int>>>(
-                typename list<LoopifyLists::list<unsigned int>>::Cons(
-                    list<unsigned int>::cons(d_a0, list<unsigned int>::nil()),
-                    nullptr));
-            *(_write) = std::move(_cell);
-            _write =
-                &std::get<
-                     typename list<LoopifyLists::list<unsigned int>>::Cons>(
-                     (*_write)->v_mut())
-                     .d_a1;
-            LoopifyLists::list<unsigned int> _next_l = *(d_a1);
-            unsigned int _next_fuel = f;
-            _loop_l = std::move(_next_l);
-            _loop_fuel = std::move(_next_fuel);
-            continue;
+            const auto &[d_a01, d_a11] = std::get<typename LoopifyLists::list<
+                LoopifyLists::list<unsigned int>>::Cons>(_sv1.v());
+            return list<LoopifyLists::list<unsigned int>>::cons(
+                list<unsigned int>::cons(
+                    d_a0,
+                    clone_as_value<LoopifyLists::list<unsigned int>>(d_a01)),
+                *(d_a11));
           }
+        } else {
+          return list<LoopifyLists::list<unsigned int>>::cons(
+              list<unsigned int>::cons(d_a0, list<unsigned int>::nil()),
+              group_fuel(f, *(d_a1)));
         }
       }
     }
   }
-  return std::move(*(_head));
 }
 
 __attribute__((pure)) LoopifyLists::list<LoopifyLists::list<unsigned int>>

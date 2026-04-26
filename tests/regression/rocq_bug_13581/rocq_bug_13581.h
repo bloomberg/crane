@@ -24,6 +24,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -65,13 +71,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -108,9 +133,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -231,6 +264,11 @@ struct RocqBug13581 {
     __attribute__((pure)) const mixin_of<t_T0> *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) mixin_of<t_T0> clone() const {
+      return mixin_of<t_T0>{clone_value((*(this)).mixin_f)};
+    }
   };
 
   static inline const mixin_of<Nat> d =
@@ -243,6 +281,12 @@ struct RocqBug13581 {
     __attribute__((pure)) R<t_T0> *operator->() { return this; }
 
     __attribute__((pure)) const R<t_T0> *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) R<t_T0> clone() const {
+      return R<t_T0>{clone_value((*(this)).g),
+                     clone_as_value<Nat>((*(this)).x)};
+    }
   };
 
   template <typename T1>
@@ -264,6 +308,7 @@ struct RocqBug13581 {
     };
 
     using variant_t = std::variant<C, D>;
+    using crane_element_type = t_T;
 
   private:
     // DATA
@@ -349,6 +394,7 @@ struct RocqBug13581 {
     };
 
     using variant_t = std::variant<E>;
+    using crane_element_type = t_T;
 
   private:
     // DATA

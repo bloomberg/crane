@@ -25,6 +25,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -66,13 +72,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -109,9 +134,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -233,6 +266,7 @@ template <typename t_A> struct Sig {
   };
 
   using variant_t = std::variant<Exist>;
+  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -304,6 +338,11 @@ struct ConstructorBugs {
     __attribute__((pure)) field_a *operator->() { return this; }
 
     __attribute__((pure)) const field_a *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) field_a clone() const {
+      return field_a{clone_as_value<unsigned int>((*(this)).a_value)};
+    }
   };
 
   struct field_b {
@@ -312,6 +351,11 @@ struct ConstructorBugs {
     __attribute__((pure)) field_b *operator->() { return this; }
 
     __attribute__((pure)) const field_b *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) field_b clone() const {
+      return field_b{clone_as_value<unsigned int>((*(this)).b_value)};
+    }
   };
 
   struct source_state {
@@ -324,6 +368,13 @@ struct ConstructorBugs {
     __attribute__((pure)) const source_state *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) source_state clone() const {
+      return source_state{clone_as_value<field_a>((*(this)).source_a),
+                          clone_as_value<field_b>((*(this)).source_b),
+                          clone_as_value<unsigned int>((*(this)).source_flag)};
+    }
   };
 
   struct packed_state {
@@ -335,6 +386,13 @@ struct ConstructorBugs {
 
     __attribute__((pure)) const packed_state *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) packed_state clone() const {
+      return packed_state{clone_as_value<source_state>((*(this)).packed_source),
+                          clone_as_value<field_a>((*(this)).packed_a),
+                          clone_as_value<field_b>((*(this)).packed_b)};
     }
   };
 
@@ -359,6 +417,14 @@ struct ConstructorBugs {
     __attribute__((pure)) const source_state_list *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) source_state_list clone() const {
+      return source_state_list{
+          clone_as_value<field_a>((*(this)).source_a_list),
+          clone_as_value<List<field_b>>((*(this)).source_b_list),
+          clone_as_value<unsigned int>((*(this)).source_flag_list)};
+    }
   };
 
   struct packed_state_list {
@@ -370,6 +436,14 @@ struct ConstructorBugs {
 
     __attribute__((pure)) const packed_state_list *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) packed_state_list clone() const {
+      return packed_state_list{
+          clone_as_value<source_state_list>((*(this)).packed_source_list),
+          clone_as_value<field_a>((*(this)).packed_a_list),
+          clone_as_value<List<field_b>>((*(this)).packed_b_list)};
     }
   };
 
@@ -384,6 +458,12 @@ struct ConstructorBugs {
     __attribute__((pure)) state *operator->() { return this; }
 
     __attribute__((pure)) const state *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state clone() const {
+      return state{clone_as_value<unsigned int>((*(this)).value),
+                   clone_as_value<List<unsigned int>>((*(this)).data)};
+    }
   };
 
   __attribute__((pure)) static state get_state(unsigned int n);
@@ -427,6 +507,11 @@ struct ConstructorBugs {
     __attribute__((pure)) Inner *operator->() { return this; }
 
     __attribute__((pure)) const Inner *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) Inner clone() const {
+      return Inner{clone_as_value<unsigned int>((*(this)).inner_val)};
+    }
   };
 
   struct Outer {
@@ -436,6 +521,12 @@ struct ConstructorBugs {
     __attribute__((pure)) Outer *operator->() { return this; }
 
     __attribute__((pure)) const Outer *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) Outer clone() const {
+      return Outer{clone_as_value<Inner>((*(this)).outer_inner),
+                   clone_as_value<unsigned int>((*(this)).outer_data)};
+    }
   };
 
   __attribute__((pure)) static Outer nested_record(Inner i);
@@ -566,6 +657,11 @@ struct ConstructorBugs {
     __attribute__((pure)) Container *operator->() { return this; }
 
     __attribute__((pure)) const Container *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) Container clone() const {
+      return Container{clone_as_value<Outer>((*(this)).cont_outer)};
+    }
   };
 
   __attribute__((pure)) static std::pair<std::pair<Outer, Inner>, unsigned int>
@@ -594,6 +690,13 @@ struct ConstructorBugs {
     __attribute__((pure)) State *operator->() { return this; }
 
     __attribute__((pure)) const State *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) State clone() const {
+      return State{clone_as_value<unsigned int>((*(this)).value_inline),
+                   clone_as_value<unsigned int>((*(this)).data_inline),
+                   clone_as_value<unsigned int>((*(this)).flag)};
+    }
   };
 
   __attribute__((pure)) static std::pair<State, unsigned int>
@@ -622,6 +725,12 @@ struct ConstructorBugs {
     __attribute__((pure)) OuterInline *operator->() { return this; }
 
     __attribute__((pure)) const OuterInline *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) OuterInline clone() const {
+      return OuterInline{clone_as_value<State>((*(this)).outer_state),
+                         clone_as_value<unsigned int>((*(this)).outer_num)};
+    }
   };
 
   __attribute__((

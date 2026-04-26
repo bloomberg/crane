@@ -24,6 +24,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -65,13 +71,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -108,9 +133,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -147,6 +180,7 @@ struct RecRecord {
     };
 
     using variant_t = std::variant<Rnil, Rcons>;
+    using crane_element_type = t_A;
 
   private:
     // DATA
@@ -252,24 +286,33 @@ struct RecRecord {
 
   struct RNode {
     unsigned int rn_value;
-    std::optional<RNode> rn_next;
+    std::optional<std::unique_ptr<RNode>> rn_next;
 
     __attribute__((pure)) RNode *operator->() { return this; }
 
     __attribute__((pure)) const RNode *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) RNode clone() const {
+      return RNode{clone_as_value<unsigned int>((*(this)).rn_value),
+                   clone_as_value<std::optional<std::unique_ptr<RNode>>>(
+                       (*(this)).rn_next)};
+    }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, std::optional<RNode>> F0>
   static T1 RNode_rect(F0 &&f, const RNode &r) {
     unsigned int rn_value0 = r.rn_value;
-    std::optional<RNode> rn_next0 = r.rn_next;
+    std::optional<RNode> rn_next0 =
+        clone_as_value<std::optional<RNode>>(r.rn_next);
     return f(rn_value0, rn_next0);
   }
 
   template <typename T1, MapsTo<T1, unsigned int, std::optional<RNode>> F0>
   static T1 RNode_rec(F0 &&f, const RNode &r) {
     unsigned int rn_value0 = r.rn_value;
-    std::optional<RNode> rn_next0 = r.rn_next;
+    std::optional<RNode> rn_next0 =
+        clone_as_value<std::optional<RNode>>(r.rn_next);
     return f(rn_value0, rn_next0);
   }
 
@@ -280,6 +323,12 @@ struct RecRecord {
     __attribute__((pure)) Employee *operator->() { return this; }
 
     __attribute__((pure)) const Employee *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) Employee clone() const {
+      return Employee{clone_as_value<unsigned int>((*(this)).emp_name),
+                      clone_as_value<unsigned int>((*(this)).emp_dept)};
+    }
   };
 
   struct Department {
@@ -290,6 +339,13 @@ struct RecRecord {
     __attribute__((pure)) Department *operator->() { return this; }
 
     __attribute__((pure)) const Department *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) Department clone() const {
+      return Department{clone_as_value<unsigned int>((*(this)).dept_id),
+                        clone_as_value<Employee>((*(this)).dept_head),
+                        clone_as_value<unsigned int>((*(this)).dept_size)};
+    }
   };
 
   template <typename T1>
@@ -315,8 +371,13 @@ struct RecRecord {
   static inline const unsigned int test_rlist_sum = rlist_sum(test_rlist);
   static inline const RNode test_rnode = RNode{
       1u,
-      std::make_optional<RNode>(RNode{
-          2u, std::make_optional<RNode>(RNode{3u, std::optional<RNode>()})})};
+      clone_as_value<std::optional<std::unique_ptr<RNode>>>(
+          std::make_optional<RNode>(RNode{
+              2u,
+              clone_as_value<std::optional<std::unique_ptr<RNode>>>(
+                  std::make_optional<RNode>(RNode{
+                      3u, clone_as_value<std::optional<std::unique_ptr<RNode>>>(
+                              std::optional<RNode>())}))}))};
   static inline const unsigned int test_rnode_depth = rnode_depth(test_rnode);
   static inline const Employee test_emp = Employee{42u, 7u};
   static inline const Department test_dept = Department{7u, test_emp, 50u};

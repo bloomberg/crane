@@ -515,6 +515,129 @@ let rec count_calls_stmts (check : call_checker) stmts =
     0
     stmts
 
+(** Detect a non-tail shape that is currently unsafe for the frame-based
+    transform with move-only recursive fields.
+
+    If a recursive call is used to compute a branch condition or scrutinee, the
+    current rewrite may need to keep an owned cloned subtree alive while
+    evaluating the selected continuation.  Popping the continuation frame before
+    pushing [_Enter] can leave only a raw pointer into a destroyed [unique_ptr]
+    owner.  Until the explicit stack has an owning-enter frame, leave these
+    functions recursive. *)
+let rec expr_has_recursive_branch_dependency check expr =
+  match expr with
+  | CPPlambda (_, _, body, _) -> has_recursive_branch_dependency check body
+  | CPPfun_call (f, args) ->
+    expr_has_recursive_branch_dependency check f
+    || List.exists (expr_has_recursive_branch_dependency check) args
+  | CPPmethod_call (obj, _, args) ->
+    expr_has_recursive_branch_dependency check obj
+    || List.exists (expr_has_recursive_branch_dependency check) args
+  | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
+    expr_has_recursive_branch_dependency check e
+  | CPPbinop (_, e1, e2) ->
+    expr_has_recursive_branch_dependency check e1
+    || expr_has_recursive_branch_dependency check e2
+  | CPPget (e, _)
+   |CPPget' (e, _)
+   |CPPmember (e, _)
+   |CPParrow (e, _)
+   |CPPqualified (e, _) -> expr_has_recursive_branch_dependency check e
+  | CPPstructmk (_, _, args)
+   |CPPstruct (_, _, args)
+   |CPPstruct_id (_, _, args)
+   |CPPnew (_, args) ->
+    List.exists (expr_has_recursive_branch_dependency check) args
+  | CPPshared_ptr_ctor (_, e) | CPPunique_ptr_ctor (_, e) ->
+    expr_has_recursive_branch_dependency check e
+  | CPPoverloaded exprs ->
+    List.exists (expr_has_recursive_branch_dependency check) exprs
+  | CPPparray (arr, def) ->
+    expr_has_recursive_branch_dependency check def
+    || Array.exists (expr_has_recursive_branch_dependency check) arr
+  | CPPvar _
+   |CPPglob _
+   |CPPvisit
+   |CPPmk_shared _
+   |CPPmk_unique _
+   |CPPthis
+   |CPPshared_from_this _
+   |CPPconvertible_to _
+   |CPPabort _
+   |CPPenum_val _
+   |CPPraw _
+   |CPPbool _
+   |CPPint _
+   |CPPbrace_init
+   |CPPunop _
+   |CPPany_cast _
+   |CPPstring _
+   |CPPuint _
+   |CPPfloat _
+   |CPPrequires _ -> false
+
+and has_recursive_branch_dependency check stmts =
+  List.exists
+    (function
+      | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) | Sderef_asgn (_, e) ->
+        expr_has_recursive_branch_dependency check e
+      | Sif (cond, then_br, else_br) ->
+        count_calls_expr check cond > 0
+        || expr_has_recursive_branch_dependency check cond
+        || has_recursive_branch_dependency check then_br
+        || has_recursive_branch_dependency check else_br
+      | Sswitch (scrut, _, branches, default) ->
+        let branch_bodies = List.map snd branches in
+        count_calls_expr check scrut > 0
+        || expr_has_recursive_branch_dependency check scrut
+        || List.exists (has_recursive_branch_dependency check) branch_bodies
+        ||
+        (match default with
+        | Some body -> has_recursive_branch_dependency check body
+        | None -> false)
+      | Scustom_case (_, scrut, _, branches, _) ->
+        let branch_bodies = List.map (fun (_, _, body) -> body) branches in
+        count_calls_expr check scrut > 0
+        || expr_has_recursive_branch_dependency check scrut
+        || List.exists (has_recursive_branch_dependency check) branch_bodies
+      | Smatch (branches, default) ->
+        let branch_has_recursive_scrut br =
+          count_calls_expr check br.smb_scrutinee > 0
+          || expr_has_recursive_branch_dependency check br.smb_scrutinee
+          || List.exists
+               (fun e ->
+                 count_calls_expr check e > 0
+                 || expr_has_recursive_branch_dependency check e)
+               br.smb_extra_conds
+          ||
+          match br.smb_reuse with
+          | Some (cond, _, _) ->
+            count_calls_expr check cond > 0
+            || expr_has_recursive_branch_dependency check cond
+          | None -> false
+        in
+        List.exists branch_has_recursive_scrut branches
+        || List.exists
+             (fun br ->
+               has_recursive_branch_dependency check br.smb_body
+               ||
+               match br.smb_reuse with
+               | Some (_, _, body) -> has_recursive_branch_dependency check body
+               | None -> false)
+             branches
+        ||
+        (match default with
+        | Some body -> has_recursive_branch_dependency check body
+        | None -> false)
+      | Sblock body | Swhile (_, body) -> has_recursive_branch_dependency check body
+      | Sassign_field (obj, _, e) ->
+        expr_has_recursive_branch_dependency check obj
+        || expr_has_recursive_branch_dependency check e
+      | Sblock_custom (_, _, _, _, args, _) ->
+        List.exists (expr_has_recursive_branch_dependency check) args
+      | _ -> false)
+    stmts
+
 (** Detect if a condition expression is a reuse-optimization guard generated by
     the escape analysis / translation pass.  These have the shape
     [scrut.use_count() == 1 && scrut->v().index() == N].  The left conjunct
@@ -1952,6 +2075,12 @@ let wrap_base_for_vt vt_ret val_expr =
     @param cell A single TMC cell allocation descriptor
     @param vt_ret [Some ret_ty] for value-type returns, [None] otherwise *)
 let build_cell_call ~vt_ret pp_expr cell =
+  let expr_builds_cell_type e =
+    match is_ctor_factory_call e with
+    | Some (type_expr, _, _, _) ->
+      String.equal (pp_expr type_expr) (pp_expr cell.tca_type_expr)
+    | None -> false
+  in
   let args =
     List.init cell.tca_n_args (fun i ->
       if i = cell.tca_rec_field_idx then CPPraw "nullptr"
@@ -1961,7 +2090,11 @@ let build_cell_call ~vt_ret pp_expr cell =
           (* For value-type return, non-rec args at unique_ptr field positions
              need wrapping in make_unique.  The struct field is unique_ptr<T>
              but the factory-produced value is bare T. *)
-          if vt_ret <> None && List.mem i cell.tca_uptr_field_idxs then
+          if
+            vt_ret <> None
+            && (List.mem i cell.tca_uptr_field_idxs
+                || expr_builds_cell_type e)
+          then
             (match vt_ret with
              | Some ret_ty -> CPPfun_call (CPPmk_unique ret_ty, [e])
              | None -> e)
@@ -2869,6 +3002,138 @@ let make_enter_frame (args : cpp_expr list) : cpp_expr =
     @return A list of inferred [cpp_type] values, parallel to [exprs] *)
 let infer_saved_types tparams env exprs =
   List.map (infer_saved_type tparams env) exprs
+
+let rec type_contains_unique_ptr = function
+  | Tunique_ptr _ -> true
+  | Tmod (_, t) | Tptr t | Tref t | Tshared_ptr t | Tnamespace (_, t) ->
+    type_contains_unique_ptr t
+  | Tvariant ts -> List.exists type_contains_unique_ptr ts
+  | Tfun (args, ret) ->
+    List.exists type_contains_unique_ptr args || type_contains_unique_ptr ret
+  | _ -> false
+
+let saved_exprs_contain_unique_ptr tparams env exprs =
+  infer_saved_types tparams env exprs |> List.exists type_contains_unique_ptr
+
+let rec expr_has_unique_owner_decomposition check tparams env expr =
+  let has_saved_unique saved = saved_exprs_contain_unique_ptr tparams env saved in
+  let self =
+    match count_calls_expr check expr with
+    | 1 ->
+      ( match decompose_single_call check expr with
+      | Some d -> has_saved_unique d.d_saved
+      | None -> false )
+    | n when n >= 2 ->
+      ( match decompose_double_call check expr with
+      | Some dd -> has_saved_unique dd.dd_saved
+      | None -> false )
+    | _ -> false
+  in
+  self
+  ||
+  match expr with
+  | CPPlambda (_, _, body, _) ->
+    body_has_unique_owner_decomposition check tparams env body
+  | CPPfun_call (f, args) ->
+    expr_has_unique_owner_decomposition check tparams env f
+    || List.exists (expr_has_unique_owner_decomposition check tparams env) args
+  | CPPmethod_call (obj, _, args) ->
+    expr_has_unique_owner_decomposition check tparams env obj
+    || List.exists (expr_has_unique_owner_decomposition check tparams env) args
+  | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
+    expr_has_unique_owner_decomposition check tparams env e
+  | CPPbinop (_, e1, e2) ->
+    expr_has_unique_owner_decomposition check tparams env e1
+    || expr_has_unique_owner_decomposition check tparams env e2
+  | CPPget (e, _)
+   |CPPget' (e, _)
+   |CPPmember (e, _)
+   |CPParrow (e, _)
+   |CPPqualified (e, _) ->
+    expr_has_unique_owner_decomposition check tparams env e
+  | CPPstructmk (_, _, args)
+   |CPPstruct (_, _, args)
+   |CPPstruct_id (_, _, args)
+   |CPPnew (_, args) ->
+    List.exists (expr_has_unique_owner_decomposition check tparams env) args
+  | CPPshared_ptr_ctor (_, e) | CPPunique_ptr_ctor (_, e) ->
+    expr_has_unique_owner_decomposition check tparams env e
+  | CPPoverloaded exprs ->
+    List.exists (expr_has_unique_owner_decomposition check tparams env) exprs
+  | CPPparray (arr, def) ->
+    expr_has_unique_owner_decomposition check tparams env def
+    || Array.exists (expr_has_unique_owner_decomposition check tparams env) arr
+  | CPPvar _
+   |CPPglob _
+   |CPPvisit
+   |CPPmk_shared _
+   |CPPmk_unique _
+   |CPPthis
+   |CPPshared_from_this _
+   |CPPconvertible_to _
+   |CPPabort _
+   |CPPenum_val _
+   |CPPraw _
+   |CPPbool _
+   |CPPint _
+   |CPPbrace_init
+   |CPPunop _
+   |CPPany_cast _
+   |CPPstring _
+   |CPPuint _
+   |CPPfloat _
+   |CPPrequires _ -> false
+
+and stmt_has_unique_owner_decomposition check tparams env = function
+  | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) | Sderef_asgn (_, e) ->
+    expr_has_unique_owner_decomposition check tparams env e
+  | Sif (cond, then_br, else_br) ->
+    expr_has_unique_owner_decomposition check tparams env cond
+    || body_has_unique_owner_decomposition check tparams env then_br
+    || body_has_unique_owner_decomposition check tparams env else_br
+  | Sswitch (scrut, _, branches, default) ->
+    expr_has_unique_owner_decomposition check tparams env scrut
+    || List.exists
+         (fun (_, body) -> body_has_unique_owner_decomposition check tparams env body)
+         branches
+    || (match default with
+       | Some body -> body_has_unique_owner_decomposition check tparams env body
+       | None -> false)
+  | Scustom_case (_, scrut, _, branches, _) ->
+    expr_has_unique_owner_decomposition check tparams env scrut
+    || List.exists
+         (fun (_, _, body) ->
+           body_has_unique_owner_decomposition check tparams env body)
+         branches
+  | Smatch (branches, default) ->
+    List.exists
+      (fun br ->
+        expr_has_unique_owner_decomposition check tparams env br.smb_scrutinee
+        || List.exists
+             (expr_has_unique_owner_decomposition check tparams env)
+             br.smb_extra_conds
+        || (match br.smb_reuse with
+           | Some (cond, _, body) ->
+             expr_has_unique_owner_decomposition check tparams env cond
+             || body_has_unique_owner_decomposition check tparams env body
+           | None -> false)
+        || body_has_unique_owner_decomposition check tparams env br.smb_body)
+      branches
+    || (match default with
+       | Some body -> body_has_unique_owner_decomposition check tparams env body
+       | None -> false)
+  | Sblock body | Swhile (_, body) ->
+    body_has_unique_owner_decomposition check tparams env body
+  | Sassign_field (obj, _, e) ->
+    expr_has_unique_owner_decomposition check tparams env obj
+    || expr_has_unique_owner_decomposition check tparams env e
+  | Sblock_custom (_, _, _, _, args, _) ->
+    List.exists (expr_has_unique_owner_decomposition check tparams env) args
+  | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _
+   |Susing _ | Sdecl_init _ | Scontinue | Sbreak -> false
+
+and body_has_unique_owner_decomposition check tparams env body =
+  List.exists (stmt_has_unique_owner_decomposition check tparams env) body
 
 (** Build a decompose_single_call handler body: reads saved values from [_f._sN]
     and _result, reconstructs the expression. *)
@@ -5018,6 +5283,10 @@ let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
   let env =
     collect_type_env body @ List.map (fun (id, ty) -> (id, ty)) params
   in
+  if body_has_unique_owner_decomposition check tparams env body then
+    body
+  else
+  (
   (* Rewrite body for Enter handler and collect call frame info *)
   let call_counter = ref 1 in
   let frames_ref = ref [] in
@@ -5032,6 +5301,13 @@ let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
   let frames =
     List.sort (fun a b -> String.compare a.cf_name b.cf_name) !frames_ref
   in
+  if
+    List.exists
+      (fun cf -> List.exists type_contains_unique_ptr cf.cf_saved_types)
+      frames
+  then
+    body
+  else
   (* Build struct definitions *)
   let enter_fields =
     List.map (fun (id, ty) -> (id, strip_ref_type ty)) varying_params
@@ -5076,6 +5352,7 @@ let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
     List.map (fun cf -> make_frame_branch cf.cf_name cf.cf_handler) frames
   in
   make_loop_and_return struct_defs ret_ty init_push (enter_branch :: call_branches)
+  )
 
 (** {2 Main transformation dispatch} *)
 
@@ -5764,6 +6041,8 @@ let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure
              && count_calls_stmts check body >= 2
           then
             body
+          else if has_recursive_branch_dependency check body then
+            body
           else
           ( match try_tmc_classify check body with
           | Some ti ->
@@ -5836,6 +6115,9 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
               body_with_self,
             false )
         | Nontail_recursion ->
+          if has_recursive_branch_dependency self_check body_with_self then
+            (body_with_self, true)
+          else
           ( match try_tmc_classify self_check body_with_self with
           | Some ti ->
             ( transform_tmc

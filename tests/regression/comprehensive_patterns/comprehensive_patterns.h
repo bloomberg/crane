@@ -27,6 +27,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -68,13 +74,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -111,9 +136,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -235,6 +268,7 @@ template <typename t_A> struct Sig {
   };
 
   using variant_t = std::variant<Exist>;
+  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -308,6 +342,13 @@ struct ComprehensivePatterns {
     __attribute__((pure)) S *operator->() { return this; }
 
     __attribute__((pure)) const S *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) S clone() const {
+      return S{clone_as_value<unsigned int>((*(this)).s_a),
+               clone_as_value<unsigned int>((*(this)).s_b),
+               clone_as_value<unsigned int>((*(this)).s_c)};
+    }
   };
 
   __attribute__((
@@ -321,6 +362,11 @@ struct ComprehensivePatterns {
     __attribute__((pure)) L1 *operator->() { return this; }
 
     __attribute__((pure)) const L1 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) L1 clone() const {
+      return L1{clone_as_value<S>((*(this)).l1_s)};
+    }
   };
 
   struct L2 {
@@ -329,6 +375,11 @@ struct ComprehensivePatterns {
     __attribute__((pure)) L2 *operator->() { return this; }
 
     __attribute__((pure)) const L2 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) L2 clone() const {
+      return L2{clone_as_value<L1>((*(this)).l2_l1)};
+    }
   };
 
   struct L3 {
@@ -337,6 +388,11 @@ struct ComprehensivePatterns {
     __attribute__((pure)) L3 *operator->() { return this; }
 
     __attribute__((pure)) const L3 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) L3 clone() const {
+      return L3{clone_as_value<L2>((*(this)).l3_l2)};
+    }
   };
 
   struct L4 {
@@ -345,6 +401,11 @@ struct ComprehensivePatterns {
     __attribute__((pure)) L4 *operator->() { return this; }
 
     __attribute__((pure)) const L4 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) L4 clone() const {
+      return L4{clone_as_value<L3>((*(this)).l4_l3)};
+    }
   };
 
   struct L5 {
@@ -353,6 +414,11 @@ struct ComprehensivePatterns {
     __attribute__((pure)) L5 *operator->() { return this; }
 
     __attribute__((pure)) const L5 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) L5 clone() const {
+      return L5{clone_as_value<L4>((*(this)).l5_l4)};
+    }
   };
 
   __attribute__((pure)) static std::pair<
@@ -545,6 +611,11 @@ struct ComprehensivePatterns {
     __attribute__((pure)) R1 *operator->() { return this; }
 
     __attribute__((pure)) const R1 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) R1 clone() const {
+      return R1{clone_as_value<unsigned int>((*(this)).r1_val)};
+    }
   };
 
   struct R2 {
@@ -554,6 +625,12 @@ struct ComprehensivePatterns {
     __attribute__((pure)) R2 *operator->() { return this; }
 
     __attribute__((pure)) const R2 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) R2 clone() const {
+      return R2{clone_as_value<R1>((*(this)).r2_inner),
+                clone_as_value<unsigned int>((*(this)).r2_data)};
+    }
   };
 
   struct R3 {
@@ -564,6 +641,13 @@ struct ComprehensivePatterns {
     __attribute__((pure)) R3 *operator->() { return this; }
 
     __attribute__((pure)) const R3 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) R3 clone() const {
+      return R3{clone_as_value<R2>((*(this)).r3_r2),
+                clone_as_value<R1>((*(this)).r3_r1),
+                clone_as_value<unsigned int>((*(this)).r3_num)};
+    }
   };
 
   __attribute__((
@@ -617,6 +701,12 @@ struct ComprehensivePatterns {
     __attribute__((pure)) R *operator->() { return this; }
 
     __attribute__((pure)) const R *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) R clone() const {
+      return R{clone_as_value<unsigned int>((*(this)).val),
+               clone_as_value<unsigned int>((*(this)).dat)};
+    }
   };
 
   __attribute__((pure)) static std::pair<R, unsigned int> pair_inline_proj(R r);
@@ -657,6 +747,13 @@ struct ComprehensivePatterns {
     __attribute__((pure)) NC *operator->() { return this; }
 
     __attribute__((pure)) const NC *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) NC clone() const {
+      return NC{clone_as_value<unsigned int>((*(this)).nc_a),
+                clone_as_value<unsigned int>((*(this)).nc_b),
+                clone_as_value<unsigned int>((*(this)).nc_c)};
+    }
   };
 
   __attribute__((pure)) static unsigned int use_proj(unsigned int n);
@@ -688,6 +785,11 @@ struct ComprehensivePatterns {
     __attribute__((pure)) OuterNC *operator->() { return this; }
 
     __attribute__((pure)) const OuterNC *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) OuterNC clone() const {
+      return OuterNC{clone_as_value<NC>((*(this)).outer_nc)};
+    }
   };
 
   __attribute__((pure)) static unsigned int double_proj_nc(const OuterNC &o);
@@ -709,6 +811,12 @@ struct ComprehensivePatterns {
     __attribute__((pure)) State *operator->() { return this; }
 
     __attribute__((pure)) const State *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) State clone() const {
+      return State{clone_as_value<unsigned int>((*(this)).state_value),
+                   clone_as_value<unsigned int>((*(this)).state_data)};
+    }
   };
 
   __attribute__((pure)) static unsigned int use_two_fc(const unsigned int &_x0,
@@ -748,6 +856,11 @@ struct ComprehensivePatterns {
     __attribute__((pure)) RSeq *operator->() { return this; }
 
     __attribute__((pure)) const RSeq *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) RSeq clone() const {
+      return RSeq{clone_as_value<unsigned int>((*(this)).seq_val)};
+    }
   };
 
   __attribute__((pure)) static RSeq side_effect(RSeq r);
@@ -763,6 +876,12 @@ struct ComprehensivePatterns {
     __attribute__((pure)) StateStmt *operator->() { return this; }
 
     __attribute__((pure)) const StateStmt *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) StateStmt clone() const {
+      return StateStmt{clone_as_value<unsigned int>((*(this)).stmt_value),
+                       clone_as_value<unsigned int>((*(this)).stmt_data)};
+    }
   };
 
   __attribute__((pure)) static unsigned int
@@ -777,6 +896,11 @@ struct ComprehensivePatterns {
     __attribute__((pure)) InnerStmt *operator->() { return this; }
 
     __attribute__((pure)) const InnerStmt *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) InnerStmt clone() const {
+      return InnerStmt{clone_as_value<unsigned int>((*(this)).inner_stmt_val)};
+    }
   };
 
   struct OuterStmt {
@@ -786,6 +910,12 @@ struct ComprehensivePatterns {
     __attribute__((pure)) OuterStmt *operator->() { return this; }
 
     __attribute__((pure)) const OuterStmt *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) OuterStmt clone() const {
+      return OuterStmt{clone_as_value<InnerStmt>((*(this)).outer_stmt_inner),
+                       clone_as_value<unsigned int>((*(this)).outer_stmt_data)};
+    }
   };
 
   __attribute__((pure)) static unsigned int chained_proj(const OuterStmt &o);
@@ -796,6 +926,11 @@ struct ComprehensivePatterns {
     __attribute__((pure)) Level3Stmt *operator->() { return this; }
 
     __attribute__((pure)) const Level3Stmt *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) Level3Stmt clone() const {
+      return Level3Stmt{clone_as_value<OuterStmt>((*(this)).l3_outer_stmt)};
+    }
   };
 
   __attribute__((pure)) static unsigned int triple_chain(const Level3Stmt &l3);
@@ -819,6 +954,11 @@ struct ComprehensivePatterns {
     __attribute__((pure)) RCF *operator->() { return this; }
 
     __attribute__((pure)) const RCF *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) RCF clone() const {
+      return RCF{clone_as_value<unsigned int>((*(this)).cf_val)};
+    }
   };
 
   __attribute__((pure)) static unsigned int branch_use(const bool &b,
@@ -841,6 +981,12 @@ struct ComprehensivePatterns {
     __attribute__((pure)) StateLB *operator->() { return this; }
 
     __attribute__((pure)) const StateLB *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) StateLB clone() const {
+      return StateLB{clone_as_value<unsigned int>((*(this)).lb_value),
+                     clone_as_value<unsigned int>((*(this)).lb_data)};
+    }
   };
 
   struct Tree {
@@ -1180,6 +1326,12 @@ struct ComprehensivePatterns {
     __attribute__((pure)) StateRO *operator->() { return this; }
 
     __attribute__((pure)) const StateRO *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) StateRO clone() const {
+      return StateRO{clone_as_value<unsigned int>((*(this)).ro_value),
+                     clone_as_value<unsigned int>((*(this)).ro_data)};
+    }
   };
 
   struct Container {
@@ -1296,6 +1448,12 @@ struct ComprehensivePatterns {
     __attribute__((pure)) StateOP *operator->() { return this; }
 
     __attribute__((pure)) const StateOP *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) StateOP clone() const {
+      return StateOP{clone_as_value<unsigned int>((*(this)).op_value),
+                     clone_as_value<unsigned int>((*(this)).op_data)};
+    }
   };
 
   __attribute__((pure)) static StateOP identity(StateOP s);

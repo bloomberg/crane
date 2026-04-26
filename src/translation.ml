@@ -611,24 +611,40 @@ let cpp_name_is_tree base =
       "Tree"
   | _ -> false
 
-let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty) = function
+let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
+    ?(no_custom_inductives = Refset'.empty) = function
   | Tid (id, []) ->
     let s = Id.to_string id in
     if String.equal s "int0" then "int64_t"
     else if String.equal s "string" then "std::string"
+    else if
+      String.equal s "dummy_type"
+      || String.equal s "dummy_prop"
+      || String.equal s "dummy_implicit"
+    then "std::any"
     else s
   | Tid (id, ts) ->
     (let s = Id.to_string id in
      if String.equal s "int0" then "int64_t"
      else if String.equal s "string" then "std::string"
+     else if
+       String.equal s "dummy_type"
+       || String.equal s "dummy_prop"
+       || String.equal s "dummy_implicit"
+     then "std::any"
      else s) ^ "<" ^
-    String.concat ", " (List.map (render_cpp_type_simple ~raw_inductives) ts) ^ ">"
+    String.concat ", "
+      (List.map (render_cpp_type_simple ~raw_inductives ~no_custom_inductives) ts)
+    ^ ">"
   | Tglob (r, [], _) ->
-    (match r with
+    (match Table.find_custom_opt r with
+    | Some s
+      when (not (Refset'.mem r no_custom_inductives))
+           && Table.to_inline r && not (String.contains s '%') ->
+      s
+    | _ ->
+    match r with
     | GlobRef.IndRef _ ->
-      (match Table.find_custom_opt r with
-      | Some s when Table.to_inline r && not (String.contains s '%') -> s
-      | _ ->
       if Refset'.mem r raw_inductives then
         Common.pp_global_name Type r
       else
@@ -644,6 +660,8 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty) = function
           | _ -> false
         in
         if String.equal base "prod" then "std::pair"
+        else if String.equal base "option" || String.equal base "Option" then
+          "std::optional"
         else if parent_is_cap || String.equal base "nat"
         then cap
         else if
@@ -651,17 +669,29 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty) = function
             (Environ.QGlobRef.equal Environ.empty_env r)
             (get_local_inductives ())
         then Common.pp_global Type r
-        else cap)
+        else cap
     | GlobRef.VarRef id ->
       let s = Id.to_string id in
       if String.equal s "int0" then "int64_t"
       else if String.equal s "string" then "std::string"
+      else if
+        String.equal s "dummy_type"
+        || String.equal s "dummy_prop"
+        || String.equal s "dummy_implicit"
+      then "std::any"
       else if String.equal s "prod" || String.equal s "Prod" then "std::pair"
+      else if String.equal s "option" || String.equal s "Option" then "std::optional"
       else if String.equal s "list" then "List"
       else s
     | _ -> Common.pp_global_name Type r)
   | Tglob (r, ts, _) ->
-    (match r with
+    (match Table.find_custom_opt r with
+    | Some s
+      when (not (Refset'.mem r no_custom_inductives))
+           && Table.to_inline r && not (String.contains s '%') ->
+      s
+    | _ ->
+    match r with
     | GlobRef.IndRef _ ->
       if Refset'.mem r raw_inductives then
         Common.pp_global_name Type r
@@ -690,22 +720,52 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty) = function
       let s = Id.to_string id in
       if String.equal s "int0" then "int64_t"
       else if String.equal s "string" then "std::string"
+      else if
+        String.equal s "dummy_type"
+        || String.equal s "dummy_prop"
+        || String.equal s "dummy_implicit"
+      then "std::any"
       else if String.equal s "prod" || String.equal s "Prod" then "std::pair"
       else if String.equal s "list" then "List"
       else s
     | _ -> Common.pp_global_name Type r) ^ "<" ^
-    String.concat ", " (List.map (render_cpp_type_simple ~raw_inductives) ts) ^ ">"
+    String.concat ", "
+      (List.map (render_cpp_type_simple ~raw_inductives ~no_custom_inductives) ts)
+    ^ ">"
   | Tid_external (id, []) -> Id.to_string id
   | Tid_external (id, ts) ->
     Id.to_string id ^ "<" ^
-    String.concat ", " (List.map (render_cpp_type_simple ~raw_inductives) ts) ^ ">"
+    String.concat ", "
+      (List.map (render_cpp_type_simple ~raw_inductives ~no_custom_inductives) ts)
+    ^ ">"
   | Tnamespace (g, t) ->
     (* For local inductives whose names are eponymous with their parent module,
        no qualification is needed.  For others, prepend the capitalized parent
        module name (e.g., "NestedTree::tree").  We cannot use pp_global_name
        here because it gives the raw Coq name ("list" → "list") instead of
        the C++ struct name ("List"). *)
-    let inner = render_cpp_type_simple ~raw_inductives t in
+    if Table.is_enum_inductive g then
+      let base = Common.pp_global_name Type g in
+      let enum_name = Common.capitalize_last_component base in
+      if
+        List.exists
+          (Environ.QGlobRef.equal Environ.empty_env g)
+          (get_local_inductives ())
+      then enum_name
+      else (
+        match g with
+        | GlobRef.IndRef (kn, _) ->
+          ( match Names.MutInd.modpath kn with
+          | Names.ModPath.MPdot (_, label) ->
+            Names.Label.to_string label ^ "::" ^ enum_name
+          | _ -> enum_name )
+        | _ -> enum_name )
+    else if not (get_record_fields g == []) then
+      render_cpp_type_simple ~raw_inductives ~no_custom_inductives t
+    else
+    let inner =
+      render_cpp_type_simple ~raw_inductives ~no_custom_inductives t
+    in
     let parent_ns =
       match g with
       | GlobRef.IndRef (kn, _) ->
@@ -726,17 +786,27 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty) = function
       | _ -> ""
     in
     parent_ns ^ inner
-  | Tmod (TMconst, t) -> "const " ^ render_cpp_type_simple ~raw_inductives t
-  | Tmod (_, t) -> render_cpp_type_simple ~raw_inductives t
-  | Tref t -> render_cpp_type_simple ~raw_inductives t ^ "&"
-  | Tptr t -> render_cpp_type_simple ~raw_inductives t ^ "*"
+  | Tmod (TMconst, t) ->
+    "const " ^ render_cpp_type_simple ~raw_inductives ~no_custom_inductives t
+  | Tmod (_, t) ->
+    render_cpp_type_simple ~raw_inductives ~no_custom_inductives t
+  | Tref t ->
+    render_cpp_type_simple ~raw_inductives ~no_custom_inductives t ^ "&"
+  | Tptr t ->
+    render_cpp_type_simple ~raw_inductives ~no_custom_inductives t ^ "*"
   | Tvar (_, Some n) ->
     let s = Id.to_string n in
     if String.equal s "int0" then "int64_t"
     else if String.equal s "string" then "std::string"
     else s
-  | Tshared_ptr t -> "std::shared_ptr<" ^ render_cpp_type_simple ~raw_inductives t ^ ">"
-  | Tunique_ptr t -> "std::unique_ptr<" ^ render_cpp_type_simple ~raw_inductives t ^ ">"
+  | Tshared_ptr t ->
+    "std::shared_ptr<"
+    ^ render_cpp_type_simple ~raw_inductives ~no_custom_inductives t
+    ^ ">"
+  | Tunique_ptr t ->
+    "std::unique_ptr<"
+    ^ render_cpp_type_simple ~raw_inductives ~no_custom_inductives t
+    ^ ">"
   | Tvoid -> "void"
   | _ -> "auto"
 
@@ -762,7 +832,38 @@ let rec qualify_inductives = function
   | Tid_external (id, ts) -> Tid_external (id, List.map qualify_inductives ts)
   | t -> t
 
-let render_cpp_type_for_raw_template ?(raw_inductives = Refset'.empty) ty =
+let rec qualify_inductives_for_raw_inductives raw_inductives = function
+  | Tglob (g, ts, es) ->
+    let ts = List.map (qualify_inductives_for_raw_inductives raw_inductives) ts in
+    let core = Tglob (g, ts, es) in
+    ( match g with
+    | GlobRef.IndRef _ when Refset'.mem g raw_inductives -> core
+    | GlobRef.IndRef _ -> Tnamespace (g, core)
+    | _ -> core )
+  | Tnamespace (g, t) ->
+    Tnamespace (g, qualify_inductives_for_raw_inductives raw_inductives t)
+  | Tshared_ptr t ->
+    Tshared_ptr (qualify_inductives_for_raw_inductives raw_inductives t)
+  | Tunique_ptr t ->
+    Tunique_ptr (qualify_inductives_for_raw_inductives raw_inductives t)
+  | Tref t -> Tref (qualify_inductives_for_raw_inductives raw_inductives t)
+  | Tmod (m, t) ->
+    Tmod (m, qualify_inductives_for_raw_inductives raw_inductives t)
+  | Tptr t -> Tptr (qualify_inductives_for_raw_inductives raw_inductives t)
+  | Tfun (args, ret) ->
+    Tfun
+      ( List.map (qualify_inductives_for_raw_inductives raw_inductives) args,
+        qualify_inductives_for_raw_inductives raw_inductives ret )
+  | Tid (id, ts) ->
+    Tid (id, List.map (qualify_inductives_for_raw_inductives raw_inductives) ts)
+  | Tid_external (id, ts) ->
+    Tid_external
+      ( id,
+        List.map (qualify_inductives_for_raw_inductives raw_inductives) ts )
+  | t -> t
+
+let render_cpp_type_for_raw_template ?(raw_inductives = Refset'.empty)
+    ?(no_custom_inductives = Refset'.empty) ty =
   Str.global_replace
     (Str.regexp "\\<string\\>")
     "std::string"
@@ -772,10 +873,20 @@ let render_cpp_type_for_raw_template ?(raw_inductives = Refset'.empty) ty =
        (Str.global_replace
           (Str.regexp_string "int0")
           "int64_t"
-          (render_cpp_type_simple ~raw_inductives ty)))
+          (render_cpp_type_simple ~raw_inductives ~no_custom_inductives ty)))
 
 let clone_helper_for_raw_template ty =
   let ty_s = render_cpp_type_for_raw_template ty in
+  let ty_s =
+    if String.equal ty_s "Option" then "std::optional" else ty_s
+  in
+  let ty_s =
+    if
+      String.length ty_s >= 7
+      && String.equal (String.sub ty_s 0 7) "Option<"
+    then "std::optional<" ^ String.sub ty_s 7 (String.length ty_s - 7)
+    else ty_s
+  in
   let ty_s = if String.equal ty_s "string" then "std::string" else ty_s in
   let has_auto =
     String.equal ty_s "auto"
@@ -784,6 +895,17 @@ let clone_helper_for_raw_template ty =
   in
   if has_auto then "clone_value"
   else "clone_as_value<" ^ ty_s ^ ">"
+
+let clone_as_cpp_type ty expr =
+  CPPfun_call
+    (CPPraw (clone_helper_for_raw_template (qualify_inductives ty)), [expr])
+
+let clone_as_cpp_type_scoped ?(raw_inductives = Refset'.empty) ty expr =
+  CPPfun_call
+    (CPPraw
+       (clone_helper_for_raw_template
+          (qualify_inductives_for_raw_inductives raw_inductives ty)),
+     [expr])
 
 (** Build a [CPPfun_call] for [ITree<R>::ret(...)].
     When [r_cpp] is [Tvoid], generates [ITree<void>::ret()]. *)
@@ -1959,6 +2081,18 @@ let rec contains_shared_ptr_or_unique_ptr = function
     List.exists contains_shared_ptr_or_unique_ptr args
     || contains_shared_ptr_or_unique_ptr ret
   | _ -> false
+
+let wrap_storage_expr ~storage_ty ~api_ty expr =
+  if storage_ty <> api_ty && contains_shared_ptr_or_unique_ptr storage_ty then
+    clone_as_cpp_type storage_ty expr
+  else
+    expr
+
+let wrap_api_expr ~storage_ty ~api_ty expr =
+  if storage_ty <> api_ty && contains_shared_ptr_or_unique_ptr storage_ty then
+    clone_as_cpp_type api_ty expr
+  else
+    expr
 
 (** Convert ML type to C++ type. Handles custom types, inductives, type
     variables, and erased parameters. env: variable environment; ns: set of
@@ -3466,11 +3600,44 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       (* Defense-in-depth: same safeguard as for non-record constructors above *)
       let saved_dead = tctx.move_dead_after in
       tctx.move_dead_after <- Escape.IntSet.empty;
-      let result = nstempmod (List.map (fun e ->
-        match e with
-        | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
-          wrap_void_call_as_value (gen_expr env e)
-        | _ -> gen_expr env e) ts) in
+      let record_arg_exprs =
+        let base_args =
+          List.map
+            (fun e ->
+              match e with
+              | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
+                wrap_void_call_as_value (gen_expr env e)
+              | _ -> gen_expr env e)
+            ts
+        in
+        match ty with
+        | Tglob (n, _, _) ->
+          let field_types =
+            match Table.get_ctor_ip_types_opt r with
+            | Some ft -> ft
+            | None -> []
+          in
+          let tvars = get_current_type_vars () in
+          List.mapi
+            (fun i expr ->
+              match List.nth_opt field_types i with
+              | Some ft ->
+                let storage_ty =
+                  convert_ml_type_to_cpp_type
+                    env
+                    (Refset'.add n Refset'.empty)
+                    tvars
+                    ft
+                in
+                let api_ty =
+                  convert_ml_type_to_cpp_type env Refset'.empty tvars ft
+                in
+                wrap_storage_expr ~storage_ty ~api_ty expr
+              | None -> expr)
+            base_args
+        | _ -> base_args
+      in
+      let result = nstempmod record_arg_exprs in
       tctx.move_dead_after <- saved_dead;
       result
     in
@@ -3515,6 +3682,26 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     let non_erased_field_types =
       filter_value_types all_field_types
     in
+    let record_ref_opt =
+      match typ with Tglob (r, _, _) -> Some r | _ -> None
+    in
+    let wrap_record_field_to_api idx access =
+      match (record_ref_opt, List.nth_opt non_erased_field_types idx) with
+      | Some record_ref, Some ml_ty ->
+        let tvars = get_current_type_vars () in
+        let storage_ty =
+          convert_ml_type_to_cpp_type
+            env
+            (Refset'.add record_ref Refset'.empty)
+            tvars
+            ml_ty
+        in
+        let api_ty =
+          convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty
+        in
+        wrap_api_expr ~storage_ty ~api_ty access
+      | _ -> access
+    in
     (* For type classes, use qualified access (::) instead of arrow (->) since
        type class instances are template type parameters, not runtime values *)
     let make_field_access base_expr fld =
@@ -3539,6 +3726,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       ( match fld with
       | Some fld ->
         let access = make_field_access (gen_expr env t) fld in
+        let access = wrap_record_field_to_api (n - i) access in
         if is_typeclass then
           (* For typeclasses, non-function value fields (like m_id : carrier)
              are generated as nullary static methods, so we need () to call
@@ -3632,6 +3820,22 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
               match fld with
               | Some fld -> make_field_access (gen_expr env t) fld
               | _ -> CErrors.anomaly (Pp.str "record field index out of bounds")
+            in
+            let e =
+              match typ with
+              | Tglob (record_ref, _, _) ->
+                let storage_ty =
+                  convert_ml_type_to_cpp_type
+                    env
+                    (Refset'.add record_ref Refset'.empty)
+                    []
+                    ty
+                in
+                let api_ty =
+                  convert_ml_type_to_cpp_type env Refset'.empty [] ty
+                in
+                wrap_api_expr ~storage_ty ~api_ty e
+              | _ -> e
             in
             Sasgn
               ( renamed_name,
@@ -7196,6 +7400,22 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
               | _ ->
                 CErrors.anomaly (Pp.str "record field index out of bounds")
             in
+            let e =
+              match typ with
+              | Tglob (record_ref, _, _) ->
+                let storage_ty =
+                  convert_ml_type_to_cpp_type
+                    env
+                    (Refset'.add record_ref Refset'.empty)
+                    tvars
+                    ty
+                in
+                let api_ty =
+                  convert_ml_type_to_cpp_type env Refset'.empty tvars ty
+                in
+                wrap_api_expr ~storage_ty ~api_ty e
+              | _ -> e
+            in
             Sasgn
               ( renamed_name,
                 Some (convert_ml_type_to_cpp_type env Refset'.empty tvars ty),
@@ -7440,6 +7660,11 @@ let gen_record_cpp name fields ind =
   let replace_promoted = function
     | Tvar (_, Some id) when List.mem (Id.to_string id) promoted_var_names ->
       Tany
+    | Tglob (g, _, _) when Table.is_promoted_type_var g ->
+      ( match Table.promoted_type_var_name g with
+      | Some var_id when List.mem (Id.to_string var_id) promoted_var_names ->
+        Tany
+      | _ -> Tany )
     | ty -> ty
   in
   let l = List.combine fields (non_dummy_constructor_types ind) in
@@ -7452,7 +7677,11 @@ let gen_record_cpp name fields ind =
           | None -> GlobRef.VarRef (Id.of_string ("_field" ^ string_of_int i))
         in
         let ct =
-          convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty all_vars t
+          convert_ml_type_to_cpp_type
+            (empty_env ())
+            (Refset'.add name Refset'.empty)
+            all_vars
+            t
         in
         let ct = Minicpp.map_cpp_type replace_promoted ct in
         ( Fvar' (n, ct), VPublic, SNoTag ) )
@@ -7462,6 +7691,33 @@ let gen_record_cpp name fields ind =
     Tglob (name, List.mapi (fun i x -> Tvar (i, Some x)) vars, [])
   in
   let record_value_compat_methods =
+    let clone_method =
+      let clone_args =
+        List.filter_map
+          (function
+            | Fvar' (field_ref, field_ty), _, _ ->
+              Some
+                (clone_as_cpp_type
+                   field_ty
+                   (CPPget' (CPPderef CPPthis, field_ref)))
+            | _ -> None)
+          l
+      in
+      ( Fmethod
+          {
+            mf_name = Id.of_string "clone";
+            mf_tparams = [];
+            mf_ret_type = self_ty;
+            mf_params = [];
+            mf_body = [Sreturn (Some (CPPstruct (name, List.mapi (fun i x -> Tvar (i, Some x)) vars, clone_args)))];
+            mf_is_const = true;
+            mf_is_static = false;
+            mf_this_pos = 0;
+            mf_no_pure = false;
+          },
+        VPublic,
+        SAccessors )
+    in
     [
       ( Fmethod
           {
@@ -7491,6 +7747,7 @@ let gen_record_cpp name fields ind =
           },
         VPublic,
         SNoTag );
+      clone_method;
     ]
   in
   let ty_vars = List.map (fun x -> (TTtypename, x)) vars in
@@ -11120,17 +11377,14 @@ let gen_ind_header_v2
         (Fnested_using (Id.of_string "variant_t", variant_ty), VPublic, STypes)
       in
       let element_using =
-        if String.equal (Common.pp_global_name Type name) "list" then
-          match ty_vars with
-          | [elt_ty] ->
+        match ty_vars with
+        | [elt_ty] ->
           [
             ( Fnested_using (Id.of_string "crane_element_type", elt_ty),
               VPublic,
               STypes );
           ]
-          | _ -> []
-        else
-          []
+        | _ -> []
       in
 
       (* 3. Private variant member: v_ for inductive, lazy_v_ for coinductive *)
@@ -11534,6 +11788,7 @@ let gen_ind_header_v2
                        Id.of_string_soft
                          ("typename "
                          ^ render_cpp_type_for_raw_template
+                             ~no_custom_inductives:(Refset'.add name Refset'.empty)
                              (Tglob (name, target_cpp_tys, []))
                          ^ "::"
                          ^ Id.to_string cname_id)
@@ -11828,7 +12083,9 @@ let gen_ind_header_v2
                     [
                       Sraw
                         ("*this = "
-                        ^ render_cpp_type_for_raw_template self_ty
+                        ^ render_cpp_type_for_raw_template
+                            ~no_custom_inductives:(Refset'.add name Refset'.empty)
+                            self_ty
                         ^ "();");
                     ];
                   mf_is_const = false;

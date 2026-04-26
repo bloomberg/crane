@@ -26,6 +26,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -67,13 +73,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -110,9 +135,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -430,78 +463,33 @@ struct LoopifyTreePaths {
     __attribute__((pure)) std::optional<List<unsigned int>>
     find_path_sum(const unsigned int &acc, const unsigned int &target) const {
       const tree *_self = this;
-
-      struct _Enter {
-        const tree *_self;
-        const unsigned int acc;
-      };
-
-      struct _Call1 {
-        unsigned int _s0;
-        std::unique_ptr<tree> _s1;
-        unsigned int _s2;
-        const unsigned int _s3;
-      };
-
-      struct _Call2 {
-        unsigned int _s0;
-      };
-
-      using _Frame = std::variant<_Enter, _Call1, _Call2>;
-      std::optional<List<unsigned int>> _result{};
-      std::vector<_Frame> _stack;
-      _stack.reserve(16);
-      _stack.emplace_back(_Enter{_self, acc});
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const tree *_self = _f._self;
-          const unsigned int acc = _f.acc;
-          auto &&_sv = *(_self);
-          if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            if (acc == target) {
-              _result = std::make_optional<List<unsigned int>>(
-                  List<unsigned int>::nil());
-            } else {
-              _result = std::optional<List<unsigned int>>();
-            }
-          } else {
-            const auto &[d_a0, d_a1, d_a2] =
-                std::get<typename tree::Node>(_sv.v());
-            unsigned int new_acc = (acc + d_a1);
-            _stack.emplace_back(_Call1{
-                d_a1, std::make_unique<tree>(d_a2->clone()), new_acc, target});
-            _stack.emplace_back(_Enter{d_a0.get(), new_acc});
-          }
-        } else if (std::holds_alternative<_Call1>(_frame)) {
-          auto _f = std::move(std::get<_Call1>(_frame));
-          unsigned int d_a1 = _f._s0;
-          std::unique_ptr<tree> d_a2 = std::move(_f._s1);
-          unsigned int new_acc = _f._s2;
-          const unsigned int target = _f._s3;
-          if (_result.has_value()) {
-            const List<unsigned int> &path = *_result;
-            _result = std::make_optional<List<unsigned int>>(
-                List<unsigned int>::cons(d_a1, path));
-          } else {
-            _stack.emplace_back(_Call2{d_a1});
-            _stack.emplace_back(_Enter{d_a2.get(), new_acc});
-          }
+      auto &&_sv = *(_self);
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+        if (acc == target) {
+          return std::make_optional<List<unsigned int>>(
+              List<unsigned int>::nil());
         } else {
-          auto _f = std::move(std::get<_Call2>(_frame));
-          unsigned int d_a1 = _f._s0;
-          if (_result.has_value()) {
-            const List<unsigned int> &path = *_result;
-            _result = std::make_optional<List<unsigned int>>(
+          return std::optional<List<unsigned int>>();
+        }
+      } else {
+        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
+        unsigned int new_acc = (acc + d_a1);
+        auto _cs = (*(d_a0)).find_path_sum(new_acc, target);
+        if (_cs.has_value()) {
+          const List<unsigned int> &path = *_cs;
+          return std::make_optional<List<unsigned int>>(
+              List<unsigned int>::cons(d_a1, path));
+        } else {
+          auto _cs1 = (*(d_a2)).find_path_sum(new_acc, target);
+          if (_cs1.has_value()) {
+            const List<unsigned int> &path = *_cs1;
+            return std::make_optional<List<unsigned int>>(
                 List<unsigned int>::cons(d_a1, path));
           } else {
-            _result = std::optional<List<unsigned int>>();
+            return std::optional<List<unsigned int>>();
           }
         }
       }
-      return _result;
     }
 
     __attribute__((pure)) unsigned int

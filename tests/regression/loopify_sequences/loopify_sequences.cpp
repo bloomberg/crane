@@ -962,75 +962,46 @@ LoopifySequences::nub(const List<unsigned int> &l) {
 __attribute__((pure)) List<List<unsigned int>>
 LoopifySequences::group_fuel(const unsigned int &fuel,
                              const List<unsigned int> &l) {
-  std::unique_ptr<List<List<unsigned int>>> _head{};
-  std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
-  unsigned int _loop_fuel = fuel;
-  while (true) {
-    if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<List<List<unsigned int>>>(
-          List<List<unsigned int>>::nil());
-      break;
+  if (fuel <= 0) {
+    return List<List<unsigned int>>::nil();
+  } else {
+    unsigned int f = fuel - 1;
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+      return List<List<unsigned int>>::nil();
     } else {
-      unsigned int f = _loop_fuel - 1;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
-        *(_write) = std::make_unique<List<List<unsigned int>>>(
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l.v());
+      auto &&_sv0 = *(d_a1);
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
+        return List<List<unsigned int>>::cons(
+            List<unsigned int>::cons(d_a0, List<unsigned int>::nil()),
             List<List<unsigned int>>::nil());
-        break;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-        auto &&_sv0 = *(d_a1);
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _sv0.v())) {
-          *(_write) = std::make_unique<List<List<unsigned int>>>(
-              List<List<unsigned int>>::cons(
-                  List<unsigned int>::cons(d_a0, List<unsigned int>::nil()),
-                  List<List<unsigned int>>::nil()));
-          break;
-        } else {
-          const auto &[d_a00, d_a10] =
-              std::get<typename List<unsigned int>::Cons>(_sv0.v());
-          if (d_a0 == d_a00) {
-            auto &&_sv1 = group_fuel(f, *(d_a1));
-            if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-                    _sv1.v())) {
-              *(_write) = std::make_unique<List<List<unsigned int>>>(
-                  List<List<unsigned int>>::cons(
-                      List<unsigned int>::cons(d_a0, List<unsigned int>::nil()),
-                      List<List<unsigned int>>::nil()));
-              break;
-            } else {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename List<List<unsigned int>>::Cons>(_sv1.v());
-              *(_write) = std::make_unique<List<List<unsigned int>>>(
-                  List<List<unsigned int>>::cons(
-                      List<unsigned int>::cons(
-                          d_a0, clone_as_value<List<unsigned int>>(d_a01)),
-                      *(d_a11)));
-              break;
-            }
+        const auto &[d_a00, d_a10] =
+            std::get<typename List<unsigned int>::Cons>(_sv0.v());
+        if (d_a0 == d_a00) {
+          auto &&_sv1 = group_fuel(f, *(d_a1));
+          if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+                  _sv1.v())) {
+            return List<List<unsigned int>>::cons(
+                List<unsigned int>::cons(d_a0, List<unsigned int>::nil()),
+                List<List<unsigned int>>::nil());
           } else {
-            auto _cell = std::make_unique<List<List<unsigned int>>>(
-                typename List<List<unsigned int>>::Cons(
-                    List<unsigned int>::cons(d_a0, List<unsigned int>::nil()),
-                    nullptr));
-            *(_write) = std::move(_cell);
-            _write = &std::get<typename List<List<unsigned int>>::Cons>(
-                          (*_write)->v_mut())
-                          .d_a1;
-            List<unsigned int> _next_l = *(d_a1);
-            unsigned int _next_fuel = f;
-            _loop_l = std::move(_next_l);
-            _loop_fuel = std::move(_next_fuel);
-            continue;
+            const auto &[d_a01, d_a11] =
+                std::get<typename List<List<unsigned int>>::Cons>(_sv1.v());
+            return List<List<unsigned int>>::cons(
+                List<unsigned int>::cons(
+                    d_a0, clone_as_value<List<unsigned int>>(d_a01)),
+                *(d_a11));
           }
+        } else {
+          return List<List<unsigned int>>::cons(
+              List<unsigned int>::cons(d_a0, List<unsigned int>::nil()),
+              group_fuel(f, *(d_a1)));
         }
       }
     }
   }
-  return std::move(*(_head));
 }
 
 __attribute__((pure)) List<List<unsigned int>>
@@ -1087,65 +1058,47 @@ LoopifySequences::remove_if_sum_even(const List<unsigned int> &l) {
 __attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
 LoopifySequences::run_length_encode_fuel(const unsigned int &fuel,
                                          const List<unsigned int> &l) {
-  struct _Enter {
-    const List<unsigned int> l;
-    const unsigned int fuel;
-  };
-
-  using _Frame = std::variant<_Enter>;
-  List<std::pair<unsigned int, unsigned int>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(16);
-  _stack.emplace_back(_Enter{l, fuel});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    auto _f = std::move(std::get<_Enter>(_frame));
-    const List<unsigned int> l = _f.l;
-    const unsigned int fuel = _f.fuel;
-    if (fuel <= 0) {
-      _result = List<std::pair<unsigned int, unsigned int>>::nil();
+  if (fuel <= 0) {
+    return List<std::pair<unsigned int, unsigned int>>::nil();
+  } else {
+    unsigned int f = fuel - 1;
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+      return List<std::pair<unsigned int, unsigned int>>::nil();
     } else {
-      unsigned int f = fuel - 1;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-        _result = List<std::pair<unsigned int, unsigned int>>::nil();
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l.v());
+      auto &&_sv = *(d_a1);
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
+        return List<std::pair<unsigned int, unsigned int>>::cons(
+            std::make_pair(d_a0, 1u),
+            List<std::pair<unsigned int, unsigned int>>::nil());
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(l.v());
-        auto &&_sv = *(d_a1);
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-          _result = List<std::pair<unsigned int, unsigned int>>::cons(
+        auto &&_sv1 = run_length_encode_fuel(f, *(d_a1));
+        if (std::holds_alternative<
+                typename List<std::pair<unsigned int, unsigned int>>::Nil>(
+                _sv1.v())) {
+          return List<std::pair<unsigned int, unsigned int>>::cons(
               std::make_pair(d_a0, 1u),
               List<std::pair<unsigned int, unsigned int>>::nil());
         } else {
-          auto &&_sv1 = run_length_encode_fuel(f, *(d_a1));
-          if (std::holds_alternative<
-                  typename List<std::pair<unsigned int, unsigned int>>::Nil>(
-                  _sv1.v())) {
-            _result = List<std::pair<unsigned int, unsigned int>>::cons(
-                std::make_pair(d_a0, 1u),
-                List<std::pair<unsigned int, unsigned int>>::nil());
+          const auto &[d_a01, d_a11] = std::get<
+              typename List<std::pair<unsigned int, unsigned int>>::Cons>(
+              _sv1.v());
+          const unsigned int &y = d_a01.first;
+          const unsigned int &n = d_a01.second;
+          if (d_a0 == y) {
+            return List<std::pair<unsigned int, unsigned int>>::cons(
+                std::make_pair(y, (n + 1)), *(d_a11));
           } else {
-            const auto &[d_a01, d_a11] = std::get<
-                typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-                _sv1.v());
-            const unsigned int &y = d_a01.first;
-            const unsigned int &n = d_a01.second;
-            if (d_a0 == y) {
-              _result = List<std::pair<unsigned int, unsigned int>>::cons(
-                  std::make_pair(y, (n + 1)), *(d_a11));
-            } else {
-              _result = List<std::pair<unsigned int, unsigned int>>::cons(
-                  std::make_pair(d_a0, 1u),
-                  List<std::pair<unsigned int, unsigned int>>::cons(
-                      std::make_pair(y, n), *(d_a11)));
-            }
+            return List<std::pair<unsigned int, unsigned int>>::cons(
+                std::make_pair(d_a0, 1u),
+                List<std::pair<unsigned int, unsigned int>>::cons(
+                    std::make_pair(y, n), *(d_a11)));
           }
         }
       }
     }
   }
-  return _result;
 }
 
 __attribute__((pure)) List<std::pair<unsigned int, unsigned int>>

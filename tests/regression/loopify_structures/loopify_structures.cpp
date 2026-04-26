@@ -87,87 +87,40 @@ __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
 /// Helper: compute max depth among a list of nested structures.
 __attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
     const unsigned int &fuel, const List<LoopifyStructures::nested> &l) {
-  struct _Enter {
-    const List<LoopifyStructures::nested> l;
-    const unsigned int fuel;
-  };
-
-  struct _Call1 {};
-
-  struct _Call2 {
-    std::unique_ptr<List<LoopifyStructures::nested>> _s0;
-    unsigned int _s1;
-  };
-
-  struct _Call3 {
-    unsigned int _s0;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
-  unsigned int _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(16);
-  _stack.emplace_back(_Enter{l, fuel});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyStructures::nested> l = _f.l;
-      const unsigned int fuel = _f.fuel;
-      if (fuel <= 0) {
-        _result = 0u;
-      } else {
-        unsigned int f = fuel - 1;
-        if (std::holds_alternative<
-                typename List<LoopifyStructures::nested>::Nil>(l.v())) {
-          _result = 0u;
-        } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<LoopifyStructures::nested>::Cons>(l.v());
-          if (std::holds_alternative<typename LoopifyStructures::nested::Elem>(
-                  d_a0.v())) {
-            _stack.emplace_back(_Call1{});
-            _stack.emplace_back(_Enter{*(d_a1), f});
-          } else {
-            const auto &[d_a00] =
-                std::get<typename LoopifyStructures::nested::NList>(d_a0.v());
-            _stack.emplace_back(
-                _Call2{std::make_unique<List<LoopifyStructures::nested>>(
-                           d_a1->clone()),
-                       f});
-            _stack.emplace_back(_Enter{
-                clone_as_value<List<LoopifyStructures::nested>>(d_a00), f});
-          }
-        }
-      }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int rest_max = _result;
-      if (0u <= rest_max) {
-        _result = rest_max;
-      } else {
-        _result = 0u;
-      }
-    } else if (std::holds_alternative<_Call2>(_frame)) {
-      auto _f = std::move(std::get<_Call2>(_frame));
-      std::unique_ptr<List<LoopifyStructures::nested>> d_a1 = std::move(_f._s0);
-      unsigned int f = _f._s1;
-      unsigned int d = (_result + 1);
-      _stack.emplace_back(_Call3{d});
-      _stack.emplace_back(_Enter{*(d_a1), f});
+  if (fuel <= 0) {
+    return 0u;
+  } else {
+    unsigned int f = fuel - 1;
+    if (std::holds_alternative<typename List<LoopifyStructures::nested>::Nil>(
+            l.v())) {
+      return 0u;
     } else {
-      auto _f = std::move(std::get<_Call3>(_frame));
-      unsigned int d = _f._s0;
-      unsigned int rest_max = _result;
-      if (d <= rest_max) {
-        _result = rest_max;
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<LoopifyStructures::nested>::Cons>(l.v());
+      if (std::holds_alternative<typename LoopifyStructures::nested::Elem>(
+              d_a0.v())) {
+        unsigned int rest_max = depth_nested_list_fuel(f, *(d_a1));
+        if (0u <= rest_max) {
+          return rest_max;
+        } else {
+          return 0u;
+        }
       } else {
-        _result = d;
+        const auto &[d_a00] =
+            std::get<typename LoopifyStructures::nested::NList>(d_a0.v());
+        unsigned int d =
+            (depth_nested_list_fuel(
+                 f, clone_as_value<List<LoopifyStructures::nested>>(d_a00)) +
+             1);
+        unsigned int rest_max = depth_nested_list_fuel(f, *(d_a1));
+        if (d <= rest_max) {
+          return rest_max;
+        } else {
+          return d;
+        }
       }
     }
   }
-  return _result;
 }
 
 /// Helper: flatten a list of nested structures to a flat list of nats.

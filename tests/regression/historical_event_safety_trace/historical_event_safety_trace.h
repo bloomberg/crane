@@ -25,6 +25,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -66,13 +72,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -109,9 +134,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -798,6 +831,13 @@ struct HistoricalEventSafetyTraceCase {
     __attribute__((pure)) State *operator->() { return this; }
 
     __attribute__((pure)) const State *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) State clone() const {
+      return State{clone_as_value<unsigned int>((*(this)).reservoir_level_cm),
+                   clone_as_value<unsigned int>((*(this)).downstream_stage_cm),
+                   clone_as_value<unsigned int>((*(this)).gate_open_pct)};
+    }
   };
 
   struct PlantConfig {
@@ -816,6 +856,22 @@ struct HistoricalEventSafetyTraceCase {
     __attribute__((pure)) PlantConfig *operator->() { return this; }
 
     __attribute__((pure)) const PlantConfig *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) PlantConfig clone() const {
+      return PlantConfig{
+          clone_as_value<unsigned int>((*(this)).max_reservoir_cm),
+          clone_as_value<unsigned int>((*(this)).max_downstream_cm),
+          clone_as_value<unsigned int>((*(this)).gate_capacity_cm),
+          clone_as_value<unsigned int>((*(this)).forecast_error_pct),
+          clone_as_value<unsigned int>((*(this)).gate_slew_pct),
+          clone_as_value<unsigned int>((*(this)).max_stage_rise_cm),
+          clone_as_value<unsigned int>((*(this)).reservoir_area_min_cm2),
+          clone_as_value<unsigned int>((*(this)).reservoir_area_max_cm2),
+          clone_value((*(this)).reservoir_area_curve_cm2),
+          clone_as_value<unsigned int>((*(this)).design_head_cm),
+          clone_as_value<unsigned int>((*(this)).timestep_s)};
+    }
   };
 
   __attribute__((pure)) static bool is_safe_bool(const PlantConfig &pconf,
@@ -829,6 +885,12 @@ struct HistoricalEventSafetyTraceCase {
 
     __attribute__((pure)) const InflowRecord *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) InflowRecord clone() const {
+      return InflowRecord{clone_as_value<unsigned int>((*(this)).ir_timestep),
+                          clone_as_value<unsigned int>((*(this)).ir_inflow_cm)};
     }
   };
 
@@ -847,6 +909,15 @@ struct HistoricalEventSafetyTraceCase {
     __attribute__((pure)) TestResult *operator->() { return this; }
 
     __attribute__((pure)) const TestResult *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) TestResult clone() const {
+      return TestResult{clone_as_value<unsigned int>((*(this)).tr_event_name),
+                        clone_as_value<bool>((*(this)).tr_initial_safe),
+                        clone_as_value<bool>((*(this)).tr_final_safe),
+                        clone_as_value<unsigned int>((*(this)).tr_max_level),
+                        clone_as_value<unsigned int>((*(this)).tr_max_stage)};
+    }
   };
 
   template <MapsTo<unsigned int, unsigned int> F0,
@@ -923,6 +994,12 @@ struct HistoricalEventSafetyTraceCase {
 
     __attribute__((pure)) const MonotoneRatingTable *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) MonotoneRatingTable clone() const {
+      return MonotoneRatingTable{
+          clone_as_value<RatingTable>((*(this)).mrt_table)};
     }
   };
 
@@ -1055,6 +1132,18 @@ return 1000u; },
 
     __attribute__((pure)) const HistoricalScenarioBundle *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) HistoricalScenarioBundle clone() const {
+      return HistoricalScenarioBundle{
+          clone_as_value<PlantConfig>((*(this)).hsb_hist_plant),
+          clone_as_value<MonotoneRatingTable>((*(this)).hsb_hist_table),
+          clone_as_value<State>((*(this)).hsb_hist_initial),
+          clone_as_value<TestResult>((*(this)).hsb_test_1983),
+          clone_as_value<TestResult>((*(this)).hsb_test_2011),
+          clone_as_value<PlantConfig>((*(this)).hsb_hoover_plant),
+          clone_as_value<TestResult>((*(this)).hsb_hoover_test)};
     }
   };
 

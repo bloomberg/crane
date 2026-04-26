@@ -24,6 +24,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -65,13 +71,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -108,9 +133,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -939,59 +972,20 @@ struct LoopifyTreeVariants {
 
     __attribute__((pure)) unsigned int leaf_tree_max() const {
       const leaf_tree *_self = this;
-
-      struct _Enter {
-        const leaf_tree *_self;
-      };
-
-      struct _Call1 {
-        std::unique_ptr<leaf_tree> _s0;
-      };
-
-      struct _Call2 {
-        unsigned int _s0;
-      };
-
-      using _Frame = std::variant<_Enter, _Call1, _Call2>;
-      unsigned int _result{};
-      std::vector<_Frame> _stack;
-      _stack.reserve(16);
-      _stack.emplace_back(_Enter{_self});
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const leaf_tree *_self = _f._self;
-          auto &&_sv = *(_self);
-          if (std::holds_alternative<typename leaf_tree::LLeaf>(_sv.v())) {
-            const auto &[d_a0] = std::get<typename leaf_tree::LLeaf>(_sv.v());
-            _result = d_a0;
-          } else {
-            const auto &[d_a0, d_a1] =
-                std::get<typename leaf_tree::LNode>(_sv.v());
-            _stack.emplace_back(
-                _Call1{std::make_unique<leaf_tree>(d_a1->clone())});
-            _stack.emplace_back(_Enter{d_a0.get()});
-          }
-        } else if (std::holds_alternative<_Call1>(_frame)) {
-          auto _f = std::move(std::get<_Call1>(_frame));
-          std::unique_ptr<leaf_tree> d_a1 = std::move(_f._s0);
-          unsigned int lmax = _result;
-          _stack.emplace_back(_Call2{lmax});
-          _stack.emplace_back(_Enter{d_a1.get()});
+      auto &&_sv = *(_self);
+      if (std::holds_alternative<typename leaf_tree::LLeaf>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename leaf_tree::LLeaf>(_sv.v());
+        return d_a0;
+      } else {
+        const auto &[d_a0, d_a1] = std::get<typename leaf_tree::LNode>(_sv.v());
+        unsigned int lmax = (*(d_a0)).leaf_tree_max();
+        unsigned int rmax = (*(d_a1)).leaf_tree_max();
+        if (lmax < rmax) {
+          return rmax;
         } else {
-          auto _f = std::move(std::get<_Call2>(_frame));
-          unsigned int lmax = _f._s0;
-          unsigned int rmax = _result;
-          if (lmax < rmax) {
-            _result = rmax;
-          } else {
-            _result = lmax;
-          }
+          return lmax;
         }
       }
-      return _result;
     }
 
     __attribute__((pure)) unsigned int leaf_tree_sum() const {

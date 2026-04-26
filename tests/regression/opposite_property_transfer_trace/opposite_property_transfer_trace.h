@@ -23,6 +23,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -64,13 +70,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -107,9 +132,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -149,6 +182,16 @@ struct OppositePropertyTransferTraceCase {
     __attribute__((pure)) const PreStableCategory *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) PreStableCategory clone() const {
+      return PreStableCategory{clone_as_value<unsigned int>((*(this)).ps_tag),
+                               clone_as_value<unsigned int>((*(this)).ps_shift),
+                               clone_value((*(this)).ps_Susp),
+                               clone_value((*(this)).ps_Loop),
+                               clone_value((*(this)).ps_eta),
+                               clone_value((*(this)).ps_epsilon)};
+    }
   };
 
   __attribute__((pure)) static PreStableCategory
@@ -163,6 +206,13 @@ struct OppositePropertyTransferTraceCase {
     __attribute__((pure)) const LeftStableWitness *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) LeftStableWitness clone() const {
+      return LeftStableWitness{
+          clone_as_value<unsigned int>((*(this)).lsw_seed),
+          clone_as_value<unsigned int>((*(this)).lsw_value)};
+    }
   };
 
   struct RightStableWitness {
@@ -173,6 +223,13 @@ struct OppositePropertyTransferTraceCase {
 
     __attribute__((pure)) const RightStableWitness *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) RightStableWitness clone() const {
+      return RightStableWitness{
+          clone_as_value<unsigned int>((*(this)).rsw_seed),
+          clone_as_value<unsigned int>((*(this)).rsw_value)};
     }
   };
 
@@ -185,6 +242,12 @@ struct OppositePropertyTransferTraceCase {
     __attribute__((pure)) const Triangle1Witness *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) Triangle1Witness clone() const {
+      return Triangle1Witness{clone_as_value<unsigned int>((*(this)).t1_seed),
+                              clone_as_value<unsigned int>((*(this)).t1_value)};
+    }
   };
 
   struct Triangle2Witness {
@@ -195,6 +258,12 @@ struct OppositePropertyTransferTraceCase {
 
     __attribute__((pure)) const Triangle2Witness *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) Triangle2Witness clone() const {
+      return Triangle2Witness{clone_as_value<unsigned int>((*(this)).t2_seed),
+                              clone_as_value<unsigned int>((*(this)).t2_value)};
     }
   };
 
@@ -215,6 +284,13 @@ struct OppositePropertyTransferTraceCase {
     __attribute__((pure)) const LeftProperty *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) LeftProperty clone() const {
+      return LeftProperty{clone_as_value<unsigned int>((*(this)).lp_seed),
+                          clone_as_value<unsigned int>((*(this)).lp_value),
+                          clone_as_value<unsigned int>((*(this)).lp_tag)};
+    }
   };
 
   struct RightProperty {
@@ -226,6 +302,13 @@ struct OppositePropertyTransferTraceCase {
 
     __attribute__((pure)) const RightProperty *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) RightProperty clone() const {
+      return RightProperty{clone_as_value<unsigned int>((*(this)).rp_seed),
+                           clone_as_value<unsigned int>((*(this)).rp_value),
+                           clone_as_value<unsigned int>((*(this)).rp_tag)};
     }
   };
 

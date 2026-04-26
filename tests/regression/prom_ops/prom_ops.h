@@ -23,6 +23,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -64,13 +70,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -107,9 +132,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -275,6 +308,12 @@ struct PromOps {
     __attribute__((pure)) state1 *operator->() { return this; }
 
     __attribute__((pure)) const state1 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state1 clone() const {
+      return state1{clone_as_value<unsigned int>((*(this)).prom_data1),
+                    clone_as_value<bool>((*(this)).prom_enable1)};
+    }
   };
 
   __attribute__((pure)) static unsigned int prom_data_or_zero(const state1 &s);
@@ -290,6 +329,14 @@ struct PromOps {
     __attribute__((pure)) state2 *operator->() { return this; }
 
     __attribute__((pure)) const state2 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state2 clone() const {
+      return state2{clone_as_value<unsigned int>((*(this)).acc2),
+                    clone_as_value<unsigned int>((*(this)).prom_addr2),
+                    clone_as_value<unsigned int>((*(this)).prom_data2),
+                    clone_as_value<bool>((*(this)).prom_enable2)};
+    }
   };
 
   __attribute__((pure)) static unsigned int flagged_sum(const state2 &s);
@@ -316,6 +363,25 @@ struct PromOps {
     __attribute__((pure)) state3 *operator->() { return this; }
 
     __attribute__((pure)) const state3 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state3 clone() const {
+      return state3{clone_as_value<unsigned int>((*(this)).acc3),
+                    clone_as_value<List<unsigned int>>((*(this)).regs3),
+                    clone_as_value<bool>((*(this)).carry3),
+                    clone_as_value<unsigned int>((*(this)).pc3),
+                    clone_as_value<List<unsigned int>>((*(this)).stack3),
+                    clone_as_value<List<unsigned int>>((*(this)).ram_sys3),
+                    clone_as_value<unsigned int>((*(this)).cur_bank3),
+                    clone_as_value<unsigned int>((*(this)).sel_ram3),
+                    clone_as_value<List<unsigned int>>((*(this)).rom_ports3),
+                    clone_as_value<unsigned int>((*(this)).sel_rom3),
+                    clone_as_value<List<unsigned int>>((*(this)).rom3),
+                    clone_as_value<bool>((*(this)).test_pin3),
+                    clone_as_value<unsigned int>((*(this)).prom_addr3),
+                    clone_as_value<unsigned int>((*(this)).prom_data3),
+                    clone_as_value<bool>((*(this)).prom_enable3)};
+    }
   };
 
   __attribute__((pure)) static state3 set_prom_params3(const state3 &s,
@@ -396,6 +462,16 @@ struct PromOps {
     __attribute__((pure)) state5 *operator->() { return this; }
 
     __attribute__((pure)) const state5 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state5 clone() const {
+      return state5{clone_as_value<unsigned int>((*(this)).acc5),
+                    clone_as_value<List<unsigned int>>((*(this)).regs5),
+                    clone_as_value<List<unsigned int>>((*(this)).rom5),
+                    clone_as_value<unsigned int>((*(this)).prom_addr5),
+                    clone_as_value<unsigned int>((*(this)).prom_data5),
+                    clone_as_value<bool>((*(this)).prom_enable5)};
+    }
   };
 
   __attribute__((pure)) static state5 set_prom_params5(const state5 &s,
@@ -435,6 +511,14 @@ struct PromOps {
     __attribute__((pure)) state6 *operator->() { return this; }
 
     __attribute__((pure)) const state6 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state6 clone() const {
+      return state6{clone_as_value<List<unsigned int>>((*(this)).rom6),
+                    clone_as_value<unsigned int>((*(this)).prom_addr6),
+                    clone_as_value<unsigned int>((*(this)).prom_data6),
+                    clone_as_value<bool>((*(this)).prom_enable6)};
+    }
   };
 
   __attribute__((pure)) static state6 set_prom_params6(const state6 &s,
@@ -461,6 +545,15 @@ struct PromOps {
     __attribute__((pure)) state7 *operator->() { return this; }
 
     __attribute__((pure)) const state7 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state7 clone() const {
+      return state7{clone_as_value<List<unsigned int>>((*(this)).regs7),
+                    clone_as_value<List<unsigned int>>((*(this)).ram_sys7),
+                    clone_as_value<unsigned int>((*(this)).prom_addr7),
+                    clone_as_value<unsigned int>((*(this)).prom_data7),
+                    clone_as_value<bool>((*(this)).prom_enable7)};
+    }
   };
 
   __attribute__((pure)) static state7 set_prom_params7(const state7 &s,
@@ -488,6 +581,15 @@ struct PromOps {
     __attribute__((pure)) state8 *operator->() { return this; }
 
     __attribute__((pure)) const state8 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state8 clone() const {
+      return state8{clone_as_value<List<unsigned int>>((*(this)).regs8),
+                    clone_as_value<List<unsigned int>>((*(this)).ram_sys8),
+                    clone_as_value<unsigned int>((*(this)).prom_addr8),
+                    clone_as_value<unsigned int>((*(this)).prom_data8),
+                    clone_as_value<bool>((*(this)).prom_enable8)};
+    }
   };
 
   __attribute__((pure)) static state8 set_prom_params8(const state8 &s,
@@ -513,6 +615,14 @@ struct PromOps {
     __attribute__((pure)) state9 *operator->() { return this; }
 
     __attribute__((pure)) const state9 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state9 clone() const {
+      return state9{clone_as_value<List<unsigned int>>((*(this)).rom9),
+                    clone_as_value<unsigned int>((*(this)).prom_addr9),
+                    clone_as_value<unsigned int>((*(this)).prom_data9),
+                    clone_as_value<bool>((*(this)).prom_enable9)};
+    }
   };
 
   __attribute__((pure)) static state9 set_prom_params9(const state9 &s,
@@ -546,6 +656,21 @@ struct PromOps {
     __attribute__((pure)) state10 *operator->() { return this; }
 
     __attribute__((pure)) const state10 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state10 clone() const {
+      return state10{clone_as_value<List<unsigned int>>((*(this)).regs10),
+                     clone_as_value<List<unsigned int>>((*(this)).rom10),
+                     clone_as_value<unsigned int>((*(this)).acc10),
+                     clone_as_value<unsigned int>((*(this)).pc10),
+                     clone_as_value<List<unsigned int>>((*(this)).stack10),
+                     clone_as_value<unsigned int>((*(this)).cur_bank10),
+                     clone_as_value<List<unsigned int>>((*(this)).rom_ports10),
+                     clone_as_value<unsigned int>((*(this)).sel_rom10),
+                     clone_as_value<unsigned int>((*(this)).prom_addr10),
+                     clone_as_value<unsigned int>((*(this)).prom_data10),
+                     clone_as_value<bool>((*(this)).prom_enable10)};
+    }
   };
 
   __attribute__((pure)) static state10 set_prom_params10(const state10 &s,
@@ -649,6 +774,14 @@ struct PromOps {
     __attribute__((pure)) state11 *operator->() { return this; }
 
     __attribute__((pure)) const state11 *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) state11 clone() const {
+      return state11{clone_as_value<List<unsigned int>>((*(this)).rom11),
+                     clone_as_value<unsigned int>((*(this)).prom_addr11),
+                     clone_as_value<unsigned int>((*(this)).prom_data11),
+                     clone_as_value<bool>((*(this)).prom_enable11)};
+    }
   };
 
   __attribute__((pure)) static state11 execute_wpm11(state11 s);

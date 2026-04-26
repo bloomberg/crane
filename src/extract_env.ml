@@ -772,6 +772,8 @@ let spec_header si () =
        template <typename T> struct is_unique_ptr<std::unique_ptr<T>> : std::true_type { using element_type = T; };\n\n\
        template <typename T> struct is_shared_ptr : std::false_type {};\n\
        template <typename T> struct is_shared_ptr<std::shared_ptr<T>> : std::true_type { using element_type = T; };\n\n\
+       template <typename T> struct is_optional : std::false_type {};\n\
+       template <typename T> struct is_optional<std::optional<T>> : std::true_type { using element_type = T; };\n\n\
        template <typename T>\n\
        auto clone_value(const T& x) { return x; }\n\n\
        template <typename T>\n\
@@ -807,14 +809,32 @@ let spec_header si () =
       \        return std::make_unique<Inner>(x->clone());\n\
       \      }\n\
       \    } else {\n\
-      \      if constexpr (std::is_same_v<Inner, SourceBare>) {\n\
+      \      if constexpr (requires { x.clone(); }) {\n\
       \        return std::make_unique<Inner>(x.clone());\n\
+      \      } else if constexpr (std::is_same_v<Inner, SourceBare>) {\n\
+      \        if constexpr (requires { x.clone(); }) {\n\
+      \          return std::make_unique<Inner>(x.clone());\n\
+      \        } else {\n\
+      \          return std::make_unique<Inner>(x);\n\
+      \        }\n\
       \      } else\n\
       \      if constexpr (requires { x.template clone_as<Inner>(); }) {\n\
       \        return std::make_unique<Inner>(x.template clone_as<Inner>());\n\
       \      } else {\n\
-      \        return std::make_unique<Inner>(x.clone());\n\
+      \        if constexpr (requires { x.clone(); }) {\n\
+      \          return std::make_unique<Inner>(x.clone());\n\
+      \        } else {\n\
+      \          return std::make_unique<Inner>(x);\n\
+      \        }\n\
       \      }\n\
+      \    }\n\
+      \  } else if constexpr (is_optional<TargetBare>::value) {\n\
+      \    using Inner = typename is_optional<TargetBare>::element_type;\n\
+      \    if constexpr (is_optional<SourceBare>::value) {\n\
+      \      if (!x) return std::nullopt;\n\
+      \      return Target{clone_as_value<Inner>(*x)};\n\
+      \    } else {\n\
+      \      return Target{clone_as_value<Inner>(x)};\n\
       \    }\n\
       \  } else if constexpr (is_shared_ptr<TargetBare>::value) {\n\
       \    using Inner = typename is_shared_ptr<TargetBare>::element_type;\n\
@@ -849,9 +869,16 @@ let spec_header si () =
       \  } else if constexpr (is_unique_ptr<SourceBare>::value) {\n\
       \    using SourceInner = typename is_unique_ptr<SourceBare>::element_type;\n\
       \    if constexpr (std::is_same_v<TargetBare, SourceInner>) {\n\
-      \      return x ? x->clone() : Target{};\n\
+      \      if (!x) return Target{};\n\
+      \      if constexpr (requires { x->clone(); }) {\n\
+      \        return x->clone();\n\
+      \      } else {\n\
+      \        return *x;\n\
+      \      }\n\
       \    } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {\n\
       \      return x->template clone_as<TargetBare>();\n\
+      \    } else if constexpr (requires { x->clone(); }) {\n\
+      \      return x->clone();\n\
       \    } else {\n\
       \      return Target(*x);\n\
       \    }\n\

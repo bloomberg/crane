@@ -24,6 +24,12 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {
   using element_type = T;
 };
 
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {
+  using element_type = T;
+};
+
 template <typename T> auto clone_value(const T &x) { return x; }
 
 template <typename T>
@@ -65,13 +71,32 @@ Target clone_as_value(const Source &x) {
         return std::make_unique<Inner>(x->clone());
       }
     } else {
-      if constexpr (std::is_same_v<Inner, SourceBare>) {
+      if constexpr (requires { x.clone(); }) {
         return std::make_unique<Inner>(x.clone());
+      } else if constexpr (std::is_same_v<Inner, SourceBare>) {
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       } else if constexpr (requires { x.template clone_as<Inner>(); }) {
         return std::make_unique<Inner>(x.template clone_as<Inner>());
       } else {
-        return std::make_unique<Inner>(x.clone());
+        if constexpr (requires { x.clone(); }) {
+          return std::make_unique<Inner>(x.clone());
+        } else {
+          return std::make_unique<Inner>(x);
+        }
       }
+    }
+  } else if constexpr (is_optional<TargetBare>::value) {
+    using Inner = typename is_optional<TargetBare>::element_type;
+    if constexpr (is_optional<SourceBare>::value) {
+      if (!x)
+        return std::nullopt;
+      return Target{clone_as_value<Inner>(*x)};
+    } else {
+      return Target{clone_as_value<Inner>(x)};
     }
   } else if constexpr (is_shared_ptr<TargetBare>::value) {
     using Inner = typename is_shared_ptr<TargetBare>::element_type;
@@ -108,9 +133,17 @@ Target clone_as_value(const Source &x) {
   } else if constexpr (is_unique_ptr<SourceBare>::value) {
     using SourceInner = typename is_unique_ptr<SourceBare>::element_type;
     if constexpr (std::is_same_v<TargetBare, SourceInner>) {
-      return x ? x->clone() : Target{};
+      if (!x)
+        return Target{};
+      if constexpr (requires { x->clone(); }) {
+        return x->clone();
+      } else {
+        return *x;
+      }
     } else if constexpr (requires { x->template clone_as<TargetBare>(); }) {
       return x->template clone_as<TargetBare>();
+    } else if constexpr (requires { x->clone(); }) {
+      return x->clone();
     } else {
       return Target(*x);
     }
@@ -817,6 +850,11 @@ struct ValidatedPumpDeliveryTraceCase {
     __attribute__((pure)) Mg_dL *operator->() { return this; }
 
     __attribute__((pure)) const Mg_dL *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) Mg_dL clone() const {
+      return Mg_dL{clone_as_value<unsigned int>((*(this)).mg_dL_val)};
+    }
   };
 
   struct Grams {
@@ -825,6 +863,11 @@ struct ValidatedPumpDeliveryTraceCase {
     __attribute__((pure)) Grams *operator->() { return this; }
 
     __attribute__((pure)) const Grams *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) Grams clone() const {
+      return Grams{clone_as_value<unsigned int>((*(this)).grams_val)};
+    }
   };
 
   using Carbs_g = Grams;
@@ -851,6 +894,19 @@ struct ValidatedPumpDeliveryTraceCase {
     __attribute__((pure)) Config *operator->() { return this; }
 
     __attribute__((pure)) const Config *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) Config clone() const {
+      return Config{
+          clone_as_value<unsigned int>((*(this)).cfg_bg_rise_per_gram),
+          clone_as_value<unsigned int>(
+              (*(this)).cfg_conservative_cob_absorption_percent),
+          clone_as_value<unsigned int>((*(this)).cfg_suspend_threshold_mg_dl),
+          clone_as_value<unsigned int>(
+              (*(this)).cfg_stacking_warning_threshold_min),
+          clone_as_value<unsigned int>(
+              (*(this)).cfg_iob_high_threshold_twentieths)};
+    }
   };
 
   static inline const Config default_config = Config{4u, 30u, 80u, 60u, 200u};
@@ -1146,6 +1202,13 @@ struct ValidatedPumpDeliveryTraceCase {
     __attribute__((pure)) BolusEvent *operator->() { return this; }
 
     __attribute__((pure)) const BolusEvent *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) BolusEvent clone() const {
+      return BolusEvent{
+          clone_as_value<unsigned int>((*(this)).be_dose_twentieths),
+          clone_as_value<Minutes>((*(this)).be_time_minutes)};
+    }
   };
 
   __attribute__((pure)) static unsigned int div_ceil(const unsigned int &a,
@@ -1338,6 +1401,16 @@ struct ValidatedPumpDeliveryTraceCase {
     __attribute__((pure)) const PrecisionParams *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) PrecisionParams clone() const {
+      return PrecisionParams{
+          clone_as_value<unsigned int>((*(this)).prec_icr_tenths),
+          clone_as_value<unsigned int>((*(this)).prec_isf_tenths),
+          clone_as_value<Mg_dL>((*(this)).prec_target_bg),
+          clone_as_value<DIA_minutes>((*(this)).prec_dia),
+          clone_as_value<InsulinType>((*(this)).prec_insulin_type)};
+    }
   };
 
   __attribute__((pure)) static bool prec_params_valid(const PrecisionParams &p);
@@ -1356,6 +1429,20 @@ struct ValidatedPumpDeliveryTraceCase {
 
     __attribute__((pure)) const PrecisionInput *operator->() const {
       return this;
+    }
+
+    // ACCESSORS
+    __attribute__((pure)) PrecisionInput clone() const {
+      return PrecisionInput{
+          clone_as_value<Carbs_g>((*(this)).pi_carbs_g),
+          clone_as_value<Mg_dL>((*(this)).pi_current_bg),
+          clone_as_value<Minutes>((*(this)).pi_now),
+          clone_as_value<List<BolusEvent>>((*(this)).pi_bolus_history),
+          clone_as_value<ActivityState>((*(this)).pi_activity),
+          clone_as_value<bool>((*(this)).pi_use_sensor_margin),
+          clone_as_value<ValidatedPumpDeliveryTraceCase::FaultStatus>(
+              (*(this)).pi_fault),
+          clone_as_value<std::optional<unsigned int>>((*(this)).pi_weight_kg)};
     }
   };
 
@@ -1540,6 +1627,20 @@ struct ValidatedPumpDeliveryTraceCase {
     __attribute__((pure)) const MmolPrecisionInput *operator->() const {
       return this;
     }
+
+    // ACCESSORS
+    __attribute__((pure)) MmolPrecisionInput clone() const {
+      return MmolPrecisionInput{
+          clone_as_value<Carbs_g>((*(this)).mpi_carbs_g),
+          clone_as_value<unsigned int>((*(this)).mpi_current_bg_mmol_tenths),
+          clone_as_value<Minutes>((*(this)).mpi_now),
+          clone_as_value<List<BolusEvent>>((*(this)).mpi_bolus_history),
+          clone_as_value<ActivityState>((*(this)).mpi_activity),
+          clone_as_value<bool>((*(this)).mpi_use_sensor_margin),
+          clone_as_value<ValidatedPumpDeliveryTraceCase::FaultStatus>(
+              (*(this)).mpi_fault),
+          clone_as_value<std::optional<unsigned int>>((*(this)).mpi_weight_kg)};
+    }
   };
 
   __attribute__((pure)) static unsigned int
@@ -1615,6 +1716,16 @@ struct ValidatedPumpDeliveryTraceCase {
     __attribute__((pure)) PumpState *operator->() { return this; }
 
     __attribute__((pure)) const PumpState *operator->() const { return this; }
+
+    // ACCESSORS
+    __attribute__((pure)) PumpState clone() const {
+      return PumpState{
+          clone_as_value<unsigned int>((*(this)).ps_reservoir_twentieths),
+          clone_as_value<unsigned int>((*(this)).ps_basal_rate_hundredths),
+          clone_as_value<Minutes>((*(this)).ps_last_bolus_time),
+          clone_as_value<bool>((*(this)).ps_occlusion_detected),
+          clone_as_value<unsigned int>((*(this)).ps_battery_percent)};
+    }
   };
 
   __attribute__((pure)) static bool pump_can_deliver(const PumpState &state,
