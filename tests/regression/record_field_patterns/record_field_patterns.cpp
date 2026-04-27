@@ -1,13 +1,5 @@
 #include <record_field_patterns.h>
 
-#include <any>
-#include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 RecordFieldPatterns::classify_point(const RecordFieldPatterns::Point &p) {
   unsigned int x = p.px;

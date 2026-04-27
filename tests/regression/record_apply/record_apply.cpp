@@ -1,10 +1,5 @@
 #include <record_apply.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) unsigned int
 RecordApply::apply_record(const RecordApply::R &r0, const unsigned int &a,
                           const unsigned int &b) {

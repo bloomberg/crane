@@ -1,11 +1,5 @@
 #include <z_int.h>
 
-#include <cstdint>
-#include <cstdlib>
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) int64_t ZIntTest::add_test(const int64_t &_x0,
                                                  const int64_t &_x1) {
   return (_x0 + _x1);

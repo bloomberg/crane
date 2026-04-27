@@ -1,10 +1,5 @@
 #include <pathological_record.h>
 
-#include <any>
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) unsigned int
 PathologicalRecord::hof_access(const PathologicalRecord::Rec &r) {
   unsigned int a = r.f1;

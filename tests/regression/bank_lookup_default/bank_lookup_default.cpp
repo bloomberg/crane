@@ -1,11 +1,5 @@
 #include <bank_lookup_default.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) BankLookupDefault::ram_bank
 BankLookupDefault::get_bank(const BankLookupDefault::state &s,
                             const unsigned int &b) {

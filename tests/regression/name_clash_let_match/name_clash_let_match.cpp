@@ -1,11 +1,5 @@
 #include <name_clash_let_match.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Variable name 'a' used in both let and match binding.
 __attribute__((pure)) unsigned int
 NameClashLetMatch::let_shadows_match(const NameClashLetMatch::either &e) {

@@ -21,7 +21,6 @@ template <typename t_A> struct List {
   };
 
   using variant_t = std::variant<Nil, Cons>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -39,12 +38,12 @@ public:
 
   List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+  List<t_A> &operator=(const List<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+  List<t_A> &operator=(List<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -163,12 +162,12 @@ struct LoopifyExprVariants {
 
     cond_expr(cond_expr &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) cond_expr &operator=(const cond_expr &_other) {
+    cond_expr &operator=(const cond_expr &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) cond_expr &operator=(cond_expr &&_other) {
+    cond_expr &operator=(cond_expr &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -584,12 +583,12 @@ struct LoopifyExprVariants {
 
     arith_expr(arith_expr &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) arith_expr &operator=(const arith_expr &_other) {
+    arith_expr &operator=(const arith_expr &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) arith_expr &operator=(arith_expr &&_other) {
+    arith_expr &operator=(arith_expr &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -1052,12 +1051,12 @@ struct LoopifyExprVariants {
 
     bool_expr(bool_expr &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) bool_expr &operator=(const bool_expr &_other) {
+    bool_expr &operator=(const bool_expr &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) bool_expr &operator=(bool_expr &&_other) {
+    bool_expr &operator=(bool_expr &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -1681,12 +1680,12 @@ struct LoopifyExprVariants {
 
     list_expr(list_expr &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) list_expr &operator=(const list_expr &_other) {
+    list_expr &operator=(const list_expr &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) list_expr &operator=(list_expr &&_other) {
+    list_expr &operator=(list_expr &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

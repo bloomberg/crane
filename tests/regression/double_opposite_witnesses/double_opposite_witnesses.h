@@ -36,13 +36,12 @@ public:
 
   SigT(SigT<t_A, t_P> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) SigT<t_A, t_P> &
-  operator=(const SigT<t_A, t_P> &_other) {
+  SigT<t_A, t_P> &operator=(const SigT<t_A, t_P> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) SigT<t_A, t_P> &operator=(SigT<t_A, t_P> &&_other) {
+  SigT<t_A, t_P> &operator=(SigT<t_A, t_P> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -121,7 +120,6 @@ struct DoubleOppositeWitnessesCase {
     struct Path_refl {};
 
     using variant_t = std::variant<Path_refl>;
-    using crane_element_type = t_A;
 
   private:
     // DATA
@@ -137,12 +135,12 @@ struct DoubleOppositeWitnessesCase {
 
     Path(Path<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) Path<t_A> &operator=(const Path<t_A> &_other) {
+    Path<t_A> &operator=(const Path<t_A> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) Path<t_A> &operator=(Path<t_A> &&_other) {
+    Path<t_A> &operator=(Path<t_A> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

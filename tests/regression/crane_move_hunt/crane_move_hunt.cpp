@@ -1,12 +1,5 @@
 #include <crane_move_hunt.h>
 
-#include <memory>
-#include <optional>
-#include <toy_helpers.h>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) CraneMoveHunt::box
 CraneMoveHunt::clone_box(const CraneMoveHunt::box &b) {
   return box{b.payload, b.enabled};

@@ -1,9 +1,5 @@
 #include <record_proj.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) unsigned int
 RecordProj::weird_access(const RecordProj::Point &p) {
   unsigned int a = p.x;

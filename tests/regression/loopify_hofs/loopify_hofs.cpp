@@ -1,13 +1,5 @@
 #include <loopify_hofs.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// is_prefix_of l1 l2 checks if l1 is a prefix of l2.
 __attribute__((pure)) bool
 LoopifyHofs::is_prefix_of(const List<unsigned int> &l1,

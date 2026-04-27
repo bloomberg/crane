@@ -50,12 +50,12 @@ template <Elem E> struct Container {
 
     maybe(maybe &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) maybe &operator=(const maybe &_other) {
+    maybe &operator=(const maybe &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) maybe &operator=(maybe &&_other) {
+    maybe &operator=(maybe &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -146,12 +146,12 @@ template <Elem E> struct Container {
 
     mlist(mlist &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) mlist &operator=(const mlist &_other) {
+    mlist &operator=(const mlist &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) mlist &operator=(mlist &&_other) {
+    mlist &operator=(mlist &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -246,12 +246,12 @@ template <Elem E> struct Container {
 
     mtree(mtree &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) mtree &operator=(const mtree &_other) {
+    mtree &operator=(const mtree &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) mtree &operator=(mtree &&_other) {
+    mtree &operator=(mtree &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

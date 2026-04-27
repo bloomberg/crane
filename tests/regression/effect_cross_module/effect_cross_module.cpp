@@ -1,16 +1,5 @@
 #include <effect_cross_module.h>
 
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Inner module defines a helper that returns a value
 void EffectCrossModule::Inner::greet(const std::string name) {
   std::cout << "Hello, "s + name << '\n';

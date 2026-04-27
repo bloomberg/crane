@@ -1,11 +1,5 @@
 #include <well_founded_rec.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) List<unsigned int>
 WellFoundedRec::countdown_acc(unsigned int n) {
   if (n <= 0) {

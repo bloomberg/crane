@@ -1,12 +1,5 @@
 #include <closures_in_data.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// apply_all fns x applies every function in fns to x,
 /// returning the list of results.
 __attribute__((pure)) List<unsigned int> ClosuresInData::apply_all(

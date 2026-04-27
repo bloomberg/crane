@@ -1,12 +1,5 @@
 #include <closure_in_ctor.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// A local fixpoint captures the function parameter n and is stored
 /// in Box — a user-defined inductive (not option, not pair).
 ///

@@ -1,12 +1,5 @@
 #include <regexp.h>
 
-#include <cstdint>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) bool Matcher::char_eq(const int64_t x, const int64_t y) {
   bool b = x == y;
   if (b) {

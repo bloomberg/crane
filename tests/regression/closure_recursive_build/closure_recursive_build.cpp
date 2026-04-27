@@ -1,12 +1,5 @@
 #include <closure_recursive_build.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Recursively build a list of fixpoint closures. Each recursive call
 /// creates a local fixpoint adder that captures the current n.
 ///

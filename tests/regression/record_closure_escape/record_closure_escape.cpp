@@ -1,12 +1,5 @@
 #include <record_closure_escape.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 RecordClosureEscape::sum_values(const RecordClosureEscape::tree &t,
                                 unsigned int x) {

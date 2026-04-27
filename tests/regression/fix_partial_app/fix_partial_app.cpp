@@ -1,12 +1,5 @@
 #include <fix_partial_app.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// count_nodes: counts nodes in a tree. Will be partially applied.
 __attribute__((pure)) unsigned int
 FixPartialApp::count_nodes(const FixPartialApp::tree &t, unsigned int base) {

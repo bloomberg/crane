@@ -45,12 +45,12 @@ struct SimpleLambdaFieldCapture {
 
     mylist(mylist &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) mylist &operator=(const mylist &_other) {
+    mylist &operator=(const mylist &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) mylist &operator=(mylist &&_other) {
+    mylist &operator=(mylist &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -171,12 +171,12 @@ struct SimpleLambdaFieldCapture {
 
     tag(tag &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) tag &operator=(const tag &_other) {
+    tag &operator=(const tag &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) tag &operator=(tag &&_other) {
+    tag &operator=(tag &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

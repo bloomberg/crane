@@ -1,12 +1,5 @@
 #include <match_ctor_closure.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// BUG HYPOTHESIS: Match arm stores a partial application (closure)
 /// in a constructor. The lambda captures a PATTERN VARIABLE (_args.d_a0)
 /// by & reference. When the visit lambda returns, _args is destroyed

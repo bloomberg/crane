@@ -55,12 +55,12 @@ struct FixSharedPtrField {
 
     mylist(mylist &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) mylist &operator=(const mylist &_other) {
+    mylist &operator=(const mylist &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) mylist &operator=(mylist &&_other) {
+    mylist &operator=(mylist &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -199,12 +199,12 @@ struct FixSharedPtrField {
 
     wrapper(wrapper &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) wrapper &operator=(const wrapper &_other) {
+    wrapper &operator=(const wrapper &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) wrapper &operator=(wrapper &&_other) {
+    wrapper &operator=(wrapper &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

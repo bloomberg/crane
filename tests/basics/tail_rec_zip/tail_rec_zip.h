@@ -34,13 +34,12 @@ public:
 
   Prod(Prod<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Prod<t_A, t_B> &
-  operator=(const Prod<t_A, t_B> &_other) {
+  Prod<t_A, t_B> &operator=(const Prod<t_A, t_B> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Prod<t_A, t_B> &operator=(Prod<t_A, t_B> &&_other) {
+  Prod<t_A, t_B> &operator=(Prod<t_A, t_B> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -95,7 +94,6 @@ template <typename t_A> struct List {
   };
 
   using variant_t = std::variant<Nil, Cons>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -113,12 +111,12 @@ public:
 
   List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+  List<t_A> &operator=(const List<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+  List<t_A> &operator=(List<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }

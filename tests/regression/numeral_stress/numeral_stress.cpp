@@ -1,12 +1,5 @@
 #include <numeral_stress.h>
 
-#include <cstdint>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 6. Numeral inside a fixpoint
 __attribute__((pure)) unsigned int
 NumeralStress::count_from(unsigned int n, const unsigned int &target) {

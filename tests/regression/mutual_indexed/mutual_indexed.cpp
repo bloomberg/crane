@@ -1,11 +1,5 @@
 #include <mutual_indexed.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 MutualIndexed::even_val(const unsigned int &,
                         const MutualIndexed::EvenTree &t) {

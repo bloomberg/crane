@@ -1,11 +1,5 @@
 #include <cpu_emulator.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 CpuEmulator::get_reg(const CpuEmulator::state &s, const unsigned int &r) {
   return ListDef::template nth<unsigned int>(r, s.ex_regs, 0u);

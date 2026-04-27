@@ -20,7 +20,6 @@ template <typename t_A> struct List {
   };
 
   using variant_t = std::variant<Nil, Cons>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -38,12 +37,12 @@ public:
 
   List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+  List<t_A> &operator=(const List<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+  List<t_A> &operator=(List<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -192,12 +191,12 @@ public:
 
   Positive(Positive &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Positive &operator=(const Positive &_other) {
+  Positive &operator=(const Positive &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Positive &operator=(Positive &&_other) {
+  Positive &operator=(Positive &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -280,12 +279,12 @@ public:
 
   Z(Z &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Z &operator=(const Z &_other) {
+  Z &operator=(const Z &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Z &operator=(Z &&_other) {
+  Z &operator=(Z &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -759,12 +758,12 @@ struct CoalitionBidHonorTraceCase {
 
     Prize(Prize &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) Prize &operator=(const Prize &_other) {
+    Prize &operator=(const Prize &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) Prize &operator=(Prize &&_other) {
+    Prize &operator=(Prize &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -861,12 +860,12 @@ struct CoalitionBidHonorTraceCase {
 
     Location(Location &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) Location &operator=(const Location &_other) {
+    Location &operator=(const Location &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) Location &operator=(Location &&_other) {
+    Location &operator=(Location &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -1038,13 +1037,12 @@ struct CoalitionBidHonorTraceCase {
 
     RefusalReason(RefusalReason &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) RefusalReason &
-    operator=(const RefusalReason &_other) {
+    RefusalReason &operator=(const RefusalReason &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) RefusalReason &operator=(RefusalReason &&_other) {
+    RefusalReason &operator=(RefusalReason &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -1189,13 +1187,12 @@ struct CoalitionBidHonorTraceCase {
 
     ProtocolAction(ProtocolAction &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) ProtocolAction &
-    operator=(const ProtocolAction &_other) {
+    ProtocolAction &operator=(const ProtocolAction &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) ProtocolAction &operator=(ProtocolAction &&_other) {
+    ProtocolAction &operator=(ProtocolAction &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -1518,13 +1515,12 @@ struct CoalitionBidHonorTraceCase {
 
     BatchallPhase(BatchallPhase &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) BatchallPhase &
-    operator=(const BatchallPhase &_other) {
+    BatchallPhase &operator=(const BatchallPhase &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) BatchallPhase &operator=(BatchallPhase &&_other) {
+    BatchallPhase &operator=(BatchallPhase &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

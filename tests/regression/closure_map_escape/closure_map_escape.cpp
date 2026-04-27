@@ -1,12 +1,5 @@
 #include <closure_map_escape.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Build a list of closures from a list of nats using LOCAL FIXPOINTS.
 /// Each recursive call creates a fixpoint add that captures the
 /// pattern variable h from the match.

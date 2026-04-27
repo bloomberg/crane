@@ -1,14 +1,5 @@
 #include <effect_hof_void.h>
 
-#include <cstdlib>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <variant>
-
 /// 7. Use print_endline as a concrete callback
 std::string EffectHofVoid::concrete_use() {
   return apply_then_return(

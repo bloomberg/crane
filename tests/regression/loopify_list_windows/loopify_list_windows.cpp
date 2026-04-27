@@ -1,12 +1,5 @@
 #include <loopify_list_windows.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) unsigned int
 LoopifyListWindows::len(const List<unsigned int> &l) {
   struct _Enter {

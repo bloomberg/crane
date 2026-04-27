@@ -1,12 +1,5 @@
 #include <let_fix.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 LetFix::local_sum(const List<unsigned int> &l) {
   std::function<unsigned int(unsigned int, List<unsigned int>)> go;

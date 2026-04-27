@@ -1,12 +1,5 @@
 #include <loopify_list_generation.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) List<unsigned int>
 LoopifyListGeneration::replicate(const unsigned int &n, unsigned int x) {
   std::unique_ptr<List<unsigned int>> _head{};

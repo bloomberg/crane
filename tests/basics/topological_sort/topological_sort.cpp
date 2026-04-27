@@ -1,13 +1,5 @@
 #include <topological_sort.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) List<unsigned int> ListDef::seq(unsigned int start,
                                                       const unsigned int &len) {
   if (len <= 0) {

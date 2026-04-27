@@ -1,11 +1,5 @@
 #include <unit_void_edge.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 void UnitVoidEdge::return_unit(const unsigned int &) { return; }
 
 void UnitVoidEdge::count_down(const unsigned int &n) {

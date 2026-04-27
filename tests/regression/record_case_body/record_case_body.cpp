@@ -1,11 +1,5 @@
 #include <record_case_body.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 RecordCaseBody::case_in_body(const RecordCaseBody::Rec &r) {
   unsigned int a = r.f1;

@@ -1,11 +1,5 @@
 #include <region_patch_write.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) List<unsigned int>
 RegionPatchWrite::update_region(const List<unsigned int> &rom,
                                 const unsigned int &base,

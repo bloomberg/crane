@@ -39,12 +39,12 @@ struct ForwardSpecAscii {
 
     node(node &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) node &operator=(const node &_other) {
+    node &operator=(const node &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) node &operator=(node &&_other) {
+    node &operator=(node &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

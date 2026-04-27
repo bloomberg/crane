@@ -1,12 +1,5 @@
 #include <sigma_types.h>
 
-#include <any>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) SigT<unsigned int, std::any>
 SigmaTypes::nat_with_double(const unsigned int &n) {
   return SigT<unsigned int, std::any>::existt((n + n), std::any{});

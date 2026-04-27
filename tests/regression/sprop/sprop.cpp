@@ -1,11 +1,5 @@
 #include <sprop.h>
 
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <type_traits>
-#include <utility>
-
 __attribute__((pure)) unsigned int
 SPropTest::guarded_pred(const unsigned int &n) {
   if (n <= 0) {

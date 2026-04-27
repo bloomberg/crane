@@ -1,9 +1,5 @@
 #include <wrapper_collision_pos.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) unsigned int
 WrapperCollisionPos::Left::Pos::id_left(unsigned int n) {
   return n;

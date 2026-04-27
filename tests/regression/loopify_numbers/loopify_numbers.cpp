@@ -1,12 +1,5 @@
 #include <loopify_numbers.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Consolidated UNIQUE numeric algorithms - no basic arithmetic.
 /// Tests loopification on number theory and recursive sequences.
 __attribute__((pure)) unsigned int

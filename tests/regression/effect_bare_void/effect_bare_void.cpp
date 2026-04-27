@@ -1,13 +1,5 @@
 #include <effect_bare_void.h>
 
-#include <cstdlib>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <variant>
-
 /// 1. Bare print_endline as function body (no bind, no Ret)
 void EffectBareVoid::just_print(const std::string msg) {
   std::cout << msg << '\n';

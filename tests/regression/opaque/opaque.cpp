@@ -1,12 +1,5 @@
 #include <opaque.h>
 
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 unsigned int Opaque::safe_pred(const unsigned int &n) {
   if (n <= 0) {
     throw std::logic_error("absurd case");

@@ -1,12 +1,5 @@
 #include <loopify_strings.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) List<unsigned int>
 LoopifyStrings::append(const List<unsigned int> &l1, List<unsigned int> l2) {
   std::unique_ptr<List<unsigned int>> _head{};

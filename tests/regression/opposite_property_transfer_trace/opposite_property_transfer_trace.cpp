@@ -1,11 +1,5 @@
 #include <opposite_property_transfer_trace.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 __attribute__((pure)) OppositePropertyTransferTraceCase::PreStableCategory
 OppositePropertyTransferTraceCase::opposite_prestable_category(
     const OppositePropertyTransferTraceCase::PreStableCategory &pS) {

@@ -1,13 +1,5 @@
 #include <existential_closure_probe.h>
 
-#include <any>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Pack a closure into a type-erased wrapper.
 __attribute__((pure)) ExistentialClosureProbe::wrap
 ExistentialClosureProbe::pack_fn(unsigned int base) {

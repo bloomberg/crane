@@ -1,11 +1,5 @@
 #include <stack_ops.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure))
 std::pair<std::optional<unsigned int>, StackOps::state_basic>
 StackOps::pop_stack(StackOps::state_basic s) {

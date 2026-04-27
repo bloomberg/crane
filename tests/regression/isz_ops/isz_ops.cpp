@@ -1,11 +1,5 @@
 #include <isz_ops.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 IszOps::nibble_of_nat(const unsigned int &n) {
   return (16u ? n % 16u : n);

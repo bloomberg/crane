@@ -1,11 +1,5 @@
 #include <custom_inline_bug.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) std::optional<unsigned int>
 CustomInlineBug::bug_some_proj(const CustomInlineBug::State &s) {
   return std::make_optional<unsigned int>(s.value);

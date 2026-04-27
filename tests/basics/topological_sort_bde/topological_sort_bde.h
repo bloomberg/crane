@@ -37,7 +37,6 @@ template <typename t_A> struct List {
     bsl::unique_ptr<List<t_A>> d_a1;
   };
   using variant_t = bsl::variant<Nil, Cons>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -50,11 +49,11 @@ public:
   explicit List(Cons _v) : d_v_(bsl::move(_v)) {}
   List(const List<t_A> &_other) : d_v_(bsl::move(_other.clone().d_v_)) {}
   List(List<t_A> &&_other) : d_v_(bsl::move(_other.d_v_)) {}
-  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+  List<t_A> &operator=(const List<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
-  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+  List<t_A> &operator=(List<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }

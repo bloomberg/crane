@@ -1,14 +1,5 @@
 #include <effect_recursive_list.h>
 
-#include <cstdlib>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. Recursive function building a list from stdin lines
 List<std::string> EffectRecursiveList::read_n_lines(const unsigned int &n) {
   if (n <= 0) {

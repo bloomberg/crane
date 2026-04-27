@@ -1,11 +1,5 @@
 #include <mutual_fix_escape.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 /// Mutual fixpoint using fix...with...for syntax, then return
 /// both functions through a pair.
 __attribute__((pure))

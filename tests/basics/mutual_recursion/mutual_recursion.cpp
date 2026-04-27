@@ -1,11 +1,5 @@
 #include <mutual_recursion.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) bool MutualRecursion::is_even(const unsigned int &n) {
   if (n <= 0) {
     return true;

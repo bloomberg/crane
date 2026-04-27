@@ -40,12 +40,12 @@ public:
 
   Nat(Nat &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Nat &operator=(const Nat &_other) {
+  Nat &operator=(const Nat &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Nat &operator=(Nat &&_other) {
+  Nat &operator=(Nat &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -149,7 +149,6 @@ struct RocqBug13581 {
     };
 
     using variant_t = std::variant<C, D>;
-    using crane_element_type = t_T;
 
   private:
     // DATA
@@ -167,12 +166,12 @@ struct RocqBug13581 {
 
     I(I<t_T> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) I<t_T> &operator=(const I<t_T> &_other) {
+    I<t_T> &operator=(const I<t_T> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) I<t_T> &operator=(I<t_T> &&_other) {
+    I<t_T> &operator=(I<t_T> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -235,7 +234,6 @@ struct RocqBug13581 {
     };
 
     using variant_t = std::variant<E>;
-    using crane_element_type = t_T;
 
   private:
     // DATA
@@ -251,12 +249,12 @@ struct RocqBug13581 {
 
     J(J<t_T> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) J<t_T> &operator=(const J<t_T> &_other) {
+    J<t_T> &operator=(const J<t_T> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) J<t_T> &operator=(J<t_T> &&_other) {
+    J<t_T> &operator=(J<t_T> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

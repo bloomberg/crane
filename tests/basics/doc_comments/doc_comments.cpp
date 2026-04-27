@@ -1,11 +1,5 @@
 #include <doc_comments.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// add computes the sum of two natural numbers n and m.
 /// It works by structural recursion on n.
 __attribute__((pure)) unsigned int DocComments::add(const unsigned int &n,

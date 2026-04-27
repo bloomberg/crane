@@ -20,7 +20,6 @@ template <typename t_A> struct List {
   };
 
   using variant_t = std::variant<Nil, Cons>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -38,12 +37,12 @@ public:
 
   List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+  List<t_A> &operator=(const List<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+  List<t_A> &operator=(List<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -141,14 +140,12 @@ struct JumpTargets {
     instr_collection(instr_collection &&_other)
         : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) instr_collection &
-    operator=(const instr_collection &_other) {
+    instr_collection &operator=(const instr_collection &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) instr_collection &
-    operator=(instr_collection &&_other) {
+    instr_collection &operator=(instr_collection &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -306,12 +303,12 @@ struct JumpTargets {
 
     instr_region(instr_region &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) instr_region &operator=(const instr_region &_other) {
+    instr_region &operator=(const instr_region &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) instr_region &operator=(instr_region &&_other) {
+    instr_region &operator=(instr_region &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -464,12 +461,12 @@ struct JumpTargets {
 
     instr_jms(instr_jms &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) instr_jms &operator=(const instr_jms &_other) {
+    instr_jms &operator=(const instr_jms &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) instr_jms &operator=(instr_jms &&_other) {
+    instr_jms &operator=(instr_jms &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -600,12 +597,12 @@ struct JumpTargets {
 
     instr_jun(instr_jun &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) instr_jun &operator=(const instr_jun &_other) {
+    instr_jun &operator=(const instr_jun &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) instr_jun &operator=(instr_jun &&_other) {
+    instr_jun &operator=(instr_jun &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

@@ -1,10 +1,5 @@
 #include <jcn_ops.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 __attribute__((pure)) bool JcnOps::jcn_condition(const JcnOps::state &s,
                                                  const unsigned int &cond) {
   unsigned int c1 = (8u ? cond / 8u : 0);

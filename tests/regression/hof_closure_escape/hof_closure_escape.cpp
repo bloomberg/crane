@@ -1,12 +1,5 @@
 #include <hof_closure_escape.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 HofClosureEscape::sum_values(const HofClosureEscape::tree &t, unsigned int x) {
   if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(t.v())) {

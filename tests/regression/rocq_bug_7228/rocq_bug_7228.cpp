@@ -1,12 +1,5 @@
 #include <rocq_bug_7228.h>
 
-#include <any>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) RocqBug7228::t_of
 RocqBug7228::v_of(const RocqBug7228::data &d) {
   const auto &[d_t] = std::get<typename RocqBug7228::data::Data0>(d.v());

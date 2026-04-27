@@ -1,12 +1,5 @@
 #include <closure_escape_match.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Return a closure wrapped in option — prevents uncurrying.
 /// The closure captures a pattern variable hd (a shared_ptr),
 /// which is an inlined _args.d_a0 inside the std::visit callback.

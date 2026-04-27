@@ -1,15 +1,5 @@
 #include <stm.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stm_adapter.h>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 unsigned int stmtest::stm_basic_counter(const std::monostate &) {
   stm::TVar<unsigned int> c = stm::newTVar(0u);
   stm::writeTVar(c, 1u);

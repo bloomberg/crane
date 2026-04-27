@@ -1,12 +1,5 @@
 #include <value_type_match_fix.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// A fixpoint that captures a field from a value-type match.
 ///
 /// BUG HYPOTHESIS: triple is a value type (stack-allocated, non-recursive).

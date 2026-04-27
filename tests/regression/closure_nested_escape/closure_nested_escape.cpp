@@ -1,11 +1,5 @@
 #include <closure_nested_escape.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 /// A function takes a nat and returns a PAIR of fixpoints, both
 /// capturing the same parameter.
 ///

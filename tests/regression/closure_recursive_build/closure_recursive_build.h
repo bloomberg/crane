@@ -40,12 +40,12 @@ struct ClosureRecursiveBuild {
 
     fn_list(fn_list &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) fn_list &operator=(const fn_list &_other) {
+    fn_list &operator=(const fn_list &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) fn_list &operator=(fn_list &&_other) {
+    fn_list &operator=(fn_list &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

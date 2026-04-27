@@ -1,12 +1,5 @@
 #include <let_closure_escape.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// BUG: let-bound partial application returned through a Box.
 /// f := sum_values t creates a & lambda bound to a variable.
 /// Box f stores the variable (not a direct lambda) in a constructor.

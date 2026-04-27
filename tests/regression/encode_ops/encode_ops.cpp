@@ -1,11 +1,5 @@
 #include <encode_ops.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) bool
 EncodeOps::pair_in_range(const std::pair<unsigned int, unsigned int> &p) {
   const unsigned int &b1 = p.first;

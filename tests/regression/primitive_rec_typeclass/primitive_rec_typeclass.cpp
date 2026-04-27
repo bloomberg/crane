@@ -1,10 +1,5 @@
 #include <primitive_rec_typeclass.h>
 
-#include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) unsigned int
 PrimitiveRecTypeclass::rect_width(const PrimitiveRecTypeclass::rect &r) {
   return (((r.bot_right.px - r.top_left.px) > r.bot_right.px

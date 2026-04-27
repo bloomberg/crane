@@ -1,11 +1,5 @@
 #include <pattern_impossible.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 PatternImpossible::complex_match(const PatternImpossible::Three x) {
   switch (x) {

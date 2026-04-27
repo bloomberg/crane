@@ -1,11 +1,5 @@
 #include <visit_match_bug.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) VisitMatchBug::Tree
 VisitMatchBug::consume(VisitMatchBug::Tree t) {
   return t;

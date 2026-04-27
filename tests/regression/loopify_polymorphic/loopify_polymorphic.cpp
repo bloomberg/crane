@@ -1,12 +1,5 @@
 #include <loopify_polymorphic.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) unsigned int
 LoopifyPolymorphic::nat_length(const List<unsigned int> &_x0) {
   return poly_length<unsigned int>(_x0);

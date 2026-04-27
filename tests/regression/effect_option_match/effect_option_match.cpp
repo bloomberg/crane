@@ -1,14 +1,5 @@
 #include <effect_option_match.h>
 
-#include <cstdlib>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. get_env returns option, match immediately
 std::string EffectOptionMatch::show_or_default(const std::string name,
                                                const std::string default0) {

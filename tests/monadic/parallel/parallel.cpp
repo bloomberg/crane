@@ -1,12 +1,5 @@
 #include <parallel.h>
 
-#include <functional>
-#include <future>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 __attribute__((pure)) unsigned int
 ParallelTest::ack(const std::pair<unsigned int, unsigned int> &p) {
   std::function<unsigned int(unsigned int, unsigned int)> f;

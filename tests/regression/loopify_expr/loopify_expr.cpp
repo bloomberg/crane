@@ -1,13 +1,5 @@
 #include <loopify_expr.h>
 
-#include <algorithm>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// sum_shapes l sums values from shapes using unified pattern.
 /// Tests or-pattern style matching in Coq.
 __attribute__((pure)) unsigned int

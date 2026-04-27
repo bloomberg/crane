@@ -1,13 +1,5 @@
 #include <itree_reified.h>
 
-#include <any>
-#include <crane_itree.h>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <variant>
-
 /// Pass-through: takes a reified itree and returns it unchanged.
 void ITreeReified::run_tree(std::shared_ptr<ITree<void>>) { return; }
 

@@ -1,12 +1,5 @@
 #include <loopify_structures.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Nested and complex data structures.
 /// Helper: sum all elements in a list of nested structures.
 /// Handles both tree and list levels in one function for full loopification.

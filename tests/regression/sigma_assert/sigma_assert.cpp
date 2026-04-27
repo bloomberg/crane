@@ -1,10 +1,5 @@
 #include <sigma_assert.h>
 
-#include <cassert>
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) unsigned int PeanoNat::div2(const unsigned int &n) {
   if (n <= 0) {
     return 0u;

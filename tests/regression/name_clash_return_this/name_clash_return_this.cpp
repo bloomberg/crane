@@ -1,11 +1,5 @@
 #include <name_clash_return_this.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Inner match returns shape in all branches, one branch returns the
 /// argument itself. The function takes shape as input, so it gets
 /// methodified. In the Blue branch, `s` becomes `this`.

@@ -1,12 +1,5 @@
 #include <deep_app.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Tail-recursive builder — loopified.
 __attribute__((pure)) DeepApp::mylist<unsigned int>
 DeepApp::build(unsigned int n, DeepApp::mylist<unsigned int> acc) {

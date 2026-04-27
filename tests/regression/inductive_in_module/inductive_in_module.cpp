@@ -1,11 +1,5 @@
 #include <inductive_in_module.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int InductiveInModule::Inner::color_to_nat(
     const InductiveInModule::Inner::Color c) {
   switch (c) {

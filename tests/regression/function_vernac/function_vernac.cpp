@@ -1,13 +1,5 @@
 #include <function_vernac.h>
 
-#include <any>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) Sig<unsigned int>
 FunctionVernac::div2_terminate(const unsigned int &n) {
   if (n <= 0) {

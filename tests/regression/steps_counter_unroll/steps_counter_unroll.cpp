@@ -1,10 +1,5 @@
 #include <steps_counter_unroll.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 __attribute__((pure)) StepsCounterUnroll::state
 StepsCounterUnroll::step(const StepsCounterUnroll::state &s) {
   return state{(4096u ? (s.pc + 1u) % 4096u : (s.pc + 1u))};

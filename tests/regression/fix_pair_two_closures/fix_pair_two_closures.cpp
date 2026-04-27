@@ -1,11 +1,5 @@
 #include <fix_pair_two_closures.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 /// Two local fixpoints escape through a pair.
 ///
 /// BUG: Both f and g use & capture. They capture a, b,

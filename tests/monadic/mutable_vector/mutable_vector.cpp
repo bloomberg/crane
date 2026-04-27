@@ -1,12 +1,5 @@
 #include <mutable_vector.h>
 
-#include <cstdint>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <variant>
-#include <vector>
-
 int64_t MutableVectorTest::test1(const int64_t) {
   std::vector<int64_t> v = {};
   v.push_back(int64_t(3));

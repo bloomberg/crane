@@ -1,13 +1,5 @@
 #include <axiom_types.h>
 
-#include <any>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 AxiomTypes::MysteryType AxiomTypes::mystery_value() {
   throw std::logic_error(
       "unrealized axiom: "

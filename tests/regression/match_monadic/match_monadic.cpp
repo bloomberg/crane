@@ -1,16 +1,5 @@
 #include <match_monadic.h>
 
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. Match on custom inductive with effects in each arm
 std::string MatchMonadic::color_name(const Color c) {
   switch (c) {

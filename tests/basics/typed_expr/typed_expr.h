@@ -64,12 +64,12 @@ public:
 
   Expr(Expr &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Expr &operator=(const Expr &_other) {
+  Expr &operator=(const Expr &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Expr &operator=(Expr &&_other) {
+  Expr &operator=(Expr &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }

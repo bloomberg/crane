@@ -107,12 +107,12 @@ struct Equations {
 
     gcd_graph(gcd_graph &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) gcd_graph &operator=(const gcd_graph &_other) {
+    gcd_graph &operator=(const gcd_graph &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) gcd_graph &operator=(gcd_graph &&_other) {
+    gcd_graph &operator=(gcd_graph &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -214,14 +214,12 @@ struct Equations {
     gcd_clause_3_graph(gcd_clause_3_graph &&_other)
         : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) gcd_clause_3_graph &
-    operator=(const gcd_clause_3_graph &_other) {
+    gcd_clause_3_graph &operator=(const gcd_clause_3_graph &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) gcd_clause_3_graph &
-    operator=(gcd_clause_3_graph &&_other) {
+    gcd_clause_3_graph &operator=(gcd_clause_3_graph &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -557,14 +555,12 @@ struct Equations {
     collatz_steps_graph(collatz_steps_graph &&_other)
         : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) collatz_steps_graph &
-    operator=(const collatz_steps_graph &_other) {
+    collatz_steps_graph &operator=(const collatz_steps_graph &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) collatz_steps_graph &
-    operator=(collatz_steps_graph &&_other) {
+    collatz_steps_graph &operator=(collatz_steps_graph &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -666,13 +662,13 @@ struct Equations {
     collatz_steps_clause_3_graph(collatz_steps_clause_3_graph &&_other)
         : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) collatz_steps_clause_3_graph &
+    collatz_steps_clause_3_graph &
     operator=(const collatz_steps_clause_3_graph &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) collatz_steps_clause_3_graph &
+    collatz_steps_clause_3_graph &
     operator=(collatz_steps_clause_3_graph &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;

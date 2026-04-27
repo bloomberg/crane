@@ -1,12 +1,5 @@
 #include <constructor_bugs.h>
 
-#include <any>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) ConstructorBugs::source_state
 ConstructorBugs::step(ConstructorBugs::source_state s) {
   return s;

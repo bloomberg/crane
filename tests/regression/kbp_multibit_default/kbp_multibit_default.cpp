@@ -1,9 +1,5 @@
 #include <kbp_multibit_default.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) KbpMultibitDefault::state
 KbpMultibitDefault::execute_kbp(const KbpMultibitDefault::state &s) {
   unsigned int result;

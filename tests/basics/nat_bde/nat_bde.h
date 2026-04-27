@@ -44,11 +44,11 @@ public:
   explicit Nat(S _v) : d_v_(bsl::move(_v)) {}
   Nat(const Nat &_other) : d_v_(bsl::move(_other.clone().d_v_)) {}
   Nat(Nat &&_other) : d_v_(bsl::move(_other.d_v_)) {}
-  __attribute__((pure)) Nat &operator=(const Nat &_other) {
+  Nat &operator=(const Nat &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
-  __attribute__((pure)) Nat &operator=(Nat &&_other) {
+  Nat &operator=(Nat &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }

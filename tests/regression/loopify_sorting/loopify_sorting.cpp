@@ -1,12 +1,5 @@
 #include <loopify_sorting.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Consolidated UNIQUE sorting algorithms and related operations.
 __attribute__((pure)) List<unsigned int>
 LoopifySorting::insert(unsigned int x, List<unsigned int> l) {

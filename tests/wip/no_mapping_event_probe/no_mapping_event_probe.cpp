@@ -1,11 +1,5 @@
 #include <no_mapping_event_probe.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 void NoMappingEventProbe::draw_hidden_tile(unsigned int x, unsigned int y) {
   {
     reproE::hidden(x, y);

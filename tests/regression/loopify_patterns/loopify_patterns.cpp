@@ -1,13 +1,5 @@
 #include <loopify_patterns.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Complex control flow and pattern matching edge cases.
 /// multi_let n multiple sequential let bindings before recursion.
 __attribute__((pure)) unsigned int

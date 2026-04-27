@@ -1,15 +1,5 @@
 #include <void_callback.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 void VoidCallback::print_nat(const unsigned int &) { return; }
 
 void VoidCallback::test_for_each_m() {

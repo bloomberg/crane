@@ -1,13 +1,5 @@
 #include <loopify_sequences.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// alternate_sum sign acc l alternating sum with sign flip.
 __attribute__((pure)) unsigned int
 LoopifySequences::alternate_sum(const unsigned int &sign, unsigned int acc,

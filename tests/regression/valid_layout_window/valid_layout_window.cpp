@@ -1,9 +1,5 @@
 #include <valid_layout_window.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) bool
 ValidLayoutWindow::valid_layoutb(const ValidLayoutWindow::layout &l) {
   return (l.base_addr + l.code_size) <= 4096u;

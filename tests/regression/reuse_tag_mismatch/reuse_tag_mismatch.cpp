@@ -1,11 +1,5 @@
 #include <reuse_tag_mismatch.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// The 'else d' branch causes d to escape (returned in tail position).
 /// This makes d "owned" (infer_owned_params marks it).
 /// The 'then' branch's match has reuse candidates because:

@@ -1,12 +1,5 @@
 #include <monadic.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) std::optional<unsigned int>
 Monadic::safe_div(const unsigned int &n, const unsigned int &m) {
   if (m <= 0) {

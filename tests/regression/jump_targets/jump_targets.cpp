@@ -1,11 +1,5 @@
 #include <jump_targets.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) List<unsigned int>
 JumpTargets::collect_targets(const List<JumpTargets::instr_collection> &prog) {
   if (std::holds_alternative<typename List<JumpTargets::instr_collection>::Nil>(

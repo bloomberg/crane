@@ -1,9 +1,5 @@
 #include <modpath_escape_collision.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) unsigned int
 ModpathEscapeCollision::A::Token_::f(unsigned int n) {
   return n;

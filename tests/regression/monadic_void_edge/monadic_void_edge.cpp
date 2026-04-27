@@ -1,15 +1,5 @@
 #include <monadic_void_edge.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. Bind where LHS is void and RHS returns a value
 unsigned int MonadicVoidEdge::bind_void_then_value() {
   std::cout << "hello"s << '\n';

@@ -1,13 +1,5 @@
 #include <loopify_list_relations.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) bool
 LoopifyListRelations::is_prefix_of(const List<unsigned int> &l1,
                                    const List<unsigned int> &l2) {

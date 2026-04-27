@@ -1,12 +1,5 @@
 #include <type_app.h>
 
-#include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) TypeApp::list<unsigned int>
 TypeApp::map_succ(const TypeApp::list<unsigned int> &_x0) {
   return map<unsigned int, unsigned int>(

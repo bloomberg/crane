@@ -1,9 +1,5 @@
 #include <sections.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) unsigned int Sections::add_n(const unsigned int &_x0,
                                                    const unsigned int &_x1) {
   return (_x0 + _x1);

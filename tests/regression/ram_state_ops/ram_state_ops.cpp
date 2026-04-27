@@ -1,11 +1,5 @@
 #include <ram_state_ops.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) RamStateOps::state
 RamStateOps::reset_state(const RamStateOps::state &s) {
   return state{

@@ -41,12 +41,12 @@ struct EvenOdd {
 
     even_list(even_list &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) even_list &operator=(const even_list &_other) {
+    even_list &operator=(const even_list &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) even_list &operator=(even_list &&_other) {
+    even_list &operator=(even_list &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -116,12 +116,12 @@ struct EvenOdd {
 
     odd_list(odd_list &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) odd_list &operator=(const odd_list &_other) {
+    odd_list &operator=(const odd_list &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) odd_list &operator=(odd_list &&_other) {
+    odd_list &operator=(odd_list &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

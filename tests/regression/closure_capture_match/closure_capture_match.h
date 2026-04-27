@@ -41,12 +41,12 @@ struct ClosureCaptureMatch {
 
     tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) tree &operator=(const tree &_other) {
+    tree &operator=(const tree &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) tree &operator=(tree &&_other) {
+    tree &operator=(tree &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -283,12 +283,12 @@ struct ClosureCaptureMatch {
 
     fn_box(fn_box &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) fn_box &operator=(const fn_box &_other) {
+    fn_box &operator=(const fn_box &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) fn_box &operator=(fn_box &&_other) {
+    fn_box &operator=(fn_box &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

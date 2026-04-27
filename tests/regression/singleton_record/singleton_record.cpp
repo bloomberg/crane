@@ -1,10 +1,5 @@
 #include <singleton_record.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) unsigned int
 SingletonRecord::get_value(const SingletonRecord::wrapper &w) {
   return w.value;

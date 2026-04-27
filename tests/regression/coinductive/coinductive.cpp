@@ -1,12 +1,5 @@
 #include <coinductive.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 std::shared_ptr<Coinductive::stream> Coinductive::zeros() {
   return stream::lazy_([]() -> std::shared_ptr<Coinductive::stream> {
     return stream::cons(0u, zeros());

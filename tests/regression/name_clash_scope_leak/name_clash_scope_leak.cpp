@@ -1,11 +1,5 @@
 #include <name_clash_scope_leak.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Match on list, return list. Both branches produce the same type.
 __attribute__((pure)) List<unsigned int>
 NameClashScopeLeak::rotate(const List<unsigned int> &l) {

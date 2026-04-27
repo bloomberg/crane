@@ -1,11 +1,5 @@
 #include <forward_spec_ascii.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 ForwardSpecAscii::helper_nat(unsigned int n) {
   return (n + 1);

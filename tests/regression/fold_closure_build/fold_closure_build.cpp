@@ -1,12 +1,5 @@
 #include <fold_closure_build.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Pattern 1: Build a COMPOSED function via fold.
 /// Each step wraps the accumulator in a new closure.
 ///

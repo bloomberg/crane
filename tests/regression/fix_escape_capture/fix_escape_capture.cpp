@@ -1,11 +1,5 @@
 #include <fix_escape_capture.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 /// A local fixpoint that captures a function parameter and is returned
 /// in a pair. The fixpoint's & capture creates a dangling reference
 /// to the captured parameter after the enclosing function returns.

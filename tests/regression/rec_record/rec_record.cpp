@@ -1,11 +1,5 @@
 #include <rec_record.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 RecRecord::rlist_sum(const RecRecord::rlist<unsigned int> &l) {
   if (std::holds_alternative<typename RecRecord::rlist<unsigned int>::Rnil>(

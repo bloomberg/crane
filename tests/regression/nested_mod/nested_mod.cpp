@@ -1,11 +1,5 @@
 #include <nested_mod.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 NestedMod::Outer::Inner::area(const NestedMod::Outer::Inner::shape &s) {
   if (std::holds_alternative<typename NestedMod::Outer::Inner::shape::Circle>(

@@ -1,12 +1,5 @@
 #include <pstring.h>
 
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) std::string PString::nat_to_string(const Nat &n) {
   if (std::holds_alternative<typename Nat::O>(n.v())) {
     return "O";

@@ -27,7 +27,6 @@ struct MutualRecursion {
     };
 
     using variant_t = std::variant<Leaf, Node>;
-    using crane_element_type = t_A;
 
   private:
     // DATA
@@ -45,12 +44,12 @@ struct MutualRecursion {
 
     tree(tree<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) tree<t_A> &operator=(const tree<t_A> &_other) {
+    tree<t_A> &operator=(const tree<t_A> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) tree<t_A> &operator=(tree<t_A> &&_other) {
+    tree<t_A> &operator=(tree<t_A> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -120,7 +119,6 @@ struct MutualRecursion {
     };
 
     using variant_t = std::variant<Empty, Trees>;
-    using crane_element_type = t_A;
 
   private:
     // DATA
@@ -138,12 +136,12 @@ struct MutualRecursion {
 
     forest(forest<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) forest<t_A> &operator=(const forest<t_A> &_other) {
+    forest<t_A> &operator=(const forest<t_A> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) forest<t_A> &operator=(forest<t_A> &&_other) {
+    forest<t_A> &operator=(forest<t_A> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

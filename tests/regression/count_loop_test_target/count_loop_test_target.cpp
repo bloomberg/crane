@@ -1,11 +1,5 @@
 #include <count_loop_test_target.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) CountLoopTestTarget::instruction
 CountLoopTestTarget::count_loop_test(unsigned int loop_addr) {
   return instruction::isz(0u, loop_addr);

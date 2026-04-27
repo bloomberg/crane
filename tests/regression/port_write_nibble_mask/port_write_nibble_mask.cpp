@@ -1,10 +1,5 @@
 #include <port_write_nibble_mask.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 __attribute__((pure)) unsigned int
 PortWriteNibbleMask::nibble_of_nat(const unsigned int &n) {
   return (16u ? n % 16u : n);

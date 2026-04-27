@@ -1,11 +1,5 @@
 #include <instruction_sequence_exec.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) InstructionSequenceExec::state
 InstructionSequenceExec::execute(
     InstructionSequenceExec::state s,

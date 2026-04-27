@@ -1,10 +1,5 @@
 #include <fix_via_simple_lambda.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 /// Two local fixpoints both capture a let-binding base via &.
 /// They are combined in a simple lambda fun x => ... which captures
 /// them by = (since simple lambdas use value capture).

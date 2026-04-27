@@ -1,11 +1,5 @@
 #include <reuse_use_after_move.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 ReuseUseAfterMove::length(const ReuseUseAfterMove::mylist &l) {
   if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(

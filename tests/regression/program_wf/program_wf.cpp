@@ -1,11 +1,5 @@
 #include <program_wf.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) std::optional<unsigned int>
 ProgramWf::jump_target(const ProgramWf::instruction &i) {
   if (std::holds_alternative<typename ProgramWf::instruction::JUN>(i.v())) {

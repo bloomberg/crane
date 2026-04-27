@@ -23,7 +23,6 @@ template <typename t_A> struct List {
   };
 
   using variant_t = std::variant<Nil, Cons>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -41,12 +40,12 @@ public:
 
   List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+  List<t_A> &operator=(const List<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+  List<t_A> &operator=(List<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -106,7 +105,6 @@ template <typename t_A> struct Sig {
   };
 
   using variant_t = std::variant<Exist>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -122,12 +120,12 @@ public:
 
   Sig(Sig<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Sig<t_A> &operator=(const Sig<t_A> &_other) {
+  Sig<t_A> &operator=(const Sig<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Sig<t_A> &operator=(Sig<t_A> &&_other) {
+  Sig<t_A> &operator=(Sig<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -362,12 +360,12 @@ struct ComprehensivePatterns {
 
     Either(Either &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) Either &operator=(const Either &_other) {
+    Either &operator=(const Either &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) Either &operator=(Either &&_other) {
+    Either &operator=(Either &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -838,12 +836,12 @@ struct ComprehensivePatterns {
 
     Tree(Tree &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) Tree &operator=(const Tree &_other) {
+    Tree &operator=(const Tree &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) Tree &operator=(Tree &&_other) {
+    Tree &operator=(Tree &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -1182,12 +1180,12 @@ struct ComprehensivePatterns {
 
     Container(Container &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) Container &operator=(const Container &_other) {
+    Container &operator=(const Container &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) Container &operator=(Container &&_other) {
+    Container &operator=(Container &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

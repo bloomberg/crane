@@ -1,12 +1,5 @@
 #include <loopify_match_arg.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Count the number of Dot cells in a list.
 /// The match on c inside the Cons branch triggers bug 2.
 __attribute__((pure)) unsigned int

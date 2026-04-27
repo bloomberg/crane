@@ -1,11 +1,5 @@
 #include <fetch_ops.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 FetchOps::fetch_byte(const FetchOps::state &s, const unsigned int &addr) {
   return ListDef::template nth<unsigned int>(addr, s.rom, 0u);

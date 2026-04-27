@@ -1,11 +1,5 @@
 #include <n_gmp.h>
 
-#include <gmpxx.h>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 __attribute__((pure)) mpz_class Pos::add_carry(const mpz_class &x,
                                                const mpz_class &y) {
   if (x == 1) {

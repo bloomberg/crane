@@ -34,13 +34,12 @@ struct BenchLetIn {
 
     pair(pair<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) pair<t_A, t_B> &
-    operator=(const pair<t_A, t_B> &_other) {
+    pair<t_A, t_B> &operator=(const pair<t_A, t_B> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) pair<t_A, t_B> &operator=(pair<t_A, t_B> &&_other) {
+    pair<t_A, t_B> &operator=(pair<t_A, t_B> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -134,14 +133,12 @@ struct BenchLetIn {
 
     triple(triple<t_A, t_B, t_C> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) triple<t_A, t_B, t_C> &
-    operator=(const triple<t_A, t_B, t_C> &_other) {
+    triple<t_A, t_B, t_C> &operator=(const triple<t_A, t_B, t_C> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) triple<t_A, t_B, t_C> &
-    operator=(triple<t_A, t_B, t_C> &&_other) {
+    triple<t_A, t_B, t_C> &operator=(triple<t_A, t_B, t_C> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

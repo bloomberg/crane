@@ -1,15 +1,5 @@
 #include <ping_pong.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Check if two strings are equal using PrimString.compare.
 __attribute__((pure)) bool PingPong::string_eq(const std::string s1,
                                                const std::string s2) {

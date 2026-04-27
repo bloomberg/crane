@@ -1,11 +1,5 @@
 #include <loopify_unit_void_repro.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 void LoopifyUnitVoidRepro::loop(unsigned int x, unsigned int y,
                                 const List<bool> &cells) {
   List<bool> _loop_cells = cells;

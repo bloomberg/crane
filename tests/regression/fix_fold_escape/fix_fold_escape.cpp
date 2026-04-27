@@ -1,12 +1,5 @@
 #include <fix_fold_escape.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Collect fixpoint closures by folding over a list of nats.
 /// Each iteration creates a new fixpoint adder that captures the
 /// current element n from the fold callback's parameter.

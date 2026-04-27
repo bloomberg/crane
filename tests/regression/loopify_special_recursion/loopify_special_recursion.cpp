@@ -1,12 +1,5 @@
 #include <loopify_special_recursion.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) List<unsigned int>
 LoopifySpecialRecursion::process_twice_fuel(const unsigned int &fuel,
                                             const List<unsigned int> &l) {

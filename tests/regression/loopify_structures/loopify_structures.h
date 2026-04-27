@@ -21,7 +21,6 @@ template <typename t_A> struct List {
   };
 
   using variant_t = std::variant<Nil, Cons>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -39,12 +38,12 @@ public:
 
   List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+  List<t_A> &operator=(const List<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+  List<t_A> &operator=(List<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -150,12 +149,12 @@ struct LoopifyStructures {
 
     nested(nested &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) nested &operator=(const nested &_other) {
+    nested &operator=(const nested &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) nested &operator=(nested &&_other) {
+    nested &operator=(nested &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -309,12 +308,12 @@ struct LoopifyStructures {
 
     quadtree(quadtree &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) quadtree &operator=(const quadtree &_other) {
+    quadtree &operator=(const quadtree &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) quadtree &operator=(quadtree &&_other) {
+    quadtree &operator=(quadtree &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -853,12 +852,12 @@ struct LoopifyStructures {
 
     ltree(ltree &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) ltree &operator=(const ltree &_other) {
+    ltree &operator=(const ltree &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) ltree &operator=(ltree &&_other) {
+    ltree &operator=(ltree &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

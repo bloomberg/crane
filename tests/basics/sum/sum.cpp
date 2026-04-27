@@ -1,11 +1,5 @@
 #include <sum.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 Sum::either_to_nat(const Sum::either<unsigned int, unsigned int> &e) {
   if (std::holds_alternative<

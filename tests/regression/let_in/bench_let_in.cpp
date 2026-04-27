@@ -1,11 +1,5 @@
 #include <bench_let_in.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int BenchLetIn::swap_snd(unsigned int a,
                                                         unsigned int b) {
   BenchLetIn::pair<unsigned int, unsigned int> p =

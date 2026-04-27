@@ -1,11 +1,5 @@
 #include <program_targets_region_scan.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) std::optional<unsigned int>
 ProgramTargetsRegionScan::jump_target(
     const ProgramTargetsRegionScan::instruction &i) {

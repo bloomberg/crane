@@ -20,7 +20,6 @@ template <typename t_A> struct List {
   };
 
   using variant_t = std::variant<Nil, Cons>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -38,12 +37,12 @@ public:
 
   List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+  List<t_A> &operator=(const List<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+  List<t_A> &operator=(List<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -145,12 +144,12 @@ struct DeepPatterns {
 
     outer(outer &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) outer &operator=(const outer &_other) {
+    outer &operator=(const outer &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) outer &operator=(outer &&_other) {
+    outer &operator=(outer &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -227,12 +226,12 @@ struct DeepPatterns {
 
     inner(inner &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) inner &operator=(const inner &_other) {
+    inner &operator=(const inner &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) inner &operator=(inner &&_other) {
+    inner &operator=(inner &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -352,13 +351,12 @@ struct DeepPatterns {
 
     pair(pair<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) pair<t_A, t_B> &
-    operator=(const pair<t_A, t_B> &_other) {
+    pair<t_A, t_B> &operator=(const pair<t_A, t_B> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) pair<t_A, t_B> &operator=(pair<t_A, t_B> &&_other) {
+    pair<t_A, t_B> &operator=(pair<t_A, t_B> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -429,7 +427,6 @@ struct DeepPatterns {
     };
 
     using variant_t = std::variant<Nil, Cons>;
-    using crane_element_type = t_A;
 
   private:
     // DATA
@@ -447,12 +444,12 @@ struct DeepPatterns {
 
     mylist(mylist<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) mylist<t_A> &operator=(const mylist<t_A> &_other) {
+    mylist<t_A> &operator=(const mylist<t_A> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) mylist<t_A> &operator=(mylist<t_A> &&_other) {
+    mylist<t_A> &operator=(mylist<t_A> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

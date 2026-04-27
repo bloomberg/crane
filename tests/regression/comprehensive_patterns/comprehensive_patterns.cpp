@@ -1,14 +1,5 @@
 #include <comprehensive_patterns.h>
 
-#include <any>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure))
 std::pair<std::pair<ComprehensivePatterns::S, unsigned int>, unsigned int>
 ComprehensivePatterns::syntactic_variation(ComprehensivePatterns::S s) {

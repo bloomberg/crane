@@ -1,12 +1,5 @@
 #include <match_closure_escape.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// BUG TRIGGER: match_arm_box
 /// The partial application sum_values l inside a match arm creates a
 /// & lambda capturing the match-bound variable _args (from std::visit).

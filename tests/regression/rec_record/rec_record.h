@@ -21,7 +21,6 @@ struct RecRecord {
     };
 
     using variant_t = std::variant<Rnil, Rcons>;
-    using crane_element_type = t_A;
 
   private:
     // DATA
@@ -39,12 +38,12 @@ struct RecRecord {
 
     rlist(rlist<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) rlist<t_A> &operator=(const rlist<t_A> &_other) {
+    rlist<t_A> &operator=(const rlist<t_A> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) rlist<t_A> &operator=(rlist<t_A> &&_other) {
+    rlist<t_A> &operator=(rlist<t_A> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

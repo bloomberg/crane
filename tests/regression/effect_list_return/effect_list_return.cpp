@@ -1,16 +1,5 @@
 #include <effect_list_return.h>
 
-#include <chrono>
-#include <cstdint>
-#include <filesystem>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. list_directory returns a list
 List<std::string> EffectListReturn::list_files(const std::string path) {
   return [&]() -> List<std::string> {

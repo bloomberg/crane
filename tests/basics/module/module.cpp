@@ -1,12 +1,5 @@
 #include <module.h>
 
-#include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) Comparison NatOrdered::compare(const unsigned int &_x0,
                                                      const unsigned int &_x1) {
   return Nat::compare(_x0, _x1);

@@ -1,15 +1,5 @@
 #include <unit_void_edge2.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 UnitVoidEdge2::take_unit(const std::monostate &) {
   return 42u;

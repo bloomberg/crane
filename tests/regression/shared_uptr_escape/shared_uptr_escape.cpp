@@ -1,11 +1,5 @@
 #include <shared_uptr_escape.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// BUG: Build a tree, then conditionally either return it once
 /// (unique_ptr sufficient) or duplicate it (needs shared_ptr).
 /// If escape analysis optimistically picks unique_ptr based on

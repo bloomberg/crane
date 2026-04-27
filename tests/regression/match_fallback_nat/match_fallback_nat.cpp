@@ -1,11 +1,5 @@
 #include <match_fallback_nat.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 MatchFallbackNat::fallback(const MatchFallbackNat::maybe_nat &x) {
   if (std::holds_alternative<typename MatchFallbackNat::maybe_nat::SomeNat>(

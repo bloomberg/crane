@@ -42,12 +42,12 @@ struct MutualIndexed {
 
     EvenTree(EvenTree &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) EvenTree &operator=(const EvenTree &_other) {
+    EvenTree &operator=(const EvenTree &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) EvenTree &operator=(EvenTree &&_other) {
+    EvenTree &operator=(EvenTree &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -120,12 +120,12 @@ struct MutualIndexed {
 
     OddTree(OddTree &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) OddTree &operator=(const OddTree &_other) {
+    OddTree &operator=(const OddTree &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) OddTree &operator=(OddTree &&_other) {
+    OddTree &operator=(OddTree &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

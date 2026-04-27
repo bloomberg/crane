@@ -30,7 +30,6 @@ template <typename t_A> struct Tree {
   };
 
   using variant_t = std::variant<Leaf, Node>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -48,12 +47,12 @@ public:
 
   Tree(Tree<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Tree<t_A> &operator=(const Tree<t_A> &_other) {
+  Tree<t_A> &operator=(const Tree<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Tree<t_A> &operator=(Tree<t_A> &&_other) {
+  Tree<t_A> &operator=(Tree<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }

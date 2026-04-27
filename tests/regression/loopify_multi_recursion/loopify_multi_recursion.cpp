@@ -1,13 +1,5 @@
 #include <loopify_multi_recursion.h>
 
-#include <algorithm>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) unsigned int
 LoopifyMultiRecursion::mixed_arith_fuel(const unsigned int &fuel,
                                         const unsigned int &n) {

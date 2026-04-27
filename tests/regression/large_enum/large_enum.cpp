@@ -1,11 +1,5 @@
 #include <large_enum.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 LargeEnum::color_to_nat(const LargeEnum::Color c) {
   switch (c) {

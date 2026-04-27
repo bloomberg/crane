@@ -1,11 +1,5 @@
 #include <inc_xch_nibble.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 IncXchNibble::get_reg(const IncXchNibble::state &s, const unsigned int &r) {
   return ListDef::template nth<unsigned int>(r, s.regs, 0u);

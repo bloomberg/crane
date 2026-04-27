@@ -1,13 +1,5 @@
 #include <functor_comp.h>
 
-#include <concepts>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) FunctorComp::Stack::t
 FunctorComp::Stack::push(unsigned int x, List<unsigned int> s) {
   return List<unsigned int>::cons(x, s);

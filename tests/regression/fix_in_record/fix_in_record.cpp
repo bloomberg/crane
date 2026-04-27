@@ -1,10 +1,5 @@
 #include <fix_in_record.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) FixInRecord::fn_box
 FixInRecord::make_box(const unsigned int &n) {
   unsigned int base = (n * 3u);

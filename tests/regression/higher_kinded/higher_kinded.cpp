@@ -1,12 +1,5 @@
 #include <higher_kinded.h>
 
-#include <any>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 HigherKinded::tree_sum(const HigherKinded::Tree<unsigned int> &t) {
   return tree_fold<unsigned int, unsigned int>(

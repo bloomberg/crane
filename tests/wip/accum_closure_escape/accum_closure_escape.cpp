@@ -1,12 +1,5 @@
 #include <accum_closure_escape.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Fold-left that builds a closure from each element.
 ///
 /// SIMPLE LAMBDA VERSION: Each closure fun x => h + x captures

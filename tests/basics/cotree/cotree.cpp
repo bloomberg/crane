@@ -1,12 +1,5 @@
 #include <cotree.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 std::shared_ptr<Cotree::colist<unsigned int>> Cotree::nats(unsigned int n) {
   return colist<unsigned int>::lazy_(
       [=]() mutable -> std::shared_ptr<Cotree::colist<unsigned int>> {

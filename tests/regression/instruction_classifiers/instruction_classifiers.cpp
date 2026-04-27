@@ -1,11 +1,5 @@
 #include <instruction_classifiers.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_acc(
     const List<InstructionClassifiers::instr_acc> &prog) {
   if (std::holds_alternative<

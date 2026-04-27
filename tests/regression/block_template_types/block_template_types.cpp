@@ -1,13 +1,5 @@
 #include <block_template_types.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-
 /// %result inferred as unsigned int.
 unsigned int BlockTemplateTypes::test_read_nat() {
   unsigned int n;

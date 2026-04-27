@@ -36,12 +36,12 @@ public:
 
   Nat(Nat &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Nat &operator=(const Nat &_other) {
+  Nat &operator=(const Nat &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Nat &operator=(Nat &&_other) {
+  Nat &operator=(Nat &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -106,13 +106,12 @@ public:
 
   Prod(Prod<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Prod<t_A, t_B> &
-  operator=(const Prod<t_A, t_B> &_other) {
+  Prod<t_A, t_B> &operator=(const Prod<t_A, t_B> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Prod<t_A, t_B> &operator=(Prod<t_A, t_B> &&_other) {
+  Prod<t_A, t_B> &operator=(Prod<t_A, t_B> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }

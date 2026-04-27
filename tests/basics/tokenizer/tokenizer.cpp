@@ -1,16 +1,5 @@
 #include <tokenizer.h>
 
-#include <cstdint>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 std::pair<std::optional<std::basic_string_view<char>>,
           std::basic_string_view<char>>
 Tokenizer::next_token(const std::basic_string_view<char> input,

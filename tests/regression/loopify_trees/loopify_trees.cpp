@@ -1,13 +1,5 @@
 #include <loopify_trees.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Consolidated UNIQUE tree algorithms - domain-specific tree operations.
 __attribute__((pure)) unsigned int
 LoopifyTrees::tree_sum(const LoopifyTrees::tree<unsigned int> &t) {

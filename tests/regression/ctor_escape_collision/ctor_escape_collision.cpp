@@ -1,10 +1,5 @@
 #include <ctor_escape_collision.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 __attribute__((pure)) unsigned int
 CtorEscapeCollision::tag(const CtorEscapeCollision::Item x) {
   switch (x) {

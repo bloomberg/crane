@@ -1,11 +1,5 @@
 #include <reuse_self_cycle.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 ReuseSelfCycle::length(const ReuseSelfCycle::mylist &l) {
   if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(l.v())) {

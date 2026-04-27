@@ -1,10 +1,5 @@
 #include <timing_preserves_wf_simple.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 __attribute__((pure)) bool
 TimingPreservesWfSimple::wf(const TimingPreservesWfSimple::state &s) {
   return (s.regs_len == 4u &&

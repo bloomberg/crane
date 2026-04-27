@@ -1,15 +1,5 @@
 #include <effect_dir_path.h>
 
-#include <cstdlib>
-#include <filesystem>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. list_directory result matched — exercises IIFE + list match
 std::optional<std::string> EffectDirPath::first_file(const std::string path) {
   List<std::string> files = [&]() -> List<std::string> {

@@ -1,10 +1,5 @@
 #include <use_after_move.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 __attribute__((pure)) std::pair<UseAfterMove::State, unsigned int>
 UseAfterMove::pattern1(UseAfterMove::State s) {
   return std::make_pair(s, s.value);

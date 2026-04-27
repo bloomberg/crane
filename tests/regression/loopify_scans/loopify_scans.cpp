@@ -1,11 +1,5 @@
 #include <loopify_scans.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) List<unsigned int>
 LoopifyScans::scanl(unsigned int acc, const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};

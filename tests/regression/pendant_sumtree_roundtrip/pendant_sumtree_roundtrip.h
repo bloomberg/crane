@@ -23,7 +23,6 @@ template <typename t_A> struct List {
   };
 
   using variant_t = std::variant<Nil0, Cons0>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -41,12 +40,12 @@ public:
 
   List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+  List<t_A> &operator=(const List<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+  List<t_A> &operator=(List<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -170,7 +169,6 @@ template <typename t_A> struct Sig {
   };
 
   using variant_t = std::variant<Exist>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -186,12 +184,12 @@ public:
 
   Sig(Sig<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Sig<t_A> &operator=(const Sig<t_A> &_other) {
+  Sig<t_A> &operator=(const Sig<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Sig<t_A> &operator=(Sig<t_A> &&_other) {
+  Sig<t_A> &operator=(Sig<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -255,13 +253,12 @@ public:
 
   SigT(SigT<t_A, t_P> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) SigT<t_A, t_P> &
-  operator=(const SigT<t_A, t_P> &_other) {
+  SigT<t_A, t_P> &operator=(const SigT<t_A, t_P> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) SigT<t_A, t_P> &operator=(SigT<t_A, t_P> &&_other) {
+  SigT<t_A, t_P> &operator=(SigT<t_A, t_P> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -317,7 +314,6 @@ template <typename t_A> struct T0 {
   };
 
   using variant_t = std::variant<Nil, Cons>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -335,12 +331,12 @@ public:
 
   T0(T0<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) T0<t_A> &operator=(const T0<t_A> &_other) {
+  T0<t_A> &operator=(const T0<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) T0<t_A> &operator=(T0<t_A> &&_other) {
+  T0<t_A> &operator=(T0<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -424,12 +420,12 @@ public:
 
   T(T &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) T &operator=(const T &_other) {
+  T &operator=(const T &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) T &operator=(T &&_other) {
+  T &operator=(T &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -717,12 +713,12 @@ struct PendantSumtreeRoundtripCase {
 
     SumTree(SumTree &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) SumTree &operator=(const SumTree &_other) {
+    SumTree &operator=(const SumTree &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) SumTree &operator=(SumTree &&_other) {
+    SumTree &operator=(SumTree &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

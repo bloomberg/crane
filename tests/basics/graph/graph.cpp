@@ -1,13 +1,5 @@
 #include <graph.h>
 
-#include <any>
-#include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// A graph abstraction parameterized by a container type G and
 /// node type A. Provides operations for building and querying
 /// the graph.

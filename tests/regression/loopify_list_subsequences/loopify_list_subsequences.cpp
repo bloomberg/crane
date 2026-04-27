@@ -1,12 +1,5 @@
 #include <loopify_list_subsequences.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) List<List<unsigned int>>
 LoopifyListSubsequences::map_cons_helper(unsigned int x,
                                          const List<List<unsigned int>> &ll) {

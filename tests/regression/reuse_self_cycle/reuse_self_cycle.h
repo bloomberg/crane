@@ -39,12 +39,12 @@ struct ReuseSelfCycle {
 
     mylist(mylist &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) mylist &operator=(const mylist &_other) {
+    mylist &operator=(const mylist &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) mylist &operator=(mylist &&_other) {
+    mylist &operator=(mylist &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

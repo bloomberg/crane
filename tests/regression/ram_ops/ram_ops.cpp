@@ -1,11 +1,5 @@
 #include <ram_ops.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) RamOps::ram_bank_main
 RamOps::get_bank_main(const RamOps::state_main &s, const unsigned int &b) {
   return ListDef::template nth<RamOps::ram_bank_main>(

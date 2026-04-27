@@ -1,12 +1,5 @@
 #include <loopify_pairs.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Consolidated UNIQUE pair/tuple operations.
 /// unzip l splits list of nat pairs into pair of lists.
 __attribute__((pure))

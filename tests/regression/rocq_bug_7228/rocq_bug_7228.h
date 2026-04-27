@@ -37,12 +37,12 @@ public:
 
   Nat(Nat &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Nat &operator=(const Nat &_other) {
+  Nat &operator=(const Nat &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Nat &operator=(Nat &&_other) {
+  Nat &operator=(Nat &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -107,12 +107,12 @@ struct RocqBug7228 {
 
     data(data &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) data &operator=(const data &_other) {
+    data &operator=(const data &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) data &operator=(data &&_other) {
+    data &operator=(data &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

@@ -1,12 +1,5 @@
 #include <sort.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) Sig<List<unsigned int>>
 Sort::sort_cons_prog(unsigned int a, const List<unsigned int> &,
                      const List<unsigned int> &l_) {

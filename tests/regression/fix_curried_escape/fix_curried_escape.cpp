@@ -1,10 +1,5 @@
 #include <fix_curried_escape.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 /// A local fixpoint that escapes through an option wrapper,
 /// preventing Crane from uncurrying it away.
 ///

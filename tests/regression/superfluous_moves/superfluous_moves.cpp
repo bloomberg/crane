@@ -1,11 +1,5 @@
 #include <superfluous_moves.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Identity tick so the reproducer stays minimal while keeping the same shape.
 __attribute__((pure)) SuperfluousMoves::game_state
 SuperfluousMoves::tick(SuperfluousMoves::game_state gs) {

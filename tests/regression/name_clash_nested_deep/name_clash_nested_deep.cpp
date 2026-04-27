@@ -1,11 +1,5 @@
 #include <name_clash_nested_deep.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Four levels of nested matching.
 __attribute__((pure)) unsigned int
 NameClashNestedDeep::deep4(const NameClashNestedDeep::mylist &a,

@@ -1,16 +1,5 @@
 #include <effect_bind_action.h>
 
-#include <chrono>
-#include <cstdint>
-#include <cstdlib>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. Bool match inside bind action: one branch block template
 std::string EffectBindAction::conditional_read(const bool &use_stdin) {
   return [=]() mutable -> std::string {

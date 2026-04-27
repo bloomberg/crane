@@ -44,12 +44,12 @@ struct TypeIndexedInductiveProbe {
 
     wrap(wrap &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) wrap &operator=(const wrap &_other) {
+    wrap &operator=(const wrap &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) wrap &operator=(wrap &&_other) {
+    wrap &operator=(wrap &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

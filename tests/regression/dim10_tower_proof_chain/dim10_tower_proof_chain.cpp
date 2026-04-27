@@ -1,14 +1,5 @@
 #include <dim10_tower_proof_chain.h>
 
-#include <any>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 Dim10TowerProofChainCase::nat_le Dim10TowerProofChainCase::nat_le_of_lt(
     const unsigned int &n, const unsigned int &m, const std::any _H) {
   if (n <= 0) {

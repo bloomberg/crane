@@ -1,11 +1,5 @@
 #include <implicit_args.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 ImplicitArgs::add_one(const unsigned int &_x0) {
   return (1u + _x0);

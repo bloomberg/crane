@@ -1,13 +1,5 @@
 #include <fold_sequence_state_trace.h>
 
-#include <crane_real.h>
-#include <cstdint>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) FoldSequenceStateTraceCase::Line
 FoldSequenceStateTraceCase::line_through(const std::pair<Real, Real> &p1,
                                          const std::pair<Real, Real> &p2) {

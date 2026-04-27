@@ -1,15 +1,5 @@
 #include <let_match_type.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. let-bound bool match returning nat
 __attribute__((pure)) unsigned int LetMatchType::let_match_nat(const bool &b) {
   unsigned int x;

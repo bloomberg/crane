@@ -1,12 +1,5 @@
 #include <loopify_list_access.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) unsigned int
 LoopifyListAccess::nth(const unsigned int &n, const List<unsigned int> &l) {
   unsigned int _result;

@@ -1,12 +1,5 @@
 #include <mutual_coind.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 std::shared_ptr<MutualCoind::streamA<unsigned int>>
 MutualCoind::countA(unsigned int n) {
   return streamA<unsigned int>::lazy_(

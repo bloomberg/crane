@@ -1,9 +1,5 @@
 #include <prim_proj.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) PrimProj::point
 PrimProj::add_points(const PrimProj::point &p1, const PrimProj::point &p2) {
   return point{(p1.px + p2.px), (p1.py + p2.py)};

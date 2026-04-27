@@ -1,11 +1,5 @@
 #include <hof_tree_loopify.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) HofTreeLoopify::tree<unsigned int>
 HofTreeLoopify::depth_tree(unsigned int n) {
   std::unique_ptr<HofTreeLoopify::tree<unsigned int>> _head{};

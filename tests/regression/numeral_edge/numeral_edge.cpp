@@ -1,12 +1,5 @@
 #include <numeral_edge.h>
 
-#include <cstdint>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 6. Numeral as function argument
 __attribute__((pure)) unsigned int
 NumeralEdge::take_nat(const unsigned int &n) {

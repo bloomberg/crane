@@ -1,11 +1,5 @@
 #include <deep_map.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Build a maximally-unbalanced tree (right spine = linked list).
 /// Tail-recursive via accumulator, should be loopified.
 __attribute__((pure)) DeepMap::tree<unsigned int>

@@ -1,11 +1,5 @@
 #include <anon_fixpoint.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 __attribute__((pure)) unsigned int AnonFixpoint::sum_to(const unsigned int &n) {
   std::function<unsigned int(unsigned int, unsigned int)> go;
   go = [&](unsigned int m, unsigned int acc) -> unsigned int {

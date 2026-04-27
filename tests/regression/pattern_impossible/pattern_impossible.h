@@ -76,12 +76,12 @@ struct PatternImpossible {
 
     nested(nested &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) nested &operator=(const nested &_other) {
+    nested &operator=(const nested &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) nested &operator=(nested &&_other) {
+    nested &operator=(nested &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

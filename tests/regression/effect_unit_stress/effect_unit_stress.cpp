@@ -1,16 +1,5 @@
 #include <effect_unit_stress.h>
 
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. Ret tt at different nesting depths
 void EffectUnitStress::ret_tt_simple() { return; }
 

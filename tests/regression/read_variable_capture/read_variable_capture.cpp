@@ -1,13 +1,5 @@
 #include <read_variable_capture.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-
 /// Works: literal argument — no capture needed
 std::string ReadVariableCapture::read_literal() {
   return [&]() -> std::string {

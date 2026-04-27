@@ -1,15 +1,5 @@
 #include <thread.h>
 
-#include <chrono>
-#include <cstdint>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <thread>
-#include <type_traits>
-#include <variant>
-
 void threadtest::fun1(const unsigned int &n) {
   if (n <= 0) {
     std::cout << "fun1 is done!!!"s << '\n';

@@ -1,13 +1,5 @@
 #include <loopify_list_of_lists.h>
 
-#include <algorithm>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) List<unsigned int>
 LoopifyListOfLists::intercalate(const List<unsigned int> &sep,
                                 const List<List<unsigned int>> &ll) {

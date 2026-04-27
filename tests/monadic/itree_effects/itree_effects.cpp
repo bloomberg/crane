@@ -1,15 +1,5 @@
 #include <itree_effects.h>
 
-#include <cstdlib>
-#include <ctime>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// ------------------------------------------------------------------
 void ITreeEffects::greet() {
   std::cout << "What is your name?"s << '\n';

@@ -1,15 +1,5 @@
 #include <effect_deep_compose.h>
 
-#include <chrono>
-#include <cstdint>
-#include <cstdlib>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <variant>
-
 /// 1. Function using all three effects
 int64_t EffectDeepCompose::timed_env_op(const std::string name,
                                         const std::string value) {

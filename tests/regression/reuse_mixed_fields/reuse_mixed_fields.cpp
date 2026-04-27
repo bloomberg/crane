@@ -1,11 +1,5 @@
 #include <reuse_mixed_fields.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Forces d to be owned through the else branch.
 /// The match branch has reuse candidates: both AsNat and AsPair
 /// have arity 2.

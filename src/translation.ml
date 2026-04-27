@@ -11585,16 +11585,7 @@ let gen_ind_header_v2
       let variant_using =
         (Fnested_using (Id.of_string "variant_t", variant_ty), VPublic, STypes)
       in
-      let element_using =
-        match ty_vars with
-        | [elt_ty] ->
-          [
-            ( Fnested_using (Id.of_string "crane_element_type", elt_ty),
-              VPublic,
-              STypes );
-          ]
-        | _ -> []
-      in
+      let element_using = [] in
 
       (* 3. Private variant member: v_ for inductive, lazy_v_ for coinductive *)
       let variant_member_name = if is_coinductive then "d_lazyV_" else "d_v_" in
@@ -12083,7 +12074,7 @@ let gen_ind_header_v2
                   mf_is_const = false;
                   mf_is_static = false;
                   mf_this_pos = 0;
-                  mf_no_pure = false;
+                  mf_no_pure = true;
                 },
               VPublic,
               SCreators )
@@ -12100,7 +12091,7 @@ let gen_ind_header_v2
                   mf_is_const = false;
                   mf_is_static = false;
                   mf_this_pos = 0;
-                  mf_no_pure = false;
+                  mf_no_pure = true;
                 },
               VPublic,
               SCreators )

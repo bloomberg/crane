@@ -1,11 +1,5 @@
 #include <decode_list.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) DecodeList::instruction
 DecodeList::decode(const unsigned int &b1, const unsigned int &b2) {
   if (b1 == 0u) {

@@ -1,11 +1,5 @@
 #include <src_wrr_updates_rom_port.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 SrcWrrUpdatesRomPort::get_reg(const SrcWrrUpdatesRomPort::state &s,
                               const unsigned int &r) {

@@ -50,12 +50,12 @@ struct IndParam {
 
       result(result &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-      __attribute__((pure)) result &operator=(const result &_other) {
+      result &operator=(const result &_other) {
         d_v_ = std::move(_other.clone().d_v_);
         return *this;
       }
 
-      __attribute__((pure)) result &operator=(result &&_other) {
+      result &operator=(result &&_other) {
         d_v_ = std::move(_other.d_v_);
         return *this;
       }
@@ -193,12 +193,12 @@ struct IndParam {
 
       t(t &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-      __attribute__((pure)) t &operator=(const t &_other) {
+      t &operator=(const t &_other) {
         d_v_ = std::move(_other.clone().d_v_);
         return *this;
       }
 
-      __attribute__((pure)) t &operator=(t &&_other) {
+      t &operator=(t &&_other) {
         d_v_ = std::move(_other.d_v_);
         return *this;
       }

@@ -1,12 +1,5 @@
 #include <validated_virtual_crossmatch_trace.h>
 
-#include <algorithm>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) bool PeanoNat::eq_dec(const unsigned int &n,
                                             const unsigned int &m) {
   if (n <= 0) {

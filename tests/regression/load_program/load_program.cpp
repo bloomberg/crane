@@ -1,11 +1,5 @@
 #include <load_program.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) LoadProgram::state
 LoadProgram::set_prom_params(const LoadProgram::state &s, unsigned int addr,
                              unsigned int data, bool enable) {

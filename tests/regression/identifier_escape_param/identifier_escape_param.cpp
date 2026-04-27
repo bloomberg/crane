@@ -1,9 +1,5 @@
 #include <identifier_escape_param.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) unsigned int
 IdentifierEscapeParam::id_from_param(unsigned int double0) {
   return double0;

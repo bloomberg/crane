@@ -1,11 +1,5 @@
 #include <disassemble_ops.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) DisassembleOps::instruction
 DisassembleOps::decode1(const unsigned int &b1, const unsigned int &b2) {
   if ((2u ? b1 % 2u : b1) == 0u) {

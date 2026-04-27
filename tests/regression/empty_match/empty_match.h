@@ -59,14 +59,12 @@ struct EmptyMatch {
 
     either(either<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) either<t_A, t_B> &
-    operator=(const either<t_A, t_B> &_other) {
+    either<t_A, t_B> &operator=(const either<t_A, t_B> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) either<t_A, t_B> &
-    operator=(either<t_A, t_B> &&_other) {
+    either<t_A, t_B> &operator=(either<t_A, t_B> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

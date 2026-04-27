@@ -1,13 +1,5 @@
 #include <loopify_more_trees.h>
 
-#include <algorithm>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) LoopifyMoreTrees::tree
 LoopifyMoreTrees::mirror(const LoopifyMoreTrees::tree &t) {
   struct _Enter {

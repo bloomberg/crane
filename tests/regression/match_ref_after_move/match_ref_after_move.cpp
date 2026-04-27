@@ -1,11 +1,5 @@
 #include <match_ref_after_move.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) MatchRefAfterMove::mypair<unsigned int, unsigned int>
 MatchRefAfterMove::head_and_tail_length(
     const MatchRefAfterMove::mylist<unsigned int> &l) {

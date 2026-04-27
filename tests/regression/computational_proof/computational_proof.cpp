@@ -1,11 +1,5 @@
 #include <computational_proof.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) bool
 ComputationalProof::nat_eq_dec(const unsigned int &n, const unsigned int &x) {
   if (n <= 0) {

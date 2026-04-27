@@ -1,12 +1,5 @@
 #include <loopify_tmc.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Tests for Tail Modulo Cons (TMC) loopification optimization.
 /// Functions where the recursive call is wrapped in a single constructor
 /// should be optimized to use O(1) extra space via destination-passing style.

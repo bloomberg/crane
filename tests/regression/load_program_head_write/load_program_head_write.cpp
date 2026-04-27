@@ -1,11 +1,5 @@
 #include <load_program_head_write.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) List<unsigned int>
 LoadProgramHeadWrite::update_nth(const unsigned int &n, unsigned int x,
                                  List<unsigned int> l) {

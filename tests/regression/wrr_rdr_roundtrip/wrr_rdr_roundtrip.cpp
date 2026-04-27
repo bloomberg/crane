@@ -1,11 +1,5 @@
 #include <wrr_rdr_roundtrip.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) WrrRdrRoundtrip::state
 WrrRdrRoundtrip::execute_wrr(const WrrRdrRoundtrip::state &s) {
   return state{s.acc, update_nth<unsigned int>(s.sel_rom, s.acc, s.rom_ports),

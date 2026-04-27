@@ -1,11 +1,5 @@
 #include <reuse_lambda_capture.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 ReuseLambdaCapture::length(const ReuseLambdaCapture::mylist &l) {
   if (std::holds_alternative<typename ReuseLambdaCapture::mylist::Mycons>(

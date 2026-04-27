@@ -1,10 +1,5 @@
 #include <n_int.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 __attribute__((pure)) unsigned int Pos::add_carry(const unsigned int &x,
                                                   const unsigned int &y) {
   if (x == 1u) {

@@ -64,12 +64,12 @@ struct LargeMutual {
 
     stmt(stmt &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) stmt &operator=(const stmt &_other) {
+    stmt &operator=(const stmt &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) stmt &operator=(stmt &&_other) {
+    stmt &operator=(stmt &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -201,12 +201,12 @@ struct LargeMutual {
 
     expr(expr &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) expr &operator=(const expr &_other) {
+    expr &operator=(const expr &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) expr &operator=(expr &&_other) {
+    expr &operator=(expr &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -345,12 +345,12 @@ struct LargeMutual {
 
     bexpr(bexpr &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) bexpr &operator=(const bexpr &_other) {
+    bexpr &operator=(const bexpr &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) bexpr &operator=(bexpr &&_other) {
+    bexpr &operator=(bexpr &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

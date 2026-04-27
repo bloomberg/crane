@@ -39,12 +39,12 @@ public:
 
   Sum(Sum<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Sum<t_A, t_B> &operator=(const Sum<t_A, t_B> &_other) {
+  Sum<t_A, t_B> &operator=(const Sum<t_A, t_B> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Sum<t_A, t_B> &operator=(Sum<t_A, t_B> &&_other) {
+  Sum<t_A, t_B> &operator=(Sum<t_A, t_B> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -131,12 +131,12 @@ struct RocqBug4844 {
 
     box(box &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) box &operator=(const box &_other) {
+    box &operator=(const box &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) box &operator=(box &&_other) {
+    box &operator=(box &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

@@ -1,13 +1,5 @@
 #include <move_safety.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// TEST 2: Store partial application in a Box.
 /// If the eta-expanded lambda uses & capture,
 /// the Box will hold a dangling reference after the

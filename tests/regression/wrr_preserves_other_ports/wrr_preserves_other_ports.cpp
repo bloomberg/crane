@@ -1,11 +1,5 @@
 #include <wrr_preserves_other_ports.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) WrrPreservesOtherPorts::state
 WrrPreservesOtherPorts::execute_wrr(const WrrPreservesOtherPorts::state &s) {
   return state{s.acc,

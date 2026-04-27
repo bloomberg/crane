@@ -1,14 +1,5 @@
 #include <io.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <variant>
-
 void iotest::test1(const std::string) { return; }
 
 void iotest::test2(const std::string s) {

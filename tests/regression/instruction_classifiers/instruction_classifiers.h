@@ -20,7 +20,6 @@ template <typename t_A> struct List {
   };
 
   using variant_t = std::variant<Nil, Cons>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -38,12 +37,12 @@ public:
 
   List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+  List<t_A> &operator=(const List<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+  List<t_A> &operator=(List<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -233,12 +232,12 @@ struct InstructionClassifiers {
 
     instr_acc(instr_acc &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) instr_acc &operator=(const instr_acc &_other) {
+    instr_acc &operator=(const instr_acc &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) instr_acc &operator=(instr_acc &&_other) {
+    instr_acc &operator=(instr_acc &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -620,12 +619,12 @@ struct InstructionClassifiers {
 
     instr_ram(instr_ram &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) instr_ram &operator=(const instr_ram &_other) {
+    instr_ram &operator=(const instr_ram &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) instr_ram &operator=(instr_ram &&_other) {
+    instr_ram &operator=(instr_ram &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -828,12 +827,12 @@ struct InstructionClassifiers {
 
     instr_regs(instr_regs &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) instr_regs &operator=(const instr_regs &_other) {
+    instr_regs &operator=(const instr_regs &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) instr_regs &operator=(instr_regs &&_other) {
+    instr_regs &operator=(instr_regs &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -1070,12 +1069,12 @@ struct InstructionClassifiers {
 
     instr_jump(instr_jump &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) instr_jump &operator=(const instr_jump &_other) {
+    instr_jump &operator=(const instr_jump &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) instr_jump &operator=(instr_jump &&_other) {
+    instr_jump &operator=(instr_jump &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

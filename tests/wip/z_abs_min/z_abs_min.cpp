@@ -1,11 +1,5 @@
 #include <z_abs_min.h>
 
-#include <cstdint>
-#include <cstdlib>
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 /// In Rocq, Z.abs is total: Z.abs z is always non-negative.
 /// ZInt maps Z.abs to std::abs(%a0) (from <cstdlib>).
 /// But std::abs(INT64_MIN) is undefined behavior in C++

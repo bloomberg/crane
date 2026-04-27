@@ -1,11 +1,5 @@
 #include <validated_pump_delivery_trace.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::bg_in_meter_range(
     const ValidatedPumpDeliveryTraceCase::Mg_dL &bg) {
   return (BG_METER_MIN <= bg.mg_dL_val && bg.mg_dL_val <= BG_METER_MAX);

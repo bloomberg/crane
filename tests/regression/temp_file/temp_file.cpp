@@ -1,13 +1,5 @@
 #include <temp_file.h>
 
-#include <cstdlib>
-#include <filesystem>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <unistd.h>
-
 std::string TempFile::make_temp_file(const std::string prefix) {
   return [&]() -> std::string {
     auto p = std::filesystem::temp_directory_path() / (prefix + "XXXXXX");

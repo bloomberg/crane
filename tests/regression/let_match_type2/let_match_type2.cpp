@@ -1,11 +1,5 @@
 #include <let_match_type2.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. Match returning bool — should be fine
 __attribute__((pure)) bool
 LetMatchType2::let_match_bool(const unsigned int &n) {

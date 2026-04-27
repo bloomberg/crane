@@ -1,12 +1,5 @@
 #include <loopify_list_pairing.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
 LoopifyListPairing::unzip(
     const List<std::pair<unsigned int, unsigned int>> &l) {

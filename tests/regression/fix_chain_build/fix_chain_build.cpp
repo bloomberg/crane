@@ -1,11 +1,5 @@
 #include <fix_chain_build.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 /// Recursive construction of a closure chain. Each level creates a
 /// local fixpoint that captures the current n AND the previous
 /// level's closure prev, then stores the fixpoint in a pair with

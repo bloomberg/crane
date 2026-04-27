@@ -1,13 +1,5 @@
 #include <embed_effect.h>
 
-#include <cstdint>
-#include <embed_effect_helper.h>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <variant>
-
 void bug_create(const std::string title) {
   {
     bug_create_impl(title);

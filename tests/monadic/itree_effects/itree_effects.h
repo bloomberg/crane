@@ -95,12 +95,12 @@ public:
 
   Uint(Uint &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Uint &operator=(const Uint &_other) {
+  Uint &operator=(const Uint &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Uint &operator=(Uint &&_other) {
+  Uint &operator=(Uint &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -322,12 +322,12 @@ public:
 
   Uint0(Uint0 &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Uint0 &operator=(const Uint0 &_other) {
+  Uint0 &operator=(const Uint0 &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Uint0 &operator=(Uint0 &&_other) {
+  Uint0 &operator=(Uint0 &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -512,12 +512,12 @@ public:
 
   Uint1(Uint1 &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Uint1 &operator=(const Uint1 &_other) {
+  Uint1 &operator=(const Uint1 &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Uint1 &operator=(Uint1 &&_other) {
+  Uint1 &operator=(Uint1 &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }

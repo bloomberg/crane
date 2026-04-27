@@ -1,12 +1,5 @@
 #include <fix_escape_match.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// A local fixpoint inside a match branch capturing a pattern variable.
 /// The pattern variable h is a structured binding reference into the
 /// shared_ptr's data. The fixpoint captures it by &, then escapes

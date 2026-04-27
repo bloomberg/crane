@@ -1,12 +1,5 @@
 #include <z_arith_overflow.h>
 
-#include <cstdint>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int Nat::tail_add(const unsigned int &n,
                                                  unsigned int m) {
   if (n <= 0) {

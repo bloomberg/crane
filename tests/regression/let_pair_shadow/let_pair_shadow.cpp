@@ -1,11 +1,5 @@
 #include <let_pair_shadow.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 LetPairShadow::mylist_sum(const LetPairShadow::mylist<unsigned int> &l) {
   if (std::holds_alternative<

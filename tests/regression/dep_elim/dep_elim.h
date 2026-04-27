@@ -21,7 +21,6 @@ template <typename t_A> struct List {
   };
 
   using variant_t = std::variant<Nil, Cons>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -39,12 +38,12 @@ public:
 
   List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+  List<t_A> &operator=(const List<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+  List<t_A> &operator=(List<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -127,12 +126,12 @@ struct DepElim {
 
     fin(fin &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) fin &operator=(const fin &_other) {
+    fin &operator=(const fin &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) fin &operator=(fin &&_other) {
+    fin &operator=(fin &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -227,7 +226,6 @@ struct DepElim {
     };
 
     using variant_t = std::variant<Vnil, Vcons>;
-    using crane_element_type = t_A;
 
   private:
     // DATA
@@ -245,12 +243,12 @@ struct DepElim {
 
     vec(vec<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) vec<t_A> &operator=(const vec<t_A> &_other) {
+    vec<t_A> &operator=(const vec<t_A> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) vec<t_A> &operator=(vec<t_A> &&_other) {
+    vec<t_A> &operator=(vec<t_A> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -408,12 +406,12 @@ struct DepElim {
 
     avail(avail &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) avail &operator=(const avail &_other) {
+    avail &operator=(const avail &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) avail &operator=(avail &&_other) {
+    avail &operator=(avail &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

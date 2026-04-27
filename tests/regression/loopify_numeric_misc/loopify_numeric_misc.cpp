@@ -1,12 +1,5 @@
 #include <loopify_numeric_misc.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) unsigned int
 LoopifyNumericMisc::sum_abs(const List<unsigned int> &l) {
   struct _Enter {

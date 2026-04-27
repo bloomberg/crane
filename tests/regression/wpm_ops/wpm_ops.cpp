@@ -1,11 +1,5 @@
 #include <wpm_ops.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) bool WpmOps::nat_list_eqb(const List<unsigned int> &xs,
                                                 const List<unsigned int> &ys) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {

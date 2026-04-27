@@ -1,16 +1,5 @@
 #include <effect_poly.h>
 
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 unsigned int EffectPoly::test_map_result() {
   return map_result<unsigned int, unsigned int>(
       [](unsigned int x) { return (x + 1); }, 41u);

@@ -1,11 +1,5 @@
 #include <name_clash_match_match.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) NameClashMatchMatch::tree
 NameClashMatchMatch::choose_subtree(const NameClashMatchMatch::Dir d,
                                     const NameClashMatchMatch::tree &t) {

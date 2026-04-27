@@ -59,12 +59,12 @@ struct MutualRecursion {
 
     expr(expr &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) expr &operator=(const expr &_other) {
+    expr &operator=(const expr &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) expr &operator=(expr &&_other) {
+    expr &operator=(expr &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

@@ -1,13 +1,5 @@
 #include <loopify_list_generators.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) List<unsigned int>
 LoopifyListGenerators::cycle_fuel(const unsigned int &fuel,
                                   const unsigned int &n,

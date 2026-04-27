@@ -1,11 +1,5 @@
 #include <coalition_bid_honor_trace.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) Positive Pos::succ(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());

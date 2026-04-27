@@ -1,12 +1,5 @@
 #include <partial_apply.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) List<unsigned int>
 PartialApply::inc_all(const List<unsigned int> &l) {
   return l.template map<unsigned int>([](unsigned int x) { return (x + 1); });

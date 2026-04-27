@@ -47,12 +47,12 @@ struct WhereClause {
 
     Expr(Expr &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) Expr &operator=(const Expr &_other) {
+    Expr &operator=(const Expr &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) Expr &operator=(Expr &&_other) {
+    Expr &operator=(Expr &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -222,12 +222,12 @@ struct WhereClause {
 
     BExpr(BExpr &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) BExpr &operator=(const BExpr &_other) {
+    BExpr &operator=(const BExpr &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) BExpr &operator=(BExpr &&_other) {
+    BExpr &operator=(BExpr &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -403,12 +403,12 @@ struct WhereClause {
 
     AExpr(AExpr &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) AExpr &operator=(const AExpr &_other) {
+    AExpr &operator=(const AExpr &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) AExpr &operator=(AExpr &&_other) {
+    AExpr &operator=(AExpr &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

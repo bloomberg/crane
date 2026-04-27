@@ -1,16 +1,5 @@
 #include <skiplist.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <skipnode.h>
-#include <stm_adapter.h>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) bool skiplist_test::nat_lt(const unsigned int &_x0,
                                                  const unsigned int &_x1) {
   return _x0 < _x1;

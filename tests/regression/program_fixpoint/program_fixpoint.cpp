@@ -1,12 +1,5 @@
 #include <program_fixpoint.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) List<unsigned int> ProgFix::interleave_func(
     const SigT<List<unsigned int>, List<unsigned int>> &x) {
   List<unsigned int> l1 = x.projT1();

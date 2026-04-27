@@ -37,12 +37,12 @@ struct NameClashBindingReuse {
 
     pair_nat(pair_nat &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) pair_nat &operator=(const pair_nat &_other) {
+    pair_nat &operator=(const pair_nat &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) pair_nat &operator=(pair_nat &&_other) {
+    pair_nat &operator=(pair_nat &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -161,12 +161,12 @@ struct NameClashBindingReuse {
 
     triple_nat(triple_nat &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) triple_nat &operator=(const triple_nat &_other) {
+    triple_nat &operator=(const triple_nat &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) triple_nat &operator=(triple_nat &&_other) {
+    triple_nat &operator=(triple_nat &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

@@ -1,11 +1,5 @@
 #include <mutual_mod.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 EvenOdd::even_length(const EvenOdd::even_list &e) {
   if (std::holds_alternative<typename EvenOdd::even_list::ENil>(e.v())) {

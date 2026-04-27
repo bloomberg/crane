@@ -24,7 +24,6 @@ struct MatchRefAfterMove {
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
-    using crane_element_type = t_A;
 
   private:
     // DATA
@@ -42,12 +41,12 @@ struct MatchRefAfterMove {
 
     mylist(mylist<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) mylist<t_A> &operator=(const mylist<t_A> &_other) {
+    mylist<t_A> &operator=(const mylist<t_A> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) mylist<t_A> &operator=(mylist<t_A> &&_other) {
+    mylist<t_A> &operator=(mylist<t_A> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -168,14 +167,12 @@ struct MatchRefAfterMove {
 
     mypair(mypair<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) mypair<t_A, t_B> &
-    operator=(const mypair<t_A, t_B> &_other) {
+    mypair<t_A, t_B> &operator=(const mypair<t_A, t_B> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) mypair<t_A, t_B> &
-    operator=(mypair<t_A, t_B> &&_other) {
+    mypair<t_A, t_B> &operator=(mypair<t_A, t_B> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -353,14 +350,12 @@ struct MatchRefAfterMove {
 
     either(either<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) either<t_A, t_B> &
-    operator=(const either<t_A, t_B> &_other) {
+    either<t_A, t_B> &operator=(const either<t_A, t_B> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) either<t_A, t_B> &
-    operator=(either<t_A, t_B> &&_other) {
+    either<t_A, t_B> &operator=(either<t_A, t_B> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

@@ -1,11 +1,5 @@
 #include <reset_state.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) ResetState::state_full
 ResetState::reset_state_full(const ResetState::state_full &s) {
   return state_full{

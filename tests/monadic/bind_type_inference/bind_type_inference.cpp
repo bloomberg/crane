@@ -1,16 +1,5 @@
 #include <bind_type_inference.h>
 
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 int64_t BindTypeInference::test1() {
   return ignoreAndReturn<int64_t>(int64_t(42));
 }

@@ -1,15 +1,5 @@
 #include <count_down.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Single effect then recurse: effect ;; recursive_call
 void CountDown::count_down(const unsigned int &n) {
   unsigned int _loop_n = n;

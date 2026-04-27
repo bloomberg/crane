@@ -1,12 +1,5 @@
 #include <loopify_grouping.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) List<List<unsigned int>>
 LoopifyGrouping::prepend_to_groups(unsigned int x, const bool &same,
                                    List<List<unsigned int>> groups) {

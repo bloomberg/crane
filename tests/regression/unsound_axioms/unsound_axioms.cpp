@@ -1,11 +1,5 @@
 #include <unsound_axioms.h>
 
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <type_traits>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 UnsoundAxioms::cast_confusion(const UnsoundAxioms::Rec &r) {
   unsigned int a = r.f1;

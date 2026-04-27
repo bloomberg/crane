@@ -1,12 +1,5 @@
 #include <cps.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int CPS::factorial(const unsigned int &n) {
   return fact_cps(n, [](unsigned int x) { return x; });
 }

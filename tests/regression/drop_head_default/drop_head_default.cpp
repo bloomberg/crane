@@ -1,11 +1,5 @@
 #include <drop_head_default.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 DropHeadDefault::head_after_drop(const List<unsigned int> &rom,
                                  const unsigned int &addr) {

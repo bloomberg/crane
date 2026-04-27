@@ -1,11 +1,5 @@
 #include <currying.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int Currying::add3(const unsigned int &a,
                                                   const unsigned int &b,
                                                   const unsigned int &c) {

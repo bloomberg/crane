@@ -1,10 +1,5 @@
 #include <closure_let_escape.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 /// A local fixpoint captures a LET-BINDING (not a function parameter)
 /// and escapes through Some (std::optional).
 ///

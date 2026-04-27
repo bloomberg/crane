@@ -1,11 +1,5 @@
 #include <deep_pattern.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 DeepPattern::list_deep_match(const DeepPattern::list<DeepPattern::tree> &l) {
   if (std::holds_alternative<

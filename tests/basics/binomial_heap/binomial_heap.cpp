@@ -1,12 +1,5 @@
 #include <binomial_heap.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) BinomialHeap::tree
 BinomialHeap::smash(const BinomialHeap::tree &t, const BinomialHeap::tree &u) {
   if (std::holds_alternative<typename BinomialHeap::tree::Node>(t.v())) {

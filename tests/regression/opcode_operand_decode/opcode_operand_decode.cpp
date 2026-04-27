@@ -1,10 +1,5 @@
 #include <opcode_operand_decode.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 __attribute__((pure)) OpcodeOperandDecode::Instruction
 OpcodeOperandDecode::decode(const unsigned int &b1, const unsigned int &) {
   unsigned int opcode = (16u ? b1 / 16u : 0);

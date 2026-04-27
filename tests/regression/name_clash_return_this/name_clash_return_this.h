@@ -43,12 +43,12 @@ struct NameClashReturnThis {
 
     shape(shape &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) shape &operator=(const shape &_other) {
+    shape &operator=(const shape &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) shape &operator=(shape &&_other) {
+    shape &operator=(shape &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

@@ -55,12 +55,12 @@ struct FreeMonad {
 
     IO(IO &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) IO &operator=(const IO &_other) {
+    IO &operator=(const IO &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) IO &operator=(IO &&_other) {
+    IO &operator=(IO &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

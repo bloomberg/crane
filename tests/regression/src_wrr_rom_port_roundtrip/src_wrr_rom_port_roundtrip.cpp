@@ -1,11 +1,5 @@
 #include <src_wrr_rom_port_roundtrip.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 SrcWrrRomPortRoundtrip::get_reg(const SrcWrrRomPortRoundtrip::state &s,
                                 const unsigned int &r) {

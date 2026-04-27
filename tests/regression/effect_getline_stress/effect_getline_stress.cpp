@@ -1,16 +1,5 @@
 #include <effect_getline_stress.h>
 
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. get_line in both branches of if-then-else
 std::string EffectGetlineStress::get_or_default(const bool &ask) {
   if (ask) {

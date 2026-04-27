@@ -1,14 +1,5 @@
 #include <pendant_sumtree_roundtrip.h>
 
-#include <algorithm>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 PendantSumtreeRoundtripCase::digit_to_nat(const T &d) {
   auto &&_sv = d.to_nat(10u);

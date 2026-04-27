@@ -35,12 +35,12 @@ struct NameClashCtorField {
 
     clash1(clash1 &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) clash1 &operator=(const clash1 &_other) {
+    clash1 &operator=(const clash1 &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) clash1 &operator=(clash1 &&_other) {
+    clash1 &operator=(clash1 &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -128,12 +128,12 @@ struct NameClashCtorField {
 
     clash2(clash2 &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) clash2 &operator=(const clash2 &_other) {
+    clash2 &operator=(const clash2 &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) clash2 &operator=(clash2 &&_other) {
+    clash2 &operator=(clash2 &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -241,12 +241,12 @@ struct NameClashCtorField {
 
     pair_ind(pair_ind &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) pair_ind &operator=(const pair_ind &_other) {
+    pair_ind &operator=(const pair_ind &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) pair_ind &operator=(pair_ind &&_other) {
+    pair_ind &operator=(pair_ind &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -332,12 +332,12 @@ struct NameClashCtorField {
 
     box(box &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) box &operator=(const box &_other) {
+    box &operator=(const box &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) box &operator=(box &&_other) {
+    box &operator=(box &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

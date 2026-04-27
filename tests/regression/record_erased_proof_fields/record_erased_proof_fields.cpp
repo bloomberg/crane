@@ -1,11 +1,5 @@
 #include <record_erased_proof_fields.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int RecordErasedProofFieldsCase::kind_code(
     const RecordErasedProofFieldsCase::ItemKind k) {
   switch (k) {

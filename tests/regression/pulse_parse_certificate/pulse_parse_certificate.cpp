@@ -1,11 +1,5 @@
 #include <pulse_parse_certificate.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) std::optional<unsigned int>
 PulseParseCertificateCase::first_true(const List<bool> &xs) {
   if (std::holds_alternative<typename List<bool>::Nil>(xs.v())) {

@@ -1,10 +1,5 @@
 #include <jms_bbl_roundtrip.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 __attribute__((pure)) unsigned int
 JmsBblRoundtrip::addr12_of_nat(const unsigned int &n) {
   return (4096u ? n % 4096u : n);

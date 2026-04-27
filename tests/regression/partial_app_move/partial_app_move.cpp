@@ -1,12 +1,5 @@
 #include <partial_app_move.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// A function taking two args: tree -> nat -> nat.
 /// Partial application of this to a tree creates a
 /// closure nat -> nat in C++ via & lambda.

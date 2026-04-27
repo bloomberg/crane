@@ -69,7 +69,6 @@ struct RecordCaseBody {
     };
 
     using variant_t = std::variant<Nil, Cons>;
-    using crane_element_type = t_A;
 
   private:
     // DATA
@@ -87,12 +86,12 @@ struct RecordCaseBody {
 
     list(list<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) list<t_A> &operator=(const list<t_A> &_other) {
+    list<t_A> &operator=(const list<t_A> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) list<t_A> &operator=(list<t_A> &&_other) {
+    list<t_A> &operator=(list<t_A> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

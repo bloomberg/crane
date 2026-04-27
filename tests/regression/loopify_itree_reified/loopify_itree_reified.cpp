@@ -1,14 +1,5 @@
 #include <loopify_itree_reified.h>
 
-#include <any>
-#include <crane_itree.h>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Consumer fixpoint: traverses an ITree with fuel. This is a regular
 /// fixpoint with recursion on fuel that processes reified ITrees. Should
 /// be loopified normally (nontail with _Enter/_Call frames).

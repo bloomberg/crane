@@ -1,13 +1,5 @@
 #include <loopify_lists.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Consolidated UNIQUE list operations - no stdlib duplicates.
 /// Tests loopification on domain-specific list algorithms.
 /// range start count generates start, start+1, ..., start+count-1.

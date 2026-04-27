@@ -1,12 +1,5 @@
 #include <mergesort_fuel.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// * Split
 __attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
 MergesortFuel::split(const List<unsigned int> &l) {

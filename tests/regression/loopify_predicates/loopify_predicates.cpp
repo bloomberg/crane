@@ -1,12 +1,5 @@
 #include <loopify_predicates.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) List<unsigned int>
 LoopifyPredicates::remove_all(const unsigned int &x,
                               const List<unsigned int> &l) {

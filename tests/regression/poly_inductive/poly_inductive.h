@@ -18,7 +18,6 @@ struct PolyInductive {
     };
 
     using variant_t = std::variant<PBox>;
-    using crane_element_type = t_A;
 
   private:
     // DATA
@@ -34,12 +33,12 @@ struct PolyInductive {
 
     pbox(pbox<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) pbox<t_A> &operator=(const pbox<t_A> &_other) {
+    pbox<t_A> &operator=(const pbox<t_A> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) pbox<t_A> &operator=(pbox<t_A> &&_other) {
+    pbox<t_A> &operator=(pbox<t_A> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -124,13 +123,12 @@ struct PolyInductive {
 
     ppair(ppair<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) ppair<t_A, t_B> &
-    operator=(const ppair<t_A, t_B> &_other) {
+    ppair<t_A, t_B> &operator=(const ppair<t_A, t_B> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) ppair<t_A, t_B> &operator=(ppair<t_A, t_B> &&_other) {
+    ppair<t_A, t_B> &operator=(ppair<t_A, t_B> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -215,7 +213,6 @@ struct PolyInductive {
     };
 
     using variant_t = std::variant<PNothing, PJust>;
-    using crane_element_type = t_A;
 
   private:
     // DATA
@@ -233,12 +230,12 @@ struct PolyInductive {
 
     pmaybe(pmaybe<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) pmaybe<t_A> &operator=(const pmaybe<t_A> &_other) {
+    pmaybe<t_A> &operator=(const pmaybe<t_A> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) pmaybe<t_A> &operator=(pmaybe<t_A> &&_other) {
+    pmaybe<t_A> &operator=(pmaybe<t_A> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -346,7 +343,6 @@ struct PolyInductive {
     };
 
     using variant_t = std::variant<PLeaf, PNode>;
-    using crane_element_type = t_A;
 
   private:
     // DATA
@@ -364,12 +360,12 @@ struct PolyInductive {
 
     ptree(ptree<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) ptree<t_A> &operator=(const ptree<t_A> &_other) {
+    ptree<t_A> &operator=(const ptree<t_A> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) ptree<t_A> &operator=(ptree<t_A> &&_other) {
+    ptree<t_A> &operator=(ptree<t_A> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

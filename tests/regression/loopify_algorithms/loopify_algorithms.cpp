@@ -1,13 +1,5 @@
 #include <loopify_algorithms.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Consolidated UNIQUE list/sequence algorithms.
 __attribute__((pure)) unsigned int
 LoopifyAlgorithms::len_impl(const List<unsigned int> &l) {

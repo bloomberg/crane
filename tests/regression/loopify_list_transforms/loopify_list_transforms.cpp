@@ -1,12 +1,5 @@
 #include <loopify_list_transforms.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
 LoopifyListTransforms::run_length_encode(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {

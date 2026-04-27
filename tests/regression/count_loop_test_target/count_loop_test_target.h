@@ -39,12 +39,12 @@ struct CountLoopTestTarget {
 
     instruction(instruction &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) instruction &operator=(const instruction &_other) {
+    instruction &operator=(const instruction &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) instruction &operator=(instruction &&_other) {
+    instruction &operator=(instruction &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

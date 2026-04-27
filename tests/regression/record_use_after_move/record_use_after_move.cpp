@@ -1,9 +1,5 @@
 #include <record_use_after_move.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) RecordUseAfterMove::box
 RecordUseAfterMove::clone_box(const RecordUseAfterMove::box &b) {
   return box{b.payload, b.enabled};

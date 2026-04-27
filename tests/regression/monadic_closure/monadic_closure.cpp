@@ -1,17 +1,5 @@
 #include <monadic_closure.h>
 
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. Lambda capturing a bind result
 int64_t MonadicClosure::capture_bind() {
   std::string line;

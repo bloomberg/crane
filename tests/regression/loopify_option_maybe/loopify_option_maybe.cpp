@@ -1,11 +1,5 @@
 #include <loopify_option_maybe.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) std::optional<unsigned int>
 LoopifyOptionMaybe::find_even(const List<unsigned int> &l) {
   std::optional<unsigned int> _result;

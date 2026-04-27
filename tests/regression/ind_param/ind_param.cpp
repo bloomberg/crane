@@ -1,12 +1,5 @@
 #include <ind_param.h>
 
-#include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 IndParam::NatContainer::size(const IndParam::NatContainer::t &c) {
   if (std::holds_alternative<typename IndParam::NatContainer::t::Empty>(

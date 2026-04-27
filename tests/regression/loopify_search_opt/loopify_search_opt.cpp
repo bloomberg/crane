@@ -1,14 +1,5 @@
 #include <loopify_search_opt.h>
 
-#include <algorithm>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) List<unsigned int>
 LoopifySearchOpt::lis(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};

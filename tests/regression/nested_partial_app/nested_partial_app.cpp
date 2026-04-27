@@ -1,12 +1,5 @@
 #include <nested_partial_app.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 NestedPartialApp::tree_sum(const NestedPartialApp::tree &t) {
   if (std::holds_alternative<typename NestedPartialApp::tree::Leaf>(t.v())) {

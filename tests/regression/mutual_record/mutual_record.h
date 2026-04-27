@@ -20,7 +20,6 @@ template <typename t_A> struct List {
   };
 
   using variant_t = std::variant<Nil, Cons>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -38,12 +37,12 @@ public:
 
   List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+  List<t_A> &operator=(const List<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+  List<t_A> &operator=(List<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -124,12 +123,12 @@ struct MutualRecord {
 
     department(department &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) department &operator=(const department &_other) {
+    department &operator=(const department &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) department &operator=(department &&_other) {
+    department &operator=(department &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -195,12 +194,12 @@ struct MutualRecord {
 
     employee(employee &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) employee &operator=(const employee &_other) {
+    employee &operator=(const employee &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) employee &operator=(employee &&_other) {
+    employee &operator=(employee &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

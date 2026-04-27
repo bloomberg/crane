@@ -1,12 +1,5 @@
 #include <loopify_numeric_sequences.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) unsigned int
 LoopifyNumericSequences::collatz_length_fuel(const unsigned int &fuel,
                                              const unsigned int &n) {

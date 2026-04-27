@@ -56,12 +56,12 @@ template <Elem E> struct MutualTree {
 
     tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) tree &operator=(const tree &_other) {
+    tree &operator=(const tree &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) tree &operator=(tree &&_other) {
+    tree &operator=(tree &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -137,12 +137,12 @@ template <Elem E> struct MutualTree {
 
     forest(forest &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) forest &operator=(const forest &_other) {
+    forest &operator=(const forest &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) forest &operator=(forest &&_other) {
+    forest &operator=(forest &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

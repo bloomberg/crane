@@ -1,11 +1,5 @@
 #include <mutual_record.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 MutualRecord::dept_id(const MutualRecord::department &d) {
   const auto &[d_a0, d_a1] =

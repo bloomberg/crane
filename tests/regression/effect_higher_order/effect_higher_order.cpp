@@ -1,15 +1,5 @@
 #include <effect_higher_order.h>
 
-#include <cstdlib>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 5. Effectful callback passed as argument
 void EffectHigherOrder::greet_all(const List<std::string> &names) {
   for_each_str(

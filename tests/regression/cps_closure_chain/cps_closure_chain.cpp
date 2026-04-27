@@ -1,12 +1,5 @@
 #include <cps_closure_chain.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 CpsClosureChain::tree_sum(const CpsClosureChain::tree &t) {
   return tree_sum_cps(t, [](unsigned int x) { return x; });

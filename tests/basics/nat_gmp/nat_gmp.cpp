@@ -1,10 +1,5 @@
 #include <nat_gmp.h>
 
-#include <gmpxx.h>
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) mpz_class NatGMPTest::add_test(const mpz_class &_x0,
                                                      const mpz_class &_x1) {
   return (_x0 + _x1);

@@ -1,12 +1,5 @@
 #include <loopify_tail.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Tail-recursive: membership test
 __attribute__((pure)) bool
 LoopifyTail::member(const unsigned int &x,

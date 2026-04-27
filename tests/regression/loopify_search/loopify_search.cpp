@@ -1,12 +1,5 @@
 #include <loopify_search.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Consolidated search and optimization algorithms.
 /// knapsack capacity items solves 0/1 knapsack problem.
 /// Items are (weight, value) pairs.

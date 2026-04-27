@@ -1,12 +1,5 @@
 #include <tailrec_reorder_probe.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Variant: TWO arguments depend on pattern-matched fields.
 /// l := t, acc1 := mycons h acc1, acc2 := mycons (h+1) acc2
 /// Both acc1 and acc2 need h from the OLD l.

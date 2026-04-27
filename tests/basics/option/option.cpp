@@ -1,10 +1,5 @@
 #include <option.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) unsigned int
 Option::get_or_default(const std::optional<unsigned int> &o,
                        unsigned int default0) {

@@ -1,13 +1,5 @@
 #include <block_template_semicolon.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-
 /// String argument with semicolons in expression position (monad right
 /// identity) Tests gen_block_iife semicolon splitting
 std::string BlockTemplateSemicolon::read_semicolon_expr() {

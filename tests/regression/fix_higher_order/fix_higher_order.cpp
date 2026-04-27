@@ -1,10 +1,5 @@
 #include <fix_higher_order.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 /// Creates a fixpoint and passes it through wrap_fn.
 /// The fixpoint escapes through the function call, not through
 /// direct constructor application.

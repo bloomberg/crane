@@ -64,13 +64,12 @@ struct AxiomTypes {
 
     AxiomInductive(AxiomInductive &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) AxiomInductive &
-    operator=(const AxiomInductive &_other) {
+    AxiomInductive &operator=(const AxiomInductive &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) AxiomInductive &operator=(AxiomInductive &&_other) {
+    AxiomInductive &operator=(AxiomInductive &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -157,7 +156,6 @@ struct AxiomTypes {
     };
 
     using variant_t = std::variant<Nil, Cons>;
-    using crane_element_type = t_A;
 
   private:
     // DATA
@@ -175,12 +173,12 @@ struct AxiomTypes {
 
     list(list<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) list<t_A> &operator=(const list<t_A> &_other) {
+    list<t_A> &operator=(const list<t_A> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) list<t_A> &operator=(list<t_A> &&_other) {
+    list<t_A> &operator=(list<t_A> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

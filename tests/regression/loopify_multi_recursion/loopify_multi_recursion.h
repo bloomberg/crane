@@ -57,12 +57,12 @@ struct LoopifyMultiRecursion {
 
     quadtree(quadtree &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) quadtree &operator=(const quadtree &_other) {
+    quadtree &operator=(const quadtree &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) quadtree &operator=(quadtree &&_other) {
+    quadtree &operator=(quadtree &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

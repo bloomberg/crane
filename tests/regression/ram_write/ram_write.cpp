@@ -1,11 +1,5 @@
 #include <ram_write.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 RamWrite::get_main(const RamWrite::ram_reg &rg, const unsigned int &i) {
   return ListDef::template nth<unsigned int>(i, rg.reg_main, 0u);

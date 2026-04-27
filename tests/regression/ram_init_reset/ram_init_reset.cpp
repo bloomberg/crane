@@ -1,11 +1,5 @@
 #include <ram_init_reset.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) RamInitReset::state
 RamInitReset::reset_state(const RamInitReset::state &s) {
   return state{

@@ -1,11 +1,5 @@
 #include <unit_void_stress.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 void UnitVoidStress::consume(const unsigned int &n) {
   if (n <= 0) {
     return;

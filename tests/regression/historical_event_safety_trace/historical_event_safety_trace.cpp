@@ -1,13 +1,5 @@
 #include <historical_event_safety_trace.h>
 
-#include <algorithm>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) bool HistoricalEventSafetyTraceCase::is_safe_bool(
     const HistoricalEventSafetyTraceCase::PlantConfig &pconf,
     const HistoricalEventSafetyTraceCase::State &s) {

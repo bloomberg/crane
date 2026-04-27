@@ -1,12 +1,5 @@
 #include <nested_match_closure.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 NestedMatchClosure::tree_sum(const NestedMatchClosure::tree &t) {
   if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(t.v())) {

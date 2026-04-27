@@ -1,10 +1,5 @@
 #include <todo_inline_custom_symbol.h>
 
-#include <memory>
-#include <optional>
-#include <todo_inline_custom_symbol_support.h>
-#include <type_traits>
-
 __attribute__((pure)) unsigned int
 TodoInlineCustomSymbol::alias(const unsigned int &_x0) {
   return inline_inc_impl(_x0);

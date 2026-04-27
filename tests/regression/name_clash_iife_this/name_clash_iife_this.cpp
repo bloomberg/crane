@@ -1,11 +1,5 @@
 #include <name_clash_iife_this.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 NameClashIifeThis::match_of_match(const NameClashIifeThis::Color c,
                                   const NameClashIifeThis::shape &s) {

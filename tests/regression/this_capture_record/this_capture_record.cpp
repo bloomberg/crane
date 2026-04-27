@@ -1,12 +1,5 @@
 #include <this_capture_record.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Methodified on tree. The extra flag argument forces Crane to
 /// treat this as a multi-argument function (preventing eta-collapse).
 /// Returns a record whose fields are closures that capture this

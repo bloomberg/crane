@@ -1,15 +1,5 @@
 #include <block_template_stress.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. Block template in a fixpoint body
 List<std::string> BlockTemplateStress::read_n_lines(const unsigned int &n) {
   if (n <= 0) {

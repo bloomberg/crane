@@ -40,14 +40,12 @@ struct Sum {
 
     either(either<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) either<t_A, t_B> &
-    operator=(const either<t_A, t_B> &_other) {
+    either<t_A, t_B> &operator=(const either<t_A, t_B> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) either<t_A, t_B> &
-    operator=(either<t_A, t_B> &&_other) {
+    either<t_A, t_B> &operator=(either<t_A, t_B> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -212,14 +210,12 @@ struct Sum {
 
     triple(triple<t_A, t_B, t_C> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) triple<t_A, t_B, t_C> &
-    operator=(const triple<t_A, t_B, t_C> &_other) {
+    triple<t_A, t_B, t_C> &operator=(const triple<t_A, t_B, t_C> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) triple<t_A, t_B, t_C> &
-    operator=(triple<t_A, t_B, t_C> &&_other) {
+    triple<t_A, t_B, t_C> &operator=(triple<t_A, t_B, t_C> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

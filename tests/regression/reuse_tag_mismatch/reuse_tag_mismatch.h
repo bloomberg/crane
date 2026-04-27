@@ -52,12 +52,12 @@ struct ReuseTagMismatch {
 
     direction(direction &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) direction &operator=(const direction &_other) {
+    direction &operator=(const direction &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) direction &operator=(direction &&_other) {
+    direction &operator=(direction &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

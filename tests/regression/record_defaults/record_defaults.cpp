@@ -1,9 +1,5 @@
 #include <record_defaults.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) RecordDefaults::Config
 RecordDefaults::set_width(unsigned int w, const RecordDefaults::Config &c) {
   return Config{w, c.cfg_height, c.cfg_depth, c.cfg_debug};

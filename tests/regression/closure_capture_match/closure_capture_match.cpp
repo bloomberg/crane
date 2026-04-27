@@ -1,13 +1,5 @@
 #include <closure_capture_match.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) ClosureCaptureMatch::fn_box
 ClosureCaptureMatch::box_from_match(const ClosureCaptureMatch::tree &t) {
   if (std::holds_alternative<typename ClosureCaptureMatch::tree::Leaf>(t.v())) {

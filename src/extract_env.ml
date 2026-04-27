@@ -668,13 +668,11 @@ let header_imports_bsl =
 
 let mk_include s = str ("#include <" ^ s ^ ">")
 
-(** Generates the [#include] block for a C++ implementation file. *)
+(** Generates the [#include] block for a C++ implementation file.
+    Standard and custom headers are omitted for non-BDE mode because they
+    are already included transitively via the component's own header (both
+    share the same accumulator during the Pre phase). *)
 let header fn () =
-  let imps = get_custom_imports () in
-  let himports =
-    if Table.std_lib () = "BDE" then header_imports_bsl
-    else needed_std_headers ()
-  in
   (* Component's own header must be first include (BDE Rule 5.5) *)
   let self_include =
     match fn with
@@ -684,13 +682,15 @@ let header fn () =
       mk_include hdr ++ fnl ()
     | None -> mt ()
   in
-  let h =
-    List.fold_left
-      (fun p s -> p ++ mk_include s ++ fnl ())
-      (str "")
-      (himports @ imps)
-  in
   if Table.std_lib () = "BDE" then
+    let imps = get_custom_imports () in
+    let himports = header_imports_bsl in
+    let h =
+      List.fold_left
+        (fun p s -> p ++ mk_include s ++ fnl ())
+        (str "")
+        (himports @ imps)
+    in
     self_include
     ++ fnl ()
     ++ h
@@ -699,7 +699,7 @@ let header fn () =
     ++ fnl2 ()
     ++ str "}"
   else
-    self_include ++ fnl () ++ h ++ fnl2 ()
+    self_include ++ fnl2 ()
 
 let mk_include_quoted s = str ("#include \"" ^ s ^ "\"")
 

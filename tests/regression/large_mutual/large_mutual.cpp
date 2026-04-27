@@ -1,11 +1,5 @@
 #include <large_mutual.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 LargeMutual::expr_size(const LargeMutual::expr &e) {
   if (std::holds_alternative<typename LargeMutual::expr::EAdd>(e.v())) {

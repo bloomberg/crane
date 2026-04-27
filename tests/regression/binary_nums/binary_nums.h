@@ -44,12 +44,12 @@ public:
 
   Positive(Positive &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Positive &operator=(const Positive &_other) {
+  Positive &operator=(const Positive &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Positive &operator=(Positive &&_other) {
+  Positive &operator=(Positive &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -126,12 +126,12 @@ public:
 
   N(N &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) N &operator=(const N &_other) {
+  N &operator=(const N &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) N &operator=(N &&_other) {
+  N &operator=(N &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -205,12 +205,12 @@ public:
 
   Z(Z &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Z &operator=(const Z &_other) {
+  Z &operator=(const Z &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Z &operator=(Z &&_other) {
+  Z &operator=(Z &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -298,12 +298,12 @@ struct Pos {
 
     mask(mask &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) mask &operator=(const mask &_other) {
+    mask &operator=(const mask &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) mask &operator=(mask &&_other) {
+    mask &operator=(mask &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

@@ -1,12 +1,5 @@
 #include <pair_closure_escape.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 PairClosureEscape::sum_values(const PairClosureEscape::tree &t,
                               unsigned int x) {

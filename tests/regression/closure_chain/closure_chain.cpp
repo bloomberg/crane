@@ -1,12 +1,5 @@
 #include <closure_chain.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 ClosureChain::tree_sum(const ClosureChain::tree &t) {
   if (std::holds_alternative<typename ClosureChain::tree::Leaf>(t.v())) {

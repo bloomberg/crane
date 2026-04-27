@@ -1,11 +1,5 @@
 #include <reuse_alias.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Increment the head — candidate for reuse optimization when use_count = 1.
 __attribute__((pure)) ReuseAlias::mylist<unsigned int>
 ReuseAlias::inc_head(const ReuseAlias::mylist<unsigned int> &l) {

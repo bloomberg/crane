@@ -41,12 +41,12 @@ struct LoopifyTreeVariants {
 
     ternary(ternary &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) ternary &operator=(const ternary &_other) {
+    ternary &operator=(const ternary &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) ternary &operator=(ternary &&_other) {
+    ternary &operator=(ternary &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -407,12 +407,12 @@ struct LoopifyTreeVariants {
 
     quadtree(quadtree &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) quadtree &operator=(const quadtree &_other) {
+    quadtree &operator=(const quadtree &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) quadtree &operator=(quadtree &&_other) {
+    quadtree &operator=(quadtree &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -769,12 +769,12 @@ struct LoopifyTreeVariants {
 
     leaf_tree(leaf_tree &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) leaf_tree &operator=(const leaf_tree &_other) {
+    leaf_tree &operator=(const leaf_tree &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) leaf_tree &operator=(leaf_tree &&_other) {
+    leaf_tree &operator=(leaf_tree &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

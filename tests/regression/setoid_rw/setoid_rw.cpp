@@ -1,10 +1,5 @@
 #include <setoid_rw.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 __attribute__((pure)) unsigned int SetoidRw::mod3(const unsigned int &n) {
   return (3u ? n % 3u : n);
 }

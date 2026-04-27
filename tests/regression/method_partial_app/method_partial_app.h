@@ -40,12 +40,12 @@ struct MethodPartialApp {
 
     tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) tree &operator=(const tree &_other) {
+    tree &operator=(const tree &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) tree &operator=(tree &&_other) {
+    tree &operator=(tree &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -172,12 +172,12 @@ struct MethodPartialApp {
 
     box(box &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) box &operator=(const box &_other) {
+    box &operator=(const box &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) box &operator=(box &&_other) {
+    box &operator=(box &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

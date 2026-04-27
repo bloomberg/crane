@@ -1,12 +1,5 @@
 #include <fold_closure_accum.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Sum all values in a tree.
 __attribute__((pure)) unsigned int
 FoldClosureAccum::tree_sum(const FoldClosureAccum::tree &t) {

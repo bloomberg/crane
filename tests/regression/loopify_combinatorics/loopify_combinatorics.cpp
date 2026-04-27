@@ -1,13 +1,5 @@
 #include <loopify_combinatorics.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Consolidated combinatorial algorithms.
 /// remove x l removes first occurrence of x from list.
 __attribute__((pure)) List<unsigned int>

@@ -1,11 +1,5 @@
 #include <wrm_then_rdm_reads_back.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 WrmThenRdmReadsBack::get_reg(const WrmThenRdmReadsBack::state &s,
                              const unsigned int &r) {

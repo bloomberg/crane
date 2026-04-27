@@ -20,7 +20,6 @@ template <typename t_A> struct List {
   };
 
   using variant_t = std::variant<Nil, Cons>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -38,12 +37,12 @@ public:
 
   List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+  List<t_A> &operator=(const List<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+  List<t_A> &operator=(List<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -176,12 +175,12 @@ struct EncodeOps {
 
     instruction1(instruction1 &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) instruction1 &operator=(const instruction1 &_other) {
+    instruction1 &operator=(const instruction1 &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) instruction1 &operator=(instruction1 &&_other) {
+    instruction1 &operator=(instruction1 &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -419,12 +418,12 @@ struct EncodeOps {
 
     instruction2(instruction2 &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) instruction2 &operator=(const instruction2 &_other) {
+    instruction2 &operator=(const instruction2 &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) instruction2 &operator=(instruction2 &&_other) {
+    instruction2 &operator=(instruction2 &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -542,12 +541,12 @@ struct EncodeOps {
 
     instruction3(instruction3 &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) instruction3 &operator=(const instruction3 &_other) {
+    instruction3 &operator=(const instruction3 &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) instruction3 &operator=(instruction3 &&_other) {
+    instruction3 &operator=(instruction3 &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

@@ -1,13 +1,5 @@
 #include <loopify_extrema.h>
 
-#include <algorithm>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 __attribute__((pure)) unsigned int
 LoopifyExtrema::maximum(const List<unsigned int> &l) {
   struct _Enter {

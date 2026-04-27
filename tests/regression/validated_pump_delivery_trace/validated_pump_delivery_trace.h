@@ -20,7 +20,6 @@ template <typename t_A> struct List {
   };
 
   using variant_t = std::variant<Nil, Cons>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -38,12 +37,12 @@ public:
 
   List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+  List<t_A> &operator=(const List<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+  List<t_A> &operator=(List<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -208,12 +207,12 @@ public:
 
   Uint(Uint &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Uint &operator=(const Uint &_other) {
+  Uint &operator=(const Uint &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Uint &operator=(Uint &&_other) {
+  Uint &operator=(Uint &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -435,12 +434,12 @@ public:
 
   Uint0(Uint0 &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Uint0 &operator=(const Uint0 &_other) {
+  Uint0 &operator=(const Uint0 &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Uint0 &operator=(Uint0 &&_other) {
+  Uint0 &operator=(Uint0 &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -625,12 +624,12 @@ public:
 
   Uint1(Uint1 &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Uint1 &operator=(const Uint1 &_other) {
+  Uint1 &operator=(const Uint1 &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Uint1 &operator=(Uint1 &&_other) {
+  Uint1 &operator=(Uint1 &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -864,12 +863,12 @@ struct ValidatedPumpDeliveryTraceCase {
 
     FaultStatus(FaultStatus &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) FaultStatus &operator=(const FaultStatus &_other) {
+    FaultStatus &operator=(const FaultStatus &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) FaultStatus &operator=(FaultStatus &&_other) {
+    FaultStatus &operator=(FaultStatus &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -1121,13 +1120,12 @@ struct ValidatedPumpDeliveryTraceCase {
 
     SuspendDecision(SuspendDecision &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) SuspendDecision &
-    operator=(const SuspendDecision &_other) {
+    SuspendDecision &operator=(const SuspendDecision &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) SuspendDecision &operator=(SuspendDecision &&_other) {
+    SuspendDecision &operator=(SuspendDecision &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -1326,13 +1324,12 @@ struct ValidatedPumpDeliveryTraceCase {
 
     PrecisionResult(PrecisionResult &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) PrecisionResult &
-    operator=(const PrecisionResult &_other) {
+    PrecisionResult &operator=(const PrecisionResult &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) PrecisionResult &operator=(PrecisionResult &&_other) {
+    PrecisionResult &operator=(PrecisionResult &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

@@ -1,13 +1,5 @@
 #include <loopify_generators.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Consolidated list generator functions.
 /// cycle n l repeats the list n times: cycle 2 1,2 -> 1,2,1,2.
 __attribute__((pure)) List<unsigned int>

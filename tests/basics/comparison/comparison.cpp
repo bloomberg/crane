@@ -1,10 +1,5 @@
 #include <comparison.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-
 __attribute__((pure)) unsigned int
 Comparison::cmp_to_nat(const Comparison::Cmp c) {
   switch (c) {

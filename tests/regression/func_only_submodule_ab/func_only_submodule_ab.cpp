@@ -1,9 +1,5 @@
 #include <func_only_submodule_ab.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 __attribute__((pure)) unsigned int
 FuncOnlySubmoduleAb::Root::A::inc(unsigned int n) {
   return (n + 1);

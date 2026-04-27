@@ -1,11 +1,5 @@
 #include <reuse_move_shadow.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) unsigned int
 ReuseMoveShadow::tree_sum(const ReuseMoveShadow::tree &t) {
   if (std::holds_alternative<typename ReuseMoveShadow::tree::Node>(t.v())) {

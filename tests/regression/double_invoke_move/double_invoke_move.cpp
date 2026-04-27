@@ -1,12 +1,5 @@
 #include <double_invoke_move.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// wrap_with takes TWO args. Partial application creates a closure.
 /// Since t is stored in a constructor, wrap_with takes t as owned (by value).
 __attribute__((pure)) DoubleInvokeMove::tree

@@ -1,12 +1,5 @@
 #include <levenshtein.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) Levenshtein::chain
 Levenshtein::same_chain(const String &s) {
   if (std::holds_alternative<typename String::EmptyString>(s.v())) {

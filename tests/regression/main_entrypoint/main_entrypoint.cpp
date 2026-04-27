@@ -1,14 +1,5 @@
 #include <main_entrypoint.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <variant>
-
 void MainEntrypoint::main() {
   std::cout << "hello from main"s << '\n';
   return;

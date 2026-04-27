@@ -1,13 +1,5 @@
 #include <polygon_winding_area_trace.h>
 
-#include <crane_real.h>
-#include <cstdint>
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 __attribute__((pure)) int64_t BinInt::pow_pos(const int64_t &z,
                                               unsigned int _x0) {
   return Pos::template iter<int64_t>(

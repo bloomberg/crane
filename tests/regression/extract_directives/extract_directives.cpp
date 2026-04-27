@@ -1,10 +1,5 @@
 #include <extract_directives.h>
 
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <type_traits>
-
 __attribute__((pure)) unsigned int
 ExtractDirectives::offset(const unsigned int &base, const unsigned int &x) {
   return (x + base);

@@ -22,7 +22,6 @@ template <typename t_A> struct List {
   };
 
   using variant_t = std::variant<Nil, Cons>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -40,12 +39,12 @@ public:
 
   List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) List<t_A> &operator=(const List<t_A> &_other) {
+  List<t_A> &operator=(const List<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) List<t_A> &operator=(List<t_A> &&_other) {
+  List<t_A> &operator=(List<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -119,7 +118,6 @@ struct NestedInd {
     };
 
     using variant_t = std::variant<Cnil, Ccons>;
-    using crane_element_type = t_A;
 
   private:
     // DATA
@@ -138,14 +136,12 @@ struct NestedInd {
 
     custom_list(custom_list<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) custom_list<t_A> &
-    operator=(const custom_list<t_A> &_other) {
+    custom_list<t_A> &operator=(const custom_list<t_A> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) custom_list<t_A> &
-    operator=(custom_list<t_A> &&_other) {
+    custom_list<t_A> &operator=(custom_list<t_A> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -253,7 +249,6 @@ struct NestedInd {
     };
 
     using variant_t = std::variant<Node>;
-    using crane_element_type = t_A;
 
   private:
     // DATA
@@ -269,12 +264,12 @@ struct NestedInd {
 
     rose(rose<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) rose<t_A> &operator=(const rose<t_A> &_other) {
+    rose<t_A> &operator=(const rose<t_A> &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) rose<t_A> &operator=(rose<t_A> &&_other) {
+    rose<t_A> &operator=(rose<t_A> &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -406,12 +401,12 @@ struct NestedInd {
 
     expr(expr &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) expr &operator=(const expr &_other) {
+    expr &operator=(const expr &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) expr &operator=(expr &&_other) {
+    expr &operator=(expr &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

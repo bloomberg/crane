@@ -1,14 +1,5 @@
 #include <block_template_hygiene.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <variant>
-
 /// Test 1: Two consecutive get_line calls with the SAME binder name s.
 /// The second s should be freshened (e.g., s0) by Crane's rename_id.
 std::string BlockTemplateHygiene::same_name_twice() {

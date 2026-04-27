@@ -39,12 +39,12 @@ public:
 
   Nat(Nat &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Nat &operator=(const Nat &_other) {
+  Nat &operator=(const Nat &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Nat &operator=(Nat &&_other) {
+  Nat &operator=(Nat &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -124,13 +124,12 @@ public:
 
   SigT(SigT<t_A, t_P> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) SigT<t_A, t_P> &
-  operator=(const SigT<t_A, t_P> &_other) {
+  SigT<t_A, t_P> &operator=(const SigT<t_A, t_P> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) SigT<t_A, t_P> &operator=(SigT<t_A, t_P> &&_other) {
+  SigT<t_A, t_P> &operator=(SigT<t_A, t_P> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -216,12 +215,12 @@ public:
 
   Ascii(Ascii &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Ascii &operator=(const Ascii &_other) {
+  Ascii &operator=(const Ascii &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Ascii &operator=(Ascii &&_other) {
+  Ascii &operator=(Ascii &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -369,12 +368,12 @@ public:
 
   String(String &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) String &operator=(const String &_other) {
+  String &operator=(const String &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) String &operator=(String &&_other) {
+  String &operator=(String &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -479,12 +478,12 @@ struct Levenshtein {
 
     edit(edit &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) edit &operator=(const edit &_other) {
+    edit &operator=(const edit &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) edit &operator=(edit &&_other) {
+    edit &operator=(edit &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }
@@ -615,12 +614,12 @@ struct Levenshtein {
 
     chain(chain &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-    __attribute__((pure)) chain &operator=(const chain &_other) {
+    chain &operator=(const chain &_other) {
       d_v_ = std::move(_other.clone().d_v_);
       return *this;
     }
 
-    __attribute__((pure)) chain &operator=(chain &&_other) {
+    chain &operator=(chain &&_other) {
       d_v_ = std::move(_other.d_v_);
       return *this;
     }

@@ -41,12 +41,12 @@ public:
 
   Nat(Nat &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Nat &operator=(const Nat &_other) {
+  Nat &operator=(const Nat &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Nat &operator=(Nat &&_other) {
+  Nat &operator=(Nat &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -97,7 +97,6 @@ template <typename t_A> struct Option {
   struct None {};
 
   using variant_t = std::variant<Some, None>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -115,12 +114,12 @@ public:
 
   Option(Option<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Option<t_A> &operator=(const Option<t_A> &_other) {
+  Option<t_A> &operator=(const Option<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Option<t_A> &operator=(Option<t_A> &&_other) {
+  Option<t_A> &operator=(Option<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -194,13 +193,12 @@ public:
 
   Prod(Prod<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Prod<t_A, t_B> &
-  operator=(const Prod<t_A, t_B> &_other) {
+  Prod<t_A, t_B> &operator=(const Prod<t_A, t_B> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Prod<t_A, t_B> &operator=(Prod<t_A, t_B> &&_other) {
+  Prod<t_A, t_B> &operator=(Prod<t_A, t_B> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -264,7 +262,6 @@ template <typename t_A> struct Sig {
   };
 
   using variant_t = std::variant<Exist0>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -280,12 +277,12 @@ public:
 
   Sig(Sig<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Sig<t_A> &operator=(const Sig<t_A> &_other) {
+  Sig<t_A> &operator=(const Sig<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Sig<t_A> &operator=(Sig<t_A> &&_other) {
+  Sig<t_A> &operator=(Sig<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -333,7 +330,6 @@ template <typename t_A> struct Sig2 {
   };
 
   using variant_t = std::variant<Exist1>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -349,12 +345,12 @@ public:
 
   Sig2(Sig2<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Sig2<t_A> &operator=(const Sig2<t_A> &_other) {
+  Sig2<t_A> &operator=(const Sig2<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Sig2<t_A> &operator=(Sig2<t_A> &&_other) {
+  Sig2<t_A> &operator=(Sig2<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -418,13 +414,12 @@ public:
 
   SigT(SigT<t_A, t_P> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) SigT<t_A, t_P> &
-  operator=(const SigT<t_A, t_P> &_other) {
+  SigT<t_A, t_P> &operator=(const SigT<t_A, t_P> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) SigT<t_A, t_P> &operator=(SigT<t_A, t_P> &&_other) {
+  SigT<t_A, t_P> &operator=(SigT<t_A, t_P> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -494,14 +489,12 @@ public:
 
   SigT2(SigT2<t_A, t_P, t_Q> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) SigT2<t_A, t_P, t_Q> &
-  operator=(const SigT2<t_A, t_P, t_Q> &_other) {
+  SigT2<t_A, t_P, t_Q> &operator=(const SigT2<t_A, t_P, t_Q> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) SigT2<t_A, t_P, t_Q> &
-  operator=(SigT2<t_A, t_P, t_Q> &&_other) {
+  SigT2<t_A, t_P, t_Q> &operator=(SigT2<t_A, t_P, t_Q> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -559,7 +552,6 @@ template <typename t_A> struct Sumor {
   struct Inright {};
 
   using variant_t = std::variant<Inleft, Inright>;
-  using crane_element_type = t_A;
 
 private:
   // DATA
@@ -577,12 +569,12 @@ public:
 
   Sumor(Sumor<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-  __attribute__((pure)) Sumor<t_A> &operator=(const Sumor<t_A> &_other) {
+  Sumor<t_A> &operator=(const Sumor<t_A> &_other) {
     d_v_ = std::move(_other.clone().d_v_);
     return *this;
   }
 
-  __attribute__((pure)) Sumor<t_A> &operator=(Sumor<t_A> &&_other) {
+  Sumor<t_A> &operator=(Sumor<t_A> &&_other) {
     d_v_ = std::move(_other.d_v_);
     return *this;
   }
@@ -642,7 +634,6 @@ struct RocqBug14174 {
       };
 
       using variant_t = std::variant<Exist>;
-      using crane_element_type = t_A;
 
     private:
       // DATA
@@ -658,12 +649,12 @@ struct RocqBug14174 {
 
       sig(sig<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-      __attribute__((pure)) sig<t_A> &operator=(const sig<t_A> &_other) {
+      sig<t_A> &operator=(const sig<t_A> &_other) {
         d_v_ = std::move(_other.clone().d_v_);
         return *this;
       }
 
-      __attribute__((pure)) sig<t_A> &operator=(sig<t_A> &&_other) {
+      sig<t_A> &operator=(sig<t_A> &&_other) {
         d_v_ = std::move(_other.d_v_);
         return *this;
       }
@@ -761,7 +752,6 @@ struct RocqBug14174 {
       };
 
       using variant_t = std::variant<Exist2>;
-      using crane_element_type = t_A;
 
     private:
       // DATA
@@ -777,12 +767,12 @@ struct RocqBug14174 {
 
       sig2(sig2<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-      __attribute__((pure)) sig2<t_A> &operator=(const sig2<t_A> &_other) {
+      sig2<t_A> &operator=(const sig2<t_A> &_other) {
         d_v_ = std::move(_other.clone().d_v_);
         return *this;
       }
 
-      __attribute__((pure)) sig2<t_A> &operator=(sig2<t_A> &&_other) {
+      sig2<t_A> &operator=(sig2<t_A> &&_other) {
         d_v_ = std::move(_other.d_v_);
         return *this;
       }
@@ -900,13 +890,12 @@ struct RocqBug14174 {
 
       sigT(sigT<t_A, t_P> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-      __attribute__((pure)) sigT<t_A, t_P> &
-      operator=(const sigT<t_A, t_P> &_other) {
+      sigT<t_A, t_P> &operator=(const sigT<t_A, t_P> &_other) {
         d_v_ = std::move(_other.clone().d_v_);
         return *this;
       }
 
-      __attribute__((pure)) sigT<t_A, t_P> &operator=(sigT<t_A, t_P> &&_other) {
+      sigT<t_A, t_P> &operator=(sigT<t_A, t_P> &&_other) {
         d_v_ = std::move(_other.d_v_);
         return *this;
       }
@@ -1042,14 +1031,12 @@ struct RocqBug14174 {
 
       sigT2(sigT2<t_A, t_P, t_Q> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-      __attribute__((pure)) sigT2<t_A, t_P, t_Q> &
-      operator=(const sigT2<t_A, t_P, t_Q> &_other) {
+      sigT2<t_A, t_P, t_Q> &operator=(const sigT2<t_A, t_P, t_Q> &_other) {
         d_v_ = std::move(_other.clone().d_v_);
         return *this;
       }
 
-      __attribute__((pure)) sigT2<t_A, t_P, t_Q> &
-      operator=(sigT2<t_A, t_P, t_Q> &&_other) {
+      sigT2<t_A, t_P, t_Q> &operator=(sigT2<t_A, t_P, t_Q> &&_other) {
         d_v_ = std::move(_other.d_v_);
         return *this;
       }
@@ -1264,7 +1251,6 @@ struct RocqBug14174 {
       struct Inright {};
 
       using variant_t = std::variant<Inleft, Inright>;
-      using crane_element_type = t_A;
 
     private:
       // DATA
@@ -1282,12 +1268,12 @@ struct RocqBug14174 {
 
       sumor(sumor<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
 
-      __attribute__((pure)) sumor<t_A> &operator=(const sumor<t_A> &_other) {
+      sumor<t_A> &operator=(const sumor<t_A> &_other) {
         d_v_ = std::move(_other.clone().d_v_);
         return *this;
       }
 
-      __attribute__((pure)) sumor<t_A> &operator=(sumor<t_A> &&_other) {
+      sumor<t_A> &operator=(sumor<t_A> &&_other) {
         d_v_ = std::move(_other.d_v_);
         return *this;
       }
