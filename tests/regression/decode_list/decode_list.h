@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
@@ -165,20 +153,6 @@ struct DecodeList {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) instruction *operator->() { return this; }
-
-    __attribute__((pure)) const instruction *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = instruction(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }

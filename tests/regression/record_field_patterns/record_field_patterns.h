@@ -82,18 +82,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <typename T1, MapsTo<T1, T1, t_A> F0>
@@ -134,10 +122,6 @@ struct RecordFieldPatterns {
     unsigned int px;
     unsigned int py;
 
-    __attribute__((pure)) Point *operator->() { return this; }
-
-    __attribute__((pure)) const Point *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Point clone() const {
       return Point{(*(this)).px, (*(this)).py};
@@ -169,10 +153,6 @@ struct RecordFieldPatterns {
   struct ScaledPoint {
     unsigned int sp_x;
     unsigned int sp_y;
-
-    __attribute__((pure)) ScaledPoint *operator->() { return this; }
-
-    __attribute__((pure)) const ScaledPoint *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) ScaledPoint clone() const {
@@ -210,10 +190,6 @@ struct RecordFieldPatterns {
     Point seg_start;
     Point seg_end;
 
-    __attribute__((pure)) Segment *operator->() { return this; }
-
-    __attribute__((pure)) const Segment *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Segment clone() const {
       return Segment{(*(this)).seg_start.clone(), (*(this)).seg_end.clone()};
@@ -226,10 +202,6 @@ struct RecordFieldPatterns {
     unsigned int lo;
     unsigned int hi;
     unsigned int mid;
-
-    __attribute__((pure)) Bounded *operator->() { return this; }
-
-    __attribute__((pure)) const Bounded *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) Bounded clone() const {
@@ -247,10 +219,6 @@ struct RecordFieldPatterns {
   struct Container {
     std::any elem;
     unsigned int count;
-
-    __attribute__((pure)) Container *operator->() { return this; }
-
-    __attribute__((pure)) const Container *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) Container clone() const {

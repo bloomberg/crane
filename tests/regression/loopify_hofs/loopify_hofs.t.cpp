@@ -43,17 +43,15 @@ int main() {
   // Test drop_while
   auto lt3 = [](unsigned int x) { return x < 3; };
   auto dropped = LoopifyHofs::drop_while(lt3, lst);
-  ASSERT(std::get<List::Cons>(dropped->v()).d_a0 == 3u);
+  ASSERT(std::get<List::Cons>(dropped.v()).d_a0 == 3u);
 
   // Test take_while
   auto taken = LoopifyHofs::take_while(lt3, lst);
-  ASSERT(taken != nullptr);
 
   // Test all_pairs
   auto lst2a = List::cons(1u, List::cons(2u, List::nil()));
   auto lst2b = List::cons(3u, List::cons(4u, List::nil()));
   auto pairs = LoopifyHofs::all_pairs(lst2a, lst2b);
-  ASSERT(pairs != nullptr);
 
   // Test find_indices
   auto eq2 = [](unsigned int x) { return x == 2; };
@@ -62,12 +60,10 @@ int main() {
               2u, List::cons(
                       2u, List::cons(3u, List::nil()))));
   auto indices = LoopifyHofs::find_indices(eq2, lst3);
-  ASSERT(indices != nullptr);
 
   // Test delete_by
   auto eq = [](unsigned int x, unsigned int y) { return x == y; };
   auto deleted = LoopifyHofs::delete_by(eq, 2u, lst);
-  ASSERT(deleted != nullptr);
 
   // Test is_prefix_of
   auto prefix =
@@ -85,7 +81,6 @@ int main() {
                             PairList::cons(std::make_pair(1u, 30u),
                                                   PairList::nil())));
   auto values = LoopifyHofs::lookup_all(1u, assoc);
-  ASSERT(values != nullptr);
 
   std::cout << "All HOF tests passed!\n";
   return testStatus;

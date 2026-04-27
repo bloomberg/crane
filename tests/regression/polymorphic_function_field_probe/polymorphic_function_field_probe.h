@@ -16,10 +16,6 @@ struct PolymorphicFunctionFieldProbe {
   struct poly {
     std::function<std::any(std::any)> apply;
 
-    __attribute__((pure)) poly *operator->() { return this; }
-
-    __attribute__((pure)) const poly *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) poly clone() const { return poly{(*(this)).apply}; }
   };

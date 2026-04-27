@@ -85,18 +85,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Positive *operator->() { return this; }
-
-  __attribute__((pure)) const Positive *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Positive(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -156,18 +144,6 @@ public:
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
-
-  // ACCESSORS
-  __attribute__((pure)) N *operator->() { return this; }
-
-  __attribute__((pure)) const N *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = N(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -242,18 +218,6 @@ public:
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
-
-  // ACCESSORS
-  __attribute__((pure)) Z *operator->() { return this; }
-
-  __attribute__((pure)) const Z *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Z(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -332,20 +296,6 @@ struct Pos {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) mask *operator->() { return this; }
-
-    __attribute__((pure)) const mask *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = mask(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }

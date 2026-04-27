@@ -79,20 +79,6 @@ struct NameClashReturnThis {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) shape *operator->() { return this; }
-
-    __attribute__((pure)) const shape *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = shape(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 

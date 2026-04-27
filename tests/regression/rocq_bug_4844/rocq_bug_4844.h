@@ -85,18 +85,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Sum<t_A, t_B> *operator->() { return this; }
-
-  __attribute__((pure)) const Sum<t_A, t_B> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Sum<t_A, t_B>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -155,20 +143,6 @@ struct RocqBug4844 {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) box *operator->() { return this; }
-
-    __attribute__((pure)) const box *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = box(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }

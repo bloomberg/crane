@@ -123,22 +123,6 @@ struct UnitVoidEdge2 {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) pair<t_A, t_B> *operator->() { return this; }
-
-    __attribute__((pure)) const pair<t_A, t_B> *operator->() const {
-      return this;
-    }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = pair<t_A, t_B>(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 

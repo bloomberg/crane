@@ -81,18 +81,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) List<t_A> app(List<t_A> m) const {
@@ -185,20 +173,6 @@ struct LoopifyStructures {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) nested *operator->() { return this; }
-
-    __attribute__((pure)) const nested *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = nested(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -354,20 +328,6 @@ struct LoopifyStructures {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) quadtree *operator->() { return this; }
-
-    __attribute__((pure)) const quadtree *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = quadtree(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -892,20 +852,6 @@ struct LoopifyStructures {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) ltree *operator->() { return this; }
-
-    __attribute__((pure)) const ltree *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = ltree(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }

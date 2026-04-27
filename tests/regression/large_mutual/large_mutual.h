@@ -134,20 +134,6 @@ struct LargeMutual {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) stmt *operator->() { return this; }
-
-    __attribute__((pure)) const stmt *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = stmt(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
@@ -268,20 +254,6 @@ struct LargeMutual {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) expr *operator->() { return this; }
-
-    __attribute__((pure)) const expr *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = expr(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -425,20 +397,6 @@ struct LargeMutual {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) bexpr *operator->() { return this; }
-
-    __attribute__((pure)) const bexpr *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = bexpr(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }

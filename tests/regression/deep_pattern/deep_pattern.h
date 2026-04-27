@@ -78,20 +78,6 @@ struct DeepPattern {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) tree *operator->() { return this; }
-
-    __attribute__((pure)) const tree *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = tree(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int nested_let_match() const {
@@ -449,20 +435,6 @@ struct DeepPattern {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) list<t_A> *operator->() { return this; }
-
-    __attribute__((pure)) const list<t_A> *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = list<t_A>(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }

@@ -75,20 +75,6 @@ struct NameClashLetMatch {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) either *operator->() { return this; }
-
-    __attribute__((pure)) const either *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = either(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     /// Deeply nested let-match-let-match chain
@@ -237,20 +223,6 @@ struct NameClashLetMatch {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) triple *operator->() { return this; }
-
-    __attribute__((pure)) const triple *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = triple(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }

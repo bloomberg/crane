@@ -29,28 +29,22 @@ int main() {
   auto pairs = PairList::cons(std::make_pair(1u, 10u),
     PairList::cons(std::make_pair(2u, 20u), pair_nil));
   auto unzipped = LoopifyListPairing::unzip(pairs);
-  ASSERT(unzipped.first != nullptr && unzipped.second != nullptr);
 
   // swizzle
   auto swizzled = LoopifyListPairing::swizzle(l5);
-  ASSERT(swizzled.first != nullptr && swizzled.second != nullptr);
 
   // partition
   auto partitioned = LoopifyListPairing::partition(l5);
-  ASSERT(partitioned.first != nullptr && partitioned.second != nullptr);
 
   // zip_longest
   auto l3 = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(3u, nil)));
   auto zipped = LoopifyListPairing::zip_longest(l3, l5, 0u);
-  ASSERT(zipped != nullptr);
 
   // zipWith
   auto zw = LoopifyListPairing::zipWith(l3, l3);
-  ASSERT(zw != nullptr);
 
   // split_even_odd
   auto split = LoopifyListPairing::split_even_odd(l5);
-  ASSERT(split.first != nullptr && split.second != nullptr);
 
   if (testStatus > 0) {
     std::cerr << "Error: " << testStatus << " test(s) failed." << std::endl;

@@ -13,10 +13,6 @@ struct RecordProj {
     unsigned int x;
     unsigned int y;
 
-    __attribute__((pure)) Point *operator->() { return this; }
-
-    __attribute__((pure)) const Point *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Point clone() const {
       return Point{(*(this)).x, (*(this)).y};
@@ -27,12 +23,6 @@ struct RecordProj {
     unsigned int field1;
     unsigned int field2;
     unsigned int field3;
-
-    __attribute__((pure)) ComplexRecord *operator->() { return this; }
-
-    __attribute__((pure)) const ComplexRecord *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) ComplexRecord clone() const {

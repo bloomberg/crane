@@ -19,15 +19,15 @@ int main() {
     auto prepender = *opt;
 
     // Drop everything except the closure
-    outer.reset();
-    inner.reset();
+    outer = LL::mynil();
+    inner = L::mynil();
     opt.reset();
 
     auto arg = L::mycons(30u, L::mynil());
     auto result = prepender(arg);
 
     // Expect: app [10, 20] [30] = [10, 20, 30]
-    auto &c1 = std::get<1>(result->v());
+    auto &c1 = std::get<1>(result.v());
     assert(c1.d_a0 == 10u);
     auto &c2 = std::get<1>(c1.d_a1->v());
     assert(c2.d_a0 == 20u);
@@ -42,7 +42,7 @@ int main() {
     auto opt = ClosureEscapeMatch::make_pair_fn_opt(l);
     assert(opt.has_value());
     auto fn = *opt;
-    l.reset();
+    l = L::mynil();
     opt.reset();
     auto [fst, snd] = fn({});
     assert(fst == 42u);
@@ -57,8 +57,8 @@ int main() {
     auto opt = ClosureEscapeMatch::nested_closure_opt(a, b);
     assert(opt.has_value());
     auto fn = *opt;
-    a.reset();
-    b.reset();
+    a = L::mynil();
+    b = L::mynil();
     opt.reset();
     unsigned int r = fn(5u);
     assert(r == 305u);
@@ -70,12 +70,12 @@ int main() {
     auto inner = L::mycons(10u, L::mycons(20u, L::mynil()));
     auto outer = LL::mycons(inner, LL::mynil());
     auto [count, prepender] = ClosureEscapeMatch::closure_in_pair(outer);
-    outer.reset();
-    inner.reset();
+    outer = LL::mynil();
+    inner = L::mynil();
     assert(count == 2u);
     auto arg = L::mycons(30u, L::mynil());
     auto result = prepender(arg);
-    auto &c1 = std::get<1>(result->v());
+    auto &c1 = std::get<1>(result.v());
     assert(c1.d_a0 == 10u);
     std::cout << "closure_in_pair: OK" << std::endl;
   }

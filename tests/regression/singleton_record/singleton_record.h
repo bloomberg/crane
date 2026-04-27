@@ -13,10 +13,6 @@ struct SingletonRecord {
   struct wrapper {
     unsigned int value;
 
-    __attribute__((pure)) wrapper *operator->() { return this; }
-
-    __attribute__((pure)) const wrapper *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) wrapper clone() const {
       return wrapper{(*(this)).value};
@@ -31,10 +27,6 @@ struct SingletonRecord {
 
   template <typename t_A> struct box {
     t_A contents;
-
-    __attribute__((pure)) box<t_A> *operator->() { return this; }
-
-    __attribute__((pure)) const box<t_A> *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) box<t_A> clone() const {
@@ -54,10 +46,6 @@ struct SingletonRecord {
 
   struct fn_wrapper {
     std::function<unsigned int(unsigned int)> fn;
-
-    __attribute__((pure)) fn_wrapper *operator->() { return this; }
-
-    __attribute__((pure)) const fn_wrapper *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) fn_wrapper clone() const {

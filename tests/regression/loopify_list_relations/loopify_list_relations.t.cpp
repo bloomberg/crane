@@ -48,27 +48,21 @@ int main() {
 
   // zip
   auto zipped = LoopifyListRelations::zip(l3, l3);
-  ASSERT(zipped != nullptr);
 
   // zip3
   auto zipped3 = LoopifyListRelations::zip3(l3, l3, l3);
-  ASSERT(zipped3 != nullptr);
 
   // interleave
   auto inter = LoopifyListRelations::interleave(l3, l3);
-  ASSERT(inter != nullptr);
 
   // merge
   auto merged = LoopifyListRelations::merge(l3, l3);
-  ASSERT(merged != nullptr);
 
   // union
   auto un = LoopifyListRelations::union_(l3, l3);
-  ASSERT(un != nullptr);
 
   // intersection
   auto inter2 = LoopifyListRelations::intersection(l3, l5);
-  ASSERT(inter2 != nullptr);
 
   if (testStatus > 0) {
     std::cerr << "Error: " << testStatus << " test(s) failed." << std::endl;

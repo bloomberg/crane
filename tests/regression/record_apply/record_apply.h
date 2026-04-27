@@ -14,10 +14,6 @@ struct RecordApply {
     std::function<unsigned int(unsigned int, unsigned int)> f;
     unsigned int _tag;
 
-    __attribute__((pure)) R *operator->() { return this; }
-
-    __attribute__((pure)) const R *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) R clone() const {
       return R{(*(this)).f, (*(this))._tag};

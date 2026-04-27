@@ -37,7 +37,6 @@ int main() {
   // tree_to_list
   auto lst = LoopifyMoreTrees::tree_to_list(t3);
   // In-order: [1, 3, 2]
-  ASSERT(LoopifyMoreTrees::append_lists(lst, UIntList::nil()) != nullptr);
 
   // mirror_equal
   auto symmetric = Tree::node(t1, 5u, t1);
@@ -71,7 +70,6 @@ int main() {
 
   // tree_levels
   auto levels = LoopifyMoreTrees::tree_levels(t3);
-  ASSERT(levels != nullptr);
 
   if (testStatus > 0) {
     std::cerr << "Error: " << testStatus << " test(s) failed." << std::endl;

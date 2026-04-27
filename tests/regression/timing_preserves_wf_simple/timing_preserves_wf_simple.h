@@ -66,10 +66,6 @@ struct TimingPreservesWfSimple {
     unsigned int pc;
     unsigned int stack_len;
 
-    __attribute__((pure)) state *operator->() { return this; }
-
-    __attribute__((pure)) const state *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state clone() const {
       return state{(*(this)).regs_len, (*(this)).rom_len, (*(this)).pc,

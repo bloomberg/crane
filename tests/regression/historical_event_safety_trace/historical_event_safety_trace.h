@@ -82,18 +82,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
@@ -280,18 +268,6 @@ public:
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
-
-  // ACCESSORS
-  __attribute__((pure)) Uint *operator->() { return this; }
-
-  __attribute__((pure)) const Uint *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Uint(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -561,18 +537,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Uint0 *operator->() { return this; }
-
-  __attribute__((pure)) const Uint0 *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Uint0(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -639,18 +603,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Uint1 *operator->() { return this; }
-
-  __attribute__((pure)) const Uint1 *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Uint1(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -676,10 +628,6 @@ struct HistoricalEventSafetyTraceCase {
     unsigned int downstream_stage_cm;
     unsigned int gate_open_pct;
 
-    __attribute__((pure)) State *operator->() { return this; }
-
-    __attribute__((pure)) const State *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) State clone() const {
       return State{(*(this)).reservoir_level_cm, (*(this)).downstream_stage_cm,
@@ -699,10 +647,6 @@ struct HistoricalEventSafetyTraceCase {
     std::function<unsigned int(unsigned int)> reservoir_area_curve_cm2;
     unsigned int design_head_cm;
     unsigned int timestep_s;
-
-    __attribute__((pure)) PlantConfig *operator->() { return this; }
-
-    __attribute__((pure)) const PlantConfig *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) PlantConfig clone() const {
@@ -727,12 +671,6 @@ struct HistoricalEventSafetyTraceCase {
     unsigned int ir_timestep;
     unsigned int ir_inflow_cm;
 
-    __attribute__((pure)) InflowRecord *operator->() { return this; }
-
-    __attribute__((pure)) const InflowRecord *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) InflowRecord clone() const {
       return InflowRecord{(*(this)).ir_timestep, (*(this)).ir_inflow_cm};
@@ -750,10 +688,6 @@ struct HistoricalEventSafetyTraceCase {
     bool tr_final_safe;
     unsigned int tr_max_level;
     unsigned int tr_max_stage;
-
-    __attribute__((pure)) TestResult *operator->() { return this; }
-
-    __attribute__((pure)) const TestResult *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) TestResult clone() const {
@@ -832,12 +766,6 @@ struct HistoricalEventSafetyTraceCase {
 
   struct MonotoneRatingTable {
     RatingTable mrt_table;
-
-    __attribute__((pure)) MonotoneRatingTable *operator->() { return this; }
-
-    __attribute__((pure)) const MonotoneRatingTable *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) MonotoneRatingTable clone() const {
@@ -967,14 +895,6 @@ return 1000u; },
     TestResult hsb_test_2011;
     PlantConfig hsb_hoover_plant;
     TestResult hsb_hoover_test;
-
-    __attribute__((pure)) HistoricalScenarioBundle *operator->() {
-      return this;
-    }
-
-    __attribute__((pure)) const HistoricalScenarioBundle *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) HistoricalScenarioBundle clone() const {

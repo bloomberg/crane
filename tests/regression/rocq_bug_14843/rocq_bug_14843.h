@@ -16,10 +16,6 @@ struct RocqBug14843 {
     std::function<void(Unit)> f1;
     std::function<void(Unit)> f2;
 
-    __attribute__((pure)) r *operator->() { return this; }
-
-    __attribute__((pure)) const r *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) r clone() const {
       return r{(*(this)).f1, (*(this)).f2};
@@ -29,10 +25,6 @@ struct RocqBug14843 {
   struct r_ {
     std::function<void(Unit)> f1_;
     std::function<void(Unit)> f2_;
-
-    __attribute__((pure)) r_ *operator->() { return this; }
-
-    __attribute__((pure)) const r_ *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) r_ clone() const {

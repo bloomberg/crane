@@ -13,10 +13,6 @@ struct RegionMembershipBounds {
     unsigned int base_addr;
     unsigned int code_size;
 
-    __attribute__((pure)) layout *operator->() { return this; }
-
-    __attribute__((pure)) const layout *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) layout clone() const {
       return layout{(*(this)).base_addr, (*(this)).code_size};

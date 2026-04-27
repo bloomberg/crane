@@ -13,10 +13,6 @@ struct PrimProj {
     unsigned int px;
     unsigned int py;
 
-    __attribute__((pure)) point *operator->() { return this; }
-
-    __attribute__((pure)) const point *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) point clone() const {
       return point{(*(this)).px, (*(this)).py};

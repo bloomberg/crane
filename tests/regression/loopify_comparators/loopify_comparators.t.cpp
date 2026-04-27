@@ -33,15 +33,12 @@ int main() {
 
   // merge_by
   auto merged = LoopifyComparators::merge_by(l_sorted, l_sorted);
-  ASSERT(merged != nullptr);
 
   // insert_sorted
   auto inserted = LoopifyComparators::insert_sorted(3u, l_sorted);
-  ASSERT(inserted != nullptr);
 
   // insertion_sort
   auto sorted = LoopifyComparators::insertion_sort(l5);
-  ASSERT(sorted != nullptr);
 
   // is_sorted
   ASSERT(LoopifyComparators::is_sorted(l_sorted) == true);

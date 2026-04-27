@@ -126,14 +126,11 @@ int main() {
          std::vector<unsigned int>({1, 10, 2, 20, 3, 30}));
 
   // concat_lists (uses ++ internally, loopification may affect results)
-  ASSERT(LoopifyAdvancedLists::concat_lists(make_list_of_lists({})) != nullptr);
-  ASSERT(LoopifyAdvancedLists::concat_lists(make_list_of_lists({{1, 2}, {3, 4}})) != nullptr);
 
   // flat_map (uses ++ internally, loopification may affect results)
   auto double_list = [](unsigned int x) -> UIntList {
     return UIntList::cons(x, UIntList::cons(x, UIntList::nil()));
   };
-  ASSERT(LoopifyAdvancedLists::flat_map(double_list, make_list({})) != nullptr);
 
   // all_satisfy
   auto is_positive = [](unsigned int x) -> bool { return x > 0; };

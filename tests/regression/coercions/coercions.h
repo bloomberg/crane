@@ -19,10 +19,6 @@ struct Coercions {
   struct Wrapper {
     unsigned int unwrap;
 
-    __attribute__((pure)) Wrapper *operator->() { return this; }
-
-    __attribute__((pure)) const Wrapper *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Wrapper clone() const {
       return Wrapper{(*(this)).unwrap};
@@ -35,10 +31,6 @@ struct Coercions {
 
   struct BoolBox {
     bool unbox;
-
-    __attribute__((pure)) BoolBox *operator->() { return this; }
-
-    __attribute__((pure)) const BoolBox *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) BoolBox clone() const {
@@ -53,10 +45,6 @@ struct Coercions {
 
   struct Transform {
     std::function<unsigned int(unsigned int)> apply_transform;
-
-    __attribute__((pure)) Transform *operator->() { return this; }
-
-    __attribute__((pure)) const Transform *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) Transform clone() const {

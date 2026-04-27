@@ -7845,39 +7845,7 @@ let gen_record_cpp name fields ind =
         VPublic,
         SAccessors )
     in
-    [
-      ( Fmethod
-          {
-            mf_name = Id.of_string_soft "operator->";
-            mf_tparams = [];
-            mf_ret_type = Tptr self_ty;
-            mf_params = [];
-            mf_body = [Sreturn (Some CPPthis)];
-            mf_is_const = false;
-            mf_is_static = false;
-            mf_is_inline = false;
-            mf_this_pos = 0;
-            mf_no_pure = false;
-          },
-        VPublic,
-        SNoTag );
-      ( Fmethod
-          {
-            mf_name = Id.of_string_soft "operator->";
-            mf_tparams = [];
-            mf_ret_type = Tptr (Tmod (TMconst, self_ty));
-            mf_params = [];
-            mf_body = [Sreturn (Some CPPthis)];
-            mf_is_const = true;
-            mf_is_static = false;
-            mf_is_inline = false;
-            mf_this_pos = 0;
-            mf_no_pure = false;
-          },
-        VPublic,
-        SNoTag );
-      clone_method;
-    ]
+    [clone_method]
   in
   let ty_vars = List.map (fun x -> (TTtypename, x)) vars in
   Dstruct
@@ -10675,45 +10643,10 @@ let gen_ind_header ?(consarg_names = [||]) vars name cnames tys =
                     constr )
                  [(make_def, VPublic, SNoTag)]
            in
-           let self_ty = Tglob (c, ty_vars, []) in
-           let value_compat_methods =
-             [
-               ( Fmethod
-                   {
-                     mf_name = Id.of_string_soft "operator->";
-                     mf_tparams = [];
-                     mf_ret_type = Tptr self_ty;
-                     mf_params = [];
-                     mf_body = [Sreturn (Some CPPthis)];
-                     mf_is_const = false;
-                     mf_is_static = false;
-                     mf_is_inline = false;
-                     mf_this_pos = 0;
-                     mf_no_pure = false;
-                   },
-                 VPublic,
-                 SNoTag );
-               ( Fmethod
-                   {
-                     mf_name = Id.of_string_soft "operator->";
-                     mf_tparams = [];
-                     mf_ret_type = Tptr (Tmod (TMconst, self_ty));
-                     mf_params = [];
-                     mf_body = [Sreturn (Some CPPthis)];
-                     mf_is_const = true;
-                     mf_is_static = false;
-                     mf_is_inline = false;
-                     mf_this_pos = 0;
-                     mf_no_pure = false;
-                   },
-                 VPublic,
-                 SNoTag );
-             ]
-           in
            Dstruct
              {
                ds_ref = c;
-               ds_fields = fields @ value_compat_methods;
+               ds_fields = fields;
                ds_tparams = templates;
                ds_constraint = None;
                ds_needs_shared_from_this = false;
@@ -12435,110 +12368,6 @@ let gen_ind_header_v2
           ]
       in
 
-      (* Temporary compatibility for the value-type migration: many existing
-         handwritten tests and some generated call paths still use pointer
-         syntax against inductive values.  Returning [this] keeps [x->m()]
-         working for stack values, and nullptr comparisons treat every value as
-         present.  The unique_ptr phase should replace these shims with the
-         final value/reference API. *)
-      let value_compat_methods =
-        if is_coinductive then
-          []
-        else
-          [
-            ( Fmethod
-                {
-                  mf_name = Id.of_string_soft "operator->";
-                  mf_tparams = [];
-                  mf_ret_type = Tptr self_ty;
-                  mf_params = [];
-                  mf_body = [Sreturn (Some CPPthis)];
-                  mf_is_const = false;
-                  mf_is_static = false;
-                  mf_is_inline = false;
-                  mf_this_pos = 0;
-                  mf_no_pure = false;
-                },
-              VPublic,
-              SAccessors );
-            ( Fmethod
-                {
-                  mf_name = Id.of_string_soft "operator->";
-                  mf_tparams = [];
-                  mf_ret_type = Tptr (Tmod (TMconst, self_ty));
-                  mf_params = [];
-                  mf_body = [Sreturn (Some CPPthis)];
-                  mf_is_const = true;
-                  mf_is_static = false;
-                  mf_is_inline = false;
-                  mf_this_pos = 0;
-                  mf_no_pure = false;
-                },
-              VPublic,
-              SAccessors );
-            ( Fmethod
-                {
-                  mf_name = Id.of_string_soft "operator!=";
-                  mf_tparams = [];
-                  mf_ret_type = Tid (Id.of_string "bool", []);
-                  mf_params =
-                    [(Id.of_string "_",
-                      Tid_external (Id.of_string_soft "std::nullptr_t", []))];
-                  mf_body = [Sreturn (Some (CPPbool true))];
-                  mf_is_const = true;
-                  mf_is_static = false;
-                  mf_is_inline = false;
-                  mf_this_pos = 0;
-                  mf_no_pure = false;
-                },
-              VPublic,
-              SAccessors );
-            ( Fmethod
-                {
-                  mf_name = Id.of_string_soft "operator==";
-                  mf_tparams = [];
-                  mf_ret_type = Tid (Id.of_string "bool", []);
-                  mf_params =
-                    [(Id.of_string "_",
-                      Tid_external (Id.of_string_soft "std::nullptr_t", []))];
-                  mf_body = [Sreturn (Some (CPPbool false))];
-                  mf_is_const = true;
-                  mf_is_static = false;
-                  mf_is_inline = false;
-                  mf_this_pos = 0;
-                  mf_no_pure = false;
-                },
-              VPublic,
-              SAccessors );
-            ( Fmethod
-                {
-                  mf_name = Id.of_string "reset";
-                  mf_tparams = [];
-                  mf_ret_type = Tvoid;
-                  mf_params = [];
-                  mf_body =
-                    [
-                      Sderef_asgn
-                        ( CPPthis,
-                          CPPfun_call
-                            ( CPPraw
-                                (render_cpp_type_for_raw_template
-                                   ~no_custom_inductives:
-                                     (Refset'.add name Refset'.empty)
-                                   self_ty),
-                              [] ) );
-                    ];
-                  mf_is_const = false;
-                  mf_is_static = false;
-                  mf_is_inline = false;
-                  mf_this_pos = 0;
-                  mf_no_pure = false;
-                },
-              VPublic,
-              SManipulators );
-          ]
-      in
-
       (* 6. Generate methods from method candidates using shared helper *)
       let method_fields =
         List.map (gen_single_method name vars) method_candidates
@@ -12593,7 +12422,6 @@ let gen_ind_header_v2
         @ factory_methods
         @ lazy_factory
         @ v_mut_accessor
-        @ value_compat_methods
         @ method_manipulators
         @ [v_accessor]
         @ method_accessors

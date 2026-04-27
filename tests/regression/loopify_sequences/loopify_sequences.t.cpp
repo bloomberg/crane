@@ -32,16 +32,13 @@ int main() {
 
   // Test join_with
   auto joined = LoopifySequences::join_with(0u, lst);
-  ASSERT(joined != nullptr);
 
   // Test collatz_list
   auto coll = LoopifySequences::collatz_list(10u);
-  ASSERT(coll != nullptr);
   ASSERT(std::holds_alternative<List::Cons>(coll.v()));
 
   // Test run_sum
   auto running = LoopifySequences::run_sum(lst);
-  ASSERT(running != nullptr);
   ASSERT(std::holds_alternative<List::Cons>(running.v()));
   ASSERT(std::get<List::Cons>(running.v()).d_a0 == 0u);
 
@@ -53,7 +50,6 @@ int main() {
   auto lists = ListList::cons(
       l1, ListList::cons(l2, ListList::nil()));
   auto inter = LoopifySequences::intercalate(sep, lists);
-  ASSERT(inter != nullptr);
 
   std::cout << "All sequence tests passed!\n";
   return testStatus;

@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -105,12 +93,6 @@ struct RocqBug16288 {
     template <typename t_elt> struct M_t_NonEmpty {
       List<t_elt> M_m;
 
-      __attribute__((pure)) M_t_NonEmpty<t_elt> *operator->() { return this; }
-
-      __attribute__((pure)) const M_t_NonEmpty<t_elt> *operator->() const {
-        return this;
-      }
-
       // ACCESSORS
       __attribute__((pure)) M_t_NonEmpty<t_elt> clone() const {
         return M_t_NonEmpty<t_elt>{(*(this)).M_m.clone()};
@@ -120,14 +102,6 @@ struct RocqBug16288 {
     template <typename t_X, typename t_Y> struct M_t_NonEmpty_ {
       t_X a;
       t_Y b;
-
-      __attribute__((pure)) M_t_NonEmpty_<t_X, t_Y> *operator->() {
-        return this;
-      }
-
-      __attribute__((pure)) const M_t_NonEmpty_<t_X, t_Y> *operator->() const {
-        return this;
-      }
 
       // ACCESSORS
       __attribute__((pure)) M_t_NonEmpty_<t_X, t_Y> clone() const {

@@ -29,27 +29,21 @@ int main() {
 
   // take_while
   auto taken = LoopifyPredicates::take_while(is_small, l5);
-  ASSERT(taken != nullptr);
 
   // drop_while
   auto dropped = LoopifyPredicates::drop_while(is_small, l5);
-  ASSERT(dropped != nullptr);
 
   // span
   auto spanned = LoopifyPredicates::span(is_small, l5);
-  ASSERT(spanned.first != nullptr && spanned.second != nullptr);
 
   // break_at
   auto broken = LoopifyPredicates::break_at(is_small, l5);
-  ASSERT(broken.first != nullptr && broken.second != nullptr);
 
   // filter
   auto filtered = LoopifyPredicates::filter(is_even, l5);
-  ASSERT(filtered != nullptr);
 
   // reject
   auto rejected = LoopifyPredicates::reject(is_even, l5);
-  ASSERT(rejected != nullptr);
 
   // forall_pred
   ASSERT(LoopifyPredicates::forall_pred(is_small, nil) == true);
@@ -67,17 +61,14 @@ int main() {
 
   // find_indices
   auto indices = LoopifyPredicates::find_indices(is_even, l5);
-  ASSERT(indices != nullptr);
 
   // delete_by
   auto deleted = LoopifyPredicates::delete_by(eq, 3u, l5);
-  ASSERT(deleted != nullptr);
 
   // remove_all
   auto l_dups = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(
     1u, UIntList::cons(3u, UIntList::cons(1u, nil)))));
   auto removed = LoopifyPredicates::remove_all(1u, l_dups);
-  ASSERT(removed != nullptr);
 
   if (testStatus > 0) {
     std::cerr << "Error: " << testStatus << " test(s) failed." << std::endl;

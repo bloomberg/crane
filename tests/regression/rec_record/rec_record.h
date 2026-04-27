@@ -84,20 +84,6 @@ struct RecRecord {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) rlist<t_A> *operator->() { return this; }
-
-    __attribute__((pure)) const rlist<t_A> *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = rlist<t_A>(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
@@ -124,10 +110,6 @@ struct RecRecord {
   struct RNode {
     unsigned int rn_value;
     std::optional<std::unique_ptr<RNode>> rn_next;
-
-    __attribute__((pure)) RNode *operator->() { return this; }
-
-    __attribute__((pure)) const RNode *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) RNode clone() const {
@@ -161,10 +143,6 @@ struct RecRecord {
     unsigned int emp_name;
     unsigned int emp_dept;
 
-    __attribute__((pure)) Employee *operator->() { return this; }
-
-    __attribute__((pure)) const Employee *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Employee clone() const {
       return Employee{(*(this)).emp_name, (*(this)).emp_dept};
@@ -175,10 +153,6 @@ struct RecRecord {
     unsigned int dept_id;
     Employee dept_head;
     unsigned int dept_size;
-
-    __attribute__((pure)) Department *operator->() { return this; }
-
-    __attribute__((pure)) const Department *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) Department clone() const {

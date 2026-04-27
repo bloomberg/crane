@@ -88,20 +88,6 @@ struct MatchRefAfterMove {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) mylist<t_A> *operator->() { return this; }
-
-    __attribute__((pure)) const mylist<t_A> *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = mylist<t_A>(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     /// Pattern 1: Match on a list, return head AND apply a function
@@ -198,22 +184,6 @@ struct MatchRefAfterMove {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) mypair<t_A, t_B> *operator->() { return this; }
-
-    __attribute__((pure)) const mypair<t_A, t_B> *operator->() const {
-      return this;
-    }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = mypair<t_A, t_B>(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -396,22 +366,6 @@ struct MatchRefAfterMove {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) either<t_A, t_B> *operator->() { return this; }
-
-    __attribute__((pure)) const either<t_A, t_B> *operator->() const {
-      return this;
-    }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = either<t_A, t_B>(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }

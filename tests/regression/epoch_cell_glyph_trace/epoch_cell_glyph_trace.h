@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 enum class Comparison { e_EQ, e_LT, e_GT };
@@ -169,18 +157,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Positive *operator->() { return this; }
-
-  __attribute__((pure)) const Positive *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Positive(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -255,18 +231,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Z *operator->() { return this; }
-
-  __attribute__((pure)) const Z *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Z(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -325,10 +289,6 @@ struct BinInt {
 struct Q {
   Z Qnum;
   Positive Qden;
-
-  __attribute__((pure)) Q *operator->() { return this; }
-
-  __attribute__((pure)) const Q *operator->() const { return this; }
 
   // ACCESSORS
   __attribute__((pure)) Q clone() const {
@@ -517,12 +477,6 @@ struct EpochCellGlyphTraceCase {
     Z games_dial;
     Z zodiac_position;
 
-    __attribute__((pure)) MechanismState *operator->() { return this; }
-
-    __attribute__((pure)) const MechanismState *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) MechanismState clone() const {
       return MechanismState{
@@ -631,12 +585,6 @@ struct EpochCellGlyphTraceCase {
     Z he_saros_member;
     Q he_magnitude;
     bool he_visible_mediterranean;
-
-    __attribute__((pure)) HistoricalEclipse *operator->() { return this; }
-
-    __attribute__((pure)) const HistoricalEclipse *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) HistoricalEclipse clone() const {
@@ -839,12 +787,6 @@ struct EpochCellGlyphTraceCase {
     Z reading_cell;
     DialGlyph reading_glyph;
 
-    __attribute__((pure)) EpochReading *operator->() { return this; }
-
-    __attribute__((pure)) const EpochReading *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) EpochReading clone() const {
       return EpochReading{
@@ -867,10 +809,6 @@ struct EpochCellGlyphTraceCase {
     Z ve_year;
     Z ve_month;
     HistoricalEclipse ve_eclipse;
-
-    __attribute__((pure)) ValidEpoch *operator->() { return this; }
-
-    __attribute__((pure)) const ValidEpoch *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) ValidEpoch clone() const {

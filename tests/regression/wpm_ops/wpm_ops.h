@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -131,10 +119,6 @@ struct WpmOps {
     unsigned int prom_data1;
     bool prom_enable1;
 
-    __attribute__((pure)) state1 *operator->() { return this; }
-
-    __attribute__((pure)) const state1 *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state1 clone() const {
       return state1{(*(this)).rom1.clone(), (*(this)).prom_addr1,
@@ -164,10 +148,6 @@ struct WpmOps {
     unsigned int prom_data2;
     bool prom_enable2;
 
-    __attribute__((pure)) state2 *operator->() { return this; }
-
-    __attribute__((pure)) const state2 *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state2 clone() const {
       return state2{(*(this)).ram_sys2.clone(), (*(this)).rom2.clone(),
@@ -196,10 +176,6 @@ struct WpmOps {
     unsigned int prom_data3;
     bool prom_enable3;
 
-    __attribute__((pure)) state3 *operator->() { return this; }
-
-    __attribute__((pure)) const state3 *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state3 clone() const {
       return state3{(*(this)).regs3.clone(), (*(this)).rom3.clone(),
@@ -227,10 +203,6 @@ struct WpmOps {
     unsigned int prom_data4;
     bool prom_enable4;
 
-    __attribute__((pure)) state4 *operator->() { return this; }
-
-    __attribute__((pure)) const state4 *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state4 clone() const {
       return state4{(*(this)).rom4.clone(), (*(this)).prom_addr4,
@@ -254,10 +226,6 @@ struct WpmOps {
     unsigned int prom_addr5;
     unsigned int prom_data5;
     bool prom_enable5;
-
-    __attribute__((pure)) state5 *operator->() { return this; }
-
-    __attribute__((pure)) const state5 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) state5 clone() const {
@@ -283,10 +251,6 @@ struct WpmOps {
     unsigned int prom_addr6;
     unsigned int prom_data6;
     bool prom_enable6;
-
-    __attribute__((pure)) state6 *operator->() { return this; }
-
-    __attribute__((pure)) const state6 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) state6 clone() const {

@@ -16,10 +16,6 @@ struct JcnOps {
     bool test_pin;
     unsigned int pc;
 
-    __attribute__((pure)) state *operator->() { return this; }
-
-    __attribute__((pure)) const state *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state clone() const {
       return state{(*(this)).acc, (*(this)).carry, (*(this)).test_pin,

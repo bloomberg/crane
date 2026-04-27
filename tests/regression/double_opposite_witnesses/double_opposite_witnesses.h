@@ -69,20 +69,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) SigT<t_A, t_P> *operator->() { return this; }
-
-  __attribute__((pure)) const SigT<t_A, t_P> *operator->() const {
-    return this;
-  }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = SigT<t_A, t_P>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A projT1() const {
@@ -159,20 +145,6 @@ struct DoubleOppositeWitnessesCase {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) Path<t_A> *operator->() { return this; }
-
-    __attribute__((pure)) const Path<t_A> *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = Path<t_A>(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
@@ -208,10 +180,6 @@ struct DoubleOppositeWitnessesCase {
   struct Functor {
     std::function<Obj(Obj)> object_of;
     std::function<Hom(Obj, Obj, Hom)> morphism_of;
-
-    __attribute__((pure)) Functor *operator->() { return this; }
-
-    __attribute__((pure)) const Functor *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) Functor clone() const {

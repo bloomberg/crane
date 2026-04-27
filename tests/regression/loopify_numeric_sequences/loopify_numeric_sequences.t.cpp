@@ -25,7 +25,6 @@ int main() {
 
   // collatz_sequence
   auto seq = LoopifyNumericSequences::collatz_sequence(16u);
-  ASSERT(seq != nullptr);
 
   // tribonacci
   ASSERT(LoopifyNumericSequences::tribonacci(0u) == 0u);

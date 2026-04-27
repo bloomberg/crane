@@ -25,18 +25,14 @@ int main() {
   // Test unique pair operations
   auto gt1 = [](unsigned int x) { return x > 1; };
   auto partitioned = LoopifyPairs::partition(gt1, l);
-  ASSERT(partitioned.first != nullptr);
 
   auto l2 = List::cons(
       4u, List::cons(5u, List::cons(6u, List::nil())));
   auto zipped = LoopifyPairs::zip(l, l2);
-  ASSERT(zipped != nullptr);
 
   auto split = LoopifyPairs::split_at(2u, l);
-  ASSERT(split.first != nullptr);
 
   auto sw = LoopifyPairs::swizzle(l);
-  ASSERT(sw.first != nullptr);
 
   auto mm = LoopifyPairs::min_max(l);
   ASSERT(mm.first == 1u);

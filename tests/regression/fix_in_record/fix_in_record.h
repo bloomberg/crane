@@ -25,10 +25,6 @@ struct FixInRecord {
     unsigned int label;
     std::function<unsigned int(unsigned int)> fn;
 
-    __attribute__((pure)) fn_box *operator->() { return this; }
-
-    __attribute__((pure)) const fn_box *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) fn_box clone() const {
       return fn_box{(*(this)).label, (*(this)).fn};

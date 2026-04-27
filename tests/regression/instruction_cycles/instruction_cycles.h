@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <MapsTo<bool, t_A> F0>
@@ -111,10 +99,6 @@ struct InstructionCycles {
     unsigned int acc1;
     bool carry1;
     bool test_pin1;
-
-    __attribute__((pure)) state1 *operator->() { return this; }
-
-    __attribute__((pure)) const state1 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) state1 clone() const {
@@ -183,22 +167,6 @@ struct InstructionCycles {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) instruction1 *operator->() { return this; }
-
-    __attribute__((pure)) const instruction1 *operator->() const {
-      return this;
-    }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = instruction1(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -322,22 +290,6 @@ struct InstructionCycles {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) instruction2 *operator->() { return this; }
-
-    __attribute__((pure)) const instruction2 *operator->() const {
-      return this;
-    }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = instruction2(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, unsigned int> F0>
@@ -365,10 +317,6 @@ struct InstructionCycles {
 
   struct state2 {
     unsigned int acc2;
-
-    __attribute__((pure)) state2 *operator->() { return this; }
-
-    __attribute__((pure)) const state2 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) state2 clone() const {
@@ -602,10 +550,6 @@ struct InstructionCycles {
     bool carry5;
     bool test5;
 
-    __attribute__((pure)) state5 *operator->() { return this; }
-
-    __attribute__((pure)) const state5 *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state5 clone() const {
       return state5{(*(this)).acc5, (*(this)).carry5, (*(this)).test5};
@@ -684,22 +628,6 @@ struct InstructionCycles {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) instruction5 *operator->() { return this; }
-
-    __attribute__((pure)) const instruction5 *operator->() const {
-      return this;
-    }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = instruction5(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -789,10 +717,6 @@ struct InstructionCycles {
   struct state6 {
     unsigned int acc6;
 
-    __attribute__((pure)) state6 *operator->() { return this; }
-
-    __attribute__((pure)) const state6 *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state6 clone() const {
       return state6{(*(this)).acc6};
@@ -831,10 +755,6 @@ struct InstructionCycles {
 
   struct state7 {
     unsigned int acc7;
-
-    __attribute__((pure)) state7 *operator->() { return this; }
-
-    __attribute__((pure)) const state7 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) state7 clone() const {

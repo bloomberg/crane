@@ -13,10 +13,6 @@ struct RecordUseAfterMove {
     unsigned int payload;
     bool enabled;
 
-    __attribute__((pure)) box *operator->() { return this; }
-
-    __attribute__((pure)) const box *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) box clone() const {
       return box{(*(this)).payload, (*(this)).enabled};

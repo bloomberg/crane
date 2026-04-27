@@ -14,10 +14,6 @@ struct RecordMatch {
     unsigned int f2;
     unsigned int f3;
 
-    __attribute__((pure)) MyRec *operator->() { return this; }
-
-    __attribute__((pure)) const MyRec *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) MyRec clone() const {
       return MyRec{(*(this)).f1, (*(this)).f2, (*(this)).f3};

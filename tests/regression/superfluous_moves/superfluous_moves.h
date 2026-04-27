@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -99,10 +87,6 @@ struct SuperfluousMoves {
   /// Tiny position record so projections become shared-pointer field accesses.
   struct position {
     unsigned int px;
-
-    __attribute__((pure)) position *operator->() { return this; }
-
-    __attribute__((pure)) const position *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) position clone() const {
@@ -146,10 +130,6 @@ struct SuperfluousMoves {
     List<position> ghosts;
     unsigned int lives;
 
-    __attribute__((pure)) game_state *operator->() { return this; }
-
-    __attribute__((pure)) const game_state *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) game_state clone() const {
       return game_state{(*(this)).pacpos.clone(), (*(this)).ghosts.clone(),
@@ -162,10 +142,6 @@ struct SuperfluousMoves {
     game_state ls_game;
     position ls_prev_pac;
     List<position> ls_prev_ghosts;
-
-    __attribute__((pure)) loop_state *operator->() { return this; }
-
-    __attribute__((pure)) const loop_state *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) loop_state clone() const {

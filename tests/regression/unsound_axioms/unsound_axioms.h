@@ -27,10 +27,6 @@ struct UnsoundAxioms {
     unsigned int f1;
     unsigned int f2;
 
-    __attribute__((pure)) Rec *operator->() { return this; }
-
-    __attribute__((pure)) const Rec *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Rec clone() const {
       return Rec{(*(this)).f1, (*(this)).f2};
@@ -43,10 +39,6 @@ struct UnsoundAxioms {
   struct ProofRec {
     unsigned int pf_val;
     unsigned int pf_val2;
-
-    __attribute__((pure)) ProofRec *operator->() { return this; }
-
-    __attribute__((pure)) const ProofRec *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) ProofRec clone() const {

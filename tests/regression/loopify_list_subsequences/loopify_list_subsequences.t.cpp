@@ -25,19 +25,15 @@ int main() {
 
   // tails
   auto t = LoopifyListSubsequences::tails(l5);
-  ASSERT(t != nullptr);
 
   // inits
   auto i = LoopifyListSubsequences::inits(l5);
-  ASSERT(i != nullptr);
 
   // init_list
   auto init = LoopifyListSubsequences::init_list(l5);
-  ASSERT(init != nullptr);
 
   // snoc
   auto snoced = LoopifyListSubsequences::snoc(l5, 99u);
-  ASSERT(snoced != nullptr);
 
   // last_elem
   ASSERT(LoopifyListSubsequences::last_elem(l5) == 5u);
@@ -47,7 +43,6 @@ int main() {
 
   // split_at
   auto split = LoopifyListSubsequences::split_at(2u, l5);
-  ASSERT(split.first != nullptr && split.second != nullptr);
 
   if (testStatus > 0) {
     std::cerr << "Error: " << testStatus << " test(s) failed." << std::endl;

@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -104,12 +92,6 @@ struct UniversePoly {
   template <typename t_A, typename t_B> struct ppair {
     t_A pfst;
     t_B psnd;
-
-    __attribute__((pure)) ppair<t_A, t_B> *operator->() { return this; }
-
-    __attribute__((pure)) const ppair<t_A, t_B> *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) ppair<t_A, t_B> clone() const {
@@ -190,22 +172,6 @@ struct UniversePoly {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) poption<t_A> *operator->() { return this; }
-
-    __attribute__((pure)) const poption<t_A> *operator->() const {
-      return this;
-    }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = poption<t_A>(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }

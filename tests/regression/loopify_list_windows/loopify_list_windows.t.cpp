@@ -34,7 +34,6 @@ int main() {
   // sliding_pairs
   auto pairs = LoopifyListWindows::sliding_pairs(l5);
   // [(1,2), (2,3), (3,4), (4,5)]
-  ASSERT(pairs != nullptr);
 
   // take
   ASSERT(LoopifyListWindows::len(LoopifyListWindows::take(0u, l5)) == 0u);
@@ -43,25 +42,20 @@ int main() {
 
   // inits
   auto ini = LoopifyListWindows::inits(l3);
-  ASSERT(ini != nullptr);
 
   // tails
   auto tai = LoopifyListWindows::tails(l3);
-  ASSERT(tai != nullptr);
 
   // windows
   auto wins = LoopifyListWindows::windows(3u, l5);
-  ASSERT(wins != nullptr);
 
   // chunks
   auto chnks = LoopifyListWindows::chunks(2u, l5);
-  ASSERT(chnks != nullptr);
 
   // group
   auto l_dups = UIntList::cons(1u, UIntList::cons(1u, UIntList::cons(
     2u, UIntList::cons(2u, UIntList::cons(2u, UIntList::cons(3u, nil))))));
   auto grouped = LoopifyListWindows::group(l_dups);
-  ASSERT(grouped != nullptr);
 
   if (testStatus > 0) {
     std::cerr << "Error: " << testStatus << " test(s) failed." << std::endl;

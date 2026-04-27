@@ -82,18 +82,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -224,10 +212,6 @@ struct DepRecord {
   struct Tagged {
     Tag the_tag;
     tag_type the_value;
-
-    __attribute__((pure)) Tagged *operator->() { return this; }
-
-    __attribute__((pure)) const Tagged *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) Tagged clone() const {

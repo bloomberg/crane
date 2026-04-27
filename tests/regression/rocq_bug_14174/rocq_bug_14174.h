@@ -73,18 +73,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Nat *operator->() { return this; }
-
-  __attribute__((pure)) const Nat *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Nat(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -155,18 +143,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Option<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const Option<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Option<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -224,20 +200,6 @@ public:
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
-
-  // ACCESSORS
-  __attribute__((pure)) Prod<t_A, t_B> *operator->() { return this; }
-
-  __attribute__((pure)) const Prod<t_A, t_B> *operator->() const {
-    return this;
-  }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Prod<t_A, t_B>(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -308,18 +270,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Sig<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const Sig<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Sig<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -374,18 +324,6 @@ public:
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
-
-  // ACCESSORS
-  __attribute__((pure)) Sig2<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const Sig2<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Sig2<t_A>(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -445,20 +383,6 @@ public:
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
-
-  // ACCESSORS
-  __attribute__((pure)) SigT<t_A, t_P> *operator->() { return this; }
-
-  __attribute__((pure)) const SigT<t_A, t_P> *operator->() const {
-    return this;
-  }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = SigT<t_A, t_P>(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -521,20 +445,6 @@ public:
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
-
-  // ACCESSORS
-  __attribute__((pure)) SigT2<t_A, t_P, t_Q> *operator->() { return this; }
-
-  __attribute__((pure)) const SigT2<t_A, t_P, t_Q> *operator->() const {
-    return this;
-  }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = SigT2<t_A, t_P, t_Q>(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -610,18 +520,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Sumor<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const Sumor<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Sumor<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -678,22 +576,6 @@ struct RocqBug14174 {
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }
-
-      // ACCESSORS
-      __attribute__((pure)) sig<t_A> *operator->() { return this; }
-
-      __attribute__((pure)) const sig<t_A> *operator->() const { return this; }
-
-      __attribute__((pure)) bool operator!=(std::nullptr_t) const {
-        return true;
-      }
-
-      __attribute__((pure)) bool operator==(std::nullptr_t) const {
-        return false;
-      }
-
-      // MANIPULATORS
-      void reset() { *this = sig<t_A>(); }
 
       // ACCESSORS
       __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -796,22 +678,6 @@ struct RocqBug14174 {
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }
-
-      // ACCESSORS
-      __attribute__((pure)) sig2<t_A> *operator->() { return this; }
-
-      __attribute__((pure)) const sig2<t_A> *operator->() const { return this; }
-
-      __attribute__((pure)) bool operator!=(std::nullptr_t) const {
-        return true;
-      }
-
-      __attribute__((pure)) bool operator==(std::nullptr_t) const {
-        return false;
-      }
-
-      // MANIPULATORS
-      void reset() { *this = sig2<t_A>(); }
 
       // ACCESSORS
       __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -921,24 +787,6 @@ struct RocqBug14174 {
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }
-
-      // ACCESSORS
-      __attribute__((pure)) sigT<t_A, t_P> *operator->() { return this; }
-
-      __attribute__((pure)) const sigT<t_A, t_P> *operator->() const {
-        return this;
-      }
-
-      __attribute__((pure)) bool operator!=(std::nullptr_t) const {
-        return true;
-      }
-
-      __attribute__((pure)) bool operator==(std::nullptr_t) const {
-        return false;
-      }
-
-      // MANIPULATORS
-      void reset() { *this = sigT<t_A, t_P>(); }
 
       // ACCESSORS
       __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -1063,24 +911,6 @@ struct RocqBug14174 {
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }
-
-      // ACCESSORS
-      __attribute__((pure)) sigT2<t_A, t_P, t_Q> *operator->() { return this; }
-
-      __attribute__((pure)) const sigT2<t_A, t_P, t_Q> *operator->() const {
-        return this;
-      }
-
-      __attribute__((pure)) bool operator!=(std::nullptr_t) const {
-        return true;
-      }
-
-      __attribute__((pure)) bool operator==(std::nullptr_t) const {
-        return false;
-      }
-
-      // MANIPULATORS
-      void reset() { *this = sigT2<t_A, t_P, t_Q>(); }
 
       // ACCESSORS
       __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -1312,24 +1142,6 @@ struct RocqBug14174 {
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }
-
-      // ACCESSORS
-      __attribute__((pure)) sumor<t_A> *operator->() { return this; }
-
-      __attribute__((pure)) const sumor<t_A> *operator->() const {
-        return this;
-      }
-
-      __attribute__((pure)) bool operator!=(std::nullptr_t) const {
-        return true;
-      }
-
-      __attribute__((pure)) bool operator==(std::nullptr_t) const {
-        return false;
-      }
-
-      // MANIPULATORS
-      void reset() { *this = sumor<t_A>(); }
 
       // ACCESSORS
       __attribute__((pure)) const variant_t &v() const { return d_v_; }

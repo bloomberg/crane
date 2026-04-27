@@ -13,10 +13,6 @@ struct PortWriteNibbleMask {
   struct ram_chip {
     unsigned int chip_port;
 
-    __attribute__((pure)) ram_chip *operator->() { return this; }
-
-    __attribute__((pure)) const ram_chip *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) ram_chip clone() const {
       return ram_chip{(*(this)).chip_port};

@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
@@ -143,10 +131,6 @@ struct PromOps {
     unsigned int prom_data1;
     bool prom_enable1;
 
-    __attribute__((pure)) state1 *operator->() { return this; }
-
-    __attribute__((pure)) const state1 *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state1 clone() const {
       return state1{(*(this)).prom_data1, (*(this)).prom_enable1};
@@ -162,10 +146,6 @@ struct PromOps {
     unsigned int prom_addr2;
     unsigned int prom_data2;
     bool prom_enable2;
-
-    __attribute__((pure)) state2 *operator->() { return this; }
-
-    __attribute__((pure)) const state2 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) state2 clone() const {
@@ -194,10 +174,6 @@ struct PromOps {
     unsigned int prom_addr3;
     unsigned int prom_data3;
     bool prom_enable3;
-
-    __attribute__((pure)) state3 *operator->() { return this; }
-
-    __attribute__((pure)) const state3 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) state3 clone() const {
@@ -294,10 +270,6 @@ struct PromOps {
     unsigned int prom_data5;
     bool prom_enable5;
 
-    __attribute__((pure)) state5 *operator->() { return this; }
-
-    __attribute__((pure)) const state5 *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state5 clone() const {
       return state5{(*(this)).acc5,         (*(this)).regs5.clone(),
@@ -340,10 +312,6 @@ struct PromOps {
     unsigned int prom_data6;
     bool prom_enable6;
 
-    __attribute__((pure)) state6 *operator->() { return this; }
-
-    __attribute__((pure)) const state6 *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state6 clone() const {
       return state6{(*(this)).rom6.clone(), (*(this)).prom_addr6,
@@ -371,10 +339,6 @@ struct PromOps {
     unsigned int prom_addr7;
     unsigned int prom_data7;
     bool prom_enable7;
-
-    __attribute__((pure)) state7 *operator->() { return this; }
-
-    __attribute__((pure)) const state7 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) state7 clone() const {
@@ -406,10 +370,6 @@ struct PromOps {
     unsigned int prom_data8;
     bool prom_enable8;
 
-    __attribute__((pure)) state8 *operator->() { return this; }
-
-    __attribute__((pure)) const state8 *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state8 clone() const {
       return state8{(*(this)).regs8.clone(), (*(this)).ram_sys8.clone(),
@@ -437,10 +397,6 @@ struct PromOps {
     unsigned int prom_addr9;
     unsigned int prom_data9;
     bool prom_enable9;
-
-    __attribute__((pure)) state9 *operator->() { return this; }
-
-    __attribute__((pure)) const state9 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) state9 clone() const {
@@ -476,10 +432,6 @@ struct PromOps {
     unsigned int prom_addr10;
     unsigned int prom_data10;
     bool prom_enable10;
-
-    __attribute__((pure)) state10 *operator->() { return this; }
-
-    __attribute__((pure)) const state10 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) state10 clone() const {
@@ -594,10 +546,6 @@ struct PromOps {
     unsigned int prom_addr11;
     unsigned int prom_data11;
     bool prom_enable11;
-
-    __attribute__((pure)) state11 *operator->() { return this; }
-
-    __attribute__((pure)) const state11 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) state11 clone() const {

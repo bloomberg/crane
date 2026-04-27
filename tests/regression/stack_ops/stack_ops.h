@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
@@ -109,10 +97,6 @@ struct StackOps {
   struct state_basic {
     List<unsigned int> stack_basic;
 
-    __attribute__((pure)) state_basic *operator->() { return this; }
-
-    __attribute__((pure)) const state_basic *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state_basic clone() const {
       return state_basic{(*(this)).stack_basic.clone()};
@@ -122,12 +106,6 @@ struct StackOps {
   struct state_with_acc {
     List<unsigned int> stack_with_acc;
     unsigned int acc;
-
-    __attribute__((pure)) state_with_acc *operator->() { return this; }
-
-    __attribute__((pure)) const state_with_acc *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) state_with_acc clone() const {

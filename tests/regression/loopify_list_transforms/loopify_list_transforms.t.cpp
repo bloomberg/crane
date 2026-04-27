@@ -27,39 +27,30 @@ int main() {
 
   // run_length_encode
   auto rle = LoopifyListTransforms::run_length_encode(l_dups);
-  ASSERT(rle != nullptr);
 
   // prefix_sums
   auto ps = LoopifyListTransforms::prefix_sums(0u, l5);
-  ASSERT(ps != nullptr);
 
   // sliding_pairs
   auto pairs = LoopifyListTransforms::sliding_pairs(l5);
-  ASSERT(pairs != nullptr);
 
   // differences
   auto diffs = LoopifyListTransforms::differences(l5);
-  ASSERT(diffs != nullptr);
 
   // take
   auto taken = LoopifyListTransforms::take(3u, l5);
-  ASSERT(taken != nullptr);
 
   // drop
   auto dropped = LoopifyListTransforms::drop(2u, l5);
-  ASSERT(dropped != nullptr);
 
   // chunks_of
   auto chunks = LoopifyListTransforms::chunks_of(2u, l5);
-  ASSERT(chunks != nullptr);
 
   // rotate_left
   auto rotated = LoopifyListTransforms::rotate_left(2u, l5);
-  ASSERT(rotated != nullptr);
 
   // uniq_sorted
   auto uniq = LoopifyListTransforms::uniq_sorted(l_dups);
-  ASSERT(uniq != nullptr);
 
   // step_sum
   ASSERT(LoopifyListTransforms::step_sum(l5) > 0u);

@@ -15,10 +15,6 @@ struct JmsBblRoundtrip {
     unsigned int ret;
     bool has_ret;
 
-    __attribute__((pure)) state *operator->() { return this; }
-
-    __attribute__((pure)) const state *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state clone() const {
       return state{(*(this)).pc, (*(this)).ret, (*(this)).has_ret};

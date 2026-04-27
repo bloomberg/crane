@@ -81,18 +81,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <MapsTo<bool, t_A> F0>
@@ -322,18 +310,6 @@ public:
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
-
-  // ACCESSORS
-  __attribute__((pure)) Uint *operator->() { return this; }
-
-  __attribute__((pure)) const Uint *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Uint(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -603,18 +579,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Uint0 *operator->() { return this; }
-
-  __attribute__((pure)) const Uint0 *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Uint0(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -690,18 +654,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Uint1 *operator->() { return this; }
-
-  __attribute__((pure)) const Uint1 *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Uint1(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -767,10 +719,6 @@ struct ValidatedVirtualCrossmatchTraceCase {
     HLALocus hla_locus;
     unsigned int hla_group;
 
-    __attribute__((pure)) HLAAllele *operator->() { return this; }
-
-    __attribute__((pure)) const HLAAllele *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) HLAAllele clone() const {
       return HLAAllele{(*(this)).hla_locus, (*(this)).hla_group};
@@ -785,10 +733,6 @@ struct ValidatedVirtualCrossmatchTraceCase {
   struct HLATyping {
     List<HLAAllele> hla_typed_alleles;
 
-    __attribute__((pure)) HLATyping *operator->() { return this; }
-
-    __attribute__((pure)) const HLATyping *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) HLATyping clone() const {
       return HLATyping{(*(this)).hla_typed_alleles.clone()};
@@ -799,10 +743,6 @@ struct ValidatedVirtualCrossmatchTraceCase {
     unsigned int epitope_id;
     HLALocus epitope_locus;
     bool epitope_immunogenic;
-
-    __attribute__((pure)) HLAEpitope *operator->() { return this; }
-
-    __attribute__((pure)) const HLAEpitope *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) HLAEpitope clone() const {
@@ -835,12 +775,6 @@ struct ValidatedVirtualCrossmatchTraceCase {
     unsigned int ab_mfi;
     bool ab_complement_fixing;
 
-    __attribute__((pure)) EpitopeAntibody *operator->() { return this; }
-
-    __attribute__((pure)) const EpitopeAntibody *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) EpitopeAntibody clone() const {
       return EpitopeAntibody{(*(this)).ab_epitope.clone(), (*(this)).ab_mfi,
@@ -853,12 +787,6 @@ struct ValidatedVirtualCrossmatchTraceCase {
     unsigned int vxm_current_pra;
     unsigned int vxm_peak_pra;
     unsigned int vxm_sensitization_events;
-
-    __attribute__((pure)) VirtualXMProfile *operator->() { return this; }
-
-    __attribute__((pure)) const VirtualXMProfile *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) VirtualXMProfile clone() const {
@@ -876,12 +804,6 @@ struct ValidatedVirtualCrossmatchTraceCase {
     unsigned int mfi_cfg_lab_id;
     bool mfi_cfg_validated;
 
-    __attribute__((pure)) MFIThresholdConfig *operator->() { return this; }
-
-    __attribute__((pure)) const MFIThresholdConfig *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) MFIThresholdConfig clone() const {
       return MFIThresholdConfig{
@@ -898,12 +820,6 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   struct ValidatedMFIConfig {
     MFIThresholdConfig vmc_config;
-
-    __attribute__((pure)) ValidatedMFIConfig *operator->() { return this; }
-
-    __attribute__((pure)) const ValidatedMFIConfig *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) ValidatedMFIConfig clone() const {
@@ -1186,14 +1102,6 @@ struct ValidatedVirtualCrossmatchTraceCase {
     unsigned int xmu_method;
     TestConfidence xmu_confidence;
 
-    __attribute__((pure)) CrossmatchWithUncertainty *operator->() {
-      return this;
-    }
-
-    __attribute__((pure)) const CrossmatchWithUncertainty *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) CrossmatchWithUncertainty clone() const {
       return CrossmatchWithUncertainty{
@@ -1212,12 +1120,6 @@ struct ValidatedVirtualCrossmatchTraceCase {
     unsigned int sto_sample_collection_time;
     unsigned int sto_authorized_by;
     bool sto_emergency_release;
-
-    __attribute__((pure)) SafeTransfusionOrder *operator->() { return this; }
-
-    __attribute__((pure)) const SafeTransfusionOrder *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) SafeTransfusionOrder clone() const {

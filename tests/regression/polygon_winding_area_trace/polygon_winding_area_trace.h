@@ -82,18 +82,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
@@ -136,10 +124,6 @@ struct Q {
   int64_t Qnum;
   unsigned int Qden;
 
-  __attribute__((pure)) Q *operator->() { return this; }
-
-  __attribute__((pure)) const Q *operator->() const { return this; }
-
   // ACCESSORS
   __attribute__((pure)) Q clone() const {
     return Q{(*(this)).Qnum, (*(this)).Qden};
@@ -154,10 +138,6 @@ struct PolygonWindingAreaTraceCase {
   struct Point {
     Real phi;
     Real lambda;
-
-    __attribute__((pure)) Point *operator->() { return this; }
-
-    __attribute__((pure)) const Point *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) Point clone() const {

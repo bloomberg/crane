@@ -20,10 +20,6 @@ struct RecordFunctionFieldStdlibProbe {
   struct endo {
     std::function<Bool0(Bool0)> run;
 
-    __attribute__((pure)) endo *operator->() { return this; }
-
-    __attribute__((pure)) const endo *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) endo clone() const { return endo{(*(this)).run}; }
   };

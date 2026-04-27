@@ -72,18 +72,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Nat *operator->() { return this; }
-
-  __attribute__((pure)) const Nat *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Nat(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) Nat add(Nat m) const {
@@ -101,12 +89,6 @@ struct RocqBug13581 {
   template <typename t_T0> struct mixin_of {
     std::function<t_T0(t_T0)> mixin_f;
 
-    __attribute__((pure)) mixin_of<t_T0> *operator->() { return this; }
-
-    __attribute__((pure)) const mixin_of<t_T0> *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) mixin_of<t_T0> clone() const {
       return mixin_of<t_T0>{(*(this)).mixin_f};
@@ -119,10 +101,6 @@ struct RocqBug13581 {
   template <typename t_T0> struct R {
     std::function<t_T0(t_T0)> g;
     Nat x;
-
-    __attribute__((pure)) R<t_T0> *operator->() { return this; }
-
-    __attribute__((pure)) const R<t_T0> *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) R<t_T0> clone() const {
@@ -210,20 +188,6 @@ struct RocqBug13581 {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) I<t_T> *operator->() { return this; }
-
-    __attribute__((pure)) const I<t_T> *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = I<t_T>(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
@@ -280,20 +244,6 @@ struct RocqBug13581 {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) J<t_T> *operator->() { return this; }
-
-    __attribute__((pure)) const J<t_T> *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = J<t_T>(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }

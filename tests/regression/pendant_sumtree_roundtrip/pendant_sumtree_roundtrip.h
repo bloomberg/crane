@@ -83,18 +83,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <MapsTo<bool, t_A> F0>
@@ -215,18 +203,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Sig<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const Sig<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Sig<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -284,20 +260,6 @@ public:
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
-
-  // ACCESSORS
-  __attribute__((pure)) SigT<t_A, t_P> *operator->() { return this; }
-
-  __attribute__((pure)) const SigT<t_A, t_P> *operator->() const {
-    return this;
-  }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = SigT<t_A, t_P>(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -376,18 +338,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) T0<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const T0<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = T0<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -453,18 +403,6 @@ public:
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
-
-  // ACCESSORS
-  __attribute__((pure)) T *operator->() { return this; }
-
-  __attribute__((pure)) const T *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = T(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -628,10 +566,6 @@ struct PendantSumtreeRoundtripCase {
     Twist cm_spin;
     Twist cm_ply;
 
-    __attribute__((pure)) CordMeta *operator->() { return this; }
-
-    __attribute__((pure)) const CordMeta *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) CordMeta clone() const {
       return CordMeta{(*(this)).cm_fiber, (*(this)).cm_color, (*(this)).cm_spin,
@@ -642,12 +576,6 @@ struct PendantSumtreeRoundtripCase {
   struct CertifiedPendant {
     CordMeta cp_meta;
     T0<digit> cp_digits;
-
-    __attribute__((pure)) CertifiedPendant *operator->() { return this; }
-
-    __attribute__((pure)) const CertifiedPendant *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) CertifiedPendant clone() const {
@@ -667,12 +595,6 @@ struct PendantSumtreeRoundtripCase {
   struct PendantGroup {
     CertifiedPendant pg_top;
     List<CertifiedPendant> pg_pendants;
-
-    __attribute__((pure)) PendantGroup *operator->() { return this; }
-
-    __attribute__((pure)) const PendantGroup *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) PendantGroup clone() const {
@@ -752,20 +674,6 @@ struct PendantSumtreeRoundtripCase {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) SumTree *operator->() { return this; }
-
-    __attribute__((pure)) const SumTree *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = SumTree(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }

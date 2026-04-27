@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
@@ -114,10 +102,6 @@ struct BankLookupDefault {
   struct ram_chip {
     unsigned int chip_port;
 
-    __attribute__((pure)) ram_chip *operator->() { return this; }
-
-    __attribute__((pure)) const ram_chip *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) ram_chip clone() const {
       return ram_chip{(*(this)).chip_port};
@@ -127,10 +111,6 @@ struct BankLookupDefault {
   struct ram_bank {
     List<ram_chip> bank_chips;
 
-    __attribute__((pure)) ram_bank *operator->() { return this; }
-
-    __attribute__((pure)) const ram_bank *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) ram_bank clone() const {
       return ram_bank{(*(this)).bank_chips.clone()};
@@ -139,10 +119,6 @@ struct BankLookupDefault {
 
   struct state {
     List<ram_bank> ram_sys;
-
-    __attribute__((pure)) state *operator->() { return this; }
-
-    __attribute__((pure)) const state *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) state clone() const {

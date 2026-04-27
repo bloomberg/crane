@@ -81,18 +81,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -149,28 +137,12 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Sig<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const Sig<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Sig<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct ConstructorBugs {
   struct field_a {
     unsigned int a_value;
-
-    __attribute__((pure)) field_a *operator->() { return this; }
-
-    __attribute__((pure)) const field_a *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) field_a clone() const {
@@ -180,10 +152,6 @@ struct ConstructorBugs {
 
   struct field_b {
     unsigned int b_value;
-
-    __attribute__((pure)) field_b *operator->() { return this; }
-
-    __attribute__((pure)) const field_b *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) field_b clone() const {
@@ -196,12 +164,6 @@ struct ConstructorBugs {
     field_b source_b;
     unsigned int source_flag;
 
-    __attribute__((pure)) source_state *operator->() { return this; }
-
-    __attribute__((pure)) const source_state *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) source_state clone() const {
       return source_state{(*(this)).source_a.clone(),
@@ -213,12 +175,6 @@ struct ConstructorBugs {
     source_state packed_source;
     field_a packed_a;
     field_b packed_b;
-
-    __attribute__((pure)) packed_state *operator->() { return this; }
-
-    __attribute__((pure)) const packed_state *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) packed_state clone() const {
@@ -244,12 +200,6 @@ struct ConstructorBugs {
     List<field_b> source_b_list;
     unsigned int source_flag_list;
 
-    __attribute__((pure)) source_state_list *operator->() { return this; }
-
-    __attribute__((pure)) const source_state_list *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) source_state_list clone() const {
       return source_state_list{(*(this)).source_a_list.clone(),
@@ -262,12 +212,6 @@ struct ConstructorBugs {
     source_state_list packed_source_list;
     field_a packed_a_list;
     List<field_b> packed_b_list;
-
-    __attribute__((pure)) packed_state_list *operator->() { return this; }
-
-    __attribute__((pure)) const packed_state_list *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) packed_state_list clone() const {
@@ -284,10 +228,6 @@ struct ConstructorBugs {
   struct state {
     unsigned int value;
     List<unsigned int> data;
-
-    __attribute__((pure)) state *operator->() { return this; }
-
-    __attribute__((pure)) const state *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) state clone() const {
@@ -333,10 +273,6 @@ struct ConstructorBugs {
   struct Inner {
     unsigned int inner_val;
 
-    __attribute__((pure)) Inner *operator->() { return this; }
-
-    __attribute__((pure)) const Inner *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Inner clone() const {
       return Inner{(*(this)).inner_val};
@@ -346,10 +282,6 @@ struct ConstructorBugs {
   struct Outer {
     Inner outer_inner;
     unsigned int outer_data;
-
-    __attribute__((pure)) Outer *operator->() { return this; }
-
-    __attribute__((pure)) const Outer *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) Outer clone() const {
@@ -434,20 +366,6 @@ struct ConstructorBugs {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) MySum *operator->() { return this; }
-
-    __attribute__((pure)) const MySum *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = MySum(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
@@ -484,10 +402,6 @@ struct ConstructorBugs {
   struct Container {
     Outer cont_outer;
 
-    __attribute__((pure)) Container *operator->() { return this; }
-
-    __attribute__((pure)) const Container *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Container clone() const {
       return Container{(*(this)).cont_outer.clone()};
@@ -516,10 +430,6 @@ struct ConstructorBugs {
     unsigned int value_inline;
     unsigned int data_inline;
     unsigned int flag;
-
-    __attribute__((pure)) State *operator->() { return this; }
-
-    __attribute__((pure)) const State *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) State clone() const {
@@ -550,10 +460,6 @@ struct ConstructorBugs {
   struct OuterInline {
     State outer_state;
     unsigned int outer_num;
-
-    __attribute__((pure)) OuterInline *operator->() { return this; }
-
-    __attribute__((pure)) const OuterInline *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) OuterInline clone() const {

@@ -22,10 +22,6 @@ struct AxiomTypes {
     unsigned int normal_field;
     MysteryType axiom_field;
 
-    __attribute__((pure)) AxiomRecord *operator->() { return this; }
-
-    __attribute__((pure)) const AxiomRecord *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) AxiomRecord clone() const {
       return AxiomRecord{(*(this)).normal_field, (*(this)).axiom_field};
@@ -97,22 +93,6 @@ struct AxiomTypes {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) AxiomInductive *operator->() { return this; }
-
-    __attribute__((pure)) const AxiomInductive *operator->() const {
-      return this;
-    }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = AxiomInductive(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -216,20 +196,6 @@ struct AxiomTypes {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) list<t_A> *operator->() { return this; }
-
-    __attribute__((pure)) const list<t_A> *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = list<t_A>(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }

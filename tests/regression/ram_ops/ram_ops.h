@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -104,12 +92,6 @@ struct RamOps {
   struct ram_reg_main {
     List<unsigned int> reg_main;
 
-    __attribute__((pure)) ram_reg_main *operator->() { return this; }
-
-    __attribute__((pure)) const ram_reg_main *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) ram_reg_main clone() const {
       return ram_reg_main{(*(this)).reg_main.clone()};
@@ -119,12 +101,6 @@ struct RamOps {
   struct ram_chip_main {
     List<ram_reg_main> chip_regs_main;
 
-    __attribute__((pure)) ram_chip_main *operator->() { return this; }
-
-    __attribute__((pure)) const ram_chip_main *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) ram_chip_main clone() const {
       return ram_chip_main{(*(this)).chip_regs_main.clone()};
@@ -133,12 +109,6 @@ struct RamOps {
 
   struct ram_bank_main {
     List<ram_chip_main> bank_chips_main;
-
-    __attribute__((pure)) ram_bank_main *operator->() { return this; }
-
-    __attribute__((pure)) const ram_bank_main *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) ram_bank_main clone() const {
@@ -152,10 +122,6 @@ struct RamOps {
     unsigned int sel_chip_main;
     unsigned int sel_reg_main;
     unsigned int sel_char_main;
-
-    __attribute__((pure)) state_main *operator->() { return this; }
-
-    __attribute__((pure)) const state_main *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) state_main clone() const {
@@ -230,10 +196,6 @@ struct RamOps {
   struct chip_port {
     unsigned int chip_port_val;
 
-    __attribute__((pure)) chip_port *operator->() { return this; }
-
-    __attribute__((pure)) const chip_port *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) chip_port clone() const {
       return chip_port{(*(this)).chip_port_val};
@@ -242,10 +204,6 @@ struct RamOps {
 
   struct bank_port {
     List<chip_port> bank_chips_port;
-
-    __attribute__((pure)) bank_port *operator->() { return this; }
-
-    __attribute__((pure)) const bank_port *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) bank_port clone() const {
@@ -257,10 +215,6 @@ struct RamOps {
     List<bank_port> ram_sys_port;
     unsigned int cur_bank_port;
     unsigned int sel_chip_port;
-
-    __attribute__((pure)) state_port *operator->() { return this; }
-
-    __attribute__((pure)) const state_port *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) state_port clone() const {
@@ -321,12 +275,6 @@ struct RamOps {
   struct ram_reg_status {
     List<unsigned int> reg_status;
 
-    __attribute__((pure)) ram_reg_status *operator->() { return this; }
-
-    __attribute__((pure)) const ram_reg_status *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) ram_reg_status clone() const {
       return ram_reg_status{(*(this)).reg_status.clone()};
@@ -336,12 +284,6 @@ struct RamOps {
   struct ram_chip_status {
     List<ram_reg_status> chip_regs_status;
 
-    __attribute__((pure)) ram_chip_status *operator->() { return this; }
-
-    __attribute__((pure)) const ram_chip_status *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) ram_chip_status clone() const {
       return ram_chip_status{(*(this)).chip_regs_status.clone()};
@@ -350,12 +292,6 @@ struct RamOps {
 
   struct ram_bank_status {
     List<ram_chip_status> bank_chips_status;
-
-    __attribute__((pure)) ram_bank_status *operator->() { return this; }
-
-    __attribute__((pure)) const ram_bank_status *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) ram_bank_status clone() const {
@@ -368,12 +304,6 @@ struct RamOps {
     unsigned int cur_bank_status;
     unsigned int sel_chip_status;
     unsigned int sel_reg_status;
-
-    __attribute__((pure)) state_status *operator->() { return this; }
-
-    __attribute__((pure)) const state_status *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) state_status clone() const {
@@ -453,10 +383,6 @@ struct RamOps {
     List<unsigned int> reg_main_sel;
     List<unsigned int> reg_status_sel;
 
-    __attribute__((pure)) ram_reg_sel *operator->() { return this; }
-
-    __attribute__((pure)) const ram_reg_sel *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) ram_reg_sel clone() const {
       return ram_reg_sel{(*(this)).reg_main_sel.clone(),
@@ -468,12 +394,6 @@ struct RamOps {
     List<ram_reg_sel> chip_regs_sel;
     unsigned int chip_port_sel;
 
-    __attribute__((pure)) ram_chip_sel *operator->() { return this; }
-
-    __attribute__((pure)) const ram_chip_sel *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) ram_chip_sel clone() const {
       return ram_chip_sel{(*(this)).chip_regs_sel.clone(),
@@ -483,12 +403,6 @@ struct RamOps {
 
   struct ram_bank_sel {
     List<ram_chip_sel> bank_chips_sel;
-
-    __attribute__((pure)) ram_bank_sel *operator->() { return this; }
-
-    __attribute__((pure)) const ram_bank_sel *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) ram_bank_sel clone() const {
@@ -501,10 +415,6 @@ struct RamOps {
     unsigned int sel_reg;
     unsigned int sel_char;
 
-    __attribute__((pure)) ram_sel *operator->() { return this; }
-
-    __attribute__((pure)) const ram_sel *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) ram_sel clone() const {
       return ram_sel{(*(this)).sel_chip, (*(this)).sel_reg, (*(this)).sel_char};
@@ -515,10 +425,6 @@ struct RamOps {
     List<ram_bank_sel> ram_sys_sel;
     unsigned int cur_bank_sel;
     ram_sel sel_ram;
-
-    __attribute__((pure)) state_sel *operator->() { return this; }
-
-    __attribute__((pure)) const state_sel *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) state_sel clone() const {
@@ -568,12 +474,6 @@ struct RamOps {
     List<unsigned int> reg_main_nested;
     List<unsigned int> reg_status_nested;
 
-    __attribute__((pure)) ram_reg_nested *operator->() { return this; }
-
-    __attribute__((pure)) const ram_reg_nested *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) ram_reg_nested clone() const {
       return ram_reg_nested{(*(this)).reg_main_nested.clone(),
@@ -585,12 +485,6 @@ struct RamOps {
     List<ram_reg_nested> chip_regs_nested;
     unsigned int chip_port_nested;
 
-    __attribute__((pure)) ram_chip_nested *operator->() { return this; }
-
-    __attribute__((pure)) const ram_chip_nested *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) ram_chip_nested clone() const {
       return ram_chip_nested{(*(this)).chip_regs_nested.clone(),
@@ -600,12 +494,6 @@ struct RamOps {
 
   struct ram_bank_nested {
     List<ram_chip_nested> bank_chips_nested;
-
-    __attribute__((pure)) ram_bank_nested *operator->() { return this; }
-
-    __attribute__((pure)) const ram_bank_nested *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) ram_bank_nested clone() const {
@@ -618,12 +506,6 @@ struct RamOps {
     unsigned int sel_reg_nested;
     unsigned int sel_char_nested;
 
-    __attribute__((pure)) ram_sel_nested *operator->() { return this; }
-
-    __attribute__((pure)) const ram_sel_nested *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) ram_sel_nested clone() const {
       return ram_sel_nested{(*(this)).sel_chip_nested, (*(this)).sel_reg_nested,
@@ -635,12 +517,6 @@ struct RamOps {
     List<ram_bank_nested> ram_sys_nested;
     unsigned int cur_bank_nested;
     ram_sel_nested sel_ram_nested;
-
-    __attribute__((pure)) state_nested *operator->() { return this; }
-
-    __attribute__((pure)) const state_nested *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) state_nested clone() const {
@@ -797,12 +673,6 @@ struct RamOps {
     List<unsigned int> ram_sys_preserve;
     unsigned int cur_bank_preserve;
 
-    __attribute__((pure)) state_preserve *operator->() { return this; }
-
-    __attribute__((pure)) const state_preserve *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) state_preserve clone() const {
       return state_preserve{(*(this)).ram_sys_preserve.clone(),
@@ -847,12 +717,6 @@ struct RamOps {
   struct reg_nested_bank {
     List<unsigned int> status_;
 
-    __attribute__((pure)) reg_nested_bank *operator->() { return this; }
-
-    __attribute__((pure)) const reg_nested_bank *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) reg_nested_bank clone() const {
       return reg_nested_bank{(*(this)).status_.clone()};
@@ -861,12 +725,6 @@ struct RamOps {
 
   struct chip_nested_bank {
     List<reg_nested_bank> regs_;
-
-    __attribute__((pure)) chip_nested_bank *operator->() { return this; }
-
-    __attribute__((pure)) const chip_nested_bank *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) chip_nested_bank clone() const {
@@ -877,12 +735,6 @@ struct RamOps {
   struct bank_nested_bank {
     List<chip_nested_bank> chips_;
 
-    __attribute__((pure)) bank_nested_bank *operator->() { return this; }
-
-    __attribute__((pure)) const bank_nested_bank *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) bank_nested_bank clone() const {
       return bank_nested_bank{(*(this)).chips_.clone()};
@@ -891,12 +743,6 @@ struct RamOps {
 
   struct state_nested_bank {
     List<bank_nested_bank> banks_;
-
-    __attribute__((pure)) state_nested_bank *operator->() { return this; }
-
-    __attribute__((pure)) const state_nested_bank *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) state_nested_bank clone() const {

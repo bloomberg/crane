@@ -83,18 +83,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -151,18 +139,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Sig<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const Sig<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Sig<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -171,10 +147,6 @@ struct ComprehensivePatterns {
     unsigned int s_a;
     unsigned int s_b;
     unsigned int s_c;
-
-    __attribute__((pure)) S *operator->() { return this; }
-
-    __attribute__((pure)) const S *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) S clone() const {
@@ -190,10 +162,6 @@ struct ComprehensivePatterns {
   struct L1 {
     S l1_s;
 
-    __attribute__((pure)) L1 *operator->() { return this; }
-
-    __attribute__((pure)) const L1 *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) L1 clone() const {
       return L1{(*(this)).l1_s.clone()};
@@ -202,10 +170,6 @@ struct ComprehensivePatterns {
 
   struct L2 {
     L1 l2_l1;
-
-    __attribute__((pure)) L2 *operator->() { return this; }
-
-    __attribute__((pure)) const L2 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) L2 clone() const {
@@ -216,10 +180,6 @@ struct ComprehensivePatterns {
   struct L3 {
     L2 l3_l2;
 
-    __attribute__((pure)) L3 *operator->() { return this; }
-
-    __attribute__((pure)) const L3 *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) L3 clone() const {
       return L3{(*(this)).l3_l2.clone()};
@@ -229,10 +189,6 @@ struct ComprehensivePatterns {
   struct L4 {
     L3 l4_l3;
 
-    __attribute__((pure)) L4 *operator->() { return this; }
-
-    __attribute__((pure)) const L4 *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) L4 clone() const {
       return L4{(*(this)).l4_l3.clone()};
@@ -241,10 +197,6 @@ struct ComprehensivePatterns {
 
   struct L5 {
     L4 l5_l4;
-
-    __attribute__((pure)) L5 *operator->() { return this; }
-
-    __attribute__((pure)) const L5 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) L5 clone() const {
@@ -395,20 +347,6 @@ struct ComprehensivePatterns {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) Either *operator->() { return this; }
-
-    __attribute__((pure)) const Either *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = Either(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, S> F0, MapsTo<T1, unsigned int> F1>
@@ -441,10 +379,6 @@ struct ComprehensivePatterns {
   struct R1 {
     unsigned int r1_val;
 
-    __attribute__((pure)) R1 *operator->() { return this; }
-
-    __attribute__((pure)) const R1 *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) R1 clone() const { return R1{(*(this)).r1_val}; }
   };
@@ -452,10 +386,6 @@ struct ComprehensivePatterns {
   struct R2 {
     R1 r2_inner;
     unsigned int r2_data;
-
-    __attribute__((pure)) R2 *operator->() { return this; }
-
-    __attribute__((pure)) const R2 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) R2 clone() const {
@@ -467,10 +397,6 @@ struct ComprehensivePatterns {
     R2 r3_r2;
     R1 r3_r1;
     unsigned int r3_num;
-
-    __attribute__((pure)) R3 *operator->() { return this; }
-
-    __attribute__((pure)) const R3 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) R3 clone() const {
@@ -527,10 +453,6 @@ struct ComprehensivePatterns {
     unsigned int val;
     unsigned int dat;
 
-    __attribute__((pure)) R *operator->() { return this; }
-
-    __attribute__((pure)) const R *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) R clone() const {
       return R{(*(this)).val, (*(this)).dat};
@@ -572,10 +494,6 @@ struct ComprehensivePatterns {
     unsigned int nc_b;
     unsigned int nc_c;
 
-    __attribute__((pure)) NC *operator->() { return this; }
-
-    __attribute__((pure)) const NC *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) NC clone() const {
       return NC{(*(this)).nc_a, (*(this)).nc_b, (*(this)).nc_c};
@@ -608,10 +526,6 @@ struct ComprehensivePatterns {
   struct OuterNC {
     NC outer_nc;
 
-    __attribute__((pure)) OuterNC *operator->() { return this; }
-
-    __attribute__((pure)) const OuterNC *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) OuterNC clone() const {
       return OuterNC{(*(this)).outer_nc.clone()};
@@ -633,10 +547,6 @@ struct ComprehensivePatterns {
   struct State {
     unsigned int state_value;
     unsigned int state_data;
-
-    __attribute__((pure)) State *operator->() { return this; }
-
-    __attribute__((pure)) const State *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) State clone() const {
@@ -678,10 +588,6 @@ struct ComprehensivePatterns {
   struct RSeq {
     unsigned int seq_val;
 
-    __attribute__((pure)) RSeq *operator->() { return this; }
-
-    __attribute__((pure)) const RSeq *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) RSeq clone() const { return RSeq{(*(this)).seq_val}; }
   };
@@ -695,10 +601,6 @@ struct ComprehensivePatterns {
   struct StateStmt {
     unsigned int stmt_value;
     unsigned int stmt_data;
-
-    __attribute__((pure)) StateStmt *operator->() { return this; }
-
-    __attribute__((pure)) const StateStmt *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) StateStmt clone() const {
@@ -715,10 +617,6 @@ struct ComprehensivePatterns {
   struct InnerStmt {
     unsigned int inner_stmt_val;
 
-    __attribute__((pure)) InnerStmt *operator->() { return this; }
-
-    __attribute__((pure)) const InnerStmt *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) InnerStmt clone() const {
       return InnerStmt{(*(this)).inner_stmt_val};
@@ -728,10 +626,6 @@ struct ComprehensivePatterns {
   struct OuterStmt {
     InnerStmt outer_stmt_inner;
     unsigned int outer_stmt_data;
-
-    __attribute__((pure)) OuterStmt *operator->() { return this; }
-
-    __attribute__((pure)) const OuterStmt *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) OuterStmt clone() const {
@@ -744,10 +638,6 @@ struct ComprehensivePatterns {
 
   struct Level3Stmt {
     OuterStmt l3_outer_stmt;
-
-    __attribute__((pure)) Level3Stmt *operator->() { return this; }
-
-    __attribute__((pure)) const Level3Stmt *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) Level3Stmt clone() const {
@@ -773,10 +663,6 @@ struct ComprehensivePatterns {
   struct RCF {
     unsigned int cf_val;
 
-    __attribute__((pure)) RCF *operator->() { return this; }
-
-    __attribute__((pure)) const RCF *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) RCF clone() const { return RCF{(*(this)).cf_val}; }
   };
@@ -797,10 +683,6 @@ struct ComprehensivePatterns {
   struct StateLB {
     unsigned int lb_value;
     unsigned int lb_data;
-
-    __attribute__((pure)) StateLB *operator->() { return this; }
-
-    __attribute__((pure)) const StateLB *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) StateLB clone() const {
@@ -878,20 +760,6 @@ struct ComprehensivePatterns {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) Tree *operator->() { return this; }
-
-    __attribute__((pure)) const Tree *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = Tree(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -1146,10 +1014,6 @@ struct ComprehensivePatterns {
     unsigned int ro_value;
     unsigned int ro_data;
 
-    __attribute__((pure)) StateRO *operator->() { return this; }
-
-    __attribute__((pure)) const StateRO *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) StateRO clone() const {
       return StateRO{(*(this)).ro_value, (*(this)).ro_data};
@@ -1216,20 +1080,6 @@ struct ComprehensivePatterns {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) Container *operator->() { return this; }
-
-    __attribute__((pure)) const Container *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = Container(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int extract_from_container() const {
@@ -1268,10 +1118,6 @@ struct ComprehensivePatterns {
   struct StateOP {
     unsigned int op_value;
     unsigned int op_data;
-
-    __attribute__((pure)) StateOP *operator->() { return this; }
-
-    __attribute__((pure)) const StateOP *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) StateOP clone() const {

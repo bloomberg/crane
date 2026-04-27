@@ -69,20 +69,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) SigT<t_A, t_P> *operator->() { return this; }
-
-  __attribute__((pure)) const SigT<t_A, t_P> *operator->() const {
-    return this;
-  }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = SigT<t_A, t_P>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -95,10 +81,6 @@ struct Dim10TowerProofChainCase {
   struct QPos {
     unsigned int qpos_num;
     unsigned int qpos_denom_pred;
-
-    __attribute__((pure)) QPos *operator->() { return this; }
-
-    __attribute__((pure)) const QPos *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) QPos clone() const {
@@ -113,10 +95,6 @@ struct Dim10TowerProofChainCase {
 
   struct GradedObj {
     unsigned int go_dim;
-
-    __attribute__((pure)) GradedObj *operator->() { return this; }
-
-    __attribute__((pure)) const GradedObj *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) GradedObj clone() const {
@@ -149,12 +127,6 @@ struct Dim10TowerProofChainCase {
   struct GradedGoodwillieTower {
     std::function<GradedObj(unsigned int)> ggt_P;
     std::function<GradedObj(unsigned int)> ggt_D;
-
-    __attribute__((pure)) GradedGoodwillieTower *operator->() { return this; }
-
-    __attribute__((pure)) const GradedGoodwillieTower *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) GradedGoodwillieTower clone() const {
@@ -195,12 +167,6 @@ struct Dim10TowerProofChainCase {
     SigT<unsigned int, std::any> gc_layers_stabilize;
     SigT<unsigned int, std::any> gc_P_stabilize;
 
-    __attribute__((pure)) GoodwillieProofChain *operator->() { return this; }
-
-    __attribute__((pure)) const GoodwillieProofChain *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) GoodwillieProofChain clone() const {
       return GoodwillieProofChain{(*(this)).gc_eventually_zero,
@@ -222,10 +188,6 @@ struct Dim10TowerProofChainCase {
   struct Dim10Bundle {
     GradedGoodwillieTower dt_tower;
     GoodwillieProofChain dt_chain;
-
-    __attribute__((pure)) Dim10Bundle *operator->() { return this; }
-
-    __attribute__((pure)) const Dim10Bundle *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) Dim10Bundle clone() const {

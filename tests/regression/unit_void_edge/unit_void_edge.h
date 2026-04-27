@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -171,10 +159,6 @@ struct UnitVoidEdge {
   struct tagged_nat {
     unsigned int tn_value;
     std::monostate tn_tag;
-
-    __attribute__((pure)) tagged_nat *operator->() { return this; }
-
-    __attribute__((pure)) const tagged_nat *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) tagged_nat clone() const {

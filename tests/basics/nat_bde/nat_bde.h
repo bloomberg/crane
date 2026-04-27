@@ -70,13 +70,6 @@ public:
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
   // ACCESSORS
-  __attribute__((pure)) Nat *operator->() { return this; }
-  __attribute__((pure)) const Nat *operator->() const { return this; }
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-  // MANIPULATORS
-  void reset() { *this = Nat(); }
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
   template <typename T1, MapsTo<T1, Nat, T1> F1>
   T1 nat_rect(const T1 f, F1 &&f0) const {

@@ -82,18 +82,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
@@ -114,10 +102,6 @@ struct FoldSequenceStateTraceCase {
     Real A;
     Real B;
     Real C;
-
-    __attribute__((pure)) Line *operator->() { return this; }
-
-    __attribute__((pure)) const Line *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) Line clone() const {
@@ -171,20 +155,6 @@ struct FoldSequenceStateTraceCase {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) Fold *operator->() { return this; }
-
-    __attribute__((pure)) const Fold *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = Fold(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -314,20 +284,6 @@ struct FoldSequenceStateTraceCase {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) FoldStep *operator->() { return this; }
-
-    __attribute__((pure)) const FoldStep *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = FoldStep(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) Line execute_fold_step() const {
@@ -384,12 +340,6 @@ struct FoldSequenceStateTraceCase {
   struct ConstructionState {
     List<Point> state_points;
     List<Line> state_lines;
-
-    __attribute__((pure)) ConstructionState *operator->() { return this; }
-
-    __attribute__((pure)) const ConstructionState *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) ConstructionState clone() const {

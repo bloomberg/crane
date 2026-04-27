@@ -15,10 +15,6 @@ struct RecordDefaults {
     unsigned int cfg_depth;
     bool cfg_debug;
 
-    __attribute__((pure)) Config *operator->() { return this; }
-
-    __attribute__((pure)) const Config *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Config clone() const {
       return Config{(*(this)).cfg_width, (*(this)).cfg_height,
@@ -35,10 +31,6 @@ struct RecordDefaults {
     unsigned int px;
     unsigned int py;
 
-    __attribute__((pure)) Point *operator->() { return this; }
-
-    __attribute__((pure)) const Point *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Point clone() const {
       return Point{(*(this)).px, (*(this)).py};
@@ -48,10 +40,6 @@ struct RecordDefaults {
   struct Rect {
     Point origin;
     Point extent;
-
-    __attribute__((pure)) Rect *operator->() { return this; }
-
-    __attribute__((pure)) const Rect *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) Rect clone() const {

@@ -56,7 +56,6 @@ int main() {
     PairList::cons(std::make_pair(2u, 20u),
     PairList::cons(std::make_pair(1u, 11u), pairs_nil)));
   auto all_vals = LoopifyListAccess::lookup_all(1u, pairs2);
-  ASSERT(all_vals != nullptr);
 
   // find
   auto is_big = [](unsigned int x) { return x > 35; };

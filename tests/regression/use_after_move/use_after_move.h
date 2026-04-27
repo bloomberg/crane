@@ -15,10 +15,6 @@ struct UseAfterMove {
     unsigned int data;
     unsigned int flag;
 
-    __attribute__((pure)) State *operator->() { return this; }
-
-    __attribute__((pure)) const State *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) State clone() const {
       return State{(*(this)).value, (*(this)).data, (*(this)).flag};

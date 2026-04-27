@@ -16,10 +16,6 @@ struct ErasedRecord {
     unsigned int field3;
     unsigned int field4;
 
-    __attribute__((pure)) ManyProps *operator->() { return this; }
-
-    __attribute__((pure)) const ManyProps *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) ManyProps clone() const {
       return ManyProps{(*(this)).field0, (*(this)).field1, (*(this)).field2,
@@ -34,10 +30,6 @@ struct ErasedRecord {
     unsigned int real1;
     unsigned int real2;
     unsigned int real3;
-
-    __attribute__((pure)) MostlyProps *operator->() { return this; }
-
-    __attribute__((pure)) const MostlyProps *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) MostlyProps clone() const {

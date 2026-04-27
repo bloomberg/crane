@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
@@ -116,10 +104,6 @@ struct EmptySystemBankCount {
     List<unsigned int> reg_main;
     List<unsigned int> reg_status;
 
-    __attribute__((pure)) ram_reg *operator->() { return this; }
-
-    __attribute__((pure)) const ram_reg *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) ram_reg clone() const {
       return ram_reg{(*(this)).reg_main.clone(), (*(this)).reg_status.clone()};
@@ -130,10 +114,6 @@ struct EmptySystemBankCount {
     List<ram_reg> chip_regs;
     unsigned int chip_port;
 
-    __attribute__((pure)) ram_chip *operator->() { return this; }
-
-    __attribute__((pure)) const ram_chip *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) ram_chip clone() const {
       return ram_chip{(*(this)).chip_regs.clone(), (*(this)).chip_port};
@@ -142,10 +122,6 @@ struct EmptySystemBankCount {
 
   struct ram_bank {
     List<ram_chip> bank_chips;
-
-    __attribute__((pure)) ram_bank *operator->() { return this; }
-
-    __attribute__((pure)) const ram_bank *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) ram_bank clone() const {

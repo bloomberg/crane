@@ -17,12 +17,6 @@ struct ConstrainedPoly {
     t_A ufst;
     t_B usnd;
 
-    __attribute__((pure)) UPair<t_A, t_B> *operator->() { return this; }
-
-    __attribute__((pure)) const UPair<t_A, t_B> *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) UPair<t_A, t_B> clone() const {
       return UPair<t_A, t_B>{(*(this)).ufst, (*(this)).usnd};
@@ -107,22 +101,6 @@ struct ConstrainedPoly {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) UOption<t_A> *operator->() { return this; }
-
-    __attribute__((pure)) const UOption<t_A> *operator->() const {
-      return this;
-    }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = UOption<t_A>(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }

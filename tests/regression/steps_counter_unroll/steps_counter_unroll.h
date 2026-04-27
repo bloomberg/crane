@@ -13,10 +13,6 @@ struct StepsCounterUnroll {
   struct state {
     unsigned int pc;
 
-    __attribute__((pure)) state *operator->() { return this; }
-
-    __attribute__((pure)) const state *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state clone() const { return state{(*(this)).pc}; }
   };

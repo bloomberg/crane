@@ -12,10 +12,6 @@ struct RocqBug4710 {
   struct Foo_ {
     unsigned int foo;
 
-    __attribute__((pure)) Foo_ *operator->() { return this; }
-
-    __attribute__((pure)) const Foo_ *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Foo_ clone() const { return Foo_{(*(this)).foo}; }
   };
@@ -23,10 +19,6 @@ struct RocqBug4710 {
   struct Foo2 {
     unsigned int foo2p;
     bool foo2b;
-
-    __attribute__((pure)) Foo2 *operator->() { return this; }
-
-    __attribute__((pure)) const Foo2 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) Foo2 clone() const {

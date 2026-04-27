@@ -12,10 +12,6 @@ struct KbpMultibitDefault {
   struct state {
     unsigned int acc;
 
-    __attribute__((pure)) state *operator->() { return this; }
-
-    __attribute__((pure)) const state *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state clone() const { return state{(*(this)).acc}; }
   };

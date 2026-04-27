@@ -16,10 +16,6 @@ struct RecordCaseBody {
     unsigned int f2;
     unsigned int f3;
 
-    __attribute__((pure)) Rec *operator->() { return this; }
-
-    __attribute__((pure)) const Rec *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Rec clone() const {
       return Rec{(*(this)).f1, (*(this)).f2, (*(this)).f3};
@@ -41,10 +37,6 @@ struct RecordCaseBody {
   struct RecRec {
     Rec inner;
     unsigned int outer_field;
-
-    __attribute__((pure)) RecRec *operator->() { return this; }
-
-    __attribute__((pure)) const RecRec *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) RecRec clone() const {
@@ -130,20 +122,6 @@ struct RecordCaseBody {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) list<t_A> *operator->() { return this; }
-
-    __attribute__((pure)) const list<t_A> *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = list<t_A>(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }

@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <MapsTo<bool, t_A> F0>
@@ -300,18 +288,6 @@ public:
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
-
-  // ACCESSORS
-  __attribute__((pure)) Uint *operator->() { return this; }
-
-  __attribute__((pure)) const Uint *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Uint(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -581,18 +557,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Uint0 *operator->() { return this; }
-
-  __attribute__((pure)) const Uint0 *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Uint0(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -659,18 +623,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Uint1 *operator->() { return this; }
-
-  __attribute__((pure)) const Uint1 *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Uint1(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -694,10 +646,6 @@ struct ValidatedPumpDeliveryTraceCase {
   struct Mg_dL {
     unsigned int mg_dL_val;
 
-    __attribute__((pure)) Mg_dL *operator->() { return this; }
-
-    __attribute__((pure)) const Mg_dL *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Mg_dL clone() const {
       return Mg_dL{(*(this)).mg_dL_val};
@@ -706,10 +654,6 @@ struct ValidatedPumpDeliveryTraceCase {
 
   struct Grams {
     unsigned int grams_val;
-
-    __attribute__((pure)) Grams *operator->() { return this; }
-
-    __attribute__((pure)) const Grams *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) Grams clone() const {
@@ -737,10 +681,6 @@ struct ValidatedPumpDeliveryTraceCase {
     unsigned int cfg_suspend_threshold_mg_dl;
     unsigned int cfg_stacking_warning_threshold_min;
     unsigned int cfg_iob_high_threshold_twentieths;
-
-    __attribute__((pure)) Config *operator->() { return this; }
-
-    __attribute__((pure)) const Config *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) Config clone() const {
@@ -916,20 +856,6 @@ struct ValidatedPumpDeliveryTraceCase {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) FaultStatus *operator->() { return this; }
-
-    __attribute__((pure)) const FaultStatus *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = FaultStatus(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) bool fault_blocks_bolus() const {
@@ -1041,10 +967,6 @@ struct ValidatedPumpDeliveryTraceCase {
   struct BolusEvent {
     unsigned int be_dose_twentieths;
     Minutes be_time_minutes;
-
-    __attribute__((pure)) BolusEvent *operator->() { return this; }
-
-    __attribute__((pure)) const BolusEvent *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) BolusEvent clone() const {
@@ -1161,22 +1083,6 @@ struct ValidatedPumpDeliveryTraceCase {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) SuspendDecision *operator->() { return this; }
-
-    __attribute__((pure)) const SuspendDecision *operator->() const {
-      return this;
-    }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = SuspendDecision(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
@@ -1238,12 +1144,6 @@ struct ValidatedPumpDeliveryTraceCase {
     DIA_minutes prec_dia;
     InsulinType prec_insulin_type;
 
-    __attribute__((pure)) PrecisionParams *operator->() { return this; }
-
-    __attribute__((pure)) const PrecisionParams *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) PrecisionParams clone() const {
       return PrecisionParams{(*(this)).prec_icr_tenths,
@@ -1264,12 +1164,6 @@ struct ValidatedPumpDeliveryTraceCase {
     bool pi_use_sensor_margin;
     FaultStatus pi_fault;
     std::optional<unsigned int> pi_weight_kg;
-
-    __attribute__((pure)) PrecisionInput *operator->() { return this; }
-
-    __attribute__((pure)) const PrecisionInput *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) PrecisionInput clone() const {
@@ -1361,22 +1255,6 @@ struct ValidatedPumpDeliveryTraceCase {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) PrecisionResult *operator->() { return this; }
-
-    __attribute__((pure)) const PrecisionResult *operator->() const {
-      return this;
-    }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = PrecisionResult(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) bool result_modified() const {
@@ -1457,12 +1335,6 @@ struct ValidatedPumpDeliveryTraceCase {
     FaultStatus mpi_fault;
     std::optional<unsigned int> mpi_weight_kg;
 
-    __attribute__((pure)) MmolPrecisionInput *operator->() { return this; }
-
-    __attribute__((pure)) const MmolPrecisionInput *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) MmolPrecisionInput clone() const {
       return MmolPrecisionInput{
@@ -1542,10 +1414,6 @@ struct ValidatedPumpDeliveryTraceCase {
     Minutes ps_last_bolus_time;
     bool ps_occlusion_detected;
     unsigned int ps_battery_percent;
-
-    __attribute__((pure)) PumpState *operator->() { return this; }
-
-    __attribute__((pure)) const PumpState *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) PumpState clone() const {

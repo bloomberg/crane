@@ -26,13 +26,11 @@ int main() {
   auto l1 = UIntList::cons(1u, UIntList::cons(3u, UIntList::cons(2u,
     UIntList::cons(4u, nil))));
   auto lis_result = LoopifySearchOpt::lis(l1);
-  ASSERT(lis_result != nullptr);
 
   // longest_run
   auto l2 = UIntList::cons(1u, UIntList::cons(1u, UIntList::cons(2u,
     UIntList::cons(2u, UIntList::cons(2u, UIntList::cons(3u, nil))))));
   auto run = LoopifySearchOpt::longest_run(l2);
-  ASSERT(run != nullptr);
 
   // knapsack
   auto items_nil = PairList::nil();

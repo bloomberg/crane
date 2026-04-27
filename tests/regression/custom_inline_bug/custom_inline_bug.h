@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -99,10 +87,6 @@ struct CustomInlineBug {
   struct State {
     unsigned int value;
     unsigned int data;
-
-    __attribute__((pure)) State *operator->() { return this; }
-
-    __attribute__((pure)) const State *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) State clone() const {

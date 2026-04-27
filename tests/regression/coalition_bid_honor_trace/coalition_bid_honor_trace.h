@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <MapsTo<bool, t_A> F0>
@@ -232,18 +220,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Positive *operator->() { return this; }
-
-  __attribute__((pure)) const Positive *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Positive(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -316,18 +292,6 @@ public:
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
-
-  // ACCESSORS
-  __attribute__((pure)) Z *operator->() { return this; }
-
-  __attribute__((pure)) const Z *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Z(); }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -441,10 +405,6 @@ struct CoalitionBidHonorTraceCase {
     Rank cmd_rank;
     bool cmd_bloodnamed;
 
-    __attribute__((pure)) Commander *operator->() { return this; }
-
-    __attribute__((pure)) const Commander *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Commander clone() const {
       return Commander{(*(this)).cmd_id, (*(this)).cmd_clan, (*(this)).cmd_rank,
@@ -542,10 +502,6 @@ struct CoalitionBidHonorTraceCase {
     bool unit_is_elite;
     bool unit_is_clan;
 
-    __attribute__((pure)) Unit *operator->() { return this; }
-
-    __attribute__((pure)) const Unit *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Unit clone() const {
       return Unit{(*(this)).unit_id,       (*(this)).unit_class,
@@ -572,12 +528,6 @@ struct CoalitionBidHonorTraceCase {
     unsigned int fm_clan_count;
     unsigned int fm_total_bv;
     unsigned int fm_total_ecr;
-
-    __attribute__((pure)) ForceMetrics *operator->() { return this; }
-
-    __attribute__((pure)) const ForceMetrics *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) ForceMetrics clone() const {
@@ -630,12 +580,6 @@ struct CoalitionBidHonorTraceCase {
     Commander cm_commander;
     Force cm_force;
 
-    __attribute__((pure)) CoalitionMember *operator->() { return this; }
-
-    __attribute__((pure)) const CoalitionMember *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) CoalitionMember clone() const {
       return CoalitionMember{(*(this)).cm_clan, (*(this)).cm_commander.clone(),
@@ -658,12 +602,6 @@ struct CoalitionBidHonorTraceCase {
     Force cmb_new_force;
     Side cmb_side;
 
-    __attribute__((pure)) CoalitionMemberBid *operator->() { return this; }
-
-    __attribute__((pure)) const CoalitionMemberBid *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) CoalitionMemberBid clone() const {
       return CoalitionMemberBid{(*(this)).cmb_member_index,
@@ -679,10 +617,6 @@ struct CoalitionBidHonorTraceCase {
     Force bid_force;
     Side bid_side;
     Commander bid_commander;
-
-    __attribute__((pure)) ForceBid *operator->() { return this; }
-
-    __attribute__((pure)) const ForceBid *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) ForceBid clone() const {
@@ -792,20 +726,6 @@ struct CoalitionBidHonorTraceCase {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) Prize *operator->() { return this; }
-
-    __attribute__((pure)) const Prize *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = Prize(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, unsigned int> F1>
@@ -900,20 +820,6 @@ struct CoalitionBidHonorTraceCase {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) Location *operator->() { return this; }
-
-    __attribute__((pure)) const Location *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = Location(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
@@ -953,12 +859,6 @@ struct CoalitionBidHonorTraceCase {
     bool ctx_hegira_allowed;
     bool ctx_circle_present;
 
-    __attribute__((pure)) BattleContext *operator->() { return this; }
-
-    __attribute__((pure)) const BattleContext *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) BattleContext clone() const {
       return BattleContext{(*(this)).ctx_hegira_allowed,
@@ -978,12 +878,6 @@ struct CoalitionBidHonorTraceCase {
     TrialType chal_trial_type;
     BattleContext chal_context;
 
-    __attribute__((pure)) BatchallChallenge *operator->() { return this; }
-
-    __attribute__((pure)) const BatchallChallenge *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) BatchallChallenge clone() const {
       return BatchallChallenge{
@@ -998,12 +892,6 @@ struct CoalitionBidHonorTraceCase {
     Commander resp_defender;
     Clan resp_clan;
     Force resp_force;
-
-    __attribute__((pure)) BatchallResponse *operator->() { return this; }
-
-    __attribute__((pure)) const BatchallResponse *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) BatchallResponse clone() const {
@@ -1071,22 +959,6 @@ struct CoalitionBidHonorTraceCase {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) RefusalReason *operator->() { return this; }
-
-    __attribute__((pure)) const RefusalReason *operator->() const {
-      return this;
-    }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = RefusalReason(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -1274,22 +1146,6 @@ struct CoalitionBidHonorTraceCase {
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) ProtocolAction *operator->() { return this; }
-
-    __attribute__((pure)) const ProtocolAction *operator->() const {
-      return this;
-    }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = ProtocolAction(); }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
@@ -1620,22 +1476,6 @@ struct CoalitionBidHonorTraceCase {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) BatchallPhase *operator->() { return this; }
-
-    __attribute__((pure)) const BatchallPhase *operator->() const {
-      return this;
-    }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = BatchallPhase(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) std::optional<Commander>
@@ -1889,12 +1729,6 @@ struct CoalitionBidHonorTraceCase {
   struct BatchallState {
     BatchallPhase bs_phase;
     HonorLedger bs_honor;
-
-    __attribute__((pure)) BatchallState *operator->() { return this; }
-
-    __attribute__((pure)) const BatchallState *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) BatchallState clone() const {

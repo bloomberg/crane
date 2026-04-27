@@ -86,20 +86,6 @@ struct ThisCaptureRecord {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) tree *operator->() { return this; }
-
-    __attribute__((pure)) const tree *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = tree(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     __attribute__((pure)) unsigned int tree_sum() const {
@@ -187,20 +173,6 @@ struct ThisCaptureRecord {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) tag *operator->() { return this; }
-
-    __attribute__((pure)) const tag *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = tag(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, unsigned int> F0>
@@ -221,12 +193,6 @@ struct ThisCaptureRecord {
   struct callback_rec {
     std::function<unsigned int(unsigned int)> cr_add;
     std::function<unsigned int(unsigned int)> cr_mul;
-
-    __attribute__((pure)) callback_rec *operator->() { return this; }
-
-    __attribute__((pure)) const callback_rec *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) callback_rec clone() const {

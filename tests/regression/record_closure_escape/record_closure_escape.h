@@ -79,20 +79,6 @@ struct RecordClosureEscape {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) tree *operator->() { return this; }
-
-    __attribute__((pure)) const tree *operator->() const { return this; }
-
-    __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-    __attribute__((pure)) bool operator==(std::nullptr_t) const {
-      return false;
-    }
-
-    // MANIPULATORS
-    void reset() { *this = tree(); }
-
-    // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
@@ -126,10 +112,6 @@ struct RecordClosureEscape {
   struct fn_record {
     std::function<unsigned int(unsigned int)> fn_field;
     unsigned int val_field;
-
-    __attribute__((pure)) fn_record *operator->() { return this; }
-
-    __attribute__((pure)) const fn_record *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) fn_record clone() const {

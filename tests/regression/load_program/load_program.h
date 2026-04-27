@@ -80,18 +80,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   __attribute__((pure)) unsigned int length() const {
@@ -138,10 +126,6 @@ struct LoadProgram {
     unsigned int prom_data;
     bool prom_enable;
 
-    __attribute__((pure)) state *operator->() { return this; }
-
-    __attribute__((pure)) const state *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) state clone() const {
       return state{(*(this)).rom.clone(), (*(this)).prom_addr,
@@ -158,12 +142,6 @@ struct LoadProgram {
     unsigned int prom_data_ext;
     bool prom_enable_ext;
 
-    __attribute__((pure)) state_extended *operator->() { return this; }
-
-    __attribute__((pure)) const state_extended *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) state_extended clone() const {
       return state_extended{(*(this)).regs_len,
@@ -179,12 +157,6 @@ struct LoadProgram {
   struct state_simple {
     List<unsigned int> rom_;
     unsigned int ptr_;
-
-    __attribute__((pure)) state_simple *operator->() { return this; }
-
-    __attribute__((pure)) const state_simple *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) state_simple clone() const {

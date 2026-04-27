@@ -85,22 +85,6 @@ struct IndParam {
       inline variant_t &v_mut() { return d_v_; }
 
       // ACCESSORS
-      __attribute__((pure)) result *operator->() { return this; }
-
-      __attribute__((pure)) const result *operator->() const { return this; }
-
-      __attribute__((pure)) bool operator!=(std::nullptr_t) const {
-        return true;
-      }
-
-      __attribute__((pure)) bool operator==(std::nullptr_t) const {
-        return false;
-      }
-
-      // MANIPULATORS
-      void reset() { *this = result(); }
-
-      // ACCESSORS
       __attribute__((pure)) const variant_t &v() const { return d_v_; }
     };
 
@@ -230,22 +214,6 @@ struct IndParam {
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }
-
-      // ACCESSORS
-      __attribute__((pure)) t *operator->() { return this; }
-
-      __attribute__((pure)) const t *operator->() const { return this; }
-
-      __attribute__((pure)) bool operator!=(std::nullptr_t) const {
-        return true;
-      }
-
-      __attribute__((pure)) bool operator==(std::nullptr_t) const {
-        return false;
-      }
-
-      // MANIPULATORS
-      void reset() { *this = t(); }
 
       // ACCESSORS
       __attribute__((pure)) const variant_t &v() const { return d_v_; }

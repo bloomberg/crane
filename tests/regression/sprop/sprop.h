@@ -24,10 +24,6 @@ struct SPropTest {
   template <typename t_A> struct Box {
     t_A box_value;
 
-    __attribute__((pure)) Box<t_A> *operator->() { return this; }
-
-    __attribute__((pure)) const Box<t_A> *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Box<t_A> clone() const {
       return Box<t_A>{(*(this)).box_value};

@@ -15,10 +15,6 @@ struct PathologicalRecord {
     unsigned int f2;
     unsigned int f3;
 
-    __attribute__((pure)) Rec *operator->() { return this; }
-
-    __attribute__((pure)) const Rec *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) Rec clone() const {
       return Rec{(*(this)).f1, (*(this)).f2, (*(this)).f3};
@@ -45,10 +41,6 @@ struct PathologicalRecord {
     unsigned int bf3;
     unsigned int bf4;
     unsigned int bf5;
-
-    __attribute__((pure)) BigRec *operator->() { return this; }
-
-    __attribute__((pure)) const BigRec *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) BigRec clone() const {

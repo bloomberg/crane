@@ -24,19 +24,15 @@ int main() {
 
   // process_twice
   auto processed = LoopifySpecialRecursion::process_twice(l3);
-  ASSERT(processed != nullptr);
 
   // double_append
   auto doubled = LoopifySpecialRecursion::double_append(l3, nil);
-  ASSERT(doubled != nullptr);
 
   // remove_if_sum_even
   auto removed = LoopifySpecialRecursion::remove_if_sum_even(l3);
-  ASSERT(removed != nullptr);
 
   // reverse_insert
   auto inserted = LoopifySpecialRecursion::reverse_insert(2u, l3);
-  ASSERT(inserted != nullptr);
 
   // nest_apply
   auto inc = [](unsigned int x) { return x + 1; };
@@ -48,7 +44,6 @@ int main() {
   auto leaf = tree::leaf();
   auto t = tree::node(leaf, 5u, leaf);
   auto collected = LoopifySpecialRecursion::collect_sorted(t);
-  ASSERT(collected != nullptr);
 
   // sum_odd_indices
   auto l5 = UIntList::cons(10u, UIntList::cons(20u, UIntList::cons(
@@ -60,14 +55,12 @@ int main() {
 
   // between
   auto filtered = LoopifySpecialRecursion::between(2u, 4u, l5);
-  ASSERT(filtered != nullptr);
 
   // merge_levels
   auto ll_nil = List<List<unsigned int>>::nil();
   auto ll = List<List<unsigned int>>::cons(l3,
     List<List<unsigned int>>::cons(l3, ll_nil));
   auto merged = LoopifySpecialRecursion::merge_levels(ll);
-  ASSERT(merged != nullptr);
 
   if (testStatus > 0) {
     std::cerr << "Error: " << testStatus << " test(s) failed." << std::endl;

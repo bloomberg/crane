@@ -19,10 +19,6 @@ struct PrimitiveRecTypeclass {
     unsigned int px;
     unsigned int py;
 
-    __attribute__((pure)) point *operator->() { return this; }
-
-    __attribute__((pure)) const point *operator->() const { return this; }
-
     // ACCESSORS
     __attribute__((pure)) point clone() const {
       return point{(*(this)).px, (*(this)).py};
@@ -41,10 +37,6 @@ struct PrimitiveRecTypeclass {
     unsigned int vx;
     unsigned int vy;
     unsigned int vz;
-
-    __attribute__((pure)) vec3 *operator->() { return this; }
-
-    __attribute__((pure)) const vec3 *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) vec3 clone() const {
@@ -68,10 +60,6 @@ struct PrimitiveRecTypeclass {
   struct rect {
     point top_left;
     point bot_right;
-
-    __attribute__((pure)) rect *operator->() { return this; }
-
-    __attribute__((pure)) const rect *operator->() const { return this; }
 
     // ACCESSORS
     __attribute__((pure)) rect clone() const {

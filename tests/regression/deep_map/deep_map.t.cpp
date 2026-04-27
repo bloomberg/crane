@@ -24,10 +24,10 @@ int main() {
   assert(r2 == r + 1u);
 
   // Dropping t2 triggers deep destructor chain
-  t2.reset();
+  t2 = DeepMap::tree<unsigned int>::leaf();
   std::cout << "Dropped mapped tree" << std::endl;
 
-  t.reset();
+  t = DeepMap::tree<unsigned int>::leaf();
   std::cout << "Dropped original tree" << std::endl;
 
   return 0;

@@ -70,18 +70,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) Nat *operator->() { return this; }
-
-  __attribute__((pure)) const Nat *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = Nat(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
@@ -155,18 +143,6 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const List<t_A> *operator->() const { return this; }
-
-  __attribute__((pure)) bool operator!=(std::nullptr_t) const { return true; }
-
-  __attribute__((pure)) bool operator==(std::nullptr_t) const { return false; }
-
-  // MANIPULATORS
-  void reset() { *this = List<t_A>(); }
-
-  // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <MapsTo<bool, t_A> F0>
@@ -214,12 +190,6 @@ template <typename t_A> struct DirectedEdge {
   t_A edge_from;
   t_A edge_to;
 
-  __attribute__((pure)) DirectedEdge<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const DirectedEdge<t_A> *operator->() const {
-    return this;
-  }
-
   // ACCESSORS
   __attribute__((pure)) DirectedEdge<t_A> clone() const {
     return DirectedEdge<t_A>{(*(this)).edge_from, (*(this)).edge_to};
@@ -236,10 +206,6 @@ __attribute__((pure)) bool directed_originates(const T1 a,
 template <typename t_A> struct Directed {
   List<t_A> directed_nodes;
   List<DirectedEdge<t_A>> directed_edges;
-
-  __attribute__((pure)) Directed<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const Directed<t_A> *operator->() const { return this; }
 
   // ACCESSORS
   __attribute__((pure)) Directed<t_A> clone() const {
@@ -286,12 +252,6 @@ template <typename t_A> struct UndirectedEdge {
   t_A edge_first;
   t_A edge_second;
 
-  __attribute__((pure)) UndirectedEdge<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const UndirectedEdge<t_A> *operator->() const {
-    return this;
-  }
-
   // ACCESSORS
   __attribute__((pure)) UndirectedEdge<t_A> clone() const {
     return UndirectedEdge<t_A>{(*(this)).edge_first, (*(this)).edge_second};
@@ -307,12 +267,6 @@ __attribute__((pure)) bool undirected_originates(const T1 a,
 template <typename t_A> struct Undirected {
   List<t_A> undirected_nodes;
   List<UndirectedEdge<t_A>> undirected_edges;
-
-  __attribute__((pure)) Undirected<t_A> *operator->() { return this; }
-
-  __attribute__((pure)) const Undirected<t_A> *operator->() const {
-    return this;
-  }
 
   // ACCESSORS
   __attribute__((pure)) Undirected<t_A> clone() const {

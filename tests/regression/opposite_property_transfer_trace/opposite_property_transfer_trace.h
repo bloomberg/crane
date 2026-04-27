@@ -19,12 +19,6 @@ struct OppositePropertyTransferTraceCase {
     std::function<unsigned int(unsigned int)> ps_eta;
     std::function<unsigned int(unsigned int)> ps_epsilon;
 
-    __attribute__((pure)) PreStableCategory *operator->() { return this; }
-
-    __attribute__((pure)) const PreStableCategory *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) PreStableCategory clone() const {
       return PreStableCategory{(*(this)).ps_tag,  (*(this)).ps_shift,
@@ -40,12 +34,6 @@ struct OppositePropertyTransferTraceCase {
     unsigned int lsw_seed;
     unsigned int lsw_value;
 
-    __attribute__((pure)) LeftStableWitness *operator->() { return this; }
-
-    __attribute__((pure)) const LeftStableWitness *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) LeftStableWitness clone() const {
       return LeftStableWitness{(*(this)).lsw_seed, (*(this)).lsw_value};
@@ -55,12 +43,6 @@ struct OppositePropertyTransferTraceCase {
   struct RightStableWitness {
     unsigned int rsw_seed;
     unsigned int rsw_value;
-
-    __attribute__((pure)) RightStableWitness *operator->() { return this; }
-
-    __attribute__((pure)) const RightStableWitness *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) RightStableWitness clone() const {
@@ -72,12 +54,6 @@ struct OppositePropertyTransferTraceCase {
     unsigned int t1_seed;
     unsigned int t1_value;
 
-    __attribute__((pure)) Triangle1Witness *operator->() { return this; }
-
-    __attribute__((pure)) const Triangle1Witness *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) Triangle1Witness clone() const {
       return Triangle1Witness{(*(this)).t1_seed, (*(this)).t1_value};
@@ -87,12 +63,6 @@ struct OppositePropertyTransferTraceCase {
   struct Triangle2Witness {
     unsigned int t2_seed;
     unsigned int t2_value;
-
-    __attribute__((pure)) Triangle2Witness *operator->() { return this; }
-
-    __attribute__((pure)) const Triangle2Witness *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) Triangle2Witness clone() const {
@@ -112,12 +82,6 @@ struct OppositePropertyTransferTraceCase {
     unsigned int lp_value;
     unsigned int lp_tag;
 
-    __attribute__((pure)) LeftProperty *operator->() { return this; }
-
-    __attribute__((pure)) const LeftProperty *operator->() const {
-      return this;
-    }
-
     // ACCESSORS
     __attribute__((pure)) LeftProperty clone() const {
       return LeftProperty{(*(this)).lp_seed, (*(this)).lp_value,
@@ -129,12 +93,6 @@ struct OppositePropertyTransferTraceCase {
     unsigned int rp_seed;
     unsigned int rp_value;
     unsigned int rp_tag;
-
-    __attribute__((pure)) RightProperty *operator->() { return this; }
-
-    __attribute__((pure)) const RightProperty *operator->() const {
-      return this;
-    }
 
     // ACCESSORS
     __attribute__((pure)) RightProperty clone() const {
