@@ -11,56 +11,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
-template <typename T> struct is_unique_ptr : std::false_type {};
-
-template <typename T>
-struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> auto clone_value(const T &x) { return x; }
-
-template <typename T>
-std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  if constexpr (requires { x->clone(); }) {
-    return x ? std::make_unique<T>(x->clone()) : nullptr;
-  } else {
-    return x ? std::make_unique<T>(*x) : nullptr;
-  }
-}
-
-template <typename Target, typename Source>
-Target clone_as_value(const Source &x) {
-  using T = std::remove_cvref_t<Target>;
-  using S = std::remove_cvref_t<Source>;
-  if constexpr (requires(const S &s) {
-                  s.has_value();
-                  *s;
-                }) {
-    if (!x.has_value())
-      return T{};
-    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
-    return T{clone_as_value<TInner>(*x)};
-  } else if constexpr (std::is_same_v<T, S>) {
-    if constexpr (is_unique_ptr<T>::value) {
-      return clone_value(x);
-    } else if constexpr (requires { x.clone(); }) {
-      return x.clone();
-    } else {
-      return x;
-    }
-  } else if constexpr (is_unique_ptr<S>::value) {
-    if (!x)
-      return T{};
-    return clone_as_value<T>(*x);
-  } else if constexpr (is_unique_ptr<T>::value) {
-    using Inner = typename is_unique_ptr<T>::element_type;
-    return std::make_unique<Inner>(clone_as_value<Inner>(x));
-  } else {
-    return T(x);
-  }
-}
-
 template <typename M>
 concept Elem = requires {
   typename M::t;
@@ -117,7 +67,18 @@ template <Elem E> struct Container {
         return maybe(Nothing{});
       } else {
         const auto &[d_a0] = std::get<Just>(_sv.v());
-        return maybe(Just{d_a0});
+        return maybe(Just{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_a0)});
       }
     }
 
@@ -213,7 +174,10 @@ template <Elem E> struct Container {
         return mlist(MNil{});
       } else {
         const auto &[d_a0, d_a1] = std::get<MCons>(_sv.v());
-        return mlist(MCons{d_a0, clone_value(d_a1)});
+        return mlist(
+            MCons{d_a0.clone(),
+                  d_a1 ? std::make_unique<Container::mlist>(d_a1->clone())
+                       : nullptr});
       }
     }
 
@@ -308,10 +272,10 @@ template <Elem E> struct Container {
       auto &&_sv = *(this);
       if (std::holds_alternative<Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<Leaf>(_sv.v());
-        return mtree(Leaf{d_a0});
+        return mtree(Leaf{d_a0.clone()});
       } else {
         const auto &[d_a0] = std::get<Node>(_sv.v());
-        return mtree(Node{d_a0});
+        return mtree(Node{d_a0.clone()});
       }
     }
 

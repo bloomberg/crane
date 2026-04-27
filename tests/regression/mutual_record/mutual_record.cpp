@@ -17,7 +17,7 @@ __attribute__((pure)) List<MutualRecord::employee>
 MutualRecord::dept_employees(const MutualRecord::department &d) {
   const auto &[d_a0, d_a1] =
       std::get<typename MutualRecord::department::Mk_department>(d.v());
-  return clone_as_value<List<MutualRecord::employee>>(d_a1);
+  return List<MutualRecord::employee>(d_a1);
 }
 
 __attribute__((pure)) unsigned int
@@ -38,7 +38,7 @@ __attribute__((pure)) unsigned int
 MutualRecord::dept_total_salary(const MutualRecord::department &d) {
   const auto &[d_a0, d_a1] =
       std::get<typename MutualRecord::department::Mk_department>(d.v());
-  return emp_list_salary(clone_as_value<List<MutualRecord::employee>>(d_a1));
+  return emp_list_salary(List<MutualRecord::employee>(d_a1));
 }
 
 __attribute__((pure)) unsigned int
@@ -57,7 +57,7 @@ __attribute__((pure)) unsigned int
 MutualRecord::dept_count(const MutualRecord::department &d) {
   const auto &[d_a0, d_a1] =
       std::get<typename MutualRecord::department::Mk_department>(d.v());
-  return emp_list_count(clone_as_value<List<MutualRecord::employee>>(d_a1));
+  return emp_list_count(List<MutualRecord::employee>(d_a1));
 }
 
 __attribute__((pure)) unsigned int

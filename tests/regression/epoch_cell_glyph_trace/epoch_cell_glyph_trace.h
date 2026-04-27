@@ -10,56 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
-template <typename T> struct is_unique_ptr : std::false_type {};
-
-template <typename T>
-struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> auto clone_value(const T &x) { return x; }
-
-template <typename T>
-std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  if constexpr (requires { x->clone(); }) {
-    return x ? std::make_unique<T>(x->clone()) : nullptr;
-  } else {
-    return x ? std::make_unique<T>(*x) : nullptr;
-  }
-}
-
-template <typename Target, typename Source>
-Target clone_as_value(const Source &x) {
-  using T = std::remove_cvref_t<Target>;
-  using S = std::remove_cvref_t<Source>;
-  if constexpr (requires(const S &s) {
-                  s.has_value();
-                  *s;
-                }) {
-    if (!x.has_value())
-      return T{};
-    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
-    return T{clone_as_value<TInner>(*x)};
-  } else if constexpr (std::is_same_v<T, S>) {
-    if constexpr (is_unique_ptr<T>::value) {
-      return clone_value(x);
-    } else if constexpr (requires { x.clone(); }) {
-      return x.clone();
-    } else {
-      return x;
-    }
-  } else if constexpr (is_unique_ptr<S>::value) {
-    if (!x)
-      return T{};
-    return clone_as_value<T>(*x);
-  } else if constexpr (is_unique_ptr<T>::value) {
-    using Inner = typename is_unique_ptr<T>::element_type;
-    return std::make_unique<Inner>(clone_as_value<Inner>(x));
-  } else {
-    return T(x);
-  }
-}
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -105,7 +55,20 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{clone_value(d_a0), clone_value(d_a1)});
+      t_A __c0;
+      if constexpr (
+          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
+          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
+        using _E = std::remove_cvref_t<decltype(*d_a0)>;
+        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
+      } else if constexpr (requires { d_a0.clone(); }) {
+        __c0 = d_a0.clone();
+      } else {
+        __c0 = d_a0;
+      }
+      return List<t_A>(
+          Cons{std::move(__c0),
+               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -115,8 +78,22 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{clone_as_value<t_A>(d_a0),
-                  d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ = Cons{
+          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
+            if constexpr (
+                requires { *__v; } &&
+                !requires { std::declval<_DstT>().get(); })
+              return _DstT(*__v);
+            else if constexpr (
+                !requires { *__v; } &&
+                requires { std::declval<_DstT>().get(); }) {
+              using _E =
+                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+              return std::make_unique<_E>(std::move(__v));
+            } else
+              return _DstT(__v);
+          }(d_a0),
+          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -193,10 +170,12 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<XI>(_sv.v())) {
       const auto &[d_a0] = std::get<XI>(_sv.v());
-      return Positive(XI{clone_value(d_a0)});
+      return Positive(
+          XI{d_a0 ? std::make_unique<Positive>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<XO>(_sv.v())) {
       const auto &[d_a0] = std::get<XO>(_sv.v());
-      return Positive(XO{clone_value(d_a0)});
+      return Positive(
+          XO{d_a0 ? std::make_unique<Positive>(d_a0->clone()) : nullptr});
     } else {
       return Positive(XH{});
     }
@@ -281,10 +260,10 @@ public:
       return Z(Z0{});
     } else if (std::holds_alternative<Zpos>(_sv.v())) {
       const auto &[d_a0] = std::get<Zpos>(_sv.v());
-      return Z(Zpos{d_a0});
+      return Z(Zpos{d_a0.clone()});
     } else {
       const auto &[d_a0] = std::get<Zneg>(_sv.v());
-      return Z(Zneg{d_a0});
+      return Z(Zneg{d_a0.clone()});
     }
   }
 
@@ -380,7 +359,7 @@ struct Q {
 
   // ACCESSORS
   __attribute__((pure)) Q clone() const {
-    return Q{(*(this)).Qnum, (*(this)).Qden};
+    return Q{(*(this)).Qnum.clone(), (*(this)).Qden.clone()};
   }
 };
 
@@ -573,10 +552,11 @@ struct EpochCellGlyphTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) MechanismState clone() const {
-      return MechanismState{(*(this)).crank_position, (*(this)).metonic_dial,
-                            (*(this)).saros_dial,     (*(this)).callippic_dial,
-                            (*(this)).exeligmos_dial, (*(this)).games_dial,
-                            (*(this)).zodiac_position};
+      return MechanismState{
+          (*(this)).crank_position.clone(), (*(this)).metonic_dial.clone(),
+          (*(this)).saros_dial.clone(),     (*(this)).callippic_dial.clone(),
+          (*(this)).exeligmos_dial.clone(), (*(this)).games_dial.clone(),
+          (*(this)).zodiac_position.clone()};
     }
   };
 
@@ -688,10 +668,36 @@ struct EpochCellGlyphTraceCase {
     // ACCESSORS
     __attribute__((pure)) HistoricalEclipse clone() const {
       return HistoricalEclipse{
-          (*(this)).he_year,         (*(this)).he_month,
-          (*(this)).he_day,          (*(this)).he_category,
-          (*(this)).he_saros_series, (*(this)).he_saros_member,
-          (*(this)).he_magnitude,    (*(this)).he_visible_mediterranean};
+          (*(this)).he_year.clone(),
+          (*(this)).he_month.clone(),
+          (*(this)).he_day.clone(),
+          [](auto &&__v) -> EclipseCategory {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).he_category),
+          (*(this)).he_saros_series.clone(),
+          (*(this)).he_saros_member.clone(),
+          (*(this)).he_magnitude.clone(),
+          [](auto &&__v) -> bool {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).he_visible_mediterranean)};
     }
   };
   enum class DialGlyph {
@@ -891,8 +897,20 @@ struct EpochCellGlyphTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) EpochReading clone() const {
-      return EpochReading{(*(this)).reading_state, (*(this)).reading_eclipse,
-                          (*(this)).reading_cell, (*(this)).reading_glyph};
+      return EpochReading{
+          (*(this)).reading_state.clone(), (*(this)).reading_eclipse.clone(),
+          (*(this)).reading_cell.clone(), [](auto &&__v) -> DialGlyph {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).reading_glyph)};
     }
   };
 
@@ -917,8 +935,8 @@ struct EpochCellGlyphTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) ValidEpoch clone() const {
-      return ValidEpoch{(*(this)).ve_year, (*(this)).ve_month,
-                        (*(this)).ve_eclipse};
+      return ValidEpoch{(*(this)).ve_year.clone(), (*(this)).ve_month.clone(),
+                        (*(this)).ve_eclipse.clone()};
     }
   };
 

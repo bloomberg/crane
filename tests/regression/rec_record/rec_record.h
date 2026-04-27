@@ -10,56 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
-template <typename T> struct is_unique_ptr : std::false_type {};
-
-template <typename T>
-struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> auto clone_value(const T &x) { return x; }
-
-template <typename T>
-std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  if constexpr (requires { x->clone(); }) {
-    return x ? std::make_unique<T>(x->clone()) : nullptr;
-  } else {
-    return x ? std::make_unique<T>(*x) : nullptr;
-  }
-}
-
-template <typename Target, typename Source>
-Target clone_as_value(const Source &x) {
-  using T = std::remove_cvref_t<Target>;
-  using S = std::remove_cvref_t<Source>;
-  if constexpr (requires(const S &s) {
-                  s.has_value();
-                  *s;
-                }) {
-    if (!x.has_value())
-      return T{};
-    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
-    return T{clone_as_value<TInner>(*x)};
-  } else if constexpr (std::is_same_v<T, S>) {
-    if constexpr (is_unique_ptr<T>::value) {
-      return clone_value(x);
-    } else if constexpr (requires { x.clone(); }) {
-      return x.clone();
-    } else {
-      return x;
-    }
-  } else if constexpr (is_unique_ptr<S>::value) {
-    if (!x)
-      return T{};
-    return clone_as_value<T>(*x);
-  } else if constexpr (is_unique_ptr<T>::value) {
-    using Inner = typename is_unique_ptr<T>::element_type;
-    return std::make_unique<Inner>(clone_as_value<Inner>(x));
-  } else {
-    return T(x);
-  }
-}
-
 struct RecRecord {
   template <typename t_A> struct rlist {
     // TYPES
@@ -106,7 +56,21 @@ struct RecRecord {
         return rlist<t_A>(Rnil{});
       } else {
         const auto &[d_a0, d_a1] = std::get<Rcons>(_sv.v());
-        return rlist<t_A>(Rcons{clone_value(d_a0), clone_value(d_a1)});
+        t_A __c0;
+        if constexpr (
+            requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
+            requires { d_a0->clone(); } && requires { d_a0.get(); }) {
+          using _E = std::remove_cvref_t<decltype(*d_a0)>;
+          __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
+        } else if constexpr (requires { d_a0.clone(); }) {
+          __c0 = d_a0.clone();
+        } else {
+          __c0 = d_a0;
+        }
+        return rlist<t_A>(
+            Rcons{std::move(__c0),
+                  d_a1 ? std::make_unique<RecRecord::rlist<t_A>>(d_a1->clone())
+                       : nullptr});
       }
     }
 
@@ -117,7 +81,20 @@ struct RecRecord {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename rlist<_U>::Rcons>(_other.v());
-        d_v_ = Rcons{clone_as_value<t_A>(d_a0),
+        d_v_ = Rcons{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
+                       if constexpr (
+                           requires { *__v; } &&
+                           !requires { std::declval<_DstT>().get(); })
+                         return _DstT(*__v);
+                       else if constexpr (
+                           !requires { *__v; } &&
+                           requires { std::declval<_DstT>().get(); }) {
+                         using _E = std::remove_pointer_t<
+                             decltype(std::declval<_DstT>().get())>;
+                         return std::make_unique<_E>(std::move(__v));
+                       } else
+                         return _DstT(__v);
+                     }(d_a0),
                      d_a1 ? std::make_unique<rlist<t_A>>(*d_a1) : nullptr};
       }
     }
@@ -180,9 +157,23 @@ struct RecRecord {
 
     // ACCESSORS
     __attribute__((pure)) RNode clone() const {
-      return RNode{(*(this)).rn_value,
-                   clone_as_value<std::optional<std::unique_ptr<RNode>>>(
-                       (*(this)).rn_next)};
+      return RNode{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).rn_value),
+          (*this).rn_next.has_value()
+              ? std::make_optional(
+                    std::make_unique<RNode>((*(*this).rn_next)->clone()))
+              : std::nullopt};
     }
   };
 
@@ -190,7 +181,8 @@ struct RecRecord {
   static T1 RNode_rect(F0 &&f, const RNode &r) {
     unsigned int rn_value0 = r.rn_value;
     std::optional<RNode> rn_next0 =
-        clone_as_value<std::optional<RNode>>(r.rn_next);
+        r.rn_next.has_value() ? std::make_optional<RNode>((*r.rn_next)->clone())
+                              : std::nullopt;
     return f(rn_value0, rn_next0);
   }
 
@@ -198,7 +190,8 @@ struct RecRecord {
   static T1 RNode_rec(F0 &&f, const RNode &r) {
     unsigned int rn_value0 = r.rn_value;
     std::optional<RNode> rn_next0 =
-        clone_as_value<std::optional<RNode>>(r.rn_next);
+        r.rn_next.has_value() ? std::make_optional<RNode>((*r.rn_next)->clone())
+                              : std::nullopt;
     return f(rn_value0, rn_next0);
   }
 
@@ -212,7 +205,31 @@ struct RecRecord {
 
     // ACCESSORS
     __attribute__((pure)) Employee clone() const {
-      return Employee{(*(this)).emp_name, (*(this)).emp_dept};
+      return Employee{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).emp_name),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).emp_dept)};
     }
   };
 
@@ -227,8 +244,32 @@ struct RecRecord {
 
     // ACCESSORS
     __attribute__((pure)) Department clone() const {
-      return Department{(*(this)).dept_id, (*(this)).dept_head,
-                        (*(this)).dept_size};
+      return Department{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).dept_id),
+          (*(this)).dept_head.clone(),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).dept_size)};
     }
   };
 
@@ -255,13 +296,27 @@ struct RecRecord {
   static inline const unsigned int test_rlist_sum = rlist_sum(test_rlist);
   static inline const RNode test_rnode = RNode{
       1u,
-      clone_as_value<std::optional<std::unique_ptr<RNode>>>(
-          std::make_optional<RNode>(RNode{
+      [](auto &&__x)
+          -> std::optional<std::unique_ptr<RNode>> {
+        return __x.has_value()
+                   ? std::make_optional(std::make_unique<RNode>((*__x).clone()))
+                   : std::nullopt;
+      }(std::make_optional<RNode>(RNode{
               2u,
-              clone_as_value<std::optional<std::unique_ptr<RNode>>>(
-                  std::make_optional<RNode>(RNode{
-                      3u, clone_as_value<std::optional<std::unique_ptr<RNode>>>(
-                              std::optional<RNode>())}))}))};
+              [](auto &&__x)
+                  -> std::optional<std::unique_ptr<RNode>> {
+                return __x.has_value()
+                           ? std::make_optional(
+                                 std::make_unique<RNode>((*__x).clone()))
+                           : std::nullopt;
+              }(std::make_optional<RNode>(RNode{
+                      3u,
+                      [](auto &&__x) -> std::optional<std::unique_ptr<RNode>> {
+                        return __x.has_value()
+                                   ? std::make_optional(std::make_unique<RNode>(
+                                         (*__x).clone()))
+                                   : std::nullopt;
+                      }(std::optional<RNode>())}))}))};
   static inline const unsigned int test_rnode_depth = rnode_depth(test_rnode);
   static inline const Employee test_emp = Employee{42u, 7u};
   static inline const Department test_dept = Department{7u, test_emp, 50u};

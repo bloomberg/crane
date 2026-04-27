@@ -13,56 +13,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
-template <typename T> struct is_unique_ptr : std::false_type {};
-
-template <typename T>
-struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> auto clone_value(const T &x) { return x; }
-
-template <typename T>
-std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  if constexpr (requires { x->clone(); }) {
-    return x ? std::make_unique<T>(x->clone()) : nullptr;
-  } else {
-    return x ? std::make_unique<T>(*x) : nullptr;
-  }
-}
-
-template <typename Target, typename Source>
-Target clone_as_value(const Source &x) {
-  using T = std::remove_cvref_t<Target>;
-  using S = std::remove_cvref_t<Source>;
-  if constexpr (requires(const S &s) {
-                  s.has_value();
-                  *s;
-                }) {
-    if (!x.has_value())
-      return T{};
-    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
-    return T{clone_as_value<TInner>(*x)};
-  } else if constexpr (std::is_same_v<T, S>) {
-    if constexpr (is_unique_ptr<T>::value) {
-      return clone_value(x);
-    } else if constexpr (requires { x.clone(); }) {
-      return x.clone();
-    } else {
-      return x;
-    }
-  } else if constexpr (is_unique_ptr<S>::value) {
-    if (!x)
-      return T{};
-    return clone_as_value<T>(*x);
-  } else if constexpr (is_unique_ptr<T>::value) {
-    using Inner = typename is_unique_ptr<T>::element_type;
-    return std::make_unique<Inner>(clone_as_value<Inner>(x));
-  } else {
-    return T(x);
-  }
-}
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil0 {};
@@ -108,7 +58,20 @@ public:
       return List<t_A>(Nil0{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons0>(_sv.v());
-      return List<t_A>(Cons0{clone_value(d_a0), clone_value(d_a1)});
+      t_A __c0;
+      if constexpr (
+          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
+          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
+        using _E = std::remove_cvref_t<decltype(*d_a0)>;
+        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
+      } else if constexpr (requires { d_a0.clone(); }) {
+        __c0 = d_a0.clone();
+      } else {
+        __c0 = d_a0;
+      }
+      return List<t_A>(
+          Cons0{std::move(__c0),
+                d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -118,8 +81,22 @@ public:
       d_v_ = Nil0{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons0>(_other.v());
-      d_v_ = Cons0{clone_as_value<t_A>(d_a0),
-                   d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ = Cons0{
+          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
+            if constexpr (
+                requires { *__v; } &&
+                !requires { std::declval<_DstT>().get(); })
+              return _DstT(*__v);
+            else if constexpr (
+                !requires { *__v; } &&
+                requires { std::declval<_DstT>().get(); }) {
+              using _E =
+                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+              return std::make_unique<_E>(std::move(__v));
+            } else
+              return _DstT(__v);
+          }(d_a0),
+          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -176,8 +153,7 @@ public:
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<List<T1>>::Cons0>(_sv.v());
-      return clone_as_value<List<T1>>(d_a0).app(
-          (*(d_a1)).template concat<T1>());
+      return d_a0.app((*(d_a1)).template concat<T1>());
     }
   }
 
@@ -250,13 +226,34 @@ public:
   __attribute__((pure)) Sig<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist>(_sv.v());
-    return Sig<t_A>(Exist{clone_value(d_x)});
+    t_A __c0;
+    if constexpr (
+        requires { d_x ? 0 : 0; } && requires { *d_x; } &&
+        requires { d_x->clone(); } && requires { d_x.get(); }) {
+      using _E = std::remove_cvref_t<decltype(*d_x)>;
+      __c0 = d_x ? std::make_unique<_E>(d_x->clone()) : nullptr;
+    } else if constexpr (requires { d_x.clone(); }) {
+      __c0 = d_x.clone();
+    } else {
+      __c0 = d_x;
+    }
+    return Sig<t_A>(Exist{std::move(__c0)});
   }
 
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
     const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    d_v_ = Exist{clone_as_value<t_A>(d_x)};
+    d_v_ = Exist{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
+      if constexpr (
+          requires { *__v; } && !requires { std::declval<_DstT>().get(); })
+        return _DstT(*__v);
+      else if constexpr (
+          !requires { *__v; } && requires { std::declval<_DstT>().get(); }) {
+        using _E = std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+        return std::make_unique<_E>(std::move(__v));
+      } else
+        return _DstT(__v);
+    }(d_x)};
   }
 
   __attribute__((pure)) static Sig<t_A> exist(t_A x) {
@@ -320,7 +317,29 @@ public:
   __attribute__((pure)) SigT<t_A, t_P> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
-    return SigT<t_A, t_P>(ExistT{clone_value(d_x), clone_value(d_a1)});
+    t_A __c0;
+    if constexpr (
+        requires { d_x ? 0 : 0; } && requires { *d_x; } &&
+        requires { d_x->clone(); } && requires { d_x.get(); }) {
+      using _E = std::remove_cvref_t<decltype(*d_x)>;
+      __c0 = d_x ? std::make_unique<_E>(d_x->clone()) : nullptr;
+    } else if constexpr (requires { d_x.clone(); }) {
+      __c0 = d_x.clone();
+    } else {
+      __c0 = d_x;
+    }
+    t_P __c1;
+    if constexpr (
+        requires { d_a1 ? 0 : 0; } && requires { *d_a1; } &&
+        requires { d_a1->clone(); } && requires { d_a1.get(); }) {
+      using _E = std::remove_cvref_t<decltype(*d_a1)>;
+      __c1 = d_a1 ? std::make_unique<_E>(d_a1->clone()) : nullptr;
+    } else if constexpr (requires { d_a1.clone(); }) {
+      __c1 = d_a1.clone();
+    } else {
+      __c1 = d_a1;
+    }
+    return SigT<t_A, t_P>(ExistT{std::move(__c0), std::move(__c1)});
   }
 
   // CREATORS
@@ -328,7 +347,33 @@ public:
   explicit SigT(const SigT<_U0, _U1> &_other) {
     const auto &[d_x, d_a1] =
         std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    d_v_ = ExistT{clone_as_value<t_A>(d_x), clone_as_value<t_P>(d_a1)};
+    d_v_ = ExistT{
+        [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
+          if constexpr (
+              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
+            return _DstT(*__v);
+          else if constexpr (
+              !requires { *__v; } &&
+              requires { std::declval<_DstT>().get(); }) {
+            using _E =
+                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+            return std::make_unique<_E>(std::move(__v));
+          } else
+            return _DstT(__v);
+        }(d_x),
+        [&]<typename _DstT = t_P>(auto &&__v) -> _DstT {
+          if constexpr (
+              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
+            return _DstT(*__v);
+          else if constexpr (
+              !requires { *__v; } &&
+              requires { std::declval<_DstT>().get(); }) {
+            using _E =
+                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+            return std::make_unique<_E>(std::move(__v));
+          } else
+            return _DstT(__v);
+        }(d_a1)};
   }
 
   __attribute__((pure)) static SigT<t_A, t_P> existt(t_A x, t_P a1) {
@@ -402,7 +447,32 @@ public:
       return T0<t_A>(Nil{});
     } else {
       const auto &[d_h, d_n, d_a2] = std::get<Cons>(_sv.v());
-      return T0<t_A>(Cons{clone_value(d_h), d_n, clone_value(d_a2)});
+      t_A __c0;
+      if constexpr (
+          requires { d_h ? 0 : 0; } && requires { *d_h; } &&
+          requires { d_h->clone(); } && requires { d_h.get(); }) {
+        using _E = std::remove_cvref_t<decltype(*d_h)>;
+        __c0 = d_h ? std::make_unique<_E>(d_h->clone()) : nullptr;
+      } else if constexpr (requires { d_h.clone(); }) {
+        __c0 = d_h.clone();
+      } else {
+        __c0 = d_h;
+      }
+      return T0<t_A>(
+          Cons{std::move(__c0),
+               [](auto &&__v) -> unsigned int {
+                 if constexpr (
+                     requires { __v ? 0 : 0; } && requires { *__v; } &&
+                     requires { __v->clone(); } && requires { __v.get(); }) {
+                   using _E = std::remove_cvref_t<decltype(*__v)>;
+                   return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                 } else if constexpr (requires { __v.clone(); }) {
+                   return __v.clone();
+                 } else {
+                   return __v;
+                 }
+               }(d_n),
+               d_a2 ? std::make_unique<T0<t_A>>(d_a2->clone()) : nullptr});
     }
   }
 
@@ -413,8 +483,34 @@ public:
     } else {
       const auto &[d_h, d_n, d_a2] =
           std::get<typename T0<_U>::Cons>(_other.v());
-      d_v_ = Cons{clone_as_value<t_A>(d_h), d_n,
-                  d_a2 ? std::make_unique<T0<t_A>>(*d_a2) : nullptr};
+      d_v_ = Cons{
+          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
+            if constexpr (
+                requires { *__v; } &&
+                !requires { std::declval<_DstT>().get(); })
+              return _DstT(*__v);
+            else if constexpr (
+                !requires { *__v; } &&
+                requires { std::declval<_DstT>().get(); }) {
+              using _E =
+                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+              return std::make_unique<_E>(std::move(__v));
+            } else
+              return _DstT(__v);
+          }(d_h),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }(d_n),
+          d_a2 ? std::make_unique<T0<t_A>>(*d_a2) : nullptr};
     }
   }
 
@@ -488,10 +584,33 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<F1>(_sv.v())) {
       const auto &[d_n] = std::get<F1>(_sv.v());
-      return T(F1{d_n});
+      return T(F1{[](auto &&__v) -> unsigned int {
+        if constexpr (
+            requires { __v ? 0 : 0; } && requires { *__v; } &&
+            requires { __v->clone(); } && requires { __v.get(); }) {
+          using _E = std::remove_cvref_t<decltype(*__v)>;
+          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+        } else if constexpr (requires { __v.clone(); }) {
+          return __v.clone();
+        } else {
+          return __v;
+        }
+      }(d_n)});
     } else {
       const auto &[d_n, d_a1] = std::get<FS>(_sv.v());
-      return T(FS{d_n, clone_value(d_a1)});
+      return T(FS{[](auto &&__v) -> unsigned int {
+                    if constexpr (
+                        requires { __v ? 0 : 0; } && requires { *__v; } &&
+                        requires { __v->clone(); } && requires { __v.get(); }) {
+                      using _E = std::remove_cvref_t<decltype(*__v)>;
+                      return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                    } else if constexpr (requires { __v.clone(); }) {
+                      return __v.clone();
+                    } else {
+                      return __v;
+                    }
+                  }(d_n),
+                  d_a1 ? std::make_unique<T>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -687,8 +806,55 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     __attribute__((pure)) CordMeta clone() const {
-      return CordMeta{(*(this)).cm_fiber, (*(this)).cm_color, (*(this)).cm_spin,
-                      (*(this)).cm_ply};
+      return CordMeta{
+          [](auto &&__v) -> Fiber {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cm_fiber),
+          [](auto &&__v) -> Color {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cm_color),
+          [](auto &&__v) -> Twist {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cm_spin),
+          [](auto &&__v) -> Twist {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cm_ply)};
     }
   };
 
@@ -704,7 +870,8 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     __attribute__((pure)) CertifiedPendant clone() const {
-      return CertifiedPendant{(*(this)).cp_meta, (*(this)).cp_digits};
+      return CertifiedPendant{(*(this)).cp_meta.clone(),
+                              (*(this)).cp_digits.clone()};
     }
   };
 
@@ -728,7 +895,8 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     __attribute__((pure)) PendantGroup clone() const {
-      return PendantGroup{(*(this)).pg_top, (*(this)).pg_pendants};
+      return PendantGroup{(*(this)).pg_top.clone(),
+                          (*(this)).pg_pendants.clone()};
     }
   };
 
@@ -779,14 +947,10 @@ struct PendantSumtreeRoundtripCase {
       auto &&_sv = *(this);
       if (std::holds_alternative<SumLeaf>(_sv.v())) {
         const auto &[d_a0] = std::get<SumLeaf>(_sv.v());
-        return SumTree(SumLeaf{d_a0});
+        return SumTree(SumLeaf{d_a0.clone()});
       } else {
         const auto &[d_a0, d_a1] = std::get<SumNode>(_sv.v());
-        return SumTree(SumNode{
-            d_a0,
-            clone_as_value<
-                List<std::unique_ptr<PendantSumtreeRoundtripCase::SumTree>>>(
-                d_a1)});
+        return SumTree(SumNode{d_a0.clone(), d_a1.clone()});
       }
     }
 
@@ -799,9 +963,7 @@ struct PendantSumtreeRoundtripCase {
                                                  List<SumTree> a1) {
       return SumTree(SumNode{
           std::move(a0),
-          clone_as_value<
-              List<std::unique_ptr<PendantSumtreeRoundtripCase::SumTree>>>(
-              a1)});
+          List<std::unique_ptr<PendantSumtreeRoundtripCase::SumTree>>(a1)});
     }
 
     // MANIPULATORS
@@ -834,9 +996,7 @@ struct PendantSumtreeRoundtripCase {
       return f(d_a0);
     } else {
       const auto &[d_a0, d_a1] = std::get<typename SumTree::SumNode>(s.v());
-      return f0(
-          d_a0,
-          clone_as_value<List<PendantSumtreeRoundtripCase::SumTree>>(d_a1));
+      return f0(d_a0, List<PendantSumtreeRoundtripCase::SumTree>(d_a1));
     }
   }
 
@@ -849,9 +1009,7 @@ struct PendantSumtreeRoundtripCase {
       return f(d_a0);
     } else {
       const auto &[d_a0, d_a1] = std::get<typename SumTree::SumNode>(s.v());
-      return f0(
-          d_a0,
-          clone_as_value<List<PendantSumtreeRoundtripCase::SumTree>>(d_a1));
+      return f0(d_a0, List<PendantSumtreeRoundtripCase::SumTree>(d_a1));
     }
   }
 

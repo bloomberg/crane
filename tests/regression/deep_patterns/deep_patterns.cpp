@@ -169,22 +169,19 @@ __attribute__((pure)) unsigned int DeepPatterns::match_triple(
   } else {
     const auto &[d_a0, d_a1] = std::get<typename DeepPatterns::mylist<
         DeepPatterns::mylist<DeepPatterns::mylist<unsigned int>>>::Cons>(l.v());
-    auto &&_sv0 = clone_as_value<
-        DeepPatterns::mylist<DeepPatterns::mylist<unsigned int>>>(d_a0);
     if (std::holds_alternative<typename DeepPatterns::mylist<
-            DeepPatterns::mylist<unsigned int>>::Nil>(_sv0.v())) {
+            DeepPatterns::mylist<unsigned int>>::Nil>(d_a0.v())) {
       return 1u;
     } else {
       const auto &[d_a00, d_a10] = std::get<typename DeepPatterns::mylist<
-          DeepPatterns::mylist<unsigned int>>::Cons>(_sv0.v());
-      auto &&_sv1 = clone_as_value<DeepPatterns::mylist<unsigned int>>(d_a00);
+          DeepPatterns::mylist<unsigned int>>::Cons>(d_a0.v());
       if (std::holds_alternative<
-              typename DeepPatterns::mylist<unsigned int>::Nil>(_sv1.v())) {
+              typename DeepPatterns::mylist<unsigned int>::Nil>(d_a00.v())) {
         return 2u;
       } else {
         const auto &[d_a01, d_a11] =
             std::get<typename DeepPatterns::mylist<unsigned int>::Cons>(
-                _sv1.v());
+                d_a00.v());
         return d_a01;
       }
     }
@@ -198,10 +195,8 @@ __attribute__((pure)) unsigned int DeepPatterns::deep_wildcard(
   const auto &[d_a0, d_a1] = std::get<typename DeepPatterns::pair<
       DeepPatterns::pair<unsigned int, unsigned int>,
       DeepPatterns::pair<unsigned int, unsigned int>>::Pair0>(p.v());
-  auto &&_sv0 =
-      clone_as_value<DeepPatterns::pair<unsigned int, unsigned int>>(d_a0);
   const auto &[d_a00, d_a10] =
       std::get<typename DeepPatterns::pair<unsigned int, unsigned int>::Pair0>(
-          _sv0.v());
+          d_a0.v());
   return d_a00;
 }

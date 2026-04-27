@@ -26,9 +26,7 @@ ClosureEscapeMatch::make_prepender_opt(
     return std::make_optional<std::function<ClosureEscapeMatch::mylist<
         unsigned int>(ClosureEscapeMatch::mylist<unsigned int>)>>(
         [=](const ClosureEscapeMatch::mylist<unsigned int> &x) mutable {
-          return app<unsigned int>(
-              clone_as_value<ClosureEscapeMatch::mylist<unsigned int>>(d_a0),
-              x);
+          return app<unsigned int>(d_a0, x);
         });
   }
 }
@@ -106,12 +104,9 @@ ClosureEscapeMatch::closure_in_pair(
     const auto &[d_a0, d_a1] = std::get<typename ClosureEscapeMatch::mylist<
         ClosureEscapeMatch::mylist<unsigned int>>::Mycons>(l.v());
     return std::make_pair(
-        length<unsigned int>(
-            clone_as_value<ClosureEscapeMatch::mylist<unsigned int>>(d_a0)),
+        length<unsigned int>(d_a0),
         [=](const ClosureEscapeMatch::mylist<unsigned int> &x) mutable {
-          return app<unsigned int>(
-              clone_as_value<ClosureEscapeMatch::mylist<unsigned int>>(d_a0),
-              x);
+          return app<unsigned int>(d_a0, x);
         });
   }
 }

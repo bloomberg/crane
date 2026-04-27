@@ -10,56 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
-template <typename T> struct is_unique_ptr : std::false_type {};
-
-template <typename T>
-struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> auto clone_value(const T &x) { return x; }
-
-template <typename T>
-std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  if constexpr (requires { x->clone(); }) {
-    return x ? std::make_unique<T>(x->clone()) : nullptr;
-  } else {
-    return x ? std::make_unique<T>(*x) : nullptr;
-  }
-}
-
-template <typename Target, typename Source>
-Target clone_as_value(const Source &x) {
-  using T = std::remove_cvref_t<Target>;
-  using S = std::remove_cvref_t<Source>;
-  if constexpr (requires(const S &s) {
-                  s.has_value();
-                  *s;
-                }) {
-    if (!x.has_value())
-      return T{};
-    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
-    return T{clone_as_value<TInner>(*x)};
-  } else if constexpr (std::is_same_v<T, S>) {
-    if constexpr (is_unique_ptr<T>::value) {
-      return clone_value(x);
-    } else if constexpr (requires { x.clone(); }) {
-      return x.clone();
-    } else {
-      return x;
-    }
-  } else if constexpr (is_unique_ptr<S>::value) {
-    if (!x)
-      return T{};
-    return clone_as_value<T>(*x);
-  } else if constexpr (is_unique_ptr<T>::value) {
-    using Inner = typename is_unique_ptr<T>::element_type;
-    return std::make_unique<Inner>(clone_as_value<Inner>(x));
-  } else {
-    return T(x);
-  }
-}
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -105,7 +55,20 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{clone_value(d_a0), clone_value(d_a1)});
+      t_A __c0;
+      if constexpr (
+          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
+          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
+        using _E = std::remove_cvref_t<decltype(*d_a0)>;
+        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
+      } else if constexpr (requires { d_a0.clone(); }) {
+        __c0 = d_a0.clone();
+      } else {
+        __c0 = d_a0;
+      }
+      return List<t_A>(
+          Cons{std::move(__c0),
+               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -115,8 +78,22 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{clone_as_value<t_A>(d_a0),
-                  d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ = Cons{
+          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
+            if constexpr (
+                requires { *__v; } &&
+                !requires { std::declval<_DstT>().get(); })
+              return _DstT(*__v);
+            else if constexpr (
+                !requires { *__v; } &&
+                requires { std::declval<_DstT>().get(); }) {
+              using _E =
+                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+              return std::make_unique<_E>(std::move(__v));
+            } else
+              return _DstT(__v);
+          }(d_a0),
+          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -274,34 +251,34 @@ public:
       return Uint(Nil{});
     } else if (std::holds_alternative<D0>(_sv.v())) {
       const auto &[d_a0] = std::get<D0>(_sv.v());
-      return Uint(D0{clone_value(d_a0)});
+      return Uint(D0{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D1>(_sv.v())) {
       const auto &[d_a0] = std::get<D1>(_sv.v());
-      return Uint(D1{clone_value(d_a0)});
+      return Uint(D1{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D2>(_sv.v())) {
       const auto &[d_a0] = std::get<D2>(_sv.v());
-      return Uint(D2{clone_value(d_a0)});
+      return Uint(D2{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D3>(_sv.v())) {
       const auto &[d_a0] = std::get<D3>(_sv.v());
-      return Uint(D3{clone_value(d_a0)});
+      return Uint(D3{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D4>(_sv.v())) {
       const auto &[d_a0] = std::get<D4>(_sv.v());
-      return Uint(D4{clone_value(d_a0)});
+      return Uint(D4{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D5>(_sv.v())) {
       const auto &[d_a0] = std::get<D5>(_sv.v());
-      return Uint(D5{clone_value(d_a0)});
+      return Uint(D5{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D6>(_sv.v())) {
       const auto &[d_a0] = std::get<D6>(_sv.v());
-      return Uint(D6{clone_value(d_a0)});
+      return Uint(D6{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D7>(_sv.v())) {
       const auto &[d_a0] = std::get<D7>(_sv.v());
-      return Uint(D7{clone_value(d_a0)});
+      return Uint(D7{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D8>(_sv.v())) {
       const auto &[d_a0] = std::get<D8>(_sv.v());
-      return Uint(D8{clone_value(d_a0)});
+      return Uint(D8{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else {
       const auto &[d_a0] = std::get<D9>(_sv.v());
-      return Uint(D9{clone_value(d_a0)});
+      return Uint(D9{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     }
   }
 
@@ -501,52 +478,62 @@ public:
       return Uint0(Nil0{});
     } else if (std::holds_alternative<D10>(_sv.v())) {
       const auto &[d_a0] = std::get<D10>(_sv.v());
-      return Uint0(D10{clone_value(d_a0)});
+      return Uint0(
+          D10{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D11>(_sv.v())) {
       const auto &[d_a0] = std::get<D11>(_sv.v());
-      return Uint0(D11{clone_value(d_a0)});
+      return Uint0(
+          D11{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D12>(_sv.v())) {
       const auto &[d_a0] = std::get<D12>(_sv.v());
-      return Uint0(D12{clone_value(d_a0)});
+      return Uint0(
+          D12{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D13>(_sv.v())) {
       const auto &[d_a0] = std::get<D13>(_sv.v());
-      return Uint0(D13{clone_value(d_a0)});
+      return Uint0(
+          D13{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D14>(_sv.v())) {
       const auto &[d_a0] = std::get<D14>(_sv.v());
-      return Uint0(D14{clone_value(d_a0)});
+      return Uint0(
+          D14{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D15>(_sv.v())) {
       const auto &[d_a0] = std::get<D15>(_sv.v());
-      return Uint0(D15{clone_value(d_a0)});
+      return Uint0(
+          D15{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D16>(_sv.v())) {
       const auto &[d_a0] = std::get<D16>(_sv.v());
-      return Uint0(D16{clone_value(d_a0)});
+      return Uint0(
+          D16{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D17>(_sv.v())) {
       const auto &[d_a0] = std::get<D17>(_sv.v());
-      return Uint0(D17{clone_value(d_a0)});
+      return Uint0(
+          D17{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D18>(_sv.v())) {
       const auto &[d_a0] = std::get<D18>(_sv.v());
-      return Uint0(D18{clone_value(d_a0)});
+      return Uint0(
+          D18{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D19>(_sv.v())) {
       const auto &[d_a0] = std::get<D19>(_sv.v());
-      return Uint0(D19{clone_value(d_a0)});
+      return Uint0(
+          D19{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<Da>(_sv.v())) {
       const auto &[d_a0] = std::get<Da>(_sv.v());
-      return Uint0(Da{clone_value(d_a0)});
+      return Uint0(Da{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<Db>(_sv.v())) {
       const auto &[d_a0] = std::get<Db>(_sv.v());
-      return Uint0(Db{clone_value(d_a0)});
+      return Uint0(Db{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<Dc>(_sv.v())) {
       const auto &[d_a0] = std::get<Dc>(_sv.v());
-      return Uint0(Dc{clone_value(d_a0)});
+      return Uint0(Dc{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<Dd>(_sv.v())) {
       const auto &[d_a0] = std::get<Dd>(_sv.v());
-      return Uint0(Dd{clone_value(d_a0)});
+      return Uint0(Dd{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<De>(_sv.v())) {
       const auto &[d_a0] = std::get<De>(_sv.v());
-      return Uint0(De{clone_value(d_a0)});
+      return Uint0(De{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else {
       const auto &[d_a0] = std::get<Df>(_sv.v());
-      return Uint0(Df{clone_value(d_a0)});
+      return Uint0(Df{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     }
   }
 
@@ -679,10 +666,10 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<UIntDecimal>(_sv.v())) {
       const auto &[d_u] = std::get<UIntDecimal>(_sv.v());
-      return Uint1(UIntDecimal{d_u});
+      return Uint1(UIntDecimal{d_u.clone()});
     } else {
       const auto &[d_u] = std::get<UIntHexadecimal>(_sv.v());
-      return Uint1(UIntHexadecimal{d_u});
+      return Uint1(UIntHexadecimal{d_u.clone()});
     }
   }
 
@@ -740,7 +727,18 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) Mg_dL clone() const {
-      return Mg_dL{(*(this)).mg_dL_val};
+      return Mg_dL{[](auto &&__v) -> unsigned int {
+        if constexpr (
+            requires { __v ? 0 : 0; } && requires { *__v; } &&
+            requires { __v->clone(); } && requires { __v.get(); }) {
+          using _E = std::remove_cvref_t<decltype(*__v)>;
+          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+        } else if constexpr (requires { __v.clone(); }) {
+          return __v.clone();
+        } else {
+          return __v;
+        }
+      }((*this).mg_dL_val)};
     }
   };
 
@@ -753,7 +751,18 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) Grams clone() const {
-      return Grams{(*(this)).grams_val};
+      return Grams{[](auto &&__v) -> unsigned int {
+        if constexpr (
+            requires { __v ? 0 : 0; } && requires { *__v; } &&
+            requires { __v->clone(); } && requires { __v.get(); }) {
+          using _E = std::remove_cvref_t<decltype(*__v)>;
+          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+        } else if constexpr (requires { __v.clone(); }) {
+          return __v.clone();
+        } else {
+          return __v;
+        }
+      }((*this).grams_val)};
     }
   };
 
@@ -784,11 +793,67 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) Config clone() const {
-      return Config{(*(this)).cfg_bg_rise_per_gram,
-                    (*(this)).cfg_conservative_cob_absorption_percent,
-                    (*(this)).cfg_suspend_threshold_mg_dl,
-                    (*(this)).cfg_stacking_warning_threshold_min,
-                    (*(this)).cfg_iob_high_threshold_twentieths};
+      return Config{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cfg_bg_rise_per_gram),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cfg_conservative_cob_absorption_percent),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cfg_suspend_threshold_mg_dl),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cfg_stacking_warning_threshold_min),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cfg_iob_high_threshold_twentieths)};
     }
   };
 
@@ -922,7 +987,18 @@ struct ValidatedPumpDeliveryTraceCase {
         return FaultStatus(Fault_Occlusion{});
       } else if (std::holds_alternative<Fault_LowReservoir>(_sv.v())) {
         const auto &[d_a0] = std::get<Fault_LowReservoir>(_sv.v());
-        return FaultStatus(Fault_LowReservoir{d_a0});
+        return FaultStatus(Fault_LowReservoir{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_a0)});
       } else if (std::holds_alternative<Fault_BatteryLow>(_sv.v())) {
         return FaultStatus(Fault_BatteryLow{});
       } else {
@@ -1088,8 +1164,31 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) BolusEvent clone() const {
-      return BolusEvent{(*(this)).be_dose_twentieths,
-                        (*(this)).be_time_minutes};
+      return BolusEvent{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).be_dose_twentieths),
+          [](auto &&__v) -> Minutes {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).be_time_minutes)};
     }
   };
 
@@ -1178,7 +1277,19 @@ struct ValidatedPumpDeliveryTraceCase {
         return SuspendDecision(Suspend_None{});
       } else if (std::holds_alternative<Suspend_Reduce>(_sv.v())) {
         const auto &[d_a0] = std::get<Suspend_Reduce>(_sv.v());
-        return SuspendDecision(Suspend_Reduce{d_a0});
+        return SuspendDecision(
+            Suspend_Reduce{[](auto &&__v) -> Insulin_twentieth {
+              if constexpr (
+                  requires { __v ? 0 : 0; } && requires { *__v; } &&
+                  requires { __v->clone(); } && requires { __v.get(); }) {
+                using _E = std::remove_cvref_t<decltype(*__v)>;
+                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+              } else if constexpr (requires { __v.clone(); }) {
+                return __v.clone();
+              } else {
+                return __v;
+              }
+            }(d_a0)});
       } else {
         return SuspendDecision(Suspend_Withhold{});
       }
@@ -1286,10 +1397,56 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) PrecisionParams clone() const {
-      return PrecisionParams{(*(this)).prec_icr_tenths,
-                             (*(this)).prec_isf_tenths,
-                             (*(this)).prec_target_bg, (*(this)).prec_dia,
-                             (*(this)).prec_insulin_type};
+      return PrecisionParams{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).prec_icr_tenths),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).prec_isf_tenths),
+          (*(this)).prec_target_bg.clone(),
+          [](auto &&__v) -> DIA_minutes {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).prec_dia),
+          [](auto &&__v) -> InsulinType {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).prec_insulin_type)};
     }
   };
 
@@ -1314,10 +1471,69 @@ struct ValidatedPumpDeliveryTraceCase {
     // ACCESSORS
     __attribute__((pure)) PrecisionInput clone() const {
       return PrecisionInput{
-          (*(this)).pi_carbs_g,  (*(this)).pi_current_bg,
-          (*(this)).pi_now,      (*(this)).pi_bolus_history,
-          (*(this)).pi_activity, (*(this)).pi_use_sensor_margin,
-          (*(this)).pi_fault,    (*(this)).pi_weight_kg};
+          [](auto &&__v) -> Carbs_g {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).pi_carbs_g),
+          (*(this)).pi_current_bg.clone(),
+          [](auto &&__v) -> Minutes {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).pi_now),
+          (*(this)).pi_bolus_history.clone(),
+          [](auto &&__v) -> ActivityState {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).pi_activity),
+          [](auto &&__v) -> bool {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).pi_use_sensor_margin),
+          (*(this)).pi_fault.clone(),
+          [](auto &&__v) -> std::optional<unsigned int> {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).pi_weight_kg)};
     }
   };
 
@@ -1381,10 +1597,45 @@ struct ValidatedPumpDeliveryTraceCase {
       auto &&_sv = *(this);
       if (std::holds_alternative<PrecOK>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<PrecOK>(_sv.v());
-        return PrecisionResult(PrecOK{d_a0, d_a1});
+        return PrecisionResult(PrecOK{
+            [](auto &&__v) -> Insulin_twentieth {
+              if constexpr (
+                  requires { __v ? 0 : 0; } && requires { *__v; } &&
+                  requires { __v->clone(); } && requires { __v.get(); }) {
+                using _E = std::remove_cvref_t<decltype(*__v)>;
+                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+              } else if constexpr (requires { __v.clone(); }) {
+                return __v.clone();
+              } else {
+                return __v;
+              }
+            }(d_a0),
+            [](auto &&__v) -> bool {
+              if constexpr (
+                  requires { __v ? 0 : 0; } && requires { *__v; } &&
+                  requires { __v->clone(); } && requires { __v.get(); }) {
+                using _E = std::remove_cvref_t<decltype(*__v)>;
+                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+              } else if constexpr (requires { __v.clone(); }) {
+                return __v.clone();
+              } else {
+                return __v;
+              }
+            }(d_a1)});
       } else {
         const auto &[d_a0] = std::get<PrecError>(_sv.v());
-        return PrecisionResult(PrecError{d_a0});
+        return PrecisionResult(PrecError{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_a0)});
       }
     }
 
@@ -1506,10 +1757,80 @@ struct ValidatedPumpDeliveryTraceCase {
     // ACCESSORS
     __attribute__((pure)) MmolPrecisionInput clone() const {
       return MmolPrecisionInput{
-          (*(this)).mpi_carbs_g,  (*(this)).mpi_current_bg_mmol_tenths,
-          (*(this)).mpi_now,      (*(this)).mpi_bolus_history,
-          (*(this)).mpi_activity, (*(this)).mpi_use_sensor_margin,
-          (*(this)).mpi_fault,    (*(this)).mpi_weight_kg};
+          [](auto &&__v) -> Carbs_g {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).mpi_carbs_g),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).mpi_current_bg_mmol_tenths),
+          [](auto &&__v) -> Minutes {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).mpi_now),
+          (*(this)).mpi_bolus_history.clone(),
+          [](auto &&__v) -> ActivityState {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).mpi_activity),
+          [](auto &&__v) -> bool {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).mpi_use_sensor_margin),
+          (*(this)).mpi_fault.clone(),
+          [](auto &&__v) -> std::optional<unsigned int> {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).mpi_weight_kg)};
     }
   };
 
@@ -1590,9 +1911,66 @@ struct ValidatedPumpDeliveryTraceCase {
     // ACCESSORS
     __attribute__((pure)) PumpState clone() const {
       return PumpState{
-          (*(this)).ps_reservoir_twentieths, (*(this)).ps_basal_rate_hundredths,
-          (*(this)).ps_last_bolus_time, (*(this)).ps_occlusion_detected,
-          (*(this)).ps_battery_percent};
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).ps_reservoir_twentieths),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).ps_basal_rate_hundredths),
+          [](auto &&__v) -> Minutes {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).ps_last_bolus_time),
+          [](auto &&__v) -> bool {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).ps_occlusion_detected),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).ps_battery_percent)};
     }
   };
 

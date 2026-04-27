@@ -10,56 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
-template <typename T> struct is_unique_ptr : std::false_type {};
-
-template <typename T>
-struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> auto clone_value(const T &x) { return x; }
-
-template <typename T>
-std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  if constexpr (requires { x->clone(); }) {
-    return x ? std::make_unique<T>(x->clone()) : nullptr;
-  } else {
-    return x ? std::make_unique<T>(*x) : nullptr;
-  }
-}
-
-template <typename Target, typename Source>
-Target clone_as_value(const Source &x) {
-  using T = std::remove_cvref_t<Target>;
-  using S = std::remove_cvref_t<Source>;
-  if constexpr (requires(const S &s) {
-                  s.has_value();
-                  *s;
-                }) {
-    if (!x.has_value())
-      return T{};
-    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
-    return T{clone_as_value<TInner>(*x)};
-  } else if constexpr (std::is_same_v<T, S>) {
-    if constexpr (is_unique_ptr<T>::value) {
-      return clone_value(x);
-    } else if constexpr (requires { x.clone(); }) {
-      return x.clone();
-    } else {
-      return x;
-    }
-  } else if constexpr (is_unique_ptr<S>::value) {
-    if (!x)
-      return T{};
-    return clone_as_value<T>(*x);
-  } else if constexpr (is_unique_ptr<T>::value) {
-    using Inner = typename is_unique_ptr<T>::element_type;
-    return std::make_unique<Inner>(clone_as_value<Inner>(x));
-  } else {
-    return T(x);
-  }
-}
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -105,7 +55,20 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{clone_value(d_a0), clone_value(d_a1)});
+      t_A __c0;
+      if constexpr (
+          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
+          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
+        using _E = std::remove_cvref_t<decltype(*d_a0)>;
+        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
+      } else if constexpr (requires { d_a0.clone(); }) {
+        __c0 = d_a0.clone();
+      } else {
+        __c0 = d_a0;
+      }
+      return List<t_A>(
+          Cons{std::move(__c0),
+               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -115,8 +78,22 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{clone_as_value<t_A>(d_a0),
-                  d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ = Cons{
+          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
+            if constexpr (
+                requires { *__v; } &&
+                !requires { std::declval<_DstT>().get(); })
+              return _DstT(*__v);
+            else if constexpr (
+                !requires { *__v; } &&
+                requires { std::declval<_DstT>().get(); }) {
+              using _E =
+                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+              return std::make_unique<_E>(std::move(__v));
+            } else
+              return _DstT(__v);
+          }(d_a0),
+          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -217,9 +194,58 @@ struct CpuEmulator {
 
     // ACCESSORS
     __attribute__((pure)) state clone() const {
-      return state{(*(this)).ex_acc,  (*(this)).ex_regs,  (*(this)).ex_carry,
-                   (*(this)).ex_pc,   (*(this)).ex_stack, (*(this)).ex_pair_bus,
-                   (*(this)).ex_ports};
+      return state{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).ex_acc),
+          (*(this)).ex_regs.clone(),
+          [](auto &&__v) -> bool {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).ex_carry),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).ex_pc),
+          (*(this)).ex_stack.clone(),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).ex_pair_bus),
+          (*(this)).ex_ports.clone()};
     }
   };
 
@@ -420,22 +446,88 @@ struct CpuEmulator {
         return instr(NOP{});
       } else if (std::holds_alternative<LDM>(_sv.v())) {
         const auto &[d_n] = std::get<LDM>(_sv.v());
-        return instr(LDM{d_n});
+        return instr(LDM{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_n)});
       } else if (std::holds_alternative<LD>(_sv.v())) {
         const auto &[d_r] = std::get<LD>(_sv.v());
-        return instr(LD{d_r});
+        return instr(LD{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_r)});
       } else if (std::holds_alternative<XCH>(_sv.v())) {
         const auto &[d_r] = std::get<XCH>(_sv.v());
-        return instr(XCH{d_r});
+        return instr(XCH{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_r)});
       } else if (std::holds_alternative<INC>(_sv.v())) {
         const auto &[d_r] = std::get<INC>(_sv.v());
-        return instr(INC{d_r});
+        return instr(INC{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_r)});
       } else if (std::holds_alternative<ADD>(_sv.v())) {
         const auto &[d_r] = std::get<ADD>(_sv.v());
-        return instr(ADD{d_r});
+        return instr(ADD{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_r)});
       } else if (std::holds_alternative<SUB>(_sv.v())) {
         const auto &[d_r] = std::get<SUB>(_sv.v());
-        return instr(SUB{d_r});
+        return instr(SUB{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_r)});
       } else if (std::holds_alternative<IAC>(_sv.v())) {
         return instr(IAC{});
       } else if (std::holds_alternative<DAC>(_sv.v())) {
@@ -464,31 +556,169 @@ struct CpuEmulator {
         return instr(KBP{});
       } else if (std::holds_alternative<JUN>(_sv.v())) {
         const auto &[d_a] = std::get<JUN>(_sv.v());
-        return instr(JUN{d_a});
+        return instr(JUN{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_a)});
       } else if (std::holds_alternative<JMS>(_sv.v())) {
         const auto &[d_a] = std::get<JMS>(_sv.v());
-        return instr(JMS{d_a});
+        return instr(JMS{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_a)});
       } else if (std::holds_alternative<JCN>(_sv.v())) {
         const auto &[d_c, d_a] = std::get<JCN>(_sv.v());
-        return instr(JCN{d_c, d_a});
+        return instr(
+            JCN{[](auto &&__v) -> unsigned int {
+                  if constexpr (
+                      requires { __v ? 0 : 0; } && requires { *__v; } &&
+                      requires { __v->clone(); } && requires { __v.get(); }) {
+                    using _E = std::remove_cvref_t<decltype(*__v)>;
+                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                  } else if constexpr (requires { __v.clone(); }) {
+                    return __v.clone();
+                  } else {
+                    return __v;
+                  }
+                }(d_c),
+                [](auto &&__v) -> unsigned int {
+                  if constexpr (
+                      requires { __v ? 0 : 0; } && requires { *__v; } &&
+                      requires { __v->clone(); } && requires { __v.get(); }) {
+                    using _E = std::remove_cvref_t<decltype(*__v)>;
+                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                  } else if constexpr (requires { __v.clone(); }) {
+                    return __v.clone();
+                  } else {
+                    return __v;
+                  }
+                }(d_a)});
       } else if (std::holds_alternative<FIM>(_sv.v())) {
         const auto &[d_r, d_d] = std::get<FIM>(_sv.v());
-        return instr(FIM{d_r, d_d});
+        return instr(
+            FIM{[](auto &&__v) -> unsigned int {
+                  if constexpr (
+                      requires { __v ? 0 : 0; } && requires { *__v; } &&
+                      requires { __v->clone(); } && requires { __v.get(); }) {
+                    using _E = std::remove_cvref_t<decltype(*__v)>;
+                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                  } else if constexpr (requires { __v.clone(); }) {
+                    return __v.clone();
+                  } else {
+                    return __v;
+                  }
+                }(d_r),
+                [](auto &&__v) -> unsigned int {
+                  if constexpr (
+                      requires { __v ? 0 : 0; } && requires { *__v; } &&
+                      requires { __v->clone(); } && requires { __v.get(); }) {
+                    using _E = std::remove_cvref_t<decltype(*__v)>;
+                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                  } else if constexpr (requires { __v.clone(); }) {
+                    return __v.clone();
+                  } else {
+                    return __v;
+                  }
+                }(d_d)});
       } else if (std::holds_alternative<SRC>(_sv.v())) {
         const auto &[d_r] = std::get<SRC>(_sv.v());
-        return instr(SRC{d_r});
+        return instr(SRC{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_r)});
       } else if (std::holds_alternative<FIN>(_sv.v())) {
         const auto &[d_r] = std::get<FIN>(_sv.v());
-        return instr(FIN{d_r});
+        return instr(FIN{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_r)});
       } else if (std::holds_alternative<JIN>(_sv.v())) {
         const auto &[d_r] = std::get<JIN>(_sv.v());
-        return instr(JIN{d_r});
+        return instr(JIN{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_r)});
       } else if (std::holds_alternative<ISZ>(_sv.v())) {
         const auto &[d_r, d_a] = std::get<ISZ>(_sv.v());
-        return instr(ISZ{d_r, d_a});
+        return instr(
+            ISZ{[](auto &&__v) -> unsigned int {
+                  if constexpr (
+                      requires { __v ? 0 : 0; } && requires { *__v; } &&
+                      requires { __v->clone(); } && requires { __v.get(); }) {
+                    using _E = std::remove_cvref_t<decltype(*__v)>;
+                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                  } else if constexpr (requires { __v.clone(); }) {
+                    return __v.clone();
+                  } else {
+                    return __v;
+                  }
+                }(d_r),
+                [](auto &&__v) -> unsigned int {
+                  if constexpr (
+                      requires { __v ? 0 : 0; } && requires { *__v; } &&
+                      requires { __v->clone(); } && requires { __v.get(); }) {
+                    using _E = std::remove_cvref_t<decltype(*__v)>;
+                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                  } else if constexpr (requires { __v.clone(); }) {
+                    return __v.clone();
+                  } else {
+                    return __v;
+                  }
+                }(d_a)});
       } else {
         const auto &[d_d] = std::get<BBL>(_sv.v());
-        return instr(BBL{d_d});
+        return instr(BBL{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_d)});
       }
     }
 

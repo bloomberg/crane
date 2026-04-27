@@ -16,8 +16,7 @@ LoopifyListOfLists::intercalate(const List<unsigned int> &sep,
   };
 
   struct _Call1 {
-    decltype(clone_as_value<List<unsigned int>>(
-        std::declval<std::shared_ptr<List<unsigned int>> &>())) _s0;
+    List<unsigned int> _s0;
     const List<unsigned int> _s1;
   };
 
@@ -41,10 +40,9 @@ LoopifyListOfLists::intercalate(const List<unsigned int> &sep,
         auto &&_sv = *(d_a1);
         if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                 _sv.v())) {
-          _result = clone_as_value<List<unsigned int>>(d_a0);
+          _result = d_a0;
         } else {
-          _stack.emplace_back(
-              _Call1{clone_as_value<List<unsigned int>>(d_a0), sep});
+          _stack.emplace_back(_Call1{d_a0, sep});
           _stack.emplace_back(_Enter{*(d_a1)});
         }
       }
@@ -70,13 +68,12 @@ LoopifyListOfLists::map_hd(const List<List<unsigned int>> &ll) {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<List<unsigned int>>::Cons>(_loop_ll.v());
-      auto &&_sv0 = clone_as_value<List<unsigned int>>(d_a0);
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a0.v())) {
         _loop_ll = *(d_a1);
         continue;
       } else {
         const auto &[d_a00, d_a10] =
-            std::get<typename List<unsigned int>::Cons>(_sv0.v());
+            std::get<typename List<unsigned int>::Cons>(d_a0.v());
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a00, nullptr));
         *(_write) = std::move(_cell);
@@ -105,13 +102,12 @@ LoopifyListOfLists::map_tl(const List<List<unsigned int>> &ll) {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<List<unsigned int>>::Cons>(_loop_ll.v());
-      auto &&_sv0 = clone_as_value<List<unsigned int>>(d_a0);
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a0.v())) {
         _loop_ll = *(d_a1);
         continue;
       } else {
         const auto &[d_a00, d_a10] =
-            std::get<typename List<unsigned int>::Cons>(_sv0.v());
+            std::get<typename List<unsigned int>::Cons>(d_a0.v());
         auto _cell = std::make_unique<List<List<unsigned int>>>(
             typename List<List<unsigned int>>::Cons(*(d_a10), nullptr));
         *(_write) = std::move(_cell);
@@ -138,8 +134,7 @@ LoopifyListOfLists::all_empty(const List<List<unsigned int>> &ll) {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<List<unsigned int>>::Cons>(_loop_ll.v());
-      auto &&_sv = clone_as_value<List<unsigned int>>(d_a0);
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a0.v())) {
         _loop_ll = *(d_a1);
       } else {
         _result = false;
@@ -172,8 +167,8 @@ LoopifyListOfLists::transpose_fuel(const unsigned int &fuel,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(_loop_ll.v());
-        auto &&_sv = clone_as_value<List<unsigned int>>(d_a0);
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                d_a0.v())) {
           *(_write) = std::make_unique<List<List<unsigned int>>>(
               List<List<unsigned int>>::nil());
           break;
@@ -248,8 +243,7 @@ LoopifyListOfLists::total_length(const List<List<unsigned int>> &ll) {
   };
 
   struct _Call1 {
-    decltype(list_len(clone_as_value<List<unsigned int>>(
-        std::declval<std::shared_ptr<List<unsigned int>> &>()))) _s0;
+    decltype(list_len(std::declval<List<unsigned int> &>())) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -269,8 +263,7 @@ LoopifyListOfLists::total_length(const List<List<unsigned int>> &ll) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(
-            _Call1{list_len(clone_as_value<List<unsigned int>>(d_a0))});
+        _stack.emplace_back(_Call1{list_len(d_a0)});
         _stack.emplace_back(_Enter{*(d_a1)});
       }
     } else {
@@ -293,8 +286,7 @@ LoopifyListOfLists::flatten(const List<List<unsigned int>> &ll) {
   };
 
   struct _Call1 {
-    decltype(clone_as_value<List<unsigned int>>(
-        std::declval<std::shared_ptr<List<unsigned int>> &>())) _s0;
+    List<unsigned int> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -314,7 +306,7 @@ LoopifyListOfLists::flatten(const List<List<unsigned int>> &ll) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(_Call1{clone_as_value<List<unsigned int>>(d_a0)});
+        _stack.emplace_back(_Call1{d_a0});
         _stack.emplace_back(_Enter{*(d_a1)});
       }
     } else {
@@ -332,8 +324,7 @@ LoopifyListOfLists::count_total(const List<List<unsigned int>> &ll) {
   };
 
   struct _Call1 {
-    decltype(list_len(clone_as_value<List<unsigned int>>(
-        std::declval<std::shared_ptr<List<unsigned int>> &>()))) _s0;
+    decltype(list_len(std::declval<List<unsigned int> &>())) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -353,8 +344,7 @@ LoopifyListOfLists::count_total(const List<List<unsigned int>> &ll) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(
-            _Call1{list_len(clone_as_value<List<unsigned int>>(d_a0))});
+        _stack.emplace_back(_Call1{list_len(d_a0)});
         _stack.emplace_back(_Enter{*(d_a1)});
       }
     } else {
@@ -379,13 +369,12 @@ LoopifyListOfLists::firsts(const List<List<unsigned int>> &ll) {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<List<unsigned int>>::Cons>(_loop_ll.v());
-      auto &&_sv0 = clone_as_value<List<unsigned int>>(d_a0);
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a0.v())) {
         _loop_ll = *(d_a1);
         continue;
       } else {
         const auto &[d_a00, d_a10] =
-            std::get<typename List<unsigned int>::Cons>(_sv0.v());
+            std::get<typename List<unsigned int>::Cons>(d_a0.v());
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a00, nullptr));
         *(_write) = std::move(_cell);
@@ -412,8 +401,7 @@ LoopifyListOfLists::all_nil(const List<List<unsigned int>> &ll) {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<List<unsigned int>>::Cons>(_loop_ll.v());
-      auto &&_sv = clone_as_value<List<unsigned int>>(d_a0);
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a0.v())) {
         _loop_ll = *(d_a1);
       } else {
         _result = false;
@@ -455,9 +443,7 @@ LoopifyListOfLists::zip_lists(const List<List<unsigned int>> &ll1,
         auto _cell = std::make_unique<
             List<std::pair<List<unsigned int>, List<unsigned int>>>>(
             typename List<std::pair<List<unsigned int>, List<unsigned int>>>::
-                Cons(std::make_pair(clone_as_value<List<unsigned int>>(d_a0),
-                                    clone_as_value<List<unsigned int>>(d_a00)),
-                     nullptr));
+                Cons(std::make_pair(d_a0, d_a00), nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<
             std::pair<List<unsigned int>, List<unsigned int>>>::Cons>(
@@ -481,8 +467,7 @@ LoopifyListOfLists::max_length(const List<List<unsigned int>> &ll) {
   };
 
   struct _Call1 {
-    decltype(list_len(clone_as_value<List<unsigned int>>(
-        std::declval<std::shared_ptr<List<unsigned int>> &>()))) _s0;
+    decltype(list_len(std::declval<List<unsigned int> &>())) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -502,8 +487,7 @@ LoopifyListOfLists::max_length(const List<List<unsigned int>> &ll) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(
-            _Call1{list_len(clone_as_value<List<unsigned int>>(d_a0))});
+        _stack.emplace_back(_Call1{list_len(d_a0)});
         _stack.emplace_back(_Enter{*(d_a1)});
       }
     } else {

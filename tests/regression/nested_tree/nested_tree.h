@@ -11,56 +11,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
-template <typename T> struct is_unique_ptr : std::false_type {};
-
-template <typename T>
-struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> auto clone_value(const T &x) { return x; }
-
-template <typename T>
-std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  if constexpr (requires { x->clone(); }) {
-    return x ? std::make_unique<T>(x->clone()) : nullptr;
-  } else {
-    return x ? std::make_unique<T>(*x) : nullptr;
-  }
-}
-
-template <typename Target, typename Source>
-Target clone_as_value(const Source &x) {
-  using T = std::remove_cvref_t<Target>;
-  using S = std::remove_cvref_t<Source>;
-  if constexpr (requires(const S &s) {
-                  s.has_value();
-                  *s;
-                }) {
-    if (!x.has_value())
-      return T{};
-    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
-    return T{clone_as_value<TInner>(*x)};
-  } else if constexpr (std::is_same_v<T, S>) {
-    if constexpr (is_unique_ptr<T>::value) {
-      return clone_value(x);
-    } else if constexpr (requires { x.clone(); }) {
-      return x.clone();
-    } else {
-      return x;
-    }
-  } else if constexpr (is_unique_ptr<S>::value) {
-    if (!x)
-      return T{};
-    return clone_as_value<T>(*x);
-  } else if constexpr (is_unique_ptr<T>::value) {
-    using Inner = typename is_unique_ptr<T>::element_type;
-    return std::make_unique<Inner>(clone_as_value<Inner>(x));
-  } else {
-    return T(x);
-  }
-}
-
 struct Nat {
   // TYPES
   struct O {};
@@ -104,7 +54,7 @@ public:
       return Nat(O{});
     } else {
       const auto &[d_a0] = std::get<S>(_sv.v());
-      return Nat(S{clone_value(d_a0)});
+      return Nat(S{d_a0 ? std::make_unique<Nat>(d_a0->clone()) : nullptr});
     }
   }
 
@@ -179,7 +129,20 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{clone_value(d_a0), clone_value(d_a1)});
+      t_A __c0;
+      if constexpr (
+          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
+          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
+        using _E = std::remove_cvref_t<decltype(*d_a0)>;
+        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
+      } else if constexpr (requires { d_a0.clone(); }) {
+        __c0 = d_a0.clone();
+      } else {
+        __c0 = d_a0;
+      }
+      return List<t_A>(
+          Cons{std::move(__c0),
+               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -189,8 +152,22 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{clone_as_value<t_A>(d_a0),
-                  d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ = Cons{
+          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
+            if constexpr (
+                requires { *__v; } &&
+                !requires { std::declval<_DstT>().get(); })
+              return _DstT(*__v);
+            else if constexpr (
+                !requires { *__v; } &&
+                requires { std::declval<_DstT>().get(); }) {
+              using _E =
+                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+              return std::make_unique<_E>(std::move(__v));
+            } else
+              return _DstT(__v);
+          }(d_a0),
+          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -275,7 +252,18 @@ struct NestedTree {
         return tree<t_A>(Leaf{});
       } else {
         const auto &[d_a0, d_a1] = std::get<Node>(_sv.v());
-        return tree<t_A>(Node{clone_value(d_a0), d_a1});
+        t_A __c0;
+        if constexpr (
+            requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
+            requires { d_a0->clone(); } && requires { d_a0.get(); }) {
+          using _E = std::remove_cvref_t<decltype(*d_a0)>;
+          __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
+        } else if constexpr (requires { d_a0.clone(); }) {
+          __c0 = d_a0.clone();
+        } else {
+          __c0 = d_a0;
+        }
+        return tree<t_A>(Node{std::move(__c0), d_a1});
       }
     }
 
@@ -287,8 +275,35 @@ struct NestedTree {
         const auto &[d_a0, d_a1] =
             std::get<typename tree<_U>::Node>(_other.v());
         d_v_ = Node{
-            clone_as_value<t_A>(d_a0),
-            clone_as_value<std::shared_ptr<tree<std::pair<t_A, t_A>>>>(d_a1)};
+            [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
+              if constexpr (
+                  requires { *__v; } &&
+                  !requires { std::declval<_DstT>().get(); })
+                return _DstT(*__v);
+              else if constexpr (
+                  !requires { *__v; } &&
+                  requires { std::declval<_DstT>().get(); }) {
+                using _E = std::remove_pointer_t<
+                    decltype(std::declval<_DstT>().get())>;
+                return std::make_unique<_E>(std::move(__v));
+              } else
+                return _DstT(__v);
+            }(d_a0),
+            [&]<typename _DstT = std::shared_ptr<tree<std::pair<t_A, t_A>>>>(
+                auto &&__v) -> _DstT {
+              if constexpr (
+                  requires { *__v; } &&
+                  !requires { std::declval<_DstT>().get(); })
+                return _DstT(*__v);
+              else if constexpr (
+                  !requires { *__v; } &&
+                  requires { std::declval<_DstT>().get(); }) {
+                using _E = std::remove_pointer_t<
+                    decltype(std::declval<_DstT>().get())>;
+                return std::make_unique<_E>(std::move(__v));
+              } else
+                return _DstT(__v);
+            }(d_a1)};
       }
     }
 
@@ -326,11 +341,40 @@ struct NestedTree {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree<T2>::Node>(t.v());
-      return std::any_cast<T1>(
-          f0(d_a0, clone_as_value<NestedTree::tree<std::pair<T2, T2>>>(d_a1),
-             tree_rect<T1, T2>(
-                 f, f0,
-                 clone_as_value<NestedTree::tree<std::pair<T2, T2>>>(d_a1))));
+      return std::any_cast<T1>(f0(
+          d_a0,
+          [&]<typename _DstT = NestedTree::tree<std::pair<T2, T2>>>(
+              auto &&__v) -> _DstT {
+            if constexpr (
+                requires { *__v; } &&
+                !requires { std::declval<_DstT>().get(); })
+              return _DstT(*__v);
+            else if constexpr (
+                !requires { *__v; } &&
+                requires { std::declval<_DstT>().get(); }) {
+              using _E =
+                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+              return std::make_unique<_E>(std::move(__v));
+            } else
+              return _DstT(__v);
+          }(d_a1),
+          tree_rect<T1, T2>(
+              f, f0,
+              [&]<typename _DstT = NestedTree::tree<std::pair<T2, T2>>>(
+                  auto &&__v) -> _DstT {
+                if constexpr (
+                    requires { *__v; } &&
+                    !requires { std::declval<_DstT>().get(); })
+                  return _DstT(*__v);
+                else if constexpr (
+                    !requires { *__v; } &&
+                    requires { std::declval<_DstT>().get(); }) {
+                  using _E = std::remove_pointer_t<
+                      decltype(std::declval<_DstT>().get())>;
+                  return std::make_unique<_E>(std::move(__v));
+                } else
+                  return _DstT(__v);
+              }(d_a1))));
     }
   }
 
@@ -340,11 +384,40 @@ struct NestedTree {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree<T2>::Node>(t.v());
-      return std::any_cast<T1>(
-          f0(d_a0, clone_as_value<NestedTree::tree<std::pair<T2, T2>>>(d_a1),
-             tree_rec<T1, T2>(
-                 f, f0,
-                 clone_as_value<NestedTree::tree<std::pair<T2, T2>>>(d_a1))));
+      return std::any_cast<T1>(f0(
+          d_a0,
+          [&]<typename _DstT = NestedTree::tree<std::pair<T2, T2>>>(
+              auto &&__v) -> _DstT {
+            if constexpr (
+                requires { *__v; } &&
+                !requires { std::declval<_DstT>().get(); })
+              return _DstT(*__v);
+            else if constexpr (
+                !requires { *__v; } &&
+                requires { std::declval<_DstT>().get(); }) {
+              using _E =
+                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+              return std::make_unique<_E>(std::move(__v));
+            } else
+              return _DstT(__v);
+          }(d_a1),
+          tree_rec<T1, T2>(
+              f, f0,
+              [&]<typename _DstT = NestedTree::tree<std::pair<T2, T2>>>(
+                  auto &&__v) -> _DstT {
+                if constexpr (
+                    requires { *__v; } &&
+                    !requires { std::declval<_DstT>().get(); })
+                  return _DstT(*__v);
+                else if constexpr (
+                    !requires { *__v; } &&
+                    requires { std::declval<_DstT>().get(); }) {
+                  using _E = std::remove_pointer_t<
+                      decltype(std::declval<_DstT>().get())>;
+                  return std::make_unique<_E>(std::move(__v));
+                } else
+                  return _DstT(__v);
+              }(d_a1))));
     }
   }
 
@@ -392,12 +465,25 @@ _flatten_tree_go(F0 &&f, const NestedTree::template tree<T1> t0) {
     const auto &[d_a0, d_a1] =
         std::get<typename NestedTree::template tree<T1>::Node>(t0.v());
     return List<List<T2>>::cons(
-        f(d_a0),
-        _flatten_tree_go<T1, T2>(
-            [=](std::pair<T1, T1> _x0) mutable -> List<T2> {
-              return NestedTree::template lift<T1, T2>(f, _x0);
-            },
-            clone_as_value<NestedTree::tree<std::pair<T1, T1>>>(d_a1)));
+        f(d_a0), _flatten_tree_go<T1, T2>(
+                     [=](std::pair<T1, T1> _x0) mutable -> List<T2> {
+                       return NestedTree::template lift<T1, T2>(f, _x0);
+                     },
+                     [&]<typename _DstT = NestedTree::tree<std::pair<T1, T1>>>(
+                         auto &&__v) -> _DstT {
+                       if constexpr (
+                           requires { *__v; } &&
+                           !requires { std::declval<_DstT>().get(); })
+                         return _DstT(*__v);
+                       else if constexpr (
+                           !requires { *__v; } &&
+                           requires { std::declval<_DstT>().get(); }) {
+                         using _E = std::remove_pointer_t<
+                             decltype(std::declval<_DstT>().get())>;
+                         return std::make_unique<_E>(std::move(__v));
+                       } else
+                         return _DstT(__v);
+                     }(d_a1)));
   }
 }
 

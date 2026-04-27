@@ -13,56 +13,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
-template <typename T> struct is_unique_ptr : std::false_type {};
-
-template <typename T>
-struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> auto clone_value(const T &x) { return x; }
-
-template <typename T>
-std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  if constexpr (requires { x->clone(); }) {
-    return x ? std::make_unique<T>(x->clone()) : nullptr;
-  } else {
-    return x ? std::make_unique<T>(*x) : nullptr;
-  }
-}
-
-template <typename Target, typename Source>
-Target clone_as_value(const Source &x) {
-  using T = std::remove_cvref_t<Target>;
-  using S = std::remove_cvref_t<Source>;
-  if constexpr (requires(const S &s) {
-                  s.has_value();
-                  *s;
-                }) {
-    if (!x.has_value())
-      return T{};
-    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
-    return T{clone_as_value<TInner>(*x)};
-  } else if constexpr (std::is_same_v<T, S>) {
-    if constexpr (is_unique_ptr<T>::value) {
-      return clone_value(x);
-    } else if constexpr (requires { x.clone(); }) {
-      return x.clone();
-    } else {
-      return x;
-    }
-  } else if constexpr (is_unique_ptr<S>::value) {
-    if (!x)
-      return T{};
-    return clone_as_value<T>(*x);
-  } else if constexpr (is_unique_ptr<T>::value) {
-    using Inner = typename is_unique_ptr<T>::element_type;
-    return std::make_unique<Inner>(clone_as_value<Inner>(x));
-  } else {
-    return T(x);
-  }
-}
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -108,7 +58,20 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{clone_value(d_a0), clone_value(d_a1)});
+      t_A __c0;
+      if constexpr (
+          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
+          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
+        using _E = std::remove_cvref_t<decltype(*d_a0)>;
+        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
+      } else if constexpr (requires { d_a0.clone(); }) {
+        __c0 = d_a0.clone();
+      } else {
+        __c0 = d_a0;
+      }
+      return List<t_A>(
+          Cons{std::move(__c0),
+               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -118,8 +81,22 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{clone_as_value<t_A>(d_a0),
-                  d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ = Cons{
+          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
+            if constexpr (
+                requires { *__v; } &&
+                !requires { std::declval<_DstT>().get(); })
+              return _DstT(*__v);
+            else if constexpr (
+                !requires { *__v; } &&
+                requires { std::declval<_DstT>().get(); }) {
+              using _E =
+                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+              return std::make_unique<_E>(std::move(__v));
+            } else
+              return _DstT(__v);
+          }(d_a0),
+          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -185,13 +162,34 @@ public:
   __attribute__((pure)) Sig<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist>(_sv.v());
-    return Sig<t_A>(Exist{clone_value(d_x)});
+    t_A __c0;
+    if constexpr (
+        requires { d_x ? 0 : 0; } && requires { *d_x; } &&
+        requires { d_x->clone(); } && requires { d_x.get(); }) {
+      using _E = std::remove_cvref_t<decltype(*d_x)>;
+      __c0 = d_x ? std::make_unique<_E>(d_x->clone()) : nullptr;
+    } else if constexpr (requires { d_x.clone(); }) {
+      __c0 = d_x.clone();
+    } else {
+      __c0 = d_x;
+    }
+    return Sig<t_A>(Exist{std::move(__c0)});
   }
 
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
     const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    d_v_ = Exist{clone_as_value<t_A>(d_x)};
+    d_v_ = Exist{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
+      if constexpr (
+          requires { *__v; } && !requires { std::declval<_DstT>().get(); })
+        return _DstT(*__v);
+      else if constexpr (
+          !requires { *__v; } && requires { std::declval<_DstT>().get(); }) {
+        using _E = std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+        return std::make_unique<_E>(std::move(__v));
+      } else
+        return _DstT(__v);
+    }(d_x)};
   }
 
   __attribute__((pure)) static Sig<t_A> exist(t_A x) {
@@ -229,7 +227,42 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     __attribute__((pure)) S clone() const {
-      return S{(*(this)).s_a, (*(this)).s_b, (*(this)).s_c};
+      return S{[](auto &&__v) -> unsigned int {
+                 if constexpr (
+                     requires { __v ? 0 : 0; } && requires { *__v; } &&
+                     requires { __v->clone(); } && requires { __v.get(); }) {
+                   using _E = std::remove_cvref_t<decltype(*__v)>;
+                   return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                 } else if constexpr (requires { __v.clone(); }) {
+                   return __v.clone();
+                 } else {
+                   return __v;
+                 }
+               }((*this).s_a),
+               [](auto &&__v) -> unsigned int {
+                 if constexpr (
+                     requires { __v ? 0 : 0; } && requires { *__v; } &&
+                     requires { __v->clone(); } && requires { __v.get(); }) {
+                   using _E = std::remove_cvref_t<decltype(*__v)>;
+                   return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                 } else if constexpr (requires { __v.clone(); }) {
+                   return __v.clone();
+                 } else {
+                   return __v;
+                 }
+               }((*this).s_b),
+               [](auto &&__v) -> unsigned int {
+                 if constexpr (
+                     requires { __v ? 0 : 0; } && requires { *__v; } &&
+                     requires { __v->clone(); } && requires { __v.get(); }) {
+                   using _E = std::remove_cvref_t<decltype(*__v)>;
+                   return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                 } else if constexpr (requires { __v.clone(); }) {
+                   return __v.clone();
+                 } else {
+                   return __v;
+                 }
+               }((*this).s_c)};
     }
   };
 
@@ -246,7 +279,9 @@ struct ComprehensivePatterns {
     __attribute__((pure)) const L1 *operator->() const { return this; }
 
     // ACCESSORS
-    __attribute__((pure)) L1 clone() const { return L1{(*(this)).l1_s}; }
+    __attribute__((pure)) L1 clone() const {
+      return L1{(*(this)).l1_s.clone()};
+    }
   };
 
   struct L2 {
@@ -257,7 +292,9 @@ struct ComprehensivePatterns {
     __attribute__((pure)) const L2 *operator->() const { return this; }
 
     // ACCESSORS
-    __attribute__((pure)) L2 clone() const { return L2{(*(this)).l2_l1}; }
+    __attribute__((pure)) L2 clone() const {
+      return L2{(*(this)).l2_l1.clone()};
+    }
   };
 
   struct L3 {
@@ -268,7 +305,9 @@ struct ComprehensivePatterns {
     __attribute__((pure)) const L3 *operator->() const { return this; }
 
     // ACCESSORS
-    __attribute__((pure)) L3 clone() const { return L3{(*(this)).l3_l2}; }
+    __attribute__((pure)) L3 clone() const {
+      return L3{(*(this)).l3_l2.clone()};
+    }
   };
 
   struct L4 {
@@ -279,7 +318,9 @@ struct ComprehensivePatterns {
     __attribute__((pure)) const L4 *operator->() const { return this; }
 
     // ACCESSORS
-    __attribute__((pure)) L4 clone() const { return L4{(*(this)).l4_l3}; }
+    __attribute__((pure)) L4 clone() const {
+      return L4{(*(this)).l4_l3.clone()};
+    }
   };
 
   struct L5 {
@@ -290,7 +331,9 @@ struct ComprehensivePatterns {
     __attribute__((pure)) const L5 *operator->() const { return this; }
 
     // ACCESSORS
-    __attribute__((pure)) L5 clone() const { return L5{(*(this)).l5_l4}; }
+    __attribute__((pure)) L5 clone() const {
+      return L5{(*(this)).l5_l4.clone()};
+    }
   };
 
   __attribute__((pure)) static std::pair<
@@ -416,10 +459,21 @@ struct ComprehensivePatterns {
       auto &&_sv = *(this);
       if (std::holds_alternative<Left_S>(_sv.v())) {
         const auto &[d_s] = std::get<Left_S>(_sv.v());
-        return Either(Left_S{d_s});
+        return Either(Left_S{d_s.clone()});
       } else {
         const auto &[d_n] = std::get<Right_N>(_sv.v());
-        return Either(Right_N{d_n});
+        return Either(Right_N{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_n)});
       }
     }
 
@@ -485,7 +539,20 @@ struct ComprehensivePatterns {
     __attribute__((pure)) const R1 *operator->() const { return this; }
 
     // ACCESSORS
-    __attribute__((pure)) R1 clone() const { return R1{(*(this)).r1_val}; }
+    __attribute__((pure)) R1 clone() const {
+      return R1{[](auto &&__v) -> unsigned int {
+        if constexpr (
+            requires { __v ? 0 : 0; } && requires { *__v; } &&
+            requires { __v->clone(); } && requires { __v.get(); }) {
+          using _E = std::remove_cvref_t<decltype(*__v)>;
+          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+        } else if constexpr (requires { __v.clone(); }) {
+          return __v.clone();
+        } else {
+          return __v;
+        }
+      }((*this).r1_val)};
+    }
   };
 
   struct R2 {
@@ -498,7 +565,18 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     __attribute__((pure)) R2 clone() const {
-      return R2{(*(this)).r2_inner, (*(this)).r2_data};
+      return R2{(*(this)).r2_inner.clone(), [](auto &&__v) -> unsigned int {
+                  if constexpr (
+                      requires { __v ? 0 : 0; } && requires { *__v; } &&
+                      requires { __v->clone(); } && requires { __v.get(); }) {
+                    using _E = std::remove_cvref_t<decltype(*__v)>;
+                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                  } else if constexpr (requires { __v.clone(); }) {
+                    return __v.clone();
+                  } else {
+                    return __v;
+                  }
+                }((*this).r2_data)};
     }
   };
 
@@ -513,7 +591,19 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     __attribute__((pure)) R3 clone() const {
-      return R3{(*(this)).r3_r2, (*(this)).r3_r1, (*(this)).r3_num};
+      return R3{(*(this)).r3_r2.clone(), (*(this)).r3_r1.clone(),
+                [](auto &&__v) -> unsigned int {
+                  if constexpr (
+                      requires { __v ? 0 : 0; } && requires { *__v; } &&
+                      requires { __v->clone(); } && requires { __v.get(); }) {
+                    using _E = std::remove_cvref_t<decltype(*__v)>;
+                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                  } else if constexpr (requires { __v.clone(); }) {
+                    return __v.clone();
+                  } else {
+                    return __v;
+                  }
+                }((*this).r3_num)};
     }
   };
 
@@ -571,7 +661,30 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     __attribute__((pure)) R clone() const {
-      return R{(*(this)).val, (*(this)).dat};
+      return R{[](auto &&__v) -> unsigned int {
+                 if constexpr (
+                     requires { __v ? 0 : 0; } && requires { *__v; } &&
+                     requires { __v->clone(); } && requires { __v.get(); }) {
+                   using _E = std::remove_cvref_t<decltype(*__v)>;
+                   return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                 } else if constexpr (requires { __v.clone(); }) {
+                   return __v.clone();
+                 } else {
+                   return __v;
+                 }
+               }((*this).val),
+               [](auto &&__v) -> unsigned int {
+                 if constexpr (
+                     requires { __v ? 0 : 0; } && requires { *__v; } &&
+                     requires { __v->clone(); } && requires { __v.get(); }) {
+                   using _E = std::remove_cvref_t<decltype(*__v)>;
+                   return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                 } else if constexpr (requires { __v.clone(); }) {
+                   return __v.clone();
+                 } else {
+                   return __v;
+                 }
+               }((*this).dat)};
     }
   };
 
@@ -616,7 +729,42 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     __attribute__((pure)) NC clone() const {
-      return NC{(*(this)).nc_a, (*(this)).nc_b, (*(this)).nc_c};
+      return NC{[](auto &&__v) -> unsigned int {
+                  if constexpr (
+                      requires { __v ? 0 : 0; } && requires { *__v; } &&
+                      requires { __v->clone(); } && requires { __v.get(); }) {
+                    using _E = std::remove_cvref_t<decltype(*__v)>;
+                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                  } else if constexpr (requires { __v.clone(); }) {
+                    return __v.clone();
+                  } else {
+                    return __v;
+                  }
+                }((*this).nc_a),
+                [](auto &&__v) -> unsigned int {
+                  if constexpr (
+                      requires { __v ? 0 : 0; } && requires { *__v; } &&
+                      requires { __v->clone(); } && requires { __v.get(); }) {
+                    using _E = std::remove_cvref_t<decltype(*__v)>;
+                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                  } else if constexpr (requires { __v.clone(); }) {
+                    return __v.clone();
+                  } else {
+                    return __v;
+                  }
+                }((*this).nc_b),
+                [](auto &&__v) -> unsigned int {
+                  if constexpr (
+                      requires { __v ? 0 : 0; } && requires { *__v; } &&
+                      requires { __v->clone(); } && requires { __v.get(); }) {
+                    using _E = std::remove_cvref_t<decltype(*__v)>;
+                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                  } else if constexpr (requires { __v.clone(); }) {
+                    return __v.clone();
+                  } else {
+                    return __v;
+                  }
+                }((*this).nc_c)};
     }
   };
 
@@ -652,7 +800,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     __attribute__((pure)) OuterNC clone() const {
-      return OuterNC{(*(this)).outer_nc};
+      return OuterNC{(*(this)).outer_nc.clone()};
     }
   };
 
@@ -678,7 +826,31 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     __attribute__((pure)) State clone() const {
-      return State{(*(this)).state_value, (*(this)).state_data};
+      return State{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).state_value),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).state_data)};
     }
   };
 
@@ -721,7 +893,20 @@ struct ComprehensivePatterns {
     __attribute__((pure)) const RSeq *operator->() const { return this; }
 
     // ACCESSORS
-    __attribute__((pure)) RSeq clone() const { return RSeq{(*(this)).seq_val}; }
+    __attribute__((pure)) RSeq clone() const {
+      return RSeq{[](auto &&__v) -> unsigned int {
+        if constexpr (
+            requires { __v ? 0 : 0; } && requires { *__v; } &&
+            requires { __v->clone(); } && requires { __v.get(); }) {
+          using _E = std::remove_cvref_t<decltype(*__v)>;
+          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+        } else if constexpr (requires { __v.clone(); }) {
+          return __v.clone();
+        } else {
+          return __v;
+        }
+      }((*this).seq_val)};
+    }
   };
 
   __attribute__((pure)) static RSeq side_effect(RSeq r);
@@ -740,7 +925,31 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     __attribute__((pure)) StateStmt clone() const {
-      return StateStmt{(*(this)).stmt_value, (*(this)).stmt_data};
+      return StateStmt{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).stmt_value),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).stmt_data)};
     }
   };
 
@@ -759,7 +968,18 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     __attribute__((pure)) InnerStmt clone() const {
-      return InnerStmt{(*(this)).inner_stmt_val};
+      return InnerStmt{[](auto &&__v) -> unsigned int {
+        if constexpr (
+            requires { __v ? 0 : 0; } && requires { *__v; } &&
+            requires { __v->clone(); } && requires { __v.get(); }) {
+          using _E = std::remove_cvref_t<decltype(*__v)>;
+          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+        } else if constexpr (requires { __v.clone(); }) {
+          return __v.clone();
+        } else {
+          return __v;
+        }
+      }((*this).inner_stmt_val)};
     }
   };
 
@@ -773,7 +993,19 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     __attribute__((pure)) OuterStmt clone() const {
-      return OuterStmt{(*(this)).outer_stmt_inner, (*(this)).outer_stmt_data};
+      return OuterStmt{
+          (*(this)).outer_stmt_inner.clone(), [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).outer_stmt_data)};
     }
   };
 
@@ -788,7 +1020,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     __attribute__((pure)) Level3Stmt clone() const {
-      return Level3Stmt{(*(this)).l3_outer_stmt};
+      return Level3Stmt{(*(this)).l3_outer_stmt.clone()};
     }
   };
 
@@ -815,7 +1047,20 @@ struct ComprehensivePatterns {
     __attribute__((pure)) const RCF *operator->() const { return this; }
 
     // ACCESSORS
-    __attribute__((pure)) RCF clone() const { return RCF{(*(this)).cf_val}; }
+    __attribute__((pure)) RCF clone() const {
+      return RCF{[](auto &&__v) -> unsigned int {
+        if constexpr (
+            requires { __v ? 0 : 0; } && requires { *__v; } &&
+            requires { __v->clone(); } && requires { __v.get(); }) {
+          using _E = std::remove_cvref_t<decltype(*__v)>;
+          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+        } else if constexpr (requires { __v.clone(); }) {
+          return __v.clone();
+        } else {
+          return __v;
+        }
+      }((*this).cf_val)};
+    }
   };
 
   __attribute__((pure)) static unsigned int branch_use(const bool &b,
@@ -841,7 +1086,31 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     __attribute__((pure)) StateLB clone() const {
-      return StateLB{(*(this)).lb_value, (*(this)).lb_data};
+      return StateLB{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).lb_value),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).lb_data)};
     }
   };
 
@@ -890,10 +1159,37 @@ struct ComprehensivePatterns {
       auto &&_sv = *(this);
       if (std::holds_alternative<Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<Leaf>(_sv.v());
-        return Tree(Leaf{d_a0});
+        return Tree(Leaf{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_a0)});
       } else {
         const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
-        return Tree(Node{clone_value(d_a0), d_a1, clone_value(d_a2)});
+        return Tree(Node{
+            d_a0 ? std::make_unique<ComprehensivePatterns::Tree>(d_a0->clone())
+                 : nullptr,
+            [](auto &&__v) -> unsigned int {
+              if constexpr (
+                  requires { __v ? 0 : 0; } && requires { *__v; } &&
+                  requires { __v->clone(); } && requires { __v.get(); }) {
+                using _E = std::remove_cvref_t<decltype(*__v)>;
+                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+              } else if constexpr (requires { __v.clone(); }) {
+                return __v.clone();
+              } else {
+                return __v;
+              }
+            }(d_a1),
+            d_a2 ? std::make_unique<ComprehensivePatterns::Tree>(d_a2->clone())
+                 : nullptr});
       }
     }
 
@@ -1184,7 +1480,31 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     __attribute__((pure)) StateRO clone() const {
-      return StateRO{(*(this)).ro_value, (*(this)).ro_data};
+      return StateRO{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).ro_value),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).ro_data)};
     }
   };
 
@@ -1231,7 +1551,7 @@ struct ComprehensivePatterns {
         return Container(Empty{});
       } else {
         const auto &[d_a0] = std::get<Full>(_sv.v());
-        return Container(Full{d_a0});
+        return Container(Full{d_a0.clone()});
       }
     }
 
@@ -1305,7 +1625,31 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     __attribute__((pure)) StateOP clone() const {
-      return StateOP{(*(this)).op_value, (*(this)).op_data};
+      return StateOP{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).op_value),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).op_data)};
     }
   };
 

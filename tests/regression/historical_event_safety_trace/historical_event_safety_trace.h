@@ -12,56 +12,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
-template <typename T> struct is_unique_ptr : std::false_type {};
-
-template <typename T>
-struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> auto clone_value(const T &x) { return x; }
-
-template <typename T>
-std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  if constexpr (requires { x->clone(); }) {
-    return x ? std::make_unique<T>(x->clone()) : nullptr;
-  } else {
-    return x ? std::make_unique<T>(*x) : nullptr;
-  }
-}
-
-template <typename Target, typename Source>
-Target clone_as_value(const Source &x) {
-  using T = std::remove_cvref_t<Target>;
-  using S = std::remove_cvref_t<Source>;
-  if constexpr (requires(const S &s) {
-                  s.has_value();
-                  *s;
-                }) {
-    if (!x.has_value())
-      return T{};
-    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
-    return T{clone_as_value<TInner>(*x)};
-  } else if constexpr (std::is_same_v<T, S>) {
-    if constexpr (is_unique_ptr<T>::value) {
-      return clone_value(x);
-    } else if constexpr (requires { x.clone(); }) {
-      return x.clone();
-    } else {
-      return x;
-    }
-  } else if constexpr (is_unique_ptr<S>::value) {
-    if (!x)
-      return T{};
-    return clone_as_value<T>(*x);
-  } else if constexpr (is_unique_ptr<T>::value) {
-    using Inner = typename is_unique_ptr<T>::element_type;
-    return std::make_unique<Inner>(clone_as_value<Inner>(x));
-  } else {
-    return T(x);
-  }
-}
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -107,7 +57,20 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{clone_value(d_a0), clone_value(d_a1)});
+      t_A __c0;
+      if constexpr (
+          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
+          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
+        using _E = std::remove_cvref_t<decltype(*d_a0)>;
+        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
+      } else if constexpr (requires { d_a0.clone(); }) {
+        __c0 = d_a0.clone();
+      } else {
+        __c0 = d_a0;
+      }
+      return List<t_A>(
+          Cons{std::move(__c0),
+               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -117,8 +80,22 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{clone_as_value<t_A>(d_a0),
-                  d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ = Cons{
+          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
+            if constexpr (
+                requires { *__v; } &&
+                !requires { std::declval<_DstT>().get(); })
+              return _DstT(*__v);
+            else if constexpr (
+                !requires { *__v; } &&
+                requires { std::declval<_DstT>().get(); }) {
+              using _E =
+                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+              return std::make_unique<_E>(std::move(__v));
+            } else
+              return _DstT(__v);
+          }(d_a0),
+          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -254,34 +231,34 @@ public:
       return Uint(Nil{});
     } else if (std::holds_alternative<D0>(_sv.v())) {
       const auto &[d_a0] = std::get<D0>(_sv.v());
-      return Uint(D0{clone_value(d_a0)});
+      return Uint(D0{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D1>(_sv.v())) {
       const auto &[d_a0] = std::get<D1>(_sv.v());
-      return Uint(D1{clone_value(d_a0)});
+      return Uint(D1{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D2>(_sv.v())) {
       const auto &[d_a0] = std::get<D2>(_sv.v());
-      return Uint(D2{clone_value(d_a0)});
+      return Uint(D2{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D3>(_sv.v())) {
       const auto &[d_a0] = std::get<D3>(_sv.v());
-      return Uint(D3{clone_value(d_a0)});
+      return Uint(D3{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D4>(_sv.v())) {
       const auto &[d_a0] = std::get<D4>(_sv.v());
-      return Uint(D4{clone_value(d_a0)});
+      return Uint(D4{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D5>(_sv.v())) {
       const auto &[d_a0] = std::get<D5>(_sv.v());
-      return Uint(D5{clone_value(d_a0)});
+      return Uint(D5{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D6>(_sv.v())) {
       const auto &[d_a0] = std::get<D6>(_sv.v());
-      return Uint(D6{clone_value(d_a0)});
+      return Uint(D6{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D7>(_sv.v())) {
       const auto &[d_a0] = std::get<D7>(_sv.v());
-      return Uint(D7{clone_value(d_a0)});
+      return Uint(D7{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D8>(_sv.v())) {
       const auto &[d_a0] = std::get<D8>(_sv.v());
-      return Uint(D8{clone_value(d_a0)});
+      return Uint(D8{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else {
       const auto &[d_a0] = std::get<D9>(_sv.v());
-      return Uint(D9{clone_value(d_a0)});
+      return Uint(D9{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     }
   }
 
@@ -481,52 +458,62 @@ public:
       return Uint0(Nil0{});
     } else if (std::holds_alternative<D10>(_sv.v())) {
       const auto &[d_a0] = std::get<D10>(_sv.v());
-      return Uint0(D10{clone_value(d_a0)});
+      return Uint0(
+          D10{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D11>(_sv.v())) {
       const auto &[d_a0] = std::get<D11>(_sv.v());
-      return Uint0(D11{clone_value(d_a0)});
+      return Uint0(
+          D11{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D12>(_sv.v())) {
       const auto &[d_a0] = std::get<D12>(_sv.v());
-      return Uint0(D12{clone_value(d_a0)});
+      return Uint0(
+          D12{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D13>(_sv.v())) {
       const auto &[d_a0] = std::get<D13>(_sv.v());
-      return Uint0(D13{clone_value(d_a0)});
+      return Uint0(
+          D13{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D14>(_sv.v())) {
       const auto &[d_a0] = std::get<D14>(_sv.v());
-      return Uint0(D14{clone_value(d_a0)});
+      return Uint0(
+          D14{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D15>(_sv.v())) {
       const auto &[d_a0] = std::get<D15>(_sv.v());
-      return Uint0(D15{clone_value(d_a0)});
+      return Uint0(
+          D15{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D16>(_sv.v())) {
       const auto &[d_a0] = std::get<D16>(_sv.v());
-      return Uint0(D16{clone_value(d_a0)});
+      return Uint0(
+          D16{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D17>(_sv.v())) {
       const auto &[d_a0] = std::get<D17>(_sv.v());
-      return Uint0(D17{clone_value(d_a0)});
+      return Uint0(
+          D17{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D18>(_sv.v())) {
       const auto &[d_a0] = std::get<D18>(_sv.v());
-      return Uint0(D18{clone_value(d_a0)});
+      return Uint0(
+          D18{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D19>(_sv.v())) {
       const auto &[d_a0] = std::get<D19>(_sv.v());
-      return Uint0(D19{clone_value(d_a0)});
+      return Uint0(
+          D19{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<Da>(_sv.v())) {
       const auto &[d_a0] = std::get<Da>(_sv.v());
-      return Uint0(Da{clone_value(d_a0)});
+      return Uint0(Da{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<Db>(_sv.v())) {
       const auto &[d_a0] = std::get<Db>(_sv.v());
-      return Uint0(Db{clone_value(d_a0)});
+      return Uint0(Db{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<Dc>(_sv.v())) {
       const auto &[d_a0] = std::get<Dc>(_sv.v());
-      return Uint0(Dc{clone_value(d_a0)});
+      return Uint0(Dc{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<Dd>(_sv.v())) {
       const auto &[d_a0] = std::get<Dd>(_sv.v());
-      return Uint0(Dd{clone_value(d_a0)});
+      return Uint0(Dd{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<De>(_sv.v())) {
       const auto &[d_a0] = std::get<De>(_sv.v());
-      return Uint0(De{clone_value(d_a0)});
+      return Uint0(De{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else {
       const auto &[d_a0] = std::get<Df>(_sv.v());
-      return Uint0(Df{clone_value(d_a0)});
+      return Uint0(Df{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     }
   }
 
@@ -659,10 +646,10 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<UIntDecimal>(_sv.v())) {
       const auto &[d_u] = std::get<UIntDecimal>(_sv.v());
-      return Uint1(UIntDecimal{d_u});
+      return Uint1(UIntDecimal{d_u.clone()});
     } else {
       const auto &[d_u] = std::get<UIntHexadecimal>(_sv.v());
-      return Uint1(UIntHexadecimal{d_u});
+      return Uint1(UIntHexadecimal{d_u.clone()});
     }
   }
 
@@ -722,8 +709,43 @@ struct HistoricalEventSafetyTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) State clone() const {
-      return State{(*(this)).reservoir_level_cm, (*(this)).downstream_stage_cm,
-                   (*(this)).gate_open_pct};
+      return State{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).reservoir_level_cm),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).downstream_stage_cm),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).gate_open_pct)};
     }
   };
 
@@ -746,17 +768,128 @@ struct HistoricalEventSafetyTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) PlantConfig clone() const {
-      return PlantConfig{(*(this)).max_reservoir_cm,
-                         (*(this)).max_downstream_cm,
-                         (*(this)).gate_capacity_cm,
-                         (*(this)).forecast_error_pct,
-                         (*(this)).gate_slew_pct,
-                         (*(this)).max_stage_rise_cm,
-                         (*(this)).reservoir_area_min_cm2,
-                         (*(this)).reservoir_area_max_cm2,
-                         (*(this)).reservoir_area_curve_cm2,
-                         (*(this)).design_head_cm,
-                         (*(this)).timestep_s};
+      return PlantConfig{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).max_reservoir_cm),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).max_downstream_cm),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).gate_capacity_cm),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).forecast_error_pct),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).gate_slew_pct),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).max_stage_rise_cm),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).reservoir_area_min_cm2),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).reservoir_area_max_cm2),
+          (*(this)).reservoir_area_curve_cm2,
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).design_head_cm),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).timestep_s)};
     }
   };
 
@@ -775,7 +908,31 @@ struct HistoricalEventSafetyTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) InflowRecord clone() const {
-      return InflowRecord{(*(this)).ir_timestep, (*(this)).ir_inflow_cm};
+      return InflowRecord{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).ir_timestep),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).ir_inflow_cm)};
     }
   };
 
@@ -797,9 +954,67 @@ struct HistoricalEventSafetyTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) TestResult clone() const {
-      return TestResult{(*(this)).tr_event_name, (*(this)).tr_initial_safe,
-                        (*(this)).tr_final_safe, (*(this)).tr_max_level,
-                        (*(this)).tr_max_stage};
+      return TestResult{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).tr_event_name),
+          [](auto &&__v) -> bool {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).tr_initial_safe),
+          [](auto &&__v) -> bool {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).tr_final_safe),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).tr_max_level),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).tr_max_stage)};
     }
   };
 
@@ -881,7 +1096,18 @@ struct HistoricalEventSafetyTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) MonotoneRatingTable clone() const {
-      return MonotoneRatingTable{(*(this)).mrt_table};
+      return MonotoneRatingTable{[](auto &&__v) -> RatingTable {
+        if constexpr (
+            requires { __v ? 0 : 0; } && requires { *__v; } &&
+            requires { __v->clone(); } && requires { __v.get(); }) {
+          using _E = std::remove_cvref_t<decltype(*__v)>;
+          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+        } else if constexpr (requires { __v.clone(); }) {
+          return __v.clone();
+        } else {
+          return __v;
+        }
+      }((*this).mrt_table)};
     }
   };
 
@@ -1018,11 +1244,13 @@ return 1000u; },
 
     // ACCESSORS
     __attribute__((pure)) HistoricalScenarioBundle clone() const {
-      return HistoricalScenarioBundle{
-          (*(this)).hsb_hist_plant,   (*(this)).hsb_hist_table,
-          (*(this)).hsb_hist_initial, (*(this)).hsb_test_1983,
-          (*(this)).hsb_test_2011,    (*(this)).hsb_hoover_plant,
-          (*(this)).hsb_hoover_test};
+      return HistoricalScenarioBundle{(*(this)).hsb_hist_plant.clone(),
+                                      (*(this)).hsb_hist_table.clone(),
+                                      (*(this)).hsb_hist_initial.clone(),
+                                      (*(this)).hsb_test_1983.clone(),
+                                      (*(this)).hsb_test_2011.clone(),
+                                      (*(this)).hsb_hoover_plant.clone(),
+                                      (*(this)).hsb_hoover_test.clone()};
     }
   };
 

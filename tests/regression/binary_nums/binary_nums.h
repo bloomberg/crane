@@ -10,56 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
-template <typename T> struct is_unique_ptr : std::false_type {};
-
-template <typename T>
-struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> auto clone_value(const T &x) { return x; }
-
-template <typename T>
-std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  if constexpr (requires { x->clone(); }) {
-    return x ? std::make_unique<T>(x->clone()) : nullptr;
-  } else {
-    return x ? std::make_unique<T>(*x) : nullptr;
-  }
-}
-
-template <typename Target, typename Source>
-Target clone_as_value(const Source &x) {
-  using T = std::remove_cvref_t<Target>;
-  using S = std::remove_cvref_t<Source>;
-  if constexpr (requires(const S &s) {
-                  s.has_value();
-                  *s;
-                }) {
-    if (!x.has_value())
-      return T{};
-    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
-    return T{clone_as_value<TInner>(*x)};
-  } else if constexpr (std::is_same_v<T, S>) {
-    if constexpr (is_unique_ptr<T>::value) {
-      return clone_value(x);
-    } else if constexpr (requires { x.clone(); }) {
-      return x.clone();
-    } else {
-      return x;
-    }
-  } else if constexpr (is_unique_ptr<S>::value) {
-    if (!x)
-      return T{};
-    return clone_as_value<T>(*x);
-  } else if constexpr (is_unique_ptr<T>::value) {
-    using Inner = typename is_unique_ptr<T>::element_type;
-    return std::make_unique<Inner>(clone_as_value<Inner>(x));
-  } else {
-    return T(x);
-  }
-}
-
 enum class Comparison { e_EQ, e_LT, e_GT };
 
 struct Positive {
@@ -109,10 +59,12 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<XI>(_sv.v())) {
       const auto &[d_a0] = std::get<XI>(_sv.v());
-      return Positive(XI{clone_value(d_a0)});
+      return Positive(
+          XI{d_a0 ? std::make_unique<Positive>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<XO>(_sv.v())) {
       const auto &[d_a0] = std::get<XO>(_sv.v());
-      return Positive(XO{clone_value(d_a0)});
+      return Positive(
+          XO{d_a0 ? std::make_unique<Positive>(d_a0->clone()) : nullptr});
     } else {
       return Positive(XH{});
     }
@@ -191,7 +143,7 @@ public:
       return N(N0{});
     } else {
       const auto &[d_a0] = std::get<Npos>(_sv.v());
-      return N(Npos{d_a0});
+      return N(Npos{d_a0.clone()});
     }
   }
 
@@ -270,10 +222,10 @@ public:
       return Z(Z0{});
     } else if (std::holds_alternative<Zpos>(_sv.v())) {
       const auto &[d_a0] = std::get<Zpos>(_sv.v());
-      return Z(Zpos{d_a0});
+      return Z(Zpos{d_a0.clone()});
     } else {
       const auto &[d_a0] = std::get<Zneg>(_sv.v());
-      return Z(Zneg{d_a0});
+      return Z(Zneg{d_a0.clone()});
     }
   }
 
@@ -363,7 +315,7 @@ struct Pos {
         return mask(IsNul{});
       } else if (std::holds_alternative<IsPos>(_sv.v())) {
         const auto &[d_a0] = std::get<IsPos>(_sv.v());
-        return mask(IsPos{d_a0});
+        return mask(IsPos{d_a0.clone()});
       } else {
         return mask(IsNeg{});
       }

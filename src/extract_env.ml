@@ -749,61 +749,10 @@ let spec_header si () =
     else
       h
   in
-  (* let fun_concept = "template <typename F, typename Out, typename...
-     In>\nconcept MapsTo = requires (const F &f, const In&... args) {\n{
-     f(args...) } -> std::same_as<Out>;\n};" in *)
-  (* The clone preamble is shared between BDE and standard modes — only
-     the concept definition differs.
-
-     - [is_unique_ptr]: type trait for unique_ptr dispatch in
-       [clone_as_value].
-     - [clone_value]: deep copy for unique_ptr fields (null-safe
-       make_unique with copy ctor).
-     - [clone_as_value<Target>(source)]: type-converting deep copy.
-       Most calls are inlined by [gen_clone_field_expr] at generation
-       time; this template handles the remaining cases: type-variable
-       fields, optional<unique_ptr<T>>, and complex sub-expressions. *)
-  let clone_preamble =
-    "\n\n\
-     template <typename T> struct is_unique_ptr : std::false_type {};\n\
-     template <typename T> struct is_unique_ptr<std::unique_ptr<T>> : std::true_type { using element_type = T; };\n\n\
-     template <typename T>\n\
-     auto clone_value(const T& x) { return x; }\n\n\
-     template <typename T>\n\
-     std::unique_ptr<T> clone_value(const std::unique_ptr<T>& x) {\n\
-    \  if constexpr (requires { x->clone(); }) {\n\
-    \    return x ? std::make_unique<T>(x->clone()) : nullptr;\n\
-    \  } else {\n\
-    \    return x ? std::make_unique<T>(*x) : nullptr;\n\
-    \  }\n\
-     }\n\n\
-     template <typename Target, typename Source>\n\
-     Target clone_as_value(const Source& x) {\n\
-    \  using T = std::remove_cvref_t<Target>;\n\
-    \  using S = std::remove_cvref_t<Source>;\n\
-    \  if constexpr (requires(const S& s) { s.has_value(); *s; }) {\n\
-    \    if (!x.has_value()) return T{};\n\
-    \    using TInner = std::remove_cvref_t<decltype(*std::declval<const T&>())>;\n\
-    \    return T{clone_as_value<TInner>(*x)};\n\
-    \  } else if constexpr (std::is_same_v<T, S>) {\n\
-    \    if constexpr (is_unique_ptr<T>::value) {\n\
-    \      return clone_value(x);\n\
-    \    } else if constexpr (requires { x.clone(); }) {\n\
-    \      return x.clone();\n\
-    \    } else {\n\
-    \      return x;\n\
-    \    }\n\
-    \  } else if constexpr (is_unique_ptr<S>::value) {\n\
-    \    if (!x) return T{};\n\
-    \    return clone_as_value<T>(*x);\n\
-    \  } else if constexpr (is_unique_ptr<T>::value) {\n\
-    \    using Inner = typename is_unique_ptr<T>::element_type;\n\
-    \    return std::make_unique<Inner>(clone_as_value<Inner>(x));\n\
-    \  } else {\n\
-    \    return T(x);\n\
-    \  }\n\
-     }"
-  in
+  (* All clone code is now generated inline in each struct's clone()
+     method and converting constructor by [gen_clone_field_expr] in
+     translation.ml.  No preamble clone helpers are needed. *)
+  let clone_preamble = "" in
   let fun_concept =
     if Table.std_lib () = "BDE" then
       "template <class From, class To>\n\
@@ -1106,10 +1055,10 @@ let print_structure_to_file (fn, si, mo) dry struc =
   set_phase Pre;
   ignore (d.pp_struct struc);
   ignore (d.pp_hstruct struc);
-  (* The boilerplate always emitted by spec_header (MapsTo concept,
-     is_unique_ptr trait, clone_value/clone_as_value helpers) uses
-     std::is_invocable_v (<type_traits>), std::unique_ptr (<memory>),
-     and std::optional (<optional>) via requires expressions.
+  (* The boilerplate emitted by spec_header (MapsTo concept) uses
+     std::is_invocable_v (<type_traits>).  Inline clone code generated
+     by gen_clone_field_expr uses std::unique_ptr (<memory>) and
+     std::optional (<optional>) via if constexpr / requires expressions.
      BDE brings in <memory> and <type_traits> via bsl_memory.h and
      bsl_type_traits.h, but still needs <optional> for std::nullopt. *)
   if Table.std_lib () <> "BDE" then begin

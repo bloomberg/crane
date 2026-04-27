@@ -454,8 +454,7 @@ LoopifyMoreTrees::flatten(const List<List<unsigned int>> &ll) {
   };
 
   struct _Call1 {
-    decltype(clone_as_value<List<unsigned int>>(
-        std::declval<std::shared_ptr<List<unsigned int>> &>())) _s0;
+    List<unsigned int> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -475,7 +474,7 @@ LoopifyMoreTrees::flatten(const List<List<unsigned int>> &ll) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(_Call1{clone_as_value<List<unsigned int>>(d_a0)});
+        _stack.emplace_back(_Call1{d_a0});
         _stack.emplace_back(_Enter{*(d_a1)});
       }
     } else {

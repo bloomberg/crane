@@ -11,56 +11,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
-template <typename T> struct is_unique_ptr : std::false_type {};
-
-template <typename T>
-struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> auto clone_value(const T &x) { return x; }
-
-template <typename T>
-std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  if constexpr (requires { x->clone(); }) {
-    return x ? std::make_unique<T>(x->clone()) : nullptr;
-  } else {
-    return x ? std::make_unique<T>(*x) : nullptr;
-  }
-}
-
-template <typename Target, typename Source>
-Target clone_as_value(const Source &x) {
-  using T = std::remove_cvref_t<Target>;
-  using S = std::remove_cvref_t<Source>;
-  if constexpr (requires(const S &s) {
-                  s.has_value();
-                  *s;
-                }) {
-    if (!x.has_value())
-      return T{};
-    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
-    return T{clone_as_value<TInner>(*x)};
-  } else if constexpr (std::is_same_v<T, S>) {
-    if constexpr (is_unique_ptr<T>::value) {
-      return clone_value(x);
-    } else if constexpr (requires { x.clone(); }) {
-      return x.clone();
-    } else {
-      return x;
-    }
-  } else if constexpr (is_unique_ptr<S>::value) {
-    if (!x)
-      return T{};
-    return clone_as_value<T>(*x);
-  } else if constexpr (is_unique_ptr<T>::value) {
-    using Inner = typename is_unique_ptr<T>::element_type;
-    return std::make_unique<Inner>(clone_as_value<Inner>(x));
-  } else {
-    return T(x);
-  }
-}
-
 struct EmptyMatch {
   struct empty {
     empty() = delete;
@@ -126,10 +76,32 @@ struct EmptyMatch {
       auto &&_sv = *(this);
       if (std::holds_alternative<Left>(_sv.v())) {
         const auto &[d_a0] = std::get<Left>(_sv.v());
-        return either<t_A, t_B>(Left{clone_value(d_a0)});
+        t_A __c0;
+        if constexpr (
+            requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
+            requires { d_a0->clone(); } && requires { d_a0.get(); }) {
+          using _E = std::remove_cvref_t<decltype(*d_a0)>;
+          __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
+        } else if constexpr (requires { d_a0.clone(); }) {
+          __c0 = d_a0.clone();
+        } else {
+          __c0 = d_a0;
+        }
+        return either<t_A, t_B>(Left{std::move(__c0)});
       } else {
         const auto &[d_a0] = std::get<Right>(_sv.v());
-        return either<t_A, t_B>(Right{clone_value(d_a0)});
+        t_B __c0;
+        if constexpr (
+            requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
+            requires { d_a0->clone(); } && requires { d_a0.get(); }) {
+          using _E = std::remove_cvref_t<decltype(*d_a0)>;
+          __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
+        } else if constexpr (requires { d_a0.clone(); }) {
+          __c0 = d_a0.clone();
+        } else {
+          __c0 = d_a0;
+        }
+        return either<t_A, t_B>(Right{std::move(__c0)});
       }
     }
 
@@ -139,11 +111,35 @@ struct EmptyMatch {
       if (std::holds_alternative<typename either<_U0, _U1>::Left>(_other.v())) {
         const auto &[d_a0] =
             std::get<typename either<_U0, _U1>::Left>(_other.v());
-        d_v_ = Left{clone_as_value<t_A>(d_a0)};
+        d_v_ = Left{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
+          if constexpr (
+              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
+            return _DstT(*__v);
+          else if constexpr (
+              !requires { *__v; } &&
+              requires { std::declval<_DstT>().get(); }) {
+            using _E =
+                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+            return std::make_unique<_E>(std::move(__v));
+          } else
+            return _DstT(__v);
+        }(d_a0)};
       } else {
         const auto &[d_a0] =
             std::get<typename either<_U0, _U1>::Right>(_other.v());
-        d_v_ = Right{clone_as_value<t_B>(d_a0)};
+        d_v_ = Right{[&]<typename _DstT = t_B>(auto &&__v) -> _DstT {
+          if constexpr (
+              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
+            return _DstT(*__v);
+          else if constexpr (
+              !requires { *__v; } &&
+              requires { std::declval<_DstT>().get(); }) {
+            using _E =
+                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+            return std::make_unique<_E>(std::move(__v));
+          } else
+            return _DstT(__v);
+        }(d_a0)};
       }
     }
 

@@ -40,7 +40,7 @@ LetFix::local_flatten(const List<List<unsigned int>> &xss) {
         return List<unsigned int>::cons(d_a00, inner(*(d_a10)));
       }
     };
-    return inner(clone_as_value<List<unsigned int>>(d_a0));
+    return inner(d_a0);
   }
 }
 

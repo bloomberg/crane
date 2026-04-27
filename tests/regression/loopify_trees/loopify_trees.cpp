@@ -300,7 +300,7 @@ LoopifyTrees::sum_rose_list_fuel(const unsigned int &fuel,
   };
 
   struct _Call1 {
-    decltype(clone_as_value<List<LoopifyTrees::rose>>(
+    decltype(List<LoopifyTrees::rose>(
         std::declval<List<std::unique_ptr<LoopifyTrees::rose>> &>())) _s0;
     unsigned int _s1;
     unsigned int _s2;
@@ -335,8 +335,8 @@ LoopifyTrees::sum_rose_list_fuel(const unsigned int &fuel,
               std::get<typename List<LoopifyTrees::rose>::Cons>(cs.v());
           const auto &[d_a00, d_a10] =
               std::get<typename LoopifyTrees::rose::RNode>(d_a0.v());
-          _stack.emplace_back(_Call1{
-              clone_as_value<List<LoopifyTrees::rose>>(d_a10), f, d_a00});
+          _stack.emplace_back(
+              _Call1{List<LoopifyTrees::rose>(d_a10), f, d_a00});
           _stack.emplace_back(_Enter{*(d_a1), f});
         }
       }
@@ -362,7 +362,7 @@ LoopifyTrees::flatten_rose_list_fuel(const unsigned int &fuel,
   };
 
   struct _Call1 {
-    decltype(clone_as_value<List<LoopifyTrees::rose>>(
+    decltype(List<LoopifyTrees::rose>(
         std::declval<List<std::unique_ptr<LoopifyTrees::rose>> &>())) _s0;
     unsigned int _s1;
     unsigned int _s2;
@@ -397,8 +397,8 @@ LoopifyTrees::flatten_rose_list_fuel(const unsigned int &fuel,
               std::get<typename List<LoopifyTrees::rose>::Cons>(cs.v());
           const auto &[d_a00, d_a10] =
               std::get<typename LoopifyTrees::rose::RNode>(d_a0.v());
-          _stack.emplace_back(_Call1{
-              clone_as_value<List<LoopifyTrees::rose>>(d_a10), f, d_a00});
+          _stack.emplace_back(
+              _Call1{List<LoopifyTrees::rose>(d_a10), f, d_a00});
           _stack.emplace_back(_Enter{*(d_a1), f});
         }
       }
@@ -431,9 +431,7 @@ LoopifyTrees::depth_rose_list_fuel(const unsigned int &fuel,
       const auto &[d_a00, d_a10] =
           std::get<typename LoopifyTrees::rose::RNode>(d_a0.v());
       unsigned int d =
-          (depth_rose_list_fuel(
-               f, clone_as_value<List<LoopifyTrees::rose>>(d_a10)) +
-           1);
+          (depth_rose_list_fuel(f, List<LoopifyTrees::rose>(d_a10)) + 1);
       unsigned int rest_max = depth_rose_list_fuel(f, *(d_a1));
       if (d <= rest_max) {
         return rest_max;
@@ -686,8 +684,7 @@ LoopifyTrees::append_list_lists(const List<List<unsigned int>> &l1,
       const auto &[d_a0, d_a1] =
           std::get<typename List<List<unsigned int>>::Cons>(_loop_l1.v());
       auto _cell = std::make_unique<List<List<unsigned int>>>(
-          typename List<List<unsigned int>>::Cons(
-              clone_as_value<List<unsigned int>>(d_a0), nullptr));
+          typename List<List<unsigned int>>::Cons(d_a0, nullptr));
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename List<List<unsigned int>>::Cons>((*_write)->v_mut())
@@ -717,9 +714,7 @@ LoopifyTrees::map_cons_to_all(unsigned int x,
           std::get<typename List<List<unsigned int>>::Cons>(_loop_lsts.v());
       auto _cell = std::make_unique<List<List<unsigned int>>>(
           typename List<List<unsigned int>>::Cons(
-              List<unsigned int>::cons(
-                  x, clone_as_value<List<unsigned int>>(d_a0)),
-              nullptr));
+              List<unsigned int>::cons(x, d_a0), nullptr));
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename List<List<unsigned int>>::Cons>((*_write)->v_mut())

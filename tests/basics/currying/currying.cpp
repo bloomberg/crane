@@ -40,11 +40,9 @@ __attribute__((pure)) unsigned int Currying::uncurried_add3(
                          Currying::pair<unsigned int, unsigned int>> &p) {
   const auto &[d_a0, d_a1] = std::get<typename Currying::pair<
       unsigned int, Currying::pair<unsigned int, unsigned int>>::Pair0>(p.v());
-  auto &&_sv0 =
-      clone_as_value<Currying::pair<unsigned int, unsigned int>>(d_a1);
   const auto &[d_a00, d_a10] =
       std::get<typename Currying::pair<unsigned int, unsigned int>::Pair0>(
-          _sv0.v());
+          d_a1.v());
   return add3(d_a0, d_a00, d_a10);
 }
 

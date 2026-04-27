@@ -140,9 +140,7 @@ LoopifyHofs::subsequences(const List<unsigned int> &l) {
         };
         struct _Call1 {
           decltype(List<unsigned int>::cons(
-              d_a0,
-              clone_as_value<List<unsigned int>>(
-                  std::declval<std::shared_ptr<List<unsigned int>> &>()))) _s0;
+              d_a0, std::declval<List<unsigned int> &>())) _s0;
         };
         using _Frame = std::variant<_Enter, _Call1>;
         List<List<unsigned int>> _result{};
@@ -161,8 +159,8 @@ LoopifyHofs::subsequences(const List<unsigned int> &l) {
             } else {
               const auto &[d_a00, d_a10] =
                   std::get<typename List<List<unsigned int>>::Cons>(lsts.v());
-              _stack.emplace_back(_Call1{List<unsigned int>::cons(
-                  d_a0, clone_as_value<List<unsigned int>>(d_a00))});
+              _stack.emplace_back(
+                  _Call1{List<unsigned int>::cons(d_a0, d_a00)});
               _stack.emplace_back(_Enter{*(d_a10)});
             }
           } else {
@@ -369,9 +367,7 @@ LoopifyHofs::power_set(const List<unsigned int> &l) {
         };
         struct _Call1 {
           decltype(List<unsigned int>::cons(
-              d_a0,
-              clone_as_value<List<unsigned int>>(
-                  std::declval<std::shared_ptr<List<unsigned int>> &>()))) _s0;
+              d_a0, std::declval<List<unsigned int> &>())) _s0;
         };
         using _Frame = std::variant<_Enter, _Call1>;
         List<List<unsigned int>> _result{};
@@ -390,8 +386,8 @@ LoopifyHofs::power_set(const List<unsigned int> &l) {
             } else {
               const auto &[d_a00, d_a10] =
                   std::get<typename List<List<unsigned int>>::Cons>(lsts.v());
-              _stack.emplace_back(_Call1{List<unsigned int>::cons(
-                  d_a0, clone_as_value<List<unsigned int>>(d_a00))});
+              _stack.emplace_back(
+                  _Call1{List<unsigned int>::cons(d_a0, d_a00)});
               _stack.emplace_back(_Enter{*(d_a10)});
             }
           } else {

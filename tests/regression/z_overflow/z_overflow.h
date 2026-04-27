@@ -11,56 +11,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
-template <typename T> struct is_unique_ptr : std::false_type {};
-
-template <typename T>
-struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> auto clone_value(const T &x) { return x; }
-
-template <typename T>
-std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  if constexpr (requires { x->clone(); }) {
-    return x ? std::make_unique<T>(x->clone()) : nullptr;
-  } else {
-    return x ? std::make_unique<T>(*x) : nullptr;
-  }
-}
-
-template <typename Target, typename Source>
-Target clone_as_value(const Source &x) {
-  using T = std::remove_cvref_t<Target>;
-  using S = std::remove_cvref_t<Source>;
-  if constexpr (requires(const S &s) {
-                  s.has_value();
-                  *s;
-                }) {
-    if (!x.has_value())
-      return T{};
-    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
-    return T{clone_as_value<TInner>(*x)};
-  } else if constexpr (std::is_same_v<T, S>) {
-    if constexpr (is_unique_ptr<T>::value) {
-      return clone_value(x);
-    } else if constexpr (requires { x.clone(); }) {
-      return x.clone();
-    } else {
-      return x;
-    }
-  } else if constexpr (is_unique_ptr<S>::value) {
-    if (!x)
-      return T{};
-    return clone_as_value<T>(*x);
-  } else if constexpr (is_unique_ptr<T>::value) {
-    using Inner = typename is_unique_ptr<T>::element_type;
-    return std::make_unique<Inner>(clone_as_value<Inner>(x));
-  } else {
-    return T(x);
-  }
-}
-
 struct Uint {
   // TYPES
   struct Nil {};
@@ -158,34 +108,34 @@ public:
       return Uint(Nil{});
     } else if (std::holds_alternative<D0>(_sv.v())) {
       const auto &[d_a0] = std::get<D0>(_sv.v());
-      return Uint(D0{clone_value(d_a0)});
+      return Uint(D0{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D1>(_sv.v())) {
       const auto &[d_a0] = std::get<D1>(_sv.v());
-      return Uint(D1{clone_value(d_a0)});
+      return Uint(D1{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D2>(_sv.v())) {
       const auto &[d_a0] = std::get<D2>(_sv.v());
-      return Uint(D2{clone_value(d_a0)});
+      return Uint(D2{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D3>(_sv.v())) {
       const auto &[d_a0] = std::get<D3>(_sv.v());
-      return Uint(D3{clone_value(d_a0)});
+      return Uint(D3{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D4>(_sv.v())) {
       const auto &[d_a0] = std::get<D4>(_sv.v());
-      return Uint(D4{clone_value(d_a0)});
+      return Uint(D4{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D5>(_sv.v())) {
       const auto &[d_a0] = std::get<D5>(_sv.v());
-      return Uint(D5{clone_value(d_a0)});
+      return Uint(D5{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D6>(_sv.v())) {
       const auto &[d_a0] = std::get<D6>(_sv.v());
-      return Uint(D6{clone_value(d_a0)});
+      return Uint(D6{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D7>(_sv.v())) {
       const auto &[d_a0] = std::get<D7>(_sv.v());
-      return Uint(D7{clone_value(d_a0)});
+      return Uint(D7{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D8>(_sv.v())) {
       const auto &[d_a0] = std::get<D8>(_sv.v());
-      return Uint(D8{clone_value(d_a0)});
+      return Uint(D8{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     } else {
       const auto &[d_a0] = std::get<D9>(_sv.v());
-      return Uint(D9{clone_value(d_a0)});
+      return Uint(D9{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
     }
   }
 
@@ -385,52 +335,62 @@ public:
       return Uint0(Nil0{});
     } else if (std::holds_alternative<D10>(_sv.v())) {
       const auto &[d_a0] = std::get<D10>(_sv.v());
-      return Uint0(D10{clone_value(d_a0)});
+      return Uint0(
+          D10{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D11>(_sv.v())) {
       const auto &[d_a0] = std::get<D11>(_sv.v());
-      return Uint0(D11{clone_value(d_a0)});
+      return Uint0(
+          D11{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D12>(_sv.v())) {
       const auto &[d_a0] = std::get<D12>(_sv.v());
-      return Uint0(D12{clone_value(d_a0)});
+      return Uint0(
+          D12{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D13>(_sv.v())) {
       const auto &[d_a0] = std::get<D13>(_sv.v());
-      return Uint0(D13{clone_value(d_a0)});
+      return Uint0(
+          D13{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D14>(_sv.v())) {
       const auto &[d_a0] = std::get<D14>(_sv.v());
-      return Uint0(D14{clone_value(d_a0)});
+      return Uint0(
+          D14{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D15>(_sv.v())) {
       const auto &[d_a0] = std::get<D15>(_sv.v());
-      return Uint0(D15{clone_value(d_a0)});
+      return Uint0(
+          D15{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D16>(_sv.v())) {
       const auto &[d_a0] = std::get<D16>(_sv.v());
-      return Uint0(D16{clone_value(d_a0)});
+      return Uint0(
+          D16{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D17>(_sv.v())) {
       const auto &[d_a0] = std::get<D17>(_sv.v());
-      return Uint0(D17{clone_value(d_a0)});
+      return Uint0(
+          D17{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D18>(_sv.v())) {
       const auto &[d_a0] = std::get<D18>(_sv.v());
-      return Uint0(D18{clone_value(d_a0)});
+      return Uint0(
+          D18{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<D19>(_sv.v())) {
       const auto &[d_a0] = std::get<D19>(_sv.v());
-      return Uint0(D19{clone_value(d_a0)});
+      return Uint0(
+          D19{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<Da>(_sv.v())) {
       const auto &[d_a0] = std::get<Da>(_sv.v());
-      return Uint0(Da{clone_value(d_a0)});
+      return Uint0(Da{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<Db>(_sv.v())) {
       const auto &[d_a0] = std::get<Db>(_sv.v());
-      return Uint0(Db{clone_value(d_a0)});
+      return Uint0(Db{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<Dc>(_sv.v())) {
       const auto &[d_a0] = std::get<Dc>(_sv.v());
-      return Uint0(Dc{clone_value(d_a0)});
+      return Uint0(Dc{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<Dd>(_sv.v())) {
       const auto &[d_a0] = std::get<Dd>(_sv.v());
-      return Uint0(Dd{clone_value(d_a0)});
+      return Uint0(Dd{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<De>(_sv.v())) {
       const auto &[d_a0] = std::get<De>(_sv.v());
-      return Uint0(De{clone_value(d_a0)});
+      return Uint0(De{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     } else {
       const auto &[d_a0] = std::get<Df>(_sv.v());
-      return Uint0(Df{clone_value(d_a0)});
+      return Uint0(Df{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
     }
   }
 
@@ -563,10 +523,10 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<UIntDecimal>(_sv.v())) {
       const auto &[d_u] = std::get<UIntDecimal>(_sv.v());
-      return Uint1(UIntDecimal{d_u});
+      return Uint1(UIntDecimal{d_u.clone()});
     } else {
       const auto &[d_u] = std::get<UIntHexadecimal>(_sv.v());
-      return Uint1(UIntHexadecimal{d_u});
+      return Uint1(UIntHexadecimal{d_u.clone()});
     }
   }
 

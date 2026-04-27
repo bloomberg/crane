@@ -10,56 +10,6 @@
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
-template <typename T> struct is_unique_ptr : std::false_type {};
-
-template <typename T>
-struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {
-  using element_type = T;
-};
-
-template <typename T> auto clone_value(const T &x) { return x; }
-
-template <typename T>
-std::unique_ptr<T> clone_value(const std::unique_ptr<T> &x) {
-  if constexpr (requires { x->clone(); }) {
-    return x ? std::make_unique<T>(x->clone()) : nullptr;
-  } else {
-    return x ? std::make_unique<T>(*x) : nullptr;
-  }
-}
-
-template <typename Target, typename Source>
-Target clone_as_value(const Source &x) {
-  using T = std::remove_cvref_t<Target>;
-  using S = std::remove_cvref_t<Source>;
-  if constexpr (requires(const S &s) {
-                  s.has_value();
-                  *s;
-                }) {
-    if (!x.has_value())
-      return T{};
-    using TInner = std::remove_cvref_t<decltype(*std::declval<const T &>())>;
-    return T{clone_as_value<TInner>(*x)};
-  } else if constexpr (std::is_same_v<T, S>) {
-    if constexpr (is_unique_ptr<T>::value) {
-      return clone_value(x);
-    } else if constexpr (requires { x.clone(); }) {
-      return x.clone();
-    } else {
-      return x;
-    }
-  } else if constexpr (is_unique_ptr<S>::value) {
-    if (!x)
-      return T{};
-    return clone_as_value<T>(*x);
-  } else if constexpr (is_unique_ptr<T>::value) {
-    using Inner = typename is_unique_ptr<T>::element_type;
-    return std::make_unique<Inner>(clone_as_value<Inner>(x));
-  } else {
-    return T(x);
-  }
-}
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -105,7 +55,20 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{clone_value(d_a0), clone_value(d_a1)});
+      t_A __c0;
+      if constexpr (
+          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
+          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
+        using _E = std::remove_cvref_t<decltype(*d_a0)>;
+        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
+      } else if constexpr (requires { d_a0.clone(); }) {
+        __c0 = d_a0.clone();
+      } else {
+        __c0 = d_a0;
+      }
+      return List<t_A>(
+          Cons{std::move(__c0),
+               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -115,8 +78,22 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{clone_as_value<t_A>(d_a0),
-                  d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ = Cons{
+          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
+            if constexpr (
+                requires { *__v; } &&
+                !requires { std::declval<_DstT>().get(); })
+              return _DstT(*__v);
+            else if constexpr (
+                !requires { *__v; } &&
+                requires { std::declval<_DstT>().get(); }) {
+              using _E =
+                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
+              return std::make_unique<_E>(std::move(__v));
+            } else
+              return _DstT(__v);
+          }(d_a0),
+          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -256,10 +233,12 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<XI>(_sv.v())) {
       const auto &[d_a0] = std::get<XI>(_sv.v());
-      return Positive(XI{clone_value(d_a0)});
+      return Positive(
+          XI{d_a0 ? std::make_unique<Positive>(d_a0->clone()) : nullptr});
     } else if (std::holds_alternative<XO>(_sv.v())) {
       const auto &[d_a0] = std::get<XO>(_sv.v());
-      return Positive(XO{clone_value(d_a0)});
+      return Positive(
+          XO{d_a0 ? std::make_unique<Positive>(d_a0->clone()) : nullptr});
     } else {
       return Positive(XH{});
     }
@@ -344,10 +323,10 @@ public:
       return Z(Z0{});
     } else if (std::holds_alternative<Zpos>(_sv.v())) {
       const auto &[d_a0] = std::get<Zpos>(_sv.v());
-      return Z(Zpos{d_a0});
+      return Z(Zpos{d_a0.clone()});
     } else {
       const auto &[d_a0] = std::get<Zneg>(_sv.v());
-      return Z(Zneg{d_a0});
+      return Z(Zneg{d_a0.clone()});
     }
   }
 
@@ -495,8 +474,55 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) Commander clone() const {
-      return Commander{(*(this)).cmd_id, (*(this)).cmd_clan, (*(this)).cmd_rank,
-                       (*(this)).cmd_bloodnamed};
+      return Commander{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cmd_id),
+          [](auto &&__v) -> Clan {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cmd_clan),
+          [](auto &&__v) -> Rank {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cmd_rank),
+          [](auto &&__v) -> bool {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cmd_bloodnamed)};
     }
   };
 
@@ -596,10 +622,102 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) Unit clone() const {
-      return Unit{(*(this)).unit_id,       (*(this)).unit_class,
-                  (*(this)).unit_weight,   (*(this)).unit_tonnage,
-                  (*(this)).unit_gunnery,  (*(this)).unit_piloting,
-                  (*(this)).unit_is_elite, (*(this)).unit_is_clan};
+      return Unit{[](auto &&__v) -> unsigned int {
+                    if constexpr (
+                        requires { __v ? 0 : 0; } && requires { *__v; } &&
+                        requires { __v->clone(); } && requires { __v.get(); }) {
+                      using _E = std::remove_cvref_t<decltype(*__v)>;
+                      return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                    } else if constexpr (requires { __v.clone(); }) {
+                      return __v.clone();
+                    } else {
+                      return __v;
+                    }
+                  }((*this).unit_id),
+                  [](auto &&__v) -> UnitClass {
+                    if constexpr (
+                        requires { __v ? 0 : 0; } && requires { *__v; } &&
+                        requires { __v->clone(); } && requires { __v.get(); }) {
+                      using _E = std::remove_cvref_t<decltype(*__v)>;
+                      return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                    } else if constexpr (requires { __v.clone(); }) {
+                      return __v.clone();
+                    } else {
+                      return __v;
+                    }
+                  }((*this).unit_class),
+                  [](auto &&__v) -> WeightClass {
+                    if constexpr (
+                        requires { __v ? 0 : 0; } && requires { *__v; } &&
+                        requires { __v->clone(); } && requires { __v.get(); }) {
+                      using _E = std::remove_cvref_t<decltype(*__v)>;
+                      return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                    } else if constexpr (requires { __v.clone(); }) {
+                      return __v.clone();
+                    } else {
+                      return __v;
+                    }
+                  }((*this).unit_weight),
+                  [](auto &&__v) -> unsigned int {
+                    if constexpr (
+                        requires { __v ? 0 : 0; } && requires { *__v; } &&
+                        requires { __v->clone(); } && requires { __v.get(); }) {
+                      using _E = std::remove_cvref_t<decltype(*__v)>;
+                      return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                    } else if constexpr (requires { __v.clone(); }) {
+                      return __v.clone();
+                    } else {
+                      return __v;
+                    }
+                  }((*this).unit_tonnage),
+                  [](auto &&__v) -> unsigned int {
+                    if constexpr (
+                        requires { __v ? 0 : 0; } && requires { *__v; } &&
+                        requires { __v->clone(); } && requires { __v.get(); }) {
+                      using _E = std::remove_cvref_t<decltype(*__v)>;
+                      return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                    } else if constexpr (requires { __v.clone(); }) {
+                      return __v.clone();
+                    } else {
+                      return __v;
+                    }
+                  }((*this).unit_gunnery),
+                  [](auto &&__v) -> unsigned int {
+                    if constexpr (
+                        requires { __v ? 0 : 0; } && requires { *__v; } &&
+                        requires { __v->clone(); } && requires { __v.get(); }) {
+                      using _E = std::remove_cvref_t<decltype(*__v)>;
+                      return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                    } else if constexpr (requires { __v.clone(); }) {
+                      return __v.clone();
+                    } else {
+                      return __v;
+                    }
+                  }((*this).unit_piloting),
+                  [](auto &&__v) -> bool {
+                    if constexpr (
+                        requires { __v ? 0 : 0; } && requires { *__v; } &&
+                        requires { __v->clone(); } && requires { __v.get(); }) {
+                      using _E = std::remove_cvref_t<decltype(*__v)>;
+                      return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                    } else if constexpr (requires { __v.clone(); }) {
+                      return __v.clone();
+                    } else {
+                      return __v;
+                    }
+                  }((*this).unit_is_elite),
+                  [](auto &&__v) -> bool {
+                    if constexpr (
+                        requires { __v ? 0 : 0; } && requires { *__v; } &&
+                        requires { __v->clone(); } && requires { __v.get(); }) {
+                      using _E = std::remove_cvref_t<decltype(*__v)>;
+                      return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+                    } else if constexpr (requires { __v.clone(); }) {
+                      return __v.clone();
+                    } else {
+                      return __v;
+                    }
+                  }((*this).unit_is_clan)};
     }
   };
 
@@ -629,9 +747,79 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) ForceMetrics clone() const {
-      return ForceMetrics{(*(this)).fm_count,       (*(this)).fm_tonnage,
-                          (*(this)).fm_elite_count, (*(this)).fm_clan_count,
-                          (*(this)).fm_total_bv,    (*(this)).fm_total_ecr};
+      return ForceMetrics{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).fm_count),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).fm_tonnage),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).fm_elite_count),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).fm_clan_count),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).fm_total_bv),
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).fm_total_ecr)};
     }
   };
 
@@ -686,8 +874,32 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) CoalitionMember clone() const {
-      return CoalitionMember{(*(this)).cm_clan, (*(this)).cm_commander,
-                             (*(this)).cm_force};
+      return CoalitionMember{
+          [](auto &&__v) -> Clan {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cm_clan),
+          (*(this)).cm_commander.clone(),
+          [](auto &&__v) -> Force {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cm_force)};
     }
   };
 
@@ -714,8 +926,43 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) CoalitionMemberBid clone() const {
-      return CoalitionMemberBid{(*(this)).cmb_member_index,
-                                (*(this)).cmb_new_force, (*(this)).cmb_side};
+      return CoalitionMemberBid{
+          [](auto &&__v) -> unsigned int {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cmb_member_index),
+          [](auto &&__v) -> Force {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cmb_new_force),
+          [](auto &&__v) -> Side {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).cmb_side)};
     }
   };
 
@@ -734,8 +981,32 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) ForceBid clone() const {
-      return ForceBid{(*(this)).bid_force, (*(this)).bid_side,
-                      (*(this)).bid_commander};
+      return ForceBid{
+          [](auto &&__v) -> Force {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).bid_force),
+          [](auto &&__v) -> Side {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).bid_side),
+          (*(this)).bid_commander.clone()};
     }
   };
 
@@ -823,7 +1094,18 @@ struct CoalitionBidHonorTraceCase {
         return Prize(PrizeHonor{});
       } else {
         const auto &[d_enclave_id] = std::get<PrizeEnclave>(_sv.v());
-        return Prize(PrizeEnclave{d_enclave_id});
+        return Prize(PrizeEnclave{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_enclave_id)});
       }
     }
 
@@ -924,10 +1206,45 @@ struct CoalitionBidHonorTraceCase {
       if (std::holds_alternative<LocPlanetSurface>(_sv.v())) {
         const auto &[d_world_id, d_region_id] =
             std::get<LocPlanetSurface>(_sv.v());
-        return Location(LocPlanetSurface{d_world_id, d_region_id});
+        return Location(LocPlanetSurface{
+            [](auto &&__v) -> unsigned int {
+              if constexpr (
+                  requires { __v ? 0 : 0; } && requires { *__v; } &&
+                  requires { __v->clone(); } && requires { __v.get(); }) {
+                using _E = std::remove_cvref_t<decltype(*__v)>;
+                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+              } else if constexpr (requires { __v.clone(); }) {
+                return __v.clone();
+              } else {
+                return __v;
+              }
+            }(d_world_id),
+            [](auto &&__v) -> unsigned int {
+              if constexpr (
+                  requires { __v ? 0 : 0; } && requires { *__v; } &&
+                  requires { __v->clone(); } && requires { __v.get(); }) {
+                using _E = std::remove_cvref_t<decltype(*__v)>;
+                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+              } else if constexpr (requires { __v.clone(); }) {
+                return __v.clone();
+              } else {
+                return __v;
+              }
+            }(d_region_id)});
       } else {
         const auto &[d_enclave_id] = std::get<LocEnclave>(_sv.v());
-        return Location(LocEnclave{d_enclave_id});
+        return Location(LocEnclave{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_enclave_id)});
       }
     }
 
@@ -1007,8 +1324,31 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) BattleContext clone() const {
-      return BattleContext{(*(this)).ctx_hegira_allowed,
-                           (*(this)).ctx_circle_present};
+      return BattleContext{
+          [](auto &&__v) -> bool {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).ctx_hegira_allowed),
+          [](auto &&__v) -> bool {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).ctx_circle_present)};
     }
   };
 
@@ -1033,10 +1373,46 @@ struct CoalitionBidHonorTraceCase {
     // ACCESSORS
     __attribute__((pure)) BatchallChallenge clone() const {
       return BatchallChallenge{
-          (*(this)).chal_challenger, (*(this)).chal_clan,
-          (*(this)).chal_prize,      (*(this)).chal_initial_force,
-          (*(this)).chal_location,   (*(this)).chal_trial_type,
-          (*(this)).chal_context};
+          (*(this)).chal_challenger.clone(),
+          [](auto &&__v) -> Clan {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).chal_clan),
+          (*(this)).chal_prize.clone(),
+          [](auto &&__v) -> Force {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).chal_initial_force),
+          (*(this)).chal_location.clone(),
+          [](auto &&__v) -> TrialType {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).chal_trial_type),
+          (*(this)).chal_context.clone()};
     }
   };
 
@@ -1053,8 +1429,32 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) BatchallResponse clone() const {
-      return BatchallResponse{(*(this)).resp_defender, (*(this)).resp_clan,
-                              (*(this)).resp_force};
+      return BatchallResponse{
+          (*(this)).resp_defender.clone(),
+          [](auto &&__v) -> Clan {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).resp_clan),
+          [](auto &&__v) -> Force {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).resp_force)};
     }
   };
 
@@ -1103,7 +1503,18 @@ struct CoalitionBidHonorTraceCase {
         return RefusalReason(RefusalInsufficientRank{});
       } else {
         const auto &[d_note] = std::get<RefusalOther>(_sv.v());
-        return RefusalReason(RefusalOther{d_note});
+        return RefusalReason(RefusalOther{[](auto &&__v) -> unsigned int {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_note)});
       }
     }
 
@@ -1252,30 +1663,63 @@ struct CoalitionBidHonorTraceCase {
       auto &&_sv = *(this);
       if (std::holds_alternative<ActChallenge>(_sv.v())) {
         const auto &[d_chal] = std::get<ActChallenge>(_sv.v());
-        return ProtocolAction(ActChallenge{d_chal});
+        return ProtocolAction(ActChallenge{d_chal.clone()});
       } else if (std::holds_alternative<ActRespond>(_sv.v())) {
         const auto &[d_resp] = std::get<ActRespond>(_sv.v());
-        return ProtocolAction(ActRespond{d_resp});
+        return ProtocolAction(ActRespond{d_resp.clone()});
       } else if (std::holds_alternative<ActRefuse>(_sv.v())) {
         const auto &[d_reason] = std::get<ActRefuse>(_sv.v());
-        return ProtocolAction(ActRefuse{d_reason});
+        return ProtocolAction(ActRefuse{d_reason.clone()});
       } else if (std::holds_alternative<ActBid>(_sv.v())) {
         const auto &[d_bid] = std::get<ActBid>(_sv.v());
-        return ProtocolAction(ActBid{d_bid});
+        return ProtocolAction(ActBid{d_bid.clone()});
       } else if (std::holds_alternative<ActCoalitionBid>(_sv.v())) {
         const auto &[d_cbid] = std::get<ActCoalitionBid>(_sv.v());
-        return ProtocolAction(ActCoalitionBid{d_cbid});
+        return ProtocolAction(ActCoalitionBid{d_cbid.clone()});
       } else if (std::holds_alternative<ActPass>(_sv.v())) {
         const auto &[d_side] = std::get<ActPass>(_sv.v());
-        return ProtocolAction(ActPass{d_side});
+        return ProtocolAction(ActPass{[](auto &&__v) -> Side {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_side)});
       } else if (std::holds_alternative<ActClose>(_sv.v())) {
         return ProtocolAction(ActClose{});
       } else if (std::holds_alternative<ActWithdraw>(_sv.v())) {
         const auto &[d_side] = std::get<ActWithdraw>(_sv.v());
-        return ProtocolAction(ActWithdraw{d_side});
+        return ProtocolAction(ActWithdraw{[](auto &&__v) -> Side {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_side)});
       } else {
         const auto &[d_side] = std::get<ActBreakBid>(_sv.v());
-        return ProtocolAction(ActBreakBid{d_side});
+        return ProtocolAction(ActBreakBid{[](auto &&__v) -> Side {
+          if constexpr (
+              requires { __v ? 0 : 0; } && requires { *__v; } &&
+              requires { __v->clone(); } && requires { __v.get(); }) {
+            using _E = std::remove_cvref_t<decltype(*__v)>;
+            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+          } else if constexpr (requires { __v.clone(); }) {
+            return __v.clone();
+          } else {
+            return __v;
+          }
+        }(d_side)});
       }
     }
 
@@ -1583,30 +2027,69 @@ struct CoalitionBidHonorTraceCase {
         return BatchallPhase(PhaseIdle{});
       } else if (std::holds_alternative<PhaseChallenged>(_sv.v())) {
         const auto &[d_challenge] = std::get<PhaseChallenged>(_sv.v());
-        return BatchallPhase(PhaseChallenged{d_challenge});
+        return BatchallPhase(PhaseChallenged{d_challenge.clone()});
       } else if (std::holds_alternative<PhaseResponded>(_sv.v())) {
         const auto &[d_challenge, d_response] =
             std::get<PhaseResponded>(_sv.v());
-        return BatchallPhase(PhaseResponded{d_challenge, d_response});
+        return BatchallPhase(
+            PhaseResponded{d_challenge.clone(), d_response.clone()});
       } else if (std::holds_alternative<PhaseBidding>(_sv.v())) {
         const auto &[d_challenge, d_response, d_attacker_bid, d_defender_bid,
                      d_attacker_coalition, d_defender_coalition, d_bid_history,
                      d_ready] = std::get<PhaseBidding>(_sv.v());
-        return BatchallPhase(
-            PhaseBidding{d_challenge, d_response, d_attacker_bid,
-                         d_defender_bid, d_attacker_coalition,
-                         d_defender_coalition, d_bid_history, d_ready});
+        return BatchallPhase(PhaseBidding{
+            d_challenge.clone(), d_response.clone(), d_attacker_bid.clone(),
+            d_defender_bid.clone(),
+            [](auto &&__v) -> CoalitionState {
+              if constexpr (
+                  requires { __v ? 0 : 0; } && requires { *__v; } &&
+                  requires { __v->clone(); } && requires { __v.get(); }) {
+                using _E = std::remove_cvref_t<decltype(*__v)>;
+                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+              } else if constexpr (requires { __v.clone(); }) {
+                return __v.clone();
+              } else {
+                return __v;
+              }
+            }(d_attacker_coalition),
+            [](auto &&__v) -> CoalitionState {
+              if constexpr (
+                  requires { __v ? 0 : 0; } && requires { *__v; } &&
+                  requires { __v->clone(); } && requires { __v.get(); }) {
+                using _E = std::remove_cvref_t<decltype(*__v)>;
+                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+              } else if constexpr (requires { __v.clone(); }) {
+                return __v.clone();
+              } else {
+                return __v;
+              }
+            }(d_defender_coalition),
+            d_bid_history.clone(),
+            [](auto &&__v) -> ReadyStatus {
+              if constexpr (
+                  requires { __v ? 0 : 0; } && requires { *__v; } &&
+                  requires { __v->clone(); } && requires { __v.get(); }) {
+                using _E = std::remove_cvref_t<decltype(*__v)>;
+                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+              } else if constexpr (requires { __v.clone(); }) {
+                return __v.clone();
+              } else {
+                return __v;
+              }
+            }(d_ready)});
       } else if (std::holds_alternative<PhaseAgreed>(_sv.v())) {
         const auto &[d_challenge, d_response, d_final_attacker,
                      d_final_defender] = std::get<PhaseAgreed>(_sv.v());
-        return BatchallPhase(PhaseAgreed{d_challenge, d_response,
-                                         d_final_attacker, d_final_defender});
+        return BatchallPhase(
+            PhaseAgreed{d_challenge.clone(), d_response.clone(),
+                        d_final_attacker.clone(), d_final_defender.clone()});
       } else if (std::holds_alternative<PhaseRefused>(_sv.v())) {
         const auto &[d_challenge, d_reason] = std::get<PhaseRefused>(_sv.v());
-        return BatchallPhase(PhaseRefused{d_challenge, d_reason});
+        return BatchallPhase(
+            PhaseRefused{d_challenge.clone(), d_reason.clone()});
       } else {
         const auto &[d_reason] = std::get<PhaseAborted>(_sv.v());
-        return BatchallPhase(PhaseAborted{d_reason});
+        return BatchallPhase(PhaseAborted{d_reason.clone()});
       }
     }
 
@@ -1940,7 +2423,19 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) BatchallState clone() const {
-      return BatchallState{(*(this)).bs_phase, (*(this)).bs_honor};
+      return BatchallState{
+          (*(this)).bs_phase.clone(), [](auto &&__v) -> HonorLedger {
+            if constexpr (
+                requires { __v ? 0 : 0; } && requires { *__v; } &&
+                requires { __v->clone(); } && requires { __v.get(); }) {
+              using _E = std::remove_cvref_t<decltype(*__v)>;
+              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
+            } else if constexpr (requires { __v.clone(); }) {
+              return __v.clone();
+            } else {
+              return __v;
+            }
+          }((*this).bs_honor)};
     }
   };
 

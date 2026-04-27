@@ -347,8 +347,7 @@ LoopifyStrings::intercalate(const List<unsigned int> &sep,
   };
 
   struct _Call1 {
-    decltype(clone_as_value<List<unsigned int>>(
-        std::declval<std::shared_ptr<List<unsigned int>> &>())) _s0;
+    List<unsigned int> _s0;
     const List<unsigned int> _s1;
   };
 
@@ -372,10 +371,9 @@ LoopifyStrings::intercalate(const List<unsigned int> &sep,
         auto &&_sv = *(d_a1);
         if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                 _sv.v())) {
-          _result = clone_as_value<List<unsigned int>>(d_a0);
+          _result = d_a0;
         } else {
-          _stack.emplace_back(
-              _Call1{clone_as_value<List<unsigned int>>(d_a0), sep});
+          _stack.emplace_back(_Call1{d_a0, sep});
           _stack.emplace_back(_Enter{*(d_a1)});
         }
       }
