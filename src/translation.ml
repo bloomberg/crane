@@ -1093,7 +1093,7 @@ let return_captures_by_value stmts =
     | Sreturn (Some e) -> Sreturn (Some (expr e))
     | Sexpr e -> Sexpr (expr e)
     | Sasgn (id, ty, e) -> Sasgn (id, ty, expr e)
-    | Sderef_asgn (id, e) -> Sderef_asgn (id, expr e)
+    | Sderef_asgn (lhs, e) -> Sderef_asgn (expr lhs, expr e)
     | Sif (c, t, f) -> Sif (expr c, List.map stmt t, List.map stmt f)
     | Sswitch (scrut, ind, branches, default) ->
       Sswitch
@@ -6240,7 +6240,7 @@ and gen_local_fix_shared_ptr env renamed_ids funs_with_params =
     List.map2
       (fun (id, _fty) (args, body) ->
         Sderef_asgn
-          ( id,
+          ( CPPvar id,
             CPPlambda
               ( List.map
                   (fun (id, ty) ->
@@ -12070,7 +12070,14 @@ let gen_ind_header_v2
                   mf_ret_type = Tref self_ty;
                   mf_params = [(other_id, Tref (Tmod (TMconst, self_ty)))];
                   mf_body =
-                    [Sraw "d_v_ = std::move(_other.clone().d_v_);\nreturn *this;"];
+                    [
+                      Sasgn (d_v_id, None,
+                        CPPmove (CPPmember
+                          (CPPfun_call
+                            (CPPmember (CPPvar other_id, clone_id), []),
+                           d_v_id)));
+                      Sreturn (Some (CPPraw "*this"));
+                    ];
                   mf_is_const = false;
                   mf_is_static = false;
                   mf_this_pos = 0;
@@ -12087,7 +12094,11 @@ let gen_ind_header_v2
                   mf_ret_type = Tref self_ty;
                   mf_params = [(other_id, Tref (Tref self_ty))];
                   mf_body =
-                    [Sraw "d_v_ = std::move(_other.d_v_);\nreturn *this;"];
+                    [
+                      Sasgn (d_v_id, None,
+                        CPPmove (CPPmember (CPPvar other_id, d_v_id)));
+                      Sreturn (Some (CPPraw "*this"));
+                    ];
                   mf_is_const = false;
                   mf_is_static = false;
                   mf_this_pos = 0;
@@ -12490,12 +12501,15 @@ let gen_ind_header_v2
                   mf_params = [];
                   mf_body =
                     [
-                      Sraw
-                        ("*this = "
-                        ^ render_cpp_type_for_raw_template
-                            ~no_custom_inductives:(Refset'.add name Refset'.empty)
-                            self_ty
-                        ^ "();");
+                      Sderef_asgn
+                        ( CPPthis,
+                          CPPfun_call
+                            ( CPPraw
+                                (render_cpp_type_for_raw_template
+                                   ~no_custom_inductives:
+                                     (Refset'.add name Refset'.empty)
+                                   self_ty),
+                              [] ) );
                     ];
                   mf_is_const = false;
                   mf_is_static = false;

@@ -179,11 +179,11 @@ let lambda_needs_capture
       ( match ty with
       | Some _ -> (refs', IdSet.add id decls')
       | None -> (IdSet.add id refs', decls') )
-    | Sderef_asgn (id, e) ->
-      (* [*id = e]: the id is referenced (not declared) because the
-         variable was declared earlier; the RHS is scanned for captures. *)
-      let refs', decls' = collect_from_expr (refs, decls) e in
-      (IdSet.add id refs', decls')
+    | Sderef_asgn (lhs, e) ->
+      (* [*lhs = e]: the lhs is scanned for captures (referenced, not
+         declared); the RHS is also scanned. *)
+      let refs', decls' = collect_from_expr (refs, decls) lhs in
+      collect_from_expr (refs', decls') e
     | Scustom_case (_, scrut, _, branches, _) ->
       List.fold_left
         (fun (r, d) (branch_vars, _, stmts) ->
@@ -567,8 +567,13 @@ let rec pp_cpp_type par vl t =
         ++ pp_list (pp_rec false) args
         ++ str ">"
       | _ -> Id.print id ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
-    | Tid_external (id, []) -> Id.print id
+    | Tid_external (id, []) ->
+      if String.equal (Id.to_string id) "std::vector" then
+        require_header "vector";
+      Id.print id
     | Tid_external (id, args) ->
+      if String.equal (Id.to_string id) "std::vector" then
+        require_header "vector";
       Id.print id ++ str "<" ++ pp_list (pp_rec false) args ++ str ">"
     | Tglob (r, tys, args) ->
       (* Erased type/prop/implicit markers (from Tdummy in the ML AST) should
@@ -1529,10 +1534,10 @@ and pp_cpp_stmt env args = function
     ++ str " = "
     ++ pp_cpp_expr env args e
     ++ str ";"
-  | Sderef_asgn (id, e) ->
-    (* Dereference assignment [*id = expr;] for the shared_ptr fixpoint
-       pattern.  Assigns the lambda body through the pointer. *)
-    str "*" ++ Id.print id ++ str " = "
+  | Sderef_asgn (lhs, e) ->
+    (* Dereference assignment [*lhs = expr;] for the shared_ptr fixpoint
+       pattern and reset().  Assigns through the pointer/reference. *)
+    str "*" ++ pp_cpp_expr env args lhs ++ str " = "
     ++ pp_cpp_expr env args e ++ str ";"
   | Sblock_custom (_ref, tmpl, result_var, result_ty, args, tyargs) ->
     (* Block template: emit a declaration + template-substituted statements.

@@ -45,11 +45,11 @@ public:
   Nat(const Nat &_other) : d_v_(bsl::move(_other.clone().d_v_)) {}
   Nat(Nat &&_other) : d_v_(bsl::move(_other.d_v_)) {}
   Nat &operator=(const Nat &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    d_v_ = bsl::move(_other.clone().d_v_);
     return *this;
   }
   Nat &operator=(Nat &&_other) {
-    d_v_ = std::move(_other.d_v_);
+    d_v_ = bsl::move(_other.d_v_);
     return *this;
   }
   // ACCESSORS

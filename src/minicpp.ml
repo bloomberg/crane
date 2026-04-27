@@ -154,13 +154,14 @@ and cpp_stmt =
   | Sassign_field of cpp_expr * Id.t * cpp_expr
   (* Field assignment: obj.field = expr. Used for in-place mutation during
      memory reuse. *)
-  | Sderef_asgn of Id.t * cpp_expr
-  (* Dereference assignment: [*id = expr;].  Introduced for the
+  | Sderef_asgn of cpp_expr * cpp_expr
+  (* Dereference assignment: [*lhs = rhs;].  Introduced for the
      [shared_ptr<std::function>] fixpoint pattern where a fixpoint is
      allocated as [auto f = make_shared<function<...>>()] and the body is
      assigned via [*f = [=](...) mutable { ... }].  The indirection allows
      the by-value lambda to capture [f] (a [shared_ptr] copy) instead of a
-     dangling [&]-reference.  See {!Translation.gen_local_fix_shared_ptr}. *)
+     dangling [&]-reference.  Also used for [reset()] body: [*this = T()].
+     See {!Translation.gen_local_fix_shared_ptr}. *)
   | Swhile of cpp_expr * cpp_stmt list
     (* while (condition) { body } — used by loopify pass *)
   | Sblock of cpp_stmt list
@@ -476,7 +477,7 @@ let map_stmt
   | Susing (id, ty) -> Susing (id, ft ty)
   | Sdecl_init (id, ty) -> Sdecl_init (id, ft ty)
   | Sassign_field (obj, field, e) -> Sassign_field (fe obj, field, fe e)
-  | Sderef_asgn (id, e) -> Sderef_asgn (id, fe e)
+  | Sderef_asgn (lhs, e) -> Sderef_asgn (fe lhs, fe e)
   | Swhile (cond, body) -> Swhile (fe cond, List.map fs body)
   | Sblock stmts -> Sblock (List.map fs stmts)
   | Scontinue -> s
@@ -548,7 +549,7 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
     on_expr scrut;
     List.iter (fun (_, _, stmts) -> on_stmts stmts) branches
   | Sassign_field (obj, _, e) -> on_expr obj; on_expr e
-  | Sderef_asgn (_, e) -> on_expr e
+  | Sderef_asgn (lhs, e) -> on_expr lhs; on_expr e
   | Swhile (cond, body) -> on_expr cond; on_stmts body
   | Sblock stmts -> on_stmts stmts
   | Sblock_custom (_, _, _, _, args, _) -> List.iter on_expr args

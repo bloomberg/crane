@@ -2642,7 +2642,7 @@ and free_vars_stmt = function
   | Sreturn None -> []
   | Sexpr e -> free_vars_expr e
   | Sasgn (_, _, e) -> free_vars_expr e
-  | Sderef_asgn (id, e) -> id :: free_vars_expr e
+  | Sderef_asgn (lhs, e) -> free_vars_expr lhs @ free_vars_expr e
   | Sif (c, t, f) ->
     free_vars_expr c @ free_vars_body t @ free_vars_body f
   | Scustom_case (_, s, _, bs, _) ->
@@ -5068,8 +5068,13 @@ let make_loop_and_return struct_defs ret_ty init_push branches =
   let result_decl = Sdecl_init (Id.of_string "_result", ret_ty) in
   (* Use Tvar with Some name to avoid struct-name qualification that Tid adds *)
   let frame_ty = Tvar (0, Some (Id.of_string "_Frame")) in
-  (* std::vector<_Frame> has no AST representation — keep as Sraw *)
-  let stack_decl = Sraw "std::vector<_Frame> _stack;\n  _stack.reserve(16);" in
+  let vector_ty = Tid_external (Id.of_string_soft "std::vector", [frame_ty]) in
+  let stack_id = Id.of_string "_stack" in
+  let stack_decl = Sdecl (stack_id, vector_ty) in
+  let stack_reserve =
+    Sexpr (CPPfun_call (CPPmember (CPPvar stack_id, Id.of_string "reserve"),
+                        [CPPint 16]))
+  in
   (* [Smatch (branches, None)] = exhaustive if/else-if chain; no wildcard needed
      since the variant can only hold the listed frame types. *)
   let dispatch_stmt = Smatch (branches, None) in
@@ -5091,6 +5096,7 @@ let make_loop_and_return struct_defs ret_ty init_push branches =
   @ [
       result_decl;
       stack_decl;
+      stack_reserve;
       init_push;
       Swhile
         (CPPunop ("!",
@@ -5641,7 +5647,7 @@ let try_inline_mutual_into names body =
         ]
       | Sreturn (Some e) -> [Sreturn (Some (inline_expr e))]
       | Sasgn (id, ty, e) -> [Sasgn (id, ty, inline_expr e)]
-      | Sderef_asgn (id, e) -> [Sderef_asgn (id, inline_expr e)]
+      | Sderef_asgn (lhs, e) -> [Sderef_asgn (inline_expr lhs, inline_expr e)]
       | Sexpr e -> [Sexpr (inline_expr e)]
       | Smatch (branches, default) ->
         [
@@ -5806,7 +5812,7 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
        shared_ptr pattern is preserved with its body recursively processed. *)
     | Sasgn (id, (Some Tauto as _ty_opt),
              (CPPfun_call (CPPmk_shared func_ty, []) as init_expr))
-      :: Sderef_asgn (id2, CPPlambda (lparams, ret_ty_opt, lbody, cap))
+      :: Sderef_asgn (CPPvar id2, CPPlambda (lparams, ret_ty_opt, lbody, cap))
       :: rest
       when Id.equal id id2 ->
       ( match try_loopify_lambda id lparams ret_ty_opt lbody cap with
@@ -5817,7 +5823,7 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
       | None ->
         let lbody' = process_stmts lbody in
         Sasgn (id, _ty_opt, init_expr)
-        :: Sderef_asgn (id, CPPlambda (lparams, ret_ty_opt, lbody', cap))
+        :: Sderef_asgn (CPPvar id, CPPlambda (lparams, ret_ty_opt, lbody', cap))
         :: process_stmts rest )
     | stmt :: rest -> process_stmt stmt :: process_stmts rest
   and process_expr expr =
@@ -5863,7 +5869,7 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
     | Swhile (cond, body) -> Swhile (process_expr cond, process_stmts body)
     | Sexpr e -> Sexpr (process_expr e)
     | Sasgn (id, ty, e) -> Sasgn (id, ty, process_expr e)
-    | Sderef_asgn (id, e) -> Sderef_asgn (id, process_expr e)
+    | Sderef_asgn (lhs, e) -> Sderef_asgn (process_expr lhs, process_expr e)
     | Sreturn (Some e) -> Sreturn (Some (process_expr e))
     | s -> s
   in
@@ -6215,8 +6221,9 @@ and inline_id_in_stmt target_id target_params target_body stmt =
     [Sreturn (Some (inline_id_in_expr target_id target_params target_body e))]
   | Sasgn (id, ty, e) ->
     [Sasgn (id, ty, inline_id_in_expr target_id target_params target_body e)]
-  | Sderef_asgn (id, e) ->
-    [Sderef_asgn (id, inline_id_in_expr target_id target_params target_body e)]
+  | Sderef_asgn (lhs, e) ->
+    [Sderef_asgn (inline_id_in_expr target_id target_params target_body lhs,
+                  inline_id_in_expr target_id target_params target_body e)]
   | Sexpr e -> [Sexpr (inline_id_in_expr target_id target_params target_body e)]
   | Scustom_case (ty, scrut, tyargs, branches, err) ->
     [

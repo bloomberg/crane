@@ -50,11 +50,11 @@ public:
   List(const List<t_A> &_other) : d_v_(bsl::move(_other.clone().d_v_)) {}
   List(List<t_A> &&_other) : d_v_(bsl::move(_other.d_v_)) {}
   List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    d_v_ = bsl::move(_other.clone().d_v_);
     return *this;
   }
   List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+    d_v_ = bsl::move(_other.d_v_);
     return *this;
   }
   // ACCESSORS
