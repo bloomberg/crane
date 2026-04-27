@@ -149,7 +149,7 @@ public:
     return Option(Some{std::move(a0)});
   }
 
-  constexpr static Option<t_A> none() { return Option(None{}); }
+  __attribute__((pure)) static Option<t_A> none() { return Option(None{}); }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -604,7 +604,7 @@ public:
     return Sumor(Inleft{std::move(a0)});
   }
 
-  constexpr static Sumor<t_A> inright() { return Sumor(Inright{}); }
+  __attribute__((pure)) static Sumor<t_A> inright() { return Sumor(Inright{}); }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -1161,30 +1161,33 @@ struct RocqBug14174 {
     };
 
     template <typename T1>
-    constexpr static sig<T1> sig_of_sigT(const sigT<T1, std::any> &x) {
+    __attribute__((pure)) static sig<T1>
+    sig_of_sigT(const sigT<T1, std::any> &x) {
       return sig<T1>::exist(x.projT1());
     }
 
     template <typename T1>
-    constexpr static sigT<T1, std::any> sigT_of_sig(const sig<T1> &x) {
+    __attribute__((pure)) static sigT<T1, std::any>
+    sigT_of_sig(const sig<T1> &x) {
       return sigT<T1, std::any>::existt(x.proj1_sig(), std::any{});
     }
 
     template <typename T1>
-    constexpr static sig2<T1>
+    __attribute__((pure)) static sig2<T1>
     sig2_of_sigT2(const sigT2<T1, std::any, std::any> &x) {
       return sig2<T1>::exist2(x.sigT_of_sigT2().projT1());
     }
 
     template <typename T1>
-    constexpr static sigT2<T1, std::any, std::any>
+    __attribute__((pure)) static sigT2<T1, std::any, std::any>
     sigT2_of_sig2(const sig2<T1> &x) {
       return sigT2<T1, std::any, std::any>::existt2(x.sig_of_sig2().proj1_sig(),
                                                     std::any{}, std::any{});
     }
 
     template <typename T1, typename T2>
-    constexpr static sigT<T1, T2> sigT_of_prod(const Prod<T1, T2> &p) {
+    __attribute__((pure)) static sigT<T1, T2>
+    sigT_of_prod(const Prod<T1, T2> &p) {
       return sigT<T1, T2>::existt(p.fst(), p.snd());
     }
 
@@ -1303,7 +1306,9 @@ struct RocqBug14174 {
         return sumor(Inleft{std::move(a0)});
       }
 
-      constexpr static sumor<t_A> inright() { return sumor(Inright{}); }
+      __attribute__((pure)) static sumor<t_A> inright() {
+        return sumor(Inright{});
+      }
 
       // MANIPULATORS
       __attribute__((pure)) variant_t &v_mut() { return d_v_; }

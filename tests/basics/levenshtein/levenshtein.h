@@ -234,8 +234,9 @@ public:
   }
 
   // CREATORS
-  constexpr static Ascii ascii0(Bool0 a0, Bool0 a1, Bool0 a2, Bool0 a3,
-                                Bool0 a4, Bool0 a5, Bool0 a6, Bool0 a7) {
+  __attribute__((pure)) static Ascii ascii0(Bool0 a0, Bool0 a1, Bool0 a2,
+                                            Bool0 a3, Bool0 a4, Bool0 a5,
+                                            Bool0 a6, Bool0 a7) {
     return Ascii(Ascii0{std::move(a0), std::move(a1), std::move(a2),
                         std::move(a3), std::move(a4), std::move(a5),
                         std::move(a6), std::move(a7)});

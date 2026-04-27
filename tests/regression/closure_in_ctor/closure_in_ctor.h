@@ -65,7 +65,7 @@ struct ClosureInCtor {
       return box(Box0{std::move(a0)});
     }
 
-    constexpr static box empty() { return box(Empty{}); }
+    __attribute__((pure)) static box empty() { return box(Empty{}); }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

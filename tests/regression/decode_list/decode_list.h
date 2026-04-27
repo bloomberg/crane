@@ -155,7 +155,9 @@ struct DecodeList {
     }
 
     // CREATORS
-    constexpr static instruction nop() { return instruction(NOP{}); }
+    __attribute__((pure)) static instruction nop() {
+      return instruction(NOP{});
+    }
 
     __attribute__((pure)) static instruction ldm(unsigned int a0) {
       return instruction(LDM{std::move(a0)});

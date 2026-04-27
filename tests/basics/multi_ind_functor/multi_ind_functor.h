@@ -72,7 +72,7 @@ template <Elem E> struct Container {
     }
 
     // CREATORS
-    constexpr static maybe nothing() { return maybe(Nothing{}); }
+    __attribute__((pure)) static maybe nothing() { return maybe(Nothing{}); }
 
     __attribute__((pure)) static maybe just(unsigned int a0) {
       return maybe(Just{std::move(a0)});
@@ -269,7 +269,9 @@ template <Elem E> struct Container {
     }
 
     // CREATORS
-    constexpr static mtree leaf(maybe a0) { return mtree(Leaf{std::move(a0)}); }
+    __attribute__((pure)) static mtree leaf(maybe a0) {
+      return mtree(Leaf{std::move(a0)});
+    }
 
     __attribute__((pure)) static mtree node(mlist a0) {
       return mtree(Node{std::move(a0)});
@@ -318,7 +320,7 @@ template <Elem E> struct Container {
     }
   }
 
-  constexpr static bool is_nothing(const maybe &m) {
+  __attribute__((pure)) static bool is_nothing(const maybe &m) {
     if (std::holds_alternative<typename maybe::Nothing>(m.v())) {
       return true;
     } else {

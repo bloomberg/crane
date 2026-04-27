@@ -162,7 +162,9 @@ struct ProgramWf {
       return instruction(JMS{std::move(a0)});
     }
 
-    constexpr static instruction nop() { return instruction(NOP{}); }
+    __attribute__((pure)) static instruction nop() {
+      return instruction(NOP{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

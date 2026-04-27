@@ -177,7 +177,9 @@ struct InstructionCycles {
       return instruction1(JCN1{std::move(a0), std::move(a1)});
     }
 
-    constexpr static instruction1 nop1() { return instruction1(NOP1{}); }
+    __attribute__((pure)) static instruction1 nop1() {
+      return instruction1(NOP1{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -312,7 +314,9 @@ struct InstructionCycles {
       return instruction2(JMS2{std::move(a0)});
     }
 
-    constexpr static instruction2 nop2() { return instruction2(NOP2{}); }
+    __attribute__((pure)) static instruction2 nop2() {
+      return instruction2(NOP2{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -666,7 +670,9 @@ struct InstructionCycles {
     }
 
     // CREATORS
-    constexpr static instruction5 nop5() { return instruction5(NOP5{}); }
+    __attribute__((pure)) static instruction5 nop5() {
+      return instruction5(NOP5{});
+    }
 
     __attribute__((pure)) static instruction5 jcn5(unsigned int a0) {
       return instruction5(JCN5{std::move(a0)});

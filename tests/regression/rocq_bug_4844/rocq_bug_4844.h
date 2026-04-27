@@ -149,7 +149,7 @@ struct RocqBug4844 {
     }
 
     // CREATORS
-    constexpr static box box0(Sum<ST, ST> a0) {
+    __attribute__((pure)) static box box0(Sum<ST, ST> a0) {
       return box(Box0{std::move(a0)});
     }
 

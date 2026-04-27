@@ -217,11 +217,17 @@ struct EncodeOps {
     }
 
     // CREATORS
-    constexpr static instruction1 clb() { return instruction1(CLB{}); }
+    __attribute__((pure)) static instruction1 clb() {
+      return instruction1(CLB{});
+    }
 
-    constexpr static instruction1 cmc() { return instruction1(CMC{}); }
+    __attribute__((pure)) static instruction1 cmc() {
+      return instruction1(CMC{});
+    }
 
-    constexpr static instruction1 daa() { return instruction1(DAA{}); }
+    __attribute__((pure)) static instruction1 daa() {
+      return instruction1(DAA{});
+    }
 
     __attribute__((pure)) static instruction1 fim(unsigned int a0,
                                                   unsigned int a1) {
@@ -236,15 +242,25 @@ struct EncodeOps {
       return instruction1(LDM1{std::move(a0)});
     }
 
-    constexpr static instruction1 nop1() { return instruction1(NOP1{}); }
+    __attribute__((pure)) static instruction1 nop1() {
+      return instruction1(NOP1{});
+    }
 
-    constexpr static instruction1 rdm() { return instruction1(RDM{}); }
+    __attribute__((pure)) static instruction1 rdm() {
+      return instruction1(RDM{});
+    }
 
-    constexpr static instruction1 tcs() { return instruction1(TCS{}); }
+    __attribute__((pure)) static instruction1 tcs() {
+      return instruction1(TCS{});
+    }
 
-    constexpr static instruction1 wpm() { return instruction1(WPM{}); }
+    __attribute__((pure)) static instruction1 wpm() {
+      return instruction1(WPM{});
+    }
 
-    constexpr static instruction1 wr0() { return instruction1(WR0{}); }
+    __attribute__((pure)) static instruction1 wr0() {
+      return instruction1(WR0{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -440,7 +456,9 @@ struct EncodeOps {
     }
 
     // CREATORS
-    constexpr static instruction2 nop2() { return instruction2(NOP2{}); }
+    __attribute__((pure)) static instruction2 nop2() {
+      return instruction2(NOP2{});
+    }
 
     __attribute__((pure)) static instruction2 ldm2(unsigned int a0) {
       return instruction2(LDM2{std::move(a0)});
@@ -563,7 +581,9 @@ struct EncodeOps {
     }
 
     // CREATORS
-    constexpr static instruction3 nop3() { return instruction3(NOP3{}); }
+    __attribute__((pure)) static instruction3 nop3() {
+      return instruction3(NOP3{});
+    }
 
     __attribute__((pure)) static instruction3 ldm3(unsigned int a0) {
       return instruction3(LDM3{std::move(a0)});

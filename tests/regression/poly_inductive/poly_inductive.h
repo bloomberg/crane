@@ -261,7 +261,9 @@ struct PolyInductive {
       }
     }
 
-    constexpr static pmaybe<t_A> pnothing() { return pmaybe(PNothing{}); }
+    __attribute__((pure)) static pmaybe<t_A> pnothing() {
+      return pmaybe(PNothing{});
+    }
 
     __attribute__((pure)) static pmaybe<t_A> pjust(t_A a0) {
       return pmaybe(PJust{std::move(a0)});

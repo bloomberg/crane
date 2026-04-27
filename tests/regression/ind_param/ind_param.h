@@ -73,7 +73,7 @@ struct IndParam {
       }
 
       // CREATORS
-      constexpr static result ok(typename C::t a0) {
+      __attribute__((pure)) static result ok(typename C::t a0) {
         return result(Ok{std::move(a0)});
       }
 
@@ -128,12 +128,12 @@ struct IndParam {
       }
     }
 
-    constexpr static result make_single(const typename C::elem e) {
+    __attribute__((pure)) static result make_single(const typename C::elem e) {
       return result::ok(C::t::single(e));
     }
 
-    constexpr static result make_pair(const typename C::elem e1,
-                                      const typename C::elem e2) {
+    __attribute__((pure)) static result make_pair(const typename C::elem e1,
+                                                  const typename C::elem e2) {
       return result::ok(C::t::pair(e1, e2));
     }
 
@@ -218,11 +218,13 @@ struct IndParam {
       }
 
       // CREATORS
-      constexpr static t empty() { return t(Empty{}); }
+      __attribute__((pure)) static t empty() { return t(Empty{}); }
 
-      constexpr static t single(elem a0) { return t(Single{std::move(a0)}); }
+      __attribute__((pure)) static t single(elem a0) {
+        return t(Single{std::move(a0)});
+      }
 
-      constexpr static t pair(elem a0, elem a1) {
+      __attribute__((pure)) static t pair(elem a0, elem a1) {
         return t(Pair{std::move(a0), std::move(a1)});
       }
 

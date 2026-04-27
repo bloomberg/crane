@@ -165,7 +165,7 @@ struct FoldSequenceStateTraceCase {
     }
 
     // CREATORS
-    constexpr static Fold fold_line_ctor(Line a0) {
+    __attribute__((pure)) static Fold fold_line_ctor(Line a0) {
       return Fold(Fold_line_ctor{std::move(a0)});
     }
 
@@ -298,15 +298,15 @@ struct FoldSequenceStateTraceCase {
     }
 
     // CREATORS
-    constexpr static FoldStep fs_o1(Point a0, Point a1) {
+    __attribute__((pure)) static FoldStep fs_o1(Point a0, Point a1) {
       return FoldStep(FS_O1{std::move(a0), std::move(a1)});
     }
 
-    constexpr static FoldStep fs_o2(Point a0, Point a1) {
+    __attribute__((pure)) static FoldStep fs_o2(Point a0, Point a1) {
       return FoldStep(FS_O2{std::move(a0), std::move(a1)});
     }
 
-    constexpr static FoldStep fs_o4(Point a0, Line a1) {
+    __attribute__((pure)) static FoldStep fs_o4(Point a0, Line a1) {
       return FoldStep(FS_O4{std::move(a0), std::move(a1)});
     }
 

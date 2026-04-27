@@ -66,7 +66,9 @@ struct CountLoopTestTarget {
       return instruction(ISZ{std::move(a0), std::move(a1)});
     }
 
-    constexpr static instruction nop() { return instruction(NOP{}); }
+    __attribute__((pure)) static instruction nop() {
+      return instruction(NOP{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

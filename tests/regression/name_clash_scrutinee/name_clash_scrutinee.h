@@ -271,11 +271,11 @@ struct NameClashScrutinee {
     }
 
     // CREATORS
-    constexpr static wrapper wrap(Color a0, shape a1) {
+    __attribute__((pure)) static wrapper wrap(Color a0, shape a1) {
       return wrapper(Wrap{std::move(a0), std::move(a1)});
     }
 
-    constexpr static wrapper empty() { return wrapper(Empty{}); }
+    __attribute__((pure)) static wrapper empty() { return wrapper(Empty{}); }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

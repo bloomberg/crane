@@ -165,9 +165,13 @@ struct InstructionSequenceExec {
     }
 
     // CREATORS
-    constexpr static instruction nop_() { return instruction(NOP_{}); }
+    __attribute__((pure)) static instruction nop_() {
+      return instruction(NOP_{});
+    }
 
-    constexpr static instruction inc_pc() { return instruction(INC_PC{}); }
+    __attribute__((pure)) static instruction inc_pc() {
+      return instruction(INC_PC{});
+    }
 
     __attribute__((pure)) static instruction add_acc(unsigned int a0) {
       return instruction(ADD_ACC{std::move(a0)});

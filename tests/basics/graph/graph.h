@@ -251,7 +251,7 @@ template <typename t_A> struct Directed {
 template <typename _tcI0, typename T1> struct DirectedGraph {
   using edge = DirectedEdge<T1>;
 
-  constexpr static Directed<std::any> empty() {
+  __attribute__((pure)) static Directed<std::any> empty() {
     return Directed<std::any>{List<std::any>::nil(),
                               List<DirectedEdge<std::any>>::nil()};
   }
@@ -262,8 +262,8 @@ template <typename _tcI0, typename T1> struct DirectedGraph {
                               g.directed_edges};
   }
 
-  constexpr static Directed<std::any> add_edge(Directed<std::any> g,
-                                               DirectedEdge<T1> e) {
+  __attribute__((pure)) static Directed<std::any> add_edge(Directed<std::any> g,
+                                                           DirectedEdge<T1> e) {
     return Directed<std::any>{
         g.directed_nodes,
         List<DirectedEdge<std::any>>::cons(e, g.directed_edges)};
@@ -324,7 +324,7 @@ template <typename t_A> struct Undirected {
 template <typename _tcI0, typename T1> struct UndirectedGraph {
   using edge = UndirectedEdge<T1>;
 
-  constexpr static Undirected<std::any> empty() {
+  __attribute__((pure)) static Undirected<std::any> empty() {
     return Undirected<std::any>{List<std::any>::nil(),
                                 List<UndirectedEdge<std::any>>::nil()};
   }
@@ -335,8 +335,8 @@ template <typename _tcI0, typename T1> struct UndirectedGraph {
                                 g.undirected_edges};
   }
 
-  constexpr static Undirected<std::any> add_edge(Undirected<std::any> g,
-                                                 UndirectedEdge<T1> e) {
+  __attribute__((pure)) static Undirected<std::any>
+  add_edge(Undirected<std::any> g, UndirectedEdge<T1> e) {
     return Undirected<std::any>{
         g.undirected_nodes,
         List<UndirectedEdge<std::any>>::cons(e, g.undirected_edges)};

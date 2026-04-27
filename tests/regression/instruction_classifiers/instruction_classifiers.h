@@ -336,43 +336,45 @@ struct InstructionClassifiers {
       return instr_acc(BBL{std::move(a0)});
     }
 
-    constexpr static instr_acc sbm() { return instr_acc(SBM{}); }
+    __attribute__((pure)) static instr_acc sbm() { return instr_acc(SBM{}); }
 
-    constexpr static instr_acc rdm() { return instr_acc(RDM{}); }
+    __attribute__((pure)) static instr_acc rdm() { return instr_acc(RDM{}); }
 
-    constexpr static instr_acc rdr() { return instr_acc(RDR{}); }
+    __attribute__((pure)) static instr_acc rdr() { return instr_acc(RDR{}); }
 
-    constexpr static instr_acc adm() { return instr_acc(ADM{}); }
+    __attribute__((pure)) static instr_acc adm() { return instr_acc(ADM{}); }
 
-    constexpr static instr_acc rd0() { return instr_acc(RD0{}); }
+    __attribute__((pure)) static instr_acc rd0() { return instr_acc(RD0{}); }
 
-    constexpr static instr_acc rd1() { return instr_acc(RD1{}); }
+    __attribute__((pure)) static instr_acc rd1() { return instr_acc(RD1{}); }
 
-    constexpr static instr_acc rd2() { return instr_acc(RD2{}); }
+    __attribute__((pure)) static instr_acc rd2() { return instr_acc(RD2{}); }
 
-    constexpr static instr_acc rd3() { return instr_acc(RD3{}); }
+    __attribute__((pure)) static instr_acc rd3() { return instr_acc(RD3{}); }
 
-    constexpr static instr_acc clb() { return instr_acc(CLB{}); }
+    __attribute__((pure)) static instr_acc clb() { return instr_acc(CLB{}); }
 
-    constexpr static instr_acc cma() { return instr_acc(CMA{}); }
+    __attribute__((pure)) static instr_acc cma() { return instr_acc(CMA{}); }
 
-    constexpr static instr_acc iac() { return instr_acc(IAC{}); }
+    __attribute__((pure)) static instr_acc iac() { return instr_acc(IAC{}); }
 
-    constexpr static instr_acc dac() { return instr_acc(DAC{}); }
+    __attribute__((pure)) static instr_acc dac() { return instr_acc(DAC{}); }
 
-    constexpr static instr_acc ral() { return instr_acc(RAL{}); }
+    __attribute__((pure)) static instr_acc ral() { return instr_acc(RAL{}); }
 
-    constexpr static instr_acc rar() { return instr_acc(RAR{}); }
+    __attribute__((pure)) static instr_acc rar() { return instr_acc(RAR{}); }
 
-    constexpr static instr_acc tcc() { return instr_acc(TCC{}); }
+    __attribute__((pure)) static instr_acc tcc() { return instr_acc(TCC{}); }
 
-    constexpr static instr_acc tcs() { return instr_acc(TCS{}); }
+    __attribute__((pure)) static instr_acc tcs() { return instr_acc(TCS{}); }
 
-    constexpr static instr_acc daa() { return instr_acc(DAA{}); }
+    __attribute__((pure)) static instr_acc daa() { return instr_acc(DAA{}); }
 
-    constexpr static instr_acc kbp() { return instr_acc(KBP{}); }
+    __attribute__((pure)) static instr_acc kbp() { return instr_acc(KBP{}); }
 
-    constexpr static instr_acc nop_acc() { return instr_acc(NOP_acc{}); }
+    __attribute__((pure)) static instr_acc nop_acc() {
+      return instr_acc(NOP_acc{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -653,19 +655,21 @@ struct InstructionClassifiers {
     }
 
     // CREATORS
-    constexpr static instr_ram wrm() { return instr_ram(WRM{}); }
+    __attribute__((pure)) static instr_ram wrm() { return instr_ram(WRM{}); }
 
-    constexpr static instr_ram wmp() { return instr_ram(WMP{}); }
+    __attribute__((pure)) static instr_ram wmp() { return instr_ram(WMP{}); }
 
-    constexpr static instr_ram wr0() { return instr_ram(WR0{}); }
+    __attribute__((pure)) static instr_ram wr0() { return instr_ram(WR0{}); }
 
-    constexpr static instr_ram wr1() { return instr_ram(WR1{}); }
+    __attribute__((pure)) static instr_ram wr1() { return instr_ram(WR1{}); }
 
-    constexpr static instr_ram wr2() { return instr_ram(WR2{}); }
+    __attribute__((pure)) static instr_ram wr2() { return instr_ram(WR2{}); }
 
-    constexpr static instr_ram wr3() { return instr_ram(WR3{}); }
+    __attribute__((pure)) static instr_ram wr3() { return instr_ram(WR3{}); }
 
-    constexpr static instr_ram nop_ram() { return instr_ram(NOP_ram{}); }
+    __attribute__((pure)) static instr_ram nop_ram() {
+      return instr_ram(NOP_ram{});
+    }
 
     __attribute__((pure)) static instr_ram add_ram(unsigned int a0) {
       return instr_ram(ADD_ram{std::move(a0)});
@@ -886,7 +890,9 @@ struct InstructionClassifiers {
       return instr_regs(ISZ{std::move(a0), std::move(a1)});
     }
 
-    constexpr static instr_regs nop_regs() { return instr_regs(NOP_regs{}); }
+    __attribute__((pure)) static instr_regs nop_regs() {
+      return instr_regs(NOP_regs{});
+    }
 
     __attribute__((pure)) static instr_regs add_regs(unsigned int a0) {
       return instr_regs(ADD_regs{std::move(a0)});
@@ -1139,7 +1145,9 @@ struct InstructionClassifiers {
       return instr_jump(ADD_jump{std::move(a0)});
     }
 
-    constexpr static instr_jump nop_jump() { return instr_jump(NOP_jump{}); }
+    __attribute__((pure)) static instr_jump nop_jump() {
+      return instr_jump(NOP_jump{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

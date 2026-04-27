@@ -891,11 +891,11 @@ struct ValidatedPumpDeliveryTraceCase {
     }
 
     // CREATORS
-    constexpr static FaultStatus fault_none() {
+    __attribute__((pure)) static FaultStatus fault_none() {
       return FaultStatus(Fault_None{});
     }
 
-    constexpr static FaultStatus fault_occlusion() {
+    __attribute__((pure)) static FaultStatus fault_occlusion() {
       return FaultStatus(Fault_Occlusion{});
     }
 
@@ -904,11 +904,11 @@ struct ValidatedPumpDeliveryTraceCase {
       return FaultStatus(Fault_LowReservoir{std::move(a0)});
     }
 
-    constexpr static FaultStatus fault_batterylow() {
+    __attribute__((pure)) static FaultStatus fault_batterylow() {
       return FaultStatus(Fault_BatteryLow{});
     }
 
-    constexpr static FaultStatus fault_unknown() {
+    __attribute__((pure)) static FaultStatus fault_unknown() {
       return FaultStatus(Fault_Unknown{});
     }
 
@@ -1144,15 +1144,16 @@ struct ValidatedPumpDeliveryTraceCase {
     }
 
     // CREATORS
-    constexpr static SuspendDecision suspend_none() {
+    __attribute__((pure)) static SuspendDecision suspend_none() {
       return SuspendDecision(Suspend_None{});
     }
 
-    constexpr static SuspendDecision suspend_reduce(Insulin_twentieth a0) {
+    __attribute__((pure)) static SuspendDecision
+    suspend_reduce(Insulin_twentieth a0) {
       return SuspendDecision(Suspend_Reduce{std::move(a0)});
     }
 
-    constexpr static SuspendDecision suspend_withhold() {
+    __attribute__((pure)) static SuspendDecision suspend_withhold() {
       return SuspendDecision(Suspend_Withhold{});
     }
 
@@ -1347,7 +1348,8 @@ struct ValidatedPumpDeliveryTraceCase {
     }
 
     // CREATORS
-    constexpr static PrecisionResult precok(Insulin_twentieth a0, bool a1) {
+    __attribute__((pure)) static PrecisionResult precok(Insulin_twentieth a0,
+                                                        bool a1) {
       return PrecisionResult(PrecOK{std::move(a0), std::move(a1)});
     }
 

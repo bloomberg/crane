@@ -432,7 +432,7 @@ struct DepElim {
       return avail(Present{std::move(a0)});
     }
 
-    constexpr static avail absent() { return avail(Absent{}); }
+    __attribute__((pure)) static avail absent() { return avail(Absent{}); }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

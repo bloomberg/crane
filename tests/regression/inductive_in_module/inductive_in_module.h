@@ -116,7 +116,9 @@ struct InductiveInModule {
           }
         }
 
-        constexpr static option<t_A> none() { return option(None{}); }
+        __attribute__((pure)) static option<t_A> none() {
+          return option(None{});
+        }
 
         __attribute__((pure)) static option<t_A> some(t_A a0) {
           return option(Some{std::move(a0)});

@@ -383,7 +383,9 @@ struct ComprehensivePatterns {
     }
 
     // CREATORS
-    constexpr static Either left_s(S s) { return Either(Left_S{std::move(s)}); }
+    __attribute__((pure)) static Either left_s(S s) {
+      return Either(Left_S{std::move(s)});
+    }
 
     __attribute__((pure)) static Either right_n(unsigned int n) {
       return Either(Right_N{std::move(n)});
@@ -1202,9 +1204,11 @@ struct ComprehensivePatterns {
     }
 
     // CREATORS
-    constexpr static Container empty() { return Container(Empty{}); }
+    __attribute__((pure)) static Container empty() {
+      return Container(Empty{});
+    }
 
-    constexpr static Container full(StateRO a0) {
+    __attribute__((pure)) static Container full(StateRO a0) {
       return Container(Full{std::move(a0)});
     }
 

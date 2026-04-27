@@ -253,7 +253,7 @@ struct DeepPatterns {
       return inner(ILeft{std::move(a0)});
     }
 
-    constexpr static inner iright(bool a0) {
+    __attribute__((pure)) static inner iright(bool a0) {
       return inner(IRight{std::move(a0)});
     }
 

@@ -230,11 +230,11 @@ struct RecordErasedProofFieldsCase {
     }
 
     // CREATORS
-    constexpr static StoredTag tagprimary(ItemKind a0) {
+    __attribute__((pure)) static StoredTag tagprimary(ItemKind a0) {
       return StoredTag(TagPrimary{std::move(a0)});
     }
 
-    constexpr static StoredTag tagsecondary(ItemKind a0) {
+    __attribute__((pure)) static StoredTag tagsecondary(ItemKind a0) {
       return StoredTag(TagSecondary{std::move(a0)});
     }
 

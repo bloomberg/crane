@@ -304,7 +304,7 @@ public:
   }
 
   // CREATORS
-  constexpr static Z z0() { return Z(Z0{}); }
+  __attribute__((pure)) static Z z0() { return Z(Z0{}); }
 
   __attribute__((pure)) static Z zpos(Positive a0) {
     return Z(Zpos{std::move(a0)});
@@ -780,7 +780,9 @@ struct CoalitionBidHonorTraceCase {
     }
 
     // CREATORS
-    constexpr static Prize prizehonor() { return Prize(PrizeHonor{}); }
+    __attribute__((pure)) static Prize prizehonor() {
+      return Prize(PrizeHonor{});
+    }
 
     __attribute__((pure)) static Prize prizeenclave(unsigned int enclave_id) {
       return Prize(PrizeEnclave{std::move(enclave_id)});
@@ -1059,7 +1061,7 @@ struct CoalitionBidHonorTraceCase {
     }
 
     // CREATORS
-    constexpr static RefusalReason refusalinsufficientrank() {
+    __attribute__((pure)) static RefusalReason refusalinsufficientrank() {
       return RefusalReason(RefusalInsufficientRank{});
     }
 
@@ -1230,39 +1232,43 @@ struct CoalitionBidHonorTraceCase {
     }
 
     // CREATORS
-    constexpr static ProtocolAction actchallenge(BatchallChallenge chal) {
+    __attribute__((pure)) static ProtocolAction
+    actchallenge(BatchallChallenge chal) {
       return ProtocolAction(ActChallenge{std::move(chal)});
     }
 
-    constexpr static ProtocolAction actrespond(BatchallResponse resp) {
+    __attribute__((pure)) static ProtocolAction
+    actrespond(BatchallResponse resp) {
       return ProtocolAction(ActRespond{std::move(resp)});
     }
 
-    constexpr static ProtocolAction actrefuse(RefusalReason reason) {
+    __attribute__((pure)) static ProtocolAction
+    actrefuse(RefusalReason reason) {
       return ProtocolAction(ActRefuse{std::move(reason)});
     }
 
-    constexpr static ProtocolAction actbid(ForceBid bid) {
+    __attribute__((pure)) static ProtocolAction actbid(ForceBid bid) {
       return ProtocolAction(ActBid{std::move(bid)});
     }
 
-    constexpr static ProtocolAction actcoalitionbid(CoalitionMemberBid cbid) {
+    __attribute__((pure)) static ProtocolAction
+    actcoalitionbid(CoalitionMemberBid cbid) {
       return ProtocolAction(ActCoalitionBid{std::move(cbid)});
     }
 
-    constexpr static ProtocolAction actpass(Side side) {
+    __attribute__((pure)) static ProtocolAction actpass(Side side) {
       return ProtocolAction(ActPass{std::move(side)});
     }
 
-    constexpr static ProtocolAction actclose() {
+    __attribute__((pure)) static ProtocolAction actclose() {
       return ProtocolAction(ActClose{});
     }
 
-    constexpr static ProtocolAction actwithdraw(Side side) {
+    __attribute__((pure)) static ProtocolAction actwithdraw(Side side) {
       return ProtocolAction(ActWithdraw{std::move(side)});
     }
 
-    constexpr static ProtocolAction actbreakbid(Side side) {
+    __attribute__((pure)) static ProtocolAction actbreakbid(Side side) {
       return ProtocolAction(ActBreakBid{std::move(side)});
     }
 
@@ -1563,17 +1569,17 @@ struct CoalitionBidHonorTraceCase {
     }
 
     // CREATORS
-    constexpr static BatchallPhase phaseidle() {
+    __attribute__((pure)) static BatchallPhase phaseidle() {
       return BatchallPhase(PhaseIdle{});
     }
 
-    constexpr static BatchallPhase
+    __attribute__((pure)) static BatchallPhase
     phasechallenged(BatchallChallenge challenge) {
       return BatchallPhase(PhaseChallenged{std::move(challenge)});
     }
 
-    constexpr static BatchallPhase phaseresponded(BatchallChallenge challenge,
-                                                  BatchallResponse response) {
+    __attribute__((pure)) static BatchallPhase
+    phaseresponded(BatchallChallenge challenge, BatchallResponse response) {
       return BatchallPhase(
           PhaseResponded{std::move(challenge), std::move(response)});
     }
@@ -1591,22 +1597,22 @@ struct CoalitionBidHonorTraceCase {
           std::move(ready)});
     }
 
-    constexpr static BatchallPhase phaseagreed(BatchallChallenge challenge,
-                                               BatchallResponse response,
-                                               ForceBid final_attacker,
-                                               ForceBid final_defender) {
+    __attribute__((pure)) static BatchallPhase
+    phaseagreed(BatchallChallenge challenge, BatchallResponse response,
+                ForceBid final_attacker, ForceBid final_defender) {
       return BatchallPhase(
           PhaseAgreed{std::move(challenge), std::move(response),
                       std::move(final_attacker), std::move(final_defender)});
     }
 
-    constexpr static BatchallPhase phaserefused(BatchallChallenge challenge,
-                                                RefusalReason reason) {
+    __attribute__((pure)) static BatchallPhase
+    phaserefused(BatchallChallenge challenge, RefusalReason reason) {
       return BatchallPhase(
           PhaseRefused{std::move(challenge), std::move(reason)});
     }
 
-    constexpr static BatchallPhase phaseaborted(ProtocolAction reason) {
+    __attribute__((pure)) static BatchallPhase
+    phaseaborted(ProtocolAction reason) {
       return BatchallPhase(PhaseAborted{std::move(reason)});
     }
 

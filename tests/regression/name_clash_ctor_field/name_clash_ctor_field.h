@@ -354,9 +354,11 @@ struct NameClashCtorField {
     }
 
     // CREATORS
-    constexpr static box box0(pair_ind a0) { return box(Box0{std::move(a0)}); }
+    __attribute__((pure)) static box box0(pair_ind a0) {
+      return box(Box0{std::move(a0)});
+    }
 
-    constexpr static box emptybox() { return box(EmptyBox{}); }
+    __attribute__((pure)) static box emptybox() { return box(EmptyBox{}); }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

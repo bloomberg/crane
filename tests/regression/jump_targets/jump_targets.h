@@ -173,7 +173,7 @@ struct JumpTargets {
       return instr_collection(JMS_coll{std::move(a0)});
     }
 
-    constexpr static instr_collection nop_coll() {
+    __attribute__((pure)) static instr_collection nop_coll() {
       return instr_collection(NOP_coll{});
     }
 
@@ -336,7 +336,9 @@ struct JumpTargets {
       return instr_region(JMS_reg{std::move(a0)});
     }
 
-    constexpr static instr_region nop_reg() { return instr_region(NOP_reg{}); }
+    __attribute__((pure)) static instr_region nop_reg() {
+      return instr_region(NOP_reg{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -494,7 +496,9 @@ struct JumpTargets {
       return instr_jms(JMS_jms{std::move(a0)});
     }
 
-    constexpr static instr_jms nop_jms() { return instr_jms(NOP_jms{}); }
+    __attribute__((pure)) static instr_jms nop_jms() {
+      return instr_jms(NOP_jms{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -630,7 +634,9 @@ struct JumpTargets {
       return instr_jun(JMS_jun{std::move(a0)});
     }
 
-    constexpr static instr_jun nop_jun() { return instr_jun(NOP_jun{}); }
+    __attribute__((pure)) static instr_jun nop_jun() {
+      return instr_jun(NOP_jun{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

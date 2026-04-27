@@ -150,7 +150,9 @@ struct StepFetchDecodeExec {
     }
 
     // CREATORS
-    constexpr static instruction nop() { return instruction(NOP{}); }
+    __attribute__((pure)) static instruction nop() {
+      return instruction(NOP{});
+    }
 
     __attribute__((pure)) static instruction add_acc(unsigned int a0) {
       return instruction(ADD_ACC{std::move(a0)});

@@ -176,9 +176,13 @@ struct DisassembleOps {
     }
 
     // CREATORS
-    constexpr static instruction nop() { return instruction(NOP{}); }
+    __attribute__((pure)) static instruction nop() {
+      return instruction(NOP{});
+    }
 
-    constexpr static instruction nop2() { return instruction(NOP2{}); }
+    __attribute__((pure)) static instruction nop2() {
+      return instruction(NOP2{});
+    }
 
     __attribute__((pure)) static instruction ldm(unsigned int a0) {
       return instruction(LDM{std::move(a0)});
@@ -316,7 +320,7 @@ struct DisassembleOps {
   disassemble3(const List<unsigned int> &rom0, const unsigned int &addr);
 
   template <typename T1>
-  constexpr static bool is_none(const std::optional<T1> &o) {
+  __attribute__((pure)) static bool is_none(const std::optional<T1> &o) {
     if (o.has_value()) {
       const T1 &_x = *o;
       return false;

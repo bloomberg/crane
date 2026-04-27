@@ -30,7 +30,7 @@ struct ConstrainedPoly {
   };
 
   template <typename T1, typename T2>
-  constexpr static UPair<T2, T1> swap(const UPair<T1, T2> &p) {
+  __attribute__((pure)) static UPair<T2, T1> swap(const UPair<T1, T2> &p) {
     return UPair<T2, T1>{p.usnd, p.ufst};
   }
 
@@ -101,7 +101,9 @@ struct ConstrainedPoly {
       return UOption(USome{std::move(a0)});
     }
 
-    constexpr static UOption<t_A> unone() { return UOption(UNone{}); }
+    __attribute__((pure)) static UOption<t_A> unone() {
+      return UOption(UNone{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

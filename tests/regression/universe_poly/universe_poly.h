@@ -180,7 +180,9 @@ struct UniversePoly {
       }
     }
 
-    constexpr static poption<t_A> pnone() { return poption(Pnone{}); }
+    __attribute__((pure)) static poption<t_A> pnone() {
+      return poption(Pnone{});
+    }
 
     __attribute__((pure)) static poption<t_A> psome(t_A a0) {
       return poption(Psome{std::move(a0)});

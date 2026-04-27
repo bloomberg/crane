@@ -175,7 +175,7 @@ struct Tuple {
   }
 
   template <typename T1, typename T2>
-  constexpr static Prod<T2, T1> swap(const Prod<T1, T2> &p) {
+  __attribute__((pure)) static Prod<T2, T1> swap(const Prod<T1, T2> &p) {
     const auto &[d_a0, d_a1] = std::get<typename Prod<T1, T2>::Pair>(p.v());
     return Prod<T2, T1>::pair(d_a1, d_a0);
   }

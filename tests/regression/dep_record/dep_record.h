@@ -131,7 +131,9 @@ struct DepRecord {
   struct bool_magma {
     using carrier = bool;
 
-    constexpr static bool op(bool a0, bool a1) { return (a0 && a1); }
+    __attribute__((pure)) static bool op(bool a0, bool a1) {
+      return (a0 && a1);
+    }
   };
 
   static_assert(Magma<bool_magma>);

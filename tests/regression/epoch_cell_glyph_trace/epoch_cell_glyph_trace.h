@@ -241,7 +241,7 @@ public:
   }
 
   // CREATORS
-  constexpr static Z z0() { return Z(Z0{}); }
+  __attribute__((pure)) static Z z0() { return Z(Z0{}); }
 
   __attribute__((pure)) static Z zpos(Positive a0) {
     return Z(Zpos{std::move(a0)});

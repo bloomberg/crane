@@ -54,7 +54,9 @@ struct ModuleTypeNameClashProbe {
       }
 
       // CREATORS
-      constexpr static t t0(Bool0 a0) { return t(T0{std::move(a0)}); }
+      __attribute__((pure)) static t t0(Bool0 a0) {
+        return t(T0{std::move(a0)});
+      }
 
       // MANIPULATORS
       __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -132,7 +134,9 @@ struct ModuleTypeNameClashProbe {
     }
 
     // CREATORS
-    constexpr static M mkm(Bool0 a0) { return M(MkM{std::move(a0)}); }
+    __attribute__((pure)) static M mkm(Bool0 a0) {
+      return M(MkM{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

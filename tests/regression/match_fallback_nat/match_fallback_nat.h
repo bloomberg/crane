@@ -63,7 +63,9 @@ struct MatchFallbackNat {
       return maybe_nat(SomeNat{std::move(a0)});
     }
 
-    constexpr static maybe_nat nonenat() { return maybe_nat(NoneNat{}); }
+    __attribute__((pure)) static maybe_nat nonenat() {
+      return maybe_nat(NoneNat{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

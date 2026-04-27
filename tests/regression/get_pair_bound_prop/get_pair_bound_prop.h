@@ -444,7 +444,7 @@ struct GetPairBoundProp {
     }
 
     // CREATORS
-    constexpr static instr nop() { return instr(NOP{}); }
+    __attribute__((pure)) static instr nop() { return instr(NOP{}); }
 
     __attribute__((pure)) static instr ldm(unsigned int n) {
       return instr(LDM{std::move(n)});
@@ -470,31 +470,31 @@ struct GetPairBoundProp {
       return instr(SUB{std::move(r)});
     }
 
-    constexpr static instr iac() { return instr(IAC{}); }
+    __attribute__((pure)) static instr iac() { return instr(IAC{}); }
 
-    constexpr static instr dac() { return instr(DAC{}); }
+    __attribute__((pure)) static instr dac() { return instr(DAC{}); }
 
-    constexpr static instr clc() { return instr(CLC{}); }
+    __attribute__((pure)) static instr clc() { return instr(CLC{}); }
 
-    constexpr static instr stc() { return instr(STC{}); }
+    __attribute__((pure)) static instr stc() { return instr(STC{}); }
 
-    constexpr static instr cmc() { return instr(CMC{}); }
+    __attribute__((pure)) static instr cmc() { return instr(CMC{}); }
 
-    constexpr static instr cma() { return instr(CMA{}); }
+    __attribute__((pure)) static instr cma() { return instr(CMA{}); }
 
-    constexpr static instr clb() { return instr(CLB{}); }
+    __attribute__((pure)) static instr clb() { return instr(CLB{}); }
 
-    constexpr static instr ral() { return instr(RAL{}); }
+    __attribute__((pure)) static instr ral() { return instr(RAL{}); }
 
-    constexpr static instr rar() { return instr(RAR{}); }
+    __attribute__((pure)) static instr rar() { return instr(RAR{}); }
 
-    constexpr static instr tcc() { return instr(TCC{}); }
+    __attribute__((pure)) static instr tcc() { return instr(TCC{}); }
 
-    constexpr static instr tcs() { return instr(TCS{}); }
+    __attribute__((pure)) static instr tcs() { return instr(TCS{}); }
 
-    constexpr static instr daa() { return instr(DAA{}); }
+    __attribute__((pure)) static instr daa() { return instr(DAA{}); }
 
-    constexpr static instr kbp() { return instr(KBP{}); }
+    __attribute__((pure)) static instr kbp() { return instr(KBP{}); }
 
     __attribute__((pure)) static instr jun(unsigned int a) {
       return instr(JUN{std::move(a)});

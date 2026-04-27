@@ -365,7 +365,7 @@ public:
     }
   }
 
-  constexpr static T0<t_A> nil() { return T0(Nil{}); }
+  __attribute__((pure)) static T0<t_A> nil() { return T0(Nil{}); }
 
   __attribute__((pure)) static T0<t_A> cons(t_A h, unsigned int n,
                                             const T0<t_A> &a2) {
@@ -740,7 +740,7 @@ struct PendantSumtreeRoundtripCase {
     }
 
     // CREATORS
-    constexpr static SumTree sumleaf(CertifiedPendant a0) {
+    __attribute__((pure)) static SumTree sumleaf(CertifiedPendant a0) {
       return SumTree(SumLeaf{std::move(a0)});
     }
 

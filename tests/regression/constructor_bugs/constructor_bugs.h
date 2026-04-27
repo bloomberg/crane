@@ -422,7 +422,9 @@ struct ConstructorBugs {
     }
 
     // CREATORS
-    constexpr static MySum left(Inner a0) { return MySum(Left{std::move(a0)}); }
+    __attribute__((pure)) static MySum left(Inner a0) {
+      return MySum(Left{std::move(a0)});
+    }
 
     __attribute__((pure)) static MySum right(unsigned int a0) {
       return MySum(Right{std::move(a0)});

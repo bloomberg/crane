@@ -1836,26 +1836,12 @@ and is_constexpr_type = function
   | Tfun _ -> false  (* std::function uses type erasure *)
   | Tdecltype _ -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false
-  | Tglob (GlobRef.IndRef (kn, i), _, _) ->
-    (* Value-type inductives with recursive fields contain shared_ptr
-       internally, making them non-literal. Check ip_types of each
-       constructor for self-references (same MutInd). *)
-    let has_recursive_field =
-      let rec check_ctor j =
-        let cref = GlobRef.ConstructRef ((kn, i), j) in
-        match Table.get_ctor_ip_types_opt cref with
-        | None -> false
-        | Some tys ->
-          List.exists (fun ty ->
-            match ty with
-            | Miniml.Tglob (GlobRef.IndRef (kn2, _), _, _) ->
-              MutInd.CanOrd.equal kn kn2
-            | _ -> false) tys
-          || check_ctor (j + 1)
-      in
-      (try check_ctor 1 with Not_found -> false)
-    in
-    not has_recursive_field
+  | Tglob (GlobRef.IndRef _ as r, tys, _) ->
+    (* Crane-generated non-enum inductives have user-provided constructors
+       (T() {}, explicit T(Ctor _v) : d_v_(_v) {}) that are not constexpr,
+       so the types are not literal.  Only enum inductives (generated as
+       [enum class]) are literal types. *)
+    Table.is_enum_inductive r && List.for_all is_constexpr_type tys
   | Tmod (_, t) | Tref t | Tptr t -> is_constexpr_type t
   | Tvariant tys -> List.for_all is_constexpr_type tys
   | Tglob (_, tys, _) -> List.for_all is_constexpr_type tys

@@ -241,29 +241,29 @@ struct LargeEnum {
       return tok(TNum{std::move(a0)});
     }
 
-    constexpr static tok tplus() { return tok(TPlus{}); }
+    __attribute__((pure)) static tok tplus() { return tok(TPlus{}); }
 
-    constexpr static tok tminus() { return tok(TMinus{}); }
+    __attribute__((pure)) static tok tminus() { return tok(TMinus{}); }
 
-    constexpr static tok tstar() { return tok(TStar{}); }
+    __attribute__((pure)) static tok tstar() { return tok(TStar{}); }
 
-    constexpr static tok tslash() { return tok(TSlash{}); }
+    __attribute__((pure)) static tok tslash() { return tok(TSlash{}); }
 
-    constexpr static tok tlparen() { return tok(TLParen{}); }
+    __attribute__((pure)) static tok tlparen() { return tok(TLParen{}); }
 
-    constexpr static tok trparen() { return tok(TRParen{}); }
+    __attribute__((pure)) static tok trparen() { return tok(TRParen{}); }
 
-    constexpr static tok teq() { return tok(TEq{}); }
+    __attribute__((pure)) static tok teq() { return tok(TEq{}); }
 
-    constexpr static tok tbang() { return tok(TBang{}); }
+    __attribute__((pure)) static tok tbang() { return tok(TBang{}); }
 
-    constexpr static tok tsemicolon() { return tok(TSemicolon{}); }
+    __attribute__((pure)) static tok tsemicolon() { return tok(TSemicolon{}); }
 
     __attribute__((pure)) static tok tident(unsigned int a0) {
       return tok(TIdent{std::move(a0)});
     }
 
-    constexpr static tok teof() { return tok(TEOF{}); }
+    __attribute__((pure)) static tok teof() { return tok(TEOF{}); }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

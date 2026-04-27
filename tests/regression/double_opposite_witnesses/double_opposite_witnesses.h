@@ -151,7 +151,9 @@ struct DoubleOppositeWitnessesCase {
     }
 
     // CREATORS
-    constexpr static Path<t_A> path_refl() { return Path(Path_refl{}); }
+    __attribute__((pure)) static Path<t_A> path_refl() {
+      return Path(Path_refl{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -218,7 +220,7 @@ struct DoubleOppositeWitnessesCase {
   };
 
   template <PreCategory _tcI0, PreCategory _tcI1, PreCategory _tcI2>
-  constexpr static Functor compose_functor(Functor f, Functor g) {
+  __attribute__((pure)) static Functor compose_functor(Functor f, Functor g) {
     return Functor{
         [=](const std::any x) mutable { return f.object_of(g.object_of(x)); },
         [=](const std::any x, const std::any y, const std::any f0) mutable {
@@ -261,21 +263,21 @@ struct DoubleOppositeWitnessesCase {
   static_assert(PreStableCategory<toy_prestable>);
 
   template <PreCategory _tcI0>
-  constexpr static Functor into_double_opposite_functor() {
+  __attribute__((pure)) static Functor into_double_opposite_functor() {
     return Functor{
         [](const std::any x) { return x; },
         [](const std::any, const std::any, const std::any f) { return f; }};
   }
 
   template <PreCategory _tcI0>
-  constexpr static Functor out_of_double_opposite_functor() {
+  __attribute__((pure)) static Functor out_of_double_opposite_functor() {
     return Functor{
         [](const std::any x) { return x; },
         [](const std::any, const std::any, const std::any f) { return f; }};
   }
 
   template <PreStableCategory _tcI0>
-  constexpr static SigT<
+  __attribute__((pure)) static SigT<
       Functor,
       SigT<Functor,
            std::pair<std::function<Path<typename _tcI0::base_category::Obj>(

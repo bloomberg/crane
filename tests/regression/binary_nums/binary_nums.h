@@ -148,7 +148,7 @@ public:
   }
 
   // CREATORS
-  constexpr static N n0() { return N(N0{}); }
+  __attribute__((pure)) static N n0() { return N(N0{}); }
 
   __attribute__((pure)) static N npos(Positive a0) {
     return N(Npos{std::move(a0)});
@@ -230,7 +230,7 @@ public:
   }
 
   // CREATORS
-  constexpr static Z z0() { return Z(Z0{}); }
+  __attribute__((pure)) static Z z0() { return Z(Z0{}); }
 
   __attribute__((pure)) static Z zpos(Positive a0) {
     return Z(Zpos{std::move(a0)});
@@ -322,13 +322,13 @@ struct Pos {
     }
 
     // CREATORS
-    constexpr static mask isnul() { return mask(IsNul{}); }
+    __attribute__((pure)) static mask isnul() { return mask(IsNul{}); }
 
     __attribute__((pure)) static mask ispos(Positive a0) {
       return mask(IsPos{std::move(a0)});
     }
 
-    constexpr static mask isneg() { return mask(IsNeg{}); }
+    __attribute__((pure)) static mask isneg() { return mask(IsNeg{}); }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
