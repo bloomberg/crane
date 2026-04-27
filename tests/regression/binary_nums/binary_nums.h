@@ -82,7 +82,7 @@ public:
   __attribute__((pure)) static Positive xh() { return Positive(XH{}); }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) Positive *operator->() { return this; }
@@ -155,7 +155,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) N *operator->() { return this; }
@@ -241,7 +241,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) Z *operator->() { return this; }
@@ -331,7 +331,7 @@ struct Pos {
     __attribute__((pure)) static mask isneg() { return mask(IsNeg{}); }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) mask *operator->() { return this; }

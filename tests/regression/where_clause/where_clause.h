@@ -93,7 +93,7 @@ struct WhereClause {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) Expr *operator->() { return this; }
@@ -281,7 +281,7 @@ struct WhereClause {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) BExpr *operator->() { return this; }
@@ -454,7 +454,7 @@ struct WhereClause {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) AExpr *operator->() { return this; }

@@ -68,7 +68,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) Nat *operator->() { return this; }
@@ -154,7 +154,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) SigT<t_A, t_P> *operator->() { return this; }
@@ -243,7 +243,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) Ascii *operator->() { return this; }
@@ -402,7 +402,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) String *operator->() { return this; }
@@ -518,7 +518,7 @@ struct Levenshtein {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) edit *operator->() { return this; }
@@ -663,7 +663,7 @@ struct Levenshtein {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) chain *operator->() { return this; }

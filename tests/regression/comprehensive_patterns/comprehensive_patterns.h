@@ -80,7 +80,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) List<t_A> *operator->() { return this; }
@@ -148,7 +148,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) Sig<t_A> *operator->() { return this; }
@@ -392,7 +392,7 @@ struct ComprehensivePatterns {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) Either *operator->() { return this; }
@@ -877,7 +877,7 @@ struct ComprehensivePatterns {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) Tree *operator->() { return this; }
@@ -1213,7 +1213,7 @@ struct ComprehensivePatterns {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) Container *operator->() { return this; }

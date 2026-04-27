@@ -70,7 +70,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) Nat *operator->() { return this; }
@@ -152,7 +152,7 @@ public:
   __attribute__((pure)) static Option<t_A> none() { return Option(None{}); }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) Option<t_A> *operator->() { return this; }
@@ -223,7 +223,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) Prod<t_A, t_B> *operator->() { return this; }
@@ -305,7 +305,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) Sig<t_A> *operator->() { return this; }
@@ -373,7 +373,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) Sig2<t_A> *operator->() { return this; }
@@ -444,7 +444,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) SigT<t_A, t_P> *operator->() { return this; }
@@ -520,7 +520,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) SigT2<t_A, t_P, t_Q> *operator->() { return this; }
@@ -607,7 +607,7 @@ public:
   __attribute__((pure)) static Sumor<t_A> inright() { return Sumor(Inright{}); }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) Sumor<t_A> *operator->() { return this; }
@@ -677,7 +677,7 @@ struct RocqBug14174 {
       }
 
       // MANIPULATORS
-      __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+      inline variant_t &v_mut() { return d_v_; }
 
       // ACCESSORS
       __attribute__((pure)) sig<t_A> *operator->() { return this; }
@@ -795,7 +795,7 @@ struct RocqBug14174 {
       }
 
       // MANIPULATORS
-      __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+      inline variant_t &v_mut() { return d_v_; }
 
       // ACCESSORS
       __attribute__((pure)) sig2<t_A> *operator->() { return this; }
@@ -920,7 +920,7 @@ struct RocqBug14174 {
       }
 
       // MANIPULATORS
-      __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+      inline variant_t &v_mut() { return d_v_; }
 
       // ACCESSORS
       __attribute__((pure)) sigT<t_A, t_P> *operator->() { return this; }
@@ -1062,7 +1062,7 @@ struct RocqBug14174 {
       }
 
       // MANIPULATORS
-      __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+      inline variant_t &v_mut() { return d_v_; }
 
       // ACCESSORS
       __attribute__((pure)) sigT2<t_A, t_P, t_Q> *operator->() { return this; }
@@ -1311,7 +1311,7 @@ struct RocqBug14174 {
       }
 
       // MANIPULATORS
-      __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+      inline variant_t &v_mut() { return d_v_; }
 
       // ACCESSORS
       __attribute__((pure)) sumor<t_A> *operator->() { return this; }

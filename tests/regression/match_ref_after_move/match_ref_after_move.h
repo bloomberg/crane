@@ -85,7 +85,7 @@ struct MatchRefAfterMove {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) mylist<t_A> *operator->() { return this; }
@@ -197,7 +197,7 @@ struct MatchRefAfterMove {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) mypair<t_A, t_B> *operator->() { return this; }
@@ -395,7 +395,7 @@ struct MatchRefAfterMove {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) either<t_A, t_B> *operator->() { return this; }

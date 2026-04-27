@@ -76,7 +76,7 @@ struct MatchClosureEscape {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) tree *operator->() { return this; }
@@ -191,7 +191,7 @@ struct MatchClosureEscape {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) fn_box *operator->() { return this; }

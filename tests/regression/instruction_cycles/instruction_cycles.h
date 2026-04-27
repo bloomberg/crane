@@ -77,7 +77,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) List<t_A> *operator->() { return this; }
@@ -182,7 +182,7 @@ struct InstructionCycles {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) instruction1 *operator->() { return this; }
@@ -319,7 +319,7 @@ struct InstructionCycles {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) instruction2 *operator->() { return this; }
@@ -683,7 +683,7 @@ struct InstructionCycles {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) instruction5 *operator->() { return this; }

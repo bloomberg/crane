@@ -87,7 +87,7 @@ struct DeepMap {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) tree<t_A> *operator->() { return this; }

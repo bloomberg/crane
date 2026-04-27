@@ -2153,10 +2153,12 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
         mf_body;
         mf_is_const;
         mf_is_static;
+        mf_is_inline;
         mf_no_pure;
       } ->
     let const_s = if mf_is_const then str " const" else mt () in
     let static_s = if mf_is_static then str "static " else mt () in
+    let inline_s = if mf_is_inline then str "inline " else mt () in
     let saved_any_params = !current_any_typed_params in
     current_any_typed_params :=
       List.fold_left
@@ -2191,7 +2193,8 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     doc_comment
     ++ template_s
     ++ h
-         ( qualifier
+         ( inline_s
+         ++ qualifier
          ++ static_s
          ++ pp_cpp_type false [] mf_ret_type
          ++ str " "

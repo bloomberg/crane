@@ -90,7 +90,7 @@ template <Elem E> struct MutualTree {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) tree *operator->() { return this; }
@@ -171,7 +171,7 @@ template <Elem E> struct MutualTree {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) forest *operator->() { return this; }

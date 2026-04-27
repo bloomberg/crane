@@ -77,7 +77,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) List<t_A> *operator->() { return this; }
@@ -229,7 +229,7 @@ public:
   __attribute__((pure)) static Positive xh() { return Positive(XH{}); }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) Positive *operator->() { return this; }
@@ -315,7 +315,7 @@ public:
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
   __attribute__((pure)) Z *operator->() { return this; }
@@ -789,7 +789,7 @@ struct CoalitionBidHonorTraceCase {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) Prize *operator->() { return this; }
@@ -897,7 +897,7 @@ struct CoalitionBidHonorTraceCase {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) Location *operator->() { return this; }
@@ -1070,7 +1070,7 @@ struct CoalitionBidHonorTraceCase {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) RefusalReason *operator->() { return this; }
@@ -1273,7 +1273,7 @@ struct CoalitionBidHonorTraceCase {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) ProtocolAction *operator->() { return this; }
@@ -1617,7 +1617,7 @@ struct CoalitionBidHonorTraceCase {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) BatchallPhase *operator->() { return this; }

@@ -7838,6 +7838,7 @@ let gen_record_cpp name fields ind =
             mf_body = [Sreturn (Some (CPPstruct (name, List.mapi (fun i x -> Tvar (i, Some x)) vars, clone_args)))];
             mf_is_const = true;
             mf_is_static = false;
+            mf_is_inline = false;
             mf_this_pos = 0;
             mf_no_pure = false;
           },
@@ -7854,6 +7855,7 @@ let gen_record_cpp name fields ind =
             mf_body = [Sreturn (Some CPPthis)];
             mf_is_const = false;
             mf_is_static = false;
+            mf_is_inline = false;
             mf_this_pos = 0;
             mf_no_pure = false;
           },
@@ -7868,6 +7870,7 @@ let gen_record_cpp name fields ind =
             mf_body = [Sreturn (Some CPPthis)];
             mf_is_const = true;
             mf_is_static = false;
+            mf_is_inline = false;
             mf_this_pos = 0;
             mf_no_pure = false;
           },
@@ -8504,6 +8507,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   mf_body = body_stmts;
                   mf_is_const = false;
                   mf_is_static = true;
+                  mf_is_inline = false;
                   mf_this_pos = 0;
                   mf_no_pure = false;
                 },
@@ -10683,6 +10687,7 @@ let gen_ind_header ?(consarg_names = [||]) vars name cnames tys =
                      mf_body = [Sreturn (Some CPPthis)];
                      mf_is_const = false;
                      mf_is_static = false;
+                     mf_is_inline = false;
                      mf_this_pos = 0;
                      mf_no_pure = false;
                    },
@@ -10697,6 +10702,7 @@ let gen_ind_header ?(consarg_names = [||]) vars name cnames tys =
                      mf_body = [Sreturn (Some CPPthis)];
                      mf_is_const = true;
                      mf_is_static = false;
+                     mf_is_inline = false;
                      mf_this_pos = 0;
                      mf_no_pure = false;
                    },
@@ -11354,6 +11360,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
         mf_body = stmts;
         mf_is_const = true;
         mf_is_static = false;
+        mf_is_inline = false;
         mf_this_pos = this_pos;
         mf_no_pure = no_pure;
       },
@@ -12034,6 +12041,7 @@ let gen_ind_header_v2
                   mf_body = [Smatch (mk_clone_branches vars ty_vars, None)];
                   mf_is_const = true;
                   mf_is_static = false;
+                  mf_is_inline = false;
                   mf_this_pos = 0;
                   mf_no_pure = false;
                 },
@@ -12080,6 +12088,7 @@ let gen_ind_header_v2
                     ];
                   mf_is_const = false;
                   mf_is_static = false;
+                  mf_is_inline = false;
                   mf_this_pos = 0;
                   mf_no_pure = true;
                 },
@@ -12101,6 +12110,7 @@ let gen_ind_header_v2
                     ];
                   mf_is_const = false;
                   mf_is_static = false;
+                  mf_is_inline = false;
                   mf_this_pos = 0;
                   mf_no_pure = true;
                 },
@@ -12374,6 +12384,7 @@ let gen_ind_header_v2
                   ];
                 mf_is_const = true;
                 mf_is_static = false;
+                mf_is_inline = false;
                 mf_this_pos = 0;
                 mf_no_pure = false;
               },
@@ -12390,6 +12401,7 @@ let gen_ind_header_v2
                 mf_body = [Sreturn (Some (CPPvar (Id.of_string "d_v_")))];
                 mf_is_const = true;
                 mf_is_static = false;
+                mf_is_inline = false;
                 mf_this_pos = 0;
                 mf_no_pure = false;
               },
@@ -12414,8 +12426,9 @@ let gen_ind_header_v2
                   mf_body = [Sreturn (Some (CPPvar (Id.of_string "d_v_")))];
                   mf_is_const = false;
                   mf_is_static = false;
+                  mf_is_inline = true;
                   mf_this_pos = 0;
-                  mf_no_pure = false;
+                  mf_no_pure = true;
                 },
               VPublic,
               SManipulators );
@@ -12442,6 +12455,7 @@ let gen_ind_header_v2
                   mf_body = [Sreturn (Some CPPthis)];
                   mf_is_const = false;
                   mf_is_static = false;
+                  mf_is_inline = false;
                   mf_this_pos = 0;
                   mf_no_pure = false;
                 },
@@ -12456,6 +12470,7 @@ let gen_ind_header_v2
                   mf_body = [Sreturn (Some CPPthis)];
                   mf_is_const = true;
                   mf_is_static = false;
+                  mf_is_inline = false;
                   mf_this_pos = 0;
                   mf_no_pure = false;
                 },
@@ -12472,6 +12487,7 @@ let gen_ind_header_v2
                   mf_body = [Sreturn (Some (CPPbool true))];
                   mf_is_const = true;
                   mf_is_static = false;
+                  mf_is_inline = false;
                   mf_this_pos = 0;
                   mf_no_pure = false;
                 },
@@ -12488,6 +12504,7 @@ let gen_ind_header_v2
                   mf_body = [Sreturn (Some (CPPbool false))];
                   mf_is_const = true;
                   mf_is_static = false;
+                  mf_is_inline = false;
                   mf_this_pos = 0;
                   mf_no_pure = false;
                 },
@@ -12513,6 +12530,7 @@ let gen_ind_header_v2
                     ];
                   mf_is_const = false;
                   mf_is_static = false;
+                  mf_is_inline = false;
                   mf_this_pos = 0;
                   mf_no_pure = false;
                 },

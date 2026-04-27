@@ -64,7 +64,7 @@ struct BenchLetIn {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) pair<t_A, t_B> *operator->() { return this; }
@@ -164,7 +164,7 @@ struct BenchLetIn {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) triple<t_A, t_B, t_C> *operator->() { return this; }

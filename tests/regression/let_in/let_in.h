@@ -78,7 +78,7 @@ struct LetIn {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) pair<t_A, t_B> *operator->() { return this; }

@@ -61,7 +61,7 @@ struct PolyInductive {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) pbox<t_A> *operator->() { return this; }
@@ -153,7 +153,7 @@ struct PolyInductive {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) ppair<t_A, t_B> *operator->() { return this; }
@@ -270,7 +270,7 @@ struct PolyInductive {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) pmaybe<t_A> *operator->() { return this; }
@@ -412,7 +412,7 @@ struct PolyInductive {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) ptree<t_A> *operator->() { return this; }

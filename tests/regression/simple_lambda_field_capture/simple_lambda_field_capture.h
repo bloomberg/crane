@@ -78,7 +78,7 @@ struct SimpleLambdaFieldCapture {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) mylist *operator->() { return this; }
@@ -194,7 +194,7 @@ struct SimpleLambdaFieldCapture {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) tag *operator->() { return this; }

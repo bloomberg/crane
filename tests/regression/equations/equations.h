@@ -157,7 +157,7 @@ struct Equations {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) gcd_graph *operator->() { return this; }
@@ -260,7 +260,7 @@ struct Equations {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) gcd_clause_3_graph *operator->() { return this; }
@@ -603,7 +603,7 @@ struct Equations {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) collatz_steps_graph *operator->() { return this; }
@@ -715,7 +715,7 @@ struct Equations {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) collatz_steps_clause_3_graph *operator->() {

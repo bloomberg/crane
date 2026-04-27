@@ -59,7 +59,7 @@ struct NameClashCtorField {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) clash1 *operator->() { return this; }
@@ -160,7 +160,7 @@ struct NameClashCtorField {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) clash2 *operator->() { return this; }
@@ -265,7 +265,7 @@ struct NameClashCtorField {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) pair_ind *operator->() { return this; }
@@ -361,7 +361,7 @@ struct NameClashCtorField {
     __attribute__((pure)) static box emptybox() { return box(EmptyBox{}); }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) box *operator->() { return this; }

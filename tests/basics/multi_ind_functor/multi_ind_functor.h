@@ -79,7 +79,7 @@ template <Elem E> struct Container {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) maybe *operator->() { return this; }
@@ -178,7 +178,7 @@ template <Elem E> struct Container {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) mlist *operator->() { return this; }
@@ -278,7 +278,7 @@ template <Elem E> struct Container {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) mtree *operator->() { return this; }

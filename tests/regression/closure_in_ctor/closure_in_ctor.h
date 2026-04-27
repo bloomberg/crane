@@ -68,7 +68,7 @@ struct ClosureInCtor {
     __attribute__((pure)) static box empty() { return box(Empty{}); }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) box *operator->() { return this; }

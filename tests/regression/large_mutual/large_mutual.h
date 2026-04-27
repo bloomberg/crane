@@ -131,7 +131,7 @@ struct LargeMutual {
     __attribute__((pure)) static stmt sskip() { return stmt(SSkip{}); }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) stmt *operator->() { return this; }
@@ -267,7 +267,7 @@ struct LargeMutual {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) expr *operator->() { return this; }
@@ -424,7 +424,7 @@ struct LargeMutual {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) bexpr *operator->() { return this; }

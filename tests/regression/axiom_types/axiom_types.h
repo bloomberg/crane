@@ -96,7 +96,7 @@ struct AxiomTypes {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) AxiomInductive *operator->() { return this; }
@@ -215,7 +215,7 @@ struct AxiomTypes {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) list<t_A> *operator->() { return this; }

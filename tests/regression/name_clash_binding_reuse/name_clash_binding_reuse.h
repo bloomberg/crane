@@ -61,7 +61,7 @@ struct NameClashBindingReuse {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) pair_nat *operator->() { return this; }
@@ -186,7 +186,7 @@ struct NameClashBindingReuse {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) triple_nat *operator->() { return this; }

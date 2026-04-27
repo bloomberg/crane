@@ -76,7 +76,7 @@ struct ThisCaptureDangling {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) tree *operator->() { return this; }
@@ -204,7 +204,7 @@ struct ThisCaptureDangling {
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     __attribute__((pure)) wrapper *operator->() { return this; }
