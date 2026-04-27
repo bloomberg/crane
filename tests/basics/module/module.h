@@ -102,30 +102,7 @@ template <OrderedType K, BaseType V> struct MakeMap {
         const auto &[d_a0, d_a1, d_a2, d_a3] = std::get<Node>(_sv.v());
         return tree(Node{
             d_a0 ? std::make_unique<MakeMap::tree>(d_a0->clone()) : nullptr,
-            [](auto &&__v) -> key {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_a1),
-            [](auto &&__v) -> value {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_a2),
+            d_a1, d_a2,
             d_a3 ? std::make_unique<MakeMap::tree>(d_a3->clone()) : nullptr});
       }
     }

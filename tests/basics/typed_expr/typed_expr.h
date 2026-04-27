@@ -79,32 +79,10 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<ENat>(_sv.v())) {
       const auto &[d_a0] = std::get<ENat>(_sv.v());
-      return Expr(ENat{[](auto &&__v) -> unsigned int {
-        if constexpr (
-            requires { __v ? 0 : 0; } && requires { *__v; } &&
-            requires { __v->clone(); } && requires { __v.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*__v)>;
-          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-        } else if constexpr (requires { __v.clone(); }) {
-          return __v.clone();
-        } else {
-          return __v;
-        }
-      }(d_a0)});
+      return Expr(ENat{d_a0});
     } else if (std::holds_alternative<EBool>(_sv.v())) {
       const auto &[d_a0] = std::get<EBool>(_sv.v());
-      return Expr(EBool{[](auto &&__v) -> bool {
-        if constexpr (
-            requires { __v ? 0 : 0; } && requires { *__v; } &&
-            requires { __v->clone(); } && requires { __v.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*__v)>;
-          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-        } else if constexpr (requires { __v.clone(); }) {
-          return __v.clone();
-        } else {
-          return __v;
-        }
-      }(d_a0)});
+      return Expr(EBool{d_a0});
     } else if (std::holds_alternative<EAdd>(_sv.v())) {
       const auto &[d_a0, d_a1] = std::get<EAdd>(_sv.v());
       return Expr(EAdd{d_a0 ? std::make_unique<Expr>(d_a0->clone()) : nullptr,
@@ -115,22 +93,10 @@ public:
                       d_a1 ? std::make_unique<Expr>(d_a1->clone()) : nullptr});
     } else {
       const auto &[d_t, d_a1, d_a2, d_a3] = std::get<EIf>(_sv.v());
-      return Expr(
-          EIf{[](auto &&__v) -> Ty {
-                if constexpr (
-                    requires { __v ? 0 : 0; } && requires { *__v; } &&
-                    requires { __v->clone(); } && requires { __v.get(); }) {
-                  using _E = std::remove_cvref_t<decltype(*__v)>;
-                  return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                } else if constexpr (requires { __v.clone(); }) {
-                  return __v.clone();
-                } else {
-                  return __v;
-                }
-              }(d_t),
-              d_a1 ? std::make_unique<Expr>(d_a1->clone()) : nullptr,
-              d_a2 ? std::make_unique<Expr>(d_a2->clone()) : nullptr,
-              d_a3 ? std::make_unique<Expr>(d_a3->clone()) : nullptr});
+      return Expr(EIf{d_t,
+                      d_a1 ? std::make_unique<Expr>(d_a1->clone()) : nullptr,
+                      d_a2 ? std::make_unique<Expr>(d_a2->clone()) : nullptr,
+                      d_a3 ? std::make_unique<Expr>(d_a3->clone()) : nullptr});
     }
   }
 

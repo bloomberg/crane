@@ -54,32 +54,10 @@ struct ForwardSpecAscii {
       auto &&_sv = *(this);
       if (std::holds_alternative<ANode>(_sv.v())) {
         const auto &[d_a0] = std::get<ANode>(_sv.v());
-        return node(ANode{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return node(ANode{d_a0});
       } else {
         const auto &[d_a0] = std::get<BNode>(_sv.v());
-        return node(BNode{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return node(BNode{d_a0});
       }
     }
 

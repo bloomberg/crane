@@ -55,20 +55,8 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return List<t_A>(
-          Cons{std::move(__c0),
-               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+      return List<t_A>(Cons{
+          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -78,22 +66,8 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -191,18 +165,7 @@ struct DeepPatterns {
                        : nullptr});
       } else {
         const auto &[d_a0] = std::get<ORight>(_sv.v());
-        return outer(ORight{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return outer(ORight{d_a0});
       }
     }
 
@@ -279,32 +242,10 @@ struct DeepPatterns {
       auto &&_sv = *(this);
       if (std::holds_alternative<ILeft>(_sv.v())) {
         const auto &[d_a0] = std::get<ILeft>(_sv.v());
-        return inner(ILeft{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return inner(ILeft{d_a0});
       } else {
         const auto &[d_a0] = std::get<IRight>(_sv.v());
-        return inner(IRight{[](auto &&__v) -> bool {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return inner(IRight{d_a0});
       }
     }
 
@@ -426,29 +367,7 @@ struct DeepPatterns {
     __attribute__((pure)) pair<t_A, t_B> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Pair0>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      t_B __c1;
-      if constexpr (
-          requires { d_a1 ? 0 : 0; } && requires { *d_a1; } &&
-          requires { d_a1->clone(); } && requires { d_a1.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a1)>;
-        __c1 = d_a1 ? std::make_unique<_E>(d_a1->clone()) : nullptr;
-      } else if constexpr (requires { d_a1.clone(); }) {
-        __c1 = d_a1.clone();
-      } else {
-        __c1 = d_a1;
-      }
-      return pair<t_A, t_B>(Pair0{std::move(__c0), std::move(__c1)});
+      return pair<t_A, t_B>(Pair0{d_a0, d_a1});
     }
 
     // CREATORS
@@ -456,35 +375,7 @@ struct DeepPatterns {
     explicit pair(const pair<_U0, _U1> &_other) {
       const auto &[d_a0, d_a1] =
           std::get<typename pair<_U0, _U1>::Pair0>(_other.v());
-      d_v_ = Pair0{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          [&]<typename _DstT = t_B>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a1)};
+      d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
     }
 
     __attribute__((pure)) static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
@@ -573,19 +464,8 @@ struct DeepPatterns {
         return mylist<t_A>(Nil{});
       } else {
         const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-        t_A __c0;
-        if constexpr (
-            requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-            requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_a0)>;
-          __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-        } else if constexpr (requires { d_a0.clone(); }) {
-          __c0 = d_a0.clone();
-        } else {
-          __c0 = d_a0;
-        }
         return mylist<t_A>(Cons{
-            std::move(__c0),
+            d_a0,
             d_a1 ? std::make_unique<DeepPatterns::mylist<t_A>>(d_a1->clone())
                  : nullptr});
       }
@@ -598,20 +478,7 @@ struct DeepPatterns {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<_U>::Cons>(_other.v());
-        d_v_ = Cons{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-                      if constexpr (
-                          requires { *__v; } &&
-                          !requires { std::declval<_DstT>().get(); })
-                        return _DstT(*__v);
-                      else if constexpr (
-                          !requires { *__v; } &&
-                          requires { std::declval<_DstT>().get(); }) {
-                        using _E = std::remove_pointer_t<
-                            decltype(std::declval<_DstT>().get())>;
-                        return std::make_unique<_E>(std::move(__v));
-                      } else
-                        return _DstT(__v);
-                    }(d_a0),
+        d_v_ = Cons{t_A(d_a0),
                     d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
       }
     }

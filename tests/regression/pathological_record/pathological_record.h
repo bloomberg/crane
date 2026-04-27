@@ -21,42 +21,7 @@ struct PathologicalRecord {
 
     // ACCESSORS
     __attribute__((pure)) Rec clone() const {
-      return Rec{[](auto &&__v) -> unsigned int {
-                   if constexpr (
-                       requires { __v ? 0 : 0; } && requires { *__v; } &&
-                       requires { __v->clone(); } && requires { __v.get(); }) {
-                     using _E = std::remove_cvref_t<decltype(*__v)>;
-                     return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                   } else if constexpr (requires { __v.clone(); }) {
-                     return __v.clone();
-                   } else {
-                     return __v;
-                   }
-                 }((*this).f1),
-                 [](auto &&__v) -> unsigned int {
-                   if constexpr (
-                       requires { __v ? 0 : 0; } && requires { *__v; } &&
-                       requires { __v->clone(); } && requires { __v.get(); }) {
-                     using _E = std::remove_cvref_t<decltype(*__v)>;
-                     return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                   } else if constexpr (requires { __v.clone(); }) {
-                     return __v.clone();
-                   } else {
-                     return __v;
-                   }
-                 }((*this).f2),
-                 [](auto &&__v) -> unsigned int {
-                   if constexpr (
-                       requires { __v ? 0 : 0; } && requires { *__v; } &&
-                       requires { __v->clone(); } && requires { __v.get(); }) {
-                     using _E = std::remove_cvref_t<decltype(*__v)>;
-                     return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                   } else if constexpr (requires { __v.clone(); }) {
-                     return __v.clone();
-                   } else {
-                     return __v;
-                   }
-                 }((*this).f3)};
+      return Rec{(*(this)).f1, (*(this)).f2, (*(this)).f3};
     }
   };
 
@@ -87,67 +52,8 @@ struct PathologicalRecord {
 
     // ACCESSORS
     __attribute__((pure)) BigRec clone() const {
-      return BigRec{
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).bf1),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).bf2),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).bf3),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).bf4),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).bf5)};
+      return BigRec{(*(this)).bf1, (*(this)).bf2, (*(this)).bf3, (*(this)).bf4,
+                    (*(this)).bf5};
     }
   };
 

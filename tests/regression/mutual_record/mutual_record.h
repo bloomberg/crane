@@ -55,20 +55,8 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return List<t_A>(
-          Cons{std::move(__c0),
-               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+      return List<t_A>(Cons{
+          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -78,22 +66,8 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -130,7 +104,7 @@ struct MutualRecord {
     // TYPES
     struct Mk_department {
       unsigned int d_a0;
-      List<std::unique_ptr<employee>> d_a1;
+      std::unique_ptr<List<employee>> d_a1;
     };
 
     using variant_t = std::variant<Mk_department>;
@@ -165,26 +139,16 @@ struct MutualRecord {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Mk_department>(_sv.v());
       return department(Mk_department{
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }(d_a0),
-          d_a1.clone()});
+          d_a0,
+          d_a1 ? std::make_unique<List<MutualRecord::employee>>(d_a1->clone())
+               : nullptr});
     }
 
     // CREATORS
-    __attribute__((pure)) static department mk_department(unsigned int a0,
-                                                          List<employee> a1) {
-      return department(Mk_department{
-          std::move(a0), List<std::unique_ptr<MutualRecord::employee>>(a1)});
+    __attribute__((pure)) static department
+    mk_department(unsigned int a0, const List<employee> &a1) {
+      return department(
+          Mk_department{std::move(a0), std::make_unique<List<employee>>(a1)});
     }
 
     // MANIPULATORS
@@ -245,31 +209,7 @@ struct MutualRecord {
     __attribute__((pure)) employee clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Mk_employee>(_sv.v());
-      return employee(Mk_employee{
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }(d_a0),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }(d_a1)});
+      return employee(Mk_employee{d_a0, d_a1});
     }
 
     // CREATORS
@@ -303,14 +243,14 @@ struct MutualRecord {
   static T1 department_rect(F0 &&f, const department &d) {
     const auto &[d_a0, d_a1] =
         std::get<typename department::Mk_department>(d.v());
-    return f(d_a0, List<MutualRecord::employee>(d_a1));
+    return f(d_a0, *(d_a1));
   }
 
   template <typename T1, MapsTo<T1, unsigned int, List<employee>> F0>
   static T1 department_rec(F0 &&f, const department &d) {
     const auto &[d_a0, d_a1] =
         std::get<typename department::Mk_department>(d.v());
-    return f(d_a0, List<MutualRecord::employee>(d_a1));
+    return f(d_a0, *(d_a1));
   }
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>

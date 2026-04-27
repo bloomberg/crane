@@ -122,60 +122,15 @@ struct Equations {
       auto &&_sv = *(this);
       if (std::holds_alternative<Gcd_graph_equation_1>(_sv.v())) {
         const auto &[d_y] = std::get<Gcd_graph_equation_1>(_sv.v());
-        return gcd_graph(Gcd_graph_equation_1{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_y)});
+        return gcd_graph(Gcd_graph_equation_1{d_y});
       } else if (std::holds_alternative<Gcd_graph_equation_2>(_sv.v())) {
         const auto &[d_n] = std::get<Gcd_graph_equation_2>(_sv.v());
-        return gcd_graph(Gcd_graph_equation_2{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_n)});
+        return gcd_graph(Gcd_graph_equation_2{d_n});
       } else {
         const auto &[d_n, d_n0, d_hind] =
             std::get<Gcd_graph_refinement_3>(_sv.v());
         return gcd_graph(Gcd_graph_refinement_3{
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_n),
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_n0),
+            d_n, d_n0,
             d_hind ? std::make_unique<Equations::gcd_clause_3_graph>(
                          d_hind->clone())
                    : nullptr});
@@ -278,60 +233,14 @@ struct Equations {
         const auto &[d_n, d_n0, d_hind] =
             std::get<Gcd_clause_3_graph_equation_1>(_sv.v());
         return gcd_clause_3_graph(Gcd_clause_3_graph_equation_1{
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_n),
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_n0),
+            d_n, d_n0,
             d_hind ? std::make_unique<Equations::gcd_graph>(d_hind->clone())
                    : nullptr});
       } else {
         const auto &[d_n, d_n0, d_hind] =
             std::get<Gcd_clause_3_graph_equation_2>(_sv.v());
         return gcd_clause_3_graph(Gcd_clause_3_graph_equation_2{
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_n),
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_n0),
+            d_n, d_n0,
             d_hind ? std::make_unique<Equations::gcd_graph>(d_hind->clone())
                    : nullptr});
       }
@@ -672,18 +581,7 @@ struct Equations {
         const auto &[d_n, d_hind] =
             std::get<Collatz_steps_graph_refinement_3>(_sv.v());
         return collatz_steps_graph(Collatz_steps_graph_refinement_3{
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_n),
+            d_n,
             d_hind ? std::make_unique<Equations::collatz_steps_clause_3_graph>(
                          d_hind->clone())
                    : nullptr});
@@ -789,41 +687,17 @@ struct Equations {
             std::get<Collatz_steps_clause_3_graph_equation_1>(_sv.v());
         return collatz_steps_clause_3_graph(
             Collatz_steps_clause_3_graph_equation_1{
-                [](auto &&__v) -> unsigned int {
-                  if constexpr (
-                      requires { __v ? 0 : 0; } && requires { *__v; } &&
-                      requires { __v->clone(); } && requires { __v.get(); }) {
-                    using _E = std::remove_cvref_t<decltype(*__v)>;
-                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                  } else if constexpr (requires { __v.clone(); }) {
-                    return __v.clone();
-                  } else {
-                    return __v;
-                  }
-                }(d_n),
-                d_hind ? std::make_unique<Equations::collatz_steps_graph>(
-                             d_hind->clone())
-                       : nullptr});
+                d_n, d_hind ? std::make_unique<Equations::collatz_steps_graph>(
+                                  d_hind->clone())
+                            : nullptr});
       } else {
         const auto &[d_n, d_hind] =
             std::get<Collatz_steps_clause_3_graph_equation_2>(_sv.v());
         return collatz_steps_clause_3_graph(
             Collatz_steps_clause_3_graph_equation_2{
-                [](auto &&__v) -> unsigned int {
-                  if constexpr (
-                      requires { __v ? 0 : 0; } && requires { *__v; } &&
-                      requires { __v->clone(); } && requires { __v.get(); }) {
-                    using _E = std::remove_cvref_t<decltype(*__v)>;
-                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                  } else if constexpr (requires { __v.clone(); }) {
-                    return __v.clone();
-                  } else {
-                    return __v;
-                  }
-                }(d_n),
-                d_hind ? std::make_unique<Equations::collatz_steps_graph>(
-                             d_hind->clone())
-                       : nullptr});
+                d_n, d_hind ? std::make_unique<Equations::collatz_steps_graph>(
+                                  d_hind->clone())
+                            : nullptr});
       }
     }
 

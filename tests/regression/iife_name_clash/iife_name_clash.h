@@ -52,18 +52,7 @@ struct IifeNameClash {
       auto &&_sv = *(this);
       if (std::holds_alternative<Wrap>(_sv.v())) {
         const auto &[d_n] = std::get<Wrap>(_sv.v());
-        return wrapper(Wrap{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_n)});
+        return wrapper(Wrap{d_n});
       } else {
         return wrapper(Empty{});
       }

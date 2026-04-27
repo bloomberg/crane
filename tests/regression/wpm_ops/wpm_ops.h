@@ -55,20 +55,8 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return List<t_A>(
-          Cons{std::move(__c0),
-               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+      return List<t_A>(Cons{
+          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -78,22 +66,8 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -164,44 +138,8 @@ struct WpmOps {
 
     // ACCESSORS
     __attribute__((pure)) state1 clone() const {
-      return state1{
-          (*(this)).rom1.clone(),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_addr1),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_data1),
-          [](auto &&__v) -> bool {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_enable1)};
+      return state1{(*(this)).rom1.clone(), (*(this)).prom_addr1,
+                    (*(this)).prom_data1, (*(this)).prom_enable1};
     }
   };
 
@@ -233,44 +171,9 @@ struct WpmOps {
 
     // ACCESSORS
     __attribute__((pure)) state2 clone() const {
-      return state2{
-          (*(this)).ram_sys2.clone(), (*(this)).rom2.clone(),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_addr2),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_data2),
-          [](auto &&__v) -> bool {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_enable2)};
+      return state2{(*(this)).ram_sys2.clone(), (*(this)).rom2.clone(),
+                    (*(this)).prom_addr2, (*(this)).prom_data2,
+                    (*(this)).prom_enable2};
     }
   };
 
@@ -300,44 +203,9 @@ struct WpmOps {
 
     // ACCESSORS
     __attribute__((pure)) state3 clone() const {
-      return state3{
-          (*(this)).regs3.clone(), (*(this)).rom3.clone(),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_addr3),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_data3),
-          [](auto &&__v) -> bool {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_enable3)};
+      return state3{(*(this)).regs3.clone(), (*(this)).rom3.clone(),
+                    (*(this)).prom_addr3, (*(this)).prom_data3,
+                    (*(this)).prom_enable3};
     }
   };
 
@@ -366,44 +234,8 @@ struct WpmOps {
 
     // ACCESSORS
     __attribute__((pure)) state4 clone() const {
-      return state4{
-          (*(this)).rom4.clone(),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_addr4),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_data4),
-          [](auto &&__v) -> bool {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_enable4)};
+      return state4{(*(this)).rom4.clone(), (*(this)).prom_addr4,
+                    (*(this)).prom_data4, (*(this)).prom_enable4};
     }
   };
 
@@ -430,44 +262,8 @@ struct WpmOps {
 
     // ACCESSORS
     __attribute__((pure)) state5 clone() const {
-      return state5{
-          (*(this)).rom5.clone(),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_addr5),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_data5),
-          [](auto &&__v) -> bool {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_enable5)};
+      return state5{(*(this)).rom5.clone(), (*(this)).prom_addr5,
+                    (*(this)).prom_data5, (*(this)).prom_enable5};
     }
   };
 
@@ -495,44 +291,8 @@ struct WpmOps {
 
     // ACCESSORS
     __attribute__((pure)) state6 clone() const {
-      return state6{
-          (*(this)).rom6.clone(),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_addr6),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_data6),
-          [](auto &&__v) -> bool {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).prom_enable6)};
+      return state6{(*(this)).rom6.clone(), (*(this)).prom_addr6,
+                    (*(this)).prom_data6, (*(this)).prom_enable6};
     }
   };
 

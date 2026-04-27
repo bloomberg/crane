@@ -56,20 +56,8 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return List<t_A>(
-          Cons{std::move(__c0),
-               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+      return List<t_A>(Cons{
+          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -79,22 +67,8 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -155,7 +129,7 @@ struct LoopifyStructures {
     };
 
     struct NList {
-      List<std::unique_ptr<nested>> d_a0;
+      std::unique_ptr<List<nested>> d_a0;
     };
 
     using variant_t = std::variant<Elem, NList>;
@@ -191,21 +165,13 @@ struct LoopifyStructures {
       auto &&_sv = *(this);
       if (std::holds_alternative<Elem>(_sv.v())) {
         const auto &[d_a0] = std::get<Elem>(_sv.v());
-        return nested(Elem{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return nested(Elem{d_a0});
       } else {
         const auto &[d_a0] = std::get<NList>(_sv.v());
-        return nested(NList{d_a0.clone()});
+        return nested(
+            NList{d_a0 ? std::make_unique<List<LoopifyStructures::nested>>(
+                             d_a0->clone())
+                       : nullptr});
       }
     }
 
@@ -214,9 +180,8 @@ struct LoopifyStructures {
       return nested(Elem{std::move(a0)});
     }
 
-    __attribute__((pure)) static nested nlist(List<nested> a0) {
-      return nested(
-          NList{List<std::unique_ptr<LoopifyStructures::nested>>(a0)});
+    __attribute__((pure)) static nested nlist(const List<nested> &a0) {
+      return nested(NList{std::make_unique<List<nested>>(a0)});
     }
 
     // MANIPULATORS
@@ -247,8 +212,7 @@ struct LoopifyStructures {
         return List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
       } else {
         const auto &[d_a0] = std::get<typename nested::NList>(_sv.v());
-        return flatten_nested_list_fuel(1000u,
-                                        List<LoopifyStructures::nested>(d_a0));
+        return flatten_nested_list_fuel(1000u, *(d_a0));
       }
     }
 
@@ -259,9 +223,7 @@ struct LoopifyStructures {
         return 0u;
       } else {
         const auto &[d_a0] = std::get<typename nested::NList>(_sv.v());
-        return (depth_nested_list_fuel(1000u,
-                                       List<LoopifyStructures::nested>(d_a0)) +
-                1);
+        return (depth_nested_list_fuel(1000u, *(d_a0)) + 1);
       }
     }
 
@@ -273,13 +235,12 @@ struct LoopifyStructures {
         return d_a0;
       } else {
         const auto &[d_a0] = std::get<typename nested::NList>(_sv.v());
-        return sum_nested_list_fuel(1000u,
-                                    List<LoopifyStructures::nested>(d_a0));
+        return sum_nested_list_fuel(1000u, *(d_a0));
       }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, List<std::unique_ptr<nested>>> F1>
+              MapsTo<T1, List<nested>> F1>
     T1 nested_rec(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename nested::Elem>(_sv.v())) {
@@ -287,12 +248,12 @@ struct LoopifyStructures {
         return f(d_a0);
       } else {
         const auto &[d_a0] = std::get<typename nested::NList>(_sv.v());
-        return f0(List<LoopifyStructures::nested>(d_a0));
+        return f0(*(d_a0));
       }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, List<std::unique_ptr<nested>>> F1>
+              MapsTo<T1, List<nested>> F1>
     T1 nested_rect(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename nested::Elem>(_sv.v())) {
@@ -300,7 +261,7 @@ struct LoopifyStructures {
         return f(d_a0);
       } else {
         const auto &[d_a0] = std::get<typename nested::NList>(_sv.v());
-        return f0(List<LoopifyStructures::nested>(d_a0));
+        return f0(*(d_a0));
       }
     }
   };
@@ -363,18 +324,7 @@ struct LoopifyStructures {
       auto &&_sv = *(this);
       if (std::holds_alternative<QLeaf>(_sv.v())) {
         const auto &[d_a0] = std::get<QLeaf>(_sv.v());
-        return quadtree(QLeaf{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return quadtree(QLeaf{d_a0});
       } else {
         const auto &[d_a0, d_a1, d_a2, d_a3] = std::get<Quad>(_sv.v());
         return quadtree(Quad{
@@ -918,33 +868,11 @@ struct LoopifyStructures {
       auto &&_sv = *(this);
       if (std::holds_alternative<LLeaf>(_sv.v())) {
         const auto &[d_a0] = std::get<LLeaf>(_sv.v());
-        return ltree(LLeaf{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return ltree(LLeaf{d_a0});
       } else {
         const auto &[d_a0, d_a1, d_a2] = std::get<LNode>(_sv.v());
         return ltree(LNode{
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_a0),
+            d_a0,
             d_a1 ? std::make_unique<LoopifyStructures::ltree>(d_a1->clone())
                  : nullptr,
             d_a2 ? std::make_unique<LoopifyStructures::ltree>(d_a2->clone())

@@ -130,18 +130,7 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<Some>(_sv.v())) {
       const auto &[d_a0] = std::get<Some>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return Option<t_A>(Some{std::move(__c0)});
+      return Option<t_A>(Some{d_a0});
     } else {
       return Option<t_A>(None{});
     }
@@ -151,18 +140,7 @@ public:
   template <typename _U> explicit Option(const Option<_U> &_other) {
     if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
       const auto &[d_a0] = std::get<typename Option<_U>::Some>(_other.v());
-      d_v_ = Some{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-        if constexpr (
-            requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-          return _DstT(*__v);
-        else if constexpr (
-            !requires { *__v; } && requires { std::declval<_DstT>().get(); }) {
-          using _E =
-              std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-          return std::make_unique<_E>(std::move(__v));
-        } else
-          return _DstT(__v);
-      }(d_a0)};
+      d_v_ = Some{t_A(d_a0)};
     } else {
       d_v_ = None{};
     }
@@ -231,29 +209,7 @@ public:
   __attribute__((pure)) Prod<t_A, t_B> clone() const {
     auto &&_sv = *(this);
     const auto &[d_a0, d_a1] = std::get<Pair>(_sv.v());
-    t_A __c0;
-    if constexpr (
-        requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-        requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-      using _E = std::remove_cvref_t<decltype(*d_a0)>;
-      __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-    } else if constexpr (requires { d_a0.clone(); }) {
-      __c0 = d_a0.clone();
-    } else {
-      __c0 = d_a0;
-    }
-    t_B __c1;
-    if constexpr (
-        requires { d_a1 ? 0 : 0; } && requires { *d_a1; } &&
-        requires { d_a1->clone(); } && requires { d_a1.get(); }) {
-      using _E = std::remove_cvref_t<decltype(*d_a1)>;
-      __c1 = d_a1 ? std::make_unique<_E>(d_a1->clone()) : nullptr;
-    } else if constexpr (requires { d_a1.clone(); }) {
-      __c1 = d_a1.clone();
-    } else {
-      __c1 = d_a1;
-    }
-    return Prod<t_A, t_B>(Pair{std::move(__c0), std::move(__c1)});
+    return Prod<t_A, t_B>(Pair{d_a0, d_a1});
   }
 
   // CREATORS
@@ -261,33 +217,7 @@ public:
   explicit Prod(const Prod<_U0, _U1> &_other) {
     const auto &[d_a0, d_a1] =
         std::get<typename Prod<_U0, _U1>::Pair>(_other.v());
-    d_v_ = Pair{
-        [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-          if constexpr (
-              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-            return _DstT(*__v);
-          else if constexpr (
-              !requires { *__v; } &&
-              requires { std::declval<_DstT>().get(); }) {
-            using _E =
-                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-            return std::make_unique<_E>(std::move(__v));
-          } else
-            return _DstT(__v);
-        }(d_a0),
-        [&]<typename _DstT = t_B>(auto &&__v) -> _DstT {
-          if constexpr (
-              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-            return _DstT(*__v);
-          else if constexpr (
-              !requires { *__v; } &&
-              requires { std::declval<_DstT>().get(); }) {
-            using _E =
-                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-            return std::make_unique<_E>(std::move(__v));
-          } else
-            return _DstT(__v);
-        }(d_a1)};
+    d_v_ = Pair{t_A(d_a0), t_B(d_a1)};
   }
 
   __attribute__((pure)) static Prod<t_A, t_B> pair(t_A a0, t_B a1) {
@@ -364,34 +294,13 @@ public:
   __attribute__((pure)) Sig<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist0>(_sv.v());
-    t_A __c0;
-    if constexpr (
-        requires { d_x ? 0 : 0; } && requires { *d_x; } &&
-        requires { d_x->clone(); } && requires { d_x.get(); }) {
-      using _E = std::remove_cvref_t<decltype(*d_x)>;
-      __c0 = d_x ? std::make_unique<_E>(d_x->clone()) : nullptr;
-    } else if constexpr (requires { d_x.clone(); }) {
-      __c0 = d_x.clone();
-    } else {
-      __c0 = d_x;
-    }
-    return Sig<t_A>(Exist0{std::move(__c0)});
+    return Sig<t_A>(Exist0{d_x});
   }
 
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
     const auto &[d_x] = std::get<typename Sig<_U>::Exist0>(_other.v());
-    d_v_ = Exist0{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-      if constexpr (
-          requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-        return _DstT(*__v);
-      else if constexpr (
-          !requires { *__v; } && requires { std::declval<_DstT>().get(); }) {
-        using _E = std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-        return std::make_unique<_E>(std::move(__v));
-      } else
-        return _DstT(__v);
-    }(d_x)};
+    d_v_ = Exist0{t_A(d_x)};
   }
 
   __attribute__((pure)) static Sig<t_A> exist0(t_A x) {
@@ -454,34 +363,13 @@ public:
   __attribute__((pure)) Sig2<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist1>(_sv.v());
-    t_A __c0;
-    if constexpr (
-        requires { d_x ? 0 : 0; } && requires { *d_x; } &&
-        requires { d_x->clone(); } && requires { d_x.get(); }) {
-      using _E = std::remove_cvref_t<decltype(*d_x)>;
-      __c0 = d_x ? std::make_unique<_E>(d_x->clone()) : nullptr;
-    } else if constexpr (requires { d_x.clone(); }) {
-      __c0 = d_x.clone();
-    } else {
-      __c0 = d_x;
-    }
-    return Sig2<t_A>(Exist1{std::move(__c0)});
+    return Sig2<t_A>(Exist1{d_x});
   }
 
   // CREATORS
   template <typename _U> explicit Sig2(const Sig2<_U> &_other) {
     const auto &[d_x] = std::get<typename Sig2<_U>::Exist1>(_other.v());
-    d_v_ = Exist1{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-      if constexpr (
-          requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-        return _DstT(*__v);
-      else if constexpr (
-          !requires { *__v; } && requires { std::declval<_DstT>().get(); }) {
-        using _E = std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-        return std::make_unique<_E>(std::move(__v));
-      } else
-        return _DstT(__v);
-    }(d_x)};
+    d_v_ = Exist1{t_A(d_x)};
   }
 
   __attribute__((pure)) static Sig2<t_A> exist1(t_A x) {
@@ -545,29 +433,7 @@ public:
   __attribute__((pure)) SigT<t_A, t_P> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1] = std::get<ExistT0>(_sv.v());
-    t_A __c0;
-    if constexpr (
-        requires { d_x ? 0 : 0; } && requires { *d_x; } &&
-        requires { d_x->clone(); } && requires { d_x.get(); }) {
-      using _E = std::remove_cvref_t<decltype(*d_x)>;
-      __c0 = d_x ? std::make_unique<_E>(d_x->clone()) : nullptr;
-    } else if constexpr (requires { d_x.clone(); }) {
-      __c0 = d_x.clone();
-    } else {
-      __c0 = d_x;
-    }
-    t_P __c1;
-    if constexpr (
-        requires { d_a1 ? 0 : 0; } && requires { *d_a1; } &&
-        requires { d_a1->clone(); } && requires { d_a1.get(); }) {
-      using _E = std::remove_cvref_t<decltype(*d_a1)>;
-      __c1 = d_a1 ? std::make_unique<_E>(d_a1->clone()) : nullptr;
-    } else if constexpr (requires { d_a1.clone(); }) {
-      __c1 = d_a1.clone();
-    } else {
-      __c1 = d_a1;
-    }
-    return SigT<t_A, t_P>(ExistT0{std::move(__c0), std::move(__c1)});
+    return SigT<t_A, t_P>(ExistT0{d_x, d_a1});
   }
 
   // CREATORS
@@ -575,33 +441,7 @@ public:
   explicit SigT(const SigT<_U0, _U1> &_other) {
     const auto &[d_x, d_a1] =
         std::get<typename SigT<_U0, _U1>::ExistT0>(_other.v());
-    d_v_ = ExistT0{
-        [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-          if constexpr (
-              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-            return _DstT(*__v);
-          else if constexpr (
-              !requires { *__v; } &&
-              requires { std::declval<_DstT>().get(); }) {
-            using _E =
-                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-            return std::make_unique<_E>(std::move(__v));
-          } else
-            return _DstT(__v);
-        }(d_x),
-        [&]<typename _DstT = t_P>(auto &&__v) -> _DstT {
-          if constexpr (
-              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-            return _DstT(*__v);
-          else if constexpr (
-              !requires { *__v; } &&
-              requires { std::declval<_DstT>().get(); }) {
-            using _E =
-                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-            return std::make_unique<_E>(std::move(__v));
-          } else
-            return _DstT(__v);
-        }(d_a1)};
+    d_v_ = ExistT0{t_A(d_x), t_P(d_a1)};
   }
 
   __attribute__((pure)) static SigT<t_A, t_P> existt0(t_A x, t_P a1) {
@@ -670,41 +510,7 @@ public:
   __attribute__((pure)) SigT2<t_A, t_P, t_Q> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1, d_a2] = std::get<ExistT1>(_sv.v());
-    t_A __c0;
-    if constexpr (
-        requires { d_x ? 0 : 0; } && requires { *d_x; } &&
-        requires { d_x->clone(); } && requires { d_x.get(); }) {
-      using _E = std::remove_cvref_t<decltype(*d_x)>;
-      __c0 = d_x ? std::make_unique<_E>(d_x->clone()) : nullptr;
-    } else if constexpr (requires { d_x.clone(); }) {
-      __c0 = d_x.clone();
-    } else {
-      __c0 = d_x;
-    }
-    t_P __c1;
-    if constexpr (
-        requires { d_a1 ? 0 : 0; } && requires { *d_a1; } &&
-        requires { d_a1->clone(); } && requires { d_a1.get(); }) {
-      using _E = std::remove_cvref_t<decltype(*d_a1)>;
-      __c1 = d_a1 ? std::make_unique<_E>(d_a1->clone()) : nullptr;
-    } else if constexpr (requires { d_a1.clone(); }) {
-      __c1 = d_a1.clone();
-    } else {
-      __c1 = d_a1;
-    }
-    t_Q __c2;
-    if constexpr (
-        requires { d_a2 ? 0 : 0; } && requires { *d_a2; } &&
-        requires { d_a2->clone(); } && requires { d_a2.get(); }) {
-      using _E = std::remove_cvref_t<decltype(*d_a2)>;
-      __c2 = d_a2 ? std::make_unique<_E>(d_a2->clone()) : nullptr;
-    } else if constexpr (requires { d_a2.clone(); }) {
-      __c2 = d_a2.clone();
-    } else {
-      __c2 = d_a2;
-    }
-    return SigT2<t_A, t_P, t_Q>(
-        ExistT1{std::move(__c0), std::move(__c1), std::move(__c2)});
+    return SigT2<t_A, t_P, t_Q>(ExistT1{d_x, d_a1, d_a2});
   }
 
   // CREATORS
@@ -712,46 +518,7 @@ public:
   explicit SigT2(const SigT2<_U0, _U1, _U2> &_other) {
     const auto &[d_x, d_a1, d_a2] =
         std::get<typename SigT2<_U0, _U1, _U2>::ExistT1>(_other.v());
-    d_v_ = ExistT1{
-        [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-          if constexpr (
-              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-            return _DstT(*__v);
-          else if constexpr (
-              !requires { *__v; } &&
-              requires { std::declval<_DstT>().get(); }) {
-            using _E =
-                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-            return std::make_unique<_E>(std::move(__v));
-          } else
-            return _DstT(__v);
-        }(d_x),
-        [&]<typename _DstT = t_P>(auto &&__v) -> _DstT {
-          if constexpr (
-              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-            return _DstT(*__v);
-          else if constexpr (
-              !requires { *__v; } &&
-              requires { std::declval<_DstT>().get(); }) {
-            using _E =
-                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-            return std::make_unique<_E>(std::move(__v));
-          } else
-            return _DstT(__v);
-        }(d_a1),
-        [&]<typename _DstT = t_Q>(auto &&__v) -> _DstT {
-          if constexpr (
-              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-            return _DstT(*__v);
-          else if constexpr (
-              !requires { *__v; } &&
-              requires { std::declval<_DstT>().get(); }) {
-            using _E =
-                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-            return std::make_unique<_E>(std::move(__v));
-          } else
-            return _DstT(__v);
-        }(d_a2)};
+    d_v_ = ExistT1{t_A(d_x), t_P(d_a1), t_Q(d_a2)};
   }
 
   __attribute__((pure)) static SigT2<t_A, t_P, t_Q> existt1(t_A x, t_P a1,
@@ -825,18 +592,7 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<Inleft>(_sv.v())) {
       const auto &[d_a0] = std::get<Inleft>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return Sumor<t_A>(Inleft{std::move(__c0)});
+      return Sumor<t_A>(Inleft{d_a0});
     } else {
       return Sumor<t_A>(Inright{});
     }
@@ -846,18 +602,7 @@ public:
   template <typename _U> explicit Sumor(const Sumor<_U> &_other) {
     if (std::holds_alternative<typename Sumor<_U>::Inleft>(_other.v())) {
       const auto &[d_a0] = std::get<typename Sumor<_U>::Inleft>(_other.v());
-      d_v_ = Inleft{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-        if constexpr (
-            requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-          return _DstT(*__v);
-        else if constexpr (
-            !requires { *__v; } && requires { std::declval<_DstT>().get(); }) {
-          using _E =
-              std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-          return std::make_unique<_E>(std::move(__v));
-        } else
-          return _DstT(__v);
-      }(d_a0)};
+      d_v_ = Inleft{t_A(d_a0)};
     } else {
       d_v_ = Inright{};
     }
@@ -927,36 +672,13 @@ struct RocqBug14174 {
       __attribute__((pure)) sig<t_A> clone() const {
         auto &&_sv = *(this);
         const auto &[d_x] = std::get<Exist>(_sv.v());
-        t_A __c0;
-        if constexpr (
-            requires { d_x ? 0 : 0; } && requires { *d_x; } &&
-            requires { d_x->clone(); } && requires { d_x.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_x)>;
-          __c0 = d_x ? std::make_unique<_E>(d_x->clone()) : nullptr;
-        } else if constexpr (requires { d_x.clone(); }) {
-          __c0 = d_x.clone();
-        } else {
-          __c0 = d_x;
-        }
-        return sig<t_A>(Exist{std::move(__c0)});
+        return sig<t_A>(Exist{d_x});
       }
 
       // CREATORS
       template <typename _U> explicit sig(const sig<_U> &_other) {
         const auto &[d_x] = std::get<typename sig<_U>::Exist>(_other.v());
-        d_v_ = Exist{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-          if constexpr (
-              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-            return _DstT(*__v);
-          else if constexpr (
-              !requires { *__v; } &&
-              requires { std::declval<_DstT>().get(); }) {
-            using _E =
-                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-            return std::make_unique<_E>(std::move(__v));
-          } else
-            return _DstT(__v);
-        }(d_x)};
+        d_v_ = Exist{t_A(d_x)};
       }
 
       __attribute__((pure)) static sig<t_A> exist(t_A x) {
@@ -1069,36 +791,13 @@ struct RocqBug14174 {
       __attribute__((pure)) sig2<t_A> clone() const {
         auto &&_sv = *(this);
         const auto &[d_x] = std::get<Exist2>(_sv.v());
-        t_A __c0;
-        if constexpr (
-            requires { d_x ? 0 : 0; } && requires { *d_x; } &&
-            requires { d_x->clone(); } && requires { d_x.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_x)>;
-          __c0 = d_x ? std::make_unique<_E>(d_x->clone()) : nullptr;
-        } else if constexpr (requires { d_x.clone(); }) {
-          __c0 = d_x.clone();
-        } else {
-          __c0 = d_x;
-        }
-        return sig2<t_A>(Exist2{std::move(__c0)});
+        return sig2<t_A>(Exist2{d_x});
       }
 
       // CREATORS
       template <typename _U> explicit sig2(const sig2<_U> &_other) {
         const auto &[d_x] = std::get<typename sig2<_U>::Exist2>(_other.v());
-        d_v_ = Exist2{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-          if constexpr (
-              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-            return _DstT(*__v);
-          else if constexpr (
-              !requires { *__v; } &&
-              requires { std::declval<_DstT>().get(); }) {
-            using _E =
-                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-            return std::make_unique<_E>(std::move(__v));
-          } else
-            return _DstT(__v);
-        }(d_x)};
+        d_v_ = Exist2{t_A(d_x)};
       }
 
       __attribute__((pure)) static sig2<t_A> exist2(t_A x) {
@@ -1216,29 +915,7 @@ struct RocqBug14174 {
       __attribute__((pure)) sigT<t_A, t_P> clone() const {
         auto &&_sv = *(this);
         const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
-        t_A __c0;
-        if constexpr (
-            requires { d_x ? 0 : 0; } && requires { *d_x; } &&
-            requires { d_x->clone(); } && requires { d_x.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_x)>;
-          __c0 = d_x ? std::make_unique<_E>(d_x->clone()) : nullptr;
-        } else if constexpr (requires { d_x.clone(); }) {
-          __c0 = d_x.clone();
-        } else {
-          __c0 = d_x;
-        }
-        t_P __c1;
-        if constexpr (
-            requires { d_a1 ? 0 : 0; } && requires { *d_a1; } &&
-            requires { d_a1->clone(); } && requires { d_a1.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_a1)>;
-          __c1 = d_a1 ? std::make_unique<_E>(d_a1->clone()) : nullptr;
-        } else if constexpr (requires { d_a1.clone(); }) {
-          __c1 = d_a1.clone();
-        } else {
-          __c1 = d_a1;
-        }
-        return sigT<t_A, t_P>(ExistT{std::move(__c0), std::move(__c1)});
+        return sigT<t_A, t_P>(ExistT{d_x, d_a1});
       }
 
       // CREATORS
@@ -1246,34 +923,7 @@ struct RocqBug14174 {
       explicit sigT(const sigT<_U0, _U1> &_other) {
         const auto &[d_x, d_a1] =
             std::get<typename sigT<_U0, _U1>::ExistT>(_other.v());
-        d_v_ = ExistT{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-                        if constexpr (
-                            requires { *__v; } &&
-                            !requires { std::declval<_DstT>().get(); })
-                          return _DstT(*__v);
-                        else if constexpr (
-                            !requires { *__v; } &&
-                            requires { std::declval<_DstT>().get(); }) {
-                          using _E = std::remove_pointer_t<
-                              decltype(std::declval<_DstT>().get())>;
-                          return std::make_unique<_E>(std::move(__v));
-                        } else
-                          return _DstT(__v);
-                      }(d_x),
-                      [&]<typename _DstT = t_P>(auto &&__v) -> _DstT {
-                        if constexpr (
-                            requires { *__v; } &&
-                            !requires { std::declval<_DstT>().get(); })
-                          return _DstT(*__v);
-                        else if constexpr (
-                            !requires { *__v; } &&
-                            requires { std::declval<_DstT>().get(); }) {
-                          using _E = std::remove_pointer_t<
-                              decltype(std::declval<_DstT>().get())>;
-                          return std::make_unique<_E>(std::move(__v));
-                        } else
-                          return _DstT(__v);
-                      }(d_a1)};
+        d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
       }
 
       __attribute__((pure)) static sigT<t_A, t_P> existt(t_A x, t_P a1) {
@@ -1408,41 +1058,7 @@ struct RocqBug14174 {
       __attribute__((pure)) sigT2<t_A, t_P, t_Q> clone() const {
         auto &&_sv = *(this);
         const auto &[d_x, d_a1, d_a2] = std::get<ExistT2>(_sv.v());
-        t_A __c0;
-        if constexpr (
-            requires { d_x ? 0 : 0; } && requires { *d_x; } &&
-            requires { d_x->clone(); } && requires { d_x.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_x)>;
-          __c0 = d_x ? std::make_unique<_E>(d_x->clone()) : nullptr;
-        } else if constexpr (requires { d_x.clone(); }) {
-          __c0 = d_x.clone();
-        } else {
-          __c0 = d_x;
-        }
-        t_P __c1;
-        if constexpr (
-            requires { d_a1 ? 0 : 0; } && requires { *d_a1; } &&
-            requires { d_a1->clone(); } && requires { d_a1.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_a1)>;
-          __c1 = d_a1 ? std::make_unique<_E>(d_a1->clone()) : nullptr;
-        } else if constexpr (requires { d_a1.clone(); }) {
-          __c1 = d_a1.clone();
-        } else {
-          __c1 = d_a1;
-        }
-        t_Q __c2;
-        if constexpr (
-            requires { d_a2 ? 0 : 0; } && requires { *d_a2; } &&
-            requires { d_a2->clone(); } && requires { d_a2.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_a2)>;
-          __c2 = d_a2 ? std::make_unique<_E>(d_a2->clone()) : nullptr;
-        } else if constexpr (requires { d_a2.clone(); }) {
-          __c2 = d_a2.clone();
-        } else {
-          __c2 = d_a2;
-        }
-        return sigT2<t_A, t_P, t_Q>(
-            ExistT2{std::move(__c0), std::move(__c1), std::move(__c2)});
+        return sigT2<t_A, t_P, t_Q>(ExistT2{d_x, d_a1, d_a2});
       }
 
       // CREATORS
@@ -1450,48 +1066,7 @@ struct RocqBug14174 {
       explicit sigT2(const sigT2<_U0, _U1, _U2> &_other) {
         const auto &[d_x, d_a1, d_a2] =
             std::get<typename sigT2<_U0, _U1, _U2>::ExistT2>(_other.v());
-        d_v_ = ExistT2{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-                         if constexpr (
-                             requires { *__v; } &&
-                             !requires { std::declval<_DstT>().get(); })
-                           return _DstT(*__v);
-                         else if constexpr (
-                             !requires { *__v; } &&
-                             requires { std::declval<_DstT>().get(); }) {
-                           using _E = std::remove_pointer_t<
-                               decltype(std::declval<_DstT>().get())>;
-                           return std::make_unique<_E>(std::move(__v));
-                         } else
-                           return _DstT(__v);
-                       }(d_x),
-                       [&]<typename _DstT = t_P>(auto &&__v) -> _DstT {
-                         if constexpr (
-                             requires { *__v; } &&
-                             !requires { std::declval<_DstT>().get(); })
-                           return _DstT(*__v);
-                         else if constexpr (
-                             !requires { *__v; } &&
-                             requires { std::declval<_DstT>().get(); }) {
-                           using _E = std::remove_pointer_t<
-                               decltype(std::declval<_DstT>().get())>;
-                           return std::make_unique<_E>(std::move(__v));
-                         } else
-                           return _DstT(__v);
-                       }(d_a1),
-                       [&]<typename _DstT = t_Q>(auto &&__v) -> _DstT {
-                         if constexpr (
-                             requires { *__v; } &&
-                             !requires { std::declval<_DstT>().get(); })
-                           return _DstT(*__v);
-                         else if constexpr (
-                             !requires { *__v; } &&
-                             requires { std::declval<_DstT>().get(); }) {
-                           using _E = std::remove_pointer_t<
-                               decltype(std::declval<_DstT>().get())>;
-                           return std::make_unique<_E>(std::move(__v));
-                         } else
-                           return _DstT(__v);
-                       }(d_a2)};
+        d_v_ = ExistT2{t_A(d_x), t_P(d_a1), t_Q(d_a2)};
       }
 
       __attribute__((pure)) static sigT2<t_A, t_P, t_Q> existt2(t_A x, t_P a1,
@@ -1722,18 +1297,7 @@ struct RocqBug14174 {
         auto &&_sv = *(this);
         if (std::holds_alternative<Inleft>(_sv.v())) {
           const auto &[d_a0] = std::get<Inleft>(_sv.v());
-          t_A __c0;
-          if constexpr (
-              requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-              requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*d_a0)>;
-            __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-          } else if constexpr (requires { d_a0.clone(); }) {
-            __c0 = d_a0.clone();
-          } else {
-            __c0 = d_a0;
-          }
-          return sumor<t_A>(Inleft{std::move(__c0)});
+          return sumor<t_A>(Inleft{d_a0});
         } else {
           return sumor<t_A>(Inright{});
         }
@@ -1743,20 +1307,7 @@ struct RocqBug14174 {
       template <typename _U> explicit sumor(const sumor<_U> &_other) {
         if (std::holds_alternative<typename sumor<_U>::Inleft>(_other.v())) {
           const auto &[d_a0] = std::get<typename sumor<_U>::Inleft>(_other.v());
-          d_v_ = Inleft{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0)};
+          d_v_ = Inleft{t_A(d_a0)};
         } else {
           d_v_ = Inright{};
         }

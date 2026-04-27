@@ -56,20 +56,8 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return List<t_A>(
-          Cons{std::move(__c0),
-               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+      return List<t_A>(Cons{
+          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -79,22 +67,8 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -800,31 +774,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) HLAAllele clone() const {
-      return HLAAllele{
-          [](auto &&__v) -> HLALocus {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).hla_locus),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).hla_group)};
+      return HLAAllele{(*(this)).hla_locus, (*(this)).hla_group};
     }
   };
 
@@ -857,43 +807,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) HLAEpitope clone() const {
-      return HLAEpitope{
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).epitope_id),
-          [](auto &&__v) -> HLALocus {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).epitope_locus),
-          [](auto &&__v) -> bool {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).epitope_immunogenic)};
+      return HLAEpitope{(*(this)).epitope_id, (*(this)).epitope_locus,
+                        (*(this)).epitope_immunogenic};
     }
   };
 
@@ -929,32 +844,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) EpitopeAntibody clone() const {
-      return EpitopeAntibody{
-          (*(this)).ab_epitope.clone(),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).ab_mfi),
-          [](auto &&__v) -> bool {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).ab_complement_fixing)};
+      return EpitopeAntibody{(*(this)).ab_epitope.clone(), (*(this)).ab_mfi,
+                             (*(this)).ab_complement_fixing};
     }
   };
 
@@ -972,44 +863,9 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) VirtualXMProfile clone() const {
-      return VirtualXMProfile{
-          (*(this)).vxm_epitope_abs.clone(),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).vxm_current_pra),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).vxm_peak_pra),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).vxm_sensitization_events)};
+      return VirtualXMProfile{(*(this)).vxm_epitope_abs.clone(),
+                              (*(this)).vxm_current_pra, (*(this)).vxm_peak_pra,
+                              (*(this)).vxm_sensitization_events};
     }
   };
 
@@ -1030,78 +886,9 @@ struct ValidatedVirtualCrossmatchTraceCase {
     // ACCESSORS
     __attribute__((pure)) MFIThresholdConfig clone() const {
       return MFIThresholdConfig{
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).mfi_cfg_negative),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).mfi_cfg_weak_positive),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).mfi_cfg_moderate),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).mfi_cfg_strong),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).mfi_cfg_lab_id),
-          [](auto &&__v) -> bool {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).mfi_cfg_validated)};
+          (*(this)).mfi_cfg_negative, (*(this)).mfi_cfg_weak_positive,
+          (*(this)).mfi_cfg_moderate, (*(this)).mfi_cfg_strong,
+          (*(this)).mfi_cfg_lab_id,   (*(this)).mfi_cfg_validated};
     }
   };
 
@@ -1411,42 +1198,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
     // ACCESSORS
     __attribute__((pure)) CrossmatchWithUncertainty clone() const {
       return CrossmatchWithUncertainty{
-          [](auto &&__v) -> CrossmatchResult {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).xmu_result),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).xmu_method),
-          [](auto &&__v) -> TestConfidence {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).xmu_confidence)};
+          (*(this)).xmu_result, (*(this)).xmu_method, (*(this)).xmu_confidence};
     }
   };
 
@@ -1470,80 +1222,13 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) SafeTransfusionOrder clone() const {
-      return SafeTransfusionOrder{
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).sto_recipient_id),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).sto_product_id),
-          [](auto &&__v) -> bool {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).sto_compatibility_check),
-          (*(this)).sto_crossmatch.clone(),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).sto_sample_collection_time),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).sto_authorized_by),
-          [](auto &&__v) -> bool {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).sto_emergency_release)};
+      return SafeTransfusionOrder{(*(this)).sto_recipient_id,
+                                  (*(this)).sto_product_id,
+                                  (*(this)).sto_compatibility_check,
+                                  (*(this)).sto_crossmatch.clone(),
+                                  (*(this)).sto_sample_collection_time,
+                                  (*(this)).sto_authorized_by,
+                                  (*(this)).sto_emergency_release};
     }
   };
 

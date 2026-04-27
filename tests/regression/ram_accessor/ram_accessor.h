@@ -55,20 +55,8 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return List<t_A>(
-          Cons{std::move(__c0),
-               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+      return List<t_A>(Cons{
+          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -78,22 +66,8 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -176,19 +150,7 @@ struct RamAccessor {
 
     // ACCESSORS
     __attribute__((pure)) ram_chip clone() const {
-      return ram_chip{
-          (*(this)).chip_regs.clone(), [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).chip_port)};
+      return ram_chip{(*(this)).chip_regs.clone(), (*(this)).chip_port};
     }
   };
 
@@ -217,55 +179,8 @@ struct RamAccessor {
 
     // ACCESSORS
     __attribute__((pure)) ram_sel clone() const {
-      return ram_sel{
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).sel_bank),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).sel_chip),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).sel_reg),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).sel_char)};
+      return ram_sel{(*(this)).sel_bank, (*(this)).sel_chip, (*(this)).sel_reg,
+                     (*(this)).sel_char};
     }
   };
 
@@ -285,48 +200,10 @@ struct RamAccessor {
 
     // ACCESSORS
     __attribute__((pure)) state clone() const {
-      return state{
-          (*(this)).state_regs.clone(),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).state_acc),
-          [](auto &&__v) -> bool {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).state_carry),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).state_pc),
-          (*(this)).state_stack.clone(),
-          (*(this)).state_ram.clone(),
-          (*(this)).state_sel.clone(),
-          (*(this)).state_rom.clone()};
+      return state{(*(this)).state_regs.clone(),  (*(this)).state_acc,
+                   (*(this)).state_carry,         (*(this)).state_pc,
+                   (*(this)).state_stack.clone(), (*(this)).state_ram.clone(),
+                   (*(this)).state_sel.clone(),   (*(this)).state_rom.clone()};
     }
   };
 

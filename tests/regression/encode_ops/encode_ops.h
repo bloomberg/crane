@@ -55,20 +55,8 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return List<t_A>(
-          Cons{std::move(__c0),
-               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+      return List<t_A>(Cons{
+          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -78,22 +66,8 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -223,59 +197,13 @@ struct EncodeOps {
         return instruction1(DAA{});
       } else if (std::holds_alternative<FIM>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<FIM>(_sv.v());
-        return instruction1(
-            FIM{[](auto &&__v) -> unsigned int {
-                  if constexpr (
-                      requires { __v ? 0 : 0; } && requires { *__v; } &&
-                      requires { __v->clone(); } && requires { __v.get(); }) {
-                    using _E = std::remove_cvref_t<decltype(*__v)>;
-                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                  } else if constexpr (requires { __v.clone(); }) {
-                    return __v.clone();
-                  } else {
-                    return __v;
-                  }
-                }(d_a0),
-                [](auto &&__v) -> unsigned int {
-                  if constexpr (
-                      requires { __v ? 0 : 0; } && requires { *__v; } &&
-                      requires { __v->clone(); } && requires { __v.get(); }) {
-                    using _E = std::remove_cvref_t<decltype(*__v)>;
-                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                  } else if constexpr (requires { __v.clone(); }) {
-                    return __v.clone();
-                  } else {
-                    return __v;
-                  }
-                }(d_a1)});
+        return instruction1(FIM{d_a0, d_a1});
       } else if (std::holds_alternative<JUN>(_sv.v())) {
         const auto &[d_a0] = std::get<JUN>(_sv.v());
-        return instruction1(JUN{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instruction1(JUN{d_a0});
       } else if (std::holds_alternative<LDM1>(_sv.v())) {
         const auto &[d_a0] = std::get<LDM1>(_sv.v());
-        return instruction1(LDM1{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instruction1(LDM1{d_a0});
       } else if (std::holds_alternative<NOP1>(_sv.v())) {
         return instruction1(NOP1{});
       } else if (std::holds_alternative<RDM>(_sv.v())) {
@@ -508,18 +436,7 @@ struct EncodeOps {
         return instruction2(NOP2{});
       } else {
         const auto &[d_a0] = std::get<LDM2>(_sv.v());
-        return instruction2(LDM2{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instruction2(LDM2{d_a0});
       }
     }
 
@@ -642,18 +559,7 @@ struct EncodeOps {
         return instruction3(NOP3{});
       } else {
         const auto &[d_a0] = std::get<LDM3>(_sv.v());
-        return instruction3(LDM3{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instruction3(LDM3{d_a0});
       }
     }
 

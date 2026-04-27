@@ -56,20 +56,8 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return List<t_A>(
-          Cons{std::move(__c0),
-               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+      return List<t_A>(Cons{
+          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -79,22 +67,8 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -204,18 +178,7 @@ struct LoopifyExprVariants {
       auto &&_sv = *(this);
       if (std::holds_alternative<Lit>(_sv.v())) {
         const auto &[d_a0] = std::get<Lit>(_sv.v());
-        return cond_expr(Lit{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return cond_expr(Lit{d_a0});
       } else if (std::holds_alternative<Add>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<Add>(_sv.v());
         return cond_expr(
@@ -636,18 +599,7 @@ struct LoopifyExprVariants {
       auto &&_sv = *(this);
       if (std::holds_alternative<ANum>(_sv.v())) {
         const auto &[d_a0] = std::get<ANum>(_sv.v());
-        return arith_expr(ANum{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return arith_expr(ANum{d_a0});
       } else if (std::holds_alternative<AAdd>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<AAdd>(_sv.v());
         return arith_expr(
@@ -1747,21 +1699,9 @@ struct LoopifyExprVariants {
       } else if (std::holds_alternative<LCons>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<LCons>(_sv.v());
         return list_expr(
-            LCons{[](auto &&__v) -> unsigned int {
-                    if constexpr (
-                        requires { __v ? 0 : 0; } && requires { *__v; } &&
-                        requires { __v->clone(); } && requires { __v.get(); }) {
-                      using _E = std::remove_cvref_t<decltype(*__v)>;
-                      return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                    } else if constexpr (requires { __v.clone(); }) {
-                      return __v.clone();
-                    } else {
-                      return __v;
-                    }
-                  }(d_a0),
-                  d_a1 ? std::make_unique<LoopifyExprVariants::list_expr>(
-                             d_a1->clone())
-                       : nullptr});
+            LCons{d_a0, d_a1 ? std::make_unique<LoopifyExprVariants::list_expr>(
+                                   d_a1->clone())
+                             : nullptr});
       } else if (std::holds_alternative<LAppend>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<LAppend>(_sv.v());
         return list_expr(
@@ -1773,31 +1713,7 @@ struct LoopifyExprVariants {
                          : nullptr});
       } else {
         const auto &[d_a0, d_a1] = std::get<LReplicate>(_sv.v());
-        return list_expr(LReplicate{
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_a0),
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_a1)});
+        return list_expr(LReplicate{d_a0, d_a1});
       }
     }
 

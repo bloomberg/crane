@@ -224,7 +224,9 @@ PendantSumtreeRoundtripCase::sumtree_leaves(
     const auto &[d_a0, d_a1] =
         std::get<typename PendantSumtreeRoundtripCase::SumTree::SumNode>(
             st.v());
-    return List<PendantSumtreeRoundtripCase::SumTree>(d_a1)
+    List<PendantSumtreeRoundtripCase::SumTree> d_a1_value =
+        List<PendantSumtreeRoundtripCase::SumTree>(*(d_a1));
+    return d_a1_value
         .template map<List<PendantSumtreeRoundtripCase::CertifiedPendant>>(
             [=](PendantSumtreeRoundtripCase::SumTree _x0) mutable
                 -> List<PendantSumtreeRoundtripCase::CertifiedPendant> {
@@ -243,7 +245,9 @@ __attribute__((pure)) unsigned int PendantSumtreeRoundtripCase::sumtree_depth(
     const auto &[d_a0, d_a1] =
         std::get<typename PendantSumtreeRoundtripCase::SumTree::SumNode>(
             st.v());
-    return (List<PendantSumtreeRoundtripCase::SumTree>(d_a1)
+    List<PendantSumtreeRoundtripCase::SumTree> d_a1_value =
+        List<PendantSumtreeRoundtripCase::SumTree>(*(d_a1));
+    return (d_a1_value
                 .template map<unsigned int>(
                     [=](PendantSumtreeRoundtripCase::SumTree _x0) mutable
                         -> unsigned int { return sumtree_depth(n, _x0); })
@@ -270,8 +274,10 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::sumtree_validb_aux(
       const auto &[d_a0, d_a1] =
           std::get<typename PendantSumtreeRoundtripCase::SumTree::SumNode>(
               st.v());
+      List<PendantSumtreeRoundtripCase::SumTree> d_a1_value =
+          List<PendantSumtreeRoundtripCase::SumTree>(*(d_a1));
       List<PendantSumtreeRoundtripCase::CertifiedPendant> child_tops =
-          List<PendantSumtreeRoundtripCase::SumTree>(d_a1)
+          d_a1_value
               .template map<PendantSumtreeRoundtripCase::CertifiedPendant>(
                   [=](PendantSumtreeRoundtripCase::SumTree _x0) mutable
                       -> PendantSumtreeRoundtripCase::CertifiedPendant {
@@ -281,7 +287,7 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::sumtree_validb_aux(
           PendantGroup{d_a0, child_tops};
       return (
           group_sums_validb(n, g) &&
-          List<PendantSumtreeRoundtripCase::SumTree>(d_a1).forallb(
+          d_a1_value.forallb(
               [=](PendantSumtreeRoundtripCase::SumTree _x0) mutable -> bool {
                 return sumtree_validb_aux(n, fuel_, _x0);
               }));

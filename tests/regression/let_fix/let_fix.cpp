@@ -29,7 +29,7 @@ LetFix::local_flatten(const List<List<unsigned int>> &xss) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<List<unsigned int>>::Cons>(xss.v());
-    List<List<unsigned int>> d_a1_value = *(d_a1);
+    List<List<unsigned int>> d_a1_value = List<List<unsigned int>>(*(d_a1));
     std::function<List<unsigned int>(List<unsigned int>)> inner;
     inner = [&](List<unsigned int> ys) -> List<unsigned int> {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(ys.v())) {

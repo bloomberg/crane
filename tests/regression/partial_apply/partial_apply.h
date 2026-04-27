@@ -56,20 +56,8 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return List<t_A>(
-          Cons{std::move(__c0),
-               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+      return List<t_A>(Cons{
+          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -79,22 +67,8 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -194,63 +168,13 @@ struct PartialApply {
     __attribute__((pure)) tagged<t_A> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Tag>(_sv.v());
-      t_A __c1;
-      if constexpr (
-          requires { d_a1 ? 0 : 0; } && requires { *d_a1; } &&
-          requires { d_a1->clone(); } && requires { d_a1.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a1)>;
-        __c1 = d_a1 ? std::make_unique<_E>(d_a1->clone()) : nullptr;
-      } else if constexpr (requires { d_a1.clone(); }) {
-        __c1 = d_a1.clone();
-      } else {
-        __c1 = d_a1;
-      }
-      return tagged<t_A>(
-          Tag{[](auto &&__v) -> unsigned int {
-                if constexpr (
-                    requires { __v ? 0 : 0; } && requires { *__v; } &&
-                    requires { __v->clone(); } && requires { __v.get(); }) {
-                  using _E = std::remove_cvref_t<decltype(*__v)>;
-                  return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                } else if constexpr (requires { __v.clone(); }) {
-                  return __v.clone();
-                } else {
-                  return __v;
-                }
-              }(d_a0),
-              std::move(__c1)});
+      return tagged<t_A>(Tag{d_a0, d_a1});
     }
 
     // CREATORS
     template <typename _U> explicit tagged(const tagged<_U> &_other) {
       const auto &[d_a0, d_a1] = std::get<typename tagged<_U>::Tag>(_other.v());
-      d_v_ = Tag{
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }(d_a0),
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a1)};
+      d_v_ = Tag{d_a0, t_A(d_a1)};
     }
 
     __attribute__((pure)) static tagged<t_A> tag(unsigned int a0, t_A a1) {

@@ -63,21 +63,9 @@ struct SimpleLambdaFieldCapture {
       } else {
         const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
         return mylist(Mycons{
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_a0),
-            d_a1 ? std::make_unique<SimpleLambdaFieldCapture::mylist>(
-                       d_a1->clone())
-                 : nullptr});
+            d_a0, d_a1 ? std::make_unique<SimpleLambdaFieldCapture::mylist>(
+                             d_a1->clone())
+                       : nullptr});
       }
     }
 
@@ -197,18 +185,7 @@ struct SimpleLambdaFieldCapture {
     __attribute__((pure)) tag clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<MkTag>(_sv.v());
-      return tag(MkTag{[](auto &&__v) -> unsigned int {
-        if constexpr (
-            requires { __v ? 0 : 0; } && requires { *__v; } &&
-            requires { __v->clone(); } && requires { __v.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*__v)>;
-          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-        } else if constexpr (requires { __v.clone(); }) {
-          return __v.clone();
-        } else {
-          return __v;
-        }
-      }(d_a0)});
+      return tag(MkTag{d_a0});
     }
 
     // CREATORS

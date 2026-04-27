@@ -17,20 +17,7 @@ struct RocqBug4710 {
     __attribute__((pure)) const Foo_ *operator->() const { return this; }
 
     // ACCESSORS
-    __attribute__((pure)) Foo_ clone() const {
-      return Foo_{[](auto &&__v) -> unsigned int {
-        if constexpr (
-            requires { __v ? 0 : 0; } && requires { *__v; } &&
-            requires { __v->clone(); } && requires { __v.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*__v)>;
-          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-        } else if constexpr (requires { __v.clone(); }) {
-          return __v.clone();
-        } else {
-          return __v;
-        }
-      }((*this).foo)};
-    }
+    __attribute__((pure)) Foo_ clone() const { return Foo_{(*(this)).foo}; }
   };
 
   struct Foo2 {
@@ -43,30 +30,7 @@ struct RocqBug4710 {
 
     // ACCESSORS
     __attribute__((pure)) Foo2 clone() const {
-      return Foo2{[](auto &&__v) -> unsigned int {
-                    if constexpr (
-                        requires { __v ? 0 : 0; } && requires { *__v; } &&
-                        requires { __v->clone(); } && requires { __v.get(); }) {
-                      using _E = std::remove_cvref_t<decltype(*__v)>;
-                      return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                    } else if constexpr (requires { __v.clone(); }) {
-                      return __v.clone();
-                    } else {
-                      return __v;
-                    }
-                  }((*this).foo2p),
-                  [](auto &&__v) -> bool {
-                    if constexpr (
-                        requires { __v ? 0 : 0; } && requires { *__v; } &&
-                        requires { __v->clone(); } && requires { __v.get(); }) {
-                      using _E = std::remove_cvref_t<decltype(*__v)>;
-                      return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                    } else if constexpr (requires { __v.clone(); }) {
-                      return __v.clone();
-                    } else {
-                      return __v;
-                    }
-                  }((*this).foo2b)};
+      return Foo2{(*(this)).foo2p, (*(this)).foo2b};
     }
   };
 

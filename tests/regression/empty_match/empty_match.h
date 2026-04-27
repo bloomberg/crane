@@ -76,32 +76,10 @@ struct EmptyMatch {
       auto &&_sv = *(this);
       if (std::holds_alternative<Left>(_sv.v())) {
         const auto &[d_a0] = std::get<Left>(_sv.v());
-        t_A __c0;
-        if constexpr (
-            requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-            requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_a0)>;
-          __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-        } else if constexpr (requires { d_a0.clone(); }) {
-          __c0 = d_a0.clone();
-        } else {
-          __c0 = d_a0;
-        }
-        return either<t_A, t_B>(Left{std::move(__c0)});
+        return either<t_A, t_B>(Left{d_a0});
       } else {
         const auto &[d_a0] = std::get<Right>(_sv.v());
-        t_B __c0;
-        if constexpr (
-            requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-            requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_a0)>;
-          __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-        } else if constexpr (requires { d_a0.clone(); }) {
-          __c0 = d_a0.clone();
-        } else {
-          __c0 = d_a0;
-        }
-        return either<t_A, t_B>(Right{std::move(__c0)});
+        return either<t_A, t_B>(Right{d_a0});
       }
     }
 
@@ -111,35 +89,11 @@ struct EmptyMatch {
       if (std::holds_alternative<typename either<_U0, _U1>::Left>(_other.v())) {
         const auto &[d_a0] =
             std::get<typename either<_U0, _U1>::Left>(_other.v());
-        d_v_ = Left{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-          if constexpr (
-              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-            return _DstT(*__v);
-          else if constexpr (
-              !requires { *__v; } &&
-              requires { std::declval<_DstT>().get(); }) {
-            using _E =
-                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-            return std::make_unique<_E>(std::move(__v));
-          } else
-            return _DstT(__v);
-        }(d_a0)};
+        d_v_ = Left{t_A(d_a0)};
       } else {
         const auto &[d_a0] =
             std::get<typename either<_U0, _U1>::Right>(_other.v());
-        d_v_ = Right{[&]<typename _DstT = t_B>(auto &&__v) -> _DstT {
-          if constexpr (
-              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-            return _DstT(*__v);
-          else if constexpr (
-              !requires { *__v; } &&
-              requires { std::declval<_DstT>().get(); }) {
-            using _E =
-                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-            return std::make_unique<_E>(std::move(__v));
-          } else
-            return _DstT(__v);
-        }(d_a0)};
+        d_v_ = Right{t_B(d_a0)};
       }
     }
 

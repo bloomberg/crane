@@ -80,18 +80,7 @@ struct FreeMonad {
         return IO(Get_line{});
       } else {
         const auto &[d_a0] = std::get<Print>(_sv.v());
-        return IO(Print{[](auto &&__v) -> std::string {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return IO(Print{d_a0});
       }
     }
 

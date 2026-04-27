@@ -58,20 +58,8 @@ struct EvenOdd {
         return even_list(ENil{});
       } else {
         const auto &[d_a0, d_a1] = std::get<ECons>(_sv.v());
-        return even_list(
-            ECons{[](auto &&__v) -> unsigned int {
-                    if constexpr (
-                        requires { __v ? 0 : 0; } && requires { *__v; } &&
-                        requires { __v->clone(); } && requires { __v.get(); }) {
-                      using _E = std::remove_cvref_t<decltype(*__v)>;
-                      return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                    } else if constexpr (requires { __v.clone(); }) {
-                      return __v.clone();
-                    } else {
-                      return __v;
-                    }
-                  }(d_a0),
-                  d_a1 ? std::make_unique<EvenOdd::odd_list>(d_a1->clone())
+        return even_list(ECons{
+            d_a0, d_a1 ? std::make_unique<EvenOdd::odd_list>(d_a1->clone())
                        : nullptr});
       }
     }
@@ -143,20 +131,8 @@ struct EvenOdd {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<OCons>(_sv.v());
       return odd_list(
-          OCons{[](auto &&__v) -> unsigned int {
-                  if constexpr (
-                      requires { __v ? 0 : 0; } && requires { *__v; } &&
-                      requires { __v->clone(); } && requires { __v.get(); }) {
-                    using _E = std::remove_cvref_t<decltype(*__v)>;
-                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                  } else if constexpr (requires { __v.clone(); }) {
-                    return __v.clone();
-                  } else {
-                    return __v;
-                  }
-                }(d_a0),
-                d_a1 ? std::make_unique<EvenOdd::even_list>(d_a1->clone())
-                     : nullptr});
+          OCons{d_a0, d_a1 ? std::make_unique<EvenOdd::even_list>(d_a1->clone())
+                           : nullptr});
     }
 
     // CREATORS

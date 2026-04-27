@@ -55,20 +55,8 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return List<t_A>(
-          Cons{std::move(__c0),
-               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+      return List<t_A>(Cons{
+          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -78,22 +66,8 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -274,102 +248,25 @@ struct InstructionClassifiers {
       auto &&_sv = *(this);
       if (std::holds_alternative<LDM>(_sv.v())) {
         const auto &[d_a0] = std::get<LDM>(_sv.v());
-        return instr_acc(LDM{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_acc(LDM{d_a0});
       } else if (std::holds_alternative<LD>(_sv.v())) {
         const auto &[d_a0] = std::get<LD>(_sv.v());
-        return instr_acc(LD{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_acc(LD{d_a0});
       } else if (std::holds_alternative<ADD>(_sv.v())) {
         const auto &[d_a0] = std::get<ADD>(_sv.v());
-        return instr_acc(ADD{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_acc(ADD{d_a0});
       } else if (std::holds_alternative<SUB>(_sv.v())) {
         const auto &[d_a0] = std::get<SUB>(_sv.v());
-        return instr_acc(SUB{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_acc(SUB{d_a0});
       } else if (std::holds_alternative<INC>(_sv.v())) {
         const auto &[d_a0] = std::get<INC>(_sv.v());
-        return instr_acc(INC{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_acc(INC{d_a0});
       } else if (std::holds_alternative<XCH>(_sv.v())) {
         const auto &[d_a0] = std::get<XCH>(_sv.v());
-        return instr_acc(XCH{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_acc(XCH{d_a0});
       } else if (std::holds_alternative<BBL>(_sv.v())) {
         const auto &[d_a0] = std::get<BBL>(_sv.v());
-        return instr_acc(BBL{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_acc(BBL{d_a0});
       } else if (std::holds_alternative<SBM>(_sv.v())) {
         return instr_acc(SBM{});
       } else if (std::holds_alternative<RDM>(_sv.v())) {
@@ -752,18 +649,7 @@ struct InstructionClassifiers {
         return instr_ram(NOP_ram{});
       } else {
         const auto &[d_a0] = std::get<ADD_ram>(_sv.v());
-        return instr_ram(ADD_ram{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_ram(ADD_ram{d_a0});
       }
     }
 
@@ -957,116 +843,24 @@ struct InstructionClassifiers {
       auto &&_sv = *(this);
       if (std::holds_alternative<XCH_regs>(_sv.v())) {
         const auto &[d_a0] = std::get<XCH_regs>(_sv.v());
-        return instr_regs(XCH_regs{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_regs(XCH_regs{d_a0});
       } else if (std::holds_alternative<INC_regs>(_sv.v())) {
         const auto &[d_a0] = std::get<INC_regs>(_sv.v());
-        return instr_regs(INC_regs{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_regs(INC_regs{d_a0});
       } else if (std::holds_alternative<FIM>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<FIM>(_sv.v());
-        return instr_regs(
-            FIM{[](auto &&__v) -> unsigned int {
-                  if constexpr (
-                      requires { __v ? 0 : 0; } && requires { *__v; } &&
-                      requires { __v->clone(); } && requires { __v.get(); }) {
-                    using _E = std::remove_cvref_t<decltype(*__v)>;
-                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                  } else if constexpr (requires { __v.clone(); }) {
-                    return __v.clone();
-                  } else {
-                    return __v;
-                  }
-                }(d_a0),
-                [](auto &&__v) -> unsigned int {
-                  if constexpr (
-                      requires { __v ? 0 : 0; } && requires { *__v; } &&
-                      requires { __v->clone(); } && requires { __v.get(); }) {
-                    using _E = std::remove_cvref_t<decltype(*__v)>;
-                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                  } else if constexpr (requires { __v.clone(); }) {
-                    return __v.clone();
-                  } else {
-                    return __v;
-                  }
-                }(d_a1)});
+        return instr_regs(FIM{d_a0, d_a1});
       } else if (std::holds_alternative<FIN>(_sv.v())) {
         const auto &[d_a0] = std::get<FIN>(_sv.v());
-        return instr_regs(FIN{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_regs(FIN{d_a0});
       } else if (std::holds_alternative<ISZ>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<ISZ>(_sv.v());
-        return instr_regs(
-            ISZ{[](auto &&__v) -> unsigned int {
-                  if constexpr (
-                      requires { __v ? 0 : 0; } && requires { *__v; } &&
-                      requires { __v->clone(); } && requires { __v.get(); }) {
-                    using _E = std::remove_cvref_t<decltype(*__v)>;
-                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                  } else if constexpr (requires { __v.clone(); }) {
-                    return __v.clone();
-                  } else {
-                    return __v;
-                  }
-                }(d_a0),
-                [](auto &&__v) -> unsigned int {
-                  if constexpr (
-                      requires { __v ? 0 : 0; } && requires { *__v; } &&
-                      requires { __v->clone(); } && requires { __v.get(); }) {
-                    using _E = std::remove_cvref_t<decltype(*__v)>;
-                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                  } else if constexpr (requires { __v.clone(); }) {
-                    return __v.clone();
-                  } else {
-                    return __v;
-                  }
-                }(d_a1)});
+        return instr_regs(ISZ{d_a0, d_a1});
       } else if (std::holds_alternative<NOP_regs>(_sv.v())) {
         return instr_regs(NOP_regs{});
       } else {
         const auto &[d_a0] = std::get<ADD_regs>(_sv.v());
-        return instr_regs(ADD_regs{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_regs(ADD_regs{d_a0});
       }
     }
 
@@ -1291,128 +1085,25 @@ struct InstructionClassifiers {
       auto &&_sv = *(this);
       if (std::holds_alternative<JCN>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<JCN>(_sv.v());
-        return instr_jump(
-            JCN{[](auto &&__v) -> unsigned int {
-                  if constexpr (
-                      requires { __v ? 0 : 0; } && requires { *__v; } &&
-                      requires { __v->clone(); } && requires { __v.get(); }) {
-                    using _E = std::remove_cvref_t<decltype(*__v)>;
-                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                  } else if constexpr (requires { __v.clone(); }) {
-                    return __v.clone();
-                  } else {
-                    return __v;
-                  }
-                }(d_a0),
-                [](auto &&__v) -> unsigned int {
-                  if constexpr (
-                      requires { __v ? 0 : 0; } && requires { *__v; } &&
-                      requires { __v->clone(); } && requires { __v.get(); }) {
-                    using _E = std::remove_cvref_t<decltype(*__v)>;
-                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                  } else if constexpr (requires { __v.clone(); }) {
-                    return __v.clone();
-                  } else {
-                    return __v;
-                  }
-                }(d_a1)});
+        return instr_jump(JCN{d_a0, d_a1});
       } else if (std::holds_alternative<JUN>(_sv.v())) {
         const auto &[d_a0] = std::get<JUN>(_sv.v());
-        return instr_jump(JUN{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_jump(JUN{d_a0});
       } else if (std::holds_alternative<JMS>(_sv.v())) {
         const auto &[d_a0] = std::get<JMS>(_sv.v());
-        return instr_jump(JMS{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_jump(JMS{d_a0});
       } else if (std::holds_alternative<JIN>(_sv.v())) {
         const auto &[d_a0] = std::get<JIN>(_sv.v());
-        return instr_jump(JIN{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_jump(JIN{d_a0});
       } else if (std::holds_alternative<BBL_jump>(_sv.v())) {
         const auto &[d_a0] = std::get<BBL_jump>(_sv.v());
-        return instr_jump(BBL_jump{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_jump(BBL_jump{d_a0});
       } else if (std::holds_alternative<ISZ_jump>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<ISZ_jump>(_sv.v());
-        return instr_jump(ISZ_jump{
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_a0),
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_a1)});
+        return instr_jump(ISZ_jump{d_a0, d_a1});
       } else if (std::holds_alternative<ADD_jump>(_sv.v())) {
         const auto &[d_a0] = std::get<ADD_jump>(_sv.v());
-        return instr_jump(ADD_jump{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return instr_jump(ADD_jump{d_a0});
       } else {
         return instr_jump(NOP_jump{});
       }

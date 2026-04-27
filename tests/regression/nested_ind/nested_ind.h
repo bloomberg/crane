@@ -57,20 +57,8 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return List<t_A>(
-          Cons{std::move(__c0),
-               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+      return List<t_A>(Cons{
+          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -80,22 +68,8 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -183,19 +157,8 @@ struct NestedInd {
         return custom_list<t_A>(Cnil{});
       } else {
         const auto &[d_a0, d_a1] = std::get<Ccons>(_sv.v());
-        t_A __c0;
-        if constexpr (
-            requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-            requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_a0)>;
-          __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-        } else if constexpr (requires { d_a0.clone(); }) {
-          __c0 = d_a0.clone();
-        } else {
-          __c0 = d_a0;
-        }
         return custom_list<t_A>(Ccons{
-            std::move(__c0),
+            d_a0,
             d_a1 ? std::make_unique<NestedInd::custom_list<t_A>>(d_a1->clone())
                  : nullptr});
       }
@@ -208,22 +171,8 @@ struct NestedInd {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename custom_list<_U>::Ccons>(_other.v());
-        d_v_ =
-            Ccons{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-                    if constexpr (
-                        requires { *__v; } &&
-                        !requires { std::declval<_DstT>().get(); })
-                      return _DstT(*__v);
-                    else if constexpr (
-                        !requires { *__v; } &&
-                        requires { std::declval<_DstT>().get(); }) {
-                      using _E = std::remove_pointer_t<
-                          decltype(std::declval<_DstT>().get())>;
-                      return std::make_unique<_E>(std::move(__v));
-                    } else
-                      return _DstT(__v);
-                  }(d_a0),
-                  d_a1 ? std::make_unique<custom_list<t_A>>(*d_a1) : nullptr};
+        d_v_ = Ccons{t_A(d_a0), d_a1 ? std::make_unique<custom_list<t_A>>(*d_a1)
+                                     : nullptr};
       }
     }
 
@@ -300,7 +249,7 @@ struct NestedInd {
     // TYPES
     struct Node {
       t_A d_a0;
-      custom_list<std::unique_ptr<rose<t_A>>> d_a1;
+      std::unique_ptr<custom_list<rose<t_A>>> d_a1;
     };
 
     using variant_t = std::variant<Node>;
@@ -334,46 +283,26 @@ struct NestedInd {
     __attribute__((pure)) rose<t_A> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Node>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return rose<t_A>(Node{std::move(__c0), d_a1.clone()});
+      return rose<t_A>(Node{
+          d_a0,
+          d_a1 ? std::make_unique<NestedInd::custom_list<NestedInd::rose<t_A>>>(
+                     d_a1->clone())
+               : nullptr});
     }
 
     // CREATORS
     template <typename _U> explicit rose(const rose<_U> &_other) {
       const auto &[d_a0, d_a1] = std::get<typename rose<_U>::Node>(_other.v());
-      d_v_ = Node{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          NestedInd::custom_list<std::unique_ptr<rose<t_A>>>(d_a1)};
+      d_v_ =
+          Node{t_A(d_a0),
+               d_a1 ? std::make_unique<NestedInd::custom_list<rose<t_A>>>(*d_a1)
+                    : nullptr};
     }
 
-    __attribute__((pure)) static rose<t_A> node(t_A a0,
-                                                custom_list<rose<t_A>> a1) {
-      return rose(Node{
-          std::move(a0),
-          NestedInd::custom_list<std::unique_ptr<NestedInd::rose<t_A>>>(a1)});
+    __attribute__((pure)) static rose<t_A>
+    node(t_A a0, const custom_list<rose<t_A>> &a1) {
+      return rose(
+          Node{std::move(a0), std::make_unique<custom_list<rose<t_A>>>(a1)});
     }
 
     // MANIPULATORS
@@ -399,8 +328,7 @@ struct NestedInd {
     __attribute__((pure)) unsigned int children_count() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose<t_A>::Node>(_sv.v());
-      return NestedInd::custom_list<NestedInd::rose<t_A>>(d_a1)
-          .custom_list_length();
+      return (*(d_a1)).custom_list_length();
     }
 
     t_A root() const {
@@ -413,14 +341,14 @@ struct NestedInd {
     T1 rose_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose<t_A>::Node>(_sv.v());
-      return f(d_a0, NestedInd::custom_list<NestedInd::rose<t_A>>(d_a1));
+      return f(d_a0, *(d_a1));
     }
 
     template <typename T1, MapsTo<T1, t_A, custom_list<rose<t_A>>> F0>
     T1 rose_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose<t_A>::Node>(_sv.v());
-      return f(d_a0, NestedInd::custom_list<NestedInd::rose<t_A>>(d_a1));
+      return f(d_a0, *(d_a1));
     }
   };
 
@@ -451,11 +379,11 @@ struct NestedInd {
     };
 
     struct Add {
-      List<std::unique_ptr<expr>> d_a0;
+      std::unique_ptr<List<expr>> d_a0;
     };
 
     struct Mul {
-      List<std::unique_ptr<expr>> d_a0;
+      std::unique_ptr<List<expr>> d_a0;
     };
 
     using variant_t = std::variant<Lit, Add, Mul>;
@@ -493,24 +421,17 @@ struct NestedInd {
       auto &&_sv = *(this);
       if (std::holds_alternative<Lit>(_sv.v())) {
         const auto &[d_a0] = std::get<Lit>(_sv.v());
-        return expr(Lit{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return expr(Lit{d_a0});
       } else if (std::holds_alternative<Add>(_sv.v())) {
         const auto &[d_a0] = std::get<Add>(_sv.v());
-        return expr(Add{d_a0.clone()});
+        return expr(
+            Add{d_a0 ? std::make_unique<List<NestedInd::expr>>(d_a0->clone())
+                     : nullptr});
       } else {
         const auto &[d_a0] = std::get<Mul>(_sv.v());
-        return expr(Mul{d_a0.clone()});
+        return expr(
+            Mul{d_a0 ? std::make_unique<List<NestedInd::expr>>(d_a0->clone())
+                     : nullptr});
       }
     }
 
@@ -519,12 +440,12 @@ struct NestedInd {
       return expr(Lit{std::move(a0)});
     }
 
-    __attribute__((pure)) static expr add(List<expr> a0) {
-      return expr(Add{List<std::unique_ptr<NestedInd::expr>>(a0)});
+    __attribute__((pure)) static expr add(const List<expr> &a0) {
+      return expr(Add{std::make_unique<List<expr>>(a0)});
     }
 
-    __attribute__((pure)) static expr mul(List<expr> a0) {
-      return expr(Mul{List<std::unique_ptr<NestedInd::expr>>(a0)});
+    __attribute__((pure)) static expr mul(const List<expr> &a0) {
+      return expr(Mul{std::make_unique<List<expr>>(a0)});
     }
 
     // MANIPULATORS
@@ -555,6 +476,7 @@ struct NestedInd {
         return expr::lit(f(d_a0));
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
+        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         return expr::add([&]() {
           std::function<List<expr>(List<expr>)> aux;
           aux = [&](List<expr> l) -> List<expr> {
@@ -566,10 +488,11 @@ struct NestedInd {
               return List<expr>::cons(d_a0.lit_map(f), aux(*(d_a1)));
             }
           };
-          return aux(List<NestedInd::expr>(d_a0));
+          return aux(d_a0_value);
         }());
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
+        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         return expr::mul([&]() {
           std::function<List<expr>(List<expr>)> aux;
           aux = [&](List<expr> l) -> List<expr> {
@@ -581,7 +504,7 @@ struct NestedInd {
               return List<expr>::cons(d_a0.lit_map(f), aux(*(d_a1)));
             }
           };
-          return aux(List<NestedInd::expr>(d_a0));
+          return aux(d_a0_value);
         }());
       }
     }
@@ -593,6 +516,7 @@ struct NestedInd {
         return List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
+        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         std::function<List<unsigned int>(List<expr>)> aux;
         aux = [&](List<expr> l) -> List<unsigned int> {
           if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
@@ -603,9 +527,10 @@ struct NestedInd {
             return d_a00.literals().app(aux(*(d_a10)));
           }
         };
-        return aux(List<NestedInd::expr>(d_a0));
+        return aux(d_a0_value);
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
+        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         std::function<List<unsigned int>(List<expr>)> aux;
         aux = [&](List<expr> l) -> List<unsigned int> {
           if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
@@ -616,7 +541,7 @@ struct NestedInd {
             return d_a00.literals().app(aux(*(d_a10)));
           }
         };
-        return aux(List<NestedInd::expr>(d_a0));
+        return aux(d_a0_value);
       }
     }
 
@@ -626,6 +551,7 @@ struct NestedInd {
         return 0u;
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
+        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         return ([&]() {
           std::function<unsigned int(List<expr>)> aux;
           aux = [&](List<expr> l) -> unsigned int {
@@ -637,10 +563,11 @@ struct NestedInd {
               return std::max(d_a0.expr_depth(), aux(*(d_a1)));
             }
           };
-          return aux(List<NestedInd::expr>(d_a0));
+          return aux(d_a0_value);
         }() + 1);
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
+        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         return ([&]() {
           std::function<unsigned int(List<expr>)> aux;
           aux = [&](List<expr> l) -> unsigned int {
@@ -652,7 +579,7 @@ struct NestedInd {
               return std::max(d_a0.expr_depth(), aux(*(d_a1)));
             }
           };
-          return aux(List<NestedInd::expr>(d_a0));
+          return aux(d_a0_value);
         }() + 1);
       }
     }
@@ -663,6 +590,7 @@ struct NestedInd {
         return 1u;
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
+        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         return ([&]() {
           std::function<unsigned int(List<expr>)> aux;
           aux = [&](List<expr> l) -> unsigned int {
@@ -674,10 +602,11 @@ struct NestedInd {
               return (d_a0.expr_size() + aux(*(d_a1)));
             }
           };
-          return aux(List<NestedInd::expr>(d_a0));
+          return aux(d_a0_value);
         }() + 1);
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
+        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         return ([&]() {
           std::function<unsigned int(List<expr>)> aux;
           aux = [&](List<expr> l) -> unsigned int {
@@ -689,7 +618,7 @@ struct NestedInd {
               return (d_a0.expr_size() + aux(*(d_a1)));
             }
           };
-          return aux(List<NestedInd::expr>(d_a0));
+          return aux(d_a0_value);
         }() + 1);
       }
     }
@@ -701,6 +630,7 @@ struct NestedInd {
         return d_a0;
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
+        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         std::function<unsigned int(List<expr>)> sum_all;
         sum_all = [&](List<expr> l) -> unsigned int {
           if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
@@ -711,9 +641,10 @@ struct NestedInd {
             return (d_a00.eval() + sum_all(*(d_a10)));
           }
         };
-        return sum_all(List<NestedInd::expr>(d_a0));
+        return sum_all(d_a0_value);
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
+        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         std::function<unsigned int(List<expr>)> prod_all;
         prod_all = [&](List<expr> l) -> unsigned int {
           if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
@@ -724,13 +655,12 @@ struct NestedInd {
             return (d_a00.eval() * prod_all(*(d_a10)));
           }
         };
-        return prod_all(List<NestedInd::expr>(d_a0));
+        return prod_all(d_a0_value);
       }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, List<std::unique_ptr<expr>>> F1,
-              MapsTo<T1, List<std::unique_ptr<expr>>> F2>
+              MapsTo<T1, List<expr>> F1, MapsTo<T1, List<expr>> F2>
     T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -738,16 +668,15 @@ struct NestedInd {
         return f(d_a0);
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
-        return f0(List<NestedInd::expr>(d_a0));
+        return f0(*(d_a0));
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
-        return f1(List<NestedInd::expr>(d_a0));
+        return f1(*(d_a0));
       }
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, List<std::unique_ptr<expr>>> F1,
-              MapsTo<T1, List<std::unique_ptr<expr>>> F2>
+              MapsTo<T1, List<expr>> F1, MapsTo<T1, List<expr>> F2>
     T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -755,10 +684,10 @@ struct NestedInd {
         return f(d_a0);
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
-        return f0(List<NestedInd::expr>(d_a0));
+        return f0(*(d_a0));
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
-        return f1(List<NestedInd::expr>(d_a0));
+        return f1(*(d_a0));
       }
     }
   };

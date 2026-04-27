@@ -71,35 +71,12 @@ template <Elem E> struct MutualTree {
       auto &&_sv = *(this);
       if (std::holds_alternative<Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<Leaf>(_sv.v());
-        return tree(Leaf{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return tree(Leaf{d_a0});
       } else {
         const auto &[d_a0, d_a1] = std::get<Node>(_sv.v());
-        return tree(
-            Node{[](auto &&__v) -> unsigned int {
-                   if constexpr (
-                       requires { __v ? 0 : 0; } && requires { *__v; } &&
-                       requires { __v->clone(); } && requires { __v.get(); }) {
-                     using _E = std::remove_cvref_t<decltype(*__v)>;
-                     return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                   } else if constexpr (requires { __v.clone(); }) {
-                     return __v.clone();
-                   } else {
-                     return __v;
-                   }
-                 }(d_a0),
-                 d_a1 ? std::make_unique<MutualTree::forest>(d_a1->clone())
-                      : nullptr});
+        return tree(Node{
+            d_a0, d_a1 ? std::make_unique<MutualTree::forest>(d_a1->clone())
+                       : nullptr});
       }
     }
 

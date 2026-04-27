@@ -300,8 +300,7 @@ LoopifyTrees::sum_rose_list_fuel(const unsigned int &fuel,
   };
 
   struct _Call1 {
-    decltype(List<LoopifyTrees::rose>(
-        std::declval<List<std::unique_ptr<LoopifyTrees::rose>> &>())) _s0;
+    List<LoopifyTrees::rose> _s0;
     unsigned int _s1;
     unsigned int _s2;
   };
@@ -335,8 +334,7 @@ LoopifyTrees::sum_rose_list_fuel(const unsigned int &fuel,
               std::get<typename List<LoopifyTrees::rose>::Cons>(cs.v());
           const auto &[d_a00, d_a10] =
               std::get<typename LoopifyTrees::rose::RNode>(d_a0.v());
-          _stack.emplace_back(
-              _Call1{List<LoopifyTrees::rose>(d_a10), f, d_a00});
+          _stack.emplace_back(_Call1{*(d_a10), f, d_a00});
           _stack.emplace_back(_Enter{*(d_a1), f});
         }
       }
@@ -362,8 +360,7 @@ LoopifyTrees::flatten_rose_list_fuel(const unsigned int &fuel,
   };
 
   struct _Call1 {
-    decltype(List<LoopifyTrees::rose>(
-        std::declval<List<std::unique_ptr<LoopifyTrees::rose>> &>())) _s0;
+    List<LoopifyTrees::rose> _s0;
     unsigned int _s1;
     unsigned int _s2;
   };
@@ -397,8 +394,7 @@ LoopifyTrees::flatten_rose_list_fuel(const unsigned int &fuel,
               std::get<typename List<LoopifyTrees::rose>::Cons>(cs.v());
           const auto &[d_a00, d_a10] =
               std::get<typename LoopifyTrees::rose::RNode>(d_a0.v());
-          _stack.emplace_back(
-              _Call1{List<LoopifyTrees::rose>(d_a10), f, d_a00});
+          _stack.emplace_back(_Call1{*(d_a10), f, d_a00});
           _stack.emplace_back(_Enter{*(d_a1), f});
         }
       }
@@ -430,8 +426,7 @@ LoopifyTrees::depth_rose_list_fuel(const unsigned int &fuel,
           std::get<typename List<LoopifyTrees::rose>::Cons>(cs.v());
       const auto &[d_a00, d_a10] =
           std::get<typename LoopifyTrees::rose::RNode>(d_a0.v());
-      unsigned int d =
-          (depth_rose_list_fuel(f, List<LoopifyTrees::rose>(d_a10)) + 1);
+      unsigned int d = (depth_rose_list_fuel(f, *(d_a10)) + 1);
       unsigned int rest_max = depth_rose_list_fuel(f, *(d_a1));
       if (d <= rest_max) {
         return rest_max;

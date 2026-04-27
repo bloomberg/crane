@@ -57,18 +57,7 @@ struct ReuseMoveShadow {
       if (std::holds_alternative<Node>(_sv.v())) {
         const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
         return tree(
-            Node{[](auto &&__v) -> unsigned int {
-                   if constexpr (
-                       requires { __v ? 0 : 0; } && requires { *__v; } &&
-                       requires { __v->clone(); } && requires { __v.get(); }) {
-                     using _E = std::remove_cvref_t<decltype(*__v)>;
-                     return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                   } else if constexpr (requires { __v.clone(); }) {
-                     return __v.clone();
-                   } else {
-                     return __v;
-                   }
-                 }(d_a0),
+            Node{d_a0,
                  d_a1 ? std::make_unique<ReuseMoveShadow::tree>(d_a1->clone())
                       : nullptr,
                  d_a2 ? std::make_unique<ReuseMoveShadow::tree>(d_a2->clone())

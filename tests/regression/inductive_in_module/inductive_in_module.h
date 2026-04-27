@@ -103,18 +103,7 @@ struct InductiveInModule {
             return option<t_A>(None{});
           } else {
             const auto &[d_a0] = std::get<Some>(_sv.v());
-            t_A __c0;
-            if constexpr (
-                requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-                requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*d_a0)>;
-              __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-            } else if constexpr (requires { d_a0.clone(); }) {
-              __c0 = d_a0.clone();
-            } else {
-              __c0 = d_a0;
-            }
-            return option<t_A>(Some{std::move(__c0)});
+            return option<t_A>(Some{d_a0});
           }
         }
 
@@ -125,20 +114,7 @@ struct InductiveInModule {
           } else {
             const auto &[d_a0] =
                 std::get<typename option<_U>::Some>(_other.v());
-            d_v_ = Some{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-              if constexpr (
-                  requires { *__v; } &&
-                  !requires { std::declval<_DstT>().get(); })
-                return _DstT(*__v);
-              else if constexpr (
-                  !requires { *__v; } &&
-                  requires { std::declval<_DstT>().get(); }) {
-                using _E = std::remove_pointer_t<
-                    decltype(std::declval<_DstT>().get())>;
-                return std::make_unique<_E>(std::move(__v));
-              } else
-                return _DstT(__v);
-            }(d_a0)};
+            d_v_ = Some{t_A(d_a0)};
           }
         }
 

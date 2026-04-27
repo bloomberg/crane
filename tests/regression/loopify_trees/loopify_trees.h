@@ -57,20 +57,8 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return List<t_A>(
-          Cons{std::move(__c0),
-               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+      return List<t_A>(Cons{
+          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -80,22 +68,8 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -194,21 +168,10 @@ struct LoopifyTrees {
         return tree<t_A>(Leaf{});
       } else {
         const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
-        t_A __c1;
-        if constexpr (
-            requires { d_a1 ? 0 : 0; } && requires { *d_a1; } &&
-            requires { d_a1->clone(); } && requires { d_a1.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_a1)>;
-          __c1 = d_a1 ? std::make_unique<_E>(d_a1->clone()) : nullptr;
-        } else if constexpr (requires { d_a1.clone(); }) {
-          __c1 = d_a1.clone();
-        } else {
-          __c1 = d_a1;
-        }
         return tree<t_A>(
             Node{d_a0 ? std::make_unique<LoopifyTrees::tree<t_A>>(d_a0->clone())
                       : nullptr,
-                 std::move(__c1),
+                 d_a1,
                  d_a2 ? std::make_unique<LoopifyTrees::tree<t_A>>(d_a2->clone())
                       : nullptr});
       }
@@ -221,22 +184,9 @@ struct LoopifyTrees {
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename tree<_U>::Node>(_other.v());
-        d_v_ = Node{d_a0 ? std::make_unique<tree<t_A>>(*d_a0) : nullptr,
-                    [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-                      if constexpr (
-                          requires { *__v; } &&
-                          !requires { std::declval<_DstT>().get(); })
-                        return _DstT(*__v);
-                      else if constexpr (
-                          !requires { *__v; } &&
-                          requires { std::declval<_DstT>().get(); }) {
-                        using _E = std::remove_pointer_t<
-                            decltype(std::declval<_DstT>().get())>;
-                        return std::make_unique<_E>(std::move(__v));
-                      } else
-                        return _DstT(__v);
-                    }(d_a1),
-                    d_a2 ? std::make_unique<tree<t_A>>(*d_a2) : nullptr};
+        d_v_ =
+            Node{d_a0 ? std::make_unique<tree<t_A>>(*d_a0) : nullptr, t_A(d_a1),
+                 d_a2 ? std::make_unique<tree<t_A>>(*d_a2) : nullptr};
       }
     }
 
@@ -848,18 +798,7 @@ struct LoopifyTrees {
                        : nullptr,
                   d_a2 ? std::make_unique<LoopifyTrees::ternary>(d_a2->clone())
                        : nullptr,
-                  [](auto &&__v) -> unsigned int {
-                    if constexpr (
-                        requires { __v ? 0 : 0; } && requires { *__v; } &&
-                        requires { __v->clone(); } && requires { __v.get(); }) {
-                      using _E = std::remove_cvref_t<decltype(*__v)>;
-                      return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                    } else if constexpr (requires { __v.clone(); }) {
-                      return __v.clone();
-                    } else {
-                      return __v;
-                    }
-                  }(d_a3)});
+                  d_a3});
       }
     }
 
@@ -1145,7 +1084,7 @@ struct LoopifyTrees {
     // TYPES
     struct RNode {
       unsigned int d_a0;
-      List<std::unique_ptr<rose>> d_a1;
+      std::unique_ptr<List<rose>> d_a1;
     };
 
     using variant_t = std::variant<RNode>;
@@ -1178,26 +1117,15 @@ struct LoopifyTrees {
     __attribute__((pure)) rose clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<RNode>(_sv.v());
-      return rose(
-          RNode{[](auto &&__v) -> unsigned int {
-                  if constexpr (
-                      requires { __v ? 0 : 0; } && requires { *__v; } &&
-                      requires { __v->clone(); } && requires { __v.get(); }) {
-                    using _E = std::remove_cvref_t<decltype(*__v)>;
-                    return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                  } else if constexpr (requires { __v.clone(); }) {
-                    return __v.clone();
-                  } else {
-                    return __v;
-                  }
-                }(d_a0),
-                d_a1.clone()});
+      return rose(RNode{
+          d_a0, d_a1 ? std::make_unique<List<LoopifyTrees::rose>>(d_a1->clone())
+                     : nullptr});
     }
 
     // CREATORS
-    __attribute__((pure)) static rose rnode(unsigned int a0, List<rose> a1) {
-      return rose(
-          RNode{std::move(a0), List<std::unique_ptr<LoopifyTrees::rose>>(a1)});
+    __attribute__((pure)) static rose rnode(unsigned int a0,
+                                            const List<rose> &a1) {
+      return rose(RNode{std::move(a0), std::make_unique<List<rose>>(a1)});
     }
 
     // MANIPULATORS
@@ -1224,15 +1152,15 @@ struct LoopifyTrees {
     __attribute__((pure)) unsigned int rose_depth() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
-      return (depth_rose_list_fuel(1000u, List<LoopifyTrees::rose>(d_a1)) + 1);
+      return (depth_rose_list_fuel(1000u, *(d_a1)) + 1);
     }
 
     /// rose_flatten t flattens a rose tree to a list (pre-order).
     __attribute__((pure)) List<unsigned int> rose_flatten() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
-      return List<unsigned int>::cons(
-          d_a0, flatten_rose_list_fuel(1000u, List<LoopifyTrees::rose>(d_a1)));
+      return List<unsigned int>::cons(d_a0,
+                                      flatten_rose_list_fuel(1000u, *(d_a1)));
     }
 
     /// rose_map f t applies f to all values in a rose tree.
@@ -1240,32 +1168,28 @@ struct LoopifyTrees {
     __attribute__((pure)) rose rose_map(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
-      return rose::rnode(
-          f(d_a0),
-          map_rose_list_fuel(1000u, f, List<LoopifyTrees::rose>(d_a1)));
+      return rose::rnode(f(d_a0), map_rose_list_fuel(1000u, f, *(d_a1)));
     }
 
     /// rose_sum t sums all values in a rose tree.
     __attribute__((pure)) unsigned int rose_sum() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
-      return (d_a0 + sum_rose_list_fuel(1000u, List<LoopifyTrees::rose>(d_a1)));
+      return (d_a0 + sum_rose_list_fuel(1000u, *(d_a1)));
     }
 
-    template <typename T1,
-              MapsTo<T1, unsigned int, List<std::unique_ptr<rose>>> F0>
+    template <typename T1, MapsTo<T1, unsigned int, List<rose>> F0>
     T1 rose_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
-      return f(d_a0, List<LoopifyTrees::rose>(d_a1));
+      return f(d_a0, *(d_a1));
     }
 
-    template <typename T1,
-              MapsTo<T1, unsigned int, List<std::unique_ptr<rose>>> F0>
+    template <typename T1, MapsTo<T1, unsigned int, List<rose>> F0>
     T1 rose_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
-      return f(d_a0, List<LoopifyTrees::rose>(d_a1));
+      return f(d_a0, *(d_a1));
     }
   };
 
@@ -1288,8 +1212,7 @@ struct LoopifyTrees {
         const auto &[d_a0, d_a1] = std::get<typename List<rose>::Cons>(cs.v());
         const auto &[d_a00, d_a10] = std::get<typename rose::RNode>(d_a0.v());
         return List<rose>::cons(
-            rose::rnode(f(d_a00), map_rose_list_fuel(
-                                      g, f, List<LoopifyTrees::rose>(d_a10))),
+            rose::rnode(f(d_a00), map_rose_list_fuel(g, f, *(d_a10))),
             map_rose_list_fuel(g, f, *(d_a1)));
       }
     }
@@ -1403,18 +1326,7 @@ struct LoopifyTrees {
       auto &&_sv = *(this);
       if (std::holds_alternative<QLeaf>(_sv.v())) {
         const auto &[d_a0] = std::get<QLeaf>(_sv.v());
-        return quadtree(QLeaf{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return quadtree(QLeaf{d_a0});
       } else {
         const auto &[d_a0, d_a1, d_a2, d_a3] = std::get<Quad>(_sv.v());
         return quadtree(
@@ -1851,18 +1763,7 @@ struct LoopifyTrees {
       auto &&_sv = *(this);
       if (std::holds_alternative<SLeaf>(_sv.v())) {
         const auto &[d_a0] = std::get<SLeaf>(_sv.v());
-        return simple_tree(SLeaf{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return simple_tree(SLeaf{d_a0});
       } else {
         const auto &[d_a0, d_a1] = std::get<SNode>(_sv.v());
         return simple_tree(SNode{

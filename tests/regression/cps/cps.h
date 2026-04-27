@@ -56,20 +56,8 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return List<t_A>(
-          Cons{std::move(__c0),
-               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+      return List<t_A>(Cons{
+          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -79,22 +67,8 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -217,18 +191,7 @@ struct CPS {
       auto &&_sv = *(this);
       if (std::holds_alternative<Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<Leaf>(_sv.v());
-        return tree(Leaf{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return tree(Leaf{d_a0});
       } else {
         const auto &[d_a0, d_a1] = std::get<Node>(_sv.v());
         return tree(
@@ -321,7 +284,7 @@ struct CPS {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      List<unsigned int> d_a1_value = *(d_a1);
+      List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
       return sum_cps(d_a1_value, [=](const unsigned int &r) mutable {
         return k((d_a0 + r));
       });
@@ -341,7 +304,7 @@ struct CPS {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      List<unsigned int> d_a1_value = *(d_a1);
+      List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
       return partition_cps(
           p, d_a1_value,
           [=](List<unsigned int> yes, List<unsigned int> no) mutable {

@@ -274,7 +274,7 @@ LoopifyCombinatorics::subsequences(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        List<unsigned int> d_a1_value = *(d_a1);
+        List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
         _stack.emplace_back(_Call1{d_a0});
         _stack.emplace_back(_Enter{d_a1_value});
       }
@@ -425,7 +425,7 @@ LoopifyCombinatorics::power_set(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        List<unsigned int> d_a1_value = *(d_a1);
+        List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
         _stack.emplace_back(_Call1{d_a0});
         _stack.emplace_back(_Enter{d_a1_value});
       }
@@ -509,7 +509,7 @@ LoopifyCombinatorics::insert_everywhere(unsigned int x, List<unsigned int> l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        List<unsigned int> d_a1_value = *(d_a1);
+        List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
         _stack.emplace_back(_Call1{d_a0, l, x});
         _stack.emplace_back(_Enter{d_a1_value});
       }

@@ -31,31 +31,7 @@ struct DocComments {
 
     // ACCESSORS
     __attribute__((pure)) pair<t_A, t_B> clone() const {
-      return pair<t_A, t_B>{
-          [](auto &&__v) -> t_A {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).fst),
-          [](auto &&__v) -> t_B {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).snd)};
+      return pair<t_A, t_B>{(*(this)).fst, (*(this)).snd};
     }
   }; /// mylist is a polymorphic list type.
 
@@ -106,19 +82,8 @@ struct DocComments {
         return mylist<t_A>(Mynil{});
       } else {
         const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
-        t_A __c0;
-        if constexpr (
-            requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-            requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_a0)>;
-          __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-        } else if constexpr (requires { d_a0.clone(); }) {
-          __c0 = d_a0.clone();
-        } else {
-          __c0 = d_a0;
-        }
         return mylist<t_A>(Mycons{
-            std::move(__c0),
+            d_a0,
             d_a1 ? std::make_unique<DocComments::mylist<t_A>>(d_a1->clone())
                  : nullptr});
       }
@@ -131,20 +96,7 @@ struct DocComments {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        d_v_ = Mycons{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-                        if constexpr (
-                            requires { *__v; } &&
-                            !requires { std::declval<_DstT>().get(); })
-                          return _DstT(*__v);
-                        else if constexpr (
-                            !requires { *__v; } &&
-                            requires { std::declval<_DstT>().get(); }) {
-                          using _E = std::remove_pointer_t<
-                              decltype(std::declval<_DstT>().get())>;
-                          return std::make_unique<_E>(std::move(__v));
-                        } else
-                          return _DstT(__v);
-                      }(d_a0),
+        d_v_ = Mycons{t_A(d_a0),
                       d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
       }
     }

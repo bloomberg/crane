@@ -63,29 +63,7 @@ struct LetIn {
     __attribute__((pure)) pair<t_A, t_B> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Pair0>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      t_B __c1;
-      if constexpr (
-          requires { d_a1 ? 0 : 0; } && requires { *d_a1; } &&
-          requires { d_a1->clone(); } && requires { d_a1.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a1)>;
-        __c1 = d_a1 ? std::make_unique<_E>(d_a1->clone()) : nullptr;
-      } else if constexpr (requires { d_a1.clone(); }) {
-        __c1 = d_a1.clone();
-      } else {
-        __c1 = d_a1;
-      }
-      return pair<t_A, t_B>(Pair0{std::move(__c0), std::move(__c1)});
+      return pair<t_A, t_B>(Pair0{d_a0, d_a1});
     }
 
     // CREATORS
@@ -93,35 +71,7 @@ struct LetIn {
     explicit pair(const pair<_U0, _U1> &_other) {
       const auto &[d_a0, d_a1] =
           std::get<typename pair<_U0, _U1>::Pair0>(_other.v());
-      d_v_ = Pair0{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          [&]<typename _DstT = t_B>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a1)};
+      d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
     }
 
     __attribute__((pure)) static pair<t_A, t_B> pair0(t_A a0, t_B a1) {

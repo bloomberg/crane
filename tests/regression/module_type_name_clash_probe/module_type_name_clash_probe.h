@@ -50,18 +50,7 @@ struct ModuleTypeNameClashProbe {
       __attribute__((pure)) t clone() const {
         auto &&_sv = *(this);
         const auto &[d_a0] = std::get<T0>(_sv.v());
-        return t(T0{[](auto &&__v) -> Bool0 {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return t(T0{d_a0});
       }
 
       // CREATORS
@@ -139,18 +128,7 @@ struct ModuleTypeNameClashProbe {
     __attribute__((pure)) M clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<MkM>(_sv.v());
-      return M(MkM{[](auto &&__v) -> Bool0 {
-        if constexpr (
-            requires { __v ? 0 : 0; } && requires { *__v; } &&
-            requires { __v->clone(); } && requires { __v.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*__v)>;
-          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-        } else if constexpr (requires { __v.clone(); }) {
-          return __v.clone();
-        } else {
-          return __v;
-        }
-      }(d_a0)});
+      return M(MkM{d_a0});
     }
 
     // CREATORS

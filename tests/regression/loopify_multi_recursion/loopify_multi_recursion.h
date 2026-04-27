@@ -72,18 +72,7 @@ struct LoopifyMultiRecursion {
       auto &&_sv = *(this);
       if (std::holds_alternative<QLeaf>(_sv.v())) {
         const auto &[d_a0] = std::get<QLeaf>(_sv.v());
-        return quadtree(QLeaf{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return quadtree(QLeaf{d_a0});
       } else {
         const auto &[d_a0, d_a1, d_a2, d_a3] = std::get<QQuad>(_sv.v());
         return quadtree(

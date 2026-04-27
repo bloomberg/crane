@@ -209,18 +209,7 @@ struct LargeEnum {
       auto &&_sv = *(this);
       if (std::holds_alternative<TNum>(_sv.v())) {
         const auto &[d_a0] = std::get<TNum>(_sv.v());
-        return tok(TNum{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return tok(TNum{d_a0});
       } else if (std::holds_alternative<TPlus>(_sv.v())) {
         return tok(TPlus{});
       } else if (std::holds_alternative<TMinus>(_sv.v())) {
@@ -241,18 +230,7 @@ struct LargeEnum {
         return tok(TSemicolon{});
       } else if (std::holds_alternative<TIdent>(_sv.v())) {
         const auto &[d_a0] = std::get<TIdent>(_sv.v());
-        return tok(TIdent{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return tok(TIdent{d_a0});
       } else {
         return tok(TEOF{});
       }

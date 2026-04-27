@@ -68,18 +68,7 @@ struct IndParam {
           return result(Ok{d_a0.clone()});
         } else {
           const auto &[d_a0] = std::get<Err>(_sv.v());
-          return result(Err{[](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }(d_a0)});
+          return result(Err{d_a0});
         }
       }
 
@@ -221,45 +210,10 @@ struct IndParam {
           return t(Empty{});
         } else if (std::holds_alternative<Single>(_sv.v())) {
           const auto &[d_a0] = std::get<Single>(_sv.v());
-          return t(Single{[](auto &&__v) -> elem {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }(d_a0)});
+          return t(Single{d_a0});
         } else {
           const auto &[d_a0, d_a1] = std::get<Pair>(_sv.v());
-          return t(Pair{
-              [](auto &&__v) -> elem {
-                if constexpr (
-                    requires { __v ? 0 : 0; } && requires { *__v; } &&
-                    requires { __v->clone(); } && requires { __v.get(); }) {
-                  using _E = std::remove_cvref_t<decltype(*__v)>;
-                  return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                } else if constexpr (requires { __v.clone(); }) {
-                  return __v.clone();
-                } else {
-                  return __v;
-                }
-              }(d_a0),
-              [](auto &&__v) -> elem {
-                if constexpr (
-                    requires { __v ? 0 : 0; } && requires { *__v; } &&
-                    requires { __v->clone(); } && requires { __v.get(); }) {
-                  using _E = std::remove_cvref_t<decltype(*__v)>;
-                  return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                } else if constexpr (requires { __v.clone(); }) {
-                  return __v.clone();
-                } else {
-                  return __v;
-                }
-              }(d_a1)});
+          return t(Pair{d_a0, d_a1});
         }
       }
 

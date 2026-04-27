@@ -67,32 +67,10 @@ struct ReuseTagMismatch {
       auto &&_sv = *(this);
       if (std::holds_alternative<GoUp>(_sv.v())) {
         const auto &[d_a0] = std::get<GoUp>(_sv.v());
-        return direction(GoUp{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return direction(GoUp{d_a0});
       } else {
         const auto &[d_a0] = std::get<GoDown>(_sv.v());
-        return direction(GoDown{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return direction(GoDown{d_a0});
       }
     }
 

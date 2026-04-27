@@ -25,18 +25,7 @@ struct Coercions {
 
     // ACCESSORS
     __attribute__((pure)) Wrapper clone() const {
-      return Wrapper{[](auto &&__v) -> unsigned int {
-        if constexpr (
-            requires { __v ? 0 : 0; } && requires { *__v; } &&
-            requires { __v->clone(); } && requires { __v.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*__v)>;
-          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-        } else if constexpr (requires { __v.clone(); }) {
-          return __v.clone();
-        } else {
-          return __v;
-        }
-      }((*this).unwrap)};
+      return Wrapper{(*(this)).unwrap};
     }
   };
 
@@ -53,18 +42,7 @@ struct Coercions {
 
     // ACCESSORS
     __attribute__((pure)) BoolBox clone() const {
-      return BoolBox{[](auto &&__v) -> bool {
-        if constexpr (
-            requires { __v ? 0 : 0; } && requires { *__v; } &&
-            requires { __v->clone(); } && requires { __v.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*__v)>;
-          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-        } else if constexpr (requires { __v.clone(); }) {
-          return __v.clone();
-        } else {
-          return __v;
-        }
-      }((*this).unbox)};
+      return BoolBox{(*(this)).unbox};
     }
   };
 

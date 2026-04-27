@@ -22,9 +22,7 @@ __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
   };
 
   struct _Call2 {
-    decltype(List<LoopifyStructures::nested>(
-        std::declval<List<std::unique_ptr<LoopifyStructures::nested>> &>()))
-        _s0;
+    List<LoopifyStructures::nested> _s0;
     unsigned int _s1;
   };
 
@@ -63,8 +61,7 @@ __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
           } else {
             const auto &[d_a00] =
                 std::get<typename LoopifyStructures::nested::NList>(d_a0.v());
-            _stack.emplace_back(
-                _Call2{List<LoopifyStructures::nested>(d_a00), f});
+            _stack.emplace_back(_Call2{*(d_a00), f});
             _stack.emplace_back(_Enter{*(d_a1), f});
           }
         }
@@ -108,9 +105,7 @@ __attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
       } else {
         const auto &[d_a00] =
             std::get<typename LoopifyStructures::nested::NList>(d_a0.v());
-        unsigned int d =
-            (depth_nested_list_fuel(f, List<LoopifyStructures::nested>(d_a00)) +
-             1);
+        unsigned int d = (depth_nested_list_fuel(f, *(d_a00)) + 1);
         unsigned int rest_max = depth_nested_list_fuel(f, *(d_a1));
         if (d <= rest_max) {
           return rest_max;
@@ -136,9 +131,7 @@ LoopifyStructures::flatten_nested_list_fuel(
   };
 
   struct _Call2 {
-    decltype(List<LoopifyStructures::nested>(
-        std::declval<List<std::unique_ptr<LoopifyStructures::nested>> &>()))
-        _s0;
+    List<LoopifyStructures::nested> _s0;
     unsigned int _s1;
   };
 
@@ -177,8 +170,7 @@ LoopifyStructures::flatten_nested_list_fuel(
           } else {
             const auto &[d_a00] =
                 std::get<typename LoopifyStructures::nested::NList>(d_a0.v());
-            _stack.emplace_back(
-                _Call2{List<LoopifyStructures::nested>(d_a00), f});
+            _stack.emplace_back(_Call2{*(d_a00), f});
             _stack.emplace_back(_Enter{*(d_a1), f});
           }
         }

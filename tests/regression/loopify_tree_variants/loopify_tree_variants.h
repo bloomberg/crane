@@ -61,18 +61,7 @@ struct LoopifyTreeVariants {
         return ternary(TNode{
             d_a0 ? std::make_unique<LoopifyTreeVariants::ternary>(d_a0->clone())
                  : nullptr,
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_a1),
+            d_a1,
             d_a2 ? std::make_unique<LoopifyTreeVariants::ternary>(d_a2->clone())
                  : nullptr,
             d_a3 ? std::make_unique<LoopifyTreeVariants::ternary>(d_a3->clone())
@@ -433,18 +422,7 @@ struct LoopifyTreeVariants {
       auto &&_sv = *(this);
       if (std::holds_alternative<QLeaf>(_sv.v())) {
         const auto &[d_a0] = std::get<QLeaf>(_sv.v());
-        return quadtree(QLeaf{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return quadtree(QLeaf{d_a0});
       } else {
         const auto &[d_a0, d_a1, d_a2, d_a3] = std::get<Quad>(_sv.v());
         return quadtree(Quad{
@@ -806,18 +784,7 @@ struct LoopifyTreeVariants {
       auto &&_sv = *(this);
       if (std::holds_alternative<LLeaf>(_sv.v())) {
         const auto &[d_a0] = std::get<LLeaf>(_sv.v());
-        return leaf_tree(LLeaf{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return leaf_tree(LLeaf{d_a0});
       } else {
         const auto &[d_a0, d_a1] = std::get<LNode>(_sv.v());
         return leaf_tree(

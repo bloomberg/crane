@@ -749,9 +749,6 @@ let spec_header si () =
     else
       h
   in
-  (* All clone code is now generated inline in each struct's clone()
-     method and converting constructor by [gen_clone_field_expr] in
-     translation.ml.  No preamble clone helpers are needed. *)
   let clone_preamble = "" in
   let fun_concept =
     if Table.std_lib () = "BDE" then

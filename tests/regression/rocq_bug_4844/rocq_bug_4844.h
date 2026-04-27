@@ -54,32 +54,10 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<Inl>(_sv.v())) {
       const auto &[d_a0] = std::get<Inl>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return Sum<t_A, t_B>(Inl{std::move(__c0)});
+      return Sum<t_A, t_B>(Inl{d_a0});
     } else {
       const auto &[d_a0] = std::get<Inr>(_sv.v());
-      t_B __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return Sum<t_A, t_B>(Inr{std::move(__c0)});
+      return Sum<t_A, t_B>(Inr{d_a0});
     }
   }
 
@@ -88,32 +66,10 @@ public:
   explicit Sum(const Sum<_U0, _U1> &_other) {
     if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
       const auto &[d_a0] = std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
-      d_v_ = Inl{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-        if constexpr (
-            requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-          return _DstT(*__v);
-        else if constexpr (
-            !requires { *__v; } && requires { std::declval<_DstT>().get(); }) {
-          using _E =
-              std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-          return std::make_unique<_E>(std::move(__v));
-        } else
-          return _DstT(__v);
-      }(d_a0)};
+      d_v_ = Inl{t_A(d_a0)};
     } else {
       const auto &[d_a0] = std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
-      d_v_ = Inr{[&]<typename _DstT = t_B>(auto &&__v) -> _DstT {
-        if constexpr (
-            requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-          return _DstT(*__v);
-        else if constexpr (
-            !requires { *__v; } && requires { std::declval<_DstT>().get(); }) {
-          using _E =
-              std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-          return std::make_unique<_E>(std::move(__v));
-        } else
-          return _DstT(__v);
-      }(d_a0)};
+      d_v_ = Inr{t_B(d_a0)};
     }
   }
 

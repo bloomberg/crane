@@ -56,20 +56,8 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return List<t_A>(
-          Cons{std::move(__c0),
-               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+      return List<t_A>(Cons{
+          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -79,22 +67,8 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -160,34 +134,13 @@ public:
   __attribute__((pure)) Sig<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist>(_sv.v());
-    t_A __c0;
-    if constexpr (
-        requires { d_x ? 0 : 0; } && requires { *d_x; } &&
-        requires { d_x->clone(); } && requires { d_x.get(); }) {
-      using _E = std::remove_cvref_t<decltype(*d_x)>;
-      __c0 = d_x ? std::make_unique<_E>(d_x->clone()) : nullptr;
-    } else if constexpr (requires { d_x.clone(); }) {
-      __c0 = d_x.clone();
-    } else {
-      __c0 = d_x;
-    }
-    return Sig<t_A>(Exist{std::move(__c0)});
+    return Sig<t_A>(Exist{d_x});
   }
 
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
     const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    d_v_ = Exist{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-      if constexpr (
-          requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-        return _DstT(*__v);
-      else if constexpr (
-          !requires { *__v; } && requires { std::declval<_DstT>().get(); }) {
-        using _E = std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-        return std::make_unique<_E>(std::move(__v));
-      } else
-        return _DstT(__v);
-    }(d_x)};
+    d_v_ = Exist{t_A(d_x)};
   }
 
   __attribute__((pure)) static Sig<t_A> exist(t_A x) {
@@ -223,18 +176,7 @@ struct ConstructorBugs {
 
     // ACCESSORS
     __attribute__((pure)) field_a clone() const {
-      return field_a{[](auto &&__v) -> unsigned int {
-        if constexpr (
-            requires { __v ? 0 : 0; } && requires { *__v; } &&
-            requires { __v->clone(); } && requires { __v.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*__v)>;
-          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-        } else if constexpr (requires { __v.clone(); }) {
-          return __v.clone();
-        } else {
-          return __v;
-        }
-      }((*this).a_value)};
+      return field_a{(*(this)).a_value};
     }
   };
 
@@ -247,18 +189,7 @@ struct ConstructorBugs {
 
     // ACCESSORS
     __attribute__((pure)) field_b clone() const {
-      return field_b{[](auto &&__v) -> unsigned int {
-        if constexpr (
-            requires { __v ? 0 : 0; } && requires { *__v; } &&
-            requires { __v->clone(); } && requires { __v.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*__v)>;
-          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-        } else if constexpr (requires { __v.clone(); }) {
-          return __v.clone();
-        } else {
-          return __v;
-        }
-      }((*this).b_value)};
+      return field_b{(*(this)).b_value};
     }
   };
 
@@ -275,20 +206,8 @@ struct ConstructorBugs {
 
     // ACCESSORS
     __attribute__((pure)) source_state clone() const {
-      return source_state{
-          (*(this)).source_a.clone(), (*(this)).source_b.clone(),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).source_flag)};
+      return source_state{(*(this)).source_a.clone(),
+                          (*(this)).source_b.clone(), (*(this)).source_flag};
     }
   };
 
@@ -335,20 +254,9 @@ struct ConstructorBugs {
 
     // ACCESSORS
     __attribute__((pure)) source_state_list clone() const {
-      return source_state_list{
-          (*(this)).source_a_list.clone(), (*(this)).source_b_list.clone(),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).source_flag_list)};
+      return source_state_list{(*(this)).source_a_list.clone(),
+                               (*(this)).source_b_list.clone(),
+                               (*(this)).source_flag_list};
     }
   };
 
@@ -385,20 +293,7 @@ struct ConstructorBugs {
 
     // ACCESSORS
     __attribute__((pure)) state clone() const {
-      return state{
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).value),
-          (*(this)).data.clone()};
+      return state{(*(this)).value, (*(this)).data.clone()};
     }
   };
 
@@ -446,18 +341,7 @@ struct ConstructorBugs {
 
     // ACCESSORS
     __attribute__((pure)) Inner clone() const {
-      return Inner{[](auto &&__v) -> unsigned int {
-        if constexpr (
-            requires { __v ? 0 : 0; } && requires { *__v; } &&
-            requires { __v->clone(); } && requires { __v.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*__v)>;
-          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-        } else if constexpr (requires { __v.clone(); }) {
-          return __v.clone();
-        } else {
-          return __v;
-        }
-      }((*this).inner_val)};
+      return Inner{(*(this)).inner_val};
     }
   };
 
@@ -471,19 +355,7 @@ struct ConstructorBugs {
 
     // ACCESSORS
     __attribute__((pure)) Outer clone() const {
-      return Outer{
-          (*(this)).outer_inner.clone(), [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).outer_data)};
+      return Outer{(*(this)).outer_inner.clone(), (*(this)).outer_data};
     }
   };
 
@@ -547,18 +419,7 @@ struct ConstructorBugs {
         return MySum(Left{d_a0.clone()});
       } else {
         const auto &[d_a0] = std::get<Right>(_sv.v());
-        return MySum(Right{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return MySum(Right{d_a0});
       }
     }
 
@@ -662,43 +523,8 @@ struct ConstructorBugs {
 
     // ACCESSORS
     __attribute__((pure)) State clone() const {
-      return State{
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).value_inline),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).data_inline),
-          [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).flag)};
+      return State{(*(this)).value_inline, (*(this)).data_inline,
+                   (*(this)).flag};
     }
   };
 
@@ -731,19 +557,7 @@ struct ConstructorBugs {
 
     // ACCESSORS
     __attribute__((pure)) OuterInline clone() const {
-      return OuterInline{
-          (*(this)).outer_state.clone(), [](auto &&__v) -> unsigned int {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).outer_num)};
+      return OuterInline{(*(this)).outer_state.clone(), (*(this)).outer_num};
     }
   };
 

@@ -60,18 +60,7 @@ struct ListClosureEscape {
         return tree(
             Node{d_a0 ? std::make_unique<ListClosureEscape::tree>(d_a0->clone())
                       : nullptr,
-                 [](auto &&__v) -> unsigned int {
-                   if constexpr (
-                       requires { __v ? 0 : 0; } && requires { *__v; } &&
-                       requires { __v->clone(); } && requires { __v.get(); }) {
-                     using _E = std::remove_cvref_t<decltype(*__v)>;
-                     return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                   } else if constexpr (requires { __v.clone(); }) {
-                     return __v.clone();
-                   } else {
-                     return __v;
-                   }
-                 }(d_a1),
+                 d_a1,
                  d_a2 ? std::make_unique<ListClosureEscape::tree>(d_a2->clone())
                       : nullptr});
       }

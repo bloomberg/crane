@@ -57,20 +57,8 @@ public:
       return List<t_A>(Nil{});
     } else {
       const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      return List<t_A>(
-          Cons{std::move(__c0),
-               d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+      return List<t_A>(Cons{
+          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
     }
   }
 
@@ -80,22 +68,8 @@ public:
       d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ = Cons{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
@@ -161,34 +135,13 @@ public:
   __attribute__((pure)) Sig<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist>(_sv.v());
-    t_A __c0;
-    if constexpr (
-        requires { d_x ? 0 : 0; } && requires { *d_x; } &&
-        requires { d_x->clone(); } && requires { d_x.get(); }) {
-      using _E = std::remove_cvref_t<decltype(*d_x)>;
-      __c0 = d_x ? std::make_unique<_E>(d_x->clone()) : nullptr;
-    } else if constexpr (requires { d_x.clone(); }) {
-      __c0 = d_x.clone();
-    } else {
-      __c0 = d_x;
-    }
-    return Sig<t_A>(Exist{std::move(__c0)});
+    return Sig<t_A>(Exist{d_x});
   }
 
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
     const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    d_v_ = Exist{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-      if constexpr (
-          requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-        return _DstT(*__v);
-      else if constexpr (
-          !requires { *__v; } && requires { std::declval<_DstT>().get(); }) {
-        using _E = std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-        return std::make_unique<_E>(std::move(__v));
-      } else
-        return _DstT(__v);
-    }(d_x)};
+    d_v_ = Exist{t_A(d_x)};
   }
 
   __attribute__((pure)) static Sig<t_A> exist(t_A x) {
@@ -287,71 +240,14 @@ struct FunctionVernac {
       auto &&_sv = *(this);
       if (std::holds_alternative<R_div2_0>(_sv.v())) {
         const auto &[d_n] = std::get<R_div2_0>(_sv.v());
-        return R_div2(R_div2_0{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_n)});
+        return R_div2(R_div2_0{d_n});
       } else if (std::holds_alternative<R_div2_1>(_sv.v())) {
         const auto &[d_n] = std::get<R_div2_1>(_sv.v());
-        return R_div2(R_div2_1{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_n)});
+        return R_div2(R_div2_1{d_n});
       } else {
         const auto &[d_n, d_p, d_a2, d__res] = std::get<R_div2_2>(_sv.v());
         return R_div2(R_div2_2{
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_n),
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_p),
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_a2),
+            d_n, d_p, d_a2,
             d__res ? std::make_unique<FunctionVernac::R_div2>(d__res->clone())
                    : nullptr});
       }
@@ -539,32 +435,7 @@ struct FunctionVernac {
         const auto &[d_l, d_x, d_xs, d_a3, d__res] =
             std::get<R_list_sum_1>(_sv.v());
         return R_list_sum(R_list_sum_1{
-            d_l.clone(),
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_x),
-            d_xs.clone(),
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_a3),
+            d_l.clone(), d_x, d_xs.clone(), d_a3,
             d__res
                 ? std::make_unique<FunctionVernac::R_list_sum>(d__res->clone())
                 : nullptr});
@@ -657,7 +528,7 @@ struct FunctionVernac {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      List<unsigned int> d_a1_value = *(d_a1);
+      List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
       std::function<T1(T1)> f3 = [=](T1 _pa0) mutable {
         return f1(d_a0, d_a1_value, _pa0);
       };

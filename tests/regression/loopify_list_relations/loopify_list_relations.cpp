@@ -561,7 +561,7 @@ LoopifyListRelations::union_(const List<unsigned int> &l1,
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1.v());
-      List<unsigned int> d_a1_value = *(d_a1);
+      List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
       if ([&]() {
             std::function<bool(unsigned int, List<unsigned int>)> member;
             member = [&](unsigned int y, List<unsigned int> ys) -> bool {
@@ -633,7 +633,7 @@ LoopifyListRelations::intersection(const List<unsigned int> &l1,
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1.v());
-      List<unsigned int> d_a1_value = *(d_a1);
+      List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
       if ([&]() {
             std::function<bool(unsigned int, List<unsigned int>)> member;
             member = [&](unsigned int y, List<unsigned int> ys) -> bool {

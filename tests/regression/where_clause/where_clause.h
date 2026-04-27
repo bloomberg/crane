@@ -62,18 +62,7 @@ struct WhereClause {
       auto &&_sv = *(this);
       if (std::holds_alternative<Num>(_sv.v())) {
         const auto &[d_a0] = std::get<Num>(_sv.v());
-        return Expr(Num{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return Expr(Num{d_a0});
       } else if (std::holds_alternative<Plus>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<Plus>(_sv.v());
         return Expr(Plus{
@@ -429,18 +418,7 @@ struct WhereClause {
       auto &&_sv = *(this);
       if (std::holds_alternative<ANum>(_sv.v())) {
         const auto &[d_a0] = std::get<ANum>(_sv.v());
-        return AExpr(ANum{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return AExpr(ANum{d_a0});
       } else if (std::holds_alternative<APlus>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<APlus>(_sv.v());
         return AExpr(

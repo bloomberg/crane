@@ -802,36 +802,9 @@ let render_cpp_type_for_raw_template ?(raw_inductives = Refset'.empty)
           "int64_t"
           (render_cpp_type_simple ~raw_inductives ~no_custom_inductives ty)))
 
-(** Return the clone function name for deep-copying a value of the given
-    type.  When the rendered type is concrete (no [auto]), returns
-    ["clone_as_value<T>"] for type-directed conversion (e.g.
-    [unique_ptr<T>] to [T]).  Falls back to ["clone_value"] when the
-    type contains [auto]. *)
-let clone_helper_for_raw_template ty =
-  let ty_s = render_cpp_type_for_raw_template ty in
-  let ty_s =
-    if String.equal ty_s "Option" then "std::optional" else ty_s
-  in
-  let ty_s =
-    if
-      String.length ty_s >= 7
-      && String.equal (String.sub ty_s 0 7) "Option<"
-    then "std::optional<" ^ String.sub ty_s 7 (String.length ty_s - 7)
-    else ty_s
-  in
-  let ty_s = if String.equal ty_s "string" then "std::string" else ty_s in
-  let has_auto =
-    String.equal ty_s "auto"
-    || (try ignore (Str.search_forward (Str.regexp "\\bauto\\b") ty_s 0); true
-        with Not_found -> false)
-  in
-  if has_auto then "clone_value"
-  else "clone_as_value<" ^ ty_s ^ ">"
-
 (** Return [true] if the C++ type contains any unresolved type variable
     ([Tvar] or [Tauto]).  Used by {!gen_clone_field_expr} to decide whether
-    a field's clone can be inlined or must use the generic
-    [clone_as_value<T>] template. *)
+    a field needs a converting constructor call. *)
 let rec contains_tvar = function
   | Tvar _ | Tauto -> true
   | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts) ->
@@ -842,22 +815,6 @@ let rec contains_tvar = function
   | Tfun (args, ret) ->
     List.exists contains_tvar args || contains_tvar ret
   | Tvariant ts -> List.exists contains_tvar ts
-  | _ -> false
-
-(** Return [true] if the C++ type contains [Tunique_ptr] anywhere in its
-    structure.  Types containing unique_ptr are not copy-constructible
-    (e.g. [optional<unique_ptr<T>>]), so they need element-wise cloning
-    rather than a plain copy. *)
-let rec contains_unique_ptr = function
-  | Tunique_ptr _ -> true
-  | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts) ->
-    List.exists contains_unique_ptr ts
-  | Tshared_ptr t | Tref t | Tptr t
-  | Tmod (_, t) | Tnamespace (_, t) ->
-    contains_unique_ptr t
-  | Tfun (args, ret) ->
-    List.exists contains_unique_ptr args || contains_unique_ptr ret
-  | Tvariant ts -> List.exists contains_unique_ptr ts
   | _ -> false
 
 (** Return [true] if [g] is the Coq [option] inductive (rendered as
@@ -885,12 +842,11 @@ let rec render_cpp_expr_simple = function
   | _ -> None
 
 (** Generate inline C++ clone code for a constructor field, converting
-    from [src_ty] to [dst_ty].  Emits all clone logic inline — no preamble
-    helper calls ([clone_value]/[clone_as_value]) are generated.
-
-    For type-variable fields the generated code uses [if constexpr] to
-    dispatch at C++ template instantiation time.  All other cases are
-    resolved at OCaml generation time. *)
+    from [src_ty] to [dst_ty].  For non-copyable types ([unique_ptr],
+    [optional<unique_ptr>]) emits explicit inline clone code.  For
+    everything else — including type variables — emits a plain copy,
+    relying on the deep-copy copy constructor that every Crane-generated
+    inductive type provides. *)
 let gen_clone_field_expr ~src_ty ~dst_ty expr =
   let render ty = render_cpp_type_for_raw_template (qualify_inductives ty) in
   (* Strip a single [Tnamespace] wrapper when it matches the inner [Tglob].
@@ -908,41 +864,6 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
     expr_s ^ " ? std::make_unique<" ^ inner_s ^ ">(" ^ expr_s
     ^ "->clone()) : nullptr"
   in
-  (* 3-branch [if constexpr] IIFE for a bare type-variable field.
-     Uses [auto&&] parameter (not [&] capture) to avoid capture restrictions
-     on structured bindings inside lambdas.
-     Distinguishes smart pointers from Crane value types via bool-convertibility:
-       1. bool-convertible (smart ptr): null-safe make_unique + ->clone()
-       2. has .clone() (Crane value type): call .clone()
-       3. otherwise (scalar, etc.): copy *)
-  let mk_tvar_clone_iife ty_s expr_s =
-    "[](auto&& __v) -> " ^ ty_s ^ " { "
-    ^ "if constexpr (requires { __v ? 0 : 0; } && requires { *__v; } "
-    ^ "&& requires { __v->clone(); } "
-    (* .get() distinguishes unique_ptr from optional (optional has no .get()) *)
-    ^ "&& requires { __v.get(); }) { "
-    ^ "using _E = std::remove_cvref_t<decltype(*__v)>; "
-    ^ "return __v ? std::make_unique<_E>(__v->clone()) : nullptr; "
-    ^ "} else if constexpr (requires { __v.clone(); }) { "
-    ^ "return __v.clone(); "
-    ^ "} else { return __v; } }(" ^ expr_s ^ ")"
-  in
-  (* 3-branch [if constexpr] IIFE for tvar → tvar conversion (converting
-     ctor context).  Uses C++20 explicit template parameter [_DstT] so that
-     [if constexpr] branches are truly template-dependent — this prevents
-     Clang from generating hard errors for invalid [decltype] expressions in
-     discarded branches when [dst_s] is the outer struct's template param. *)
-  let mk_tvar_convert_iife dst_s expr_s =
-    "[&]<typename _DstT = " ^ dst_s ^ ">(auto&& __v) -> _DstT { "
-    ^ "if constexpr (requires { *__v; } "
-    ^ "&& !requires { std::declval<_DstT>().get(); }) "
-    ^ "return _DstT(*__v); "
-    ^ "else if constexpr (!requires { *__v; } "
-    ^ "&& requires { std::declval<_DstT>().get(); }) { "
-    ^ "using _E = std::remove_pointer_t<decltype(std::declval<_DstT>().get())>; "
-    ^ "return std::make_unique<_E>(std::move(__v)); } "
-    ^ "else return _DstT(__v); }(" ^ expr_s ^ ")"
-  in
   (* Inline clone for [optional<unique_ptr<T>>] (same-type): null-check +
      make_optional + make_unique + ->clone(). *)
   let mk_opt_uptr_clone inner_s expr_s =
@@ -950,10 +871,8 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
     ^ ">((*" ^ expr_s ^ ")->clone())) : std::nullopt"
   in
   (* Convert [optional<unique_ptr<T>>] → [optional<T>]: null-check + clone
-     the pointed-to value.  The inner type T is a Crane value type with a
-     [clone()] method (it is a recursive inductive stored via [unique_ptr]).
-     Direct copy via [**expr] fails when T's copy constructor is deleted
-     (which happens when T itself contains a [unique_ptr] field). *)
+     the pointed-to value.  Uses clone() because T may have a deleted copy
+     constructor (when T itself contains a [unique_ptr] field). *)
   let mk_opt_uptr_to_val dst_inner_s expr_s =
     expr_s ^ ".has_value() ? std::make_optional<" ^ dst_inner_s ^ ">((*"
     ^ expr_s ^ ")->clone()) : std::nullopt"
@@ -967,8 +886,6 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
     match render_cpp_expr_simple expr with
     | Some s -> CPPraw (make_body s)
     | None ->
-      (* For non-simple expressions, wrap in a lambda that passes expr as
-         auto&& __x so make_body can reference it without capture issues. *)
       let body = make_body "__x" in
       CPPfun_call
         ( CPPraw
@@ -983,20 +900,6 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
       let inner_s = render inner in
       let ty_s = render src_ty in
       with_expr_s ~lambda_ty:ty_s ~make_body:(mk_uptr_clone inner_s)
-    | Tvar (_, Some nm) ->
-      (* Type variable with known name: 3-branch IIFE *)
-      let ty_s = Id.to_string nm in
-      with_expr_s ~lambda_ty:ty_s
-        ~make_body:(mk_tvar_clone_iife ty_s)
-    | Tvar (_, None) | Tauto ->
-      (* Type variable without name (rare): auto return, same 3-branch logic *)
-      with_expr_s ~lambda_ty:"auto"
-        ~make_body:(fun _ ->
-          (* Use mk_tvar_clone_iife with auto return type and expr_s *)
-          mk_tvar_clone_iife "auto"
-            (match render_cpp_expr_simple expr with
-            | Some s -> s
-            | None -> "__x"))
     | Tglob (g, [Tunique_ptr inner], _) when is_option_global g ->
       (* optional<unique_ptr<T>>: null-safe element-wise clone *)
       let inner_s = render inner in
@@ -1007,13 +910,11 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
       when not (Table.is_inline_custom g) && not (Table.is_enum_inductive g) ->
       (* Crane-generated inductive struct (has clone()): call directly *)
       CPPfun_call (CPPmember (expr, Id.of_string "clone"), [])
-    | Tglob (_, _, _) ->
-      (* Type alias, module carrier, or enum class: may not have clone().
-         Use 3-branch IIFE that falls back to scalar copy. *)
-      let ty_s = render src_ty in
-      with_expr_s ~lambda_ty:ty_s ~make_body:(mk_tvar_clone_iife ty_s)
     | _ ->
-      (* Concrete non-Crane type (scalar, shared_ptr, std::pair, …): copy *)
+      (* Type variables, scalars, shared_ptr, type aliases, etc.: plain copy.
+         Copy constructors deep-copy for Crane types; type variables are
+         always bare types (never unique_ptr) because nested self-references
+         are wrapped at the field level, not the type-argument level. *)
       expr
   else
     (* ---- Different types: dispatch on wrapper structure ---- *)
@@ -1025,10 +926,15 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
       with_expr_s ~lambda_ty:ty_s
         ~make_body:(fun s ->
           s ^ " ? std::make_unique<" ^ dst_inner_s ^ ">(*" ^ s ^ ") : nullptr")
-    | Tunique_ptr _, _ when not (contains_tvar dst_ty) ->
-      (* unique_ptr<T> → T: dereference (copy ctor deep-copies) *)
-      CPPderef expr
-    | _, Tunique_ptr inner when not (contains_tvar src_ty) ->
+    | Tunique_ptr inner, _ ->
+      (* unique_ptr<T> → T: dereference; if inner type differs from dst,
+         apply a converting constructor after dereferencing. *)
+      let derefed = CPPderef expr in
+      if inner = dst_ty then derefed
+      else
+        let dst_s = render dst_ty in
+        CPPfun_call (CPPraw dst_s, [derefed])
+    | _, Tunique_ptr inner ->
       (* T → unique_ptr<T>: wrap in make_unique *)
       CPPfun_call (CPPmk_unique inner, [expr])
     | Tglob (g1, [src_inner_ty], _), Tglob (g2, [dst_inner], _)
@@ -1039,8 +945,7 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
            && (match dst_inner with
                | Tunique_ptr _ | Tshared_ptr _ -> false
                | _ -> true) ->
-      (* optional<unique_ptr<T>> or optional<shared_ptr<T>> → optional<T>:
-         null-check + double-dereference *)
+      (* optional<unique_ptr<T>> or optional<shared_ptr<T>> → optional<T> *)
       let dst_inner_s = render dst_inner in
       let ty_s = render dst_ty in
       with_expr_s ~lambda_ty:ty_s
@@ -1048,10 +953,7 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
     | Tglob (g1, [src_inner], _), Tglob (g2, [Tunique_ptr dst_inner], _)
       when GlobRef.CanOrd.equal g1 g2 && is_option_global g1
            && (match src_inner with Tunique_ptr _ | Tshared_ptr _ -> false | _ -> true) ->
-      (* optional<T> → optional<unique_ptr<T>>: null-check + clone + make_unique.
-         Use clone() because T may have a deleted copy constructor (when T
-         itself contains a unique_ptr field). clone() returns by value, so
-         make_unique uses T's move constructor (which is always available). *)
+      (* optional<T> → optional<unique_ptr<T>> *)
       let dst_inner_s = render dst_inner in
       let ty_s = render dst_ty in
       with_expr_s ~lambda_ty:ty_s
@@ -1061,7 +963,7 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
     | Tglob (g1, [src_inner], _), Tglob (g2, [Tshared_ptr dst_inner], _)
       when GlobRef.CanOrd.equal g1 g2 && is_option_global g1
            && (match src_inner with Tunique_ptr _ | Tshared_ptr _ -> false | _ -> true) ->
-      (* optional<T> → optional<shared_ptr<T>>: null-check + clone + make_shared *)
+      (* optional<T> → optional<shared_ptr<T>> *)
       let dst_inner_s = render dst_inner in
       let ty_s = render dst_ty in
       with_expr_s ~lambda_ty:ty_s
@@ -1074,18 +976,10 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
       (* Same Crane container, different element types → converting ctor *)
       let dst_type_s = render dst_ty in
       CPPfun_call (CPPraw dst_type_s, [expr])
-    | (Tvar _ | Tauto), _ | _, (Tvar _ | Tauto) ->
-      (* Bare type variable: 2-branch IIFE *)
-      let dst_s = render dst_ty in
-      with_expr_s ~lambda_ty:dst_s
-        ~make_body:(mk_tvar_convert_iife dst_s)
-    | _ when contains_tvar dst_ty || contains_tvar src_ty ->
-      (* Types contain tvars in sub-structure: 2-branch IIFE *)
-      let dst_s = render dst_ty in
-      with_expr_s ~lambda_ty:dst_s
-        ~make_body:(mk_tvar_convert_iife dst_s)
     | _ ->
-      (* Fully concrete, different types: converting constructor T(e) *)
+      (* Type variables or fully concrete different types: converting
+         constructor.  Type variables are always bare (never unique_ptr)
+         because nested self-references are wrapped at the field level. *)
       let dst_s = render dst_ty in
       CPPfun_call (CPPraw dst_s, [expr])
 
@@ -2401,8 +2295,15 @@ let rec convert_ml_type_to_cpp_type
         (* Keep all if we can't determine *)
       | _ -> ts
     in
+    (* Only propagate ns into type arguments when g itself is a self-ref.
+       For non-self types (e.g. list inside tree's definition), type args
+       stay bare — the field-level wrapping handles the cycle-breaking.
+       This ensures type variables are never unique_ptr at instantiation. *)
+    let ns_for_args =
+      if Refset'.mem g ns then ns else Refset'.empty
+    in
     let converted_ts =
-      List.map (convert_ml_type_to_cpp_type env ns tvars) filtered_ts
+      List.map (convert_ml_type_to_cpp_type env ns_for_args tvars) filtered_ts
     in
     let core = Tglob (g, converted_ts, []) in
     ( match g with
@@ -5175,18 +5076,37 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     | GlobRef.IndRef (kn, _) -> Some kn
     | _ -> None
   in
+  let is_self_or_mutual r =
+    Environ.QGlobRef.equal Environ.empty_env r ind_ref
+    || match r, ind_kn_opt with
+       | GlobRef.IndRef (kn2, _), Some kn ->
+         MutInd.CanOrd.equal kn2 kn
+       | _ -> false
+  in
   let field_is_self_or_mutual_ref_at_def i =
-    let is_self_or_mutual r =
-      Environ.QGlobRef.equal Environ.empty_env r ind_ref
-      || match r, ind_kn_opt with
-         | GlobRef.IndRef (kn2, _), Some kn ->
-           MutInd.CanOrd.equal kn2 kn
-         | _ -> false
-    in
     match List.nth_opt non_erased_def_site_field_tys i with
     | Some (Miniml.Tglob (r, _, _)) -> is_self_or_mutual r
     | Some (Miniml.Tmeta {contents = Some (Miniml.Tglob (r, _, _))}) ->
       is_self_or_mutual r
+    | _ -> false
+  in
+  (* Does the def-site ML type contain a self/mutual reference nested
+     inside type arguments (e.g. list(tree(A)) when defining tree)? *)
+  let rec ml_has_self_ref = function
+    | Miniml.Tglob (r, args, _) ->
+      is_self_or_mutual r || List.exists ml_has_self_ref args
+    | Miniml.Tmeta {contents = Some t} -> ml_has_self_ref t
+    | Miniml.Tarr (t1, t2) ->
+      ml_has_self_ref t1 || ml_has_self_ref t2
+    | _ -> false
+  in
+  let field_has_nested_self_ref_at_def i =
+    match List.nth_opt non_erased_def_site_field_tys i with
+    | Some (Miniml.Tglob (r, args, _)) when not (is_self_or_mutual r) ->
+      List.exists ml_has_self_ref args
+    | Some (Miniml.Tmeta {contents = Some (Miniml.Tglob (r, args, _))})
+      when not (is_self_or_mutual r) ->
+      List.exists ml_has_self_ref args
     | _ -> false
   in
   let field_bindings =
@@ -5222,26 +5142,37 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
         in
         (* A field is unique_ptr only for UNIFORM self-recursion.  Non-uniform
            recursion (e.g. tree<pair<T,T>> inside tree<T>) uses shared_ptr.
-           Check def-site: if the self-referencing field has the same number
-           of type args as the inductive's parameter count, AND each arg is a
-           simple Tvar matching the parent's corresponding param, it's uniform. *)
+           Find the self/mutual reference anywhere in the ML type (direct or
+           nested in type args) and check if its type arguments match the
+           parent's params uniformly. *)
         let is_uniform_self_ref_at_def i =
+          let rec find_self_ref_args = function
+            | Miniml.Tglob (r, args, _) when is_self_or_mutual r -> Some args
+            | Miniml.Tglob (_, args, _) ->
+              List.find_map find_self_ref_args args
+            | Miniml.Tmeta {contents = Some t} -> find_self_ref_args t
+            | _ -> None
+          in
           match List.nth_opt non_erased_def_site_field_tys i with
-          | Some (Miniml.Tglob (_, args, _))
-          | Some (Miniml.Tmeta {contents = Some (Miniml.Tglob (_, args, _))}) ->
-            let n_params = Table.get_ctor_num_param_vars cname in
-            List.length args = n_params
-            && List.for_all (fun (j, arg) ->
-              match arg with
-              | Miniml.Tvar k | Miniml.Tvar' k -> k = j + 1
-              | Miniml.Tmeta {contents = Some (Miniml.Tvar k)}
-              | Miniml.Tmeta {contents = Some (Miniml.Tvar' k)} -> k = j + 1
-              | _ -> false
-            ) (List.mapi (fun j a -> (j, a)) args)
-          | _ -> true  (* non-self: treat as uniform *)
+          | Some ty -> begin
+            match find_self_ref_args ty with
+            | Some args ->
+              let n_params = Table.get_ctor_num_param_vars cname in
+              List.length args = n_params
+              && List.for_all (fun (j, arg) ->
+                match arg with
+                | Miniml.Tvar k | Miniml.Tvar' k -> k = j + 1
+                | Miniml.Tmeta {contents = Some (Miniml.Tvar k)}
+                | Miniml.Tmeta {contents = Some (Miniml.Tvar' k)} -> k = j + 1
+                | _ -> false
+              ) (List.mapi (fun j a -> (j, a)) args)
+            | None -> true  (* no self-ref found: treat as uniform *)
+          end
+          | _ -> true
         in
         let is_unique_ptr =
-          field_is_self_or_mutual_ref_at_def i
+          ( field_is_self_or_mutual_ref_at_def i
+            || field_has_nested_self_ref_at_def i )
           && not (Table.is_coinductive ind_ref)
           && is_uniform_self_ref_at_def i
         in
@@ -5258,7 +5189,8 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             match storage_field_cpp_ty with
             | (Tunique_ptr _ | Tshared_ptr _) when
                 non_erased_def_site_field_tys <> []
-                && not (field_is_self_or_mutual_ref_at_def i) ->
+                && not (field_is_self_or_mutual_ref_at_def i)
+                && not (field_has_nested_self_ref_at_def i) ->
               bare_field_cpp_ty
             | _ -> storage_field_cpp_ty
         in
@@ -11442,6 +11374,76 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
     @param consarg_names  binder names from {!Miniml.ml_ind_packet.ip_consarg_names};
       when provided, constructor struct fields and factory parameters use
       descriptive names derived from the Rocq source instead of [d_a0] etc. *)
+
+(** Does the ML type [ml_ty] contain [ind_ref] (or a mutual sibling) anywhere
+    in its type arguments — but NOT at the top level?  Used to detect fields
+    like [list(tree(A))] inside [tree]'s definition, which need field-level
+    [unique_ptr] wrapping instead of type-argument wrapping. *)
+let ml_type_has_nested_self_ref ~ind_ref ml_ty =
+  let ind_kn_opt =
+    match ind_ref with
+    | GlobRef.IndRef (kn, _) -> Some kn
+    | _ -> None
+  in
+  let is_self_or_mutual r =
+    Environ.QGlobRef.equal Environ.empty_env r ind_ref
+    || match r, ind_kn_opt with
+       | GlobRef.IndRef (kn2, _), Some kn ->
+         MutInd.CanOrd.equal kn2 kn
+       | _ -> false
+  in
+  let rec has_self_ref = function
+    | Miniml.Tglob (r, args, _) ->
+      is_self_or_mutual r || List.exists has_self_ref args
+    | Miniml.Tmeta {contents = Some t} -> has_self_ref t
+    | Miniml.Tarr (t1, t2) ->
+      has_self_ref t1 || has_self_ref t2
+    | _ -> false
+  in
+  match ml_ty with
+  | Miniml.Tglob (r, args, _) when not (is_self_or_mutual r) ->
+    List.exists has_self_ref args
+  | Miniml.Tmeta {contents = Some (Miniml.Tglob (r, args, _))}
+    when not (is_self_or_mutual r) ->
+    List.exists has_self_ref args
+  | _ -> false
+
+(** Check whether the self/mutual reference inside [ml_ty] is uniform
+    (i.e. its type arguments are exactly the parent's type parameters
+    in order).  Non-uniform recursion needs [shared_ptr]. *)
+let ml_self_ref_is_uniform ~ind_ref ~cname ml_ty =
+  let ind_kn_opt =
+    match ind_ref with
+    | GlobRef.IndRef (kn, _) -> Some kn
+    | _ -> None
+  in
+  let is_self_or_mutual r =
+    Environ.QGlobRef.equal Environ.empty_env r ind_ref
+    || match r, ind_kn_opt with
+       | GlobRef.IndRef (kn2, _), Some kn ->
+         MutInd.CanOrd.equal kn2 kn
+       | _ -> false
+  in
+  let rec find_self_ref_args = function
+    | Miniml.Tglob (r, args, _) when is_self_or_mutual r -> Some args
+    | Miniml.Tglob (_, args, _) ->
+      List.find_map find_self_ref_args args
+    | Miniml.Tmeta {contents = Some t} -> find_self_ref_args t
+    | _ -> None
+  in
+  match find_self_ref_args ml_ty with
+  | Some args ->
+    let n_params = Table.get_ctor_num_param_vars cname in
+    List.length args = n_params
+    && List.for_all (fun (j, arg) ->
+      match arg with
+      | Miniml.Tvar k | Miniml.Tvar' k -> k = j + 1
+      | Miniml.Tmeta {contents = Some (Miniml.Tvar k)}
+      | Miniml.Tmeta {contents = Some (Miniml.Tvar' k)} -> k = j + 1
+      | _ -> false
+    ) (List.mapi (fun j a -> (j, a)) args)
+  | None -> true
+
 let gen_ind_header_v2
     ?(is_mutual = false)
     ?(consarg_names = [||])
@@ -11540,6 +11542,19 @@ let gen_ind_header_v2
                          (Refset'.add name Refset'.empty)
                          vars
                          ty
+                     in
+                     (* Wrap fields that contain a nested self-reference in
+                        their type arguments (e.g. list(tree(A)) inside tree).
+                        The cycle is broken at the field level, not the type-arg
+                        level, so type variables are always bare types. *)
+                     let cpp_ty =
+                       if (not is_coinductive)
+                          && ml_type_has_nested_self_ref ~ind_ref:name ty
+                       then
+                         if ml_self_ref_is_uniform ~ind_ref:name ~cname:c ty
+                         then Tunique_ptr cpp_ty
+                         else Tshared_ptr cpp_ty
+                       else cpp_ty
                      in
                      (* For indexed inductives (no template params), erase
                         unnamed Tvars to std::any *)
@@ -11715,6 +11730,16 @@ let gen_ind_header_v2
                   (Refset'.add name Refset'.empty)
                   vars
                   ty
+              in
+              (* Wrap fields with nested self-refs at the field level *)
+              let storage_ty =
+                if (not is_coinductive)
+                   && ml_type_has_nested_self_ref ~ind_ref:name ty
+                then
+                  if ml_self_ref_is_uniform ~ind_ref:name ~cname:c ty
+                  then Tunique_ptr storage_ty
+                  else Tshared_ptr storage_ty
+                else storage_ty
               in
               let api_ty =
                 convert_ml_type_to_cpp_type
@@ -11904,27 +11929,6 @@ let gen_ind_header_v2
           let clone_id = Id.of_string "clone" in
           let d_v_id = Id.of_string "d_v_" in
           let other_id = Id.of_string "_other" in
-          (* Generate the [if constexpr] block that deep-copies a bare
-             type-variable field [field_s] into a declared temp [tmp_s].
-             Dispatches at instantiation time:
-               1. bool-convertible + dereferenceable → smart pointer: null-safe
-                  make_unique + ->clone()
-               2. has .clone() → Crane value type: call .clone()
-               3. otherwise → scalar/std type: copy *)
-          let mk_tvar_clone_stmts field_s tmp_s =
-            "if constexpr (requires { " ^ field_s ^ " ? 0 : 0; } "
-            ^ "&& requires { *" ^ field_s ^ "; } "
-            ^ "&& requires { " ^ field_s ^ "->clone(); } "
-            (* .get() distinguishes unique_ptr (has .get()) from optional (no .get()). *)
-            ^ "&& requires { " ^ field_s ^ ".get(); }) { "
-            ^ "using _E = std::remove_cvref_t<decltype(*" ^ field_s ^ ")>; "
-            ^ tmp_s ^ " = " ^ field_s
-            ^ " ? std::make_unique<_E>(" ^ field_s ^ "->clone()) : nullptr; "
-            ^ "} else if constexpr (requires { " ^ field_s ^ ".clone(); }) { "
-            ^ tmp_s ^ " = " ^ field_s ^ ".clone(); "
-            ^ "} else { "
-            ^ tmp_s ^ " = " ^ field_s ^ "; }"
-          in
           let mk_clone_branches target_tvar_ids target_cpp_tys =
             Array.to_list
               (Array.mapi
@@ -11946,6 +11950,15 @@ let gen_ind_header_v2
                              ty
                          in
                          let cpp_ty =
+                           if (not is_coinductive)
+                              && ml_type_has_nested_self_ref ~ind_ref:name ty
+                           then
+                             if ml_self_ref_is_uniform ~ind_ref:name ~cname:c ty
+                             then Tunique_ptr cpp_ty
+                             else Tshared_ptr cpp_ty
+                           else cpp_ty
+                         in
+                         let cpp_ty =
                            if vars = [] then tvar_erase_type cpp_ty else cpp_ty
                          in
                          (field_id, cpp_ty, true))
@@ -11961,44 +11974,28 @@ let gen_ind_header_v2
                              target_tvar_ids
                              ty
                          in
+                         let cpp_ty =
+                           if (not is_coinductive)
+                              && ml_type_has_nested_self_ref ~ind_ref:name ty
+                           then
+                             if ml_self_ref_is_uniform ~ind_ref:name ~cname:c ty
+                             then Tunique_ptr cpp_ty
+                             else Tshared_ptr cpp_ty
+                           else cpp_ty
+                         in
                          if target_tvar_ids = [] then tvar_erase_type cpp_ty
                          else cpp_ty)
                        tys_list
                    in
-                   (* For each field, decide whether to use a pre-declared
-                      temp (for bare type-variable fields that need if constexpr
-                      dispatch) or an inline clone expression (for concrete
-                      types whose clone can be expressed as a single expr). *)
-                   let field_clone_info =
-                     List.mapi
-                       (fun j ((field_id, source_field_ty, _), target_field_ty) ->
-                         let tmp_id =
-                           Id.of_string ("__c" ^ string_of_int j)
-                         in
-                         let field_s = Id.to_string field_id in
-                         let tmp_s = Id.to_string tmp_id in
-                         match source_field_ty with
-                         | Tvar _ | Tauto when source_field_ty = target_field_ty ->
-                           (* Same-type bare tvar: Sdecl + if constexpr stmts *)
-                           let pre =
-                             [ Sdecl (tmp_id, source_field_ty);
-                               Sraw (mk_tvar_clone_stmts field_s tmp_s) ]
-                           in
-                           (pre, CPPmove (CPPvar tmp_id))
-                         | _ ->
-                           (* Concrete or diff-type: inline expression *)
-                           let expr =
-                             gen_clone_field_expr
-                               ~src_ty:source_field_ty ~dst_ty:target_field_ty
-                               (CPPvar field_id)
-                           in
-                           ([], expr))
-                       (List.combine field_bindings target_field_tys)
+                   let ctor_args =
+                     List.map2
+                       (fun (field_id, source_field_ty, _) target_field_ty ->
+                         gen_clone_field_expr
+                           ~src_ty:source_field_ty ~dst_ty:target_field_ty
+                           (CPPvar field_id))
+                       field_bindings
+                       target_field_tys
                    in
-                   let pre_stmts =
-                     List.concat_map fst field_clone_info
-                   in
-                   let ctor_args = List.map snd field_clone_info in
                    let ctor_id =
                      if List.length target_tvar_ids = List.length vars
                         && List.for_all2 Id.equal target_tvar_ids vars
@@ -12028,12 +12025,11 @@ let gen_ind_header_v2
                      smb_is_value_type = true;
                      smb_is_owned = false;
                      smb_body =
-                       pre_stmts
-                       @ [ Sreturn
-                             (Some
-                                (CPPfun_call
-                                   ( mk_cppglob name target_cpp_tys,
-                                     [ctor_struct] ))) ];
+                       [ Sreturn
+                           (Some
+                              (CPPfun_call
+                                 ( mk_cppglob name target_cpp_tys,
+                                   [ctor_struct] ))) ];
                    })
                  tys)
           in
@@ -12165,51 +12161,32 @@ let gen_ind_header_v2
                       let field_id =
                         lookup_ctor_field_name ctor_struct_name j
                       in
+                      let wrap_nested cpp_ty =
+                        if (not is_coinductive)
+                           && ml_type_has_nested_self_ref ~ind_ref:name ty
+                        then
+                          if ml_self_ref_is_uniform ~ind_ref:name ~cname:c ty
+                          then Tunique_ptr cpp_ty
+                          else Tshared_ptr cpp_ty
+                        else cpp_ty
+                      in
                       let src_fty =
-                        convert_ml_type_to_cpp_type (empty_env ())
-                          (Refset'.add name Refset'.empty)
-                          u_var_names ty
+                        wrap_nested
+                          (convert_ml_type_to_cpp_type (empty_env ())
+                             (Refset'.add name Refset'.empty)
+                             u_var_names ty)
                       in
                       let dst_fty =
-                        convert_ml_type_to_cpp_type (empty_env ())
-                          (Refset'.add name Refset'.empty)
-                          vars ty
+                        wrap_nested
+                          (convert_ml_type_to_cpp_type (empty_env ())
+                             (Refset'.add name Refset'.empty)
+                             vars ty)
                       in
                       (field_id, src_fty, dst_fty))
                     tys_list
                 in
                 let convert_field (field_id, src_fty, dst_fty) =
                   let field_s = Id.to_string field_id in
-                  (* 3-branch IIFE for same-type tvar/pointer fields.
-                     Uses [auto&&] param (no capture) to work even inside
-                     lambdas.  Distinguishes smart ptrs by bool-convertibility. *)
-                  let tvar_clone_iife ty_s =
-                    "[](auto&& __v) -> " ^ ty_s ^ " { "
-                    ^ "if constexpr (requires { __v ? 0 : 0; } && requires { *__v; } "
-                    ^ "&& requires { __v->clone(); } "
-                    ^ "&& requires { __v.get(); }) { "
-                    ^ "using _E = std::remove_cvref_t<decltype(*__v)>; "
-                    ^ "return __v ? std::make_unique<_E>(__v->clone()) : nullptr; "
-                    ^ "} else if constexpr (requires { __v.clone(); }) { "
-                    ^ "return __v.clone(); "
-                    ^ "} else { return __v; } }(" ^ field_s ^ ")"
-                  in
-                  (* 3-branch IIFE for tvar → tvar conversion.  Uses C++20
-                     explicit template param [_DstT] so if constexpr branches
-                     are truly template-dependent — prevents hard errors for
-                     invalid decltype expressions in discarded branches when
-                     the destination type is the outer struct's template param. *)
-                  let tvar_convert_iife dst_s =
-                    "[&]<typename _DstT = " ^ dst_s ^ ">(auto&& __v) -> _DstT { "
-                    ^ "if constexpr (requires { *__v; } "
-                    ^ "&& !requires { std::declval<_DstT>().get(); }) "
-                    ^ "return _DstT(*__v); "
-                    ^ "else if constexpr (!requires { *__v; } "
-                    ^ "&& requires { std::declval<_DstT>().get(); }) { "
-                    ^ "using _E = std::remove_pointer_t<decltype(std::declval<_DstT>().get())>; "
-                    ^ "return std::make_unique<_E>(std::move(__v)); } "
-                    ^ "else return _DstT(__v); }(" ^ field_s ^ ")"
-                  in
                   if src_fty = dst_fty then
                     match src_fty with
                     | Tunique_ptr inner ->
@@ -12217,10 +12194,6 @@ let gen_ind_header_v2
                       let inner_s = render_ty inner in
                       field_s ^ " ? std::make_unique<" ^ inner_s ^ ">("
                       ^ field_s ^ "->clone()) : nullptr"
-                    | Tvar (_, Some nm) ->
-                      tvar_clone_iife (Id.to_string nm)
-                    | Tvar (_, None) | Tauto ->
-                      tvar_clone_iife "auto"
                     | Tglob (g, [Tunique_ptr inner], _)
                       when is_option_global g ->
                       (* optional<unique_ptr<T>>: element-wise clone *)
@@ -12240,13 +12213,9 @@ let gen_ind_header_v2
                            && not (Table.is_enum_inductive g) ->
                       (* Crane-generated inductive struct: always has clone() *)
                       field_s ^ ".clone()"
-                    | Tglob (_, _, _) ->
-                      (* Type alias, module carrier, or enum class: may not
-                         have clone().  Use safe IIFE fallback. *)
-                      let ty_s = render_ty src_fty in
-                      tvar_clone_iife ty_s
                     | _ ->
-                      (* Scalar, shared_ptr, std::pair, etc.: copy *)
+                      (* Type variables, scalars, shared_ptr, type aliases, etc.:
+                         plain copy.  Copy ctor deep-copies for Crane types. *)
                       field_s
                   else
                     match (src_fty, dst_fty) with
@@ -12290,9 +12259,11 @@ let gen_ind_header_v2
                       when GlobRef.CanOrd.equal g1 g2 ->
                       render_ty dst_fty ^ "(" ^ field_s ^ ")"
                     | (Tvar _ | Tauto), _ | _, (Tvar _ | Tauto) ->
-                      tvar_convert_iife (render_ty dst_fty)
+                      (* Type variable conversion: converting constructor *)
+                      render_ty dst_fty ^ "(" ^ field_s ^ ")"
                     | _ when contains_tvar dst_fty || contains_tvar src_fty ->
-                      tvar_convert_iife (render_ty dst_fty)
+                      (* Contains type variable: converting constructor *)
+                      render_ty dst_fty ^ "(" ^ field_s ^ ")"
                     | _ ->
                       (* Fully concrete, different: converting constructor *)
                       render_ty dst_fty ^ "(" ^ field_s ^ ")"

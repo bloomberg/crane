@@ -51,29 +51,7 @@ public:
   __attribute__((pure)) SigT<t_A, t_P> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
-    t_A __c0;
-    if constexpr (
-        requires { d_x ? 0 : 0; } && requires { *d_x; } &&
-        requires { d_x->clone(); } && requires { d_x.get(); }) {
-      using _E = std::remove_cvref_t<decltype(*d_x)>;
-      __c0 = d_x ? std::make_unique<_E>(d_x->clone()) : nullptr;
-    } else if constexpr (requires { d_x.clone(); }) {
-      __c0 = d_x.clone();
-    } else {
-      __c0 = d_x;
-    }
-    t_P __c1;
-    if constexpr (
-        requires { d_a1 ? 0 : 0; } && requires { *d_a1; } &&
-        requires { d_a1->clone(); } && requires { d_a1.get(); }) {
-      using _E = std::remove_cvref_t<decltype(*d_a1)>;
-      __c1 = d_a1 ? std::make_unique<_E>(d_a1->clone()) : nullptr;
-    } else if constexpr (requires { d_a1.clone(); }) {
-      __c1 = d_a1.clone();
-    } else {
-      __c1 = d_a1;
-    }
-    return SigT<t_A, t_P>(ExistT{std::move(__c0), std::move(__c1)});
+    return SigT<t_A, t_P>(ExistT{d_x, d_a1});
   }
 
   // CREATORS
@@ -81,33 +59,7 @@ public:
   explicit SigT(const SigT<_U0, _U1> &_other) {
     const auto &[d_x, d_a1] =
         std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    d_v_ = ExistT{
-        [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-          if constexpr (
-              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-            return _DstT(*__v);
-          else if constexpr (
-              !requires { *__v; } &&
-              requires { std::declval<_DstT>().get(); }) {
-            using _E =
-                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-            return std::make_unique<_E>(std::move(__v));
-          } else
-            return _DstT(__v);
-        }(d_x),
-        [&]<typename _DstT = t_P>(auto &&__v) -> _DstT {
-          if constexpr (
-              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-            return _DstT(*__v);
-          else if constexpr (
-              !requires { *__v; } &&
-              requires { std::declval<_DstT>().get(); }) {
-            using _E =
-                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-            return std::make_unique<_E>(std::move(__v));
-          } else
-            return _DstT(__v);
-        }(d_a1)};
+    d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
   }
 
   __attribute__((pure)) static SigT<t_A, t_P> existt(t_A x, t_P a1) {
@@ -151,30 +103,7 @@ struct Dim10TowerProofChainCase {
 
     // ACCESSORS
     __attribute__((pure)) QPos clone() const {
-      return QPos{[](auto &&__v) -> unsigned int {
-                    if constexpr (
-                        requires { __v ? 0 : 0; } && requires { *__v; } &&
-                        requires { __v->clone(); } && requires { __v.get(); }) {
-                      using _E = std::remove_cvref_t<decltype(*__v)>;
-                      return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                    } else if constexpr (requires { __v.clone(); }) {
-                      return __v.clone();
-                    } else {
-                      return __v;
-                    }
-                  }((*this).qpos_num),
-                  [](auto &&__v) -> unsigned int {
-                    if constexpr (
-                        requires { __v ? 0 : 0; } && requires { *__v; } &&
-                        requires { __v->clone(); } && requires { __v.get(); }) {
-                      using _E = std::remove_cvref_t<decltype(*__v)>;
-                      return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                    } else if constexpr (requires { __v.clone(); }) {
-                      return __v.clone();
-                    } else {
-                      return __v;
-                    }
-                  }((*this).qpos_denom_pred)};
+      return QPos{(*(this)).qpos_num, (*(this)).qpos_denom_pred};
     }
   };
 
@@ -192,18 +121,7 @@ struct Dim10TowerProofChainCase {
 
     // ACCESSORS
     __attribute__((pure)) GradedObj clone() const {
-      return GradedObj{[](auto &&__v) -> unsigned int {
-        if constexpr (
-            requires { __v ? 0 : 0; } && requires { *__v; } &&
-            requires { __v->clone(); } && requires { __v.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*__v)>;
-          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-        } else if constexpr (requires { __v.clone(); }) {
-          return __v.clone();
-        } else {
-          return __v;
-        }
-      }((*this).go_dim)};
+      return GradedObj{(*(this)).go_dim};
     }
   };
 
@@ -286,21 +204,9 @@ struct Dim10TowerProofChainCase {
 
     // ACCESSORS
     __attribute__((pure)) GoodwillieProofChain clone() const {
-      return GoodwillieProofChain{
-          [](auto &&__v) -> EventuallyZero {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).gc_eventually_zero),
-          (*(this)).gc_layers_stabilize.clone(),
-          (*(this)).gc_P_stabilize.clone()};
+      return GoodwillieProofChain{(*(this)).gc_eventually_zero,
+                                  (*(this)).gc_layers_stabilize.clone(),
+                                  (*(this)).gc_P_stabilize.clone()};
     }
   };
 

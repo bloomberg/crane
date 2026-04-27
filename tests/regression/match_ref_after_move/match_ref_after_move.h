@@ -59,22 +59,10 @@ struct MatchRefAfterMove {
         return mylist<t_A>(Mynil{});
       } else {
         const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
-        t_A __c0;
-        if constexpr (
-            requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-            requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_a0)>;
-          __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-        } else if constexpr (requires { d_a0.clone(); }) {
-          __c0 = d_a0.clone();
-        } else {
-          __c0 = d_a0;
-        }
-        return mylist<t_A>(
-            Mycons{std::move(__c0),
-                   d_a1 ? std::make_unique<MatchRefAfterMove::mylist<t_A>>(
-                              d_a1->clone())
-                        : nullptr});
+        return mylist<t_A>(Mycons{
+            d_a0, d_a1 ? std::make_unique<MatchRefAfterMove::mylist<t_A>>(
+                             d_a1->clone())
+                       : nullptr});
       }
     }
 
@@ -85,20 +73,7 @@ struct MatchRefAfterMove {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        d_v_ = Mycons{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-                        if constexpr (
-                            requires { *__v; } &&
-                            !requires { std::declval<_DstT>().get(); })
-                          return _DstT(*__v);
-                        else if constexpr (
-                            !requires { *__v; } &&
-                            requires { std::declval<_DstT>().get(); }) {
-                          using _E = std::remove_pointer_t<
-                              decltype(std::declval<_DstT>().get())>;
-                          return std::make_unique<_E>(std::move(__v));
-                        } else
-                          return _DstT(__v);
-                      }(d_a0),
+        d_v_ = Mycons{t_A(d_a0),
                       d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
       }
     }
@@ -209,29 +184,7 @@ struct MatchRefAfterMove {
     __attribute__((pure)) mypair<t_A, t_B> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Mkpair>(_sv.v());
-      t_A __c0;
-      if constexpr (
-          requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-          requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a0)>;
-        __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-      } else if constexpr (requires { d_a0.clone(); }) {
-        __c0 = d_a0.clone();
-      } else {
-        __c0 = d_a0;
-      }
-      t_B __c1;
-      if constexpr (
-          requires { d_a1 ? 0 : 0; } && requires { *d_a1; } &&
-          requires { d_a1->clone(); } && requires { d_a1.get(); }) {
-        using _E = std::remove_cvref_t<decltype(*d_a1)>;
-        __c1 = d_a1 ? std::make_unique<_E>(d_a1->clone()) : nullptr;
-      } else if constexpr (requires { d_a1.clone(); }) {
-        __c1 = d_a1.clone();
-      } else {
-        __c1 = d_a1;
-      }
-      return mypair<t_A, t_B>(Mkpair{std::move(__c0), std::move(__c1)});
+      return mypair<t_A, t_B>(Mkpair{d_a0, d_a1});
     }
 
     // CREATORS
@@ -239,35 +192,7 @@ struct MatchRefAfterMove {
     explicit mypair(const mypair<_U0, _U1> &_other) {
       const auto &[d_a0, d_a1] =
           std::get<typename mypair<_U0, _U1>::Mkpair>(_other.v());
-      d_v_ = Mkpair{
-          [&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a0),
-          [&]<typename _DstT = t_B>(auto &&__v) -> _DstT {
-            if constexpr (
-                requires { *__v; } &&
-                !requires { std::declval<_DstT>().get(); })
-              return _DstT(*__v);
-            else if constexpr (
-                !requires { *__v; } &&
-                requires { std::declval<_DstT>().get(); }) {
-              using _E =
-                  std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-              return std::make_unique<_E>(std::move(__v));
-            } else
-              return _DstT(__v);
-          }(d_a1)};
+      d_v_ = Mkpair{t_A(d_a0), t_B(d_a1)};
     }
 
     __attribute__((pure)) static mypair<t_A, t_B> mkpair(t_A a0, t_B a1) {
@@ -445,32 +370,10 @@ struct MatchRefAfterMove {
       auto &&_sv = *(this);
       if (std::holds_alternative<Left>(_sv.v())) {
         const auto &[d_a0] = std::get<Left>(_sv.v());
-        t_A __c0;
-        if constexpr (
-            requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-            requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_a0)>;
-          __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-        } else if constexpr (requires { d_a0.clone(); }) {
-          __c0 = d_a0.clone();
-        } else {
-          __c0 = d_a0;
-        }
-        return either<t_A, t_B>(Left{std::move(__c0)});
+        return either<t_A, t_B>(Left{d_a0});
       } else {
         const auto &[d_a0] = std::get<Right>(_sv.v());
-        t_B __c0;
-        if constexpr (
-            requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-            requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_a0)>;
-          __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-        } else if constexpr (requires { d_a0.clone(); }) {
-          __c0 = d_a0.clone();
-        } else {
-          __c0 = d_a0;
-        }
-        return either<t_A, t_B>(Right{std::move(__c0)});
+        return either<t_A, t_B>(Right{d_a0});
       }
     }
 
@@ -480,35 +383,11 @@ struct MatchRefAfterMove {
       if (std::holds_alternative<typename either<_U0, _U1>::Left>(_other.v())) {
         const auto &[d_a0] =
             std::get<typename either<_U0, _U1>::Left>(_other.v());
-        d_v_ = Left{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-          if constexpr (
-              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-            return _DstT(*__v);
-          else if constexpr (
-              !requires { *__v; } &&
-              requires { std::declval<_DstT>().get(); }) {
-            using _E =
-                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-            return std::make_unique<_E>(std::move(__v));
-          } else
-            return _DstT(__v);
-        }(d_a0)};
+        d_v_ = Left{t_A(d_a0)};
       } else {
         const auto &[d_a0] =
             std::get<typename either<_U0, _U1>::Right>(_other.v());
-        d_v_ = Right{[&]<typename _DstT = t_B>(auto &&__v) -> _DstT {
-          if constexpr (
-              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-            return _DstT(*__v);
-          else if constexpr (
-              !requires { *__v; } &&
-              requires { std::declval<_DstT>().get(); }) {
-            using _E =
-                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-            return std::make_unique<_E>(std::move(__v));
-          } else
-            return _DstT(__v);
-        }(d_a0)};
+        d_v_ = Right{t_B(d_a0)};
       }
     }
 

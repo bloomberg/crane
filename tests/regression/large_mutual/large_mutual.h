@@ -80,20 +80,8 @@ struct LargeMutual {
       if (std::holds_alternative<SAssign>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<SAssign>(_sv.v());
         return stmt(SAssign{
-            [](auto &&__v) -> unsigned int {
-              if constexpr (
-                  requires { __v ? 0 : 0; } && requires { *__v; } &&
-                  requires { __v->clone(); } && requires { __v.get(); }) {
-                using _E = std::remove_cvref_t<decltype(*__v)>;
-                return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-              } else if constexpr (requires { __v.clone(); }) {
-                return __v.clone();
-              } else {
-                return __v;
-              }
-            }(d_a0),
-            d_a1 ? std::make_unique<LargeMutual::expr>(d_a1->clone())
-                 : nullptr});
+            d_a0, d_a1 ? std::make_unique<LargeMutual::expr>(d_a1->clone())
+                       : nullptr});
       } else if (std::holds_alternative<SSeq>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<SSeq>(_sv.v());
         return stmt(SSeq{
@@ -228,32 +216,10 @@ struct LargeMutual {
       auto &&_sv = *(this);
       if (std::holds_alternative<ENum>(_sv.v())) {
         const auto &[d_a0] = std::get<ENum>(_sv.v());
-        return expr(ENum{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return expr(ENum{d_a0});
       } else if (std::holds_alternative<EVar>(_sv.v())) {
         const auto &[d_a0] = std::get<EVar>(_sv.v());
-        return expr(EVar{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_a0)});
+        return expr(EVar{d_a0});
       } else if (std::holds_alternative<EAdd>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<EAdd>(_sv.v());
         return expr(EAdd{

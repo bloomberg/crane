@@ -22,30 +22,7 @@ struct CraneMoveHunt {
 
     // ACCESSORS
     __attribute__((pure)) box clone() const {
-      return box{[](auto &&__v) -> unsigned int {
-                   if constexpr (
-                       requires { __v ? 0 : 0; } && requires { *__v; } &&
-                       requires { __v->clone(); } && requires { __v.get(); }) {
-                     using _E = std::remove_cvref_t<decltype(*__v)>;
-                     return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                   } else if constexpr (requires { __v.clone(); }) {
-                     return __v.clone();
-                   } else {
-                     return __v;
-                   }
-                 }((*this).payload),
-                 [](auto &&__v) -> bool {
-                   if constexpr (
-                       requires { __v ? 0 : 0; } && requires { *__v; } &&
-                       requires { __v->clone(); } && requires { __v.get(); }) {
-                     using _E = std::remove_cvref_t<decltype(*__v)>;
-                     return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                   } else if constexpr (requires { __v.clone(); }) {
-                     return __v.clone();
-                   } else {
-                     return __v;
-                   }
-                 }((*this).enabled)};
+      return box{(*(this)).payload, (*(this)).enabled};
     }
   };
 
@@ -60,20 +37,8 @@ struct CraneMoveHunt {
 
     // ACCESSORS
     __attribute__((pure)) state clone() const {
-      return state{
-          (*(this)).core.clone(), (*(this)).cursor.clone(),
-          [](auto &&__v) -> bool {
-            if constexpr (
-                requires { __v ? 0 : 0; } && requires { *__v; } &&
-                requires { __v->clone(); } && requires { __v.get(); }) {
-              using _E = std::remove_cvref_t<decltype(*__v)>;
-              return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-            } else if constexpr (requires { __v.clone(); }) {
-              return __v.clone();
-            } else {
-              return __v;
-            }
-          }((*this).visible)};
+      return state{(*(this)).core.clone(), (*(this)).cursor.clone(),
+                   (*(this)).visible};
     }
   };
 

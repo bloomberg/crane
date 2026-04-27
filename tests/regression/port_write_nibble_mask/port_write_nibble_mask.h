@@ -19,18 +19,7 @@ struct PortWriteNibbleMask {
 
     // ACCESSORS
     __attribute__((pure)) ram_chip clone() const {
-      return ram_chip{[](auto &&__v) -> unsigned int {
-        if constexpr (
-            requires { __v ? 0 : 0; } && requires { *__v; } &&
-            requires { __v->clone(); } && requires { __v.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*__v)>;
-          return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-        } else if constexpr (requires { __v.clone(); }) {
-          return __v.clone();
-        } else {
-          return __v;
-        }
-      }((*this).chip_port)};
+      return ram_chip{(*(this)).chip_port};
     }
   };
 

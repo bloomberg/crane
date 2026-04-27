@@ -60,18 +60,7 @@ struct MutualRecursion {
       auto &&_sv = *(this);
       if (std::holds_alternative<Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<Leaf>(_sv.v());
-        t_A __c0;
-        if constexpr (
-            requires { d_a0 ? 0 : 0; } && requires { *d_a0; } &&
-            requires { d_a0->clone(); } && requires { d_a0.get(); }) {
-          using _E = std::remove_cvref_t<decltype(*d_a0)>;
-          __c0 = d_a0 ? std::make_unique<_E>(d_a0->clone()) : nullptr;
-        } else if constexpr (requires { d_a0.clone(); }) {
-          __c0 = d_a0.clone();
-        } else {
-          __c0 = d_a0;
-        }
-        return tree<t_A>(Leaf{std::move(__c0)});
+        return tree<t_A>(Leaf{d_a0});
       } else {
         const auto &[d_a0] = std::get<Node>(_sv.v());
         return tree<t_A>(Node{
@@ -84,19 +73,7 @@ struct MutualRecursion {
     template <typename _U> explicit tree(const tree<_U> &_other) {
       if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
         const auto &[d_a0] = std::get<typename tree<_U>::Leaf>(_other.v());
-        d_v_ = Leaf{[&]<typename _DstT = t_A>(auto &&__v) -> _DstT {
-          if constexpr (
-              requires { *__v; } && !requires { std::declval<_DstT>().get(); })
-            return _DstT(*__v);
-          else if constexpr (
-              !requires { *__v; } &&
-              requires { std::declval<_DstT>().get(); }) {
-            using _E =
-                std::remove_pointer_t<decltype(std::declval<_DstT>().get())>;
-            return std::make_unique<_E>(std::move(__v));
-          } else
-            return _DstT(__v);
-        }(d_a0)};
+        d_v_ = Leaf{t_A(d_a0)};
       } else {
         const auto &[d_a0] = std::get<typename tree<_U>::Node>(_other.v());
         d_v_ = Node{d_a0 ? std::make_unique<MutualRecursion::forest<t_A>>(*d_a0)

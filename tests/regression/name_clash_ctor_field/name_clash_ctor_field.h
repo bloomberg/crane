@@ -49,31 +49,7 @@ struct NameClashCtorField {
     __attribute__((pure)) clash1 clone() const {
       auto &&_sv = *(this);
       const auto &[d_d_a0, d_d_a1] = std::get<C1>(_sv.v());
-      return clash1(
-          C1{[](auto &&__v) -> unsigned int {
-               if constexpr (
-                   requires { __v ? 0 : 0; } && requires { *__v; } &&
-                   requires { __v->clone(); } && requires { __v.get(); }) {
-                 using _E = std::remove_cvref_t<decltype(*__v)>;
-                 return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-               } else if constexpr (requires { __v.clone(); }) {
-                 return __v.clone();
-               } else {
-                 return __v;
-               }
-             }(d_d_a0),
-             [](auto &&__v) -> unsigned int {
-               if constexpr (
-                   requires { __v ? 0 : 0; } && requires { *__v; } &&
-                   requires { __v->clone(); } && requires { __v.get(); }) {
-                 using _E = std::remove_cvref_t<decltype(*__v)>;
-                 return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-               } else if constexpr (requires { __v.clone(); }) {
-                 return __v.clone();
-               } else {
-                 return __v;
-               }
-             }(d_d_a1)});
+      return clash1(C1{d_d_a0, d_d_a1});
     }
 
     // CREATORS
@@ -167,32 +143,10 @@ struct NameClashCtorField {
       auto &&_sv = *(this);
       if (std::holds_alternative<C2a>(_sv.v())) {
         const auto &[d_v] = std::get<C2a>(_sv.v());
-        return clash2(C2a{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_v)});
+        return clash2(C2a{d_v});
       } else {
         const auto &[d_result] = std::get<C2b>(_sv.v());
-        return clash2(C2b{[](auto &&__v) -> unsigned int {
-          if constexpr (
-              requires { __v ? 0 : 0; } && requires { *__v; } &&
-              requires { __v->clone(); } && requires { __v.get(); }) {
-            using _E = std::remove_cvref_t<decltype(*__v)>;
-            return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-          } else if constexpr (requires { __v.clone(); }) {
-            return __v.clone();
-          } else {
-            return __v;
-          }
-        }(d_result)});
+        return clash2(C2b{d_result});
       }
     }
 
@@ -301,31 +255,7 @@ struct NameClashCtorField {
     __attribute__((pure)) pair_ind clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<MkPair>(_sv.v());
-      return pair_ind(
-          MkPair{[](auto &&__v) -> unsigned int {
-                   if constexpr (
-                       requires { __v ? 0 : 0; } && requires { *__v; } &&
-                       requires { __v->clone(); } && requires { __v.get(); }) {
-                     using _E = std::remove_cvref_t<decltype(*__v)>;
-                     return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                   } else if constexpr (requires { __v.clone(); }) {
-                     return __v.clone();
-                   } else {
-                     return __v;
-                   }
-                 }(d_a0),
-                 [](auto &&__v) -> unsigned int {
-                   if constexpr (
-                       requires { __v ? 0 : 0; } && requires { *__v; } &&
-                       requires { __v->clone(); } && requires { __v.get(); }) {
-                     using _E = std::remove_cvref_t<decltype(*__v)>;
-                     return __v ? std::make_unique<_E>(__v->clone()) : nullptr;
-                   } else if constexpr (requires { __v.clone(); }) {
-                     return __v.clone();
-                   } else {
-                     return __v;
-                   }
-                 }(d_a1)});
+      return pair_ind(MkPair{d_a0, d_a1});
     }
 
     // CREATORS
