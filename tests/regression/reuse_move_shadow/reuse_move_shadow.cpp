@@ -38,9 +38,10 @@ ReuseMoveShadow::tree_sum(const ReuseMoveShadow::tree &t) {
 __attribute__((pure)) ReuseMoveShadow::tree
 ReuseMoveShadow::dup_left(ReuseMoveShadow::tree t, const bool &b) {
   if (b) {
-    if (std::holds_alternative<typename ReuseMoveShadow::tree::Node>(t.v())) {
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename ReuseMoveShadow::tree::Node>(t.v());
+    if (std::holds_alternative<typename ReuseMoveShadow::tree::Node>(
+            t.v_mut())) {
+      auto &[d_a0, d_a1, d_a2] =
+          std::get<typename ReuseMoveShadow::tree::Node>(t.v_mut());
       return tree::node(d_a0, *(d_a1), *(d_a1));
     } else {
       return tree::leaf();

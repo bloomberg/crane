@@ -108,17 +108,14 @@ public:
 struct EvenLengthByteValidation {
   __attribute__((pure)) static bool
   valid_program(const List<unsigned int> &bytes);
-  static inline const unsigned int t = []() -> unsigned int {
-    if (valid_program(List<unsigned int>::cons(
-            1u, List<unsigned int>::cons(
-                    2u, List<unsigned int>::cons(
-                            3u, List<unsigned int>::cons(
-                                    4u, List<unsigned int>::nil())))))) {
-      return 1u;
-    } else {
-      return 0u;
-    }
-  }();
+  static inline const unsigned int t =
+      (valid_program(List<unsigned int>::cons(
+           1u, List<unsigned int>::cons(
+                   2u, List<unsigned int>::cons(
+                           3u, List<unsigned int>::cons(
+                                   4u, List<unsigned int>::nil())))))
+           ? 1u
+           : 0u);
 };
 
 #endif // INCLUDED_EVEN_LENGTH_BYTE_VALIDATION

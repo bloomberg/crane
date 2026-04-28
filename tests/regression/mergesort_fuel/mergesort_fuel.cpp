@@ -35,11 +35,12 @@ MergesortFuel::merge(List<unsigned int> l1, const List<unsigned int> &l2) {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l1.v());
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l3.v())) {
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(
+              l3.v_mut())) {
         return l1;
       } else {
-        const auto &[d_a00, d_a10] =
-            std::get<typename List<unsigned int>::Cons>(l3.v());
+        auto &[d_a00, d_a10] =
+            std::get<typename List<unsigned int>::Cons>(l3.v_mut());
         if (Compare_dec::le_lt_dec(d_a0, d_a00)) {
           return List<unsigned int>::cons(d_a0, merge(*(d_a1), l3));
         } else {
@@ -58,11 +59,11 @@ MergesortFuel::msort_go(const unsigned int &fuel, List<unsigned int> l) {
     return l;
   } else {
     unsigned int fuel_ = fuel - 1;
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v_mut())) {
       return List<unsigned int>::nil();
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v());
+      auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l.v_mut());
       auto &&_sv = *(d_a1);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
         return List<unsigned int>::cons(d_a0, List<unsigned int>::nil());

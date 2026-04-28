@@ -735,13 +735,7 @@ ComprehensivePatterns::double_proj_nc(const ComprehensivePatterns::OuterNC &o) {
 
 __attribute__((pure)) unsigned int
 ComprehensivePatterns::multi_positions(const ComprehensivePatterns::NC &r) {
-  return (r.nc_a + [=]() mutable -> unsigned int {
-    if (r.nc_b == 0u) {
-      return r.nc_a;
-    } else {
-      return r.nc_c;
-    }
-  }());
+  return (r.nc_a + (r.nc_b == 0u ? r.nc_a : r.nc_c));
 }
 
 __attribute__((pure)) unsigned int

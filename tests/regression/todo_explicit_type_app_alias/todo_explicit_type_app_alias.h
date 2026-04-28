@@ -15,13 +15,7 @@ struct TodoExplicitTypeAppAlias {
     return []() {
       unsigned int kept_nat = id(9u);
       bool kept_bool = id(true);
-      return (kept_nat + [&]() -> unsigned int {
-        if (kept_bool) {
-          return 1u;
-        } else {
-          return 0u;
-        }
-      }());
+      return (kept_nat + (kept_bool ? 1u : 0u));
     }();
   }();
 };

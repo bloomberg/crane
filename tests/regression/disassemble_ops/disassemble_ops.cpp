@@ -15,11 +15,11 @@ DisassembleOps::drop_(const unsigned int &n, List<unsigned int> l) {
     return l;
   } else {
     unsigned int n_ = n - 1;
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v_mut())) {
       return List<unsigned int>::nil();
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v());
+      auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l.v_mut());
       return drop_(n_, *(d_a1));
     }
   }

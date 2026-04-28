@@ -86,13 +86,7 @@ GetPairBoundProp::execute(const GetPairBoundProp::state &s,
   } else if (std::holds_alternative<typename GetPairBoundProp::instr::ADD>(
                  i.v())) {
     const auto &[d_r] = std::get<typename GetPairBoundProp::instr::ADD>(i.v());
-    unsigned int sum = ((s.ex_acc + get_reg(s, d_r)) + [&]() -> unsigned int {
-      if (s.ex_carry) {
-        return 1u;
-      } else {
-        return 0u;
-      }
-    }());
+    unsigned int sum = ((s.ex_acc + get_reg(s, d_r)) + (s.ex_carry ? 1u : 0u));
     return state{(16u ? sum % 16u : sum),
                  s.ex_regs,
                  16u <= sum,
@@ -168,28 +162,9 @@ GetPairBoundProp::execute(const GetPairBoundProp::state &s,
                  s.ex_ports};
   } else if (std::holds_alternative<typename GetPairBoundProp::instr::RAL>(
                  i.v())) {
-    unsigned int acc_ = (16u ? ((2u * s.ex_acc) + [&]() -> unsigned int {
-                                 if (s.ex_carry) {
-                                   return 1u;
-                                 } else {
-                                   return 0u;
-                                 }
-                               }()) %
-                                   16u
-                             : ((2u * s.ex_acc) + [&]() -> unsigned int {
-                                 if (s.ex_carry) {
-                                   return 1u;
-                                 } else {
-                                   return 0u;
-                                 }
-                               }()));
-    bool carry_ = 16u <= ((2u * s.ex_acc) + [&]() -> unsigned int {
-                    if (s.ex_carry) {
-                      return 1u;
-                    } else {
-                      return 0u;
-                    }
-                  }());
+    unsigned int acc_ = (16u ? ((2u * s.ex_acc) + (s.ex_carry ? 1u : 0u)) % 16u
+                             : ((2u * s.ex_acc) + (s.ex_carry ? 1u : 0u)));
+    bool carry_ = 16u <= ((2u * s.ex_acc) + (s.ex_carry ? 1u : 0u));
     return state{acc_,       s.ex_regs,
                  carry_,     (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
                  s.ex_stack, s.ex_pair_bus,
@@ -211,13 +186,7 @@ GetPairBoundProp::execute(const GetPairBoundProp::state &s,
                  s.ex_ports};
   } else if (std::holds_alternative<typename GetPairBoundProp::instr::TCC>(
                  i.v())) {
-    return state{[&]() -> unsigned int {
-                   if (s.ex_carry) {
-                     return 1u;
-                   } else {
-                     return 0u;
-                   }
-                 }(),
+    return state{(s.ex_carry ? 1u : 0u),
                  s.ex_regs,
                  false,
                  (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
@@ -226,13 +195,7 @@ GetPairBoundProp::execute(const GetPairBoundProp::state &s,
                  s.ex_ports};
   } else if (std::holds_alternative<typename GetPairBoundProp::instr::TCS>(
                  i.v())) {
-    return state{[&]() -> unsigned int {
-                   if (s.ex_carry) {
-                     return 10u;
-                   } else {
-                     return 9u;
-                   }
-                 }(),
+    return state{(s.ex_carry ? 10u : 9u),
                  s.ex_regs,
                  false,
                  (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
@@ -304,13 +267,8 @@ GetPairBoundProp::execute(const GetPairBoundProp::state &s,
     return state{s.ex_acc,
                  s.ex_regs,
                  s.ex_carry,
-                 [&]() -> unsigned int {
-                   if (jump) {
-                     return (4096u ? d_a % 4096u : d_a);
-                   } else {
-                     return (4096u ? (s.ex_pc + 2u) % 4096u : (s.ex_pc + 2u));
-                   }
-                 }(),
+                 (jump ? (4096u ? d_a % 4096u : d_a)
+                       : (4096u ? (s.ex_pc + 2u) % 4096u : (s.ex_pc + 2u))),
                  s.ex_stack,
                  s.ex_pair_bus,
                  s.ex_ports};
@@ -353,13 +311,8 @@ GetPairBoundProp::execute(const GetPairBoundProp::state &s,
     return state{s.ex_acc,
                  set_reg(s, d_r, n),
                  s.ex_carry,
-                 [&]() -> unsigned int {
-                   if (n == 0u) {
-                     return (4096u ? d_a % 4096u : d_a);
-                   } else {
-                     return (4096u ? (s.ex_pc + 2u) % 4096u : (s.ex_pc + 2u));
-                   }
-                 }(),
+                 (n == 0u ? (4096u ? d_a % 4096u : d_a)
+                          : (4096u ? (s.ex_pc + 2u) % 4096u : (s.ex_pc + 2u))),
                  s.ex_stack,
                  s.ex_pair_bus,
                  s.ex_ports};

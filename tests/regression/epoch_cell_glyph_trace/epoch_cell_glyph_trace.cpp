@@ -255,28 +255,28 @@ __attribute__((pure)) Z BinInt::pos_sub(const Positive &x, const Positive &y) {
 }
 
 __attribute__((pure)) Z BinInt::add(Z x, Z y) {
-  if (std::holds_alternative<typename Z::Z0>(x.v())) {
+  if (std::holds_alternative<typename Z::Z0>(x.v_mut())) {
     return y;
-  } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
-    if (std::holds_alternative<typename Z::Z0>(y.v())) {
+  } else if (std::holds_alternative<typename Z::Zpos>(x.v_mut())) {
+    auto &[d_a0] = std::get<typename Z::Zpos>(x.v_mut());
+    if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
-      const auto &[d_a00] = std::get<typename Z::Zpos>(y.v());
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
+      auto &[d_a00] = std::get<typename Z::Zpos>(y.v_mut());
       return Z::zpos(Pos::add(d_a0, d_a00));
     } else {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(y.v());
+      auto &[d_a00] = std::get<typename Z::Zneg>(y.v_mut());
       return BinInt::pos_sub(d_a0, d_a00);
     }
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
-    if (std::holds_alternative<typename Z::Z0>(y.v())) {
+    auto &[d_a0] = std::get<typename Z::Zneg>(x.v_mut());
+    if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
-      const auto &[d_a00] = std::get<typename Z::Zpos>(y.v());
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
+      auto &[d_a00] = std::get<typename Z::Zpos>(y.v_mut());
       return BinInt::pos_sub(d_a00, d_a0);
     } else {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(y.v());
+      auto &[d_a00] = std::get<typename Z::Zneg>(y.v_mut());
       return Z::zneg(Pos::add(d_a0, d_a00));
     }
   }
@@ -454,10 +454,10 @@ __attribute__((pure)) std::pair<Z, Z> BinInt::pos_div_eucl(const Positive &a,
 }
 
 __attribute__((pure)) std::pair<Z, Z> BinInt::div_eucl(Z a, const Z &b) {
-  if (std::holds_alternative<typename Z::Z0>(a.v())) {
+  if (std::holds_alternative<typename Z::Z0>(a.v_mut())) {
     return std::make_pair(Z::z0(), Z::z0());
-  } else if (std::holds_alternative<typename Z::Zpos>(a.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(a.v());
+  } else if (std::holds_alternative<typename Z::Zpos>(a.v_mut())) {
+    auto &[d_a0] = std::get<typename Z::Zpos>(a.v_mut());
     if (std::holds_alternative<typename Z::Z0>(b.v())) {
       return std::make_pair(Z::z0(), a);
     } else if (std::holds_alternative<typename Z::Zpos>(b.v())) {
@@ -476,7 +476,7 @@ __attribute__((pure)) std::pair<Z, Z> BinInt::div_eucl(Z a, const Z &b) {
       }
     }
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(a.v());
+    auto &[d_a0] = std::get<typename Z::Zneg>(a.v_mut());
     if (std::holds_alternative<typename Z::Z0>(b.v())) {
       return std::make_pair(Z::z0(), a);
     } else if (std::holds_alternative<typename Z::Zpos>(b.v())) {

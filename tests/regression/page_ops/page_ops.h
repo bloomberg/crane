@@ -205,10 +205,10 @@ struct PageOps {
       return l;
     } else {
       unsigned int n_ = n - 1;
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
         return List<T1>::nil();
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
+        auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v_mut());
         return drop<T1>(n_, *(d_a1));
       }
     }

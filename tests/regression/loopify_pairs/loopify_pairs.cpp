@@ -160,21 +160,8 @@ LoopifyPairs::min_max(const LoopifyPairs::list<unsigned int> &l) {
       unsigned int d_a0 = _f._s0;
       const unsigned int &mn = _result.first;
       const unsigned int &mx = _result.second;
-      _result = std::make_pair(
-          [&]() -> unsigned int {
-            if (d_a0 <= mn) {
-              return d_a0;
-            } else {
-              return mn;
-            }
-          }(),
-          [&]() -> unsigned int {
-            if (mx <= d_a0) {
-              return d_a0;
-            } else {
-              return mx;
-            }
-          }());
+      _result =
+          std::make_pair((d_a0 <= mn ? d_a0 : mn), (mx <= d_a0 ? d_a0 : mx));
     }
   }
   return _result;

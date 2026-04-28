@@ -22,19 +22,7 @@ struct MutualFixEscape {
       auto _cs = make_even_odd(0u);
       const std::function<bool(unsigned int)> &ev = _cs.first;
       const std::function<bool(unsigned int)> &od = _cs.second;
-      return ([&]() -> unsigned int {
-        if (ev(4u)) {
-          return 1u;
-        } else {
-          return 0u;
-        }
-      }() + [&]() -> unsigned int {
-        if (od(3u)) {
-          return 1u;
-        } else {
-          return 0u;
-        }
-      }());
+      return ((ev(4u) ? 1u : 0u) + (od(3u) ? 1u : 0u));
     }();
   }();
   /// test2: even(5) = false, odd(6) = false. 0+0=0.
@@ -43,19 +31,7 @@ struct MutualFixEscape {
       auto _cs = make_even_odd(0u);
       const std::function<bool(unsigned int)> &ev = _cs.first;
       const std::function<bool(unsigned int)> &od = _cs.second;
-      return ([&]() -> unsigned int {
-        if (ev(5u)) {
-          return 1u;
-        } else {
-          return 0u;
-        }
-      }() + [&]() -> unsigned int {
-        if (od(6u)) {
-          return 1u;
-        } else {
-          return 0u;
-        }
-      }());
+      return ((ev(5u) ? 1u : 0u) + (od(6u) ? 1u : 0u));
     }();
   }();
   /// A mutual fixpoint that captures a parameter base.

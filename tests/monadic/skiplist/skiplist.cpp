@@ -492,95 +492,17 @@ unsigned int skiplist_test::run_tests() {
   bool r11 = test_bounds();
   bool r12 = test_removeAll();
   bool r13 = test_bde_api();
-  unsigned int passed = (((((((((((([&]() -> unsigned int {
-                                     if (r1) {
-                                       return 1u;
-                                     } else {
-                                       return 0u;
-                                     }
-                                   }() + [&]() -> unsigned int {
-                                     if (r2) {
-                                       return 1u;
-                                     } else {
-                                       return 0u;
-                                     }
-                                   }()) +
-                                       [&]() -> unsigned int {
-                                    if (r3) {
-                                      return 1u;
-                                    } else {
-                                      return 0u;
-                                    }
-                                  }()) +
-                                      [&]() -> unsigned int {
-                                   if (r4) {
-                                     return 1u;
-                                   } else {
-                                     return 0u;
-                                   }
-                                 }()) +
-                                     [&]() -> unsigned int {
-                                  if (r5) {
-                                    return 1u;
-                                  } else {
-                                    return 0u;
-                                  }
-                                }()) +
-                                    [&]() -> unsigned int {
-                                 if (r6) {
-                                   return 1u;
-                                 } else {
-                                   return 0u;
-                                 }
-                               }()) +
-                                   [&]() -> unsigned int {
-                                if (r7) {
-                                  return 1u;
-                                } else {
-                                  return 0u;
-                                }
-                              }()) +
-                                  [&]() -> unsigned int {
-                               if (r8) {
-                                 return 1u;
-                               } else {
-                                 return 0u;
-                               }
-                             }()) +
-                                 [&]() -> unsigned int {
-                              if (r9) {
-                                return 1u;
-                              } else {
-                                return 0u;
-                              }
-                            }()) +
-                                [&]() -> unsigned int {
-                             if (r10) {
-                               return 1u;
-                             } else {
-                               return 0u;
-                             }
-                           }()) +
-                               [&]() -> unsigned int {
-                            if (r11) {
-                              return 1u;
-                            } else {
-                              return 0u;
-                            }
-                          }()) +
-                              [&]() -> unsigned int {
-                           if (r12) {
-                             return 1u;
-                           } else {
-                             return 0u;
-                           }
-                         }()) +
-                             [&]() -> unsigned int {
-    if (r13) {
-      return 1u;
-    } else {
-      return 0u;
-    }
-  }());
+  unsigned int passed =
+      (((((((((((((r1 ? 1u : 0u) + (r2 ? 1u : 0u)) + (r3 ? 1u : 0u)) +
+                (r4 ? 1u : 0u)) +
+               (r5 ? 1u : 0u)) +
+              (r6 ? 1u : 0u)) +
+             (r7 ? 1u : 0u)) +
+            (r8 ? 1u : 0u)) +
+           (r9 ? 1u : 0u)) +
+          (r10 ? 1u : 0u)) +
+         (r11 ? 1u : 0u)) +
+        (r12 ? 1u : 0u)) +
+       (r13 ? 1u : 0u));
   return passed;
 }

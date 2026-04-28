@@ -32,13 +32,7 @@ void MonadicVoidEdge::unit_chain() {
 /// 5. Match on a value obtained from a bind
 unsigned int MonadicVoidEdge::match_after_bind() {
   bool b = true;
-  return [=]() mutable -> unsigned int {
-    if (b) {
-      return 1u;
-    } else {
-      return 0u;
-    }
-  }();
+  return (b ? 1u : 0u);
 }
 
 /// 6. Void function called in a non-tail bind position

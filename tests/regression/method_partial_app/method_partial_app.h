@@ -210,7 +210,7 @@ struct MethodPartialApp {
       box b = box::box0([=](unsigned int _x0) mutable -> unsigned int {
         return t.add_to_sum(_x0);
       });
-      const auto &[d_a0] = std::get<typename box::Box0>(b.v());
+      auto &[d_a0] = std::get<typename box::Box0>(b.v_mut());
       return (d_a0(5u) + d_a0(10u));
     }();
   }();

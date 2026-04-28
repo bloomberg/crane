@@ -45,9 +45,9 @@ __attribute__((pure)) ReuseUseAfterMove::mylist
 ReuseUseAfterMove::rewrite_head(ReuseUseAfterMove::mylist l, const bool &b) {
   if (b) {
     if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
-            l.v())) {
-      const auto &[d_a0, d_a1] =
-          std::get<typename ReuseUseAfterMove::mylist::Mycons>(l.v());
+            l.v_mut())) {
+      auto &[d_a0, d_a1] =
+          std::get<typename ReuseUseAfterMove::mylist::Mycons>(l.v_mut());
       return mylist::mycons(length(l), *(d_a1));
     } else {
       return mylist::mynil();
@@ -63,9 +63,9 @@ ReuseUseAfterMove::rewrite_head_sum(ReuseUseAfterMove::mylist l,
                                     const bool &b) {
   if (b) {
     if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
-            l.v())) {
-      const auto &[d_a0, d_a1] =
-          std::get<typename ReuseUseAfterMove::mylist::Mycons>(l.v());
+            l.v_mut())) {
+      auto &[d_a0, d_a1] =
+          std::get<typename ReuseUseAfterMove::mylist::Mycons>(l.v_mut());
       return mylist::mycons(sum(l), *(d_a1));
     } else {
       return mylist::mynil();

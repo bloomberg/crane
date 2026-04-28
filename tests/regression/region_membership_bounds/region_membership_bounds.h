@@ -24,19 +24,8 @@ struct RegionMembershipBounds {
   static inline const unsigned int t = []() {
     return []() {
       layout l = layout{100u, 20u};
-      return ([&]() -> unsigned int {
-        if (addr_in_regionb(110u, l)) {
-          return 1u;
-        } else {
-          return 0u;
-        }
-      }() + [&]() -> unsigned int {
-        if (addr_in_regionb(121u, l)) {
-          return 1u;
-        } else {
-          return 0u;
-        }
-      }());
+      return ((addr_in_regionb(110u, l) ? 1u : 0u) +
+              (addr_in_regionb(121u, l) ? 1u : 0u));
     }();
   }();
 };

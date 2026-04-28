@@ -10,16 +10,16 @@ __attribute__((pure)) List<unsigned int> ProgFix::interleave_func(
             Sig<SigT<List<unsigned int>, List<unsigned int>>>::exist(
                 SigT<List<unsigned int>, List<unsigned int>>::existt(l3, l4));
         return interleave_func([=]() mutable {
-          const auto &[d_x] = std::get<typename Sig<
-              SigT<List<unsigned int>, List<unsigned int>>>::Exist>(y.v());
+          auto &[d_x] = std::get<typename Sig<
+              SigT<List<unsigned int>, List<unsigned int>>>::Exist>(y.v_mut());
           return d_x;
         }());
       };
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v_mut())) {
     return l2;
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l1.v());
+    auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(l1.v_mut());
     return List<unsigned int>::cons(d_a0, interleave0(std::move(l2), *(d_a1)));
   }
 }

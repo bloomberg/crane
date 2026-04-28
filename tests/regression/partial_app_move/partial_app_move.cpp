@@ -47,7 +47,7 @@ PartialAppMove::trigger_bug(PartialAppMove::tree t) {
     return sum_values(t, _x0);
   };
   PartialAppMove::tree w = wrap(std::move(t));
-  if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(w.v())) {
+  if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(w.v_mut())) {
     return f(0u);
   } else {
     return f(99u);

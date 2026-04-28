@@ -15,13 +15,7 @@ struct TodoPolymorphicErasedHelper {
     return []() {
       unsigned int kept_nat = _anon_aux(7u);
       bool kept_bool = _anon_aux(true);
-      return (kept_nat + [&]() -> unsigned int {
-        if (kept_bool) {
-          return 1u;
-        } else {
-          return 0u;
-        }
-      }());
+      return (kept_nat + (kept_bool ? 1u : 0u));
     }();
   }();
 };

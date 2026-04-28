@@ -120,19 +120,7 @@ struct IszOps {
     return []() {
       state s = state{List<unsigned int>::cons(
           15u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))};
-      return ([&]() -> unsigned int {
-        if (isz_loops(s, 0u)) {
-          return 1u;
-        } else {
-          return 0u;
-        }
-      }() + [&]() -> unsigned int {
-        if (isz_terminates(s, 0u)) {
-          return 1u;
-        } else {
-          return 0u;
-        }
-      }());
+      return ((isz_loops(s, 0u) ? 1u : 0u) + (isz_terminates(s, 0u) ? 1u : 0u));
     }();
   }();
   static inline const std::pair<std::pair<unsigned int, unsigned int>,

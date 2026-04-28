@@ -20,15 +20,15 @@ SigmaTypes::get_positive(const unsigned int &n) {
 __attribute__((pure)) Sig<unsigned int>
 SigmaTypes::double_positive(const unsigned int &n) {
   Sig<unsigned int> p = positive_succ(n);
-  return Sig<unsigned int>::exist((
-      [=]() mutable {
-        const auto &[d_x] = std::get<typename Sig<unsigned int>::Exist>(p.v());
+  return Sig<unsigned int>::exist(
+      ([=]() mutable {
+        auto &[d_x] = std::get<typename Sig<unsigned int>::Exist>(p.v_mut());
         return d_x;
       }() +
-      [=]() mutable {
-        const auto &[d_x0] = std::get<typename Sig<unsigned int>::Exist>(p.v());
-        return d_x0;
-      }()));
+       [=]() mutable {
+         auto &[d_x0] = std::get<typename Sig<unsigned int>::Exist>(p.v_mut());
+         return d_x0;
+       }()));
 }
 
 __attribute__((pure)) unsigned int

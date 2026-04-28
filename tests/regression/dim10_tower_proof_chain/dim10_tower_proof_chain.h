@@ -146,14 +146,14 @@ struct Dim10TowerProofChainCase {
       []() {
         SigT<unsigned int, std::any> s =
             graded_goodwillie_layers_stabilize(10u);
-        const auto &[d_x, d_a1] =
-            std::get<typename SigT<unsigned int, std::any>::ExistT>(s.v());
+        auto &[d_x, d_a1] =
+            std::get<typename SigT<unsigned int, std::any>::ExistT>(s.v_mut());
         return SigT<unsigned int, std::any>::existt(d_x, std::any{});
       }();
   static inline const SigT<unsigned int, std::any> dim10_P_stabilizes = []() {
     SigT<unsigned int, std::any> s = graded_goodwillie_P_stabilizes(10u);
-    const auto &[d_x, d_a1] =
-        std::get<typename SigT<unsigned int, std::any>::ExistT>(s.v());
+    auto &[d_x, d_a1] =
+        std::get<typename SigT<unsigned int, std::any>::ExistT>(s.v_mut());
     return SigT<unsigned int, std::any>::existt(d_x, std::any{});
   }();
   __attribute__((pure)) static std::pair<

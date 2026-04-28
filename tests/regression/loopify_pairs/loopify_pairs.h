@@ -341,10 +341,10 @@ struct LoopifyPairs {
           _result = std::make_pair(list<T1>::nil(), std::move(l));
         } else {
           unsigned int m = n - 1;
-          if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
+          if (std::holds_alternative<typename list<T1>::Nil>(l.v_mut())) {
             _result = std::make_pair(list<T1>::nil(), list<T1>::nil());
           } else {
-            const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
+            auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v_mut());
             _stack.emplace_back(_Call1{d_a0});
             _stack.emplace_back(_Enter{*(d_a1), m});
           }

@@ -26,11 +26,12 @@ FixMoveCapture::sum(const FixMoveCapture::mylist &l) {
 /// This means the caller passes l by value (move semantics).
 __attribute__((pure)) FixMoveCapture::mylist
 FixMoveCapture::dup_head(FixMoveCapture::mylist l) {
-  if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(l.v())) {
+  if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(
+          l.v_mut())) {
     return mylist::mynil();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename FixMoveCapture::mylist::Mycons>(l.v());
+    auto &[d_a0, d_a1] =
+        std::get<typename FixMoveCapture::mylist::Mycons>(l.v_mut());
     return mylist::mycons(d_a0, l);
   }
 }

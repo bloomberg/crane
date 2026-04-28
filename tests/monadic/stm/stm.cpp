@@ -42,11 +42,11 @@ void stmtest::stm_enqueue(const stm::TVar<List<unsigned int>> q,
 
 unsigned int stmtest::stm_dequeue(const stm::TVar<List<unsigned int>> q) {
   List<unsigned int> xs = stm::readTVar(q);
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v_mut())) {
     return stm::retry<unsigned int>();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(xs.v());
+    auto &[d_a0, d_a1] =
+        std::get<typename List<unsigned int>::Cons>(xs.v_mut());
     stm::writeTVar(q, *(d_a1));
     return d_a0;
   }

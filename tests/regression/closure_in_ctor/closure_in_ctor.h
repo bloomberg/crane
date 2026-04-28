@@ -124,8 +124,8 @@ struct ClosureInCtor {
   /// Expected: add(10) = 42 + 10 = 52.
   static inline const unsigned int test2 = []() {
     box b = make_box_fix(42u);
-    if (std::holds_alternative<typename box::Box0>(b.v())) {
-      const auto &[d_a0] = std::get<typename box::Box0>(b.v());
+    if (std::holds_alternative<typename box::Box0>(b.v_mut())) {
+      auto &[d_a0] = std::get<typename box::Box0>(b.v_mut());
       return d_a0(10u);
     } else {
       return 999u;
@@ -136,10 +136,10 @@ struct ClosureInCtor {
   static inline const unsigned int test3 = []() {
     box b1 = make_box_fix(10u);
     box b2 = make_box_fix(20u);
-    if (std::holds_alternative<typename box::Box0>(b1.v())) {
-      const auto &[d_a0] = std::get<typename box::Box0>(b1.v());
-      if (std::holds_alternative<typename box::Box0>(b2.v())) {
-        const auto &[d_a00] = std::get<typename box::Box0>(b2.v());
+    if (std::holds_alternative<typename box::Box0>(b1.v_mut())) {
+      auto &[d_a0] = std::get<typename box::Box0>(b1.v_mut());
+      if (std::holds_alternative<typename box::Box0>(b2.v_mut())) {
+        auto &[d_a00] = std::get<typename box::Box0>(b2.v_mut());
         return (d_a0(0u) + d_a00(0u));
       } else {
         return 999u;

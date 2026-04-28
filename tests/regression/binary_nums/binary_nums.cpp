@@ -371,10 +371,10 @@ __attribute__((pure)) unsigned int Coq_Pos::to_nat(const Positive &x) {
 }
 
 __attribute__((pure)) N BinNat::sub(N n, const N &m) {
-  if (std::holds_alternative<typename N::N0>(n.v())) {
+  if (std::holds_alternative<typename N::N0>(n.v_mut())) {
     return N::n0();
   } else {
-    const auto &[d_a0] = std::get<typename N::Npos>(n.v());
+    auto &[d_a0] = std::get<typename N::Npos>(n.v_mut());
     if (std::holds_alternative<typename N::N0>(m.v())) {
       return n;
     } else {
@@ -418,14 +418,14 @@ __attribute__((pure)) N BinNat::pred(const N &n) {
 }
 
 __attribute__((pure)) N BinNat::add(N n, N m) {
-  if (std::holds_alternative<typename N::N0>(n.v())) {
+  if (std::holds_alternative<typename N::N0>(n.v_mut())) {
     return m;
   } else {
-    const auto &[d_a0] = std::get<typename N::Npos>(n.v());
-    if (std::holds_alternative<typename N::N0>(m.v())) {
+    auto &[d_a0] = std::get<typename N::Npos>(n.v_mut());
+    if (std::holds_alternative<typename N::N0>(m.v_mut())) {
       return n;
     } else {
-      const auto &[d_a00] = std::get<typename N::Npos>(m.v());
+      auto &[d_a00] = std::get<typename N::Npos>(m.v_mut());
       return N::npos(Coq_Pos::add(d_a0, d_a00));
     }
   }
@@ -527,28 +527,28 @@ __attribute__((pure)) Z BinInt::pos_sub(const Positive &x, const Positive &y) {
 }
 
 __attribute__((pure)) Z BinInt::add(Z x, Z y) {
-  if (std::holds_alternative<typename Z::Z0>(x.v())) {
+  if (std::holds_alternative<typename Z::Z0>(x.v_mut())) {
     return y;
-  } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
-    if (std::holds_alternative<typename Z::Z0>(y.v())) {
+  } else if (std::holds_alternative<typename Z::Zpos>(x.v_mut())) {
+    auto &[d_a0] = std::get<typename Z::Zpos>(x.v_mut());
+    if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
-      const auto &[d_a00] = std::get<typename Z::Zpos>(y.v());
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
+      auto &[d_a00] = std::get<typename Z::Zpos>(y.v_mut());
       return Z::zpos(Pos::add(d_a0, d_a00));
     } else {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(y.v());
+      auto &[d_a00] = std::get<typename Z::Zneg>(y.v_mut());
       return BinInt::pos_sub(d_a0, d_a00);
     }
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
-    if (std::holds_alternative<typename Z::Z0>(y.v())) {
+    auto &[d_a0] = std::get<typename Z::Zneg>(x.v_mut());
+    if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
-      const auto &[d_a00] = std::get<typename Z::Zpos>(y.v());
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
+      auto &[d_a00] = std::get<typename Z::Zpos>(y.v_mut());
       return BinInt::pos_sub(d_a00, d_a0);
     } else {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(y.v());
+      auto &[d_a00] = std::get<typename Z::Zneg>(y.v_mut());
       return Z::zneg(Pos::add(d_a0, d_a00));
     }
   }

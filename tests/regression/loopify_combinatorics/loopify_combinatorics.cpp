@@ -123,7 +123,7 @@ LoopifyCombinatorics::perms_choices_fuel(const unsigned int &fuel,
               std::get<typename List<unsigned int>::Cons>(choices.v());
           List<unsigned int> remaining = remove(d_a0, orig);
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  remaining.v())) {
+                  remaining.v_mut())) {
             _stack.emplace_back(
                 _Call1{map_cons(d_a0, List<List<unsigned int>>::cons(
                                           List<unsigned int>::nil(),
@@ -494,13 +494,13 @@ LoopifyCombinatorics::insert_everywhere(unsigned int x, List<unsigned int> l) {
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       List<unsigned int> l = _f.l;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v_mut())) {
         _result = List<List<unsigned int>>::cons(
             List<unsigned int>::cons(x, List<unsigned int>::nil()),
             List<List<unsigned int>>::nil());
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(l.v());
+        auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l.v_mut());
         List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
         _stack.emplace_back(_Call1{d_a0, l, x});
         _stack.emplace_back(_Enter{d_a1_value});

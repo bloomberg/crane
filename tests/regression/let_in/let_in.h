@@ -99,8 +99,8 @@ struct LetIn {
   static inline const unsigned int let_destruct = []() {
     pair<unsigned int, unsigned int> p =
         pair<unsigned int, unsigned int>::pair0(3u, 4u);
-    const auto &[d_a0, d_a1] =
-        std::get<typename pair<unsigned int, unsigned int>::Pair0>(p.v());
+    auto &[d_a0, d_a1] =
+        std::get<typename pair<unsigned int, unsigned int>::Pair0>(p.v_mut());
     return d_a0;
   }();
   static inline const unsigned int multi_let = []() {

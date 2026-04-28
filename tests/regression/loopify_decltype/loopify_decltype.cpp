@@ -27,13 +27,7 @@ LoopifyDecltype::count_true(const List<bool> &xs) {
         _result = 0u;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs.v());
-        _stack.emplace_back(_Call1{[&]() -> unsigned int {
-          if (d_a0) {
-            return 1u;
-          } else {
-            return 0u;
-          }
-        }()});
+        _stack.emplace_back(_Call1{(d_a0 ? 1u : 0u)});
         _stack.emplace_back(_Enter{*(d_a1)});
       }
     } else {
@@ -71,13 +65,7 @@ LoopifyDecltype::sum_flagged(const List<LoopifyDecltype::item> &xs) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<LoopifyDecltype::item>::Cons>(xs.v());
-        _stack.emplace_back(_Call1{[&]() -> unsigned int {
-          if (d_a0.item_flag) {
-            return d_a0.item_val;
-          } else {
-            return 0u;
-          }
-        }()});
+        _stack.emplace_back(_Call1{(d_a0.item_flag ? d_a0.item_val : 0u)});
         _stack.emplace_back(_Enter{*(d_a1)});
       }
     } else {

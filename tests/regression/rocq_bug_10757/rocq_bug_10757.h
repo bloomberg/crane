@@ -84,7 +84,7 @@ struct RocqBug10757 {
     std::function<Sig<T1>(T1)> iterate0 = [=](const T1 x1) mutable {
       Sig<T1> y = Sig<Sig<T1>>::exist(Sig<T1>::exist(x1));
       return iterate_func<T1>(beq, f, [=]() mutable {
-        const auto &[d_x] = std::get<typename Sig<T1>::Exist>(y.v());
+        auto &[d_x] = std::get<typename Sig<T1>::Exist>(y.v_mut());
         return d_x;
       }());
     };

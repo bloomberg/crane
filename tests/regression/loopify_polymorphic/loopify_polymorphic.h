@@ -281,12 +281,12 @@ struct LoopifyPolymorphic {
         break;
       } else {
         unsigned int n_ = _loop_n - 1;
-        if (std::holds_alternative<typename List<T1>::Nil>(_loop_l.v())) {
+        if (std::holds_alternative<typename List<T1>::Nil>(_loop_l.v_mut())) {
           _result = List<T1>::nil();
           break;
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<T1>::Cons>(_loop_l.v());
+          auto &[d_a0, d_a1] =
+              std::get<typename List<T1>::Cons>(_loop_l.v_mut());
           List<T1> _next_l = *(d_a1);
           unsigned int _next_n = n_;
           _loop_l = std::move(_next_l);

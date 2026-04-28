@@ -339,10 +339,10 @@ struct TopologicalSort {
       } else {
         unsigned int c = counter - 1;
         List<T1> l = graph_lookup<T1>(eqb_node, elem, graph0);
-        if (bsl::holds_alternative<typename List<T1>::Nil>(l.v())) {
+        if (bsl::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
           return elem;
         } else {
-          const auto &[d_a0, d_a1] = bsl::get<typename List<T1>::Cons>(l.v());
+          auto &[d_a0, d_a1] = bsl::get<typename List<T1>::Cons>(l.v_mut());
           return cycle_entry_aux<T1>(eqb_node, graph0,
                                      List<T1>::cons(elem, bsl::move(seens)),
                                      d_a0, c);

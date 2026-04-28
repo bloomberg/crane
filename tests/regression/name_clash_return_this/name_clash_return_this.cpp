@@ -8,13 +8,13 @@ NameClashReturnThis::maybe_transform(const bool &flag,
                                      NameClashReturnThis::shape s) {
   if (flag) {
     if (std::holds_alternative<typename NameClashReturnThis::shape::Circle>(
-            s.v())) {
-      const auto &[d_a0] =
-          std::get<typename NameClashReturnThis::shape::Circle>(s.v());
+            s.v_mut())) {
+      auto &[d_a0] =
+          std::get<typename NameClashReturnThis::shape::Circle>(s.v_mut());
       return shape::square(d_a0, d_a0);
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename NameClashReturnThis::shape::Square>(s.v());
+      auto &[d_a0, d_a1] =
+          std::get<typename NameClashReturnThis::shape::Square>(s.v_mut());
       return shape::circle((d_a0 + d_a1));
     }
   } else {
@@ -42,7 +42,7 @@ __attribute__((pure)) NameClashReturnThis::shape
 NameClashReturnThis::pick_shape(NameClashReturnThis::shape s1,
                                 NameClashReturnThis::shape s2) {
   if (std::holds_alternative<typename NameClashReturnThis::shape::Circle>(
-          s1.v())) {
+          s1.v_mut())) {
     return s2;
   } else {
     return s1;

@@ -411,13 +411,12 @@ struct LoopifyLists {
     std::unique_ptr<list<list<T1>>> *_write = &_head;
     list<T1> _loop_l = std::move(l);
     while (true) {
-      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l.v_mut())) {
         *(_write) = std::make_unique<list<list<T1>>>(
             list<list<T1>>::cons(list<T1>::nil(), list<list<T1>>::nil()));
         break;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename list<T1>::Cons>(_loop_l.v());
+        auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(_loop_l.v_mut());
         auto _cell = std::make_unique<list<list<T1>>>(
             typename list<list<T1>>::Cons(_loop_l, nullptr));
         *(_write) = std::move(_cell);
@@ -635,12 +634,12 @@ struct LoopifyLists {
             } else {
               unsigned int m = _loop_k - 1;
               if (std::holds_alternative<typename list<T1>::Nil>(
-                      _loop_lst.v())) {
+                      _loop_lst.v_mut())) {
                 _result = list<T1>::nil();
                 break;
               } else {
-                const auto &[d_a00, d_a10] =
-                    std::get<typename list<T1>::Cons>(_loop_lst.v());
+                auto &[d_a00, d_a10] =
+                    std::get<typename list<T1>::Cons>(_loop_lst.v_mut());
                 list<T1> _next_lst = *(d_a10);
                 unsigned int _next_k = m;
                 _loop_lst = std::move(_next_lst);
@@ -656,7 +655,7 @@ struct LoopifyLists {
         } else {
           list<T1> chunk = take(n, _loop_l);
           list<T1> rest = drop0(n, _loop_l);
-          if (std::holds_alternative<typename list<T1>::Nil>(chunk.v())) {
+          if (std::holds_alternative<typename list<T1>::Nil>(chunk.v_mut())) {
             *(_write) = std::make_unique<list<list<T1>>>(list<list<T1>>::nil());
             break;
           } else {
@@ -1126,7 +1125,7 @@ struct LoopifyLists {
           } else {
             list<T1> heads = map_head(_loop_m);
             list<list<T1>> tails0 = map_tail(_loop_m);
-            if (std::holds_alternative<typename list<T1>::Nil>(heads.v())) {
+            if (std::holds_alternative<typename list<T1>::Nil>(heads.v_mut())) {
               *(_write) =
                   std::make_unique<list<list<T1>>>(list<list<T1>>::nil());
               break;
@@ -1453,12 +1452,13 @@ struct LoopifyLists {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         list<unsigned int> l = _f.l;
-        if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
+        if (std::holds_alternative<typename list<unsigned int>::Nil>(
+                l.v_mut())) {
           _result = std::make_pair(list<unsigned int>::nil(),
                                    list<unsigned int>::nil());
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename list<unsigned int>::Cons>(l.v());
+          auto &[d_a0, d_a1] =
+              std::get<typename list<unsigned int>::Cons>(l.v_mut());
           if (p(d_a0)) {
             _stack.emplace_back(_Call1{d_a0});
             _stack.emplace_back(_Enter{*(d_a1)});

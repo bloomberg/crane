@@ -11,13 +11,13 @@ ReuseTagMismatch::id_or_flip(ReuseTagMismatch::direction d,
                              const bool &flip_flag) {
   if (flip_flag) {
     if (std::holds_alternative<typename ReuseTagMismatch::direction::GoUp>(
-            d.v())) {
-      const auto &[d_a0] =
-          std::get<typename ReuseTagMismatch::direction::GoUp>(d.v());
+            d.v_mut())) {
+      auto &[d_a0] =
+          std::get<typename ReuseTagMismatch::direction::GoUp>(d.v_mut());
       return direction::godown(d_a0);
     } else {
-      const auto &[d_a0] =
-          std::get<typename ReuseTagMismatch::direction::GoDown>(d.v());
+      auto &[d_a0] =
+          std::get<typename ReuseTagMismatch::direction::GoDown>(d.v_mut());
       return direction::goup(d_a0);
     }
   } else {

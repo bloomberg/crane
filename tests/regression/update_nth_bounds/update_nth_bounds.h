@@ -89,10 +89,10 @@ public:
     } else {
       unsigned int n0 = n - 1;
       auto &&_sv = *(this);
-      if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+      if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v_mut())) {
         return List<t_A>::nil();
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+        auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v_mut());
         return (*(d_a1)).skipn(n0);
       }
     }

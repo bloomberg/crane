@@ -211,7 +211,7 @@ struct CpsEscape {
         return t.make_adder(_x0);
       };
       box b = store_in_box(adder);
-      const auto &[d_a0] = std::get<typename box::Box0>(b.v());
+      auto &[d_a0] = std::get<typename box::Box0>(b.v_mut());
       return d_a0(5u);
     }();
   }();
@@ -224,7 +224,7 @@ struct CpsEscape {
       box b = store_in_box([=](unsigned int _x0) mutable -> unsigned int {
         return t.make_adder(_x0);
       });
-      const auto &[d_a0] = std::get<typename box::Box0>(b.v());
+      auto &[d_a0] = std::get<typename box::Box0>(b.v_mut());
       return d_a0(5u);
     }();
   }();
@@ -241,8 +241,8 @@ struct CpsEscape {
       box b2 = store_in_box([=](unsigned int _x0) mutable -> unsigned int {
         return t2.make_adder(_x0);
       });
-      const auto &[d_a0] = std::get<typename box::Box0>(b1.v());
-      const auto &[d_a00] = std::get<typename box::Box0>(b2.v());
+      auto &[d_a0] = std::get<typename box::Box0>(b1.v_mut());
+      auto &[d_a00] = std::get<typename box::Box0>(b2.v_mut());
       return (d_a0(0u) + d_a00(0u));
     }();
   }();

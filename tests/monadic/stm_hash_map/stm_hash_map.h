@@ -235,11 +235,12 @@ template <typename K, typename V> struct CHT {
   __attribute__((
       pure)) static std::pair<std::optional<T2>, List<std::pair<T1, T2>>>
   assoc_remove(F0 &&eqb, const T1 k, List<std::pair<T1, T2>> xs) {
-    if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(xs.v())) {
+    if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(
+            xs.v_mut())) {
       return std::make_pair(std::optional<T2>(), xs);
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<std::pair<T1, T2>>::Cons>(xs.v());
+      auto &[d_a0, d_a1] =
+          std::get<typename List<std::pair<T1, T2>>::Cons>(xs.v_mut());
       const T1 &k_ = d_a0.first;
       const T2 &v_ = d_a0.second;
       if (eqb(k, k_)) {

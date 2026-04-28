@@ -230,12 +230,12 @@ LoopifySearch::drop_impl(const unsigned int &k, List<unsigned int> l) {
     } else {
       unsigned int m = _loop_k - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l.v_mut())) {
         _result = List<unsigned int>::nil();
         break;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+        auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
         List<unsigned int> _next_l = *(d_a1);
         unsigned int _next_k = m;
         _loop_l = std::move(_next_l);
@@ -517,13 +517,13 @@ LoopifySearch::sieve_fuel(const unsigned int &fuel, List<unsigned int> l) {
     } else {
       unsigned int f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l.v_mut())) {
         *(_write) =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+        auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
         List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
@@ -588,13 +588,13 @@ LoopifySearch::nub_fuel(const unsigned int &fuel, List<unsigned int> l) {
     } else {
       unsigned int f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l.v_mut())) {
         *(_write) =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+        auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
         if (elem_impl(d_a0, *(d_a1))) {
           List<unsigned int> _next_l = *(d_a1);
           unsigned int _next_fuel = f;
@@ -640,13 +640,13 @@ LoopifySearch::remove_duplicates_fuel(const unsigned int &fuel,
     } else {
       unsigned int f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l.v_mut())) {
         *(_write) =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+        auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
         List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
         if (elem_impl(d_a0, d_a1_value)) {
           List<unsigned int> _next_l = d_a1_value;
@@ -715,11 +715,12 @@ LoopifySearch::quicksort_fuel(const unsigned int &fuel, List<unsigned int> l) {
         _result = std::move(l);
       } else {
         unsigned int f = fuel - 1;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                l.v_mut())) {
           _result = List<unsigned int>::nil();
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
+          auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l.v_mut());
           List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
           List<unsigned int> smaller = filter_impl(
               [=](const unsigned int &y) mutable { return y < d_a0; },
@@ -820,19 +821,19 @@ LoopifySearch::merge_sorted_fuel(const unsigned int &fuel,
     } else {
       unsigned int f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l1.v())) {
+              _loop_l1.v_mut())) {
         *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
         break;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l1.v());
+        auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l1.v_mut());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _loop_l2.v())) {
+                _loop_l2.v_mut())) {
           *(_write) = std::make_unique<List<unsigned int>>(_loop_l1);
           break;
         } else {
-          const auto &[d_a00, d_a10] =
-              std::get<typename List<unsigned int>::Cons>(_loop_l2.v());
+          auto &[d_a00, d_a10] =
+              std::get<typename List<unsigned int>::Cons>(_loop_l2.v_mut());
           if (d_a0 <= d_a00) {
             auto _cell = std::make_unique<List<unsigned int>>(
                 typename List<unsigned int>::Cons(d_a0, nullptr));
@@ -905,11 +906,12 @@ LoopifySearch::merge_sort_fuel(const unsigned int &fuel, List<unsigned int> l) {
         _result = std::move(l);
       } else {
         unsigned int f = fuel - 1;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                l.v_mut())) {
           _result = List<unsigned int>::nil();
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
+          auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l.v_mut());
           auto &&_sv = *(d_a1);
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
@@ -1059,7 +1061,7 @@ LoopifySearch::perms_choices_fuel(const unsigned int &fuel,
               std::get<typename List<unsigned int>::Cons>(choices.v());
           List<unsigned int> remaining = remove_first(d_a0, orig);
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  remaining.v())) {
+                  remaining.v_mut())) {
             _stack.emplace_back(
                 _Call1{map_cons(d_a0, List<List<unsigned int>>::cons(
                                           List<unsigned int>::nil(),

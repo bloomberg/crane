@@ -194,10 +194,10 @@ struct AccumClosureCapture {
     __attribute__((pure)) fn_list extract_closures() const {
       tree _self = *(this);
       auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v_mut())) {
         return fn_list::fnil();
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
+        auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v_mut());
         return fn_list::fcons(
             [=](const unsigned int &x) mutable {
               return (x + _self.tree_sum());

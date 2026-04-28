@@ -4,20 +4,20 @@ __attribute__((pure)) List<unsigned int>
 LoadProgramHeadWrite::update_nth(const unsigned int &n, unsigned int x,
                                  List<unsigned int> l) {
   if (n <= 0) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v_mut())) {
       return l;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v());
+      auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(l.v_mut());
       return List<unsigned int>::cons(x, *(d_a1));
     }
   } else {
     unsigned int n_ = n - 1;
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v_mut())) {
       return l;
     } else {
-      const auto &[d_a00, d_a10] =
-          std::get<typename List<unsigned int>::Cons>(l.v());
+      auto &[d_a00, d_a10] =
+          std::get<typename List<unsigned int>::Cons>(l.v_mut());
       return List<unsigned int>::cons(d_a00, update_nth(n_, x, *(d_a10)));
     }
   }

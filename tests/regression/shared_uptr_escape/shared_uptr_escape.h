@@ -225,7 +225,7 @@ struct SharedUptrEscape {
   static inline const unsigned int unwrap_and_dup = []() {
     tree t = tree::node(tree::leaf(), 42u, tree::leaf());
     wrapper w = wrap_tree(std::move(t));
-    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
+    auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v_mut());
     return (d_a0.tree_sum() + d_a0.tree_sum());
   }();
 };

@@ -23,13 +23,7 @@ struct SetTestPinUpdate {
   static inline const unsigned int t = []() {
     return []() {
       state s_ = set_test_pin(state{6u, false}, true);
-      return (s_.acc + [&]() -> unsigned int {
-        if (s_.test_pin) {
-          return 1u;
-        } else {
-          return 0u;
-        }
-      }());
+      return (s_.acc + (s_.test_pin ? 1u : 0u));
     }();
   }();
 };

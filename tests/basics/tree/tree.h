@@ -74,14 +74,14 @@ public:
 
   __attribute__((pure)) Nat max(Nat m) const {
     auto &&_sv = *(this);
-    if (std::holds_alternative<typename Nat::O>(_sv.v())) {
+    if (std::holds_alternative<typename Nat::O>(_sv.v_mut())) {
       return m;
     } else {
-      const auto &[d_a0] = std::get<typename Nat::S>(_sv.v());
-      if (std::holds_alternative<typename Nat::O>(m.v())) {
+      auto &[d_a0] = std::get<typename Nat::S>(_sv.v_mut());
+      if (std::holds_alternative<typename Nat::O>(m.v_mut())) {
         return *(this);
       } else {
-        const auto &[d_a00] = std::get<typename Nat::S>(m.v());
+        auto &[d_a00] = std::get<typename Nat::S>(m.v_mut());
         return Nat::s((*(d_a0)).max(*(d_a00)));
       }
     }

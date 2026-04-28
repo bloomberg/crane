@@ -873,15 +873,8 @@ LoopifyNumbers::mixed_arith_fuel(const unsigned int &fuel,
             } else {
               unsigned int m = n_ - 1;
               _stack.emplace_back(_Call1{m, f, n_, f});
-              _stack.emplace_back(_Enter{[&]() -> unsigned int {
-                                           if (m == 0u) {
-                                             return 0u;
-                                           } else {
-                                             return (
-                                                 ((m - 1u) > m ? 0 : (m - 1u)));
-                                           }
-                                         }(),
-                                         f});
+              _stack.emplace_back(
+                  _Enter{(m == 0u ? 0u : (((m - 1u) > m ? 0 : (m - 1u)))), f});
             }
           }
         }

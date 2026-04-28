@@ -506,13 +506,13 @@ struct LoopifyHofs {
       } else {
         unsigned int g = _loop_fuel - 1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _loop_l.v())) {
+                _loop_l.v_mut())) {
           *(_write) =
               std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
           break;
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
           auto &&_sv0 = *(d_a1);
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv0.v())) {
@@ -828,16 +828,18 @@ struct LoopifyHofs {
       return l1;
     } else {
       unsigned int f = fuel - 1;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(
+              l1.v_mut())) {
         return l2;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(l1.v());
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
+        auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l1.v_mut());
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                l2.v_mut())) {
           return l1;
         } else {
-          const auto &[d_a00, d_a10] =
-              std::get<typename List<unsigned int>::Cons>(l2.v());
+          auto &[d_a00, d_a10] =
+              std::get<typename List<unsigned int>::Cons>(l2.v_mut());
           if (cmp(d_a0, d_a00) <= 0u) {
             return List<unsigned int>::cons(d_a0,
                                             merge_by_fuel(f, cmp, *(d_a1), l2));

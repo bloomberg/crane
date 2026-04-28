@@ -108,26 +108,20 @@ public:
 struct ValidProgramChecks {
   __attribute__((pure)) static bool
   valid_program(const List<unsigned int> &bytes);
-  static inline const unsigned int t = ([]() -> unsigned int {
-    if (valid_program(List<unsigned int>::cons(
+  static inline const unsigned int t =
+      ((valid_program(List<unsigned int>::cons(
             1u, List<unsigned int>::cons(
                     2u, List<unsigned int>::cons(
                             3u, List<unsigned int>::cons(
-                                    4u, List<unsigned int>::nil())))))) {
-      return 1u;
-    } else {
-      return 0u;
-    }
-  }() + []() -> unsigned int {
-    if (valid_program(List<unsigned int>::cons(
-            1u, List<unsigned int>::cons(
-                    2u, List<unsigned int>::cons(
-                            300u, List<unsigned int>::nil()))))) {
-      return 1u;
-    } else {
-      return 0u;
-    }
-  }());
+                                    4u, List<unsigned int>::nil())))))
+            ? 1u
+            : 0u) +
+       (valid_program(List<unsigned int>::cons(
+            1u,
+            List<unsigned int>::cons(
+                2u, List<unsigned int>::cons(300u, List<unsigned int>::nil()))))
+            ? 1u
+            : 0u));
 };
 
 #endif // INCLUDED_VALID_PROGRAM_CHECKS

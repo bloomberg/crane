@@ -10,11 +10,11 @@ std::optional<std::string> EffectDirPath::first_file(const std::string path) {
     }
     return result;
   }();
-  if (std::holds_alternative<typename List<std::string>::Nil>(files.v())) {
+  if (std::holds_alternative<typename List<std::string>::Nil>(files.v_mut())) {
     return std::optional<std::string>();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<std::string>::Cons>(files.v());
+    auto &[d_a0, d_a1] =
+        std::get<typename List<std::string>::Cons>(files.v_mut());
     return std::make_optional<std::string>(d_a0);
   }
 }

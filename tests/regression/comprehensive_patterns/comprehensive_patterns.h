@@ -771,11 +771,11 @@ struct ComprehensivePatterns {
 
     __attribute__((pure)) Tree flip_tree() const {
       auto &&_sv = *(this);
-      if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename Tree::Leaf>(_sv.v());
+      if (std::holds_alternative<typename Tree::Leaf>(_sv.v_mut())) {
+        auto &[d_a0] = std::get<typename Tree::Leaf>(_sv.v_mut());
         return Tree::node(*(this), d_a0, *(this));
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename Tree::Node>(_sv.v());
+        auto &[d_a0, d_a1, d_a2] = std::get<typename Tree::Node>(_sv.v_mut());
         return Tree::leaf(d_a1);
       }
     }

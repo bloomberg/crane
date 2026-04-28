@@ -196,28 +196,28 @@ __attribute__((pure)) Z BinInt::pos_sub(const Positive &x, const Positive &y) {
 }
 
 __attribute__((pure)) Z BinInt::add(Z x, Z y) {
-  if (std::holds_alternative<typename Z::Z0>(x.v())) {
+  if (std::holds_alternative<typename Z::Z0>(x.v_mut())) {
     return y;
-  } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
-    if (std::holds_alternative<typename Z::Z0>(y.v())) {
+  } else if (std::holds_alternative<typename Z::Zpos>(x.v_mut())) {
+    auto &[d_a0] = std::get<typename Z::Zpos>(x.v_mut());
+    if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
-      const auto &[d_a00] = std::get<typename Z::Zpos>(y.v());
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
+      auto &[d_a00] = std::get<typename Z::Zpos>(y.v_mut());
       return Z::zpos(Pos::add(d_a0, d_a00));
     } else {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(y.v());
+      auto &[d_a00] = std::get<typename Z::Zneg>(y.v_mut());
       return BinInt::pos_sub(d_a0, d_a00);
     }
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
-    if (std::holds_alternative<typename Z::Z0>(y.v())) {
+    auto &[d_a0] = std::get<typename Z::Zneg>(x.v_mut());
+    if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
-      const auto &[d_a00] = std::get<typename Z::Zpos>(y.v());
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
+      auto &[d_a00] = std::get<typename Z::Zpos>(y.v_mut());
       return BinInt::pos_sub(d_a00, d_a0);
     } else {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(y.v());
+      auto &[d_a00] = std::get<typename Z::Zneg>(y.v_mut());
       return Z::zneg(Pos::add(d_a0, d_a00));
     }
   }
@@ -416,20 +416,8 @@ CoalitionBidHonorTraceCase::unit_to_metrics(
     const CoalitionBidHonorTraceCase::Unit &u) {
   return ForceMetrics{1u,
                       u.unit_tonnage,
-                      [=]() mutable -> unsigned int {
-                        if (u.unit_is_elite) {
-                          return 1u;
-                        } else {
-                          return 0u;
-                        }
-                      }(),
-                      [=]() mutable -> unsigned int {
-                        if (u.unit_is_clan) {
-                          return 1u;
-                        } else {
-                          return 0u;
-                        }
-                      }(),
+                      (u.unit_is_elite ? 1u : 0u),
+                      (u.unit_is_clan ? 1u : 0u),
                       unit_battle_value(u),
                       unit_effective_combat_rating(u)};
 }

@@ -131,7 +131,7 @@ struct PartialAppMove {
         return sum_values(t, _x0);
       };
       tree w = tree::node(std::move(t), 42u, tree::leaf());
-      if (std::holds_alternative<typename tree::Leaf>(w.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(w.v_mut())) {
         return f(0u);
       } else {
         return f(99u);
@@ -148,7 +148,7 @@ struct PartialAppMove {
         return sum_values(t, _x0);
       };
       tree w = wrap(std::move(t));
-      if (std::holds_alternative<typename tree::Leaf>(w.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(w.v_mut())) {
         return f(0u);
       } else {
         return f(99u);

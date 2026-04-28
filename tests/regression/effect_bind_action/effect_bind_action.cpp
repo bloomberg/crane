@@ -17,16 +17,11 @@ std::string EffectBindAction::conditional_read(const bool &use_stdin) {
 
 /// 2. Bool match where both branches are effects
 int64_t EffectBindAction::conditional_effect(const bool &flag) {
-  return [=]() mutable -> int64_t {
-    if (flag) {
-      return static_cast<int64_t>(
-          std::chrono::duration_cast<std::chrono::milliseconds>(
-              std::chrono::steady_clock::now().time_since_epoch())
-              .count());
-    } else {
-      return int64_t(0);
-    }
-  }();
+  return (flag ? static_cast<int64_t>(
+                     std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::steady_clock::now().time_since_epoch())
+                         .count())
+               : int64_t(0));
 }
 
 /// 3. Option match inside bind: conditional effect based on env
@@ -48,26 +43,18 @@ std::string EffectBindAction::maybe_override(const std::string name,
 
 /// 4. Nested: effect result used in another conditional effect
 std::pair<int64_t, int64_t> EffectBindAction::timed_if_needed(bool measure) {
-  int64_t t1 = [&]() -> int64_t {
-    if (measure) {
-      return static_cast<int64_t>(
-          std::chrono::duration_cast<std::chrono::milliseconds>(
-              std::chrono::steady_clock::now().time_since_epoch())
-              .count());
-    } else {
-      return int64_t(0);
-    }
-  }();
-  int64_t t2 = [&]() -> int64_t {
-    if (measure) {
-      return static_cast<int64_t>(
-          std::chrono::duration_cast<std::chrono::milliseconds>(
-              std::chrono::steady_clock::now().time_since_epoch())
-              .count());
-    } else {
-      return int64_t(0);
-    }
-  }();
+  int64_t t1 =
+      (measure ? static_cast<int64_t>(
+                     std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::steady_clock::now().time_since_epoch())
+                         .count())
+               : int64_t(0));
+  int64_t t2 =
+      (measure ? static_cast<int64_t>(
+                     std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::steady_clock::now().time_since_epoch())
+                         .count())
+               : int64_t(0));
   return std::make_pair(t1, t2);
 }
 

@@ -424,19 +424,7 @@ struct LoopifyStructures {
         unsigned int d3 = (*(d_a2)).quad_depth();
         unsigned int d4 = (*(d_a3)).quad_depth();
         return ([&]() -> unsigned int {
-          if ([&]() -> unsigned int {
-                if (d1 <= d2) {
-                  return d2;
-                } else {
-                  return d1;
-                }
-              }() <= [&]() -> unsigned int {
-                if (d3 <= d4) {
-                  return d4;
-                } else {
-                  return d3;
-                }
-              }()) {
+          if ((d1 <= d2 ? d2 : d1) <= (d3 <= d4 ? d4 : d3)) {
             if (d3 <= d4) {
               return d4;
             } else {
@@ -893,28 +881,22 @@ struct LoopifyStructures {
           const ltree *_self = _f._self;
           ltree t2 = _f.t2;
           auto &&_sv = *(_self);
-          if (std::holds_alternative<typename ltree::LLeaf>(_sv.v())) {
-            const auto &[d_a0] = std::get<typename ltree::LLeaf>(_sv.v());
-            if (std::holds_alternative<typename ltree::LLeaf>(t2.v())) {
-              const auto &[d_a00] = std::get<typename ltree::LLeaf>(t2.v());
-              _result = ltree::lleaf([&]() -> unsigned int {
-                if (d_a0 <= d_a00) {
-                  return d_a00;
-                } else {
-                  return d_a0;
-                }
-              }());
+          if (std::holds_alternative<typename ltree::LLeaf>(_sv.v_mut())) {
+            auto &[d_a0] = std::get<typename ltree::LLeaf>(_sv.v_mut());
+            if (std::holds_alternative<typename ltree::LLeaf>(t2.v_mut())) {
+              auto &[d_a00] = std::get<typename ltree::LLeaf>(t2.v_mut());
+              _result = ltree::lleaf((d_a0 <= d_a00 ? d_a00 : d_a0));
             } else {
               _result = t2;
             }
           } else {
-            const auto &[d_a0, d_a1, d_a2] =
-                std::get<typename ltree::LNode>(_sv.v());
-            if (std::holds_alternative<typename ltree::LLeaf>(t2.v())) {
+            auto &[d_a0, d_a1, d_a2] =
+                std::get<typename ltree::LNode>(_sv.v_mut());
+            if (std::holds_alternative<typename ltree::LLeaf>(t2.v_mut())) {
               _result = *(_self);
             } else {
-              const auto &[d_a00, d_a10, d_a20] =
-                  std::get<typename ltree::LNode>(t2.v());
+              auto &[d_a00, d_a10, d_a20] =
+                  std::get<typename ltree::LNode>(t2.v_mut());
               unsigned int max_val;
               if (d_a0 <= d_a00) {
                 max_val = d_a00;

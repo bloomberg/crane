@@ -160,19 +160,19 @@ LoopifyAdvancedLists::interleave(List<unsigned int> l1, List<unsigned int> l2) {
   List<unsigned int> _loop_l1 = std::move(l1);
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
-            _loop_l1.v())) {
+            _loop_l1.v_mut())) {
       *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
       break;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l1.v());
+      auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l1.v_mut());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l2.v())) {
+              _loop_l2.v_mut())) {
         *(_write) = std::make_unique<List<unsigned int>>(_loop_l1);
         break;
       } else {
-        const auto &[d_a00, d_a10] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l2.v());
+        auto &[d_a00, d_a10] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l2.v_mut());
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
         auto _cell1 = std::make_unique<List<unsigned int>>(

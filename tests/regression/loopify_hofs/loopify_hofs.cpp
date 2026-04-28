@@ -253,13 +253,13 @@ LoopifyHofs::longest_run_fuel(const unsigned int &fuel, List<unsigned int> l) {
     } else {
       unsigned int f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l.v_mut())) {
         *(_write) =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+        auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
         auto &&_sv0 = *(d_a1);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv0.v())) {
@@ -286,13 +286,14 @@ LoopifyHofs::longest_run_fuel(const unsigned int &fuel, List<unsigned int> l) {
             List<unsigned int> rec_result =
                 longest_run_fuel(f, List<unsigned int>::cons(d_a00, *(d_a10)));
             if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                    rec_result.v())) {
+                    rec_result.v_mut())) {
               *(_write) = std::make_unique<List<unsigned int>>(
                   List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
               break;
             } else {
-              const auto &[d_a01, d_a11] =
-                  std::get<typename List<unsigned int>::Cons>(rec_result.v());
+              auto &[d_a01, d_a11] =
+                  std::get<typename List<unsigned int>::Cons>(
+                      rec_result.v_mut());
               if (d_a0 == d_a01) {
                 *(_write) = std::make_unique<List<unsigned int>>(rec_result);
                 break;

@@ -5,13 +5,13 @@ LoopifyGrouping::prepend_to_groups(unsigned int x, const bool &same,
                                    List<List<unsigned int>> groups) {
   if (same) {
     if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-            groups.v())) {
+            groups.v_mut())) {
       return List<List<unsigned int>>::cons(
           List<unsigned int>::cons(x, List<unsigned int>::nil()),
           List<List<unsigned int>>::nil());
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(groups.v());
+      auto &[d_a0, d_a1] =
+          std::get<typename List<List<unsigned int>>::Cons>(groups.v_mut());
       return List<List<unsigned int>>::cons(List<unsigned int>::cons(x, d_a0),
                                             *(d_a1));
     }

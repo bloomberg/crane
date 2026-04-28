@@ -219,11 +219,12 @@ template <typename K, typename V> struct CHT {
   __attribute__((
       pure)) static bsl::pair<bsl::optional<T2>, List<bsl::pair<T1, T2>>>
   assoc_remove(F0 &&eqb, const T1 k, List<bsl::pair<T1, T2>> xs) {
-    if (bsl::holds_alternative<typename List<bsl::pair<T1, T2>>::Nil>(xs.v())) {
+    if (bsl::holds_alternative<typename List<bsl::pair<T1, T2>>::Nil>(
+            xs.v_mut())) {
       return bsl::make_pair(bsl::optional<T2>(), xs);
     } else {
-      const auto &[d_a0, d_a1] =
-          bsl::get<typename List<bsl::pair<T1, T2>>::Cons>(xs.v());
+      auto &[d_a0, d_a1] =
+          bsl::get<typename List<bsl::pair<T1, T2>>::Cons>(xs.v_mut());
       T1 k_ = d_a0.first;
       T2 v_ = d_a0.second;
       if (eqb(k, k_)) {

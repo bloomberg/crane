@@ -221,14 +221,9 @@ struct PromOps {
           0u,
           false};
       state3 s_ = set_prom_params3(std::move(s), 21u, 144u, true);
-      return ((s_.prom_addr3 + [&]() -> unsigned int {
-                if (s_.prom_enable3) {
-                  return std::move(s_).prom_data3;
-                } else {
-                  return 0u;
-                }
-              }()) +
-              s_.regs3.length());
+      return (
+          (s_.prom_addr3 + (s_.prom_enable3 ? std::move(s_).prom_data3 : 0u)) +
+          s_.regs3.length());
     }();
   }();
   static inline const unsigned int test4 = []() {
@@ -252,14 +247,9 @@ struct PromOps {
           0u,
           false};
       state3 s_ = set_prom_params3(std::move(s), 21u, 144u, true);
-      return ((s_.prom_addr3 + [&]() -> unsigned int {
-                if (s_.prom_enable3) {
-                  return std::move(s_).prom_data3;
-                } else {
-                  return 0u;
-                }
-              }()) +
-              s_.regs3.length());
+      return (
+          (s_.prom_addr3 + (s_.prom_enable3 ? std::move(s_).prom_data3 : 0u)) +
+          s_.regs3.length());
     }();
   }();
 
@@ -297,13 +287,8 @@ struct PromOps {
           0u,
           false};
       state5 s_ = set_prom_params5(std::move(s), 23u, 77u, true);
-      return ((s_.acc5 + s_.prom_addr5) + [&]() -> unsigned int {
-        if (s_.prom_enable5) {
-          return std::move(s_).prom_data5;
-        } else {
-          return 0u;
-        }
-      }());
+      return ((s_.acc5 + s_.prom_addr5) +
+              (s_.prom_enable5 ? std::move(s_).prom_data5 : 0u));
     }();
   }();
 

@@ -249,17 +249,17 @@ LoopifyMoreTrees::tree_max(LoopifyMoreTrees::tree t1,
       LoopifyMoreTrees::tree t2 = _f.t2;
       LoopifyMoreTrees::tree t1 = _f.t1;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
-              t1.v())) {
+              t1.v_mut())) {
         _result = std::move(t2);
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename LoopifyMoreTrees::tree::Node>(t1.v());
+        auto &[d_a0, d_a1, d_a2] =
+            std::get<typename LoopifyMoreTrees::tree::Node>(t1.v_mut());
         if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
-                t2.v())) {
+                t2.v_mut())) {
           _result = t1;
         } else {
-          const auto &[d_a00, d_a10, d_a20] =
-              std::get<typename LoopifyMoreTrees::tree::Node>(t2.v());
+          auto &[d_a00, d_a10, d_a20] =
+              std::get<typename LoopifyMoreTrees::tree::Node>(t2.v_mut());
           _stack.emplace_back(_Call1{*(d_a00), *(d_a0), std::max(d_a1, d_a10)});
           _stack.emplace_back(_Enter{*(d_a20), *(d_a2)});
         }

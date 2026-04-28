@@ -127,12 +127,12 @@ struct LoopifyPredicates {
     List<unsigned int> _loop_l = std::move(l);
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l.v_mut())) {
         _result = List<unsigned int>::nil();
         break;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+        auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
         if (p(d_a0)) {
           _loop_l = *(d_a1);
         } else {
@@ -166,12 +166,13 @@ struct LoopifyPredicates {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         List<unsigned int> l = _f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                l.v_mut())) {
           _result = std::make_pair(List<unsigned int>::nil(),
                                    List<unsigned int>::nil());
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
+          auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l.v_mut());
           if (p(d_a0)) {
             _stack.emplace_back(_Call1{d_a0});
             _stack.emplace_back(_Enter{*(d_a1)});
@@ -212,12 +213,13 @@ struct LoopifyPredicates {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         List<unsigned int> l = _f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                l.v_mut())) {
           _result = std::make_pair(List<unsigned int>::nil(),
                                    List<unsigned int>::nil());
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
+          auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l.v_mut());
           if (p(d_a0)) {
             _result = std::make_pair(List<unsigned int>::nil(), l);
           } else {

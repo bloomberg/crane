@@ -37,7 +37,7 @@ BinomialHeap::smash(const BinomialHeap::tree &t, const BinomialHeap::tree &u) {
 __attribute__((pure)) List<BinomialHeap::tree>
 BinomialHeap::carry(const List<BinomialHeap::tree> &q, BinomialHeap::tree t) {
   if (std::holds_alternative<typename List<BinomialHeap::tree>::Nil>(q.v())) {
-    if (std::holds_alternative<typename BinomialHeap::tree::Node>(t.v())) {
+    if (std::holds_alternative<typename BinomialHeap::tree::Node>(t.v_mut())) {
       return List<BinomialHeap::tree>::cons(t, List<BinomialHeap::tree>::nil());
     } else {
       return List<BinomialHeap::tree>::nil();
@@ -46,7 +46,8 @@ BinomialHeap::carry(const List<BinomialHeap::tree> &q, BinomialHeap::tree t) {
     const auto &[d_a0, d_a1] =
         std::get<typename List<BinomialHeap::tree>::Cons>(q.v());
     if (std::holds_alternative<typename BinomialHeap::tree::Node>(d_a0.v())) {
-      if (std::holds_alternative<typename BinomialHeap::tree::Node>(t.v())) {
+      if (std::holds_alternative<typename BinomialHeap::tree::Node>(
+              t.v_mut())) {
         return List<BinomialHeap::tree>::cons(tree::leaf(),
                                               carry(*(d_a1), smash(t, d_a0)));
       } else {
@@ -84,7 +85,7 @@ BinomialHeap::join(const List<BinomialHeap::tree> &p,
               std::move(c), join(*(d_a1), *(d_a11), smash(d_a0, d_a01)));
         } else {
           if (std::holds_alternative<typename BinomialHeap::tree::Node>(
-                  c.v())) {
+                  c.v_mut())) {
             return List<BinomialHeap::tree>::cons(
                 tree::leaf(), join(*(d_a1), *(d_a11), smash(c, d_a0)));
           } else {
@@ -103,7 +104,7 @@ BinomialHeap::join(const List<BinomialHeap::tree> &p,
         if (std::holds_alternative<typename BinomialHeap::tree::Node>(
                 d_a01.v())) {
           if (std::holds_alternative<typename BinomialHeap::tree::Node>(
-                  c.v())) {
+                  c.v_mut())) {
             return List<BinomialHeap::tree>::cons(
                 tree::leaf(), join(*(d_a1), *(d_a11), smash(c, d_a01)));
           } else {
@@ -148,15 +149,7 @@ BinomialHeap::find_max_helper(unsigned int current,
     if (std::holds_alternative<typename BinomialHeap::tree::Node>(d_a0.v())) {
       const auto &[d_a00, d_a10, d_a20] =
           std::get<typename BinomialHeap::tree::Node>(d_a0.v());
-      return find_max_helper(
-          [&]() -> unsigned int {
-            if (current < d_a00) {
-              return d_a00;
-            } else {
-              return current;
-            }
-          }(),
-          *(d_a1));
+      return find_max_helper((current < d_a00 ? d_a00 : current), *(d_a1));
     } else {
       return find_max_helper(current, *(d_a1));
     }

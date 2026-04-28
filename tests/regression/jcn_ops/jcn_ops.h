@@ -59,26 +59,9 @@ struct JcnOps {
   static inline const unsigned int test_constants = []() {
     return []() {
       state s = state{0u, true, false, 0u};
-      return (([&]() -> unsigned int {
-                if (jcn_condition(s, JCN_JC)) {
-                  return 1u;
-                } else {
-                  return 0u;
-                }
-              }() + [&]() -> unsigned int {
-                if (jcn_condition(s, JCN_JZ)) {
-                  return 1u;
-                } else {
-                  return 0u;
-                }
-              }()) +
-                  [&]() -> unsigned int {
-        if (jcn_condition(s, JCN_JNT)) {
-          return 1u;
-        } else {
-          return 0u;
-        }
-      }());
+      return (((jcn_condition(s, JCN_JC) ? 1u : 0u) +
+               (jcn_condition(s, JCN_JZ) ? 1u : 0u)) +
+              (jcn_condition(s, JCN_JNT) ? 1u : 0u));
     }();
   }();
   static inline const std::pair<std::pair<unsigned int, bool>, unsigned int> t =

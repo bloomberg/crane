@@ -28,9 +28,9 @@ ReuseLambdaCapture::add_length_to_each(ReuseLambdaCapture::mylist l,
                                        const bool &b) {
   if (b) {
     if (std::holds_alternative<typename ReuseLambdaCapture::mylist::Mycons>(
-            l.v())) {
-      const auto &[d_a0, d_a1] =
-          std::get<typename ReuseLambdaCapture::mylist::Mycons>(l.v());
+            l.v_mut())) {
+      auto &[d_a0, d_a1] =
+          std::get<typename ReuseLambdaCapture::mylist::Mycons>(l.v_mut());
       ReuseLambdaCapture::mylist d_a1_value = *(d_a1);
       return mylist::mycons(
           (d_a0 + 1u),

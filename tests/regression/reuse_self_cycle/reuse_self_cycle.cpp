@@ -30,9 +30,9 @@ __attribute__((pure)) ReuseSelfCycle::mylist
 ReuseSelfCycle::prepend_self(ReuseSelfCycle::mylist l, const bool &b) {
   if (b) {
     if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(
-            l.v())) {
-      const auto &[d_a0, d_a1] =
-          std::get<typename ReuseSelfCycle::mylist::Mycons>(l.v());
+            l.v_mut())) {
+      auto &[d_a0, d_a1] =
+          std::get<typename ReuseSelfCycle::mylist::Mycons>(l.v_mut());
       return mylist::mycons(d_a0, l);
     } else {
       return mylist::mynil();

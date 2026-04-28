@@ -589,13 +589,7 @@ struct LoopifyTrees {
             std::get<typename tree<t_A>::Node>(_sv.v());
         unsigned int lh = (*(d_a0)).tree_height();
         unsigned int rh = (*(d_a2)).tree_height();
-        return ([&]() -> unsigned int {
-          if (lh <= rh) {
-            return rh;
-          } else {
-            return lh;
-          }
-        }() + 1);
+        return ((lh <= rh ? rh : lh) + 1);
       }
     }
 
@@ -809,13 +803,7 @@ struct LoopifyTrees {
         unsigned int d2 = (*(d_a1)).ternary_depth();
         unsigned int d3 = (*(d_a2)).ternary_depth();
         return ([&]() -> unsigned int {
-          if ([&]() -> unsigned int {
-                if (d1 <= d2) {
-                  return d2;
-                } else {
-                  return d1;
-                }
-              }() <= d3) {
+          if ((d1 <= d2 ? d2 : d1) <= d3) {
             return d3;
           } else {
             if (d1 <= d2) {

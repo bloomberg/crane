@@ -271,13 +271,7 @@ LoopifyTrees::sum_of_max_branches(const LoopifyTrees::tree<unsigned int> &t) {
         std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
     unsigned int lsum = sum_of_max_branches(*(d_a0));
     unsigned int rsum = sum_of_max_branches(*(d_a2));
-    return (d_a1 + [&]() -> unsigned int {
-      if (lsum <= rsum) {
-        return rsum;
-      } else {
-        return lsum;
-      }
-    }());
+    return (d_a1 + (lsum <= rsum ? rsum : lsum));
   }
 }
 
@@ -462,22 +456,24 @@ LoopifyTrees::tree_max(LoopifyTrees::tree<unsigned int> t1,
       LoopifyTrees::tree<unsigned int> t2 = _f.t2;
       LoopifyTrees::tree<unsigned int> t1 = _f.t1;
       if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(t1.v())) {
+              typename LoopifyTrees::tree<unsigned int>::Leaf>(t1.v_mut())) {
         if (std::holds_alternative<
-                typename LoopifyTrees::tree<unsigned int>::Leaf>(t2.v())) {
+                typename LoopifyTrees::tree<unsigned int>::Leaf>(t2.v_mut())) {
           _result = tree<unsigned int>::leaf();
         } else {
           _result = t2;
         }
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t1.v());
+        auto &[d_a0, d_a1, d_a2] =
+            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(
+                t1.v_mut());
         if (std::holds_alternative<
-                typename LoopifyTrees::tree<unsigned int>::Leaf>(t2.v())) {
+                typename LoopifyTrees::tree<unsigned int>::Leaf>(t2.v_mut())) {
           _result = t1;
         } else {
-          const auto &[d_a00, d_a10, d_a20] =
-              std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t2.v());
+          auto &[d_a00, d_a10, d_a20] =
+              std::get<typename LoopifyTrees::tree<unsigned int>::Node>(
+                  t2.v_mut());
           unsigned int max_val;
           if (d_a1 <= d_a10) {
             max_val = d_a10;
@@ -605,7 +601,7 @@ __attribute__((pure)) List<List<unsigned int>> LoopifyTrees::tree_levels_fuel(
       unsigned int f = _loop_fuel - 1;
       List<unsigned int> values = extract_tree_values(_loop_trees);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              values.v())) {
+              values.v_mut())) {
         *(_write) = std::make_unique<List<List<unsigned int>>>(
             List<List<unsigned int>>::nil());
         break;
@@ -902,19 +898,7 @@ __attribute__((pure)) unsigned int LoopifyTrees::max4_impl(unsigned int a,
                                                            unsigned int b,
                                                            unsigned int c,
                                                            unsigned int d) {
-  if ([&]() -> unsigned int {
-        if (a <= b) {
-          return b;
-        } else {
-          return a;
-        }
-      }() <= [&]() -> unsigned int {
-        if (c <= d) {
-          return d;
-        } else {
-          return c;
-        }
-      }()) {
+  if ((a <= b ? b : a) <= (c <= d ? d : c)) {
     if (c <= d) {
       return d;
     } else {
@@ -980,23 +964,9 @@ LoopifyTrees::tree_min_max(const LoopifyTrees::tree<unsigned int> &t) {
     auto _cs1 = tree_min_max(*(d_a2));
     const unsigned int &rmin = _cs1.first;
     const unsigned int &rmax = _cs1.second;
-    return std::make_pair(min3(
-                              [&]() -> unsigned int {
-                                if (lmin == 0u) {
-                                  return d_a1;
-                                } else {
-                                  return lmin;
-                                }
-                              }(),
-                              [&]() -> unsigned int {
-                                if (rmin == 0u) {
-                                  return d_a1;
-                                } else {
-                                  return rmin;
-                                }
-                              }(),
-                              d_a1),
-                          max3(lmax, rmax, d_a1));
+    return std::make_pair(
+        min3((lmin == 0u ? d_a1 : lmin), (rmin == 0u ? d_a1 : rmin), d_a1),
+        max3(lmax, rmax, d_a1));
   }
 }
 

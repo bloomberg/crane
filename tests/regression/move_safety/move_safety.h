@@ -344,10 +344,10 @@ struct MoveSafety {
         return t.sum_values(_x0);
       };
       tree t2 = std::move(t).tree_id();
-      if (std::holds_alternative<typename tree::Leaf>(t2.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(t2.v_mut())) {
         return f(0u);
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t2.v());
+        auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t2.v_mut());
         return f(d_a1);
       }
     }();

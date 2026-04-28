@@ -1180,8 +1180,8 @@ struct RocqBug14174 {
           [=](const T1 z) mutable { return h(z).projT1(); },
           [=](const T1 z) mutable {
             sigT<T2, T3> s = h(z);
-            const auto &[d_x, d_a1] =
-                std::get<typename sigT<T2, T3>::ExistT>(s.v());
+            auto &[d_x, d_a1] =
+                std::get<typename sigT<T2, T3>::ExistT>(s.v_mut());
             return d_a1;
           });
     }

@@ -69,12 +69,12 @@ LoopifyListRelations::is_suffix_of(const List<unsigned int> &l1,
         } else {
           unsigned int n_ = _loop_n - 1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  _loop_xs.v())) {
+                  _loop_xs.v_mut())) {
             _result = List<unsigned int>::nil();
             break;
           } else {
-            const auto &[d_a0, d_a1] =
-                std::get<typename List<unsigned int>::Cons>(_loop_xs.v());
+            auto &[d_a0, d_a1] =
+                std::get<typename List<unsigned int>::Cons>(_loop_xs.v_mut());
             List<unsigned int> _next_xs = *(d_a1);
             unsigned int _next_n = n_;
             _loop_xs = std::move(_next_xs);
@@ -434,19 +434,19 @@ LoopifyListRelations::interleave(List<unsigned int> l1, List<unsigned int> l2) {
   List<unsigned int> _loop_l1 = std::move(l1);
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
-            _loop_l1.v())) {
+            _loop_l1.v_mut())) {
       *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
       break;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l1.v());
+      auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l1.v_mut());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l2.v())) {
+              _loop_l2.v_mut())) {
         *(_write) = std::make_unique<List<unsigned int>>(_loop_l1);
         break;
       } else {
-        const auto &[d_a00, d_a10] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l2.v());
+        auto &[d_a00, d_a10] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l2.v_mut());
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
         auto _cell1 = std::make_unique<List<unsigned int>>(
@@ -486,19 +486,19 @@ LoopifyListRelations::merge_fuel(const unsigned int &fuel,
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l1.v())) {
+              _loop_l1.v_mut())) {
         *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
         break;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l1.v());
+        auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l1.v_mut());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _loop_l2.v())) {
+                _loop_l2.v_mut())) {
           *(_write) = std::make_unique<List<unsigned int>>(_loop_l1);
           break;
         } else {
-          const auto &[d_a00, d_a10] =
-              std::get<typename List<unsigned int>::Cons>(_loop_l2.v());
+          auto &[d_a00, d_a10] =
+              std::get<typename List<unsigned int>::Cons>(_loop_l2.v_mut());
           if (d_a0 <= d_a00) {
             auto _cell = std::make_unique<List<unsigned int>>(
                 typename List<unsigned int>::Cons(d_a0, nullptr));

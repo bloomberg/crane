@@ -8,12 +8,12 @@ VisitMatchBug::consume(VisitMatchBug::Tree t) {
 __attribute__((pure)) unsigned int
 VisitMatchBug::match_after_consume(const VisitMatchBug::Tree &t) {
   VisitMatchBug::Tree t2 = consume(t);
-  if (std::holds_alternative<typename VisitMatchBug::Tree::Leaf>(t2.v())) {
-    const auto &[d_a0] = std::get<typename VisitMatchBug::Tree::Leaf>(t2.v());
+  if (std::holds_alternative<typename VisitMatchBug::Tree::Leaf>(t2.v_mut())) {
+    auto &[d_a0] = std::get<typename VisitMatchBug::Tree::Leaf>(t2.v_mut());
     return d_a0;
   } else {
-    const auto &[d_a0, d_a1, d_a2] =
-        std::get<typename VisitMatchBug::Tree::Node>(t2.v());
+    auto &[d_a0, d_a1, d_a2] =
+        std::get<typename VisitMatchBug::Tree::Node>(t2.v_mut());
     return d_a1;
   }
 }
@@ -33,12 +33,12 @@ VisitMatchBug::match_last_use(const VisitMatchBug::Tree &t) {
 __attribute__((pure)) unsigned int
 VisitMatchBug::nested_match_consume(const VisitMatchBug::Tree &t) {
   VisitMatchBug::Tree t2 = consume(t);
-  if (std::holds_alternative<typename VisitMatchBug::Tree::Leaf>(t2.v())) {
-    const auto &[d_a0] = std::get<typename VisitMatchBug::Tree::Leaf>(t2.v());
+  if (std::holds_alternative<typename VisitMatchBug::Tree::Leaf>(t2.v_mut())) {
+    auto &[d_a0] = std::get<typename VisitMatchBug::Tree::Leaf>(t2.v_mut());
     return d_a0;
   } else {
-    const auto &[d_a0, d_a1, d_a2] =
-        std::get<typename VisitMatchBug::Tree::Node>(t2.v());
+    auto &[d_a0, d_a1, d_a2] =
+        std::get<typename VisitMatchBug::Tree::Node>(t2.v_mut());
     return d_a1;
   }
 }
@@ -47,12 +47,12 @@ __attribute__((pure)) unsigned int
 VisitMatchBug::chain_then_match(const VisitMatchBug::Tree &t1) {
   VisitMatchBug::Tree t2 = consume(t1);
   VisitMatchBug::Tree t3 = consume(std::move(t2));
-  if (std::holds_alternative<typename VisitMatchBug::Tree::Leaf>(t3.v())) {
-    const auto &[d_a0] = std::get<typename VisitMatchBug::Tree::Leaf>(t3.v());
+  if (std::holds_alternative<typename VisitMatchBug::Tree::Leaf>(t3.v_mut())) {
+    auto &[d_a0] = std::get<typename VisitMatchBug::Tree::Leaf>(t3.v_mut());
     return d_a0;
   } else {
-    const auto &[d_a0, d_a1, d_a2] =
-        std::get<typename VisitMatchBug::Tree::Node>(t3.v());
+    auto &[d_a0, d_a1, d_a2] =
+        std::get<typename VisitMatchBug::Tree::Node>(t3.v_mut());
     return d_a1;
   }
 }

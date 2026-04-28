@@ -247,12 +247,12 @@ LoopifyListTransforms::drop(const unsigned int &n, List<unsigned int> l) {
     } else {
       unsigned int n_ = _loop_n - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l.v_mut())) {
         _result = List<unsigned int>::nil();
         break;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+        auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
         List<unsigned int> _next_l = *(d_a1);
         unsigned int _next_n = n_;
         _loop_l = std::move(_next_l);
@@ -334,12 +334,12 @@ LoopifyListTransforms::rotate_left_fuel(const unsigned int &fuel,
         break;
       } else {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _loop_l.v())) {
+                _loop_l.v_mut())) {
           _result = List<unsigned int>::nil();
           break;
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
           List<unsigned int> rotated = (*(d_a1)).app(
               List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
           List<unsigned int> _next_l = std::move(rotated);

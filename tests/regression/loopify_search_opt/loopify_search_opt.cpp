@@ -69,7 +69,7 @@ __attribute__((pure)) List<unsigned int> LoopifySearchOpt::longest_run_fuel(
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _loop_current.v())) {
+                _loop_current.v_mut())) {
           List<unsigned int> _next_l = *(d_a1);
           List<unsigned int> _next_best = std::move(_loop_best);
           List<unsigned int> _next_current =
@@ -80,8 +80,8 @@ __attribute__((pure)) List<unsigned int> LoopifySearchOpt::longest_run_fuel(
           _loop_current = std::move(_next_current);
           _loop_fuel = std::move(_next_fuel);
         } else {
-          const auto &[d_a00, d_a10] =
-              std::get<typename List<unsigned int>::Cons>(_loop_current.v());
+          auto &[d_a00, d_a10] = std::get<typename List<unsigned int>::Cons>(
+              _loop_current.v_mut());
           if (d_a0 == d_a00) {
             List<unsigned int> _next_l = *(d_a1);
             List<unsigned int> _next_best = std::move(_loop_best);
@@ -457,12 +457,13 @@ LoopifySearchOpt::binary_search_fuel(const unsigned int &fuel,
               } else {
                 unsigned int n_ = _loop_n - 1;
                 if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                        _loop_xs.v())) {
+                        _loop_xs.v_mut())) {
                   _result = List<unsigned int>::nil();
                   break;
                 } else {
-                  const auto &[d_a04, d_a14] =
-                      std::get<typename List<unsigned int>::Cons>(_loop_xs.v());
+                  auto &[d_a04, d_a14] =
+                      std::get<typename List<unsigned int>::Cons>(
+                          _loop_xs.v_mut());
                   List<unsigned int> _next_xs = *(d_a14);
                   unsigned int _next_n = n_;
                   _loop_xs = std::move(_next_xs);

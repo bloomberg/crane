@@ -739,6 +739,21 @@ let rec pp_cpp_type par vl t =
   in
   h (pp_rec par t)
 
+(** Check if a C++ expression tree contains a string literal ([CPPstring]).
+    Used to guard ternary simplification: ternary with string-literal branches
+    loses the implicit [const char* → std::string] conversion that an IIFE
+    with explicit return type provides. *)
+and expr_contains_string e =
+  match e with
+  | CPPstring _ -> true
+  | _ ->
+    let found = ref false in
+    iter_expr_children
+      ~on_expr:(fun e -> if expr_contains_string e then found := true)
+      ~on_stmts:(fun _ -> ())
+      e;
+    !found
+
 (** Pretty-print a MiniCpp expression as C++ source. [env] is the de Bruijn
     variable name environment. [args] is the list of accumulated arguments (for
     partial application). *)
@@ -1055,6 +1070,86 @@ and pp_cpp_expr env args t =
        dereference the function pointer before invoking. *)
     let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in
     str "(*" ++ pp_cpp_expr env args e ++ str ")(" ++ args_s ++ str ")"
+  | CPPfun_call
+      ( CPPlambda ([], _, [Smatch (branches, wildcard)], false),
+        [] )
+    when (* Detect simple IIFE-wrapped matches that can be printed as ternary.
+            Eligible: exactly 2 return-only branches (no wildcard), or 1 branch
+            + a return-only wildcard; no structured bindings, no extra conditions,
+            no reuse paths. *)
+      ( match branches, wildcard with
+      | [br1; br2], None ->
+        br1.smb_field_bindings = [] && br2.smb_field_bindings = []
+        && br1.smb_extra_conds = [] && br2.smb_extra_conds = []
+        && br1.smb_reuse = None && br2.smb_reuse = None
+        && ( match br1.smb_body, br2.smb_body with
+             | [Sreturn (Some _)], [Sreturn (Some _)] -> true
+             | _ -> false )
+      | [br1], Some [Sreturn (Some _)] ->
+        br1.smb_field_bindings = []
+        && br1.smb_extra_conds = []
+        && br1.smb_reuse = None
+        && ( match br1.smb_body with
+             | [Sreturn (Some _)] -> true
+             | _ -> false )
+      | _ -> false ) ->
+    require_header "variant";
+    let pp = pp_cpp_expr env args in
+    let cond_pp, then_e, else_e =
+      match branches, wildcard with
+      | [br1; br2], None ->
+        let cond =
+          str (sn ()).holds_alternative ++ str "<"
+          ++ pp_cpp_type false [] br1.smb_ctor_type ++ str ">("
+          ++ pp br1.smb_scrutinee ++ str ")"
+        in
+        let e1 = match br1.smb_body with [Sreturn (Some e)] -> e | _ -> assert false in
+        let e2 = match br2.smb_body with [Sreturn (Some e)] -> e | _ -> assert false in
+        (cond, e1, e2)
+      | [br1], Some [Sreturn (Some e2)] ->
+        let cond =
+          str (sn ()).holds_alternative ++ str "<"
+          ++ pp_cpp_type false [] br1.smb_ctor_type ++ str ">("
+          ++ pp br1.smb_scrutinee ++ str ")"
+        in
+        let e1 = match br1.smb_body with [Sreturn (Some e)] -> e | _ -> assert false in
+        (cond, e1, e2)
+      | _ -> assert false
+    in
+    str "(" ++ cond_pp ++ str " ? " ++ pp then_e ++ str " : " ++ pp else_e ++ str ")"
+  | CPPfun_call
+      ( CPPlambda ([], _, [Sif (cond, [Sreturn (Some e1)], [Sreturn (Some e2)])], _),
+        [] )
+    when not (expr_contains_string e1 || expr_contains_string e2) ->
+    (* IIFE wrapping a simple if/else with single-expression returns in both
+       branches → emit as ternary.  Skip when branches contain string literals
+       to preserve implicit const char* → std::string conversion. *)
+    let pp = pp_cpp_expr env args in
+    str "(" ++ pp cond ++ str " ? " ++ pp e1 ++ str " : " ++ pp e2 ++ str ")"
+  | CPPfun_call
+      ( CPPlambda ([], _, [Scustom_case (_, scrut, _, branches, cmatch)], _),
+        [] )
+    when (* Custom case with exactly 2 return-only branches and the standard
+            bool-like if/else template → emit ternary.  Skip when branches
+            contain string literals (const char* → std::string coercion). *)
+      String.trim cmatch = "if (%scrut) { %br0 } else { %br1 }"
+      && List.length branches = 2
+      && List.for_all
+           (fun (_, _, stmts) ->
+             match stmts with
+             | [Sreturn (Some e)] -> not (expr_contains_string e)
+             | _ -> false)
+           branches ->
+    let pp = pp_cpp_expr env args in
+    let e1 = match branches with
+      | (_, _, [Sreturn (Some e)]) :: _ -> e
+      | _ -> assert false
+    in
+    let e2 = match branches with
+      | _ :: (_, _, [Sreturn (Some e)]) :: _ -> e
+      | _ -> assert false
+    in
+    str "(" ++ pp scrut ++ str " ? " ++ pp e1 ++ str " : " ++ pp e2 ++ str ")"
   | CPPfun_call (f, ts) ->
     let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in
     pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")"
@@ -1667,7 +1762,10 @@ and pp_cpp_stmt env args = function
     let pp_block_binding scrut_var_pp br =
       match br.smb_field_bindings with
       | _ :: _ ->
-        str "const auto& ["
+        let binding_qual =
+          if br.smb_is_owned then "auto& [" else "const auto& ["
+        in
+        str binding_qual
         ++ prlist_with_sep (fun () -> str ", ")
              (fun (bname, _ty, _used) -> Id.print bname)
              br.smb_field_bindings
@@ -1709,8 +1807,12 @@ and pp_cpp_stmt env args = function
         Some obj
       | _ -> None
     in
+    let is_owned = first_br.smb_is_owned in
     let v_access name =
-      if is_value_type then name ^ ".v()" else name ^ "->v()"
+      if is_value_type then
+        name ^ (if is_owned then ".v_mut()" else ".v()")
+      else
+        name ^ (if is_owned then "->v_mut()" else "->v()")
     in
     let scrut_binding_pp, scrut_var_pp, scrut_obj_pp =
       match scrut_obj_opt with
@@ -1718,7 +1820,7 @@ and pp_cpp_stmt env args = function
         let name = Id.to_string id in
         (mt (), str (v_access name), str name)
       | Some CPPthis ->
-        (mt (), str "this->v()", str "(*this)")
+        (mt (), str (if is_owned then "this->v_mut()" else "this->v()"), str "(*this)")
       | Some obj_expr ->
         let obj_pp = pp_scrut obj_expr in
         ( str ("auto&& " ^ sv_name ^ " = ") ++ obj_pp ++ str ";" ++ fnl (),

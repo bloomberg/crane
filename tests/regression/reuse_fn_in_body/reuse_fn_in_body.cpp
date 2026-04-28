@@ -41,9 +41,10 @@ ReuseFnInBody::sum(const ReuseFnInBody::mylist &l) {
 __attribute__((pure)) ReuseFnInBody::mylist
 ReuseFnInBody::prefix_sum(ReuseFnInBody::mylist l, const bool &b) {
   if (b) {
-    if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(l.v())) {
-      const auto &[d_a0, d_a1] =
-          std::get<typename ReuseFnInBody::mylist::Mycons>(l.v());
+    if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(
+            l.v_mut())) {
+      auto &[d_a0, d_a1] =
+          std::get<typename ReuseFnInBody::mylist::Mycons>(l.v_mut());
       return mylist::mycons((sum(l) + d_a0), *(d_a1));
     } else {
       return mylist::mynil();

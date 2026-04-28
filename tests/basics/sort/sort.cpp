@@ -10,8 +10,7 @@ Sort::sort_cons_prog(unsigned int a, const List<unsigned int> &,
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(l_.v());
     Sig<List<unsigned int>> s = sort_cons_prog(a, *(d_a1), *(d_a1));
-    const auto &[d_x0] =
-        std::get<typename Sig<List<unsigned int>>::Exist>(s.v());
+    auto &[d_x0] = std::get<typename Sig<List<unsigned int>>::Exist>(s.v_mut());
     bool s0 = Compare_dec::le_lt_dec(a, d_a0);
     if (s0) {
       return Sig<List<unsigned int>>::exist(
@@ -46,11 +45,12 @@ Sort::merge(List<unsigned int> l1, const List<unsigned int> &l2) {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l1.v());
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l3.v())) {
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(
+              l3.v_mut())) {
         return l1;
       } else {
-        const auto &[d_a00, d_a10] =
-            std::get<typename List<unsigned int>::Cons>(l3.v());
+        auto &[d_a00, d_a10] =
+            std::get<typename List<unsigned int>::Cons>(l3.v_mut());
         if (Compare_dec::le_lt_dec(d_a0, d_a00)) {
           return List<unsigned int>::cons(d_a0, merge(*(d_a1), l3));
         } else {

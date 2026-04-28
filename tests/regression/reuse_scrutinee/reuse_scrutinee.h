@@ -119,7 +119,7 @@ struct ReuseScrutinee {
   static inline const unsigned int reuse_bug = []() {
     tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                         tree::node(tree::leaf(), 30u, tree::leaf()));
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
+    if (std::holds_alternative<typename tree::Leaf>(t.v_mut())) {
       return 0u;
     } else {
       return subtree_sum(t);
@@ -130,10 +130,10 @@ struct ReuseScrutinee {
   static inline const tree reuse_direct = []() {
     tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                         tree::node(tree::leaf(), 30u, tree::leaf()));
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
+    if (std::holds_alternative<typename tree::Leaf>(t.v_mut())) {
       return tree::leaf();
     } else {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
+      auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v_mut());
       return tree::node(tree::leaf(), subtree_sum(t), *(d_a2));
     }
   }();

@@ -135,12 +135,12 @@ __attribute__((pure)) List<unsigned int> LoopifySequences::rotate_left_fuel(
         break;
       } else {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _loop_l.v())) {
+                _loop_l.v_mut())) {
           _result = List<unsigned int>::nil();
           break;
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
           List<unsigned int> _next_l = (*(d_a1)).app(
               List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
           unsigned int _next_n =
@@ -802,13 +802,14 @@ LoopifySequences::lis(List<unsigned int> l) {
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l = std::move(l);
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l.v_mut())) {
       *(_write) =
           std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+      auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
       auto &&_sv0 = *(d_a1);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
         *(_write) = std::make_unique<List<unsigned int>>(_loop_l);

@@ -8,13 +8,13 @@ ReuseMixedFields::swap_tag_or_id(ReuseMixedFields::payload p,
                                  const bool &do_swap) {
   if (do_swap) {
     if (std::holds_alternative<typename ReuseMixedFields::payload::AsNat>(
-            p.v())) {
-      const auto &[d_a0, d_a1] =
-          std::get<typename ReuseMixedFields::payload::AsNat>(p.v());
+            p.v_mut())) {
+      auto &[d_a0, d_a1] =
+          std::get<typename ReuseMixedFields::payload::AsNat>(p.v_mut());
       return payload::aspair(d_a1, d_a0);
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename ReuseMixedFields::payload::AsPair>(p.v());
+      auto &[d_a0, d_a1] =
+          std::get<typename ReuseMixedFields::payload::AsPair>(p.v_mut());
       return payload::asnat(d_a1, d_a0);
     }
   } else {

@@ -232,16 +232,18 @@ struct LoopifySorting {
       return List<unsigned int>::nil();
     } else {
       unsigned int f = fuel - 1;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(
+              l1.v_mut())) {
         return l2;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(l1.v());
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
+        auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(l1.v_mut());
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                l2.v_mut())) {
           return l1;
         } else {
-          const auto &[d_a00, d_a10] =
-              std::get<typename List<unsigned int>::Cons>(l2.v());
+          auto &[d_a00, d_a10] =
+              std::get<typename List<unsigned int>::Cons>(l2.v_mut());
           if (cmp(d_a0, d_a00)) {
             return List<unsigned int>::cons(d_a0,
                                             merge_by_fuel(f, cmp, *(d_a1), l2));

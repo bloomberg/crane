@@ -126,32 +126,23 @@ struct ReuseTagMismatch {
   /// Match on the result:
   /// - GoUp _ => 1 (wrong, reuse bug would make this match)
   /// - GoDown _ => 2 (correct)
-  static inline const unsigned int test1 = []() {
-    auto &&_sv = id_or_flip(direction::goup(42u), true);
-    if (std::holds_alternative<typename direction::GoUp>(_sv.v())) {
-      return 1u;
-    } else {
-      return 2u;
-    }
-  }();
+  static inline const unsigned int test1 =
+      (std::holds_alternative<typename direction::GoUp>(
+           id_or_flip(direction::goup(42u), true).v())
+           ? 1u
+           : 2u);
   /// test2: no flip -> should be GoUp 42 unchanged.
-  static inline const unsigned int test2 = []() {
-    auto &&_sv = id_or_flip(direction::goup(42u), false);
-    if (std::holds_alternative<typename direction::GoUp>(_sv.v())) {
-      return 1u;
-    } else {
-      return 2u;
-    }
-  }();
+  static inline const unsigned int test2 =
+      (std::holds_alternative<typename direction::GoUp>(
+           id_or_flip(direction::goup(42u), false).v())
+           ? 1u
+           : 2u);
   /// test3: flip GoDown 100 -> should be GoUp 100.
-  static inline const unsigned int test3 = []() {
-    auto &&_sv = id_or_flip(direction::godown(100u), true);
-    if (std::holds_alternative<typename direction::GoUp>(_sv.v())) {
-      return 3u;
-    } else {
-      return 4u;
-    }
-  }();
+  static inline const unsigned int test3 =
+      (std::holds_alternative<typename direction::GoUp>(
+           id_or_flip(direction::godown(100u), true).v())
+           ? 3u
+           : 4u);
   /// test4: use the flipped value's payload.
   static inline const unsigned int test4 = []() {
     auto &&_sv3 = id_or_flip(direction::goup(10u), true);

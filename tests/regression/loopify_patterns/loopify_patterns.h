@@ -364,16 +364,18 @@ struct LoopifyPatterns {
       return l1;
     } else {
       unsigned int f = fuel - 1;
-      if (std::holds_alternative<typename list<unsigned int>::Nil>(l1.v())) {
+      if (std::holds_alternative<typename list<unsigned int>::Nil>(
+              l1.v_mut())) {
         return l2;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename list<unsigned int>::Cons>(l1.v());
-        if (std::holds_alternative<typename list<unsigned int>::Nil>(l2.v())) {
+        auto &[d_a0, d_a1] =
+            std::get<typename list<unsigned int>::Cons>(l1.v_mut());
+        if (std::holds_alternative<typename list<unsigned int>::Nil>(
+                l2.v_mut())) {
           return l1;
         } else {
-          const auto &[d_a00, d_a10] =
-              std::get<typename list<unsigned int>::Cons>(l2.v());
+          auto &[d_a00, d_a10] =
+              std::get<typename list<unsigned int>::Cons>(l2.v_mut());
           if (cmp(d_a0, d_a00) <= 0u) {
             return list<unsigned int>::cons(d_a0,
                                             merge_by_fuel(f, cmp, *(d_a1), l2));

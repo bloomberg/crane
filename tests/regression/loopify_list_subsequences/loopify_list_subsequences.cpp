@@ -35,14 +35,15 @@ LoopifyListSubsequences::tails(List<unsigned int> l) {
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
   List<unsigned int> _loop_l = std::move(l);
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l.v_mut())) {
       *(_write) = std::make_unique<List<List<unsigned int>>>(
           List<List<unsigned int>>::cons(List<unsigned int>::nil(),
                                          List<List<unsigned int>>::nil()));
       break;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+      auto &[d_a0, d_a1] =
+          std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
       auto _cell = std::make_unique<List<List<unsigned int>>>(
           typename List<List<unsigned int>>::Cons(_loop_l, nullptr));
       *(_write) = std::move(_cell);
@@ -247,12 +248,13 @@ LoopifyListSubsequences::split_at(const unsigned int &n, List<unsigned int> l) {
         _result = std::make_pair(List<unsigned int>::nil(), std::move(l));
       } else {
         unsigned int n_ = n - 1;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                l.v_mut())) {
           _result = std::make_pair(List<unsigned int>::nil(),
                                    List<unsigned int>::nil());
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
+          auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(l.v_mut());
           _stack.emplace_back(_Call1{d_a0});
           _stack.emplace_back(_Enter{*(d_a1), n_});
         }

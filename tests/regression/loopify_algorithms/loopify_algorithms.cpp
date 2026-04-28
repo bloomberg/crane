@@ -50,13 +50,13 @@ LoopifyAlgorithms::sieve_fuel(const unsigned int &fuel, List<unsigned int> l) {
     } else {
       unsigned int f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l.v_mut())) {
         *(_write) =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+        auto &[d_a0, d_a1] =
+            std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
         List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
         std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
             filter_multiples;
@@ -241,12 +241,12 @@ __attribute__((pure)) List<unsigned int> LoopifyAlgorithms::rotate_left_fuel(
         break;
       } else {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _loop_l.v())) {
+                _loop_l.v_mut())) {
           _result = List<unsigned int>::nil();
           break;
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
           List<unsigned int> _next_l = (*(d_a1)).app(
               List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
           unsigned int _next_n =

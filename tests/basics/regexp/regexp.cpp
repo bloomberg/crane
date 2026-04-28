@@ -93,14 +93,16 @@ __attribute__((pure)) bool Matcher::regexp_eq(const Matcher::regexp &r,
 /// An optimized constructor for Cat.
 __attribute__((pure)) Matcher::regexp Matcher::OptCat(Matcher::regexp r2,
                                                       Matcher::regexp r3) {
-  if (std::holds_alternative<typename Matcher::regexp::Eps>(r2.v())) {
+  if (std::holds_alternative<typename Matcher::regexp::Eps>(r2.v_mut())) {
     return r3;
-  } else if (std::holds_alternative<typename Matcher::regexp::Zero>(r2.v())) {
+  } else if (std::holds_alternative<typename Matcher::regexp::Zero>(
+                 r2.v_mut())) {
     return regexp::zero();
   } else {
-    if (std::holds_alternative<typename Matcher::regexp::Eps>(r3.v())) {
+    if (std::holds_alternative<typename Matcher::regexp::Eps>(r3.v_mut())) {
       return r2;
-    } else if (std::holds_alternative<typename Matcher::regexp::Zero>(r3.v())) {
+    } else if (std::holds_alternative<typename Matcher::regexp::Zero>(
+                   r3.v_mut())) {
       return regexp::zero();
     } else {
       return regexp::cat(std::move(r2), std::move(r3));
@@ -111,10 +113,10 @@ __attribute__((pure)) Matcher::regexp Matcher::OptCat(Matcher::regexp r2,
 /// Optimized version of Alt.
 __attribute__((pure)) Matcher::regexp Matcher::OptAlt(Matcher::regexp r2,
                                                       Matcher::regexp r3) {
-  if (std::holds_alternative<typename Matcher::regexp::Zero>(r2.v())) {
+  if (std::holds_alternative<typename Matcher::regexp::Zero>(r2.v_mut())) {
     return r3;
   } else {
-    if (std::holds_alternative<typename Matcher::regexp::Zero>(r3.v())) {
+    if (std::holds_alternative<typename Matcher::regexp::Zero>(r3.v_mut())) {
       return r2;
     } else {
       if (regexp_eq(r2, r3)) {

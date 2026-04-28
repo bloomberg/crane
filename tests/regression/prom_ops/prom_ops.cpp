@@ -32,13 +32,7 @@ PromOps::prom_data_or_zero(const PromOps::state1 &s) {
 
 __attribute__((pure)) unsigned int
 PromOps::flagged_sum(const PromOps::state2 &s) {
-  return ((s.acc2 + s.prom_addr2) + [=]() mutable -> unsigned int {
-    if (s.prom_enable2) {
-      return s.prom_data2;
-    } else {
-      return 0u;
-    }
-  }());
+  return ((s.acc2 + s.prom_addr2) + (s.prom_enable2 ? s.prom_data2 : 0u));
 }
 
 __attribute__((pure)) PromOps::state3
