@@ -50,9 +50,10 @@ LoadProgramHeadWrite::load_program(LoadProgramHeadWrite::state s,
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(bytes.v());
-    LoadProgramHeadWrite::state s1 = set_prom_params(s, base, d_a0, true);
-    LoadProgramHeadWrite::state s2 = execute_wpm(s1);
-    return load_program(s2, (4096u ? (base + 1u) % 4096u : (base + 1u)),
-                        *(d_a1));
+    LoadProgramHeadWrite::state s1 =
+        set_prom_params(std::move(s), base, d_a0, true);
+    LoadProgramHeadWrite::state s2 = execute_wpm(std::move(s1));
+    return load_program(std::move(s2),
+                        (4096u ? (base + 1u) % 4096u : (base + 1u)), *(d_a1));
   }
 }

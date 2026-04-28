@@ -72,8 +72,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -132,10 +133,10 @@ struct MutualRecord {
     }
 
     // CREATORS
-    __attribute__((pure)) static department
-    mk_department(unsigned int a0, const List<employee> &a1) {
-      return department(
-          Mk_department{std::move(a0), std::make_unique<List<employee>>(a1)});
+    __attribute__((pure)) static department mk_department(unsigned int a0,
+                                                          List<employee> a1) {
+      return department(Mk_department{
+          std::move(a0), std::make_unique<List<employee>>(std::move(a1))});
     }
 
     // MANIPULATORS

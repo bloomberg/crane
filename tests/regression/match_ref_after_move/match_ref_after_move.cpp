@@ -96,7 +96,7 @@ MatchRefAfterMove::double_match(
     }
   }();
   return mypair<unsigned int, MatchRefAfterMove::mylist<unsigned int>>::mkpair(
-      h, t);
+      h, std::move(t));
 }
 
 __attribute__((pure)) unsigned int MatchRefAfterMove::mylist_sum(

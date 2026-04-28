@@ -64,8 +64,8 @@ public:
   }
   // CREATORS
   __attribute__((pure)) static Nat o() { return Nat(O{}); }
-  __attribute__((pure)) static Nat s(const Nat &n) {
-    return Nat(S{bsl::make_unique<Nat>(n)});
+  __attribute__((pure)) static Nat s(Nat n) {
+    return Nat(S{bsl::make_unique<Nat>(bsl::move(n))});
   }
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
@@ -97,7 +97,7 @@ public:
       return n;
     } else {
       const auto &[d_n] = bsl::get<typename Nat::S>(_sv.v());
-      return Nat::s((*(d_n)).add(n));
+      return Nat::s((*(d_n)).add(bsl::move(n)));
     }
   }
   __attribute__((pure)) int nat_to_int() const {

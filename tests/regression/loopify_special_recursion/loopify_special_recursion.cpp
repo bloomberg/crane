@@ -48,12 +48,12 @@ LoopifySpecialRecursion::process_twice_fuel(const unsigned int &fuel,
       unsigned int fuel_ = _f._s1;
       List<unsigned int> first = _result;
       _stack.emplace_back(_Call2{d_a0});
-      _stack.emplace_back(_Enter{first, fuel_});
+      _stack.emplace_back(_Enter{std::move(first), fuel_});
     } else {
       auto _f = std::move(std::get<_Call2>(_frame));
       unsigned int d_a0 = _f._s0;
       List<unsigned int> second = _result;
-      _result = List<unsigned int>::cons(d_a0, second);
+      _result = List<unsigned int>::cons(d_a0, std::move(second));
     }
   }
   return _result;
@@ -68,6 +68,7 @@ __attribute__((pure)) List<unsigned int>
 LoopifySpecialRecursion::double_append(const List<unsigned int> &l1,
                                        List<unsigned int> l2) {
   struct _Enter {
+    List<unsigned int> l2;
     const List<unsigned int> l1;
   };
 
@@ -79,20 +80,21 @@ LoopifySpecialRecursion::double_append(const List<unsigned int> &l1,
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l1});
+  _stack.emplace_back(_Enter{l2, l1});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
+      List<unsigned int> l2 = _f.l2;
       const List<unsigned int> l1 = _f.l1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
-        _result = l2;
+        _result = std::move(l2);
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l1.v());
         _stack.emplace_back(_Call1{d_a0});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{std::move(l2), *(d_a1)});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));

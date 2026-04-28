@@ -61,8 +61,8 @@ public:
   // CREATORS
   __attribute__((pure)) static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(const Nat &a0) {
-    return Nat(S{std::make_unique<Nat>(a0)});
+  __attribute__((pure)) static Nat s(Nat a0) {
+    return Nat(S{std::make_unique<Nat>(std::move(a0))});
   }
 
   // MANIPULATORS

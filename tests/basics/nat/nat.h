@@ -61,8 +61,8 @@ public:
   // CREATORS
   __attribute__((pure)) static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(const Nat &n) {
-    return Nat(S{std::make_unique<Nat>(n)});
+  __attribute__((pure)) static Nat s(Nat n) {
+    return Nat(S{std::make_unique<Nat>(std::move(n))});
   }
 
   // MANIPULATORS
@@ -100,7 +100,7 @@ public:
       return n;
     } else {
       const auto &[d_n] = std::get<typename Nat::S>(_sv.v());
-      return Nat::s((*(d_n)).add(n));
+      return Nat::s((*(d_n)).add(std::move(n)));
     }
   }
 

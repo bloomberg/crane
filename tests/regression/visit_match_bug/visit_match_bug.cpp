@@ -46,7 +46,7 @@ VisitMatchBug::nested_match_consume(const VisitMatchBug::Tree &t) {
 __attribute__((pure)) unsigned int
 VisitMatchBug::chain_then_match(const VisitMatchBug::Tree &t1) {
   VisitMatchBug::Tree t2 = consume(t1);
-  VisitMatchBug::Tree t3 = consume(t2);
+  VisitMatchBug::Tree t3 = consume(std::move(t2));
   if (std::holds_alternative<typename VisitMatchBug::Tree::Leaf>(t3.v())) {
     const auto &[d_a0] = std::get<typename VisitMatchBug::Tree::Leaf>(t3.v());
     return d_a0;

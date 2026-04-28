@@ -69,10 +69,9 @@ struct DoubleInvokeMove {
     // CREATORS
     __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(const tree &a0, unsigned int a1,
-                                           const tree &a2) {
-      return tree(Node{std::make_unique<tree>(a0), std::move(a1),
-                       std::make_unique<tree>(a2)});
+    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -135,7 +134,7 @@ struct DoubleInvokeMove {
           [=](unsigned int _x0) mutable -> tree { return wrap_with(t, _x0); };
       tree w1 = f(0u);
       tree w2 = f(1u);
-      return (left_value(w1) + left_value(w2));
+      return (left_value(std::move(w1)) + left_value(std::move(w2)));
     }();
   }();
 };

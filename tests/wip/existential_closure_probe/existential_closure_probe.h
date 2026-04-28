@@ -95,7 +95,7 @@ struct ExistentialClosureProbe {
   /// base=42, apply to 0. Expected: 42.
   static inline const unsigned int test2 = []() {
     wrap p = pack_fn(42u);
-    return apply_packed(p, 0u);
+    return apply_packed(std::move(p), 0u);
   }();
   /// Store a closure that captures another closure.
   __attribute__((pure)) static wrap pack_composed(unsigned int a,

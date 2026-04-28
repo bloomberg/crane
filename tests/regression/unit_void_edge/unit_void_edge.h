@@ -72,8 +72,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -170,7 +171,7 @@ struct UnitVoidEdge {
   __attribute__((pure)) static unsigned int get_value(const tagged_nat &t);
   static inline const unsigned int test_record_unit = []() {
     tagged_nat t = make_tagged(99u);
-    return get_value(t);
+    return get_value(std::move(t));
   }();
   static void make_callback(const unsigned int &n, const std::monostate &_x);
   static inline const std::monostate test_make_callback = []() {

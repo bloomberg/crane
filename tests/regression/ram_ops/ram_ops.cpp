@@ -56,10 +56,12 @@ RamOps::ram_write_main_sys(const RamOps::state_main &s, const unsigned int &v) {
   RamOps::ram_bank_main bk = get_bank_main(s, b);
   RamOps::ram_chip_main ch = get_chip_main(bk, c);
   RamOps::ram_reg_main rg = get_reg_main(ch, r);
-  RamOps::ram_reg_main rg_ = upd_main_in_reg(rg, i, v);
-  RamOps::ram_chip_main ch_ = upd_reg_in_chip_main(ch, r, rg_);
-  RamOps::ram_bank_main bk_ = upd_chip_in_bank_main(bk, c, ch_);
-  return upd_bank_in_sys_main(s, b, bk_);
+  RamOps::ram_reg_main rg_ = upd_main_in_reg(std::move(rg), i, v);
+  RamOps::ram_chip_main ch_ =
+      upd_reg_in_chip_main(std::move(ch), r, std::move(rg_));
+  RamOps::ram_bank_main bk_ =
+      upd_chip_in_bank_main(std::move(bk), c, std::move(ch_));
+  return upd_bank_in_sys_main(s, b, std::move(bk_));
 }
 
 __attribute__((pure)) RamOps::bank_port
@@ -99,9 +101,10 @@ RamOps::ram_write_port_sys(const RamOps::state_port &s, const unsigned int &v) {
   unsigned int c = s.sel_chip_port;
   RamOps::bank_port bk = get_bank_port(s, b);
   RamOps::chip_port ch = get_chip_port(bk, c);
-  RamOps::chip_port ch_ = upd_port_in_chip(ch, v);
-  RamOps::bank_port bk_ = upd_chip_in_bank_port(bk, c, ch_);
-  return upd_bank_in_sys_port(s, b, bk_);
+  RamOps::chip_port ch_ = upd_port_in_chip(std::move(ch), v);
+  RamOps::bank_port bk_ =
+      upd_chip_in_bank_port(std::move(bk), c, std::move(ch_));
+  return upd_bank_in_sys_port(s, b, std::move(bk_));
 }
 
 __attribute__((pure)) RamOps::ram_bank_status
@@ -165,10 +168,12 @@ RamOps::ram_write_status_sys(const RamOps::state_status &s,
   RamOps::ram_bank_status bk = get_bank_status(s, b);
   RamOps::ram_chip_status ch = get_chip_status(bk, c);
   RamOps::ram_reg_status rg = get_reg_status(ch, r);
-  RamOps::ram_reg_status rg_ = upd_status_in_reg(rg, idx, v);
-  RamOps::ram_chip_status ch_ = upd_reg_in_chip_status(ch, r, rg_);
-  RamOps::ram_bank_status bk_ = upd_chip_in_bank_status(bk, c, ch_);
-  return upd_bank_in_sys_status(s, b, bk_);
+  RamOps::ram_reg_status rg_ = upd_status_in_reg(std::move(rg), idx, v);
+  RamOps::ram_chip_status ch_ =
+      upd_reg_in_chip_status(std::move(ch), r, std::move(rg_));
+  RamOps::ram_bank_status bk_ =
+      upd_chip_in_bank_status(std::move(bk), c, std::move(ch_));
+  return upd_bank_in_sys_status(s, b, std::move(bk_));
 }
 
 __attribute__((pure)) RamOps::ram_bank_sel
@@ -197,9 +202,9 @@ RamOps::get_main_sel(const RamOps::ram_reg_sel &rg, const unsigned int &i) {
 __attribute__((pure)) unsigned int
 RamOps::ram_read_main(const RamOps::state_sel &s) {
   RamOps::ram_bank_sel bk = get_bank_sel(s, s.cur_bank_sel);
-  RamOps::ram_chip_sel ch = get_chip_sel(bk, s.sel_ram.sel_chip);
-  RamOps::ram_reg_sel rg = get_regRAM(ch, s.sel_ram.sel_reg);
-  return get_main_sel(rg, s.sel_ram.sel_char);
+  RamOps::ram_chip_sel ch = get_chip_sel(std::move(bk), s.sel_ram.sel_chip);
+  RamOps::ram_reg_sel rg = get_regRAM(std::move(ch), s.sel_ram.sel_reg);
+  return get_main_sel(std::move(rg), s.sel_ram.sel_char);
 }
 
 __attribute__((pure)) RamOps::ram_bank_nested
@@ -232,10 +237,10 @@ __attribute__((pure)) unsigned int
 RamOps::ram_read_main_nested(const RamOps::state_nested &s) {
   RamOps::ram_bank_nested bk = get_bank_nested(s, s.cur_bank_nested);
   RamOps::ram_chip_nested ch =
-      get_chip_nested(bk, s.sel_ram_nested.sel_chip_nested);
+      get_chip_nested(std::move(bk), s.sel_ram_nested.sel_chip_nested);
   RamOps::ram_reg_nested rg =
-      get_regRAM_nested(ch, s.sel_ram_nested.sel_reg_nested);
-  return get_main_nested(rg, s.sel_ram_nested.sel_char_nested);
+      get_regRAM_nested(std::move(ch), s.sel_ram_nested.sel_reg_nested);
+  return get_main_nested(std::move(rg), s.sel_ram_nested.sel_char_nested);
 }
 
 __attribute__((pure)) RamOps::reg_frame
@@ -315,9 +320,9 @@ RamOps::write_status0(const RamOps::state_nested_bank &s,
 __attribute__((pure)) unsigned int
 RamOps::read_status0(const RamOps::state_nested_bank &s) {
   RamOps::bank_nested_bank b = get_bank0(s);
-  RamOps::chip_nested_bank c = get_chip0(b);
-  RamOps::reg_nested_bank r = get_reg0(c);
-  return ListDef::template nth<unsigned int>(0u, r.status_, 0u);
+  RamOps::chip_nested_bank c = get_chip0(std::move(b));
+  RamOps::reg_nested_bank r = get_reg0(std::move(c));
+  return ListDef::template nth<unsigned int>(0u, std::move(r).status_, 0u);
 }
 
 __attribute__((pure)) unsigned int RamOps::score(const RamOps::Item x) {

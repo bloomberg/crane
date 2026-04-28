@@ -248,7 +248,7 @@ LoopifyHofs::longest_run_fuel(const unsigned int &fuel, List<unsigned int> l) {
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<List<unsigned int>>(_loop_l);
+      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l));
       break;
     } else {
       unsigned int f = _loop_fuel - 1;

@@ -77,9 +77,9 @@ struct ClosureMapEscape {
 
     __attribute__((pure)) static mylist<t_A> mynil() { return mylist(Mynil{}); }
 
-    __attribute__((pure)) static mylist<t_A> mycons(t_A a0,
-                                                    const mylist<t_A> &a1) {
-      return mylist(Mycons{std::move(a0), std::make_unique<mylist<t_A>>(a1)});
+    __attribute__((pure)) static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+      return mylist(
+          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -154,7 +154,7 @@ struct ClosureMapEscape {
         map_to_adders(mylist<unsigned int>::mycons(
             100u,
             mylist<unsigned int>::mycons(200u, mylist<unsigned int>::mynil())));
-    return sum_apply(fns, 1u);
+    return sum_apply(std::move(fns), 1u);
   }();
 };
 

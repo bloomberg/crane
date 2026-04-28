@@ -103,10 +103,13 @@ RamStateOps::ram_write_main_sys(const RamStateOps::state &s,
   RamStateOps::ram_reg rg = current_reg(s);
   RamStateOps::ram_chip ch = current_chip(s);
   RamStateOps::ram_bank bk = current_bank(s);
-  RamStateOps::ram_reg rg_ = upd_main_in_reg(rg, s.state_sel.sel_char, v);
-  RamStateOps::ram_chip ch_ = upd_reg_in_chip(ch, s.state_sel.sel_reg, rg_);
-  RamStateOps::ram_bank bk_ = upd_chip_in_bank(bk, s.state_sel.sel_chip, ch_);
-  return upd_bank_in_sys(s, s.state_sel.sel_bank, bk_);
+  RamStateOps::ram_reg rg_ =
+      upd_main_in_reg(std::move(rg), s.state_sel.sel_char, v);
+  RamStateOps::ram_chip ch_ =
+      upd_reg_in_chip(std::move(ch), s.state_sel.sel_reg, std::move(rg_));
+  RamStateOps::ram_bank bk_ =
+      upd_chip_in_bank(std::move(bk), s.state_sel.sel_chip, std::move(ch_));
+  return upd_bank_in_sys(s, s.state_sel.sel_bank, std::move(bk_));
 }
 
 __attribute__((pure)) List<RamStateOps::ram_bank>
@@ -116,17 +119,19 @@ RamStateOps::ram_write_status_sys(const RamStateOps::state &s,
   RamStateOps::ram_reg rg = current_reg(s);
   RamStateOps::ram_chip ch = current_chip(s);
   RamStateOps::ram_bank bk = current_bank(s);
-  RamStateOps::ram_reg rg_ = upd_stat_in_reg(rg, idx, v);
-  RamStateOps::ram_chip ch_ = upd_reg_in_chip(ch, s.state_sel.sel_reg, rg_);
-  RamStateOps::ram_bank bk_ = upd_chip_in_bank(bk, s.state_sel.sel_chip, ch_);
-  return upd_bank_in_sys(s, s.state_sel.sel_bank, bk_);
+  RamStateOps::ram_reg rg_ = upd_stat_in_reg(std::move(rg), idx, v);
+  RamStateOps::ram_chip ch_ =
+      upd_reg_in_chip(std::move(ch), s.state_sel.sel_reg, std::move(rg_));
+  RamStateOps::ram_bank bk_ =
+      upd_chip_in_bank(std::move(bk), s.state_sel.sel_chip, std::move(ch_));
+  return upd_bank_in_sys(s, s.state_sel.sel_bank, std::move(bk_));
 }
 
 __attribute__((pure)) std::pair<std::optional<unsigned int>, RamStateOps::state>
 RamStateOps::pop_stack(RamStateOps::state s) {
   auto &&_sv = s.state_stack;
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-    return std::make_pair(std::optional<unsigned int>(), s);
+    return std::make_pair(std::optional<unsigned int>(), std::move(s));
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(_sv.v());

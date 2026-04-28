@@ -85,8 +85,8 @@ template <Elem E> struct MutualTree {
       return tree(Leaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static tree node(unsigned int a0, const forest &a1) {
-      return tree(Node{std::move(a0), std::make_unique<forest>(a1)});
+    __attribute__((pure)) static tree node(unsigned int a0, forest a1) {
+      return tree(Node{std::move(a0), std::make_unique<forest>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -150,10 +150,9 @@ template <Elem E> struct MutualTree {
     // CREATORS
     __attribute__((pure)) static forest fnil() { return forest(FNil{}); }
 
-    __attribute__((pure)) static forest fcons(const tree &a0,
-                                              const forest &a1) {
-      return forest(
-          FCons{std::make_unique<tree>(a0), std::make_unique<forest>(a1)});
+    __attribute__((pure)) static forest fcons(tree a0, forest a1) {
+      return forest(FCons{std::make_unique<tree>(std::move(a0)),
+                          std::make_unique<forest>(std::move(a1))});
     }
 
     // MANIPULATORS

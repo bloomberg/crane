@@ -73,10 +73,9 @@ struct VisitMatchBug {
       return Tree(Leaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static Tree node(const Tree &a0, unsigned int a1,
-                                           const Tree &a2) {
-      return Tree(Node{std::make_unique<Tree>(a0), std::move(a1),
-                       std::make_unique<Tree>(a2)});
+    __attribute__((pure)) static Tree node(Tree a0, unsigned int a1, Tree a2) {
+      return Tree(Node{std::make_unique<Tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<Tree>(std::move(a2))});
     }
 
     // MANIPULATORS

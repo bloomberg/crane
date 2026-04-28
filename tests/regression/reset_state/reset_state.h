@@ -72,8 +72,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -149,7 +150,7 @@ struct ResetState {
                 4u, List<unsigned int>::cons(5u, List<unsigned int>::nil()))),
         List<unsigned int>::cons(
             10u, List<unsigned int>::cons(11u, List<unsigned int>::nil()))};
-    state_full s_ = reset_state_full(s);
+    state_full s_ = reset_state_full(std::move(s));
     return (
         ((s_.acc + ListDef::template nth<unsigned int>(1u, s_.ram_sys, 0u)) +
          ListDef::template nth<unsigned int>(0u, s_.rom, 0u)) +

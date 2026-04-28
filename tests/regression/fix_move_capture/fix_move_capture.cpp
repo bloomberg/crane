@@ -53,7 +53,7 @@ __attribute__((pure)) unsigned int FixMoveCapture::f(FixMoveCapture::mylist l) {
     }
   };
   FixMoveCapture::mylist t = dup_head(l);
-  return (go(3u) + length(t));
+  return (go(3u) + length(std::move(t)));
 }
 
 /// Even simpler: use the fixpoint, then pass l to a consuming
@@ -72,5 +72,5 @@ FixMoveCapture::f2(FixMoveCapture::mylist l) {
   };
   unsigned int result_g = go(3u);
   FixMoveCapture::mylist t = dup_head(l);
-  return (result_g + length(t));
+  return (result_g + length(std::move(t)));
 }

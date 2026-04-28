@@ -161,7 +161,7 @@ LoopifyAdvancedLists::interleave(List<unsigned int> l1, List<unsigned int> l2) {
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l1.v())) {
-      *(_write) = std::make_unique<List<unsigned int>>(_loop_l2);
+      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
       break;
     } else {
       const auto &[d_a0, d_a1] =

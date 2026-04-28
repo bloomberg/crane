@@ -618,7 +618,8 @@ __attribute__((pure)) List<List<unsigned int>> LoopifyTrees::tree_levels_fuel(
         _write = &std::get<typename List<List<unsigned int>>::Cons>(
                       (*_write)->v_mut())
                       .d_a1;
-        List<LoopifyTrees::tree<unsigned int>> _next_trees = children;
+        List<LoopifyTrees::tree<unsigned int>> _next_trees =
+            std::move(children);
         unsigned int _next_fuel = f;
         _loop_trees = std::move(_next_trees);
         _loop_fuel = std::move(_next_fuel);
@@ -633,7 +634,7 @@ __attribute__((pure)) List<List<unsigned int>>
 LoopifyTrees::tree_levels(LoopifyTrees::tree<unsigned int> t) {
   return tree_levels_fuel(
       100u, List<LoopifyTrees::tree<unsigned int>>::cons(
-                t, List<LoopifyTrees::tree<unsigned int>>::nil()));
+                std::move(t), List<LoopifyTrees::tree<unsigned int>>::nil()));
 }
 
 /// count_nodes t returns tuple (node_count, sum_of_values).
@@ -661,11 +662,13 @@ LoopifyTrees::append_list_lists(const List<List<unsigned int>> &l1,
                                 List<List<unsigned int>> l2) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
+  List<List<unsigned int>> _loop_l2 = std::move(l2);
   List<List<unsigned int>> _loop_l1 = l1;
   while (true) {
     if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
             _loop_l1.v())) {
-      *(_write) = std::make_unique<List<List<unsigned int>>>(l2);
+      *(_write) =
+          std::make_unique<List<List<unsigned int>>>(std::move(_loop_l2));
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -676,7 +679,10 @@ LoopifyTrees::append_list_lists(const List<List<unsigned int>> &l1,
       _write =
           &std::get<typename List<List<unsigned int>>::Cons>((*_write)->v_mut())
                .d_a1;
-      _loop_l1 = *(d_a1);
+      List<List<unsigned int>> _next_l2 = std::move(_loop_l2);
+      List<List<unsigned int>> _next_l1 = *(d_a1);
+      _loop_l2 = std::move(_next_l2);
+      _loop_l1 = std::move(_next_l1);
       continue;
     }
   }

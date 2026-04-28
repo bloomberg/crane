@@ -75,9 +75,9 @@ struct RecRecord {
 
     __attribute__((pure)) static rlist<t_A> rnil() { return rlist(Rnil{}); }
 
-    __attribute__((pure)) static rlist<t_A> rcons(t_A a0,
-                                                  const rlist<t_A> &a1) {
-      return rlist(Rcons{std::move(a0), std::make_unique<rlist<t_A>>(a1)});
+    __attribute__((pure)) static rlist<t_A> rcons(t_A a0, rlist<t_A> a1) {
+      return rlist(
+          Rcons{std::move(a0), std::make_unique<rlist<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS

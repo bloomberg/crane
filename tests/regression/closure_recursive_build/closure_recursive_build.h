@@ -68,8 +68,9 @@ struct ClosureRecursiveBuild {
     __attribute__((pure)) static fn_list fnil() { return fn_list(FNil{}); }
 
     __attribute__((pure)) static fn_list
-    fcons(std::function<unsigned int(unsigned int)> a0, const fn_list &a1) {
-      return fn_list(FCons{std::move(a0), std::make_unique<fn_list>(a1)});
+    fcons(std::function<unsigned int(unsigned int)> a0, fn_list a1) {
+      return fn_list(
+          FCons{std::move(a0), std::make_unique<fn_list>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -126,7 +127,7 @@ struct ClosureRecursiveBuild {
   static inline const unsigned int test3 = []() {
     fn_list fns = build_adders(5u);
     unsigned int noise = ((99u + 88u) + 77u);
-    return (apply_first(fns, 0u) + noise);
+    return (apply_first(std::move(fns), 0u) + noise);
   }();
 };
 

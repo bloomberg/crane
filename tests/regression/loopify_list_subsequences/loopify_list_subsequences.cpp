@@ -99,8 +99,8 @@ LoopifyListSubsequences::inits_fuel(const unsigned int &fuel,
       auto _f = std::move(std::get<_Call1>(_frame));
       unsigned int d_a0 = _f._s0;
       List<List<unsigned int>> rest = _result;
-      _result = List<List<unsigned int>>::cons(List<unsigned int>::nil(),
-                                               map_cons_helper(d_a0, rest));
+      _result = List<List<unsigned int>>::cons(
+          List<unsigned int>::nil(), map_cons_helper(d_a0, std::move(rest)));
     }
   }
   return _result;
@@ -244,7 +244,7 @@ LoopifyListSubsequences::split_at(const unsigned int &n, List<unsigned int> l) {
       List<unsigned int> l = _f.l;
       const unsigned int n = _f.n;
       if (n <= 0) {
-        _result = std::make_pair(List<unsigned int>::nil(), l);
+        _result = std::make_pair(List<unsigned int>::nil(), std::move(l));
       } else {
         unsigned int n_ = n - 1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {

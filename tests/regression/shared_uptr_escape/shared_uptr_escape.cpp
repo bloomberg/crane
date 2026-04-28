@@ -10,15 +10,16 @@ SharedUptrEscape::conditional_share(const unsigned int &flag) {
       tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                  tree::node(tree::leaf(), 30u, tree::leaf()));
   if (flag <= 0) {
-    return t.identity().tree_sum();
+    return std::move(t).identity().tree_sum();
   } else {
     unsigned int _x = flag - 1;
-    std::pair<SharedUptrEscape::tree, SharedUptrEscape::tree> p = t.dup();
+    std::pair<SharedUptrEscape::tree, SharedUptrEscape::tree> p =
+        std::move(t).dup();
     return (p.first.tree_sum() + p.second.tree_sum());
   }
 }
 
 __attribute__((pure)) SharedUptrEscape::wrapper
 SharedUptrEscape::wrap_tree(SharedUptrEscape::tree t) {
-  return wrapper::wrap(t);
+  return wrapper::wrap(std::move(t));
 }

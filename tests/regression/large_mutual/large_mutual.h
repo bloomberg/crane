@@ -109,23 +109,25 @@ struct LargeMutual {
     }
 
     // CREATORS
-    __attribute__((pure)) static stmt sassign(unsigned int a0, const expr &a1) {
-      return stmt(SAssign{std::move(a0), std::make_unique<expr>(a1)});
-    }
-
-    __attribute__((pure)) static stmt sseq(const stmt &a0, const stmt &a1) {
-      return stmt(SSeq{std::make_unique<stmt>(a0), std::make_unique<stmt>(a1)});
-    }
-
-    __attribute__((pure)) static stmt sif(const bexpr &a0, const stmt &a1,
-                                          const stmt &a2) {
-      return stmt(SIf{std::make_unique<bexpr>(a0), std::make_unique<stmt>(a1),
-                      std::make_unique<stmt>(a2)});
-    }
-
-    __attribute__((pure)) static stmt swhile(const bexpr &a0, const stmt &a1) {
+    __attribute__((pure)) static stmt sassign(unsigned int a0, expr a1) {
       return stmt(
-          SWhile{std::make_unique<bexpr>(a0), std::make_unique<stmt>(a1)});
+          SAssign{std::move(a0), std::make_unique<expr>(std::move(a1))});
+    }
+
+    __attribute__((pure)) static stmt sseq(stmt a0, stmt a1) {
+      return stmt(SSeq{std::make_unique<stmt>(std::move(a0)),
+                       std::make_unique<stmt>(std::move(a1))});
+    }
+
+    __attribute__((pure)) static stmt sif(bexpr a0, stmt a1, stmt a2) {
+      return stmt(SIf{std::make_unique<bexpr>(std::move(a0)),
+                      std::make_unique<stmt>(std::move(a1)),
+                      std::make_unique<stmt>(std::move(a2))});
+    }
+
+    __attribute__((pure)) static stmt swhile(bexpr a0, stmt a1) {
+      return stmt(SWhile{std::make_unique<bexpr>(std::move(a0)),
+                         std::make_unique<stmt>(std::move(a1))});
     }
 
     __attribute__((pure)) static stmt sskip() { return stmt(SSkip{}); }
@@ -238,18 +240,20 @@ struct LargeMutual {
       return expr(EVar{std::move(a0)});
     }
 
-    __attribute__((pure)) static expr eadd(const expr &a0, const expr &a1) {
-      return expr(EAdd{std::make_unique<expr>(a0), std::make_unique<expr>(a1)});
+    __attribute__((pure)) static expr eadd(expr a0, expr a1) {
+      return expr(EAdd{std::make_unique<expr>(std::move(a0)),
+                       std::make_unique<expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static expr emul(const expr &a0, const expr &a1) {
-      return expr(EMul{std::make_unique<expr>(a0), std::make_unique<expr>(a1)});
+    __attribute__((pure)) static expr emul(expr a0, expr a1) {
+      return expr(EMul{std::make_unique<expr>(std::move(a0)),
+                       std::make_unique<expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static expr econd(const bexpr &a0, const expr &a1,
-                                            const expr &a2) {
-      return expr(ECond{std::make_unique<bexpr>(a0), std::make_unique<expr>(a1),
-                        std::make_unique<expr>(a2)});
+    __attribute__((pure)) static expr econd(bexpr a0, expr a1, expr a2) {
+      return expr(ECond{std::make_unique<bexpr>(std::move(a0)),
+                        std::make_unique<expr>(std::move(a1)),
+                        std::make_unique<expr>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -373,26 +377,28 @@ struct LargeMutual {
 
     __attribute__((pure)) static bexpr bfalse() { return bexpr(BFalse{}); }
 
-    __attribute__((pure)) static bexpr beq(const expr &a0, const expr &a1) {
-      return bexpr(BEq{std::make_unique<expr>(a0), std::make_unique<expr>(a1)});
+    __attribute__((pure)) static bexpr beq(expr a0, expr a1) {
+      return bexpr(BEq{std::make_unique<expr>(std::move(a0)),
+                       std::make_unique<expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static bexpr blt(const expr &a0, const expr &a1) {
-      return bexpr(BLt{std::make_unique<expr>(a0), std::make_unique<expr>(a1)});
+    __attribute__((pure)) static bexpr blt(expr a0, expr a1) {
+      return bexpr(BLt{std::make_unique<expr>(std::move(a0)),
+                       std::make_unique<expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static bexpr band(const bexpr &a0, const bexpr &a1) {
-      return bexpr(
-          BAnd{std::make_unique<bexpr>(a0), std::make_unique<bexpr>(a1)});
+    __attribute__((pure)) static bexpr band(bexpr a0, bexpr a1) {
+      return bexpr(BAnd{std::make_unique<bexpr>(std::move(a0)),
+                        std::make_unique<bexpr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static bexpr bor(const bexpr &a0, const bexpr &a1) {
-      return bexpr(
-          BOr{std::make_unique<bexpr>(a0), std::make_unique<bexpr>(a1)});
+    __attribute__((pure)) static bexpr bor(bexpr a0, bexpr a1) {
+      return bexpr(BOr{std::make_unique<bexpr>(std::move(a0)),
+                       std::make_unique<bexpr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static bexpr bnot(const bexpr &a0) {
-      return bexpr(BNot{std::make_unique<bexpr>(a0)});
+    __attribute__((pure)) static bexpr bnot(bexpr a0) {
+      return bexpr(BNot{std::make_unique<bexpr>(std::move(a0))});
     }
 
     // MANIPULATORS

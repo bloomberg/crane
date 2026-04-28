@@ -45,7 +45,7 @@ LoopifyAlgorithms::sieve_fuel(const unsigned int &fuel, List<unsigned int> l) {
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<List<unsigned int>>(_loop_l);
+      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l));
       break;
     } else {
       unsigned int f = _loop_fuel - 1;
@@ -232,12 +232,12 @@ __attribute__((pure)) List<unsigned int> LoopifyAlgorithms::rotate_left_fuel(
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = _loop_l;
+      _result = std::move(_loop_l);
       break;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_n <= 0u) {
-        _result = _loop_l;
+        _result = std::move(_loop_l);
         break;
       } else {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
@@ -364,13 +364,14 @@ LoopifyAlgorithms::rev_impl(List<unsigned int> acc,
   List<unsigned int> _loop_acc = std::move(acc);
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
-      _result = _loop_acc;
+      _result = std::move(_loop_acc);
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l.v());
       List<unsigned int> _next_l = *(d_a1);
-      List<unsigned int> _next_acc = List<unsigned int>::cons(d_a0, _loop_acc);
+      List<unsigned int> _next_acc =
+          List<unsigned int>::cons(d_a0, std::move(_loop_acc));
       _loop_l = std::move(_next_l);
       _loop_acc = std::move(_next_acc);
     }

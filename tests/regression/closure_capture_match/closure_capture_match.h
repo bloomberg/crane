@@ -70,10 +70,9 @@ struct ClosureCaptureMatch {
     // CREATORS
     __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(const tree &a0, unsigned int a1,
-                                           const tree &a2) {
-      return tree(Node{std::make_unique<tree>(a0), std::move(a1),
-                       std::make_unique<tree>(a2)});
+    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -86,7 +85,7 @@ struct ClosureCaptureMatch {
     /// the original data structure is dropped.
     __attribute__((pure)) unsigned int capture_and_drop() const {
       std::function<tree(unsigned int)> f = [&](unsigned int _x0) -> tree {
-        return (*(this)).make_inserter(_x0);
+        return std::move(*(this)).make_inserter(_x0);
       };
       auto &&_sv = f(42u);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
@@ -331,8 +330,8 @@ struct ClosureCaptureMatch {
           [=](unsigned int _x0) mutable -> unsigned int {
         return t.deep_capture(_x0);
       };
-      fn_box b = box_from_match(t);
-      return (f(5u) + b.unbox(7u));
+      fn_box b = box_from_match(std::move(t));
+      return (f(5u) + std::move(b).unbox(7u));
     }();
   }();
 };

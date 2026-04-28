@@ -126,12 +126,12 @@ __attribute__((pure)) List<unsigned int> LoopifySequences::rotate_left_fuel(
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = _loop_l;
+      _result = std::move(_loop_l);
       break;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_n == 0u) {
-        _result = _loop_l;
+        _result = std::move(_loop_l);
         break;
       } else {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
@@ -252,7 +252,7 @@ LoopifySequences::repeat_with_sep(List<unsigned int> s,
       } else {
         unsigned int m = n - 1;
         if (m <= 0) {
-          _result = s;
+          _result = std::move(s);
         } else {
           unsigned int _x = m - 1;
           _stack.emplace_back(_Call1{s, sep});
@@ -333,22 +333,26 @@ LoopifySequences::split_by_sign(const List<unsigned int> &l,
   List<unsigned int> _loop_l = l;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
-      _result = std::make_pair(_loop_pos, _loop_neg);
+      _result = std::make_pair(std::move(_loop_pos), std::move(_loop_neg));
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l.v());
       if (base <= d_a0) {
+        List<unsigned int> _next_neg = std::move(_loop_neg);
         List<unsigned int> _next_pos =
-            List<unsigned int>::cons(d_a0, _loop_pos);
+            List<unsigned int>::cons(d_a0, std::move(_loop_pos));
         List<unsigned int> _next_l = *(d_a1);
+        _loop_neg = std::move(_next_neg);
         _loop_pos = std::move(_next_pos);
         _loop_l = std::move(_next_l);
       } else {
         List<unsigned int> _next_neg =
-            List<unsigned int>::cons(d_a0, _loop_neg);
+            List<unsigned int>::cons(d_a0, std::move(_loop_neg));
+        List<unsigned int> _next_pos = std::move(_loop_pos);
         List<unsigned int> _next_l = *(d_a1);
         _loop_neg = std::move(_next_neg);
+        _loop_pos = std::move(_next_pos);
         _loop_l = std::move(_next_l);
       }
     }

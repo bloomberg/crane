@@ -73,8 +73,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -87,10 +88,11 @@ public:
     std::unique_ptr<List<t_A>> _head{};
     std::unique_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
+    List<t_A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *(_loop_self);
       if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(m);
+        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
@@ -98,7 +100,10 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        _loop_self = d_a1.get();
+        const List *_next_self = d_a1.get();
+        List<t_A> _next_m = std::move(_loop_m);
+        _loop_self = std::move(_next_self);
+        _loop_m = std::move(_next_m);
         continue;
       }
     }
@@ -184,10 +189,11 @@ struct LoopifyPolymorphic {
                                                     List<T1> l2) {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
+    List<T1> _loop_l2 = std::move(l2);
     List<T1> _loop_l1 = l1;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l1.v())) {
-        *(_write) = std::make_unique<List<T1>>(l2);
+        *(_write) = std::make_unique<List<T1>>(std::move(_loop_l2));
         break;
       } else {
         const auto &[d_a0, d_a1] =
@@ -196,7 +202,10 @@ struct LoopifyPolymorphic {
             std::make_unique<List<T1>>(typename List<T1>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).d_a1;
-        _loop_l1 = *(d_a1);
+        List<T1> _next_l2 = std::move(_loop_l2);
+        List<T1> _next_l1 = *(d_a1);
+        _loop_l2 = std::move(_next_l2);
+        _loop_l1 = std::move(_next_l1);
         continue;
       }
     }
@@ -268,7 +277,7 @@ struct LoopifyPolymorphic {
     unsigned int _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
-        _result = _loop_l;
+        _result = std::move(_loop_l);
         break;
       } else {
         unsigned int n_ = _loop_n - 1;

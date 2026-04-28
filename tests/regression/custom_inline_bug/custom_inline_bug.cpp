@@ -56,7 +56,7 @@ CustomInlineBug::pair_if(const bool &b, CustomInlineBug::State s) {
   if (b) {
     return std::make_pair(s, s.value);
   } else {
-    return std::make_pair(s, 0u);
+    return std::make_pair(std::move(s), 0u);
   }
 }
 

@@ -72,8 +72,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -183,14 +184,16 @@ struct RamOps {
     state_main s =
         state_main{List<ram_bank_main>::cons(bk0, List<ram_bank_main>::nil()),
                    0u, 0u, 0u, 1u};
-    List<ram_bank_main> sys_ = ram_write_main_sys(s, 19u);
+    List<ram_bank_main> sys_ = ram_write_main_sys(std::move(s), 19u);
     ram_bank_main bk_ = ListDef::template nth<ram_bank_main>(
-        0u, sys_, ram_bank_main{List<ram_chip_main>::nil()});
+        0u, std::move(sys_), ram_bank_main{List<ram_chip_main>::nil()});
     ram_chip_main ch_ = ListDef::template nth<ram_chip_main>(
-        0u, bk_.bank_chips_main, ram_chip_main{List<ram_reg_main>::nil()});
+        0u, std::move(bk_).bank_chips_main,
+        ram_chip_main{List<ram_reg_main>::nil()});
     ram_reg_main rg_ = ListDef::template nth<ram_reg_main>(
-        0u, ch_.chip_regs_main, ram_reg_main{List<unsigned int>::nil()});
-    return ListDef::template nth<unsigned int>(1u, rg_.reg_main, 0u);
+        0u, std::move(ch_).chip_regs_main,
+        ram_reg_main{List<unsigned int>::nil()});
+    return ListDef::template nth<unsigned int>(1u, std::move(rg_).reg_main, 0u);
   }();
 
   struct chip_port {
@@ -264,12 +267,12 @@ struct RamOps {
         bank_port{List<chip_port>::cons(ch0, List<chip_port>::nil())};
     state_port s =
         state_port{List<bank_port>::cons(bk0, List<bank_port>::nil()), 0u, 0u};
-    List<bank_port> sys_ = ram_write_port_sys(s, 17u);
+    List<bank_port> sys_ = ram_write_port_sys(std::move(s), 17u);
     bank_port bk_ = ListDef::template nth<bank_port>(
-        0u, sys_, bank_port{List<chip_port>::nil()});
-    chip_port ch_ = ListDef::template nth<chip_port>(0u, bk_.bank_chips_port,
-                                                     chip_port{0u});
-    return ch_.chip_port_val;
+        0u, std::move(sys_), bank_port{List<chip_port>::nil()});
+    chip_port ch_ = ListDef::template nth<chip_port>(
+        0u, std::move(bk_).bank_chips_port, chip_port{0u});
+    return std::move(ch_).chip_port_val;
   }();
 
   struct ram_reg_status {
@@ -368,15 +371,17 @@ struct RamOps {
     state_status s = state_status{
         List<ram_bank_status>::cons(bk0, List<ram_bank_status>::nil()), 0u, 0u,
         0u};
-    List<ram_bank_status> sys_ = ram_write_status_sys(s, 2u, 25u);
+    List<ram_bank_status> sys_ = ram_write_status_sys(std::move(s), 2u, 25u);
     ram_bank_status bk_ = ListDef::template nth<ram_bank_status>(
-        0u, sys_, ram_bank_status{List<ram_chip_status>::nil()});
+        0u, std::move(sys_), ram_bank_status{List<ram_chip_status>::nil()});
     ram_chip_status ch_ = ListDef::template nth<ram_chip_status>(
-        0u, bk_.bank_chips_status,
+        0u, std::move(bk_).bank_chips_status,
         ram_chip_status{List<ram_reg_status>::nil()});
     ram_reg_status rg_ = ListDef::template nth<ram_reg_status>(
-        0u, ch_.chip_regs_status, ram_reg_status{List<unsigned int>::nil()});
-    return ListDef::template nth<unsigned int>(2u, rg_.reg_status, 0u);
+        0u, std::move(ch_).chip_regs_status,
+        ram_reg_status{List<unsigned int>::nil()});
+    return ListDef::template nth<unsigned int>(2u, std::move(rg_).reg_status,
+                                               0u);
   }();
 
   struct ram_reg_sel {
@@ -634,9 +639,10 @@ struct RamOps {
         0u, sample_bank_frame, List<List<unsigned int>>::nil());
     List<unsigned int> rg =
         ListDef::template nth<reg_frame>(1u, ch, List<unsigned int>::nil());
-    List<unsigned int> rg_ = upd_main_in_reg_frame(rg, 2u, 99u);
-    List<List<unsigned int>> ch_ = upd_reg_in_chip_frame(ch, 1u, rg_);
-    return upd_chip_in_bank_frame(sample_bank_frame, 0u, ch_);
+    List<unsigned int> rg_ = upd_main_in_reg_frame(std::move(rg), 2u, 99u);
+    List<List<unsigned int>> ch_ =
+        upd_reg_in_chip_frame(std::move(ch), 1u, std::move(rg_));
+    return upd_chip_in_bank_frame(sample_bank_frame, 0u, std::move(ch_));
   }();
   static inline const bool test_write_frame_different_chip =
       ListDef::template nth<unsigned int>(

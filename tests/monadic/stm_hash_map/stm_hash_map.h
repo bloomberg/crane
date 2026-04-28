@@ -79,8 +79,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -117,7 +118,7 @@ template <typename K, typename V> struct CHT {
     List<std::pair<K, V>> xs = stm::readTVar(b);
     List<std::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
-            (*(this)).CHT::cht_eqb, k, v, xs);
+            std::move(*(this)).CHT::cht_eqb, k, v, std::move(xs));
     stm::writeTVar(b, xs_);
     return std::monostate{};
   }
@@ -126,8 +127,8 @@ template <typename K, typename V> struct CHT {
     stm::TVar<List<std::pair<K, V>>> b = (*(this)).bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
     std::pair<std::optional<V>, List<std::pair<K, V>>> p =
-        CHT<int, int>::template assoc_remove<K, V>((*(this)).CHT::cht_eqb, k,
-                                                   xs);
+        CHT<int, int>::template assoc_remove<K, V>(
+            std::move(*(this)).CHT::cht_eqb, k, std::move(xs));
     auto _cs = p.first;
     if (_cs.has_value()) {
       const V &_x = *_cs;
@@ -147,7 +148,7 @@ template <typename K, typename V> struct CHT {
     V v = f(ov);
     List<std::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
-            (*(this)).CHT::cht_eqb, k, v, xs);
+            std::move(*(this)).CHT::cht_eqb, k, v, std::move(xs));
     stm::writeTVar(b, xs_);
     return v;
   }

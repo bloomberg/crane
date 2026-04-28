@@ -268,7 +268,7 @@ bool skiplist_test::stm_test_navigation() {
       const std::shared_ptr<SkipNode<unsigned int, unsigned int>> &second =
           *nextOpt;
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
-          prevOpt = sl.previous(nat_eq, second);
+          prevOpt = std::move(sl).previous(nat_eq, second);
       bool c1 = SkipList<int, int>::template key<unsigned int, unsigned int>(
                     first) == 1u;
       bool c2 = SkipList<int, int>::template key<unsigned int, unsigned int>(
@@ -408,7 +408,7 @@ bool skiplist_test::stm_test_bde_api() {
   std::pair<
       unsigned int,
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>>
-      backResult = sl.bde_back();
+      backResult = std::move(sl).bde_back();
   const unsigned int &status5 = backResult.first;
   const std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
       &backItem = backResult.second;

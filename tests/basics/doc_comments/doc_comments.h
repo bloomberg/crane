@@ -96,9 +96,9 @@ struct DocComments {
 
     __attribute__((pure)) static mylist<t_A> mynil() { return mylist(Mynil{}); }
 
-    __attribute__((pure)) static mylist<t_A> mycons(t_A a0,
-                                                    const mylist<t_A> &a1) {
-      return mylist(Mycons{std::move(a0), std::make_unique<mylist<t_A>>(a1)});
+    __attribute__((pure)) static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+      return mylist(
+          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS

@@ -65,8 +65,8 @@ public:
   // CREATORS
   __attribute__((pure)) static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(const Nat &a0) {
-    return Nat(S{std::make_unique<Nat>(a0)});
+  __attribute__((pure)) static Nat s(Nat a0) {
+    return Nat(S{std::make_unique<Nat>(std::move(a0))});
   }
 
   // MANIPULATORS
@@ -1206,7 +1206,7 @@ struct RocqBug14174 {
     template <typename T1, MapsTo<sig<T1>, T1> F0>
     __attribute__((pure)) static sig<std::function<T1(Nat)>>
     dependent_choice(F0 &&h, const T1 x0) {
-      auto f_impl = [&](auto &_self_f, Nat n) -> T1 {
+      auto f_impl = [=](auto &_self_f, Nat n) mutable -> T1 {
         if (std::holds_alternative<typename Nat::O>(n.v())) {
           return x0;
         } else {

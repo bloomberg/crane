@@ -96,10 +96,13 @@ RamAccessor::ram_write_main_sys(const RamAccessor::state &s,
   RamAccessor::ram_reg rg = current_reg(s);
   RamAccessor::ram_chip ch = current_chip(s);
   RamAccessor::ram_bank bk = current_bank(s);
-  RamAccessor::ram_reg rg_ = upd_main_in_reg(rg, s.state_sel.sel_char, v);
-  RamAccessor::ram_chip ch_ = upd_reg_in_chip(ch, s.state_sel.sel_reg, rg_);
-  RamAccessor::ram_bank bk_ = upd_chip_in_bank(bk, s.state_sel.sel_chip, ch_);
-  return upd_bank_in_sys(s, s.state_sel.sel_bank, bk_);
+  RamAccessor::ram_reg rg_ =
+      upd_main_in_reg(std::move(rg), s.state_sel.sel_char, v);
+  RamAccessor::ram_chip ch_ =
+      upd_reg_in_chip(std::move(ch), s.state_sel.sel_reg, std::move(rg_));
+  RamAccessor::ram_bank bk_ =
+      upd_chip_in_bank(std::move(bk), s.state_sel.sel_chip, std::move(ch_));
+  return upd_bank_in_sys(s, s.state_sel.sel_bank, std::move(bk_));
 }
 
 __attribute__((pure)) List<RamAccessor::ram_bank>
@@ -109,8 +112,10 @@ RamAccessor::ram_write_status_sys(const RamAccessor::state &s,
   RamAccessor::ram_reg rg = current_reg(s);
   RamAccessor::ram_chip ch = current_chip(s);
   RamAccessor::ram_bank bk = current_bank(s);
-  RamAccessor::ram_reg rg_ = upd_stat_in_reg(rg, idx, v);
-  RamAccessor::ram_chip ch_ = upd_reg_in_chip(ch, s.state_sel.sel_reg, rg_);
-  RamAccessor::ram_bank bk_ = upd_chip_in_bank(bk, s.state_sel.sel_chip, ch_);
-  return upd_bank_in_sys(s, s.state_sel.sel_bank, bk_);
+  RamAccessor::ram_reg rg_ = upd_stat_in_reg(std::move(rg), idx, v);
+  RamAccessor::ram_chip ch_ =
+      upd_reg_in_chip(std::move(ch), s.state_sel.sel_reg, std::move(rg_));
+  RamAccessor::ram_bank bk_ =
+      upd_chip_in_bank(std::move(bk), s.state_sel.sel_chip, std::move(ch_));
+  return upd_bank_in_sys(s, s.state_sel.sel_bank, std::move(bk_));
 }

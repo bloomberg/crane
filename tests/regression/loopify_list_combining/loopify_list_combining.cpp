@@ -5,10 +5,11 @@ LoopifyListCombining::append(const List<unsigned int> &a,
                              List<unsigned int> b) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
+  List<unsigned int> _loop_b = std::move(b);
   List<unsigned int> _loop_a = a;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_a.v())) {
-      *(_write) = std::make_unique<List<unsigned int>>(b);
+      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_b));
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -18,7 +19,10 @@ LoopifyListCombining::append(const List<unsigned int> &a,
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      _loop_a = *(d_a1);
+      List<unsigned int> _next_b = std::move(_loop_b);
+      List<unsigned int> _next_a = *(d_a1);
+      _loop_b = std::move(_next_b);
+      _loop_a = std::move(_next_a);
       continue;
     }
   }
@@ -200,7 +204,7 @@ LoopifyListCombining::interleave_two(List<unsigned int> l1,
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l1.v())) {
-      *(_write) = std::make_unique<List<unsigned int>>(_loop_l2);
+      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
       break;
     } else {
       const auto &[d_a0, d_a1] =

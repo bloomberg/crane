@@ -150,10 +150,10 @@ struct Equations {
 
     __attribute__((pure)) static gcd_graph
     gcd_graph_refinement_3(unsigned int n, unsigned int n0,
-                           const gcd_clause_3_graph &hind) {
-      return gcd_graph(
-          Gcd_graph_refinement_3{std::move(n), std::move(n0),
-                                 std::make_unique<gcd_clause_3_graph>(hind)});
+                           gcd_clause_3_graph hind) {
+      return gcd_graph(Gcd_graph_refinement_3{
+          std::move(n), std::move(n0),
+          std::make_unique<gcd_clause_3_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
@@ -233,16 +233,18 @@ struct Equations {
     // CREATORS
     __attribute__((pure)) static gcd_clause_3_graph
     gcd_clause_3_graph_equation_1(unsigned int n, unsigned int n0,
-                                  const gcd_graph &hind) {
+                                  gcd_graph hind) {
       return gcd_clause_3_graph(Gcd_clause_3_graph_equation_1{
-          std::move(n), std::move(n0), std::make_unique<gcd_graph>(hind)});
+          std::move(n), std::move(n0),
+          std::make_unique<gcd_graph>(std::move(hind))});
     }
 
     __attribute__((pure)) static gcd_clause_3_graph
     gcd_clause_3_graph_equation_2(unsigned int n, unsigned int n0,
-                                  const gcd_graph &hind) {
+                                  gcd_graph hind) {
       return gcd_clause_3_graph(Gcd_clause_3_graph_equation_2{
-          std::move(n), std::move(n0), std::make_unique<gcd_graph>(hind)});
+          std::move(n), std::move(n0),
+          std::make_unique<gcd_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
@@ -567,9 +569,10 @@ struct Equations {
 
     __attribute__((pure)) static collatz_steps_graph
     collatz_steps_graph_refinement_3(unsigned int n,
-                                     const collatz_steps_clause_3_graph &hind) {
+                                     collatz_steps_clause_3_graph hind) {
       return collatz_steps_graph(Collatz_steps_graph_refinement_3{
-          std::move(n), std::make_unique<collatz_steps_clause_3_graph>(hind)});
+          std::move(n),
+          std::make_unique<collatz_steps_clause_3_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
@@ -654,18 +657,20 @@ struct Equations {
     // CREATORS
     __attribute__((pure)) static collatz_steps_clause_3_graph
     collatz_steps_clause_3_graph_equation_1(unsigned int n,
-                                            const collatz_steps_graph &hind) {
+                                            collatz_steps_graph hind) {
       return collatz_steps_clause_3_graph(
           Collatz_steps_clause_3_graph_equation_1{
-              std::move(n), std::make_unique<collatz_steps_graph>(hind)});
+              std::move(n),
+              std::make_unique<collatz_steps_graph>(std::move(hind))});
     }
 
     __attribute__((pure)) static collatz_steps_clause_3_graph
     collatz_steps_clause_3_graph_equation_2(unsigned int n,
-                                            const collatz_steps_graph &hind) {
+                                            collatz_steps_graph hind) {
       return collatz_steps_clause_3_graph(
           Collatz_steps_clause_3_graph_equation_2{
-              std::move(n), std::make_unique<collatz_steps_graph>(hind)});
+              std::move(n),
+              std::make_unique<collatz_steps_graph>(std::move(hind))});
     }
 
     // MANIPULATORS

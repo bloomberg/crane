@@ -74,8 +74,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -185,22 +186,24 @@ struct LoopifyExpr {
       return expr(Val{std::move(a0)});
     }
 
-    __attribute__((pure)) static expr succ(const expr &a0) {
-      return expr(Succ{std::make_unique<expr>(a0)});
+    __attribute__((pure)) static expr succ(expr a0) {
+      return expr(Succ{std::make_unique<expr>(std::move(a0))});
     }
 
-    __attribute__((pure)) static expr add(const expr &a0, const expr &a1) {
-      return expr(Add{std::make_unique<expr>(a0), std::make_unique<expr>(a1)});
+    __attribute__((pure)) static expr add(expr a0, expr a1) {
+      return expr(Add{std::make_unique<expr>(std::move(a0)),
+                      std::make_unique<expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static expr mul(const expr &a0, const expr &a1) {
-      return expr(Mul{std::make_unique<expr>(a0), std::make_unique<expr>(a1)});
+    __attribute__((pure)) static expr mul(expr a0, expr a1) {
+      return expr(Mul{std::make_unique<expr>(std::move(a0)),
+                      std::make_unique<expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static expr cond(const expr &a0, const expr &a1,
-                                           const expr &a2) {
-      return expr(Cond{std::make_unique<expr>(a0), std::make_unique<expr>(a1),
-                       std::make_unique<expr>(a2)});
+    __attribute__((pure)) static expr cond(expr a0, expr a1, expr a2) {
+      return expr(Cond{std::make_unique<expr>(std::move(a0)),
+                       std::make_unique<expr>(std::move(a1)),
+                       std::make_unique<expr>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -239,23 +242,24 @@ struct LoopifyExpr {
                 return s1;
               } else {
                 unsigned int n2 = d_a01 - 1;
-                return expr::add(s1, expr::val((n2 + 1)));
+                return expr::add(std::move(s1), expr::val((n2 + 1)));
               }
             } else if (std::holds_alternative<typename expr::Succ>(_sv1.v())) {
               const auto &[d_a01] = std::get<typename expr::Succ>(_sv1.v());
-              return expr::add(s1, expr::succ(*(d_a01)));
+              return expr::add(std::move(s1), expr::succ(*(d_a01)));
             } else if (std::holds_alternative<typename expr::Add>(_sv1.v())) {
               const auto &[d_a01, d_a11] =
                   std::get<typename expr::Add>(_sv1.v());
-              return expr::add(s1, expr::add(*(d_a01), *(d_a11)));
+              return expr::add(std::move(s1), expr::add(*(d_a01), *(d_a11)));
             } else if (std::holds_alternative<typename expr::Mul>(_sv1.v())) {
               const auto &[d_a01, d_a11] =
                   std::get<typename expr::Mul>(_sv1.v());
-              return expr::add(s1, expr::mul(*(d_a01), *(d_a11)));
+              return expr::add(std::move(s1), expr::mul(*(d_a01), *(d_a11)));
             } else {
               const auto &[d_a01, d_a11, d_a21] =
                   std::get<typename expr::Cond>(_sv1.v());
-              return expr::add(s1, expr::cond(*(d_a01), *(d_a11), *(d_a21)));
+              return expr::add(std::move(s1),
+                               expr::cond(*(d_a01), *(d_a11), *(d_a21)));
             }
           }
         } else if (std::holds_alternative<typename expr::Succ>(_sv0.v())) {
@@ -268,21 +272,22 @@ struct LoopifyExpr {
               return s1;
             } else {
               unsigned int n0 = d_a01 - 1;
-              return expr::add(s1, expr::val((n0 + 1)));
+              return expr::add(std::move(s1), expr::val((n0 + 1)));
             }
           } else if (std::holds_alternative<typename expr::Succ>(_sv1.v())) {
             const auto &[d_a01] = std::get<typename expr::Succ>(_sv1.v());
-            return expr::add(s1, expr::succ(*(d_a01)));
+            return expr::add(std::move(s1), expr::succ(*(d_a01)));
           } else if (std::holds_alternative<typename expr::Add>(_sv1.v())) {
             const auto &[d_a01, d_a11] = std::get<typename expr::Add>(_sv1.v());
-            return expr::add(s1, expr::add(*(d_a01), *(d_a11)));
+            return expr::add(std::move(s1), expr::add(*(d_a01), *(d_a11)));
           } else if (std::holds_alternative<typename expr::Mul>(_sv1.v())) {
             const auto &[d_a01, d_a11] = std::get<typename expr::Mul>(_sv1.v());
-            return expr::add(s1, expr::mul(*(d_a01), *(d_a11)));
+            return expr::add(std::move(s1), expr::mul(*(d_a01), *(d_a11)));
           } else {
             const auto &[d_a01, d_a11, d_a21] =
                 std::get<typename expr::Cond>(_sv1.v());
-            return expr::add(s1, expr::cond(*(d_a01), *(d_a11), *(d_a21)));
+            return expr::add(std::move(s1),
+                             expr::cond(*(d_a01), *(d_a11), *(d_a21)));
           }
         } else if (std::holds_alternative<typename expr::Add>(_sv0.v())) {
           const auto &[d_a00, d_a10] = std::get<typename expr::Add>(_sv0.v());
@@ -294,21 +299,22 @@ struct LoopifyExpr {
               return s1;
             } else {
               unsigned int n0 = d_a01 - 1;
-              return expr::add(s1, expr::val((n0 + 1)));
+              return expr::add(std::move(s1), expr::val((n0 + 1)));
             }
           } else if (std::holds_alternative<typename expr::Succ>(_sv1.v())) {
             const auto &[d_a01] = std::get<typename expr::Succ>(_sv1.v());
-            return expr::add(s1, expr::succ(*(d_a01)));
+            return expr::add(std::move(s1), expr::succ(*(d_a01)));
           } else if (std::holds_alternative<typename expr::Add>(_sv1.v())) {
             const auto &[d_a01, d_a11] = std::get<typename expr::Add>(_sv1.v());
-            return expr::add(s1, expr::add(*(d_a01), *(d_a11)));
+            return expr::add(std::move(s1), expr::add(*(d_a01), *(d_a11)));
           } else if (std::holds_alternative<typename expr::Mul>(_sv1.v())) {
             const auto &[d_a01, d_a11] = std::get<typename expr::Mul>(_sv1.v());
-            return expr::add(s1, expr::mul(*(d_a01), *(d_a11)));
+            return expr::add(std::move(s1), expr::mul(*(d_a01), *(d_a11)));
           } else {
             const auto &[d_a01, d_a11, d_a21] =
                 std::get<typename expr::Cond>(_sv1.v());
-            return expr::add(s1, expr::cond(*(d_a01), *(d_a11), *(d_a21)));
+            return expr::add(std::move(s1),
+                             expr::cond(*(d_a01), *(d_a11), *(d_a21)));
           }
         } else if (std::holds_alternative<typename expr::Mul>(_sv0.v())) {
           const auto &[d_a00, d_a10] = std::get<typename expr::Mul>(_sv0.v());
@@ -320,21 +326,22 @@ struct LoopifyExpr {
               return s1;
             } else {
               unsigned int n0 = d_a01 - 1;
-              return expr::add(s1, expr::val((n0 + 1)));
+              return expr::add(std::move(s1), expr::val((n0 + 1)));
             }
           } else if (std::holds_alternative<typename expr::Succ>(_sv1.v())) {
             const auto &[d_a01] = std::get<typename expr::Succ>(_sv1.v());
-            return expr::add(s1, expr::succ(*(d_a01)));
+            return expr::add(std::move(s1), expr::succ(*(d_a01)));
           } else if (std::holds_alternative<typename expr::Add>(_sv1.v())) {
             const auto &[d_a01, d_a11] = std::get<typename expr::Add>(_sv1.v());
-            return expr::add(s1, expr::add(*(d_a01), *(d_a11)));
+            return expr::add(std::move(s1), expr::add(*(d_a01), *(d_a11)));
           } else if (std::holds_alternative<typename expr::Mul>(_sv1.v())) {
             const auto &[d_a01, d_a11] = std::get<typename expr::Mul>(_sv1.v());
-            return expr::add(s1, expr::mul(*(d_a01), *(d_a11)));
+            return expr::add(std::move(s1), expr::mul(*(d_a01), *(d_a11)));
           } else {
             const auto &[d_a01, d_a11, d_a21] =
                 std::get<typename expr::Cond>(_sv1.v());
-            return expr::add(s1, expr::cond(*(d_a01), *(d_a11), *(d_a21)));
+            return expr::add(std::move(s1),
+                             expr::cond(*(d_a01), *(d_a11), *(d_a21)));
           }
         } else {
           const auto &[d_a00, d_a10, d_a20] =
@@ -347,21 +354,22 @@ struct LoopifyExpr {
               return s1;
             } else {
               unsigned int n0 = d_a01 - 1;
-              return expr::add(s1, expr::val((n0 + 1)));
+              return expr::add(std::move(s1), expr::val((n0 + 1)));
             }
           } else if (std::holds_alternative<typename expr::Succ>(_sv1.v())) {
             const auto &[d_a01] = std::get<typename expr::Succ>(_sv1.v());
-            return expr::add(s1, expr::succ(*(d_a01)));
+            return expr::add(std::move(s1), expr::succ(*(d_a01)));
           } else if (std::holds_alternative<typename expr::Add>(_sv1.v())) {
             const auto &[d_a01, d_a11] = std::get<typename expr::Add>(_sv1.v());
-            return expr::add(s1, expr::add(*(d_a01), *(d_a11)));
+            return expr::add(std::move(s1), expr::add(*(d_a01), *(d_a11)));
           } else if (std::holds_alternative<typename expr::Mul>(_sv1.v())) {
             const auto &[d_a01, d_a11] = std::get<typename expr::Mul>(_sv1.v());
-            return expr::add(s1, expr::mul(*(d_a01), *(d_a11)));
+            return expr::add(std::move(s1), expr::mul(*(d_a01), *(d_a11)));
           } else {
             const auto &[d_a01, d_a11, d_a21] =
                 std::get<typename expr::Cond>(_sv1.v());
-            return expr::add(s1, expr::cond(*(d_a01), *(d_a11), *(d_a21)));
+            return expr::add(std::move(s1),
+                             expr::cond(*(d_a01), *(d_a11), *(d_a21)));
           }
         }
       } else if (std::holds_alternative<typename expr::Mul>(_sv.v())) {
@@ -384,7 +392,7 @@ struct LoopifyExpr {
                 if (d_a00 == 1u) {
                   return s2;
                 } else {
-                  return expr::mul(expr::val(d_a00), s2);
+                  return expr::mul(expr::val(d_a00), std::move(s2));
                 }
               }
             } else if (std::holds_alternative<typename expr::Succ>(_sv1.v())) {
@@ -393,7 +401,7 @@ struct LoopifyExpr {
               if (d_a00 == 1u) {
                 return s2;
               } else {
-                return expr::mul(expr::val(d_a00), s2);
+                return expr::mul(expr::val(d_a00), std::move(s2));
               }
             } else if (std::holds_alternative<typename expr::Add>(_sv1.v())) {
               const auto &[d_a01, d_a11] =
@@ -402,7 +410,7 @@ struct LoopifyExpr {
               if (d_a00 == 1u) {
                 return s2;
               } else {
-                return expr::mul(expr::val(d_a00), s2);
+                return expr::mul(expr::val(d_a00), std::move(s2));
               }
             } else if (std::holds_alternative<typename expr::Mul>(_sv1.v())) {
               const auto &[d_a01, d_a11] =
@@ -411,7 +419,7 @@ struct LoopifyExpr {
               if (d_a00 == 1u) {
                 return s2;
               } else {
-                return expr::mul(expr::val(d_a00), s2);
+                return expr::mul(expr::val(d_a00), std::move(s2));
               }
             } else {
               const auto &[d_a01, d_a11, d_a21] =
@@ -420,7 +428,7 @@ struct LoopifyExpr {
               if (d_a00 == 1u) {
                 return s2;
               } else {
-                return expr::mul(expr::val(d_a00), s2);
+                return expr::mul(expr::val(d_a00), std::move(s2));
               }
             }
           }
@@ -437,22 +445,23 @@ struct LoopifyExpr {
               if (d_a01 == 1u) {
                 return s1;
               } else {
-                return expr::mul(s1, expr::val(d_a01));
+                return expr::mul(std::move(s1), expr::val(d_a01));
               }
             }
           } else if (std::holds_alternative<typename expr::Succ>(_sv1.v())) {
             const auto &[d_a01] = std::get<typename expr::Succ>(_sv1.v());
-            return expr::mul(s1, expr::succ(*(d_a01)));
+            return expr::mul(std::move(s1), expr::succ(*(d_a01)));
           } else if (std::holds_alternative<typename expr::Add>(_sv1.v())) {
             const auto &[d_a01, d_a11] = std::get<typename expr::Add>(_sv1.v());
-            return expr::mul(s1, expr::add(*(d_a01), *(d_a11)));
+            return expr::mul(std::move(s1), expr::add(*(d_a01), *(d_a11)));
           } else if (std::holds_alternative<typename expr::Mul>(_sv1.v())) {
             const auto &[d_a01, d_a11] = std::get<typename expr::Mul>(_sv1.v());
-            return expr::mul(s1, expr::mul(*(d_a01), *(d_a11)));
+            return expr::mul(std::move(s1), expr::mul(*(d_a01), *(d_a11)));
           } else {
             const auto &[d_a01, d_a11, d_a21] =
                 std::get<typename expr::Cond>(_sv1.v());
-            return expr::mul(s1, expr::cond(*(d_a01), *(d_a11), *(d_a21)));
+            return expr::mul(std::move(s1),
+                             expr::cond(*(d_a01), *(d_a11), *(d_a21)));
           }
         } else if (std::holds_alternative<typename expr::Add>(_sv0.v())) {
           const auto &[d_a00, d_a10] = std::get<typename expr::Add>(_sv0.v());
@@ -467,22 +476,23 @@ struct LoopifyExpr {
               if (d_a01 == 1u) {
                 return s1;
               } else {
-                return expr::mul(s1, expr::val(d_a01));
+                return expr::mul(std::move(s1), expr::val(d_a01));
               }
             }
           } else if (std::holds_alternative<typename expr::Succ>(_sv1.v())) {
             const auto &[d_a01] = std::get<typename expr::Succ>(_sv1.v());
-            return expr::mul(s1, expr::succ(*(d_a01)));
+            return expr::mul(std::move(s1), expr::succ(*(d_a01)));
           } else if (std::holds_alternative<typename expr::Add>(_sv1.v())) {
             const auto &[d_a01, d_a11] = std::get<typename expr::Add>(_sv1.v());
-            return expr::mul(s1, expr::add(*(d_a01), *(d_a11)));
+            return expr::mul(std::move(s1), expr::add(*(d_a01), *(d_a11)));
           } else if (std::holds_alternative<typename expr::Mul>(_sv1.v())) {
             const auto &[d_a01, d_a11] = std::get<typename expr::Mul>(_sv1.v());
-            return expr::mul(s1, expr::mul(*(d_a01), *(d_a11)));
+            return expr::mul(std::move(s1), expr::mul(*(d_a01), *(d_a11)));
           } else {
             const auto &[d_a01, d_a11, d_a21] =
                 std::get<typename expr::Cond>(_sv1.v());
-            return expr::mul(s1, expr::cond(*(d_a01), *(d_a11), *(d_a21)));
+            return expr::mul(std::move(s1),
+                             expr::cond(*(d_a01), *(d_a11), *(d_a21)));
           }
         } else if (std::holds_alternative<typename expr::Mul>(_sv0.v())) {
           const auto &[d_a00, d_a10] = std::get<typename expr::Mul>(_sv0.v());
@@ -497,22 +507,23 @@ struct LoopifyExpr {
               if (d_a01 == 1u) {
                 return s1;
               } else {
-                return expr::mul(s1, expr::val(d_a01));
+                return expr::mul(std::move(s1), expr::val(d_a01));
               }
             }
           } else if (std::holds_alternative<typename expr::Succ>(_sv1.v())) {
             const auto &[d_a01] = std::get<typename expr::Succ>(_sv1.v());
-            return expr::mul(s1, expr::succ(*(d_a01)));
+            return expr::mul(std::move(s1), expr::succ(*(d_a01)));
           } else if (std::holds_alternative<typename expr::Add>(_sv1.v())) {
             const auto &[d_a01, d_a11] = std::get<typename expr::Add>(_sv1.v());
-            return expr::mul(s1, expr::add(*(d_a01), *(d_a11)));
+            return expr::mul(std::move(s1), expr::add(*(d_a01), *(d_a11)));
           } else if (std::holds_alternative<typename expr::Mul>(_sv1.v())) {
             const auto &[d_a01, d_a11] = std::get<typename expr::Mul>(_sv1.v());
-            return expr::mul(s1, expr::mul(*(d_a01), *(d_a11)));
+            return expr::mul(std::move(s1), expr::mul(*(d_a01), *(d_a11)));
           } else {
             const auto &[d_a01, d_a11, d_a21] =
                 std::get<typename expr::Cond>(_sv1.v());
-            return expr::mul(s1, expr::cond(*(d_a01), *(d_a11), *(d_a21)));
+            return expr::mul(std::move(s1),
+                             expr::cond(*(d_a01), *(d_a11), *(d_a21)));
           }
         } else {
           const auto &[d_a00, d_a10, d_a20] =
@@ -528,22 +539,23 @@ struct LoopifyExpr {
               if (d_a01 == 1u) {
                 return s1;
               } else {
-                return expr::mul(s1, expr::val(d_a01));
+                return expr::mul(std::move(s1), expr::val(d_a01));
               }
             }
           } else if (std::holds_alternative<typename expr::Succ>(_sv1.v())) {
             const auto &[d_a01] = std::get<typename expr::Succ>(_sv1.v());
-            return expr::mul(s1, expr::succ(*(d_a01)));
+            return expr::mul(std::move(s1), expr::succ(*(d_a01)));
           } else if (std::holds_alternative<typename expr::Add>(_sv1.v())) {
             const auto &[d_a01, d_a11] = std::get<typename expr::Add>(_sv1.v());
-            return expr::mul(s1, expr::add(*(d_a01), *(d_a11)));
+            return expr::mul(std::move(s1), expr::add(*(d_a01), *(d_a11)));
           } else if (std::holds_alternative<typename expr::Mul>(_sv1.v())) {
             const auto &[d_a01, d_a11] = std::get<typename expr::Mul>(_sv1.v());
-            return expr::mul(s1, expr::mul(*(d_a01), *(d_a11)));
+            return expr::mul(std::move(s1), expr::mul(*(d_a01), *(d_a11)));
           } else {
             const auto &[d_a01, d_a11, d_a21] =
                 std::get<typename expr::Cond>(_sv1.v());
-            return expr::mul(s1, expr::cond(*(d_a01), *(d_a11), *(d_a21)));
+            return expr::mul(std::move(s1),
+                             expr::cond(*(d_a01), *(d_a11), *(d_a21)));
           }
         }
       } else {
@@ -1236,17 +1248,17 @@ struct LoopifyExpr {
       return simple_expr(Lit{std::move(a0)});
     }
 
-    __attribute__((pure)) static simple_expr plus(const simple_expr &a0,
-                                                  const simple_expr &a1) {
-      return simple_expr(Plus{std::make_unique<simple_expr>(a0),
-                              std::make_unique<simple_expr>(a1)});
+    __attribute__((pure)) static simple_expr plus(simple_expr a0,
+                                                  simple_expr a1) {
+      return simple_expr(Plus{std::make_unique<simple_expr>(std::move(a0)),
+                              std::make_unique<simple_expr>(std::move(a1))});
     }
 
     __attribute__((pure)) static simple_expr
-    ifpos(const simple_expr &a0, const simple_expr &a1, const simple_expr &a2) {
-      return simple_expr(IfPos{std::make_unique<simple_expr>(a0),
-                               std::make_unique<simple_expr>(a1),
-                               std::make_unique<simple_expr>(a2)});
+    ifpos(simple_expr a0, simple_expr a1, simple_expr a2) {
+      return simple_expr(IfPos{std::make_unique<simple_expr>(std::move(a0)),
+                               std::make_unique<simple_expr>(std::move(a1)),
+                               std::make_unique<simple_expr>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -1754,17 +1766,16 @@ struct LoopifyExpr {
       return cond_expr(CLit{std::move(a0)});
     }
 
-    __attribute__((pure)) static cond_expr cplus(const cond_expr &a0,
-                                                 const cond_expr &a1) {
-      return cond_expr(CPlus{std::make_unique<cond_expr>(a0),
-                             std::make_unique<cond_expr>(a1)});
+    __attribute__((pure)) static cond_expr cplus(cond_expr a0, cond_expr a1) {
+      return cond_expr(CPlus{std::make_unique<cond_expr>(std::move(a0)),
+                             std::make_unique<cond_expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static cond_expr
-    ccond(const cond_expr &a0, const cond_expr &a1, const cond_expr &a2) {
-      return cond_expr(CCond{std::make_unique<cond_expr>(a0),
-                             std::make_unique<cond_expr>(a1),
-                             std::make_unique<cond_expr>(a2)});
+    __attribute__((pure)) static cond_expr ccond(cond_expr a0, cond_expr a1,
+                                                 cond_expr a2) {
+      return cond_expr(CCond{std::make_unique<cond_expr>(std::move(a0)),
+                             std::make_unique<cond_expr>(std::move(a1)),
+                             std::make_unique<cond_expr>(std::move(a2))});
     }
 
     // MANIPULATORS

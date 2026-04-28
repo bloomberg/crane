@@ -69,10 +69,9 @@ struct NestedPartialApp {
     // CREATORS
     __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(const tree &a0, unsigned int a1,
-                                           const tree &a2) {
-      return tree(Node{std::make_unique<tree>(a0), std::move(a1),
-                       std::make_unique<tree>(a2)});
+    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -132,7 +131,7 @@ struct NestedPartialApp {
       };
       tree r1 = h(tree::node(tree::leaf(), 1u, tree::leaf()));
       tree r2 = h(tree::node(tree::leaf(), 2u, tree::leaf()));
-      return (tree_sum(r1) + tree_sum(r2));
+      return (tree_sum(std::move(r1)) + tree_sum(std::move(r2)));
     }();
   }();
   /// Variation: use intermediate partial app g twice before further
@@ -152,7 +151,7 @@ struct NestedPartialApp {
       };
       tree r1 = h1(tree::node(tree::leaf(), 1u, tree::leaf()));
       tree r2 = h2(tree::node(tree::leaf(), 2u, tree::leaf()));
-      return (tree_sum(r1) + tree_sum(r2));
+      return (tree_sum(std::move(r1)) + tree_sum(std::move(r2)));
     }();
   }();
   /// Variation: 4-argument function, triple nesting.

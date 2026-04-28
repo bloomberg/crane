@@ -78,9 +78,9 @@ struct TailrecReorderProbe {
 
     __attribute__((pure)) static mylist<t_A> mynil() { return mylist(Mynil{}); }
 
-    __attribute__((pure)) static mylist<t_A> mycons(t_A a0,
-                                                    const mylist<t_A> &a1) {
-      return mylist(Mycons{std::move(a0), std::make_unique<mylist<t_A>>(a1)});
+    __attribute__((pure)) static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+      return mylist(
+          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -184,12 +184,12 @@ struct TailrecReorderProbe {
     mylist<T1> _loop_l = l;
     while (true) {
       if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l.v())) {
-        _result = _loop_acc;
+        _result = std::move(_loop_acc);
         break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<T1>::Mycons>(_loop_l.v());
-        mylist<T1> _next_acc = mylist<T1>::mycons(d_a0, _loop_acc);
+        mylist<T1> _next_acc = mylist<T1>::mycons(d_a0, std::move(_loop_acc));
         mylist<T1> _next_l = *(d_a1);
         _loop_acc = std::move(_next_acc);
         _loop_l = std::move(_next_l);

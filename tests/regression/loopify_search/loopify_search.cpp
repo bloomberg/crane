@@ -225,7 +225,7 @@ LoopifySearch::drop_impl(const unsigned int &k, List<unsigned int> l) {
   unsigned int _loop_k = k;
   while (true) {
     if (_loop_k <= 0) {
-      _result = _loop_l;
+      _result = std::move(_loop_l);
       break;
     } else {
       unsigned int m = _loop_k - 1;
@@ -310,10 +310,10 @@ LoopifySearch::longest_run_aux(List<unsigned int> current_run,
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
       if (len_impl<unsigned int>(_loop_current_run) <=
           len_impl<unsigned int>(_loop_best_run)) {
-        _result = _loop_best_run;
+        _result = std::move(_loop_best_run);
         break;
       } else {
-        _result = _loop_current_run;
+        _result = std::move(_loop_current_run);
         break;
       }
     } else {
@@ -322,13 +322,13 @@ LoopifySearch::longest_run_aux(List<unsigned int> current_run,
       auto &&_sv0 = *(d_a1);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
         List<unsigned int> new_run =
-            List<unsigned int>::cons(d_a0, _loop_current_run);
+            List<unsigned int>::cons(d_a0, std::move(_loop_current_run));
         if (len_impl<unsigned int>(new_run) <=
             len_impl<unsigned int>(_loop_best_run)) {
-          _result = _loop_best_run;
+          _result = std::move(_loop_best_run);
           break;
         } else {
-          _result = new_run;
+          _result = std::move(new_run);
           break;
         }
       } else {
@@ -336,13 +336,15 @@ LoopifySearch::longest_run_aux(List<unsigned int> current_run,
             std::get<typename List<unsigned int>::Cons>(_sv0.v());
         if (d_a0 == d_a00) {
           List<unsigned int> _next_l = *(d_a1);
+          List<unsigned int> _next_best_run = std::move(_loop_best_run);
           List<unsigned int> _next_current_run =
-              List<unsigned int>::cons(d_a0, _loop_current_run);
+              List<unsigned int>::cons(d_a0, std::move(_loop_current_run));
           _loop_l = std::move(_next_l);
+          _loop_best_run = std::move(_next_best_run);
           _loop_current_run = std::move(_next_current_run);
         } else {
           List<unsigned int> new_run =
-              List<unsigned int>::cons(d_a0, _loop_current_run);
+              List<unsigned int>::cons(d_a0, std::move(_loop_current_run));
           List<unsigned int> new_best;
           if (len_impl<unsigned int>(new_run) <=
               len_impl<unsigned int>(_loop_best_run)) {
@@ -351,7 +353,7 @@ LoopifySearch::longest_run_aux(List<unsigned int> current_run,
             new_best = new_run;
           }
           List<unsigned int> _next_l = *(d_a1);
-          List<unsigned int> _next_best_run = new_best;
+          List<unsigned int> _next_best_run = std::move(new_best);
           List<unsigned int> _next_current_run = List<unsigned int>::nil();
           _loop_l = std::move(_next_l);
           _loop_best_run = std::move(_next_best_run);
@@ -510,7 +512,7 @@ LoopifySearch::sieve_fuel(const unsigned int &fuel, List<unsigned int> l) {
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<List<unsigned int>>(_loop_l);
+      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l));
       break;
     } else {
       unsigned int f = _loop_fuel - 1;
@@ -581,7 +583,7 @@ LoopifySearch::nub_fuel(const unsigned int &fuel, List<unsigned int> l) {
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<List<unsigned int>>(_loop_l);
+      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l));
       break;
     } else {
       unsigned int f = _loop_fuel - 1;
@@ -633,7 +635,7 @@ LoopifySearch::remove_duplicates_fuel(const unsigned int &fuel,
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<List<unsigned int>>(_loop_l);
+      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l));
       break;
     } else {
       unsigned int f = _loop_fuel - 1;
@@ -710,7 +712,7 @@ LoopifySearch::quicksort_fuel(const unsigned int &fuel, List<unsigned int> l) {
       List<unsigned int> l = _f.l;
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = l;
+        _result = std::move(l);
       } else {
         unsigned int f = fuel - 1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
@@ -725,8 +727,8 @@ LoopifySearch::quicksort_fuel(const unsigned int &fuel, List<unsigned int> l) {
           List<unsigned int> greater = filter_impl(
               [=](const unsigned int &y) mutable { return d_a0 <= y; },
               d_a1_value);
-          _stack.emplace_back(_Call1{smaller, f, d_a0});
-          _stack.emplace_back(_Enter{greater, f});
+          _stack.emplace_back(_Call1{std::move(smaller), f, d_a0});
+          _stack.emplace_back(_Enter{std::move(greater), f});
         }
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
@@ -812,13 +814,14 @@ LoopifySearch::merge_sorted_fuel(const unsigned int &fuel,
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<List<unsigned int>>(_loop_l1.app(_loop_l2));
+      *(_write) = std::make_unique<List<unsigned int>>(
+          std::move(_loop_l1).app(std::move(_loop_l2)));
       break;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l1.v())) {
-        *(_write) = std::make_unique<List<unsigned int>>(_loop_l2);
+        *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
         break;
       } else {
         const auto &[d_a0, d_a1] =
@@ -899,7 +902,7 @@ LoopifySearch::merge_sort_fuel(const unsigned int &fuel, List<unsigned int> l) {
       List<unsigned int> l = _f.l;
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = l;
+        _result = std::move(l);
       } else {
         unsigned int f = fuel - 1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {

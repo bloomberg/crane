@@ -90,10 +90,9 @@ struct HigherKinded {
       return Tree(Leaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static Tree<t_A> branch(const Tree<t_A> &a0,
-                                                  const Tree<t_A> &a1) {
-      return Tree(Branch{std::make_unique<Tree<t_A>>(a0),
-                         std::make_unique<Tree<t_A>>(a1)});
+    __attribute__((pure)) static Tree<t_A> branch(Tree<t_A> a0, Tree<t_A> a1) {
+      return Tree(Branch{std::make_unique<Tree<t_A>>(std::move(a0)),
+                         std::make_unique<Tree<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS

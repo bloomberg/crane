@@ -73,8 +73,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -87,10 +88,11 @@ public:
     std::unique_ptr<List<t_A>> _head{};
     std::unique_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
+    List<t_A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *(_loop_self);
       if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(m);
+        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
@@ -98,7 +100,10 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        _loop_self = d_a1.get();
+        const List *_next_self = d_a1.get();
+        List<t_A> _next_m = std::move(_loop_m);
+        _loop_self = std::move(_next_self);
+        _loop_m = std::move(_next_m);
         continue;
       }
     }
@@ -195,17 +200,16 @@ struct LoopifyExprVariants {
       return cond_expr(Lit{std::move(a0)});
     }
 
-    __attribute__((pure)) static cond_expr add(const cond_expr &a0,
-                                               const cond_expr &a1) {
-      return cond_expr(Add{std::make_unique<cond_expr>(a0),
-                           std::make_unique<cond_expr>(a1)});
+    __attribute__((pure)) static cond_expr add(cond_expr a0, cond_expr a1) {
+      return cond_expr(Add{std::make_unique<cond_expr>(std::move(a0)),
+                           std::make_unique<cond_expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static cond_expr
-    cond(const cond_expr &a0, const cond_expr &a1, const cond_expr &a2) {
-      return cond_expr(Cond{std::make_unique<cond_expr>(a0),
-                            std::make_unique<cond_expr>(a1),
-                            std::make_unique<cond_expr>(a2)});
+    __attribute__((pure)) static cond_expr cond(cond_expr a0, cond_expr a1,
+                                                cond_expr a2) {
+      return cond_expr(Cond{std::make_unique<cond_expr>(std::move(a0)),
+                            std::make_unique<cond_expr>(std::move(a1)),
+                            std::make_unique<cond_expr>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -608,22 +612,19 @@ struct LoopifyExprVariants {
       return arith_expr(ANum{std::move(a0)});
     }
 
-    __attribute__((pure)) static arith_expr aadd(const arith_expr &a0,
-                                                 const arith_expr &a1) {
-      return arith_expr(AAdd{std::make_unique<arith_expr>(a0),
-                             std::make_unique<arith_expr>(a1)});
+    __attribute__((pure)) static arith_expr aadd(arith_expr a0, arith_expr a1) {
+      return arith_expr(AAdd{std::make_unique<arith_expr>(std::move(a0)),
+                             std::make_unique<arith_expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static arith_expr amul(const arith_expr &a0,
-                                                 const arith_expr &a1) {
-      return arith_expr(AMul{std::make_unique<arith_expr>(a0),
-                             std::make_unique<arith_expr>(a1)});
+    __attribute__((pure)) static arith_expr amul(arith_expr a0, arith_expr a1) {
+      return arith_expr(AMul{std::make_unique<arith_expr>(std::move(a0)),
+                             std::make_unique<arith_expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static arith_expr adiv(const arith_expr &a0,
-                                                 const arith_expr &a1) {
-      return arith_expr(ADiv{std::make_unique<arith_expr>(a0),
-                             std::make_unique<arith_expr>(a1)});
+    __attribute__((pure)) static arith_expr adiv(arith_expr a0, arith_expr a1) {
+      return arith_expr(ADiv{std::make_unique<arith_expr>(std::move(a0)),
+                             std::make_unique<arith_expr>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -1064,20 +1065,18 @@ struct LoopifyExprVariants {
       return bool_expr(BFalse{});
     }
 
-    __attribute__((pure)) static bool_expr band(const bool_expr &a0,
-                                                const bool_expr &a1) {
-      return bool_expr(BAnd{std::make_unique<bool_expr>(a0),
-                            std::make_unique<bool_expr>(a1)});
+    __attribute__((pure)) static bool_expr band(bool_expr a0, bool_expr a1) {
+      return bool_expr(BAnd{std::make_unique<bool_expr>(std::move(a0)),
+                            std::make_unique<bool_expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static bool_expr bor(const bool_expr &a0,
-                                               const bool_expr &a1) {
-      return bool_expr(BOr{std::make_unique<bool_expr>(a0),
-                           std::make_unique<bool_expr>(a1)});
+    __attribute__((pure)) static bool_expr bor(bool_expr a0, bool_expr a1) {
+      return bool_expr(BOr{std::make_unique<bool_expr>(std::move(a0)),
+                           std::make_unique<bool_expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static bool_expr bnot(const bool_expr &a0) {
-      return bool_expr(BNot{std::make_unique<bool_expr>(a0)});
+    __attribute__((pure)) static bool_expr bnot(bool_expr a0) {
+      return bool_expr(BNot{std::make_unique<bool_expr>(std::move(a0))});
     }
 
     // MANIPULATORS
@@ -1134,15 +1133,17 @@ struct LoopifyExprVariants {
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BAnd>(_sv1.v());
-            return bool_expr::band(a_, bool_expr::band(*(d_a01), *(d_a11)));
+            return bool_expr::band(std::move(a_),
+                                   bool_expr::band(*(d_a01), *(d_a11)));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BOr>(_sv1.v());
-            return bool_expr::band(a_, bool_expr::bor(*(d_a01), *(d_a11)));
+            return bool_expr::band(std::move(a_),
+                                   bool_expr::bor(*(d_a01), *(d_a11)));
           } else {
             const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::band(a_, bool_expr::bnot(*(d_a01)));
+            return bool_expr::band(std::move(a_), bool_expr::bnot(*(d_a01)));
           }
         } else if (std::holds_alternative<typename bool_expr::BOr>(_sv0.v())) {
           const auto &[d_a00, d_a10] =
@@ -1158,15 +1159,17 @@ struct LoopifyExprVariants {
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BAnd>(_sv1.v());
-            return bool_expr::band(a_, bool_expr::band(*(d_a01), *(d_a11)));
+            return bool_expr::band(std::move(a_),
+                                   bool_expr::band(*(d_a01), *(d_a11)));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BOr>(_sv1.v());
-            return bool_expr::band(a_, bool_expr::bor(*(d_a01), *(d_a11)));
+            return bool_expr::band(std::move(a_),
+                                   bool_expr::bor(*(d_a01), *(d_a11)));
           } else {
             const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::band(a_, bool_expr::bnot(*(d_a01)));
+            return bool_expr::band(std::move(a_), bool_expr::bnot(*(d_a01)));
           }
         } else {
           const auto &[d_a00] = std::get<typename bool_expr::BNot>(_sv0.v());
@@ -1181,15 +1184,17 @@ struct LoopifyExprVariants {
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BAnd>(_sv1.v());
-            return bool_expr::band(a_, bool_expr::band(*(d_a01), *(d_a11)));
+            return bool_expr::band(std::move(a_),
+                                   bool_expr::band(*(d_a01), *(d_a11)));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BOr>(_sv1.v());
-            return bool_expr::band(a_, bool_expr::bor(*(d_a01), *(d_a11)));
+            return bool_expr::band(std::move(a_),
+                                   bool_expr::bor(*(d_a01), *(d_a11)));
           } else {
             const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::band(a_, bool_expr::bnot(*(d_a01)));
+            return bool_expr::band(std::move(a_), bool_expr::bnot(*(d_a01)));
           }
         }
       } else if (std::holds_alternative<typename bool_expr::BOr>(_sv.v())) {
@@ -1233,15 +1238,17 @@ struct LoopifyExprVariants {
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BAnd>(_sv1.v());
-            return bool_expr::bor(a_, bool_expr::band(*(d_a01), *(d_a11)));
+            return bool_expr::bor(std::move(a_),
+                                  bool_expr::band(*(d_a01), *(d_a11)));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BOr>(_sv1.v());
-            return bool_expr::bor(a_, bool_expr::bor(*(d_a01), *(d_a11)));
+            return bool_expr::bor(std::move(a_),
+                                  bool_expr::bor(*(d_a01), *(d_a11)));
           } else {
             const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::bor(a_, bool_expr::bnot(*(d_a01)));
+            return bool_expr::bor(std::move(a_), bool_expr::bnot(*(d_a01)));
           }
         } else if (std::holds_alternative<typename bool_expr::BOr>(_sv0.v())) {
           const auto &[d_a00, d_a10] =
@@ -1257,15 +1264,17 @@ struct LoopifyExprVariants {
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BAnd>(_sv1.v());
-            return bool_expr::bor(a_, bool_expr::band(*(d_a01), *(d_a11)));
+            return bool_expr::bor(std::move(a_),
+                                  bool_expr::band(*(d_a01), *(d_a11)));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BOr>(_sv1.v());
-            return bool_expr::bor(a_, bool_expr::bor(*(d_a01), *(d_a11)));
+            return bool_expr::bor(std::move(a_),
+                                  bool_expr::bor(*(d_a01), *(d_a11)));
           } else {
             const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::bor(a_, bool_expr::bnot(*(d_a01)));
+            return bool_expr::bor(std::move(a_), bool_expr::bnot(*(d_a01)));
           }
         } else {
           const auto &[d_a00] = std::get<typename bool_expr::BNot>(_sv0.v());
@@ -1280,15 +1289,17 @@ struct LoopifyExprVariants {
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BAnd>(_sv1.v());
-            return bool_expr::bor(a_, bool_expr::band(*(d_a01), *(d_a11)));
+            return bool_expr::bor(std::move(a_),
+                                  bool_expr::band(*(d_a01), *(d_a11)));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BOr>(_sv1.v());
-            return bool_expr::bor(a_, bool_expr::bor(*(d_a01), *(d_a11)));
+            return bool_expr::bor(std::move(a_),
+                                  bool_expr::bor(*(d_a01), *(d_a11)));
           } else {
             const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::bor(a_, bool_expr::bnot(*(d_a01)));
+            return bool_expr::bor(std::move(a_), bool_expr::bnot(*(d_a01)));
           }
         }
       } else {
@@ -1666,14 +1677,14 @@ struct LoopifyExprVariants {
     __attribute__((pure)) static list_expr lnil() { return list_expr(LNil{}); }
 
     __attribute__((pure)) static list_expr lcons(unsigned int a0,
-                                                 const list_expr &a1) {
-      return list_expr(LCons{std::move(a0), std::make_unique<list_expr>(a1)});
+                                                 list_expr a1) {
+      return list_expr(
+          LCons{std::move(a0), std::make_unique<list_expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static list_expr lappend(const list_expr &a0,
-                                                   const list_expr &a1) {
-      return list_expr(LAppend{std::make_unique<list_expr>(a0),
-                               std::make_unique<list_expr>(a1)});
+    __attribute__((pure)) static list_expr lappend(list_expr a0, list_expr a1) {
+      return list_expr(LAppend{std::make_unique<list_expr>(std::move(a0)),
+                               std::make_unique<list_expr>(std::move(a1))});
     }
 
     __attribute__((pure)) static list_expr lreplicate(unsigned int a0,

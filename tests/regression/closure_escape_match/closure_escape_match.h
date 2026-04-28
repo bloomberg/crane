@@ -77,9 +77,9 @@ struct ClosureEscapeMatch {
 
     __attribute__((pure)) static mylist<t_A> mynil() { return mylist(Mynil{}); }
 
-    __attribute__((pure)) static mylist<t_A> mycons(t_A a0,
-                                                    const mylist<t_A> &a1) {
-      return mylist(Mycons{std::move(a0), std::make_unique<mylist<t_A>>(a1)});
+    __attribute__((pure)) static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+      return mylist(
+          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -126,7 +126,7 @@ struct ClosureEscapeMatch {
       return l2;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l1.v());
-      return mylist<T1>::mycons(d_a0, app<T1>(*(d_a1), l2));
+      return mylist<T1>::mycons(d_a0, app<T1>(*(d_a1), std::move(l2)));
     }
   }
 

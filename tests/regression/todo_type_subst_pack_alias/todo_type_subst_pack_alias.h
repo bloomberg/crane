@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
@@ -45,7 +46,7 @@ struct TodoTypeSubstPackAlias {
     __attribute__((pure)) static unsigned int seed() { return 3u; }
 
     __attribute__((pure)) static unsigned int step(unsigned int x) {
-      return (x + 1);
+      return (std::move(x) + 1);
     }
   };
 

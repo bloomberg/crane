@@ -173,12 +173,13 @@ LoopifyListOfLists::transpose_fuel(const unsigned int &fuel,
             List<unsigned int> heads = map_hd(_loop_ll);
             List<List<unsigned int>> tails = map_tl(_loop_ll);
             auto _cell = std::make_unique<List<List<unsigned int>>>(
-                typename List<List<unsigned int>>::Cons(heads, nullptr));
+                typename List<List<unsigned int>>::Cons(std::move(heads),
+                                                        nullptr));
             *(_write) = std::move(_cell);
             _write = &std::get<typename List<List<unsigned int>>::Cons>(
                           (*_write)->v_mut())
                           .d_a1;
-            List<List<unsigned int>> _next_ll = tails;
+            List<List<unsigned int>> _next_ll = std::move(tails);
             unsigned int _next_fuel = fuel_;
             _loop_ll = std::move(_next_ll);
             _loop_fuel = std::move(_next_fuel);

@@ -28,7 +28,7 @@ FimOperatesOnPairs::set_reg_pair(const FimOperatesOnPairs::state &s,
   unsigned int hi = (16u ? v / 16u : 0);
   unsigned int lo = (16u ? v % 16u : v);
   FimOperatesOnPairs::state s1 = set_reg(s, base, hi);
-  return set_reg(s1, (base + 1u), lo);
+  return set_reg(std::move(s1), (base + 1u), lo);
 }
 
 __attribute__((pure)) FimOperatesOnPairs::state

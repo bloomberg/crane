@@ -112,7 +112,7 @@ __attribute__((pure)) List<unsigned int> LoopifyComparators::merge_by_fuel(
       unsigned int fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l1.v())) {
-        *(_write) = std::make_unique<List<unsigned int>>(_loop_l2);
+        *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
         break;
       } else {
         const auto &[d_a0, d_a1] =

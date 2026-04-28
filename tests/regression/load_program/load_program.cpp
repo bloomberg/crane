@@ -25,9 +25,9 @@ LoadProgram::load_program(LoadProgram::state s, const unsigned int &base,
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(bytes.v());
-    LoadProgram::state s_ = set_prom_params(s, base, d_a0, true);
-    LoadProgram::state s__ = execute_wpm(s_);
-    return load_program(s__, (base + 1u), *(d_a1));
+    LoadProgram::state s_ = set_prom_params(std::move(s), base, d_a0, true);
+    LoadProgram::state s__ = execute_wpm(std::move(s_));
+    return load_program(std::move(s__), (base + 1u), *(d_a1));
   }
 }
 
@@ -68,6 +68,6 @@ LoadProgram::load_program_simple(LoadProgram::state_simple s,
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(bytes.v());
-    return load_program_simple(write_byte(s, d_a0), *(d_a1));
+    return load_program_simple(write_byte(std::move(s), d_a0), *(d_a1));
   }
 }

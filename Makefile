@@ -1,4 +1,4 @@
-.PHONY: build install clean test test-quick test-verbose test-sequential test-raw test-one test-folder test-folder-verbose test-list theories plugin all extract format
+.PHONY: build install clean test test-quick test-verbose test-sequential test-raw test-one test-one-verbose test-folder test-folder-verbose test-list theories plugin all extract format
 
 # Default target: build plugin and theories only (not tests)
 build: plugin theories
@@ -97,6 +97,31 @@ test-one:
 		        exit 1; \
 		      fi ;; \
 	esac
+
+# Run a single test with full output (useful for debugging): make test-one-verbose TEST=list
+test-one-verbose:
+	@if [ -z "$(TEST)" ]; then \
+		echo "Usage: make test-one-verbose TEST=<test_name>"; \
+		exit 1; \
+	fi
+	@# Build and run, showing full executable output
+	@case "$(TEST)" in \
+		*/*)  cat="$$(echo '$(TEST)' | cut -d/ -f1)"; name="$$(echo '$(TEST)' | cut -d/ -f2)" ;; \
+		*)    cat=""; name="$(TEST)"; \
+		      for c in basics monadic regression wip; do \
+		        if [ -d "tests/$$c/$(TEST)" ]; then cat="$$c"; break; fi; \
+		      done ;; \
+	esac; \
+	if [ -z "$$cat" ]; then \
+		echo "Test '$(TEST)' not found in any category"; exit 1; \
+	fi; \
+	case "$(TEST)" in \
+		*/*)  dune build @tests/$(TEST)/runtest 2>&1 || true ;; \
+		*)    dune build "tests/$$cat/$$name/$$name.t.exe" 2>&1 || true ;; \
+	esac; \
+	exe="_build/default/tests/$$cat/$$name/$$name.t.exe"; \
+	if [ ! -f "$$exe" ]; then echo "Build failed: $$exe not found"; exit 1; fi; \
+	cd "_build/default/tests/$$cat/$$name" && "./$$name.t.exe"
 
 # Run all tests in a folder: make test-folder FOLDER=basics
 # Examples:

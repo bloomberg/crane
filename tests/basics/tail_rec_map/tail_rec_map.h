@@ -73,8 +73,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -99,7 +100,7 @@ public:
       return m;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(m));
+      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
     }
   }
 };
@@ -109,10 +110,10 @@ __attribute__((pure)) List<T2> better_map(F0 &&f, const List<T1> &l) {
   std::function<List<T2>(List<T1>, List<T2>)> go;
   go = [&](List<T1> l0, List<T2> acc) -> List<T2> {
     if (std::holds_alternative<typename List<T1>::Nil>(l0.v())) {
-      return acc.rev();
+      return std::move(acc).rev();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l0.v());
-      return go(*(d_a1), List<T2>::cons(f(d_a0), acc));
+      return go(*(d_a1), List<T2>::cons(f(d_a0), std::move(acc)));
     }
   };
   return go(l, List<T2>::nil());

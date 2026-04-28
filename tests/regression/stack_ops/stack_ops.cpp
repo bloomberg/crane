@@ -5,7 +5,7 @@ std::pair<std::optional<unsigned int>, StackOps::state_basic>
 StackOps::pop_stack(StackOps::state_basic s) {
   auto &&_sv = s.stack_basic;
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-    return std::make_pair(std::optional<unsigned int>(), s);
+    return std::make_pair(std::optional<unsigned int>(), std::move(s));
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(_sv.v());
@@ -39,7 +39,7 @@ std::pair<std::optional<unsigned int>, StackOps::state_with_acc>
 StackOps::pop_stack_acc(StackOps::state_with_acc s) {
   auto &&_sv = s.stack_with_acc;
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-    return std::make_pair(std::optional<unsigned int>(), s);
+    return std::make_pair(std::optional<unsigned int>(), std::move(s));
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(_sv.v());

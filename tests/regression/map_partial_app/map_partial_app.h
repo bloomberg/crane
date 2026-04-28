@@ -73,8 +73,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -153,10 +154,9 @@ struct MapPartialApp {
     // CREATORS
     __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(const tree &a0, unsigned int a1,
-                                           const tree &a2) {
-      return tree(Node{std::make_unique<tree>(a0), std::move(a1),
-                       std::make_unique<tree>(a2)});
+    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -220,7 +220,7 @@ struct MapPartialApp {
               .template map<unsigned int>([=](const unsigned int &v) mutable {
                 return tree_sum(f(v));
               });
-      return sum_list(results);
+      return sum_list(std::move(results));
     }();
   }();
   /// Variation: store the partial app in a pair, extract it, then map.
@@ -240,7 +240,7 @@ struct MapPartialApp {
               .template map<unsigned int>([=](const unsigned int &v) mutable {
                 return tree_sum(p.first(v));
               });
-      return sum_list(results);
+      return sum_list(std::move(results));
     }();
   }();
   /// Variation: two closures mapped over same list.
@@ -264,7 +264,7 @@ struct MapPartialApp {
               .template map<unsigned int>([=](const unsigned int &v) mutable {
                 return tree_sum(f2(v));
               });
-      return (sum_list(r1) + sum_list(r2));
+      return (sum_list(std::move(r1)) + sum_list(std::move(r2)));
     }();
   }();
 };

@@ -72,8 +72,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -142,7 +143,7 @@ public:
       return m;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(m));
+      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
     }
   }
 };
@@ -206,12 +207,12 @@ public:
   }
 
   // CREATORS
-  __attribute__((pure)) static Positive xi(const Positive &a0) {
-    return Positive(XI{std::make_unique<Positive>(a0)});
+  __attribute__((pure)) static Positive xi(Positive a0) {
+    return Positive(XI{std::make_unique<Positive>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Positive xo(const Positive &a0) {
-    return Positive(XO{std::make_unique<Positive>(a0)});
+  __attribute__((pure)) static Positive xo(Positive a0) {
+    return Positive(XO{std::make_unique<Positive>(std::move(a0))});
   }
 
   __attribute__((pure)) static Positive xh() { return Positive(XH{}); }

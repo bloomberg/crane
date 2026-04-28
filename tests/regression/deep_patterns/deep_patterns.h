@@ -72,8 +72,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -157,8 +158,8 @@ struct DeepPatterns {
     }
 
     // CREATORS
-    __attribute__((pure)) static outer oleft(const inner &a0) {
-      return outer(OLeft{std::make_unique<inner>(a0)});
+    __attribute__((pure)) static outer oleft(inner a0) {
+      return outer(OLeft{std::make_unique<inner>(std::move(a0))});
     }
 
     __attribute__((pure)) static outer oright(unsigned int a0) {
@@ -426,9 +427,9 @@ struct DeepPatterns {
 
     __attribute__((pure)) static mylist<t_A> nil() { return mylist(Nil{}); }
 
-    __attribute__((pure)) static mylist<t_A> cons(t_A a0,
-                                                  const mylist<t_A> &a1) {
-      return mylist(Cons{std::move(a0), std::make_unique<mylist<t_A>>(a1)});
+    __attribute__((pure)) static mylist<t_A> cons(t_A a0, mylist<t_A> a1) {
+      return mylist(
+          Cons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS

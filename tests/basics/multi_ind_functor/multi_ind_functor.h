@@ -159,8 +159,9 @@ template <Elem E> struct Container {
     // CREATORS
     __attribute__((pure)) static mlist mnil() { return mlist(MNil{}); }
 
-    __attribute__((pure)) static mlist mcons(maybe a0, const mlist &a1) {
-      return mlist(MCons{std::move(a0), std::make_unique<mlist>(a1)});
+    __attribute__((pure)) static mlist mcons(maybe a0, mlist a1) {
+      return mlist(
+          MCons{std::move(a0), std::make_unique<mlist>(std::move(a1))});
     }
 
     // MANIPULATORS

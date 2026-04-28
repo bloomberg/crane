@@ -68,10 +68,9 @@ struct SharedUptrEscape {
     // CREATORS
     __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(const tree &a0, unsigned int a1,
-                                           const tree &a2) {
-      return tree(Node{std::make_unique<tree>(a0), std::move(a1),
-                       std::make_unique<tree>(a2)});
+    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -107,7 +106,7 @@ struct SharedUptrEscape {
 
     /// identity: takes a tree and returns it unchanged.
     /// The tree enters as owned and leaves as owned.
-    __attribute__((pure)) tree identity() const { return *(this); }
+    __attribute__((pure)) tree identity() const { return std::move(*(this)); }
 
     __attribute__((pure)) unsigned int tree_sum() const {
       auto &&_sv = *(this);
@@ -153,7 +152,7 @@ struct SharedUptrEscape {
   static inline const unsigned int use_extracted_twice = []() {
     tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                         tree::node(tree::leaf(), 30u, tree::leaf()));
-    tree sub = t.extract_subtree(0u);
+    tree sub = std::move(t).extract_subtree(0u);
     return (sub.tree_sum() + sub.tree_sum());
   }();
 
@@ -225,7 +224,7 @@ struct SharedUptrEscape {
   __attribute__((pure)) static wrapper wrap_tree(tree t);
   static inline const unsigned int unwrap_and_dup = []() {
     tree t = tree::node(tree::leaf(), 42u, tree::leaf());
-    wrapper w = wrap_tree(t);
+    wrapper w = wrap_tree(std::move(t));
     const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
     return (d_a0.tree_sum() + d_a0.tree_sum());
   }();

@@ -62,8 +62,8 @@ public:
   // CREATORS
   __attribute__((pure)) static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(const Nat &a0) {
-    return Nat(S{std::make_unique<Nat>(a0)});
+  __attribute__((pure)) static Nat s(Nat a0) {
+    return Nat(S{std::make_unique<Nat>(std::move(a0))});
   }
 
   // MANIPULATORS
@@ -93,7 +93,7 @@ public:
       return m;
     } else {
       const auto &[d_a0] = std::get<typename Nat::S>(_sv.v());
-      return Nat::s((*(d_a0)).add(m));
+      return Nat::s((*(d_a0)).add(std::move(m)));
     }
   }
 };
@@ -160,8 +160,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -176,7 +177,7 @@ public:
       return m;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(m));
+      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
     }
   }
 };
@@ -249,10 +250,10 @@ public:
 
   __attribute__((pure)) static Tree<t_A> leaf() { return Tree(Leaf{}); }
 
-  __attribute__((pure)) static Tree<t_A> node(const Tree<t_A> &a0, t_A a1,
-                                              const Tree<t_A> &a2) {
-    return Tree(Node{std::make_unique<Tree<t_A>>(a0), std::move(a1),
-                     std::make_unique<Tree<t_A>>(a2)});
+  __attribute__((pure)) static Tree<t_A> node(Tree<t_A> a0, t_A a1,
+                                              Tree<t_A> a2) {
+    return Tree(Node{std::make_unique<Tree<t_A>>(std::move(a0)), std::move(a1),
+                     std::make_unique<Tree<t_A>>(std::move(a2))});
   }
 
   // MANIPULATORS

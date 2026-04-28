@@ -75,8 +75,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -183,7 +184,7 @@ public:
       return m;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(m));
+      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
     }
   }
 };
@@ -263,20 +264,22 @@ struct TopologicalSort {
           const T1 &_x = *f1;
           if (f2.has_value()) {
             const T1 &_x0 = *f2;
-            return get_elems_aux(d_a1_value, h);
+            return get_elems_aux(d_a1_value, std::move(h));
           } else {
-            return get_elems_aux(d_a1_value, List<T1>::cons(e2, h));
+            return get_elems_aux(d_a1_value, List<T1>::cons(e2, std::move(h)));
           }
         } else {
           if (f2.has_value()) {
             const T1 &_x = *f2;
-            return get_elems_aux(d_a1_value, List<T1>::cons(e1, h));
+            return get_elems_aux(d_a1_value, List<T1>::cons(e1, std::move(h)));
           } else {
             if (eqb_node(e1, e2)) {
-              return get_elems_aux(d_a1_value, List<T1>::cons(e1, h));
-            } else {
               return get_elems_aux(d_a1_value,
-                                   List<T1>::cons(e1, List<T1>::cons(e2, h)));
+                                   List<T1>::cons(e1, std::move(h)));
+            } else {
+              return get_elems_aux(
+                  d_a1_value,
+                  List<T1>::cons(e1, List<T1>::cons(e2, std::move(h))));
             }
           }
         }
@@ -304,7 +307,7 @@ struct TopologicalSort {
   __attribute__((pure)) static graph<T1> make_graph(F0 &&eqb_node,
                                                     List<std::pair<T1, T1>> l) {
     List<T1> elems = get_elems<T1>(eqb_node, l);
-    return elems.template fold_right<List<entry<T1>>>(
+    return std::move(elems).template fold_right<List<entry<T1>>>(
         [=](const T1 e, List<std::pair<T1, List<T1>>> ret) mutable {
           return List<std::pair<T1, List<T1>>>::cons(
               make_entry<T1>(eqb_node, l, e), ret);
@@ -358,7 +361,8 @@ struct TopologicalSort {
         } else {
           const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
           return cycle_entry_aux<T1>(eqb_node, graph0,
-                                     List<T1>::cons(elem, seens), d_a0, c);
+                                     List<T1>::cons(elem, std::move(seens)),
+                                     d_a0, c);
         }
       }
     }
@@ -396,7 +400,7 @@ struct TopologicalSort {
                 [=](T1 _x0, List<T1> _x1) mutable -> List<T1> {
                   return cycle_extract_aux<T1>(eqb_node, graph0, c, _x0, _x1);
                 },
-                List<T1>::cons(elem, cycl));
+                List<T1>::cons(elem, std::move(cycl)));
       }
     }
   }
@@ -454,7 +458,7 @@ struct TopologicalSort {
               return !(contains<T1>(eqb_node, entry0.first, mins_));
             });
         List<std::pair<T1, List<T1>>> rest_ =
-            rest.template map<std::pair<T1, List<T1>>>(
+            std::move(rest).template map<std::pair<T1, List<T1>>>(
                 [=](const std::pair<T1, List<T1>> &entry0) mutable {
                   return std::make_pair(
                       entry0.first,
@@ -463,7 +467,8 @@ struct TopologicalSort {
                       }));
                 });
         return List<List<T1>>::cons(
-            mins_, topological_sort_aux<T1>(eqb_node, rest_, c));
+            std::move(mins_),
+            topological_sort_aux<T1>(eqb_node, std::move(rest_), c));
       }
     }
   }

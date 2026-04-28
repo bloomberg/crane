@@ -132,8 +132,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -158,7 +159,7 @@ public:
       return m;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(m));
+      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
     }
   }
 };
@@ -170,16 +171,16 @@ __attribute__((pure)) List<Prod<T1, T2>> better_zip(const List<T1> &la,
   go = [&](List<T1> la0, List<T2> lb0,
            List<Prod<T1, T2>> acc) -> List<Prod<T1, T2>> {
     if (std::holds_alternative<typename List<T1>::Nil>(la0.v())) {
-      return acc.rev();
+      return std::move(acc).rev();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(la0.v());
       if (std::holds_alternative<typename List<T2>::Nil>(lb0.v())) {
-        return acc.rev();
+        return std::move(acc).rev();
       } else {
         const auto &[d_a00, d_a10] = std::get<typename List<T2>::Cons>(lb0.v());
-        return go(
-            *(d_a1), *(d_a10),
-            List<Prod<T1, T2>>::cons(Prod<T1, T2>::pair(d_a0, d_a00), acc));
+        return go(*(d_a1), *(d_a10),
+                  List<Prod<T1, T2>>::cons(Prod<T1, T2>::pair(d_a0, d_a00),
+                                           std::move(acc)));
       }
     }
   };

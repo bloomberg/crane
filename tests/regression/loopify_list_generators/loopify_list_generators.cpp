@@ -135,7 +135,7 @@ LoopifyListGenerators::replicate_each(const unsigned int &n,
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         List<unsigned int> reps = replicate_elem(n, d_a0);
-        _stack.emplace_back(_Call1{reps});
+        _stack.emplace_back(_Call1{std::move(reps)});
         _stack.emplace_back(_Enter{*(d_a1)});
       }
     } else {

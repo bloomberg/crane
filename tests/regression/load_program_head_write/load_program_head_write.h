@@ -72,8 +72,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -121,10 +122,10 @@ struct LoadProgramHeadWrite {
                                           0u, List<unsigned int>::nil())))),
               0u, 0u, false};
     state s1 = load_program(
-        s0, 1u,
+        std::move(s0), 1u,
         List<unsigned int>::cons(
             7u, List<unsigned int>::cons(8u, List<unsigned int>::nil())));
-    return ListDef::template nth<unsigned int>(1u, s1.rom, 0u);
+    return ListDef::template nth<unsigned int>(1u, std::move(s1).rom, 0u);
   }();
 };
 

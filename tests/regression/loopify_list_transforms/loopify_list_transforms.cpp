@@ -242,7 +242,7 @@ LoopifyListTransforms::drop(const unsigned int &n, List<unsigned int> l) {
   unsigned int _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
-      _result = _loop_l;
+      _result = std::move(_loop_l);
       break;
     } else {
       unsigned int n_ = _loop_n - 1;
@@ -325,12 +325,12 @@ LoopifyListTransforms::rotate_left_fuel(const unsigned int &fuel,
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = _loop_l;
+      _result = std::move(_loop_l);
       break;
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       if (_loop_n <= 0u) {
-        _result = _loop_l;
+        _result = std::move(_loop_l);
         break;
       } else {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
@@ -342,7 +342,7 @@ LoopifyListTransforms::rotate_left_fuel(const unsigned int &fuel,
               std::get<typename List<unsigned int>::Cons>(_loop_l.v());
           List<unsigned int> rotated = (*(d_a1)).app(
               List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
-          List<unsigned int> _next_l = rotated;
+          List<unsigned int> _next_l = std::move(rotated);
           unsigned int _next_n =
               (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
           unsigned int _next_fuel = fuel_;

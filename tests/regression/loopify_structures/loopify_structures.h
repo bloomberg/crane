@@ -73,8 +73,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -87,10 +88,11 @@ public:
     std::unique_ptr<List<t_A>> _head{};
     std::unique_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
+    List<t_A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *(_loop_self);
       if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(m);
+        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
@@ -98,7 +100,10 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        _loop_self = d_a1.get();
+        const List *_next_self = d_a1.get();
+        List<t_A> _next_m = std::move(_loop_m);
+        _loop_self = std::move(_next_self);
+        _loop_m = std::move(_next_m);
         continue;
       }
     }
@@ -167,8 +172,8 @@ struct LoopifyStructures {
       return nested(Elem{std::move(a0)});
     }
 
-    __attribute__((pure)) static nested nlist(const List<nested> &a0) {
-      return nested(NList{std::make_unique<List<nested>>(a0)});
+    __attribute__((pure)) static nested nlist(List<nested> a0) {
+      return nested(NList{std::make_unique<List<nested>>(std::move(a0))});
     }
 
     // MANIPULATORS
@@ -317,13 +322,12 @@ struct LoopifyStructures {
       return quadtree(QLeaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static quadtree quad(const quadtree &a0,
-                                               const quadtree &a1,
-                                               const quadtree &a2,
-                                               const quadtree &a3) {
-      return quadtree(
-          Quad{std::make_unique<quadtree>(a0), std::make_unique<quadtree>(a1),
-               std::make_unique<quadtree>(a2), std::make_unique<quadtree>(a3)});
+    __attribute__((pure)) static quadtree quad(quadtree a0, quadtree a1,
+                                               quadtree a2, quadtree a3) {
+      return quadtree(Quad{std::make_unique<quadtree>(std::move(a0)),
+                           std::make_unique<quadtree>(std::move(a1)),
+                           std::make_unique<quadtree>(std::move(a2)),
+                           std::make_unique<quadtree>(std::move(a3))});
     }
 
     // MANIPULATORS
@@ -844,10 +848,10 @@ struct LoopifyStructures {
       return ltree(LLeaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static ltree lnode(unsigned int a0, const ltree &a1,
-                                             const ltree &a2) {
-      return ltree(LNode{std::move(a0), std::make_unique<ltree>(a1),
-                         std::make_unique<ltree>(a2)});
+    __attribute__((pure)) static ltree lnode(unsigned int a0, ltree a1,
+                                             ltree a2) {
+      return ltree(LNode{std::move(a0), std::make_unique<ltree>(std::move(a1)),
+                         std::make_unique<ltree>(std::move(a2))});
     }
 
     // MANIPULATORS

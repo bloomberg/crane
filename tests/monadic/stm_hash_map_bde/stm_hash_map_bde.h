@@ -83,8 +83,9 @@ public:
     }
   }
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{bsl::move(a0), bsl::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{bsl::move(a0), bsl::make_unique<List<t_A>>(bsl::move(a1))});
   }
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
@@ -112,7 +113,7 @@ template <typename K, typename V> struct CHT {
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
     List<bsl::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
-            (*(this)).CHT::cht_eqb, k, v, xs);
+            bsl::move(*(this)).CHT::cht_eqb, k, v, bsl::move(xs));
     stm::writeTVar(b, xs_);
     return std::monostate{};
   }
@@ -120,8 +121,8 @@ template <typename K, typename V> struct CHT {
     stm::TVar<List<bsl::pair<K, V>>> b = (*(this)).bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
     bsl::pair<bsl::optional<V>, List<bsl::pair<K, V>>> p =
-        CHT<int, int>::template assoc_remove<K, V>((*(this)).CHT::cht_eqb, k,
-                                                   xs);
+        CHT<int, int>::template assoc_remove<K, V>(
+            bsl::move(*(this)).CHT::cht_eqb, k, bsl::move(xs));
     auto _cs = p.first;
     if (_cs.has_value()) {
       V _x = *_cs;
@@ -140,7 +141,7 @@ template <typename K, typename V> struct CHT {
     V v = f(ov);
     List<bsl::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
-            (*(this)).CHT::cht_eqb, k, v, xs);
+            bsl::move(*(this)).CHT::cht_eqb, k, v, bsl::move(xs));
     stm::writeTVar(b, xs_);
     return v;
   }

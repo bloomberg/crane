@@ -103,7 +103,7 @@ __attribute__((pure)) Matcher::regexp Matcher::OptCat(Matcher::regexp r2,
     } else if (std::holds_alternative<typename Matcher::regexp::Zero>(r3.v())) {
       return regexp::zero();
     } else {
-      return regexp::cat(r2, r3);
+      return regexp::cat(std::move(r2), std::move(r3));
     }
   }
 }
@@ -120,7 +120,7 @@ __attribute__((pure)) Matcher::regexp Matcher::OptAlt(Matcher::regexp r2,
       if (regexp_eq(r2, r3)) {
         return r2;
       } else {
-        return regexp::alt(r2, r3);
+        return regexp::alt(std::move(r2), std::move(r3));
       }
     }
   }
@@ -183,7 +183,7 @@ __attribute__((pure)) Matcher::regexp Matcher::derivs(Matcher::regexp r,
     return r;
   } else {
     const auto &[d_a0, d_a1] = std::get<typename List<int64_t>::Cons>(cs.v());
-    return derivs(deriv(r, d_a0), *(d_a1));
+    return derivs(deriv(std::move(r), d_a0), *(d_a1));
   }
 }
 

@@ -72,8 +72,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -219,10 +220,10 @@ struct PromOps {
           0u,
           0u,
           false};
-      state3 s_ = set_prom_params3(s, 21u, 144u, true);
+      state3 s_ = set_prom_params3(std::move(s), 21u, 144u, true);
       return ((s_.prom_addr3 + [&]() -> unsigned int {
                 if (s_.prom_enable3) {
-                  return s_.prom_data3;
+                  return std::move(s_).prom_data3;
                 } else {
                   return 0u;
                 }
@@ -250,10 +251,10 @@ struct PromOps {
           0u,
           0u,
           false};
-      state3 s_ = set_prom_params3(s, 21u, 144u, true);
+      state3 s_ = set_prom_params3(std::move(s), 21u, 144u, true);
       return ((s_.prom_addr3 + [&]() -> unsigned int {
                 if (s_.prom_enable3) {
-                  return s_.prom_data3;
+                  return std::move(s_).prom_data3;
                 } else {
                   return 0u;
                 }
@@ -295,10 +296,10 @@ struct PromOps {
           0u,
           0u,
           false};
-      state5 s_ = set_prom_params5(s, 23u, 77u, true);
+      state5 s_ = set_prom_params5(std::move(s), 23u, 77u, true);
       return ((s_.acc5 + s_.prom_addr5) + [&]() -> unsigned int {
         if (s_.prom_enable5) {
-          return s_.prom_data5;
+          return std::move(s_).prom_data5;
         } else {
           return 0u;
         }
@@ -492,44 +493,44 @@ struct PromOps {
       false};
   static inline const bool check_pc_bound = []() {
     state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
-    return after.pc10 < 4096u;
+    return std::move(after).pc10 < 4096u;
   }();
   static inline const bool check_acc_bound = []() {
     state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
-    return after.acc10 < 16u;
+    return std::move(after).acc10 < 16u;
   }();
   static inline const bool check_bank_bound = []() {
     state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
-    return after.cur_bank10 < 8u;
+    return std::move(after).cur_bank10 < 8u;
   }();
   static inline const bool check_regs_length = []() {
     state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
-    return after.regs10.length() == 4u;
+    return std::move(after).regs10.length() == 4u;
   }();
   static inline const bool check_rom_ports_length = []() {
     state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
-    return after.rom_ports10.length() == 4u;
+    return std::move(after).rom_ports10.length() == 4u;
   }();
   static inline const bool check_sel_rom_bound = []() {
     state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
-    return after.sel_rom10 < 16u;
+    return std::move(after).sel_rom10 < 16u;
   }();
   static inline const bool check_stack_length = []() {
     state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
-    return after.stack10.length() <= 3u;
+    return std::move(after).stack10.length() <= 3u;
   }();
   static inline const bool check_prom_addr_bound = []() {
     state10 after =
         execute_wpm10(set_prom_params10(sample10, 2048u, 99u, true));
-    return after.prom_addr10 < 4096u;
+    return std::move(after).prom_addr10 < 4096u;
   }();
   static inline const bool check_prom_data_bound = []() {
     state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 155u, true));
-    return after.prom_data10 < 256u;
+    return std::move(after).prom_data10 < 256u;
   }();
   static inline const bool check_rom_length = []() {
     state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
-    return after.rom10.length() == 8u;
+    return std::move(after).rom10.length() == 8u;
   }();
   static inline const bool test10 =
       (((((((((check_pc_bound && check_acc_bound) && check_bank_bound) &&

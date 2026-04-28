@@ -73,8 +73,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -205,7 +206,7 @@ struct Sort {
   template <typename T1, typename T2, MapsTo<T2, T1> F1,
             MapsTo<T2, List<T1>, T2, T2> F2>
   static T2 div_conq_split(const T2 x, F1 &&_x0, F2 &&_x1, List<T1> _x2) {
-    return div_conq<T1, T2>(split<T1>, x, _x0, _x1, _x2);
+    return div_conq<T1, T2>(split<T1>, x, _x0, _x1, std::move(_x2));
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F1, MapsTo<T2, T1, T1> F2,

@@ -89,11 +89,11 @@ struct FreeMonad {
       return IO(Pure{std::move(a)});
     }
 
-    __attribute__((pure)) static IO bind(const IO &a,
-                                         std::function<IO(std::any)> b) {
-      return IO(Bind{std::make_unique<IO>(a), [=](std::any x0) mutable {
-                       return std::make_unique<IO>(b(x0));
-                     }});
+    __attribute__((pure)) static IO bind(IO a, std::function<IO(std::any)> b) {
+      return IO(
+          Bind{std::make_unique<IO>(std::move(a)), [=](std::any x0) mutable {
+                 return std::make_unique<IO>(b(x0));
+               }});
     }
 
     __attribute__((pure)) static IO get_line() { return IO(Get_line{}); }

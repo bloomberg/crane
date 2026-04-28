@@ -2,7 +2,7 @@
 
 __attribute__((pure)) FunctorComp::Stack::t
 FunctorComp::Stack::push(unsigned int x, List<unsigned int> s) {
-  return List<unsigned int>::cons(x, s);
+  return List<unsigned int>::cons(x, std::move(s));
 }
 
 __attribute__((pure))

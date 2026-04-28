@@ -8,12 +8,12 @@ DeepApp::build(unsigned int n, DeepApp::mylist<unsigned int> acc) {
   unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      _result = _loop_acc;
+      _result = std::move(_loop_acc);
       break;
     } else {
       unsigned int n_ = _loop_n - 1;
       DeepApp::mylist<unsigned int> _next_acc =
-          mylist<unsigned int>::mycons(_loop_n, _loop_acc);
+          mylist<unsigned int>::mycons(_loop_n, std::move(_loop_acc));
       unsigned int _next_n = n_;
       _loop_acc = std::move(_next_acc);
       _loop_n = std::move(_next_n);

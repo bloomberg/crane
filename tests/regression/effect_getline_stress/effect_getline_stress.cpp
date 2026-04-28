@@ -47,7 +47,7 @@ List<std::string> EffectGetlineStress::read_lines(const unsigned int &n,
     unsigned int n_ = n - 1;
     std::string line;
     std::getline(std::cin, line);
-    return read_lines(n_, List<std::string>::cons(line, acc));
+    return read_lines(n_, List<std::string>::cons(line, std::move(acc)));
   }
 }
 

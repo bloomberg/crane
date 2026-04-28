@@ -6,7 +6,7 @@
 /// closure types.
 __attribute__((pure)) Nat
 FunctionReturnBranchProbe::make_adder(const Nat &n, const Nat &_x0) {
-  return [&]() -> std::function<Nat(Nat)> {
+  return [=]() mutable -> std::function<Nat(Nat)> {
     if (std::holds_alternative<typename Nat::O>(n.v())) {
       return [](Nat x) { return x; };
     } else {

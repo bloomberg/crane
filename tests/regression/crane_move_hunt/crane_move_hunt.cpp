@@ -42,7 +42,7 @@ CraneMoveHunt::record_function(const CraneMoveHunt::box &b0) {
   CraneMoveHunt::box b1 = clone_box(b);
   CraneMoveHunt::box b2 = clone_box(b);
   if (keep_box(b).enabled) {
-    if (b.enabled) {
+    if (std::move(b).enabled) {
       return b2;
     } else {
       return b1;
@@ -55,8 +55,8 @@ CraneMoveHunt::record_function(const CraneMoveHunt::box &b0) {
 __attribute__((pure)) CraneMoveHunt::state
 CraneMoveHunt::state_function(const CraneMoveHunt::state &s0) {
   CraneMoveHunt::state s1 = render_state(s0);
-  CraneMoveHunt::state s2 = resolve_state(s1);
-  return render_state(s2);
+  CraneMoveHunt::state s2 = resolve_state(std::move(s1));
+  return render_state(std::move(s2));
 }
 
 __attribute__((pure)) CraneMoveHunt::state
@@ -76,7 +76,7 @@ CraneMoveHunt::match_reuse(const CraneMoveHunt::state &s0) {
 
 void tick(CraneMoveHunt::state s) {
   {
-    toy_tick(s);
+    toy_tick(std::move(s));
     return;
   }
 }

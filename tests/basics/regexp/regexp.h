@@ -73,8 +73,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -190,22 +191,20 @@ struct Matcher {
 
     __attribute__((pure)) static regexp eps() { return regexp(Eps{}); }
 
-    __attribute__((pure)) static regexp cat(const regexp &r1,
-                                            const regexp &r2) {
-      return regexp(
-          Cat{std::make_unique<regexp>(r1), std::make_unique<regexp>(r2)});
+    __attribute__((pure)) static regexp cat(regexp r1, regexp r2) {
+      return regexp(Cat{std::make_unique<regexp>(std::move(r1)),
+                        std::make_unique<regexp>(std::move(r2))});
     }
 
-    __attribute__((pure)) static regexp alt(const regexp &r1,
-                                            const regexp &r2) {
-      return regexp(
-          Alt{std::make_unique<regexp>(r1), std::make_unique<regexp>(r2)});
+    __attribute__((pure)) static regexp alt(regexp r1, regexp r2) {
+      return regexp(Alt{std::make_unique<regexp>(std::move(r1)),
+                        std::make_unique<regexp>(std::move(r2))});
     }
 
     __attribute__((pure)) static regexp zero() { return regexp(Zero{}); }
 
-    __attribute__((pure)) static regexp star(const regexp &r) {
-      return regexp(Star{std::make_unique<regexp>(r)});
+    __attribute__((pure)) static regexp star(regexp r) {
+      return regexp(Star{std::make_unique<regexp>(std::move(r))});
     }
 
     // MANIPULATORS

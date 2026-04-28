@@ -74,8 +74,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -237,10 +238,9 @@ struct FunctionVernac {
     }
 
     __attribute__((pure)) static R_div2 r_div2_2(unsigned int n, unsigned int p,
-                                                 unsigned int a2,
-                                                 const R_div2 &_res) {
+                                                 unsigned int a2, R_div2 _res) {
       return R_div2(R_div2_2{std::move(n), std::move(p), std::move(a2),
-                             std::make_unique<R_div2>(_res)});
+                             std::make_unique<R_div2>(std::move(_res))});
     }
 
     // MANIPULATORS
@@ -409,10 +409,10 @@ struct FunctionVernac {
 
     __attribute__((pure)) static R_list_sum
     r_list_sum_1(List<unsigned int> l, unsigned int x, List<unsigned int> xs,
-                 unsigned int a3, const R_list_sum &_res) {
-      return R_list_sum(R_list_sum_1{std::move(l), std::move(x), std::move(xs),
-                                     std::move(a3),
-                                     std::make_unique<R_list_sum>(_res)});
+                 unsigned int a3, R_list_sum _res) {
+      return R_list_sum(
+          R_list_sum_1{std::move(l), std::move(x), std::move(xs), std::move(a3),
+                       std::make_unique<R_list_sum>(std::move(_res))});
     }
 
     // MANIPULATORS

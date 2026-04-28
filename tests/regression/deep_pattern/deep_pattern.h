@@ -70,8 +70,9 @@ struct DeepPattern {
       return tree(Leaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static tree node(const tree &a0, const tree &a1) {
-      return tree(Node{std::make_unique<tree>(a0), std::make_unique<tree>(a1)});
+    __attribute__((pure)) static tree node(tree a0, tree a1) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)),
+                       std::make_unique<tree>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -148,7 +149,9 @@ struct DeepPattern {
       }
     }
 
-    __attribute__((pure)) tree as_pattern_test() const { return *(this); }
+    __attribute__((pure)) tree as_pattern_test() const {
+      return std::move(*(this));
+    }
 
     __attribute__((pure)) unsigned int wildcard_with_bindings() const {
       auto &&_sv = *(this);
@@ -429,8 +432,9 @@ struct DeepPattern {
 
     __attribute__((pure)) static list<t_A> nil() { return list(Nil{}); }
 
-    __attribute__((pure)) static list<t_A> cons(t_A a0, const list<t_A> &a1) {
-      return list(Cons{std::move(a0), std::make_unique<list<t_A>>(a1)});
+    __attribute__((pure)) static list<t_A> cons(t_A a0, list<t_A> a1) {
+      return list(
+          Cons{std::move(a0), std::make_unique<list<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS

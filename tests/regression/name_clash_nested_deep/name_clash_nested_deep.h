@@ -67,9 +67,9 @@ struct NameClashNestedDeep {
     // CREATORS
     __attribute__((pure)) static mylist mynil() { return mylist(MyNil{}); }
 
-    __attribute__((pure)) static mylist mycons(unsigned int a0,
-                                               const mylist &a1) {
-      return mylist(MyCons{std::move(a0), std::make_unique<mylist>(a1)});
+    __attribute__((pure)) static mylist mycons(unsigned int a0, mylist a1) {
+      return mylist(
+          MyCons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
     }
 
     // MANIPULATORS

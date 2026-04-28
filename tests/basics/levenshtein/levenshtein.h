@@ -63,8 +63,8 @@ public:
   // CREATORS
   __attribute__((pure)) static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(const Nat &a0) {
-    return Nat(S{std::make_unique<Nat>(a0)});
+  __attribute__((pure)) static Nat s(Nat a0) {
+    return Nat(S{std::make_unique<Nat>(std::move(a0))});
   }
 
   // MANIPULATORS
@@ -359,8 +359,9 @@ public:
     return String(EmptyString{});
   }
 
-  __attribute__((pure)) static String string0(Ascii a0, const String &a1) {
-    return String(String0{std::move(a0), std::make_unique<String>(a1)});
+  __attribute__((pure)) static String string0(Ascii a0, String a1) {
+    return String(
+        String0{std::move(a0), std::make_unique<String>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -375,7 +376,7 @@ public:
       return s2;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename String::String0>(_sv.v());
-      return String::string0(d_a0, (*(d_a1)).append(s2));
+      return String::string0(d_a0, (*(d_a1)).append(std::move(s2)));
     }
   }
 
@@ -586,16 +587,16 @@ struct Levenshtein {
     __attribute__((pure)) static chain empty() { return chain(Empty{}); }
 
     __attribute__((pure)) static chain skip(Ascii a, String s, String t, Nat n,
-                                            const chain &a4) {
+                                            chain a4) {
       return chain(Skip{std::move(a), std::move(s), std::move(t), std::move(n),
-                        std::make_unique<chain>(a4)});
+                        std::make_unique<chain>(std::move(a4))});
     }
 
     __attribute__((pure)) static chain change(String s, String t, String u,
-                                              Nat n, edit a4, const chain &a5) {
+                                              Nat n, edit a4, chain a5) {
       return chain(Change{std::move(s), std::move(t), std::move(u),
                           std::move(n), std::move(a4),
-                          std::make_unique<chain>(a5)});
+                          std::make_unique<chain>(std::move(a5))});
     }
 
     // MANIPULATORS
@@ -607,7 +608,8 @@ struct Levenshtein {
     __attribute__((pure)) chain aux_eq_char(const String &, const String &,
                                             const Ascii &, String xs, Ascii y,
                                             String ys, Nat n) const {
-      return chain::skip(y, xs, ys, n, *(this));
+      return chain::skip(std::move(y), std::move(xs), std::move(ys),
+                         std::move(n), std::move(*(this)));
     }
 
     __attribute__((pure)) chain aux_update(const String &, const String &,
@@ -621,34 +623,37 @@ struct Levenshtein {
                                            const Ascii &x, const String &xs,
                                            Ascii y, String ys,
                                            const Nat &n) const {
-      return (*(this)).delete_chain(x, xs, String::string0(y, ys), n);
+      return (*(this)).delete_chain(
+          x, xs, String::string0(std::move(y), std::move(ys)), n);
     }
 
     __attribute__((pure)) chain aux_insert(const String &, const String &,
                                            Ascii x, String xs, const Ascii &y,
                                            const String &ys,
                                            const Nat &n) const {
-      return (*(this)).insert_chain(y, String::string0(x, xs), ys, n);
+      return (*(this)).insert_chain(
+          y, String::string0(std::move(x), std::move(xs)), ys, n);
     }
 
     __attribute__((pure)) chain update_chain(Ascii c, Ascii c_, String s1,
                                              String s2, Nat n) const {
       return chain::change(String::string0(c, s1), String::string0(c_, s1),
                            String::string0(c_, s2), n, edit::update(c, c_, s1),
-                           chain::skip(c_, s1, s2, n, *(this)));
+                           chain::skip(c_, s1, s2, n, std::move(*(this))));
     }
 
     __attribute__((pure)) chain delete_chain(Ascii c, String s1, String s2,
                                              Nat n) const {
-      return chain::change(String::string0(c, s1), s1, s2, n,
-                           edit::deletion(c, s1), *(this));
+      return chain::change(String::string0(c, s1), s1, std::move(s2),
+                           std::move(n), edit::deletion(c, s1),
+                           std::move(*(this)));
     }
 
     __attribute__((pure)) chain insert_chain(Ascii c, String s1, String s2,
                                              Nat n) const {
       return chain::change(s1, String::string0(c, s1), String::string0(c, s2),
                            n, edit::insertion(c, s1),
-                           chain::skip(c, s1, s2, n, *(this)));
+                           chain::skip(c, s1, s2, n, std::move(*(this))));
     }
 
     template <typename T1, MapsTo<T1, Ascii, String, String, Nat, chain, T1> F1,
@@ -720,7 +725,7 @@ struct Levenshtein {
     Nat n3 = f(z);
     switch (n1.leb(n2)) {
     case Bool0::e_TRUE0: {
-      switch (n1.leb(n3)) {
+      switch (std::move(n1).leb(std::move(n3))) {
       case Bool0::e_TRUE0: {
         return x;
       }
@@ -732,7 +737,7 @@ struct Levenshtein {
       }
     }
     case Bool0::e_FALSE0: {
-      switch (n2.leb(n3)) {
+      switch (std::move(n2).leb(std::move(n3))) {
       case Bool0::e_TRUE0: {
         return y;
       }

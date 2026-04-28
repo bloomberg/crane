@@ -70,8 +70,9 @@ struct AccumClosureCapture {
     __attribute__((pure)) static fn_list fnil() { return fn_list(FNil{}); }
 
     __attribute__((pure)) static fn_list
-    fcons(std::function<unsigned int(unsigned int)> a0, const fn_list &a1) {
-      return fn_list(FCons{std::move(a0), std::make_unique<fn_list>(a1)});
+    fcons(std::function<unsigned int(unsigned int)> a0, fn_list a1) {
+      return fn_list(
+          FCons{std::move(a0), std::make_unique<fn_list>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -174,10 +175,9 @@ struct AccumClosureCapture {
     // CREATORS
     __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(const tree &a0, unsigned int a1,
-                                           const tree &a2) {
-      return tree(Node{std::make_unique<tree>(a0), std::move(a1),
-                       std::make_unique<tree>(a2)});
+    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -254,7 +254,7 @@ struct AccumClosureCapture {
     fn_list fs = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                             tree::node(tree::leaf(), 12u, tree::leaf()))
                      .extract_closures();
-    return fs.apply_all(0u);
+    return std::move(fs).apply_all(0u);
   }();
   /// test2: Allocate a noise tree between extracting closures and applying
   /// them. Increases memory pressure on freed region.
@@ -263,7 +263,7 @@ struct AccumClosureCapture {
         tree::node(tree::leaf(), 100u, tree::leaf()).extract_closures();
     unsigned int noise =
         tree::node(tree::leaf(), 999u, tree::leaf()).tree_sum();
-    return fs.apply_all(noise);
+    return std::move(fs).apply_all(noise);
   }();
 };
 

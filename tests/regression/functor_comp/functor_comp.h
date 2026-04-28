@@ -74,8 +74,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -121,7 +122,7 @@ public:
       return m;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(m));
+      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
     }
   }
 };
@@ -186,7 +187,7 @@ struct FunctorComp {
       go = [&](unsigned int fuel, List<unsigned int> acc,
                typename C::t c0) -> List<unsigned int> {
         if (fuel <= 0) {
-          return acc.rev();
+          return std::move(acc).rev();
         } else {
           unsigned int f = fuel - 1;
           auto _cs = C::pop(c0);
@@ -194,9 +195,9 @@ struct FunctorComp {
             const std::pair<unsigned int, typename C::t> &p = *_cs;
             const unsigned int &x = p.first;
             const typename C::t &c_ = p.second;
-            return go(f, List<unsigned int>::cons(x, acc), c_);
+            return go(f, List<unsigned int>::cons(x, std::move(acc)), c_);
           } else {
-            return acc.rev();
+            return std::move(acc).rev();
           }
         }
       };

@@ -35,8 +35,8 @@ unsigned int stmtest::io_add_self(const unsigned int &x) {
 void stmtest::stm_enqueue(const stm::TVar<List<unsigned int>> q,
                           unsigned int x) {
   List<unsigned int> xs = stm::readTVar(q);
-  stm::writeTVar(
-      q, xs.app(List<unsigned int>::cons(x, List<unsigned int>::nil())));
+  stm::writeTVar(q, std::move(xs).app(List<unsigned int>::cons(
+                        x, List<unsigned int>::nil())));
   return;
 }
 

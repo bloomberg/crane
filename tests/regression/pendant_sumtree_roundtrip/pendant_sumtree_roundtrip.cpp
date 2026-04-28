@@ -71,23 +71,25 @@ PendantSumtreeRoundtripCase::decode_multi(unsigned int n,
                   -> std::optional<T0<PendantSumtreeRoundtripCase::digit>> {
                 return list_to_vector_opt(n, _x0);
               });
-  return decoded.template fold_right<
-      std::optional<List<T0<PendantSumtreeRoundtripCase::digit>>>>(
-      [](const std::optional<T0<T>> &ov,
-         const std::optional<List<T0<T>>> &acc) {
-        if (ov.has_value()) {
-          const T0<T> &v = *ov;
-          if (acc.has_value()) {
-            const List<T0<T>> &vs = *acc;
-            return std::make_optional<List<T0<T>>>(List<T0<T>>::cons0(v, vs));
-          } else {
-            return std::optional<List<T0<T>>>();
-          }
-        } else {
-          return std::optional<List<T0<T>>>();
-        }
-      },
-      std::make_optional<List<T0<T>>>(List<T0<T>>::nil0()));
+  return std::move(decoded)
+      .template fold_right<
+          std::optional<List<T0<PendantSumtreeRoundtripCase::digit>>>>(
+          [](const std::optional<T0<T>> &ov,
+             const std::optional<List<T0<T>>> &acc) {
+            if (ov.has_value()) {
+              const T0<T> &v = *ov;
+              if (acc.has_value()) {
+                const List<T0<T>> &vs = *acc;
+                return std::make_optional<List<T0<T>>>(
+                    List<T0<T>>::cons0(v, vs));
+              } else {
+                return std::optional<List<T0<T>>>();
+              }
+            } else {
+              return std::optional<List<T0<T>>>();
+            }
+          },
+          std::make_optional<List<T0<T>>>(List<T0<T>>::nil0()));
 }
 
 __attribute__((pure)) std::optional<T0<PendantSumtreeRoundtripCase::digit>>
@@ -157,22 +159,23 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::group_sums_validb(
               return pendant_value(n, _x0);
             });
     std::optional<unsigned int> sum_opt =
-        pendant_vals.template fold_right<std::optional<unsigned int>>(
-            [](const std::optional<unsigned int> &ov,
-               const std::optional<unsigned int> &acc) {
-              if (ov.has_value()) {
-                const unsigned int &v = *ov;
-                if (acc.has_value()) {
-                  const unsigned int &a = *acc;
-                  return std::make_optional<unsigned int>((v + a));
-                } else {
-                  return std::optional<unsigned int>();
-                }
-              } else {
-                return std::optional<unsigned int>();
-              }
-            },
-            std::make_optional<unsigned int>(0u));
+        std::move(pendant_vals)
+            .template fold_right<std::optional<unsigned int>>(
+                [](const std::optional<unsigned int> &ov,
+                   const std::optional<unsigned int> &acc) {
+                  if (ov.has_value()) {
+                    const unsigned int &v = *ov;
+                    if (acc.has_value()) {
+                      const unsigned int &a = *acc;
+                      return std::make_optional<unsigned int>((v + a));
+                    } else {
+                      return std::optional<unsigned int>();
+                    }
+                  } else {
+                    return std::optional<unsigned int>();
+                  }
+                },
+                std::make_optional<unsigned int>(0u));
     if (sum_opt.has_value()) {
       const unsigned int &s = *sum_opt;
       return top_val == s;
@@ -277,7 +280,7 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::sumtree_validb_aux(
       PendantSumtreeRoundtripCase::PendantGroup g =
           PendantGroup{d_a0, child_tops};
       return (
-          group_sums_validb(n, g) &&
+          group_sums_validb(n, std::move(g)) &&
           d_a1_value.forallb(
               [=](PendantSumtreeRoundtripCase::SumTree _x0) mutable -> bool {
                 return sumtree_validb_aux(n, fuel_, _x0);
@@ -298,7 +301,7 @@ PendantSumtreeRoundtripCase::sumtree_leaf_total(
       sumtree_leaves(n, st).template map<std::optional<unsigned int>>(
           [=](PendantSumtreeRoundtripCase::CertifiedPendant _x0) mutable
               -> std::optional<unsigned int> { return pendant_value(n, _x0); });
-  return vals.template fold_right<std::optional<unsigned int>>(
+  return std::move(vals).template fold_right<std::optional<unsigned int>>(
       [](const std::optional<unsigned int> &ov,
          const std::optional<unsigned int> &acc) {
         if (ov.has_value()) {
@@ -371,13 +374,14 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::option_nat_is_some(
 
 __attribute__((pure)) T0<PendantSumtreeRoundtripCase::digit>
 PendantSumtreeRoundtripCase::digit_vec1(T a) {
-  return T0<T>::cons(a, 0u, T0<T>::nil());
+  return T0<T>::cons(std::move(a), 0u, T0<T>::nil());
 }
 
 __attribute__((pure)) T0<PendantSumtreeRoundtripCase::digit>
 PendantSumtreeRoundtripCase::digit_vec3(T a, T b, T c) {
-  return T0<T>::cons(a, 2u,
-                     T0<T>::cons(b, 1u, T0<T>::cons(c, 0u, T0<T>::nil())));
+  return T0<T>::cons(std::move(a), 2u,
+                     T0<T>::cons(std::move(b), 1u,
+                                 T0<T>::cons(std::move(c), 0u, T0<T>::nil())));
 }
 
 T Fin::of_nat_lt(const unsigned int &p, const unsigned int &n) {

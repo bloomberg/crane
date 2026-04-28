@@ -72,13 +72,12 @@ struct LoopifyTreeVariants {
     // CREATORS
     __attribute__((pure)) static ternary tleaf() { return ternary(TLeaf{}); }
 
-    __attribute__((pure)) static ternary tnode(const ternary &a0,
-                                               unsigned int a1,
-                                               const ternary &a2,
-                                               const ternary &a3) {
-      return ternary(TNode{std::make_unique<ternary>(a0), std::move(a1),
-                           std::make_unique<ternary>(a2),
-                           std::make_unique<ternary>(a3)});
+    __attribute__((pure)) static ternary tnode(ternary a0, unsigned int a1,
+                                               ternary a2, ternary a3) {
+      return ternary(TNode{std::make_unique<ternary>(std::move(a0)),
+                           std::move(a1),
+                           std::make_unique<ternary>(std::move(a2)),
+                           std::make_unique<ternary>(std::move(a3))});
     }
 
     // MANIPULATORS
@@ -432,13 +431,12 @@ struct LoopifyTreeVariants {
       return quadtree(QLeaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static quadtree quad(const quadtree &a0,
-                                               const quadtree &a1,
-                                               const quadtree &a2,
-                                               const quadtree &a3) {
-      return quadtree(
-          Quad{std::make_unique<quadtree>(a0), std::make_unique<quadtree>(a1),
-               std::make_unique<quadtree>(a2), std::make_unique<quadtree>(a3)});
+    __attribute__((pure)) static quadtree quad(quadtree a0, quadtree a1,
+                                               quadtree a2, quadtree a3) {
+      return quadtree(Quad{std::make_unique<quadtree>(std::move(a0)),
+                           std::make_unique<quadtree>(std::move(a1)),
+                           std::make_unique<quadtree>(std::move(a2)),
+                           std::make_unique<quadtree>(std::move(a3))});
     }
 
     // MANIPULATORS
@@ -774,10 +772,9 @@ struct LoopifyTreeVariants {
       return leaf_tree(LLeaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static leaf_tree lnode(const leaf_tree &a0,
-                                                 const leaf_tree &a1) {
-      return leaf_tree(LNode{std::make_unique<leaf_tree>(a0),
-                             std::make_unique<leaf_tree>(a1)});
+    __attribute__((pure)) static leaf_tree lnode(leaf_tree a0, leaf_tree a1) {
+      return leaf_tree(LNode{std::make_unique<leaf_tree>(std::move(a0)),
+                             std::make_unique<leaf_tree>(std::move(a1))});
     }
 
     // MANIPULATORS

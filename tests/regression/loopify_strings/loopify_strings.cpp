@@ -4,11 +4,12 @@ __attribute__((pure)) List<unsigned int>
 LoopifyStrings::append(const List<unsigned int> &l1, List<unsigned int> l2) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
+  List<unsigned int> _loop_l2 = std::move(l2);
   List<unsigned int> _loop_l1 = l1;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l1.v())) {
-      *(_write) = std::make_unique<List<unsigned int>>(l2);
+      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -18,7 +19,10 @@ LoopifyStrings::append(const List<unsigned int> &l1, List<unsigned int> l2) {
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      _loop_l1 = *(d_a1);
+      List<unsigned int> _next_l2 = std::move(_loop_l2);
+      List<unsigned int> _next_l1 = *(d_a1);
+      _loop_l2 = std::move(_next_l2);
+      _loop_l1 = std::move(_next_l1);
       continue;
     }
   }
@@ -130,7 +134,7 @@ LoopifyStrings::repeat_with_sep(List<unsigned int> s,
       } else {
         unsigned int n_ = n - 1;
         if (n_ <= 0) {
-          _result = s;
+          _result = std::move(s);
         } else {
           unsigned int _x = n_ - 1;
           _stack.emplace_back(_Call1{s, sep});

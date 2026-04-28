@@ -53,7 +53,7 @@ BinomialHeap::carry(const List<BinomialHeap::tree> &q, BinomialHeap::tree t) {
         return List<BinomialHeap::tree>::cons(d_a0, *(d_a1));
       }
     } else {
-      return List<BinomialHeap::tree>::cons(t, *(d_a1));
+      return List<BinomialHeap::tree>::cons(std::move(t), *(d_a1));
     }
   }
 }
@@ -67,21 +67,21 @@ __attribute__((pure)) BinomialHeap::priqueue
 BinomialHeap::join(const List<BinomialHeap::tree> &p,
                    const List<BinomialHeap::tree> &q, BinomialHeap::tree c) {
   if (std::holds_alternative<typename List<BinomialHeap::tree>::Nil>(p.v())) {
-    return carry(q, c);
+    return carry(q, std::move(c));
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<BinomialHeap::tree>::Cons>(p.v());
     if (std::holds_alternative<typename BinomialHeap::tree::Node>(d_a0.v())) {
       if (std::holds_alternative<typename List<BinomialHeap::tree>::Nil>(
               q.v())) {
-        return carry(p, c);
+        return carry(p, std::move(c));
       } else {
         const auto &[d_a01, d_a11] =
             std::get<typename List<BinomialHeap::tree>::Cons>(q.v());
         if (std::holds_alternative<typename BinomialHeap::tree::Node>(
                 d_a01.v())) {
           return List<BinomialHeap::tree>::cons(
-              c, join(*(d_a1), *(d_a11), smash(d_a0, d_a01)));
+              std::move(c), join(*(d_a1), *(d_a11), smash(d_a0, d_a01)));
         } else {
           if (std::holds_alternative<typename BinomialHeap::tree::Node>(
                   c.v())) {
@@ -96,7 +96,7 @@ BinomialHeap::join(const List<BinomialHeap::tree> &p,
     } else {
       if (std::holds_alternative<typename List<BinomialHeap::tree>::Nil>(
               q.v())) {
-        return carry(p, c);
+        return carry(p, std::move(c));
       } else {
         const auto &[d_a01, d_a11] =
             std::get<typename List<BinomialHeap::tree>::Cons>(q.v());
@@ -112,7 +112,7 @@ BinomialHeap::join(const List<BinomialHeap::tree> &p,
           }
         } else {
           return List<BinomialHeap::tree>::cons(
-              c, join(*(d_a1), *(d_a11), tree::leaf()));
+              std::move(c), join(*(d_a1), *(d_a11), tree::leaf()));
         }
       }
     }
@@ -251,21 +251,22 @@ BinomialHeap::insert_list(const List<unsigned int> &l,
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(l.v());
-    return insert_list(*(d_a1), insert(d_a0, q));
+    return insert_list(*(d_a1), insert(d_a0, std::move(q)));
   }
 }
 
 __attribute__((pure)) List<unsigned int>
 BinomialHeap::make_list(const unsigned int &n, List<unsigned int> l) {
   if (n <= 0) {
-    return List<unsigned int>::cons(0u, l);
+    return List<unsigned int>::cons(0u, std::move(l));
   } else {
     unsigned int n0 = n - 1;
     if (n0 <= 0) {
-      return List<unsigned int>::cons(1u, l);
+      return List<unsigned int>::cons(1u, std::move(l));
     } else {
       unsigned int n1 = n0 - 1;
-      return make_list(n1, List<unsigned int>::cons(((n1 + 1) + 1), l));
+      return make_list(n1,
+                       List<unsigned int>::cons(((n1 + 1) + 1), std::move(l)));
     }
   }
 }

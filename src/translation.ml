@@ -1186,14 +1186,23 @@ let with_escape_analysis body f =
       may still be live in another.
     @param add_owned  Optional de Bruijn index to add to the owned set after
       shifting.  Used for monadic bind continuation parameters that receive an
-      owned [shared_ptr] value (e.g. [>>=] callback arguments). *)
-let with_shifted_move_tracking n ?(clear_dead = false) ?add_owned f =
+      owned [shared_ptr] value (e.g. [>>=] callback arguments).
+    @param exclude_owned  Optional de Bruijn index to REMOVE from the owned set
+      after shifting.  Used for match scrutinees: after shifting by [n], the
+      scrutinee's outer index [db] becomes [db + n].  Excluding it prevents
+      [std::move(scrutinee)] from being emitted inside the branch while
+      pattern-variable structured bindings ([const auto& [d_a0, d_a1] = ...])
+      still hold const references into it — which would cause use-after-move. *)
+let with_shifted_move_tracking n ?(clear_dead = false) ?add_owned ?exclude_owned f =
   let saved_owned = tctx.move_owned_vars in
   let saved_dead = tctx.move_dead_after in
   tctx.move_owned_vars <-
     Escape.IntSet.map (fun i -> i + n) tctx.move_owned_vars;
   ( match add_owned with
   | Some idx -> tctx.move_owned_vars <- Escape.IntSet.add idx tctx.move_owned_vars
+  | None -> () );
+  ( match exclude_owned with
+  | Some idx -> tctx.move_owned_vars <- Escape.IntSet.remove idx tctx.move_owned_vars
   | None -> () );
   tctx.move_dead_after <-
     ( if clear_dead then Escape.IntSet.empty
@@ -2824,17 +2833,12 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
         String.length s >= 4 && String.sub s 0 4 = "_tcI"
       | _ -> false
     in
-    let _move_candidate =
+    let move_candidate =
       (not is_tc_param)
       && Escape.IntSet.mem i tctx.move_dead_after
       && Escape.IntSet.mem i tctx.move_owned_vars
     in
-    (* Phase 1 value types are still copyable because recursive fields use
-       shared_ptr.  Emitting last-use moves before clone insertion is complete
-       can consume values captured by reusable closures.  Keep variables as
-       copies for now; the unique_ptr phase will re-enable moves together with
-       explicit clone insertion. *)
-    var_expr
+    if move_candidate then CPPmove var_expr else var_expr
   | MLapp (MLmagic t, args) -> gen_expr env (MLapp (t, args))
   | MLapp (MLglob (r, ret_tys), a1 :: l) when is_ret r ->
     if tctx.itree_mode = Reified then begin
@@ -4776,11 +4780,21 @@ and eta_fun env f args =
           in
           (* When eta_keep_moves is set (single-use closure from MLletin),
              keep CPPmove wrappers and capture by reference for zero-copy.
-             Otherwise strip CPPmove: the closure may be called multiple
-             times, so captured variables must not be consumed. *)
+             Otherwise strip CPPmove recursively: the closure may be called
+             multiple times, so captured variables must not be consumed.
+             A top-level strip is insufficient when moves appear inside
+             constructor calls, e.g. cons(std::move(t1), rest) — those
+             moves would fire on the closure's own captured copy on every
+             invocation. *)
+          let rec strip_moves_deep = function
+            | CPPmove inner -> strip_moves_deep inner
+            | CPPfun_call (f, fargs) ->
+              CPPfun_call (f, List.map strip_moves_deep fargs)
+            | e -> e
+          in
           let captured_args =
             if eta_keep_moves then args
-            else List.map (function CPPmove inner -> inner | e -> e) args
+            else List.map strip_moves_deep args
           in
           let call_args =
             captured_args
@@ -5014,13 +5028,24 @@ and ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
     @param match_i  nesting level counter for name suffixing
     @param scrut_v  the [scrut->v()] or [scrut.v()] accessor expression *)
 and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
-    match_i scrut_v ~is_value_type ~is_owned =
+    match_i scrut_v ~is_value_type ~is_owned ~scrut_db =
   let ctor_type = ctor_type_of_match env typ cname in
   let ctor_name = ctor_struct_id_of_ref cname in
   let ctor_struct_name = Id.to_string ctor_name in
   let n_pat_vars = List.length ids in
+  (* When the scrutinee is an owned variable (is_owned = true) and we create
+     const-ref structured bindings into it ([const auto& [d_a0, d_a1] = ...]),
+     moving the scrutinee inside the branch would leave those references
+     dangling.  Exclude the shifted scrutinee index from move_owned_vars for
+     the duration of the branch so move insertion cannot fire on it. *)
+  let exclude_scrutinee =
+    if is_owned then Option.map (fun db -> db + n_pat_vars) scrut_db
+    else None
+  in
   let body_stmts =
-    with_shifted_move_tracking n_pat_vars ~clear_dead:true (fun () ->
+    with_shifted_move_tracking n_pat_vars ~clear_dead:true
+      ?exclude_owned:exclude_scrutinee
+      (fun () ->
       let saved_match_counter = tctx.match_param_counter in
       let saved_cs_counter = tctx.cs_counter in
       let saved_return_type = tctx.current_cpp_return_type in
@@ -5609,6 +5634,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
             match_i scrut_v
             ~is_value_type:(not is_coinductive)
             ~is_owned:scrut_is_owned
+            ~scrut_db
         in
         tctx.env_types <- saved_env_types;
         let rest, wild = gen_branches cs in
@@ -11789,16 +11815,15 @@ let gen_ind_header_v2
           else field_id
         in
         (* For owned recursive fields in value-type inductives, factory
-           params take the inner value by const reference and clone it into a
-           unique_ptr field.  Coinductive shared_ptr fields stay as shared_ptr
-           in both params and body. *)
+           params take the inner value by value (sink parameter) so callers
+           can move in.  Coinductive shared_ptr fields stay as const ref. *)
         let params =
           List.map
             (fun (j, storage_ty, api_ty) ->
               let param_ty =
                 match storage_ty with
                 | Tunique_ptr inner ->
-                  Tref (Tmod (TMconst, inner))
+                  inner
                 | Tshared_ptr inner ->
                   Tref (Tmod (TMconst, inner))
                 | _ -> api_ty
@@ -11856,7 +11881,7 @@ let gen_ind_header_v2
                     ~src_ty:api_ty ~dst_ty:storage_ty var
               end
               | Tunique_ptr inner ->
-                CPPfun_call (CPPmk_unique inner, [var])
+                CPPfun_call (CPPmk_unique inner, [CPPmove var])
               | Tshared_ptr inner when is_coinductive ->
                 CPPfun_call (CPPmk_shared inner, [var])
               | Tshared_ptr _ ->

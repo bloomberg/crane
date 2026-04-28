@@ -103,7 +103,7 @@ __attribute__((pure)) Positive Pos::mul(const Positive &x, Positive y) {
     return add(y, Positive::xo(mul(*(d_a0), y)));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xo(mul(*(d_a0), y));
+    return Positive::xo(mul(*(d_a0), std::move(y)));
   } else {
     return y;
   }
@@ -422,12 +422,12 @@ __attribute__((pure)) std::pair<Z, Z> BinInt::pos_div_eucl(const Positive &a,
                        Z::zpos(Positive::xh()));
     if (BinInt::ltb(r_, b)) {
       return std::make_pair(
-          BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q), r_);
+          BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q), std::move(r_));
     } else {
       return std::make_pair(
           BinInt::add(BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q),
                       Z::zpos(Positive::xh())),
-          BinInt::sub(r_, b));
+          BinInt::sub(std::move(r_), b));
     }
   } else if (std::holds_alternative<typename Positive::XO>(a.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(a.v());
@@ -437,12 +437,12 @@ __attribute__((pure)) std::pair<Z, Z> BinInt::pos_div_eucl(const Positive &a,
     Z r_ = BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), r);
     if (BinInt::ltb(r_, b)) {
       return std::make_pair(
-          BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q), r_);
+          BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q), std::move(r_));
     } else {
       return std::make_pair(
           BinInt::add(BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q),
                       Z::zpos(Positive::xh())),
-          BinInt::sub(r_, b));
+          BinInt::sub(std::move(r_), b));
     }
   } else {
     if (BinInt::leb(Z::zpos(Positive::xo(Positive::xh())), b)) {
@@ -567,7 +567,7 @@ EpochCellGlyphTraceCase::phase_from_angle(const Z &angle_deg) {
                                        Positive::xi(Positive::xh())))))))))) {
         return LunarPhase::e_FULLMOON;
       } else {
-        if (BinInt::ltb(wrapped,
+        if (BinInt::ltb(std::move(wrapped),
                         Z::zpos(Positive::xi(Positive::xi(Positive::xo(
                             Positive::xi(Positive::xi(Positive::xi(Positive::xo(
                                 Positive::xo(Positive::xh()))))))))))) {
@@ -706,7 +706,7 @@ EpochCellGlyphTraceCase::step_n(const unsigned int &n,
     return s;
   } else {
     unsigned int rest = n - 1;
-    return step_n(rest, step(s));
+    return step_n(rest, step(std::move(s)));
   }
 }
 
@@ -725,7 +725,7 @@ EpochCellGlyphTraceCase::predict_moon_phase_from_state(
                           Positive::xi(Positive::xo(Positive::xh())))))))))),
       Z::zpos(Positive::xi(Positive::xi(Positive::xo(Positive::xi(
           Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))))));
-  return phase_from_angle(phase_angle);
+  return phase_from_angle(std::move(phase_angle));
 }
 
 __attribute__((pure)) Z EpochCellGlyphTraceCase::predict_olympiad_year(
@@ -799,7 +799,7 @@ EpochCellGlyphTraceCase::predict_zodiac_sign(
                       return ZodiacSign::e_CAPRICORN;
                     } else {
                       if (BinInt::ltb(
-                              deg,
+                              std::move(deg),
                               Z::zpos(Positive::xo(Positive::xi(
                                   Positive::xo(Positive::xi(Positive::xo(
                                       Positive::xo(Positive::xi(Positive::xo(
@@ -1024,9 +1024,9 @@ __attribute__((pure)) Z EpochCellGlyphTraceCase::months_from_epoch(
   Z year_diff = BinInt::sub(epoch_year, eclipse_year);
   Z month_diff = BinInt::sub(eclipse_month, epoch_month);
   return BinInt::add(
-      BinInt::mul(year_diff, Z::zpos(Positive::xo(
-                                 Positive::xo(Positive::xi(Positive::xh()))))),
-      month_diff);
+      BinInt::mul(std::move(year_diff), Z::zpos(Positive::xo(Positive::xo(
+                                            Positive::xi(Positive::xh()))))),
+      std::move(month_diff));
 }
 
 __attribute__((pure)) Z EpochCellGlyphTraceCase::saros_cell(
@@ -1034,7 +1034,7 @@ __attribute__((pure)) Z EpochCellGlyphTraceCase::saros_cell(
     const EpochCellGlyphTraceCase::HistoricalEclipse &e) {
   Z months = months_from_epoch(epoch_year, e.he_year, epoch_month, e.he_month);
   return BinInt::modulo(
-      months,
+      std::move(months),
       Z::zpos(Positive::xi(Positive::xi(Positive::xi(Positive::xi(
           Positive::xi(Positive::xo(Positive::xi(Positive::xh())))))))));
 }

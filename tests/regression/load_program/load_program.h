@@ -72,8 +72,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -189,7 +190,8 @@ struct LoadProgram {
                                     12u, List<unsigned int>::cons(
                                              13u, List<unsigned int>::nil())))),
               0u, 0u, false};
-    state after = load_program(sample, 1u, List<unsigned int>::nil());
+    state after =
+        load_program(std::move(sample), 1u, List<unsigned int>::nil());
     return (ListDef::template nth<unsigned int>(0u, after.rom, 0u) == 10u &&
             (ListDef::template nth<unsigned int>(1u, after.rom, 0u) == 11u &&
              (ListDef::template nth<unsigned int>(2u, after.rom, 0u) == 12u &&
@@ -204,7 +206,7 @@ struct LoadProgram {
                                              13u, List<unsigned int>::nil())))),
               0u, 0u, false};
     state after = load_program(
-        sample, 1u,
+        std::move(sample), 1u,
         List<unsigned int>::cons(
             99u, List<unsigned int>::cons(88u, List<unsigned int>::nil())));
     return (ListDef::template nth<unsigned int>(0u, after.rom, 0u) == 10u &&
@@ -221,12 +223,12 @@ struct LoadProgram {
                                              13u, List<unsigned int>::nil())))),
               0u, 0u, false};
     state after =
-        load_program(sample, 1u,
+        load_program(std::move(sample), 1u,
                      List<unsigned int>::cons(
                          99u, List<unsigned int>::cons(
                                   88u, List<unsigned int>::cons(
                                            77u, List<unsigned int>::nil()))));
-    return after.rom.length() == 4u;
+    return std::move(after).rom.length() == 4u;
   }();
   static inline const bool test_load_program_step_preserves_wf_simple = []() {
     state_extended sample = state_extended{
@@ -242,7 +244,7 @@ struct LoadProgram {
         0u,
         false};
     state_extended after =
-        execute_wpm_ext(set_prom_params_ext(sample, 1u, 99u, true));
+        execute_wpm_ext(set_prom_params_ext(std::move(sample), 1u, 99u, true));
     return (after.regs_len == 4u &&
             (after.rom_ext.length() == 4u &&
              (after.pc < 4096u && after.stack_len <= 3u)));
@@ -255,8 +257,9 @@ struct LoadProgram {
                                     12u, List<unsigned int>::cons(
                                              13u, List<unsigned int>::nil())))),
               0u, 0u, false};
-    state after = execute_wpm(set_prom_params(sample, 1u, 99u, true));
-    return after.rom.length() == 4u;
+    state after =
+        execute_wpm(set_prom_params(std::move(sample), 1u, 99u, true));
+    return std::move(after).rom.length() == 4u;
   }();
   static inline const bool test_load_program_step_writes_at_base = []() {
     state sample =
@@ -266,8 +269,10 @@ struct LoadProgram {
                                     12u, List<unsigned int>::cons(
                                              13u, List<unsigned int>::nil())))),
               0u, 0u, false};
-    state after = execute_wpm(set_prom_params(sample, 1u, 99u, true));
-    return ListDef::template nth<unsigned int>(1u, after.rom, 0u) == 99u;
+    state after =
+        execute_wpm(set_prom_params(std::move(sample), 1u, 99u, true));
+    return ListDef::template nth<unsigned int>(1u, std::move(after).rom, 0u) ==
+           99u;
   }();
   static inline const unsigned int test_sequential_program_load = []() {
     state_simple sample = state_simple{
@@ -281,10 +286,11 @@ struct LoadProgram {
     return ListDef::template nth<unsigned int>(
         2u,
         load_program_simple(
-            sample, List<unsigned int>::cons(
-                        5u, List<unsigned int>::cons(
-                                6u, List<unsigned int>::cons(
-                                        7u, List<unsigned int>::nil()))))
+            std::move(sample),
+            List<unsigned int>::cons(
+                5u, List<unsigned int>::cons(
+                        6u, List<unsigned int>::cons(
+                                7u, List<unsigned int>::nil()))))
             .rom_,
         0u);
   }();

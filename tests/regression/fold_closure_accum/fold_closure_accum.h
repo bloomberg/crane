@@ -73,8 +73,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -153,10 +154,9 @@ struct FoldClosureAccum {
     // CREATORS
     __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(const tree &a0, unsigned int a1,
-                                           const tree &a2) {
-      return tree(Node{std::make_unique<tree>(a0), std::move(a1),
-                       std::make_unique<tree>(a2)});
+    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -210,8 +210,10 @@ struct FoldClosureAccum {
     tree t2 = tree::node(tree::leaf(), 20u, tree::leaf());
     tree t3 = tree::node(tree::leaf(), 30u, tree::leaf());
     return compose_adders(
-        List<tree>::cons(
-            t1, List<tree>::cons(t2, List<tree>::cons(t3, List<tree>::nil()))),
+        List<tree>::cons(std::move(t1),
+                         List<tree>::cons(std::move(t2),
+                                          List<tree>::cons(std::move(t3),
+                                                           List<tree>::nil()))),
         0u);
   }();
   /// Test with non-zero starting value.
@@ -221,8 +223,10 @@ struct FoldClosureAccum {
     tree t2 = tree::node(tree::leaf(), 20u, tree::leaf());
     tree t3 = tree::node(tree::leaf(), 30u, tree::leaf());
     return compose_adders(
-        List<tree>::cons(
-            t1, List<tree>::cons(t2, List<tree>::cons(t3, List<tree>::nil()))),
+        List<tree>::cons(std::move(t1),
+                         List<tree>::cons(std::move(t2),
+                                          List<tree>::cons(std::move(t3),
+                                                           List<tree>::nil()))),
         7u);
   }();
   /// Invoke the composed function twice — tests if closures survive

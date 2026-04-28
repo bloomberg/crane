@@ -109,18 +109,20 @@ public:
     return Expr(EBool{std::move(a0)});
   }
 
-  __attribute__((pure)) static Expr eadd(const Expr &a0, const Expr &a1) {
-    return Expr(EAdd{std::make_unique<Expr>(a0), std::make_unique<Expr>(a1)});
+  __attribute__((pure)) static Expr eadd(Expr a0, Expr a1) {
+    return Expr(EAdd{std::make_unique<Expr>(std::move(a0)),
+                     std::make_unique<Expr>(std::move(a1))});
   }
 
-  __attribute__((pure)) static Expr eeq(const Expr &a0, const Expr &a1) {
-    return Expr(EEq{std::make_unique<Expr>(a0), std::make_unique<Expr>(a1)});
+  __attribute__((pure)) static Expr eeq(Expr a0, Expr a1) {
+    return Expr(EEq{std::make_unique<Expr>(std::move(a0)),
+                    std::make_unique<Expr>(std::move(a1))});
   }
 
-  __attribute__((pure)) static Expr eif(Ty t, const Expr &a1, const Expr &a2,
-                                        const Expr &a3) {
-    return Expr(EIf{std::move(t), std::make_unique<Expr>(a1),
-                    std::make_unique<Expr>(a2), std::make_unique<Expr>(a3)});
+  __attribute__((pure)) static Expr eif(Ty t, Expr a1, Expr a2, Expr a3) {
+    return Expr(EIf{std::move(t), std::make_unique<Expr>(std::move(a1)),
+                    std::make_unique<Expr>(std::move(a2)),
+                    std::make_unique<Expr>(std::move(a3))});
   }
 
   // MANIPULATORS

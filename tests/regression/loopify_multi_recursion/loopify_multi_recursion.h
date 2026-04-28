@@ -96,13 +96,12 @@ struct LoopifyMultiRecursion {
       return quadtree(QLeaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static quadtree qquad(const quadtree &a0,
-                                                const quadtree &a1,
-                                                const quadtree &a2,
-                                                const quadtree &a3) {
-      return quadtree(QQuad{
-          std::make_unique<quadtree>(a0), std::make_unique<quadtree>(a1),
-          std::make_unique<quadtree>(a2), std::make_unique<quadtree>(a3)});
+    __attribute__((pure)) static quadtree qquad(quadtree a0, quadtree a1,
+                                                quadtree a2, quadtree a3) {
+      return quadtree(QQuad{std::make_unique<quadtree>(std::move(a0)),
+                            std::make_unique<quadtree>(std::move(a1)),
+                            std::make_unique<quadtree>(std::move(a2)),
+                            std::make_unique<quadtree>(std::move(a3))});
     }
 
     // MANIPULATORS

@@ -12,7 +12,7 @@ std::pair<std::optional<unsigned int>, RamInitReset::state>
 RamInitReset::pop_stack(RamInitReset::state s) {
   auto &&_sv = s.state_stack;
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-    return std::make_pair(std::optional<unsigned int>(), s);
+    return std::make_pair(std::optional<unsigned int>(), std::move(s));
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(_sv.v());

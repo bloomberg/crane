@@ -67,9 +67,9 @@ struct EvenOdd {
     // CREATORS
     __attribute__((pure)) static even_list enil() { return even_list(ENil{}); }
 
-    __attribute__((pure)) static even_list econs(unsigned int a0,
-                                                 const odd_list &a1) {
-      return even_list(ECons{std::move(a0), std::make_unique<odd_list>(a1)});
+    __attribute__((pure)) static even_list econs(unsigned int a0, odd_list a1) {
+      return even_list(
+          ECons{std::move(a0), std::make_unique<odd_list>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -122,9 +122,9 @@ struct EvenOdd {
     }
 
     // CREATORS
-    __attribute__((pure)) static odd_list ocons(unsigned int a0,
-                                                const even_list &a1) {
-      return odd_list(OCons{std::move(a0), std::make_unique<even_list>(a1)});
+    __attribute__((pure)) static odd_list ocons(unsigned int a0, even_list a1) {
+      return odd_list(
+          OCons{std::move(a0), std::make_unique<even_list>(std::move(a1))});
     }
 
     // MANIPULATORS

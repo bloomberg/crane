@@ -474,7 +474,7 @@ ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
   unsigned int carb_adj = apply_reverse_correction_twentieths(
       carb, eff_bg, params.prec_target_bg, activity_isf);
   unsigned int corr = correction_twentieths_full(
-      input.pi_now, eff_bg, params.prec_target_bg, activity_isf);
+      input.pi_now, std::move(eff_bg), params.prec_target_bg, activity_isf);
   unsigned int iob =
       total_bilinear_iob(input.pi_now, input.pi_bolus_history, params.prec_dia,
                          params.prec_insulin_type);
@@ -629,11 +629,11 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                       }
                       ValidatedPumpDeliveryTraceCase::SuspendDecision
                           suspend_decision = suspend_check_tenths_with_cob(
-                              default_config, eff_bg, iob,
+                              default_config, std::move(eff_bg), iob,
                               input.pi_carbs_g.grams_val, activity_isf,
                               tdd_capped);
-                      unsigned int suspended =
-                          apply_suspend(tdd_capped, suspend_decision);
+                      unsigned int suspended = apply_suspend(
+                          tdd_capped, std::move(suspend_decision));
                       unsigned int adult_capped = cap_twentieths(suspended);
                       unsigned int capped;
                       if (input.pi_weight_kg.has_value()) {

@@ -73,8 +73,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -98,7 +99,7 @@ struct FixFoldEscape {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      return fold_left(f, f(acc, d_a0), *(d_a1));
+      return fold_left(f, f(std::move(acc), d_a0), *(d_a1));
     }
   }
 
@@ -141,7 +142,7 @@ struct FixFoldEscape {
         collect_adders(List<unsigned int>::cons(
             100u, List<unsigned int>::cons(200u, List<unsigned int>::nil())));
     unsigned int noise = ((55u + 44u) + 33u);
-    return (apply_head(fns, 0u) + noise);
+    return (apply_head(std::move(fns), 0u) + noise);
   }();
 };
 

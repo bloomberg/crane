@@ -74,8 +74,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -88,10 +89,11 @@ public:
     std::unique_ptr<List<t_A>> _head{};
     std::unique_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
+    List<t_A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *(_loop_self);
       if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(m);
+        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
@@ -99,7 +101,10 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        _loop_self = d_a1.get();
+        const List *_next_self = d_a1.get();
+        List<t_A> _next_m = std::move(_loop_m);
+        _loop_self = std::move(_next_self);
+        _loop_m = std::move(_next_m);
         continue;
       }
     }

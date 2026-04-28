@@ -435,7 +435,7 @@ LoopifyListRelations::interleave(List<unsigned int> l1, List<unsigned int> l2) {
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l1.v())) {
-      *(_write) = std::make_unique<List<unsigned int>>(_loop_l2);
+      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -487,7 +487,7 @@ LoopifyListRelations::merge_fuel(const unsigned int &fuel,
       unsigned int fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l1.v())) {
-        *(_write) = std::make_unique<List<unsigned int>>(_loop_l2);
+        *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
         break;
       } else {
         const auto &[d_a0, d_a1] =
@@ -544,11 +544,12 @@ LoopifyListRelations::union_(const List<unsigned int> &l1,
                              List<unsigned int> l2) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
+  List<unsigned int> _loop_l2 = std::move(l2);
   List<unsigned int> _loop_l1 = l1;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l1.v())) {
-      *(_write) = std::make_unique<List<unsigned int>>(l2);
+      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -591,9 +592,12 @@ LoopifyListRelations::union_(const List<unsigned int> &l1,
               }
               return _result;
             };
-            return member(d_a0, l2);
+            return member(d_a0, _loop_l2);
           }()) {
-        _loop_l1 = d_a1_value;
+        List<unsigned int> _next_l2 = std::move(_loop_l2);
+        List<unsigned int> _next_l1 = d_a1_value;
+        _loop_l2 = std::move(_next_l2);
+        _loop_l1 = std::move(_next_l1);
         continue;
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
@@ -602,7 +606,10 @@ LoopifyListRelations::union_(const List<unsigned int> &l1,
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l1 = d_a1_value;
+        List<unsigned int> _next_l2 = std::move(_loop_l2);
+        List<unsigned int> _next_l1 = d_a1_value;
+        _loop_l2 = std::move(_next_l2);
+        _loop_l1 = std::move(_next_l1);
         continue;
       }
     }

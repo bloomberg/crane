@@ -11,6 +11,6 @@ StepsCounterUnroll::steps(const unsigned int &n, StepsCounterUnroll::state s) {
     return s;
   } else {
     unsigned int n_ = n - 1;
-    return steps(n_, step(s));
+    return steps(n_, step(std::move(s)));
   }
 }

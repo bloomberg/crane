@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
@@ -41,7 +42,7 @@ struct FixInRecord {
   static inline const unsigned int test2 = []() {
     fn_box bx = make_box(20u);
     unsigned int noise = ((((1u + 2u) + 3u) + 4u) + 5u);
-    return bx.fn(noise);
+    return std::move(bx).fn(noise);
   }();
   /// test3: Use label too (to ensure struct is alive).
   /// n=5, base=15, label=15, fn(0) = 15. label + fn(0) = 30.

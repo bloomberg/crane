@@ -361,10 +361,10 @@ struct PolyInductive {
       return ptree(PLeaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static ptree<t_A> pnode(const ptree<t_A> &a0,
-                                                  const ptree<t_A> &a1) {
-      return ptree(PNode{std::make_unique<ptree<t_A>>(a0),
-                         std::make_unique<ptree<t_A>>(a1)});
+    __attribute__((pure)) static ptree<t_A> pnode(ptree<t_A> a0,
+                                                  ptree<t_A> a1) {
+      return ptree(PNode{std::make_unique<ptree<t_A>>(std::move(a0)),
+                         std::make_unique<ptree<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS

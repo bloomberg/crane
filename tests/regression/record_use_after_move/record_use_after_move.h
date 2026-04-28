@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
@@ -31,7 +32,7 @@ struct RecordUseAfterMove {
     box b1 = clone_box(b);
     box b2 = clone_box(b);
     if (keep_box(b).enabled) {
-      if (b.enabled) {
+      if (std::move(b).enabled) {
         return b2;
       } else {
         return b1;

@@ -69,10 +69,9 @@ struct ListClosureEscape {
     // CREATORS
     __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(const tree &a0, unsigned int a1,
-                                           const tree &a2) {
-      return tree(Node{std::make_unique<tree>(a0), std::move(a1),
-                       std::make_unique<tree>(a2)});
+    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -186,8 +185,9 @@ struct ListClosureEscape {
     __attribute__((pure)) static fn_list fnil() { return fn_list(FNil{}); }
 
     __attribute__((pure)) static fn_list
-    fcons(std::function<unsigned int(unsigned int)> a0, const fn_list &a1) {
-      return fn_list(FCons{std::move(a0), std::make_unique<fn_list>(a1)});
+    fcons(std::function<unsigned int(unsigned int)> a0, fn_list a1) {
+      return fn_list(
+          FCons{std::move(a0), std::make_unique<fn_list>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -242,8 +242,8 @@ struct ListClosureEscape {
                          tree::node(tree::leaf(), 30u, tree::leaf()));
     tree t2 = tree::node(tree::node(tree::leaf(), 77u, tree::leaf()), 88u,
                          tree::node(tree::leaf(), 99u, tree::leaf()));
-    fn_list fns = build_fns(t1, t2);
-    return fns.apply_first(0u);
+    fn_list fns = build_fns(std::move(t1), std::move(t2));
+    return std::move(fns).apply_first(0u);
   }();
 };
 

@@ -84,8 +84,8 @@ struct MutualRecursion {
       return tree(Leaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static tree<t_A> node(const forest<t_A> &a0) {
-      return tree(Node{std::make_unique<forest<t_A>>(a0)});
+    __attribute__((pure)) static tree<t_A> node(forest<t_A> a0) {
+      return tree(Node{std::make_unique<forest<t_A>>(std::move(a0))});
     }
 
     // MANIPULATORS
@@ -162,10 +162,10 @@ struct MutualRecursion {
 
     __attribute__((pure)) static forest<t_A> empty() { return forest(Empty{}); }
 
-    __attribute__((pure)) static forest<t_A> trees(const tree<t_A> &a0,
-                                                   const forest<t_A> &a1) {
-      return forest(Trees{std::make_unique<tree<t_A>>(a0),
-                          std::make_unique<forest<t_A>>(a1)});
+    __attribute__((pure)) static forest<t_A> trees(tree<t_A> a0,
+                                                   forest<t_A> a1) {
+      return forest(Trees{std::make_unique<tree<t_A>>(std::move(a0)),
+                          std::make_unique<forest<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS

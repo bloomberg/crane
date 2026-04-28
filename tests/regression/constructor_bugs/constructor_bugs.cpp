@@ -39,7 +39,7 @@ ConstructorBugs::bad_complex_step(const ConstructorBugs::source_state &s1) {
 __attribute__((pure)) std::pair<bool, ConstructorBugs::packed_state>
 ConstructorBugs::bad_nested(const ConstructorBugs::source_state &s1) {
   ConstructorBugs::source_state s2 = step(s1);
-  ConstructorBugs::source_state s3 = step(s2);
+  ConstructorBugs::source_state s3 = step(std::move(s2));
   return std::make_pair(false, packed_state{s3, s3.source_a, s3.source_b});
 }
 
@@ -272,7 +272,7 @@ ConstructorBugs::tail_pair(ConstructorBugs::Inner i, const bool &b) {
   if (b) {
     return std::make_pair(i, i.inner_val);
   } else {
-    return std::make_pair(i, 0u);
+    return std::make_pair(std::move(i), 0u);
   }
 }
 
@@ -299,7 +299,7 @@ ConstructorBugs::match_both_branches(
 
 __attribute__((pure)) Sig<ConstructorBugs::Inner>
 ConstructorBugs::sigma_test(ConstructorBugs::Inner i) {
-  return Sig<ConstructorBugs::Inner>::exist(i);
+  return Sig<ConstructorBugs::Inner>::exist(std::move(i));
 }
 
 __attribute__((pure)) unsigned int
@@ -370,7 +370,7 @@ ConstructorBugs::inline_if(const bool &b, ConstructorBugs::State s) {
   if (b) {
     return std::make_pair(s, s.value_inline);
   } else {
-    return std::make_pair(s, 0u);
+    return std::make_pair(std::move(s), 0u);
   }
 }
 

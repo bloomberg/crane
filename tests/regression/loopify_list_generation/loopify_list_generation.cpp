@@ -152,7 +152,7 @@ __attribute__((pure)) List<unsigned int> LoopifyListGeneration::replicate_list(
         const unsigned int &n = d_a0.first;
         const unsigned int &x = d_a0.second;
         List<unsigned int> rep = replicate(n, x);
-        _stack.emplace_back(_Call1{rep});
+        _stack.emplace_back(_Call1{std::move(rep)});
         _stack.emplace_back(_Enter{*(d_a1)});
       }
     } else {

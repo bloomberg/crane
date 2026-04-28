@@ -73,8 +73,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -142,10 +143,9 @@ struct BinomialHeap {
     }
 
     // CREATORS
-    __attribute__((pure)) static tree node(key a0, const tree &a1,
-                                           const tree &a2) {
-      return tree(Node{std::move(a0), std::make_unique<tree>(a1),
-                       std::make_unique<tree>(a2)});
+    __attribute__((pure)) static tree node(key a0, tree a1, tree a2) {
+      return tree(Node{std::move(a0), std::make_unique<tree>(std::move(a1)),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }

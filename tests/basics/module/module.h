@@ -110,10 +110,9 @@ template <OrderedType K, BaseType V> struct MakeMap {
     // CREATORS
     __attribute__((pure)) static tree empty() { return tree(Empty{}); }
 
-    __attribute__((pure)) static tree node(const tree &a0, key a1, value a2,
-                                           const tree &a3) {
-      return tree(Node{std::make_unique<tree>(a0), std::move(a1), std::move(a2),
-                       std::make_unique<tree>(a3)});
+    __attribute__((pure)) static tree node(tree a0, key a1, value a2, tree a3) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::move(a2), std::make_unique<tree>(std::move(a3))});
     }
 
     // MANIPULATORS

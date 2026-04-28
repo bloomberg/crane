@@ -74,8 +74,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -90,7 +91,7 @@ public:
       return m;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(m));
+      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
     }
   }
 };
@@ -164,10 +165,10 @@ struct NestedInd {
       return custom_list(Cnil{});
     }
 
-    __attribute__((pure)) static custom_list<t_A>
-    ccons(t_A a0, const custom_list<t_A> &a1) {
-      return custom_list(
-          Ccons{std::move(a0), std::make_unique<custom_list<t_A>>(a1)});
+    __attribute__((pure)) static custom_list<t_A> ccons(t_A a0,
+                                                        custom_list<t_A> a1) {
+      return custom_list(Ccons{
+          std::move(a0), std::make_unique<custom_list<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -266,10 +267,10 @@ struct NestedInd {
                     : nullptr};
     }
 
-    __attribute__((pure)) static rose<t_A>
-    node(t_A a0, const custom_list<rose<t_A>> &a1) {
-      return rose(
-          Node{std::move(a0), std::make_unique<custom_list<rose<t_A>>>(a1)});
+    __attribute__((pure)) static rose<t_A> node(t_A a0,
+                                                custom_list<rose<t_A>> a1) {
+      return rose(Node{std::move(a0), std::make_unique<custom_list<rose<t_A>>>(
+                                          std::move(a1))});
     }
 
     // MANIPULATORS
@@ -393,12 +394,12 @@ struct NestedInd {
       return expr(Lit{std::move(a0)});
     }
 
-    __attribute__((pure)) static expr add(const List<expr> &a0) {
-      return expr(Add{std::make_unique<List<expr>>(a0)});
+    __attribute__((pure)) static expr add(List<expr> a0) {
+      return expr(Add{std::make_unique<List<expr>>(std::move(a0))});
     }
 
-    __attribute__((pure)) static expr mul(const List<expr> &a0) {
-      return expr(Mul{std::make_unique<List<expr>>(a0)});
+    __attribute__((pure)) static expr mul(List<expr> a0) {
+      return expr(Mul{std::make_unique<List<expr>>(std::move(a0))});
     }
 
     // MANIPULATORS

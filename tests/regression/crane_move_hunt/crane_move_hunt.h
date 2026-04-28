@@ -51,7 +51,7 @@ struct CraneMoveHunt {
     box b1 = clone_box(b);
     box b2 = clone_box(b);
     if (keep_box(b).enabled) {
-      if (b.enabled) {
+      if (std::move(b).enabled) {
         return b2;
       } else {
         return b1;
@@ -63,8 +63,8 @@ struct CraneMoveHunt {
   __attribute__((pure)) static box record_function(const box &b0);
   static inline const state state_constant = []() {
     state s1 = render_state(initial_state);
-    state s2 = resolve_state(s1);
-    return render_state(s2);
+    state s2 = resolve_state(std::move(s1));
+    return render_state(std::move(s2));
   }();
   __attribute__((pure)) static state state_function(const state &s0);
   __attribute__((pure)) static state match_reuse(const state &s0);

@@ -85,10 +85,10 @@ public:
 
   __attribute__((pure)) static Tree<t_A> leaf() { return Tree(Leaf{}); }
 
-  __attribute__((pure)) static Tree<t_A> node(const Tree<t_A> &a0, t_A a1,
-                                              const Tree<t_A> &a2) {
-    return Tree(Node{std::make_unique<Tree<t_A>>(a0), std::move(a1),
-                     std::make_unique<Tree<t_A>>(a2)});
+  __attribute__((pure)) static Tree<t_A> node(Tree<t_A> a0, t_A a1,
+                                              Tree<t_A> a2) {
+    return Tree(Node{std::make_unique<Tree<t_A>>(std::move(a0)), std::move(a1),
+                     std::make_unique<Tree<t_A>>(std::move(a2))});
   }
 
   // MANIPULATORS

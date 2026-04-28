@@ -79,8 +79,9 @@ struct LoopifyTmc {
 
     __attribute__((pure)) static list<t_A> nil() { return list(Nil{}); }
 
-    __attribute__((pure)) static list<t_A> cons(t_A a0, const list<t_A> &a1) {
-      return list(Cons{std::move(a0), std::make_unique<list<t_A>>(a1)});
+    __attribute__((pure)) static list<t_A> cons(t_A a0, list<t_A> a1) {
+      return list(
+          Cons{std::move(a0), std::make_unique<list<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -169,10 +170,11 @@ struct LoopifyTmc {
   __attribute__((pure)) static list<T1> app(const list<T1> &l1, list<T1> l2) {
     std::unique_ptr<list<T1>> _head{};
     std::unique_ptr<list<T1>> *_write = &_head;
+    list<T1> _loop_l2 = std::move(l2);
     list<T1> _loop_l1 = l1;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1.v())) {
-        *(_write) = std::make_unique<list<T1>>(l2);
+        *(_write) = std::make_unique<list<T1>>(std::move(_loop_l2));
         break;
       } else {
         const auto &[d_a0, d_a1] =
@@ -181,7 +183,10 @@ struct LoopifyTmc {
             std::make_unique<list<T1>>(typename list<T1>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename list<T1>::Cons>((*_write)->v_mut()).d_a1;
-        _loop_l1 = *(d_a1);
+        list<T1> _next_l2 = std::move(_loop_l2);
+        list<T1> _next_l1 = *(d_a1);
+        _loop_l2 = std::move(_next_l2);
+        _loop_l1 = std::move(_next_l1);
         continue;
       }
     }

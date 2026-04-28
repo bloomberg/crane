@@ -64,8 +64,8 @@ public:
   // CREATORS
   __attribute__((pure)) static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(const Nat &a0) {
-    return Nat(S{std::make_unique<Nat>(a0)});
+  __attribute__((pure)) static Nat s(Nat a0) {
+    return Nat(S{std::make_unique<Nat>(std::move(a0))});
   }
 
   // MANIPULATORS
@@ -80,7 +80,7 @@ public:
       return m;
     } else {
       const auto &[d_a0] = std::get<typename Nat::S>(_sv.v());
-      return Nat::s((*(d_a0)).add(m));
+      return Nat::s((*(d_a0)).add(std::move(m)));
     }
   }
 };
@@ -180,8 +180,8 @@ struct RocqBug13581 {
 
     __attribute__((pure)) static I<t_T> c() { return I(C{}); }
 
-    __attribute__((pure)) static I<t_T> d(const J<t_T> &a0) {
-      return I(D{std::make_unique<J<t_T>>(a0)});
+    __attribute__((pure)) static I<t_T> d(J<t_T> a0) {
+      return I(D{std::make_unique<J<t_T>>(std::move(a0))});
     }
 
     // MANIPULATORS
@@ -238,8 +238,8 @@ struct RocqBug13581 {
       d_v_ = E{d_a0 ? std::make_unique<RocqBug13581::I<t_T>>(*d_a0) : nullptr};
     }
 
-    __attribute__((pure)) static J<t_T> e(const I<t_T> &a0) {
-      return J(E{std::make_unique<I<t_T>>(a0)});
+    __attribute__((pure)) static J<t_T> e(I<t_T> a0) {
+      return J(E{std::make_unique<I<t_T>>(std::move(a0))});
     }
 
     // MANIPULATORS

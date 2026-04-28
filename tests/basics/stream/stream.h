@@ -62,8 +62,8 @@ public:
   // CREATORS
   __attribute__((pure)) static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(const Nat &a0) {
-    return Nat(S{std::make_unique<Nat>(a0)});
+  __attribute__((pure)) static Nat s(Nat a0) {
+    return Nat(S{std::make_unique<Nat>(std::move(a0))});
   }
 
   // MANIPULATORS
@@ -135,8 +135,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -167,57 +168,55 @@ public:
   explicit Stream(std::function<variant_t()> _thunk)
       : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-  static std::shared_ptr<Stream<t_A>> scons(t_A a0,
-                                            std::shared_ptr<Stream<t_A>> a1) {
-    return std::make_shared<Stream<t_A>>(Scons{std::move(a0), std::move(a1)});
+  __attribute__((pure)) static Stream<t_A> scons(t_A a0,
+                                                 const Stream<t_A> &a1) {
+    return Stream(Scons{std::move(a0), std::make_shared<Stream<t_A>>(a1)});
   }
 
-  static std::shared_ptr<Stream<t_A>>
-  lazy_(std::function<std::shared_ptr<Stream<t_A>>()> thunk) {
-    return std::make_shared<Stream<t_A>>(
-        std::function<variant_t()>([=]() mutable -> variant_t {
-          std::shared_ptr<Stream<t_A>> _tmp = thunk();
-          return _tmp->v();
-        }));
+  __attribute__((pure)) static Stream<t_A>
+  lazy_(std::function<Stream<t_A>()> thunk) {
+    return Stream<t_A>(std::function<variant_t()>([=]() mutable -> variant_t {
+      Stream<t_A> _tmp = thunk();
+      return _tmp.v();
+    }));
   }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_lazyV_.force(); }
 
-  std::shared_ptr<Stream<t_A>>
-  interleave(const std::shared_ptr<Stream<t_A>> &sb) const {
+  __attribute__((pure)) Stream<t_A> interleave(const Stream<t_A> sb) const {
     const auto &[d_a0, d_a1] = std::get<typename Stream<t_A>::Scons>(this->v());
-    return Stream<t_A>::lazy_([=]() mutable -> std::shared_ptr<Stream<t_A>> {
-      return Stream<t_A>::scons(d_a0, sb->interleave(d_a1));
+    return Stream<t_A>::lazy_([=]() mutable -> Stream<t_A> {
+      return Stream<t_A>::scons(d_a0, sb.interleave(*(d_a1)));
     });
   }
 
   template <typename T1>
-  __attribute__((pure)) static List<T1>
-  take(const Nat &n, const std::shared_ptr<Stream<T1>> &s) {
+  __attribute__((pure)) static List<T1> take(const Nat &n, const Stream<T1> s) {
     if (std::holds_alternative<typename Nat::O>(n.v())) {
       return List<T1>::nil();
     } else {
       const auto &[d_a0] = std::get<typename Nat::S>(n.v());
       const auto &[d_a00, d_a10] = std::get<typename Stream<T1>::Scons>(s->v());
-      return List<T1>::cons(d_a00, take<T1>(*(d_a0), d_a10));
+      return List<T1>::cons(d_a00, take<T1>(*(d_a0), *(d_a10)));
     }
   }
 
-  template <typename T1> static std::shared_ptr<Stream<T1>> repeat(const T1 x) {
-    return Stream<T1>::lazy_([=]() mutable -> std::shared_ptr<Stream<T1>> {
+  template <typename T1>
+  __attribute__((pure)) static Stream<T1> repeat(const T1 x) {
+    return Stream<T1>::lazy_([=]() mutable -> Stream<T1> {
       return Stream<T1>::scons(x, repeat<T1>(x));
     });
   }
 
-  static std::shared_ptr<Stream<Nat>> nats_from(Nat n) {
-    return Stream<Nat>::lazy_([=]() mutable -> std::shared_ptr<Stream<Nat>> {
+  __attribute__((pure)) static Stream<Nat> nats_from(Nat n) {
+    return Stream<Nat>::lazy_([=]() mutable -> Stream<Nat> {
       return Stream<Nat>::scons(n, nats_from(Nat::s(n)));
     });
   }
 
-  static const std::shared_ptr<Stream<Nat>> &ones() {
-    static const std::shared_ptr<Stream<Nat>> v = repeat<Nat>(Nat::s(Nat::o()));
+  static const Stream<Nat> &ones() {
+    static const Stream<Nat> v = repeat<Nat>(Nat::s(Nat::o()));
     return v;
   }
 
@@ -237,7 +236,7 @@ public:
     static const List<Nat> v = take<Nat>(
         Nat::s(
             Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
-        nats_from(Nat::o())->interleave(repeat<Nat>(
+        nats_from(Nat::o()).interleave(repeat<Nat>(
             Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))));
     return v;
   }

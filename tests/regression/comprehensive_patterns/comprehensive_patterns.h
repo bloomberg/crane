@@ -75,8 +75,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -539,7 +540,7 @@ struct ComprehensivePatterns {
 
   template <MapsTo<unsigned int, NC> F0>
   __attribute__((pure)) static unsigned int apply(F0 &&f, NC _x0) {
-    return f(_x0);
+    return f(std::move(_x0));
   }
 
   __attribute__((pure)) static unsigned int hof_test(const NC &r);
@@ -752,10 +753,9 @@ struct ComprehensivePatterns {
       return Tree(Leaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static Tree node(const Tree &a0, unsigned int a1,
-                                           const Tree &a2) {
-      return Tree(Node{std::make_unique<Tree>(a0), std::move(a1),
-                       std::make_unique<Tree>(a2)});
+    __attribute__((pure)) static Tree node(Tree a0, unsigned int a1, Tree a2) {
+      return Tree(Node{std::make_unique<Tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<Tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -766,7 +766,7 @@ struct ComprehensivePatterns {
 
     __attribute__((pure)) Tree nested_reuse() const {
       Tree t2 = (*(this)).transform_tree();
-      return t2.transform_tree();
+      return std::move(t2).transform_tree();
     }
 
     __attribute__((pure)) Tree flip_tree() const {

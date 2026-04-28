@@ -551,7 +551,7 @@ LoopifyCombinatorics::insert_everywhere(unsigned int x, List<unsigned int> l) {
         return _result;
       };
       _result = List<List<unsigned int>>::cons(List<unsigned int>::cons(x, l),
-                                               prepend_y(rest));
+                                               prepend_y(std::move(rest)));
     }
   }
   return _result;
@@ -675,9 +675,9 @@ LoopifyCombinatorics::dedup_fuel(const unsigned int &fuel,
       unsigned int d_a0 = _f._s0;
       List<unsigned int> rest = _result;
       if (elem(d_a0, rest)) {
-        _result = rest;
+        _result = std::move(rest);
       } else {
-        _result = List<unsigned int>::cons(d_a0, rest);
+        _result = List<unsigned int>::cons(d_a0, std::move(rest));
       }
     }
   }

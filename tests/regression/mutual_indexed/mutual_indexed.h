@@ -70,9 +70,9 @@ struct MutualIndexed {
     __attribute__((pure)) static EvenTree eleaf() { return EvenTree(ELeaf{}); }
 
     __attribute__((pure)) static EvenTree enode(unsigned int n, unsigned int a1,
-                                                const OddTree &a2) {
-      return EvenTree(
-          ENode{std::move(n), std::move(a1), std::make_unique<OddTree>(a2)});
+                                                OddTree a2) {
+      return EvenTree(ENode{std::move(n), std::move(a1),
+                            std::make_unique<OddTree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -128,9 +128,9 @@ struct MutualIndexed {
 
     // CREATORS
     __attribute__((pure)) static OddTree onode(unsigned int n, unsigned int a1,
-                                               const EvenTree &a2) {
-      return OddTree(
-          ONode{std::move(n), std::move(a1), std::make_unique<EvenTree>(a2)});
+                                               EvenTree a2) {
+      return OddTree(ONode{std::move(n), std::move(a1),
+                           std::make_unique<EvenTree>(std::move(a2))});
     }
 
     // MANIPULATORS

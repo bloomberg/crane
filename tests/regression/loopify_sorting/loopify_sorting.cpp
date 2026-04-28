@@ -87,7 +87,7 @@ LoopifySorting::merge_fuel(const unsigned int &fuel, List<unsigned int> l1,
       unsigned int f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l1.v())) {
-        *(_write) = std::make_unique<List<unsigned int>>(_loop_l2);
+        *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
         break;
       } else {
         const auto &[d_a0, d_a1] =
@@ -168,7 +168,7 @@ LoopifySorting::merge_sort_fuel(const unsigned int &fuel,
       List<unsigned int> l = _f.l;
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = l;
+        _result = std::move(l);
       } else {
         unsigned int f = fuel - 1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
@@ -285,7 +285,7 @@ LoopifySorting::quicksort_fuel(const unsigned int &fuel, List<unsigned int> l) {
       List<unsigned int> l = _f.l;
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = l;
+        _result = std::move(l);
       } else {
         unsigned int f = fuel - 1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {

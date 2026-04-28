@@ -76,9 +76,9 @@ struct DeepApp {
 
     __attribute__((pure)) static mylist<t_A> mynil() { return mylist(Mynil{}); }
 
-    __attribute__((pure)) static mylist<t_A> mycons(t_A a0,
-                                                    const mylist<t_A> &a1) {
-      return mylist(Mycons{std::move(a0), std::make_unique<mylist<t_A>>(a1)});
+    __attribute__((pure)) static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+      return mylist(
+          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -176,10 +176,11 @@ struct DeepApp {
                                               mylist<T1> l2) {
     std::unique_ptr<mylist<T1>> _head{};
     std::unique_ptr<mylist<T1>> *_write = &_head;
+    mylist<T1> _loop_l2 = std::move(l2);
     mylist<T1> _loop_l1 = l1;
     while (true) {
       if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l1.v())) {
-        *(_write) = std::make_unique<mylist<T1>>(l2);
+        *(_write) = std::make_unique<mylist<T1>>(std::move(_loop_l2));
         break;
       } else {
         const auto &[d_a0, d_a1] =
@@ -189,7 +190,10 @@ struct DeepApp {
         *(_write) = std::move(_cell);
         _write =
             &std::get<typename mylist<T1>::Mycons>((*_write)->v_mut()).d_a1;
-        _loop_l1 = *(d_a1);
+        mylist<T1> _next_l2 = std::move(_loop_l2);
+        mylist<T1> _next_l1 = *(d_a1);
+        _loop_l2 = std::move(_next_l2);
+        _loop_l1 = std::move(_next_l1);
         continue;
       }
     }

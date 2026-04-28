@@ -85,9 +85,9 @@ struct AccumClosureEscape {
 
     __attribute__((pure)) static mylist<t_A> mynil() { return mylist(Mynil{}); }
 
-    __attribute__((pure)) static mylist<t_A> mycons(t_A a0,
-                                                    const mylist<t_A> &a1) {
-      return mylist(Mycons{std::move(a0), std::make_unique<mylist<t_A>>(a1)});
+    __attribute__((pure)) static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+      return mylist(
+          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -103,7 +103,8 @@ struct AccumClosureEscape {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<t_A>::Mycons>(_sv.v());
-        return mylist<t_A>::mycons(d_a0, (*(d_a1)).mylist_append(l2));
+        return mylist<t_A>::mycons(d_a0,
+                                   (*(d_a1)).mylist_append(std::move(l2)));
       }
     }
 
@@ -190,10 +191,9 @@ struct AccumClosureEscape {
     // CREATORS
     __attribute__((pure)) static tree tleaf() { return tree(TLeaf{}); }
 
-    __attribute__((pure)) static tree tnode(const tree &a0, unsigned int a1,
-                                            const tree &a2) {
-      return tree(TNode{std::make_unique<tree>(a0), std::move(a1),
-                        std::make_unique<tree>(a2)});
+    __attribute__((pure)) static tree tnode(tree a0, unsigned int a1, tree a2) {
+      return tree(TNode{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                        std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -286,7 +286,7 @@ struct AccumClosureEscape {
                      20u, mylist<unsigned int>::mycons(
                               30u, mylist<unsigned int>::mynil()))),
         mylist<std::function<unsigned int(unsigned int)>>::mynil());
-    return apply_first(fns, 5u);
+    return apply_first(std::move(fns), 5u);
   }();
   /// test2: apply all closures: (30+5) + (20+5) + (10+5) = 35+25+15 = 75
   static inline const unsigned int test2 = []() {
@@ -296,7 +296,7 @@ struct AccumClosureEscape {
                      20u, mylist<unsigned int>::mycons(
                               30u, mylist<unsigned int>::mynil()))),
         mylist<std::function<unsigned int(unsigned int)>>::mynil());
-    return apply_all_sum(fns, 5u);
+    return apply_all_sum(std::move(fns), 5u);
   }();
 
   /// COMPOSE CLOSURES: Each step builds a composed function.
@@ -305,7 +305,7 @@ struct AccumClosureEscape {
   compose_from_list(const mylist<unsigned int> &l,
                     const std::function<unsigned int(unsigned int)> acc,
                     unsigned int _x0) {
-    return [&]() -> std::function<unsigned int(unsigned int)> {
+    return [=]() mutable -> std::function<unsigned int(unsigned int)> {
       if (std::holds_alternative<typename mylist<unsigned int>::Mynil>(l.v())) {
         return acc;
       } else {
@@ -338,14 +338,15 @@ struct AccumClosureEscape {
   static inline const unsigned int test4 = []() {
     tree t = tree::tnode(tree::tnode(tree::tleaf(), 10u, tree::tleaf()), 20u,
                          tree::tnode(tree::tleaf(), 30u, tree::tleaf()));
-    return apply_all_sum(t.tree_to_adders(), 5u);
+    return apply_all_sum(std::move(t).tree_to_adders(), 5u);
   }();
   /// Store a closure and then clobber the stack before using it.
   static inline const unsigned int test5 = []() {
     tree t = tree::tnode(tree::tnode(tree::tleaf(), 42u, tree::tleaf()), 100u,
                          tree::tleaf());
-    mylist<std::function<unsigned int(unsigned int)>> fns = t.tree_to_adders();
-    return apply_first(fns, 0u);
+    mylist<std::function<unsigned int(unsigned int)>> fns =
+        std::move(t).tree_to_adders();
+    return apply_first(std::move(fns), 0u);
   }();
 };
 

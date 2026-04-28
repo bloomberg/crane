@@ -18,6 +18,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <iostream>
+#include <pthread.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -49,12 +50,28 @@ Tree build_deep_tree(unsigned int depth) {
 // Run test_fn in a forked subprocess. Returns true if it exits 0.
 // This isolates stack overflow crashes: if test_fn overflows, the child
 // gets SIGSEGV but the parent survives and reports a clean failure.
+// Run test_fn in a forked subprocess on a thread with a fixed 8 MB stack.
+// Using a new pthread guarantees the stack size regardless of RLIMIT_STACK
+// inherited from the parent (e.g. the OCaml test runner raises it to 64 MB).
+static void *run_in_thread(void *arg) {
+  void (*test_fn)() = reinterpret_cast<void (*)(void)>(arg);
+  test_fn();
+  _exit(0);
+}
+
 bool survives(void (*test_fn)()) {
   pid_t pid = fork();
   if (pid == 0) {
     alarm(10);
-    test_fn();
-    _exit(0);
+    pthread_t thr;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setstacksize(&attr, 8 * 1024 * 1024);
+    pthread_create(&thr, &attr, run_in_thread,
+                   reinterpret_cast<void *>(test_fn));
+    pthread_attr_destroy(&attr);
+    pthread_join(thr, nullptr);
+    _exit(0); // reached only if test_fn returns (should _exit itself)
   }
   int status;
   waitpid(pid, &status, 0);

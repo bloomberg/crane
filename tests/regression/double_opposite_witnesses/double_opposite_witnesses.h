@@ -213,7 +213,8 @@ struct DoubleOppositeWitnessesCase {
 
     static std::any compose(unsigned int, unsigned int, unsigned int,
                             std::any f, std::any g) {
-      return (std::any_cast<unsigned int>(f) + std::any_cast<unsigned int>(g));
+      return (std::any_cast<unsigned int>(std::move(f)) +
+              std::any_cast<unsigned int>(std::move(g)));
     }
   };
 
@@ -225,7 +226,7 @@ struct DoubleOppositeWitnessesCase {
 
     static Obj zero_object() { return 0u; }
 
-    static Obj suspension(unsigned int x) { return (x + 1); }
+    static Obj suspension(unsigned int x) { return (std::move(x) + 1); }
   };
 
   static_assert(PreStableCategory<toy_prestable>);

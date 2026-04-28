@@ -69,10 +69,9 @@ struct MoveSafety {
     // CREATORS
     __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(const tree &a0, unsigned int a1,
-                                           const tree &a2) {
-      return tree(Node{std::make_unique<tree>(a0), std::move(a1),
-                       std::make_unique<tree>(a2)});
+    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -83,12 +82,12 @@ struct MoveSafety {
 
     /// TEST 4: Partial application followed by identity function
     /// that takes by value (returns its argument).
-    __attribute__((pure)) tree tree_id() const { return *(this); }
+    __attribute__((pure)) tree tree_id() const { return std::move(*(this)); }
 
     /// A function that stores its tree argument inside a constructor.
     /// This causes the parameter to be passed by value (it "escapes").
     __attribute__((pure)) tree wrap_tree() const {
-      return tree::node(*(this), 0u, tree::leaf());
+      return tree::node(std::move(*(this)), 0u, tree::leaf());
     }
 
     __attribute__((pure)) unsigned int sum_values(unsigned int x) const {
@@ -306,7 +305,7 @@ struct MoveSafety {
   static inline const unsigned int bug_partial_then_wrap = []() {
     tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                         tree::node(tree::leaf(), 30u, tree::leaf()));
-    return t.sum_values(99u);
+    return std::move(t).sum_values(99u);
   }();
   /// TEST 2: Store partial application in a Box.
   /// If the eta-expanded lambda uses & capture,
@@ -316,8 +315,8 @@ struct MoveSafety {
   static inline const unsigned int bug_box_escape = []() {
     tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                         tree::node(tree::leaf(), 30u, tree::leaf()));
-    fn_box b = make_box(t);
-    return b.apply_box(99u);
+    fn_box b = make_box(std::move(t));
+    return std::move(b).apply_box(99u);
   }();
   /// TEST 3: Two partial applications of same variable.
   /// Second one should not move t.
@@ -330,7 +329,9 @@ struct MoveSafety {
         return t.sum_values(_x0);
       };
       std::function<unsigned int(unsigned int)> g =
-          [&](unsigned int _x0) -> unsigned int { return t.sum_values(_x0); };
+          [&](unsigned int _x0) -> unsigned int {
+        return std::move(t).sum_values(_x0);
+      };
       return (f(1u) + g(2u));
     }();
   }();
@@ -342,7 +343,7 @@ struct MoveSafety {
           [=](unsigned int _x0) mutable -> unsigned int {
         return t.sum_values(_x0);
       };
-      tree t2 = t.tree_id();
+      tree t2 = std::move(t).tree_id();
       if (std::holds_alternative<typename tree::Leaf>(t2.v())) {
         return f(0u);
       } else {

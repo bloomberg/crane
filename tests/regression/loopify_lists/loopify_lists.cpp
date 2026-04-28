@@ -1095,7 +1095,8 @@ LoopifyLists::interleave(LoopifyLists::list<unsigned int> l1,
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<unsigned int>::Nil>(
             _loop_l1.v())) {
-      *(_write) = std::make_unique<LoopifyLists::list<unsigned int>>(_loop_l2);
+      *(_write) = std::make_unique<LoopifyLists::list<unsigned int>>(
+          std::move(_loop_l2));
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -1221,7 +1222,7 @@ LoopifyLists::rev_helper(LoopifyLists::list<unsigned int> acc,
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<unsigned int>::Nil>(
             _loop_l.v())) {
-      _result = _loop_acc;
+      _result = std::move(_loop_acc);
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -1229,7 +1230,7 @@ LoopifyLists::rev_helper(LoopifyLists::list<unsigned int> acc,
               _loop_l.v());
       LoopifyLists::list<unsigned int> _next_l = *(d_a1);
       LoopifyLists::list<unsigned int> _next_acc =
-          list<unsigned int>::cons(d_a0, _loop_acc);
+          list<unsigned int>::cons(d_a0, std::move(_loop_acc));
       _loop_l = std::move(_next_l);
       _loop_acc = std::move(_next_acc);
     }
@@ -1284,11 +1285,13 @@ LoopifyLists::app_helper(const LoopifyLists::list<unsigned int> &l1,
                          LoopifyLists::list<unsigned int> l2) {
   std::unique_ptr<LoopifyLists::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyLists::list<unsigned int>> *_write = &_head;
+  LoopifyLists::list<unsigned int> _loop_l2 = std::move(l2);
   LoopifyLists::list<unsigned int> _loop_l1 = l1;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<unsigned int>::Nil>(
             _loop_l1.v())) {
-      *(_write) = std::make_unique<LoopifyLists::list<unsigned int>>(l2);
+      *(_write) = std::make_unique<LoopifyLists::list<unsigned int>>(
+          std::move(_loop_l2));
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -1299,7 +1302,10 @@ LoopifyLists::app_helper(const LoopifyLists::list<unsigned int> &l1,
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      _loop_l1 = *(d_a1);
+      LoopifyLists::list<unsigned int> _next_l2 = std::move(_loop_l2);
+      LoopifyLists::list<unsigned int> _next_l1 = *(d_a1);
+      _loop_l2 = std::move(_next_l2);
+      _loop_l1 = std::move(_next_l1);
       continue;
     }
   }
@@ -1311,6 +1317,7 @@ __attribute__((pure)) LoopifyLists::list<unsigned int>
 LoopifyLists::double_append(const LoopifyLists::list<unsigned int> &l1,
                             LoopifyLists::list<unsigned int> l2) {
   struct _Enter {
+    LoopifyLists::list<unsigned int> l2;
     const LoopifyLists::list<unsigned int> l1;
   };
 
@@ -1322,21 +1329,22 @@ LoopifyLists::double_append(const LoopifyLists::list<unsigned int> &l1,
   LoopifyLists::list<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l1});
+  _stack.emplace_back(_Enter{l2, l1});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
+      LoopifyLists::list<unsigned int> l2 = _f.l2;
       const LoopifyLists::list<unsigned int> l1 = _f.l1;
       if (std::holds_alternative<
               typename LoopifyLists::list<unsigned int>::Nil>(l1.v())) {
-        _result = l2;
+        _result = std::move(l2);
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(l1.v());
         _stack.emplace_back(_Call1{d_a0});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{std::move(l2), *(d_a1)});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -1787,12 +1795,12 @@ LoopifyLists::rotate_left_fuel(const unsigned int &fuel, const unsigned int &n,
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = _loop_l;
+      _result = std::move(_loop_l);
       break;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_n == 0u) {
-        _result = _loop_l;
+        _result = std::move(_loop_l);
         break;
       } else {
         if (std::holds_alternative<

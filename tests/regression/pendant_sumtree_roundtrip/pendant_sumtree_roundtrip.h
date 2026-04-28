@@ -75,8 +75,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil0() { return List(Nil0{}); }
 
-  __attribute__((pure)) static List<t_A> cons0(t_A a0, const List<t_A> &a1) {
-    return List(Cons0{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons0(t_A a0, List<t_A> a1) {
+    return List(
+        Cons0{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -145,7 +146,7 @@ public:
       return m;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(_sv.v());
-      return List<t_A>::cons0(d_a0, (*(d_a1)).app(m));
+      return List<t_A>::cons0(d_a0, (*(d_a1)).app(std::move(m)));
     }
   }
 };
@@ -329,9 +330,9 @@ public:
 
   __attribute__((pure)) static T0<t_A> nil() { return T0(Nil{}); }
 
-  __attribute__((pure)) static T0<t_A> cons(t_A h, unsigned int n,
-                                            const T0<t_A> &a2) {
-    return T0(Cons{std::move(h), std::move(n), std::make_unique<T0<t_A>>(a2)});
+  __attribute__((pure)) static T0<t_A> cons(t_A h, unsigned int n, T0<t_A> a2) {
+    return T0(Cons{std::move(h), std::move(n),
+                   std::make_unique<T0<t_A>>(std::move(a2))});
   }
 
   // MANIPULATORS
@@ -397,8 +398,8 @@ public:
     return T(F1{std::move(n)});
   }
 
-  __attribute__((pure)) static T fs(unsigned int n, const T &a1) {
-    return T(FS{std::move(n), std::make_unique<T>(a1)});
+  __attribute__((pure)) static T fs(unsigned int n, T a1) {
+    return T(FS{std::move(n), std::make_unique<T>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -667,9 +668,9 @@ struct PendantSumtreeRoundtripCase {
     }
 
     __attribute__((pure)) static SumTree sumnode(CertifiedPendant a0,
-                                                 const List<SumTree> &a1) {
-      return SumTree(
-          SumNode{std::move(a0), std::make_unique<List<SumTree>>(a1)});
+                                                 List<SumTree> a1) {
+      return SumTree(SumNode{std::move(a0),
+                             std::make_unique<List<SumTree>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -829,7 +830,7 @@ __attribute__((pure)) List<T1> Vector::to_list(const unsigned int &n,
       return b;
     } else {
       const auto &[d_h, d_n, d_a2] = std::get<typename T0<T1>::Cons>(v0.v());
-      return List<T1>::cons0(d_h, fold_right_fix(d_n, *(d_a2), b));
+      return List<T1>::cons0(d_h, fold_right_fix(d_n, *(d_a2), std::move(b)));
     }
   };
   return fold_right_fix(n, v, List<T1>::nil0());

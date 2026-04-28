@@ -68,10 +68,9 @@ struct ReuseMoveShadow {
     }
 
     // CREATORS
-    __attribute__((pure)) static tree node(unsigned int a0, const tree &a1,
-                                           const tree &a2) {
-      return tree(Node{std::move(a0), std::make_unique<tree>(a1),
-                       std::make_unique<tree>(a2)});
+    __attribute__((pure)) static tree node(unsigned int a0, tree a1, tree a2) {
+      return tree(Node{std::move(a0), std::make_unique<tree>(std::move(a1)),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }

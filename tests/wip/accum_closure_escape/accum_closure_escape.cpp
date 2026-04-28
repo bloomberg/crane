@@ -21,7 +21,8 @@ AccumClosureEscape::build_adders(
     return build_adders(
         d_a1_value,
         mylist<std::function<unsigned int(unsigned int)>>::mycons(
-            [=](const unsigned int &x) mutable { return (d_a0 + x); }, acc));
+            [=](const unsigned int &x) mutable { return (d_a0 + x); },
+            std::move(acc)));
   }
 }
 

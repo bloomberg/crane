@@ -109,9 +109,12 @@ Levenshtein::levenshtein_chain(const String &s, String _x0) {
           Levenshtein::chain r3_ =
               d_a14.aux_update(s, t, d_a0, *(d_a1), d_a00, *(d_a10), d_x4);
           return min3_app<SigT<Nat, Levenshtein::chain>>(
-              SigT<Nat, Levenshtein::chain>::existt(Nat::s(d_x2), r1_),
-              SigT<Nat, Levenshtein::chain>::existt(Nat::s(d_x3), r2_),
-              SigT<Nat, Levenshtein::chain>::existt(Nat::s(d_x4), r3_),
+              SigT<Nat, Levenshtein::chain>::existt(Nat::s(d_x2),
+                                                    std::move(r1_)),
+              SigT<Nat, Levenshtein::chain>::existt(Nat::s(d_x3),
+                                                    std::move(r2_)),
+              SigT<Nat, Levenshtein::chain>::existt(Nat::s(d_x4),
+                                                    std::move(r3_)),
               [](const auto &_x) { return _x.projT1(); });
         }
         default:

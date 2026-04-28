@@ -80,10 +80,11 @@ struct DeepMap {
 
     __attribute__((pure)) static tree<t_A> leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree<t_A> node(const tree<t_A> &a0, t_A a1,
-                                                const tree<t_A> &a2) {
-      return tree(Node{std::make_unique<tree<t_A>>(a0), std::move(a1),
-                       std::make_unique<tree<t_A>>(a2)});
+    __attribute__((pure)) static tree<t_A> node(tree<t_A> a0, t_A a1,
+                                                tree<t_A> a2) {
+      return tree(Node{std::make_unique<tree<t_A>>(std::move(a0)),
+                       std::move(a1),
+                       std::make_unique<tree<t_A>>(std::move(a2))});
     }
 
     // MANIPULATORS

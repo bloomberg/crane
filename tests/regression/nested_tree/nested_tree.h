@@ -61,8 +61,8 @@ public:
   // CREATORS
   __attribute__((pure)) static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(const Nat &a0) {
-    return Nat(S{std::make_unique<Nat>(a0)});
+  __attribute__((pure)) static Nat s(Nat a0) {
+    return Nat(S{std::make_unique<Nat>(std::move(a0))});
   }
 
   // MANIPULATORS
@@ -134,8 +134,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -150,7 +151,7 @@ public:
       return m;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(m));
+      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
     }
   }
 };
@@ -236,9 +237,8 @@ struct NestedTree {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree<T2>::Node>(t.v());
-      return std::any_cast<T1>(f0(
-          d_a0, NestedTree::tree<std::pair<T2, T2>>(d_a1),
-          tree_rect<T1, T2>(f, f0, NestedTree::tree<std::pair<T2, T2>>(d_a1))));
+      return std::any_cast<T1>(
+          f0(d_a0, *(d_a1), tree_rect<T1, T2>(f, f0, *(d_a1))));
     }
   }
 
@@ -248,9 +248,8 @@ struct NestedTree {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree<T2>::Node>(t.v());
-      return std::any_cast<T1>(f0(
-          d_a0, NestedTree::tree<std::pair<T2, T2>>(d_a1),
-          tree_rec<T1, T2>(f, f0, NestedTree::tree<std::pair<T2, T2>>(d_a1))));
+      return std::any_cast<T1>(
+          f0(d_a0, *(d_a1), tree_rec<T1, T2>(f, f0, *(d_a1))));
     }
   }
 
@@ -302,7 +301,7 @@ _flatten_tree_go(F0 &&f, const NestedTree::template tree<T1> t0) {
                      [=](std::pair<T1, T1> _x0) mutable -> List<T2> {
                        return NestedTree::template lift<T1, T2>(f, _x0);
                      },
-                     NestedTree::tree<std::pair<T1, T1>>(d_a1)));
+                     *(d_a1)));
   }
 }
 

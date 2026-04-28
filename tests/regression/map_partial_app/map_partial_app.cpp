@@ -14,7 +14,7 @@ MapPartialApp::tree_sum(const MapPartialApp::tree &t) {
 /// wrap: takes tree and nat, builds Node with leaves.
 __attribute__((pure)) MapPartialApp::tree
 MapPartialApp::wrap(MapPartialApp::tree t, unsigned int v) {
-  return tree::node(t, v, tree::leaf());
+  return tree::node(std::move(t), v, tree::leaf());
 }
 
 /// Sum a list of nats.

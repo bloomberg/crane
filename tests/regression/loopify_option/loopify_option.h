@@ -77,8 +77,9 @@ struct LoopifyOption {
 
     __attribute__((pure)) static list<t_A> nil() { return list(Nil{}); }
 
-    __attribute__((pure)) static list<t_A> cons(t_A a0, const list<t_A> &a1) {
-      return list(Cons{std::move(a0), std::make_unique<list<t_A>>(a1)});
+    __attribute__((pure)) static list<t_A> cons(t_A a0, list<t_A> a1) {
+      return list(
+          Cons{std::move(a0), std::make_unique<list<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS

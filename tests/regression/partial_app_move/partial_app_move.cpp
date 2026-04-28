@@ -34,7 +34,7 @@ PartialAppMove::sum_values(const PartialAppMove::tree &t, unsigned int x) {
 /// If escape analysis adds std::move(t) here, the move is REAL.
 __attribute__((pure)) PartialAppMove::tree
 PartialAppMove::wrap(PartialAppMove::tree t) {
-  return tree::node(t, 0u, tree::leaf());
+  return tree::node(std::move(t), 0u, tree::leaf());
 }
 
 /// BUG TRIGGER: partial application creates a & lambda capturing t,
@@ -46,7 +46,7 @@ PartialAppMove::trigger_bug(PartialAppMove::tree t) {
       [=](unsigned int _x0) mutable -> unsigned int {
     return sum_values(t, _x0);
   };
-  PartialAppMove::tree w = wrap(t);
+  PartialAppMove::tree w = wrap(std::move(t));
   if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(w.v())) {
     return f(0u);
   } else {

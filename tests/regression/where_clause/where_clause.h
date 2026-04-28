@@ -83,13 +83,14 @@ struct WhereClause {
       return Expr(Num{std::move(a0)});
     }
 
-    __attribute__((pure)) static Expr plus(const Expr &a0, const Expr &a1) {
-      return Expr(Plus{std::make_unique<Expr>(a0), std::make_unique<Expr>(a1)});
+    __attribute__((pure)) static Expr plus(Expr a0, Expr a1) {
+      return Expr(Plus{std::make_unique<Expr>(std::move(a0)),
+                       std::make_unique<Expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static Expr times(const Expr &a0, const Expr &a1) {
-      return Expr(
-          Times{std::make_unique<Expr>(a0), std::make_unique<Expr>(a1)});
+    __attribute__((pure)) static Expr times(Expr a0, Expr a1) {
+      return Expr(Times{std::make_unique<Expr>(std::move(a0)),
+                        std::make_unique<Expr>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -252,18 +253,18 @@ struct WhereClause {
 
     __attribute__((pure)) static BExpr bfalse() { return BExpr(BFalse{}); }
 
-    __attribute__((pure)) static BExpr band(const BExpr &a0, const BExpr &a1) {
-      return BExpr(
-          BAnd{std::make_unique<BExpr>(a0), std::make_unique<BExpr>(a1)});
+    __attribute__((pure)) static BExpr band(BExpr a0, BExpr a1) {
+      return BExpr(BAnd{std::make_unique<BExpr>(std::move(a0)),
+                        std::make_unique<BExpr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static BExpr bor(const BExpr &a0, const BExpr &a1) {
-      return BExpr(
-          BOr{std::make_unique<BExpr>(a0), std::make_unique<BExpr>(a1)});
+    __attribute__((pure)) static BExpr bor(BExpr a0, BExpr a1) {
+      return BExpr(BOr{std::make_unique<BExpr>(std::move(a0)),
+                       std::make_unique<BExpr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static BExpr bnot(const BExpr &a0) {
-      return BExpr(BNot{std::make_unique<BExpr>(a0)});
+    __attribute__((pure)) static BExpr bnot(BExpr a0) {
+      return BExpr(BNot{std::make_unique<BExpr>(std::move(a0))});
     }
 
     // MANIPULATORS
@@ -414,15 +415,14 @@ struct WhereClause {
       return AExpr(ANum{std::move(a0)});
     }
 
-    __attribute__((pure)) static AExpr aplus(const AExpr &a0, const AExpr &a1) {
-      return AExpr(
-          APlus{std::make_unique<AExpr>(a0), std::make_unique<AExpr>(a1)});
+    __attribute__((pure)) static AExpr aplus(AExpr a0, AExpr a1) {
+      return AExpr(APlus{std::make_unique<AExpr>(std::move(a0)),
+                         std::make_unique<AExpr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static AExpr aif(BExpr a0, const AExpr &a1,
-                                           const AExpr &a2) {
-      return AExpr(AIf{std::move(a0), std::make_unique<AExpr>(a1),
-                       std::make_unique<AExpr>(a2)});
+    __attribute__((pure)) static AExpr aif(BExpr a0, AExpr a1, AExpr a2) {
+      return AExpr(AIf{std::move(a0), std::make_unique<AExpr>(std::move(a1)),
+                       std::make_unique<AExpr>(std::move(a2))});
     }
 
     // MANIPULATORS

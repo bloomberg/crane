@@ -69,10 +69,9 @@ struct ClosureChain {
     // CREATORS
     __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(const tree &a0, unsigned int a1,
-                                           const tree &a2) {
-      return tree(Node{std::make_unique<tree>(a0), std::move(a1),
-                       std::make_unique<tree>(a2)});
+    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -120,17 +119,17 @@ struct ClosureChain {
   /// Test: make_chain 0 t 5 = tree_sum(t) + 5 = 10 + 5 = 15
   static inline const unsigned int chain_0 = []() {
     tree t = tree::node(tree::leaf(), 10u, tree::leaf());
-    return make_chain(0u, t, 5u);
+    return make_chain(0u, std::move(t), 5u);
   }();
   /// Test: make_chain 1 t 5 = (make_chain 0 t) (5 + 1) = 10 + 6 = 16
   static inline const unsigned int chain_1 = []() {
     tree t = tree::node(tree::leaf(), 10u, tree::leaf());
-    return make_chain(1u, t, 5u);
+    return make_chain(1u, std::move(t), 5u);
   }();
   /// Test: make_chain 3 t 0 = (make_chain 0 t) 3 = 10 + 3 = 13
   static inline const unsigned int chain_3 = []() {
     tree t = tree::node(tree::leaf(), 10u, tree::leaf());
-    return make_chain(3u, t, 0u);
+    return make_chain(3u, std::move(t), 0u);
   }();
   /// Store the chain result and call it twice.
   /// If make_chain returns a chain with dangling references,

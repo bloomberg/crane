@@ -148,7 +148,7 @@ struct UnitVoidEdge2 {
 
   static inline const unsigned int use_pair = []() {
     pair<unsigned int, std::monostate> p = make_nat_unit_pair(7u);
-    return get_fst<unsigned int, std::monostate>(p);
+    return get_fst<unsigned int, std::monostate>(std::move(p));
   }();
   static inline const unsigned int test_let_use = let_use_as_arg(5u);
   static inline const unsigned int test_let_match = let_match_unit(3u);

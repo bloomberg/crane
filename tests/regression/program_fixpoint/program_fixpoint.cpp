@@ -20,12 +20,12 @@ __attribute__((pure)) List<unsigned int> ProgFix::interleave_func(
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(l1.v());
-    return List<unsigned int>::cons(d_a0, interleave0(l2, *(d_a1)));
+    return List<unsigned int>::cons(d_a0, interleave0(std::move(l2), *(d_a1)));
   }
 }
 
 __attribute__((pure)) List<unsigned int>
 ProgFix::interleave(List<unsigned int> l1, List<unsigned int> l2) {
-  return interleave_func(
-      SigT<List<unsigned int>, List<unsigned int>>::existt(l1, l2));
+  return interleave_func(SigT<List<unsigned int>, List<unsigned int>>::existt(
+      std::move(l1), std::move(l2)));
 }

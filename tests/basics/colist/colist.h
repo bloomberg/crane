@@ -62,8 +62,8 @@ public:
   // CREATORS
   __attribute__((pure)) static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(const Nat &a0) {
-    return Nat(S{std::make_unique<Nat>(a0)});
+  __attribute__((pure)) static Nat s(Nat a0) {
+    return Nat(S{std::make_unique<Nat>(std::move(a0))});
   }
 
   // MANIPULATORS
@@ -135,8 +135,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -172,44 +173,41 @@ public:
   explicit Colist(std::function<variant_t()> _thunk)
       : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-  static std::shared_ptr<Colist<t_A>> conil() {
-    return std::make_shared<Colist<t_A>>(Conil{});
+  __attribute__((pure)) static Colist<t_A> conil() { return Colist(Conil{}); }
+
+  __attribute__((pure)) static Colist<t_A> cocons(t_A a0,
+                                                  const Colist<t_A> &a1) {
+    return Colist(Cocons{std::move(a0), std::make_shared<Colist<t_A>>(a1)});
   }
 
-  static std::shared_ptr<Colist<t_A>> cocons(t_A a0,
-                                             std::shared_ptr<Colist<t_A>> a1) {
-    return std::make_shared<Colist<t_A>>(Cocons{std::move(a0), std::move(a1)});
-  }
-
-  static std::shared_ptr<Colist<t_A>>
-  lazy_(std::function<std::shared_ptr<Colist<t_A>>()> thunk) {
-    return std::make_shared<Colist<t_A>>(
-        std::function<variant_t()>([=]() mutable -> variant_t {
-          std::shared_ptr<Colist<t_A>> _tmp = thunk();
-          return _tmp->v();
-        }));
+  __attribute__((pure)) static Colist<t_A>
+  lazy_(std::function<Colist<t_A>()> thunk) {
+    return Colist<t_A>(std::function<variant_t()>([=]() mutable -> variant_t {
+      Colist<t_A> _tmp = thunk();
+      return _tmp.v();
+    }));
   }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_lazyV_.force(); }
 
   template <typename T1, MapsTo<T1, t_A> F0>
-  std::shared_ptr<Colist<T1>> comap(F0 &&f) const {
+  __attribute__((pure)) Colist<T1> comap(F0 &&f) const {
     if (std::holds_alternative<typename Colist<t_A>::Conil>(this->v())) {
       return Colist<T1>::lazy_(
-          []() -> std::shared_ptr<Colist<T1>> { return Colist<T1>::conil(); });
+          []() -> Colist<T1> { return Colist<T1>::conil(); });
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename Colist<t_A>::Cocons>(this->v());
-      return Colist<T1>::lazy_([=]() mutable -> std::shared_ptr<Colist<T1>> {
-        return Colist<T1>::cocons(f(d_a0), d_a1->template comap<T1>(f));
+      return Colist<T1>::lazy_([=]() mutable -> Colist<T1> {
+        return Colist<T1>::cocons(f(d_a0), (*(d_a1)).template comap<T1>(f));
       });
     }
   }
 
   template <typename T1>
-  __attribute__((pure)) static List<T1>
-  list_of_colist(const Nat &fuel, const std::shared_ptr<Colist<T1>> &l) {
+  __attribute__((pure)) static List<T1> list_of_colist(const Nat &fuel,
+                                                       const Colist<T1> l) {
     if (std::holds_alternative<typename Nat::O>(fuel.v())) {
       return List<T1>::nil();
     } else {
@@ -219,13 +217,13 @@ public:
       } else {
         const auto &[d_a00, d_a10] =
             std::get<typename Colist<T1>::Cocons>(l->v());
-        return List<T1>::cons(d_a00, list_of_colist<T1>(*(d_a0), d_a10));
+        return List<T1>::cons(d_a00, list_of_colist<T1>(*(d_a0), *(d_a10)));
       }
     }
   }
 
-  static std::shared_ptr<Colist<Nat>> nats(Nat n) {
-    return Colist<Nat>::lazy_([=]() mutable -> std::shared_ptr<Colist<Nat>> {
+  __attribute__((pure)) static Colist<Nat> nats(Nat n) {
+    return Colist<Nat>::lazy_([=]() mutable -> Colist<Nat> {
       return Colist<Nat>::cocons(n, nats(Nat::s(n)));
     });
   }

@@ -73,7 +73,7 @@ LoopifyListWindows::drop(const unsigned int &m, List<unsigned int> xs) {
   unsigned int _loop_m = m;
   while (true) {
     if (_loop_m <= 0) {
-      _result = _loop_xs;
+      _result = std::move(_loop_xs);
       break;
     } else {
       unsigned int m_ = _loop_m - 1;
@@ -413,12 +413,12 @@ LoopifyListWindows::chunks_fuel(const unsigned int &fuel, const unsigned int &n,
         List<unsigned int> chunk = take(n, _loop_l);
         List<unsigned int> rest = drop(n, _loop_l);
         auto _cell = std::make_unique<List<List<unsigned int>>>(
-            typename List<List<unsigned int>>::Cons(chunk, nullptr));
+            typename List<List<unsigned int>>::Cons(std::move(chunk), nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<List<unsigned int>>::Cons>(
                       (*_write)->v_mut())
                       .d_a1;
-        List<unsigned int> _next_l = rest;
+        List<unsigned int> _next_l = std::move(rest);
         unsigned int _next_fuel = fuel_;
         _loop_l = std::move(_next_l);
         _loop_fuel = std::move(_next_fuel);

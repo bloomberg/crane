@@ -20,13 +20,13 @@ SuperfluousMoves::bad_branch(SuperfluousMoves::loop_state ls) {
   bool do_tick = true;
   SuperfluousMoves::game_state gs2;
   if (do_tick) {
-    gs2 = tick(gs1);
+    gs2 = tick(std::move(gs1));
   } else {
-    gs2 = gs1;
+    gs2 = std::move(gs1);
   }
   switch (forced_mode) {
   case Mode::e_CHASE: {
-    SuperfluousMoves::game_state gs3 = lose_one_life(gs2);
+    SuperfluousMoves::game_state gs3 = lose_one_life(std::move(gs2));
     if (gs3.lives == 0u) {
       return std::make_pair(false, loop_state{gs3, gs3.pacpos, gs3.ghosts});
     } else {
@@ -34,7 +34,7 @@ SuperfluousMoves::bad_branch(SuperfluousMoves::loop_state ls) {
     }
   }
   case Mode::e_FRIGHTENED: {
-    return std::make_pair(false, ls);
+    return std::make_pair(false, std::move(ls));
   }
   default:
     std::unreachable();

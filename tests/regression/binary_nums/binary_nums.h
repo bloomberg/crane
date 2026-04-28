@@ -71,12 +71,12 @@ public:
   }
 
   // CREATORS
-  __attribute__((pure)) static Positive xi(const Positive &a0) {
-    return Positive(XI{std::make_unique<Positive>(a0)});
+  __attribute__((pure)) static Positive xi(Positive a0) {
+    return Positive(XI{std::make_unique<Positive>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Positive xo(const Positive &a0) {
-    return Positive(XO{std::make_unique<Positive>(a0)});
+  __attribute__((pure)) static Positive xo(Positive a0) {
+    return Positive(XO{std::make_unique<Positive>(std::move(a0))});
   }
 
   __attribute__((pure)) static Positive xh() { return Positive(XH{}); }

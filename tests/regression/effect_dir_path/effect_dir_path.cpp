@@ -88,7 +88,7 @@ unsigned int EffectDirPath::count_entries(const List<std::string> &dirs,
       }
       return result;
     }();
-    unsigned int n = files.length();
+    unsigned int n = std::move(files).length();
     return count_entries(*(d_a1), (acc + n));
   }
 }

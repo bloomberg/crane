@@ -142,44 +142,44 @@ public:
   // CREATORS
   __attribute__((pure)) static Uint nil() { return Uint(Nil{}); }
 
-  __attribute__((pure)) static Uint d0(const Uint &a0) {
-    return Uint(D0{std::make_unique<Uint>(a0)});
+  __attribute__((pure)) static Uint d0(Uint a0) {
+    return Uint(D0{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d1(const Uint &a0) {
-    return Uint(D1{std::make_unique<Uint>(a0)});
+  __attribute__((pure)) static Uint d1(Uint a0) {
+    return Uint(D1{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d2(const Uint &a0) {
-    return Uint(D2{std::make_unique<Uint>(a0)});
+  __attribute__((pure)) static Uint d2(Uint a0) {
+    return Uint(D2{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d3(const Uint &a0) {
-    return Uint(D3{std::make_unique<Uint>(a0)});
+  __attribute__((pure)) static Uint d3(Uint a0) {
+    return Uint(D3{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d4(const Uint &a0) {
-    return Uint(D4{std::make_unique<Uint>(a0)});
+  __attribute__((pure)) static Uint d4(Uint a0) {
+    return Uint(D4{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d5(const Uint &a0) {
-    return Uint(D5{std::make_unique<Uint>(a0)});
+  __attribute__((pure)) static Uint d5(Uint a0) {
+    return Uint(D5{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d6(const Uint &a0) {
-    return Uint(D6{std::make_unique<Uint>(a0)});
+  __attribute__((pure)) static Uint d6(Uint a0) {
+    return Uint(D6{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d7(const Uint &a0) {
-    return Uint(D7{std::make_unique<Uint>(a0)});
+  __attribute__((pure)) static Uint d7(Uint a0) {
+    return Uint(D7{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d8(const Uint &a0) {
-    return Uint(D8{std::make_unique<Uint>(a0)});
+  __attribute__((pure)) static Uint d8(Uint a0) {
+    return Uint(D8{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d9(const Uint &a0) {
-    return Uint(D9{std::make_unique<Uint>(a0)});
+  __attribute__((pure)) static Uint d9(Uint a0) {
+    return Uint(D9{std::make_unique<Uint>(std::move(a0))});
   }
 
   // MANIPULATORS
@@ -385,68 +385,68 @@ public:
   // CREATORS
   __attribute__((pure)) static Uint0 nil0() { return Uint0(Nil0{}); }
 
-  __attribute__((pure)) static Uint0 d10(const Uint0 &a0) {
-    return Uint0(D10{std::make_unique<Uint0>(a0)});
+  __attribute__((pure)) static Uint0 d10(Uint0 a0) {
+    return Uint0(D10{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d11(const Uint0 &a0) {
-    return Uint0(D11{std::make_unique<Uint0>(a0)});
+  __attribute__((pure)) static Uint0 d11(Uint0 a0) {
+    return Uint0(D11{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d12(const Uint0 &a0) {
-    return Uint0(D12{std::make_unique<Uint0>(a0)});
+  __attribute__((pure)) static Uint0 d12(Uint0 a0) {
+    return Uint0(D12{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d13(const Uint0 &a0) {
-    return Uint0(D13{std::make_unique<Uint0>(a0)});
+  __attribute__((pure)) static Uint0 d13(Uint0 a0) {
+    return Uint0(D13{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d14(const Uint0 &a0) {
-    return Uint0(D14{std::make_unique<Uint0>(a0)});
+  __attribute__((pure)) static Uint0 d14(Uint0 a0) {
+    return Uint0(D14{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d15(const Uint0 &a0) {
-    return Uint0(D15{std::make_unique<Uint0>(a0)});
+  __attribute__((pure)) static Uint0 d15(Uint0 a0) {
+    return Uint0(D15{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d16(const Uint0 &a0) {
-    return Uint0(D16{std::make_unique<Uint0>(a0)});
+  __attribute__((pure)) static Uint0 d16(Uint0 a0) {
+    return Uint0(D16{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d17(const Uint0 &a0) {
-    return Uint0(D17{std::make_unique<Uint0>(a0)});
+  __attribute__((pure)) static Uint0 d17(Uint0 a0) {
+    return Uint0(D17{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d18(const Uint0 &a0) {
-    return Uint0(D18{std::make_unique<Uint0>(a0)});
+  __attribute__((pure)) static Uint0 d18(Uint0 a0) {
+    return Uint0(D18{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d19(const Uint0 &a0) {
-    return Uint0(D19{std::make_unique<Uint0>(a0)});
+  __attribute__((pure)) static Uint0 d19(Uint0 a0) {
+    return Uint0(D19{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 da(const Uint0 &a0) {
-    return Uint0(Da{std::make_unique<Uint0>(a0)});
+  __attribute__((pure)) static Uint0 da(Uint0 a0) {
+    return Uint0(Da{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 db(const Uint0 &a0) {
-    return Uint0(Db{std::make_unique<Uint0>(a0)});
+  __attribute__((pure)) static Uint0 db(Uint0 a0) {
+    return Uint0(Db{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 dc(const Uint0 &a0) {
-    return Uint0(Dc{std::make_unique<Uint0>(a0)});
+  __attribute__((pure)) static Uint0 dc(Uint0 a0) {
+    return Uint0(Dc{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 dd(const Uint0 &a0) {
-    return Uint0(Dd{std::make_unique<Uint0>(a0)});
+  __attribute__((pure)) static Uint0 dd(Uint0 a0) {
+    return Uint0(Dd{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 de(const Uint0 &a0) {
-    return Uint0(De{std::make_unique<Uint0>(a0)});
+  __attribute__((pure)) static Uint0 de(Uint0 a0) {
+    return Uint0(De{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 df(const Uint0 &a0) {
-    return Uint0(Df{std::make_unique<Uint0>(a0)});
+  __attribute__((pure)) static Uint0 df(Uint0 a0) {
+    return Uint0(Df{std::make_unique<Uint0>(std::move(a0))});
   }
 
   // MANIPULATORS

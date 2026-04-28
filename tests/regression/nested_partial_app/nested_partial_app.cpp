@@ -15,7 +15,7 @@ NestedPartialApp::tree_sum(const NestedPartialApp::tree &t) {
 __attribute__((pure)) NestedPartialApp::tree
 NestedPartialApp::build_node(NestedPartialApp::tree t1, unsigned int n,
                              NestedPartialApp::tree t2) {
-  return tree::node(t1, n, t2);
+  return tree::node(std::move(t1), n, std::move(t2));
 }
 
 /// Variation: 4-argument function, triple nesting.

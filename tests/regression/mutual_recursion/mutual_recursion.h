@@ -96,14 +96,13 @@ struct MutualRecursion {
       return expr(Val{std::move(a0)});
     }
 
-    __attribute__((pure)) static expr binop(unsigned int a0, const expr &a1,
-                                            const expr &a2) {
-      return expr(BinOp{std::move(a0), std::make_unique<expr>(a1),
-                        std::make_unique<expr>(a2)});
+    __attribute__((pure)) static expr binop(unsigned int a0, expr a1, expr a2) {
+      return expr(BinOp{std::move(a0), std::make_unique<expr>(std::move(a1)),
+                        std::make_unique<expr>(std::move(a2))});
     }
 
-    __attribute__((pure)) static expr unop(unsigned int a0, const expr &a1) {
-      return expr(UnOp{std::move(a0), std::make_unique<expr>(a1)});
+    __attribute__((pure)) static expr unop(unsigned int a0, expr a1) {
+      return expr(UnOp{std::move(a0), std::make_unique<expr>(std::move(a1))});
     }
 
     // MANIPULATORS

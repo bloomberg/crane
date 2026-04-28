@@ -69,10 +69,9 @@ struct PartialAppMove {
     // CREATORS
     __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(const tree &a0, unsigned int a1,
-                                           const tree &a2) {
-      return tree(Node{std::make_unique<tree>(a0), std::move(a1),
-                       std::make_unique<tree>(a2)});
+    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -131,7 +130,7 @@ struct PartialAppMove {
           [=](unsigned int _x0) mutable -> unsigned int {
         return sum_values(t, _x0);
       };
-      tree w = tree::node(t, 42u, tree::leaf());
+      tree w = tree::node(std::move(t), 42u, tree::leaf());
       if (std::holds_alternative<typename tree::Leaf>(w.v())) {
         return f(0u);
       } else {
@@ -148,7 +147,7 @@ struct PartialAppMove {
           [=](unsigned int _x0) mutable -> unsigned int {
         return sum_values(t, _x0);
       };
-      tree w = wrap(t);
+      tree w = wrap(std::move(t));
       if (std::holds_alternative<typename tree::Leaf>(w.v())) {
         return f(0u);
       } else {

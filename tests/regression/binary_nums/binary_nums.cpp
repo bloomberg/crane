@@ -211,7 +211,7 @@ __attribute__((pure)) Positive Pos::mul(const Positive &x, Positive y) {
     return add(y, Positive::xo(mul(*(d_a0), y)));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xo(mul(*(d_a0), y));
+    return Positive::xo(mul(*(d_a0), std::move(y)));
   } else {
     return y;
   }
@@ -356,7 +356,7 @@ __attribute__((pure)) Positive Coq_Pos::mul(const Positive &x, Positive y) {
     return add(y, Positive::xo(mul(*(d_a0), y)));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xo(mul(*(d_a0), y));
+    return Positive::xo(mul(*(d_a0), std::move(y)));
   } else {
     return y;
   }

@@ -17,7 +17,8 @@ LoopifyGrouping::prepend_to_groups(unsigned int x, const bool &same,
     }
   } else {
     return List<List<unsigned int>>::cons(
-        List<unsigned int>::cons(x, List<unsigned int>::nil()), groups);
+        List<unsigned int>::cons(x, List<unsigned int>::nil()),
+        std::move(groups));
   }
 }
 
@@ -75,7 +76,7 @@ LoopifyGrouping::group_fuel(const unsigned int &fuel,
       unsigned int d_a0 = _f._s0;
       unsigned int d_a00 = _f._s1;
       List<List<unsigned int>> rec_result = _result;
-      _result = prepend_to_groups(d_a0, d_a0 == d_a00, rec_result);
+      _result = prepend_to_groups(d_a0, d_a0 == d_a00, std::move(rec_result));
     }
   }
   return _result;
@@ -142,9 +143,9 @@ LoopifyGrouping::nub(const List<unsigned int> &l) {
       unsigned int d_a0 = _f._s0;
       List<unsigned int> rest = _result;
       if (elem(d_a0, rest)) {
-        _result = rest;
+        _result = std::move(rest);
       } else {
-        _result = List<unsigned int>::cons(d_a0, rest);
+        _result = List<unsigned int>::cons(d_a0, std::move(rest));
       }
     }
   }

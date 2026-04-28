@@ -73,8 +73,9 @@ public:
 
   __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, const List<t_A> &a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<t_A>>(a1)});
+  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -92,7 +93,7 @@ __attribute__((pure)) List<T1> better_rev(const List<T1> &l) {
       return acc;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l0.v());
-      return go(*(d_a1), List<T1>::cons(d_a0, acc));
+      return go(*(d_a1), List<T1>::cons(d_a0, std::move(acc)));
     }
   };
   return go(l, List<T1>::nil());

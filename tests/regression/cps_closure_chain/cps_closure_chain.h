@@ -69,10 +69,9 @@ struct CpsClosureChain {
     // CREATORS
     __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(const tree &a0, unsigned int a1,
-                                           const tree &a2) {
-      return tree(Node{std::make_unique<tree>(a0), std::move(a1),
-                       std::make_unique<tree>(a2)});
+    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -191,7 +190,7 @@ struct CpsClosureChain {
     tree t = build_left(4u);
     unsigned int s = tree_sum(t);
     unsigned int f = tree_fold_cps(
-        t, 0u,
+        std::move(t), 0u,
         [](const unsigned int &l, const unsigned int &n,
            const unsigned int &r) { return ((l + n) + r); },
         [](unsigned int x) { return x; });

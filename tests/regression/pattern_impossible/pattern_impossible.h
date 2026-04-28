@@ -107,10 +107,9 @@ struct PatternImpossible {
       return nested(Leaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static nested node(const nested &a0,
-                                             const nested &a1) {
-      return nested(
-          Node{std::make_unique<nested>(a0), std::make_unique<nested>(a1)});
+    __attribute__((pure)) static nested node(nested a0, nested a1) {
+      return nested(Node{std::make_unique<nested>(std::move(a0)),
+                         std::make_unique<nested>(std::move(a1))});
     }
 
     // MANIPULATORS

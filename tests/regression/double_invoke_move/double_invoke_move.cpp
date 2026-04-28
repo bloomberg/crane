@@ -4,7 +4,7 @@
 /// Since t is stored in a constructor, wrap_with takes t as owned (by value).
 __attribute__((pure)) DoubleInvokeMove::tree
 DoubleInvokeMove::wrap_with(DoubleInvokeMove::tree t, unsigned int v) {
-  return tree::node(t, v, tree::leaf());
+  return tree::node(std::move(t), v, tree::leaf());
 }
 
 __attribute__((pure)) unsigned int
