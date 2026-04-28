@@ -114,7 +114,7 @@ int main() {
   // Test 6: interleave of two infinite streams (called as method)
   auto evens = NatStream::nats_from(int_to_nat(0));
   auto odds = NatStream::nats_from(int_to_nat(100));
-  auto mixed = evens->interleave(odds);
+  auto mixed = evens.interleave(odds);
   auto mixed_list = NatStream::take(int_to_nat(6), mixed);
   auto vec_m = list_to_vec<Nat>(mixed_list);
   ASSERT(vec_m.size() == 6);

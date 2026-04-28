@@ -15,14 +15,14 @@ Coinductive::count_from(unsigned int n) {
 __attribute__((pure)) unsigned int
 Coinductive::hd(const Coinductive::stream s) {
   const auto &[d_a0, d_a1] =
-      std::get<typename Coinductive::stream::Cons>(s->v());
+      std::get<typename Coinductive::stream::Cons>(s.v());
   return d_a0;
 }
 
 __attribute__((pure)) Coinductive::stream
 Coinductive::tl(const Coinductive::stream s) {
   const auto &[d_a0, d_a1] =
-      std::get<typename Coinductive::stream::Cons>(s->v());
+      std::get<typename Coinductive::stream::Cons>(s.v());
   return stream::lazy_(
       [=]() mutable -> Coinductive::stream { return *(d_a1); });
 }
@@ -31,7 +31,7 @@ __attribute__((pure)) Coinductive::stream
 Coinductive::interleave(const Coinductive::stream s1,
                         const Coinductive::stream s2) {
   const auto &[d_a0, d_a1] =
-      std::get<typename Coinductive::stream::Cons>(s1->v());
+      std::get<typename Coinductive::stream::Cons>(s1.v());
   return stream::lazy_([=]() mutable -> Coinductive::stream {
     return stream::cons(d_a0, interleave(s2, *(d_a1)));
   });

@@ -5221,6 +5221,16 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
               bare_field_cpp_ty
             | _ -> storage_field_cpp_ty
         in
+        (* For coinductive types, fields with nested self-refs are stored
+           as shared_ptr to break circular template dependencies (e.g.
+           colist<cotree<A>> inside cotree<A>).  Apply the same wrapping
+           that gen_ind_header_v2 applies. *)
+        let field_cpp_ty =
+          if Table.is_coinductive ind_ref
+             && field_has_nested_self_ref_at_def i
+          then Tshared_ptr bare_field_cpp_ty
+          else field_cpp_ty
+        in
         let used = dummies_arr.(i) in
         (binding_name, field_cpp_ty, is_unique_ptr, used))
       rev_ids
@@ -5273,6 +5283,20 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     | _ -> false
   in
   let branch_has_lambda = List.exists stmt_has_lambda body_stmts in
+  (* True when the enclosing function returns a coinductive type and will
+     wrap each branch result in a [lazy_] thunk via [cofix_wrap].  The
+     thunk is a [CPPlambda] that captures by [=], so any [unique_ptr]
+     binding reachable from the branch body would be illegally captured.
+     This flag triggers pre-extraction even when [branch_has_lambda] is
+     false (because the lambda is added externally by [inline_iife]). *)
+  let return_type_is_coinductive =
+    match tctx.current_cpp_return_type with
+    | Some (Tglob (r, _, _)) -> Table.is_coinductive r
+    | _ -> false
+  in
+  let branch_needs_uptr_preextract =
+    branch_has_lambda || return_type_is_coinductive
+  in
   (* Substitute pattern variable references with the structured-binding
      names.  For unique_ptr fields (self-references at definition site),
      the structured binding gives [const unique_ptr<T>& d_field]; we
@@ -5284,10 +5308,21 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
         if dummies_arr.(i) then
           let (binding_name, field_ty, is_uptr, _) = field_bindings_arr.(i) in
           let bare_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars _ml_ty in
+          (* A field may be stored as unique_ptr either because is_uptr detected
+             a self-ref via ip_types (Crane-extracted types), or because the field
+             type itself is Tunique_ptr (custom-mapped types like stdlib list whose
+             ip_types are not registered).  In both cases, when the branch body
+             contains a lambda (or the return type is coinductive, meaning
+             cofix_wrap adds a lambda externally), we must pre-extract the value
+             before the lambda to avoid capturing the non-copyable unique_ptr
+             via [=]. *)
+          let is_uptr_field =
+            is_uptr || (match field_ty with Tunique_ptr _ -> true | _ -> false)
+          in
           let subst_expr =
-            if is_uptr && branch_has_lambda then
+            if is_uptr_field && branch_needs_uptr_preextract then
               CPPvar (Id.of_string (Id.to_string binding_name ^ "_value"))
-            else if is_uptr then CPPderef (CPPvar binding_name)
+            else if is_uptr_field then CPPderef (CPPvar binding_name)
             else if field_ty <> bare_ty
                     && contains_shared_ptr_or_unique_ptr field_ty then
               gen_clone_field_expr ~src_ty:field_ty ~dst_ty:bare_ty
@@ -5305,10 +5340,13 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     List.filter_map
       (fun (i, (_var_name, ml_ty)) ->
         if dummies_arr.(i) then
-          let (binding_name, _field_ty, is_uptr, _) =
+          let (binding_name, field_ty, is_uptr, _) =
             field_bindings_arr.(i)
           in
-          if is_uptr && branch_has_lambda then
+          let is_uptr_field =
+            is_uptr || (match field_ty with Tunique_ptr _ -> true | _ -> false)
+          in
+          if is_uptr_field && branch_needs_uptr_preextract then
             let bare_ty =
               convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty
             in
@@ -5632,7 +5670,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
         let br =
           gen_match_branch env' typ rty r ids' dummies body sname
             match_i scrut_v
-            ~is_value_type:(not is_coinductive)
+            ~is_value_type:true
             ~is_owned:scrut_is_owned
             ~scrut_db
         in
@@ -11604,10 +11642,10 @@ let gen_ind_header_v2
                         The cycle is broken at the field level, not the type-arg
                         level, so type variables are always bare types. *)
                      let cpp_ty =
-                       if (not is_coinductive)
-                          && ml_type_has_nested_self_ref ~ind_ref:name ty
+                       if ml_type_has_nested_self_ref ~ind_ref:name ty
                        then
-                         if ml_self_ref_is_uniform ~ind_ref:name ~cname:c ty
+                         if is_coinductive then Tshared_ptr cpp_ty
+                         else if ml_self_ref_is_uniform ~ind_ref:name ~cname:c ty
                          then Tunique_ptr cpp_ty
                          else Tshared_ptr cpp_ty
                        else cpp_ty
@@ -11778,10 +11816,10 @@ let gen_ind_header_v2
               in
               (* Wrap fields with nested self-refs at the field level *)
               let storage_ty =
-                if (not is_coinductive)
-                   && ml_type_has_nested_self_ref ~ind_ref:name ty
+                if ml_type_has_nested_self_ref ~ind_ref:name ty
                 then
-                  if ml_self_ref_is_uniform ~ind_ref:name ~cname:c ty
+                  if is_coinductive then Tshared_ptr storage_ty
+                  else if ml_self_ref_is_uniform ~ind_ref:name ~cname:c ty
                   then Tunique_ptr storage_ty
                   else Tshared_ptr storage_ty
                 else storage_ty
@@ -11994,10 +12032,10 @@ let gen_ind_header_v2
                              ty
                          in
                          let cpp_ty =
-                           if (not is_coinductive)
-                              && ml_type_has_nested_self_ref ~ind_ref:name ty
+                           if ml_type_has_nested_self_ref ~ind_ref:name ty
                            then
-                             if ml_self_ref_is_uniform ~ind_ref:name ~cname:c ty
+                             if is_coinductive then Tshared_ptr cpp_ty
+                             else if ml_self_ref_is_uniform ~ind_ref:name ~cname:c ty
                              then Tunique_ptr cpp_ty
                              else Tshared_ptr cpp_ty
                            else cpp_ty
@@ -12019,10 +12057,10 @@ let gen_ind_header_v2
                              ty
                          in
                          let cpp_ty =
-                           if (not is_coinductive)
-                              && ml_type_has_nested_self_ref ~ind_ref:name ty
+                           if ml_type_has_nested_self_ref ~ind_ref:name ty
                            then
-                             if ml_self_ref_is_uniform ~ind_ref:name ~cname:c ty
+                             if is_coinductive then Tshared_ptr cpp_ty
+                             else if ml_self_ref_is_uniform ~ind_ref:name ~cname:c ty
                              then Tunique_ptr cpp_ty
                              else Tshared_ptr cpp_ty
                            else cpp_ty
@@ -12220,10 +12258,10 @@ let gen_ind_header_v2
                         lookup_ctor_field_name ctor_struct_name j
                       in
                       let wrap_nested cpp_ty =
-                        if (not is_coinductive)
-                           && ml_type_has_nested_self_ref ~ind_ref:name ty
+                        if ml_type_has_nested_self_ref ~ind_ref:name ty
                         then
-                          if ml_self_ref_is_uniform ~ind_ref:name ~cname:c ty
+                          if is_coinductive then Tshared_ptr cpp_ty
+                          else if ml_self_ref_is_uniform ~ind_ref:name ~cname:c ty
                           then Tunique_ptr cpp_ty
                           else Tshared_ptr cpp_ty
                         else cpp_ty

@@ -212,11 +212,11 @@ public:
       return List<T1>::nil();
     } else {
       const auto &[d_a0] = std::get<typename Nat::S>(fuel.v());
-      if (std::holds_alternative<typename Colist<T1>::Conil>(l->v())) {
+      if (std::holds_alternative<typename Colist<T1>::Conil>(l.v())) {
         return List<T1>::nil();
       } else {
         const auto &[d_a00, d_a10] =
-            std::get<typename Colist<T1>::Cocons>(l->v());
+            std::get<typename Colist<T1>::Cocons>(l.v());
         return List<T1>::cons(d_a00, list_of_colist<T1>(*(d_a0), *(d_a10)));
       }
     }

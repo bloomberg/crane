@@ -128,13 +128,13 @@ struct LoopifyCoindStream {
   };
 
   template <typename T1> static T1 hd(const stream<T1> s) {
-    const auto &[d_a0, d_a1] = std::get<typename stream<T1>::Scons>(s->v());
+    const auto &[d_a0, d_a1] = std::get<typename stream<T1>::Scons>(s.v());
     return d_a0;
   }
 
   template <typename T1>
   __attribute__((pure)) static stream<T1> tl(const stream<T1> s) {
-    const auto &[d_a0, d_a1] = std::get<typename stream<T1>::Scons>(s->v());
+    const auto &[d_a0, d_a1] = std::get<typename stream<T1>::Scons>(s.v());
     return stream<T1>::lazy_([=]() mutable -> stream<T1> { return *(d_a1); });
   }
 

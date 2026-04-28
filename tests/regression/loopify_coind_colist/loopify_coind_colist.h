@@ -136,11 +136,11 @@ struct LoopifyCoindColist {
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
   __attribute__((pure)) static colist<T2> comap(F0 &&f, const colist<T1> l) {
-    if (std::holds_alternative<typename colist<T1>::Conil>(l->v())) {
+    if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
       return colist<T2>::lazy_(
           []() -> colist<T2> { return colist<T2>::conil(); });
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename colist<T1>::Cocons>(l->v());
+      const auto &[d_a0, d_a1] = std::get<typename colist<T1>::Cocons>(l.v());
       return colist<T2>::lazy_([=]() mutable -> colist<T2> {
         return colist<T2>::cocons(f(d_a0), comap<T1, T2>(f, *(d_a1)));
       });
@@ -155,12 +155,11 @@ struct LoopifyCoindColist {
           []() -> colist<T1> { return colist<T1>::conil(); });
     } else {
       unsigned int n_ = n - 1;
-      if (std::holds_alternative<typename colist<T1>::Conil>(l->v())) {
+      if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
         return colist<T1>::lazy_(
             []() -> colist<T1> { return colist<T1>::conil(); });
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename colist<T1>::Cocons>(l->v());
+        const auto &[d_a0, d_a1] = std::get<typename colist<T1>::Cocons>(l.v());
         return colist<T1>::lazy_([=]() mutable -> colist<T1> {
           return colist<T1>::cocons(d_a0, cotake<T1>(n_, *(d_a1)));
         });
@@ -175,8 +174,9 @@ struct LoopifyCoindColist {
           []() -> colist<T1> { return colist<T1>::conil(); });
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
+      List<T1> d_a1_value = List<T1>(*(d_a1));
       return colist<T1>::lazy_([=]() mutable -> colist<T1> {
-        return colist<T1>::cocons(d_a0, from_list<T1>(*(d_a1)));
+        return colist<T1>::cocons(d_a0, from_list<T1>(d_a1_value));
       });
     }
   }
@@ -194,12 +194,12 @@ struct LoopifyCoindColist {
         break;
       } else {
         unsigned int f = _loop_fuel - 1;
-        if (std::holds_alternative<typename colist<T1>::Conil>(_loop_l->v())) {
+        if (std::holds_alternative<typename colist<T1>::Conil>(_loop_l.v())) {
           *(_write) = std::make_unique<List<T1>>(List<T1>::nil());
           break;
         } else {
           const auto &[d_a0, d_a1] =
-              std::get<typename colist<T1>::Cocons>(_loop_l->v());
+              std::get<typename colist<T1>::Cocons>(_loop_l.v());
           auto _cell = std::make_unique<List<T1>>(
               typename List<T1>::Cons(d_a0, nullptr));
           *(_write) = std::move(_cell);

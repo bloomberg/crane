@@ -149,7 +149,7 @@ struct Cotree {
     // TYPES
     struct Conode {
       t_A d_a0;
-      colist<cotree<t_A>> d_a1;
+      std::shared_ptr<colist<cotree<t_A>>> d_a1;
     };
 
     using variant_t = std::variant<Conode>;
@@ -166,9 +166,10 @@ struct Cotree {
     explicit cotree(std::function<variant_t()> _thunk)
         : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-    __attribute__((pure)) static cotree<t_A> conode(t_A a0,
-                                                    colist<cotree<t_A>> a1) {
-      return cotree(Conode{std::move(a0), std::move(a1)});
+    __attribute__((pure)) static cotree<t_A>
+    conode(t_A a0, const colist<cotree<t_A>> &a1) {
+      return cotree(
+          Conode{std::move(a0), std::make_shared<colist<cotree<t_A>>>(a1)});
     }
 
     __attribute__((pure)) static cotree<t_A>
@@ -194,7 +195,7 @@ struct Cotree {
       const auto &[d_a0, d_a1] =
           std::get<typename cotree<t_A>::Conode>(this->v());
       return colist<std::shared_ptr<cotree<t_A>>>::lazy_(
-          [=]() mutable -> colist<cotree<t_A>> { return d_a1; });
+          [=]() mutable -> colist<cotree<t_A>> { return *(d_a1); });
     }
 
     template <typename T1, MapsTo<T1, t_A> F0>
@@ -207,7 +208,7 @@ struct Cotree {
                          [=](cotree<t_A> _x0) mutable -> cotree<T1> {
                            return _x0.template comap_cotree<T1>(g);
                          },
-                         d_a1));
+                         *(d_a1)));
       });
     }
   };
@@ -292,11 +293,11 @@ struct Cotree {
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
   __attribute__((pure)) static colist<T2> comap(F0 &&f, const colist<T1> l) {
-    if (std::holds_alternative<typename colist<T1>::Conil>(l->v())) {
+    if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
       return colist<T2>::lazy_(
           []() -> colist<T2> { return colist<T2>::conil(); });
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename colist<T1>::Cocons>(l->v());
+      const auto &[d_a0, d_a1] = std::get<typename colist<T1>::Cocons>(l.v());
       return colist<T2>::lazy_([=]() mutable -> colist<T2> {
         return colist<T2>::cocons(f(d_a0), comap<T1, T2>(f, *(d_a1)));
       });
@@ -329,11 +330,10 @@ struct Cotree {
       return List<T1>::nil();
     } else {
       unsigned int fuel_ = fuel - 1;
-      if (std::holds_alternative<typename colist<T1>::Conil>(l->v())) {
+      if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
         return List<T1>::nil();
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename colist<T1>::Cocons>(l->v());
+        const auto &[d_a0, d_a1] = std::get<typename colist<T1>::Cocons>(l.v());
         return List<T1>::cons(d_a0, list_of_colist<T1>(fuel_, *(d_a1)));
       }
     }
@@ -342,14 +342,14 @@ struct Cotree {
   template <typename T1>
   __attribute__((pure)) static tree<T1> tree_of_cotree(const unsigned int &fuel,
                                                        const cotree<T1> t) {
-    const auto &[d_a0, d_a1] = std::get<typename cotree<T1>::Conode>(t->v());
+    const auto &[d_a0, d_a1] = std::get<typename cotree<T1>::Conode>(t.v());
     if (fuel <= 0) {
       return tree<T1>::node(d_a0, List<tree<T1>>::nil());
     } else {
       unsigned int fuel_ = fuel - 1;
       return tree<T1>::node(
           d_a0,
-          list_of_colist<cotree<T1>>(fuel, d_a1)
+          list_of_colist<cotree<T1>>(fuel, *(d_a1))
               .template map<tree<T1>>([=](cotree<T1> _x0) mutable -> tree<T1> {
                 return tree_of_cotree<T1>(fuel_, _x0);
               }));

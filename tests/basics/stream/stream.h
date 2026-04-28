@@ -197,7 +197,7 @@ public:
       return List<T1>::nil();
     } else {
       const auto &[d_a0] = std::get<typename Nat::S>(n.v());
-      const auto &[d_a00, d_a10] = std::get<typename Stream<T1>::Scons>(s->v());
+      const auto &[d_a00, d_a10] = std::get<typename Stream<T1>::Scons>(s.v());
       return List<T1>::cons(d_a00, take<T1>(*(d_a0), *(d_a10)));
     }
   }
