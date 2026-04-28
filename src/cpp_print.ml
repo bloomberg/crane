@@ -1025,11 +1025,12 @@ and pp_cpp_expr env args t =
           ( str "template ",
             str "<" ++ pp_list (pp_cpp_type false []) filtered_tys ++ str ">" )
       in
-      (* Coinductive types are shared_ptr → use arrow.
-         Value types → use dot.  unique_ptr pattern match fields
-         are auto-dereferenced at binding time, so variables holding
-         inductives are always value types (T or const T&). *)
-      let use_arrow = method_receiver_is_ptr n in
+      (* All inductives (including coinductives) are value types, so use
+         dot access.  Exception: [this] is always a pointer, so method
+         bodies use arrow. *)
+      let use_arrow =
+        match this_arg with CPPthis -> true | _ -> false
+      in
       let accessor = if use_arrow then "->" else "." in
       (* Parenthesize deref expressions for correct precedence. *)
       let obj_pp =
@@ -1073,7 +1074,9 @@ and pp_cpp_expr env args t =
     let body_derefs_var =
       let found = ref false in
       let rec scan_expr = function
-        | CPPderef (CPPvar id) when String.equal (Id.to_string id) "_self" ->
+        | CPPderef (CPPvar _) ->
+          (* Dereferencing a simple variable (shared_ptr, pointer) is safe
+             for by-value capture — the pointer/smart-pointer is copied. *)
           ()
         | CPPderef _ -> found := true
         | e ->

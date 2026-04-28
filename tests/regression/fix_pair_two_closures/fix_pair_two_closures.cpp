@@ -8,23 +8,27 @@
 __attribute__((pure)) std::pair<std::function<unsigned int(unsigned int)>,
                                 std::function<unsigned int(unsigned int)>>
 FixPairTwoClosures::make_ops(unsigned int a, unsigned int b) {
-  auto f = std::make_shared<std::function<unsigned int(unsigned int)>>();
-  *f = [=](unsigned int x) mutable -> unsigned int {
+  auto f_impl = [=](auto &_self_f, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return a;
     } else {
       unsigned int x_ = x - 1;
-      return ((*f)(x_) + 1);
+      return (_self_f(_self_f, x_) + 1);
     }
   };
-  auto g = std::make_shared<std::function<unsigned int(unsigned int)>>();
-  *g = [=](unsigned int x) mutable -> unsigned int {
+  auto f = [=](unsigned int x) mutable -> unsigned int {
+    return f_impl(f_impl, x);
+  };
+  auto g_impl = [=](auto &_self_g, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return b;
     } else {
       unsigned int x_ = x - 1;
-      return ((*g)(x_) + 1);
+      return (_self_g(_self_g, x_) + 1);
     }
   };
-  return std::make_pair((*f), (*g));
+  auto g = [=](unsigned int x) mutable -> unsigned int {
+    return g_impl(g_impl, x);
+  };
+  return std::make_pair(f, g);
 }

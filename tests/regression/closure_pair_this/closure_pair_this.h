@@ -90,20 +90,20 @@ struct ClosurePairThis {
     __attribute__((pure)) std::pair<std::function<unsigned int(unsigned int)>,
                                     std::function<unsigned int(unsigned int)>>
     get_fn_pair(const unsigned int &flag) const {
-      std::shared_ptr<tree> _self = std::make_shared<tree>(*(this));
+      tree _self = *(this);
       if (flag <= 0) {
         return std::make_pair(
             [=](const unsigned int &x) mutable {
-              return (x + (*(_self)).tree_sum());
+              return (x + _self.tree_sum());
             },
             [=](const unsigned int &x) mutable {
-              return ((*(_self)).tree_sum() * x);
+              return (_self.tree_sum() * x);
             });
       } else {
         unsigned int _x = flag - 1;
         return std::make_pair(
             [=](const unsigned int &x) mutable {
-              return ((*(_self)).tree_sum() + x);
+              return (_self.tree_sum() + x);
             },
             [](unsigned int x) { return x; });
       }

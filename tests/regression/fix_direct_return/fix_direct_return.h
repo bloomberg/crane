@@ -22,17 +22,20 @@ struct FixDirectReturn {
   __attribute__((pure)) static unsigned int
   make_callback(const unsigned int &base, F1 &&_x0) {
     return [=]() mutable {
-      auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
-      *add = [=](unsigned int x) mutable -> unsigned int {
+      auto add_impl = [=](auto &_self_add,
+                          unsigned int x) mutable -> unsigned int {
         if (x <= 0) {
           return base;
         } else {
           unsigned int x_ = x - 1;
-          return ((*add)(x_) + 1);
+          return (_self_add(_self_add, x_) + 1);
         }
       };
+      auto add = [=](unsigned int x) mutable -> unsigned int {
+        return add_impl(add_impl, x);
+      };
       return [=](const std::function<unsigned int(unsigned int)> g) mutable {
-        return (g((*add)(0u)) + (*add)(1u));
+        return (g(add(0u)) + add(1u));
       };
     }()(_x0);
   }

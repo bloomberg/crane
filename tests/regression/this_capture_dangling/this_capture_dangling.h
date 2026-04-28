@@ -97,7 +97,7 @@ struct ThisCaptureDangling {
     __attribute__((pure))
     std::optional<std::function<unsigned int(unsigned int)>>
     get_fn() const {
-      std::shared_ptr<tree> _self = std::make_shared<tree>(*(this));
+      tree _self = *(this);
       auto _cs = (*(this)).tree_sum();
       if (_cs <= 0) {
         return std::optional<std::function<unsigned int(unsigned int)>>();
@@ -105,7 +105,7 @@ struct ThisCaptureDangling {
         unsigned int _x = _cs - 1;
         return std::make_optional<std::function<unsigned int(unsigned int)>>(
             [=](const unsigned int &x) mutable {
-              return (x + (*(_self)).tree_sum());
+              return (x + _self.tree_sum());
             });
       }
     }

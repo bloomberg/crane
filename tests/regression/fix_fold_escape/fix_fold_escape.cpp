@@ -13,17 +13,19 @@ __attribute__((pure)) List<std::function<unsigned int(unsigned int)>>
 FixFoldEscape::collect_adders(const List<unsigned int> &l) {
   return fold_left(
       [](List<std::function<unsigned int(unsigned int)>> acc, unsigned int n) {
-        auto adder =
-            std::make_shared<std::function<unsigned int(unsigned int)>>();
-        *adder = [=](unsigned int x) mutable -> unsigned int {
+        auto adder_impl = [=](auto &_self_adder,
+                              unsigned int x) mutable -> unsigned int {
           if (x <= 0) {
             return n;
           } else {
             unsigned int x_ = x - 1;
-            return ((*adder)(x_) + 1);
+            return (_self_adder(_self_adder, x_) + 1);
           }
         };
-        return List<std::function<unsigned int(unsigned int)>>::cons((*adder),
+        auto adder = [=](unsigned int x) mutable -> unsigned int {
+          return adder_impl(adder_impl, x);
+        };
+        return List<std::function<unsigned int(unsigned int)>>::cons(adder,
                                                                      acc);
       },
       List<std::function<unsigned int(unsigned int)>>::nil(), l);

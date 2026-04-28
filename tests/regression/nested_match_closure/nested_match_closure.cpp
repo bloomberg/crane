@@ -30,17 +30,19 @@ NestedMatchClosure::make_combiner(const NestedMatchClosure::tree &t) {
       const auto &[d_a00, d_a10, d_a20] =
           std::get<typename NestedMatchClosure::tree::Node>(d_a0_value.v());
       unsigned int combined = (d_a1 + d_a10);
-      auto go = std::make_shared<std::function<unsigned int(unsigned int)>>();
-      *go = [=](unsigned int x) mutable -> unsigned int {
+      auto go_impl = [=](auto &_self_go,
+                         unsigned int x) mutable -> unsigned int {
         if (x <= 0) {
           return combined;
         } else {
           unsigned int x_ = x - 1;
-          return ((*go)(x_) + 1);
+          return (_self_go(_self_go, x_) + 1);
         }
       };
-      return std::make_optional<std::function<unsigned int(unsigned int)>>(
-          (*go));
+      auto go = [=](unsigned int x) mutable -> unsigned int {
+        return go_impl(go_impl, x);
+      };
+      return std::make_optional<std::function<unsigned int(unsigned int)>>(go);
     }
   }
 }
@@ -68,17 +70,20 @@ NestedMatchClosure::make_deep_combiner(const NestedMatchClosure::tree &t) {
         const auto &[d_a01, d_a11, d_a21] =
             std::get<typename NestedMatchClosure::tree::Node>(d_a00_value.v());
         unsigned int total = ((d_a1 + d_a10) + d_a11);
-        auto go = std::make_shared<std::function<unsigned int(unsigned int)>>();
-        *go = [=](unsigned int x) mutable -> unsigned int {
+        auto go_impl = [=](auto &_self_go,
+                           unsigned int x) mutable -> unsigned int {
           if (x <= 0) {
             return total;
           } else {
             unsigned int x_ = x - 1;
-            return ((*go)(x_) + 1);
+            return (_self_go(_self_go, x_) + 1);
           }
         };
+        auto go = [=](unsigned int x) mutable -> unsigned int {
+          return go_impl(go_impl, x);
+        };
         return std::make_optional<std::function<unsigned int(unsigned int)>>(
-            (*go));
+            go);
       }
     }
   }
@@ -98,15 +103,17 @@ NestedMatchClosure::make_param_combiner(const NestedMatchClosure::tree &t,
         std::get<typename NestedMatchClosure::tree::Node>(t.v());
     NestedMatchClosure::tree d_a0_value = *(d_a0);
     NestedMatchClosure::tree d_a2_value = *(d_a2);
-    auto go = std::make_shared<std::function<unsigned int(unsigned int)>>();
-    *go = [=](unsigned int x) mutable -> unsigned int {
+    auto go_impl = [=](auto &_self_go, unsigned int x) mutable -> unsigned int {
       if (x <= 0) {
         return (((base + d_a1) + tree_sum(d_a0_value)) + tree_sum(d_a2_value));
       } else {
         unsigned int x_ = x - 1;
-        return ((*go)(x_) + 1);
+        return (_self_go(_self_go, x_) + 1);
       }
     };
-    return std::make_optional<std::function<unsigned int(unsigned int)>>((*go));
+    auto go = [=](unsigned int x) mutable -> unsigned int {
+      return go_impl(go_impl, x);
+    };
+    return std::make_optional<std::function<unsigned int(unsigned int)>>(go);
   }
 }

@@ -104,18 +104,20 @@ struct FixSharedPtrField {
       } else {
         const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
         mylist d_a1_value = *(d_a1);
-        auto compute =
-            std::make_shared<std::function<unsigned int(unsigned int)>>();
-        *compute = [=](unsigned int x) mutable -> unsigned int {
+        auto compute_impl = [=](auto &_self_compute,
+                                unsigned int x) mutable -> unsigned int {
           if (x <= 0) {
             return (d_a0 + d_a1_value.mylist_sum());
           } else {
             unsigned int x_ = x - 1;
-            return (1u + (*compute)(x_));
+            return (1u + _self_compute(_self_compute, x_));
           }
         };
+        auto compute = [=](unsigned int x) mutable -> unsigned int {
+          return compute_impl(compute_impl, x);
+        };
         return std::make_optional<std::function<unsigned int(unsigned int)>>(
-            (*compute));
+            compute);
       }
     }
 

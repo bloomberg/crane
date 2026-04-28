@@ -66,19 +66,19 @@ __attribute__((pure)) unsigned int FoldClosureBuild::compose_with_fix(
     const FoldClosureBuild::mylist<unsigned int> &l, const unsigned int &_x0) {
   return fold_left<std::function<unsigned int(unsigned int)>, unsigned int>(
       [](const std::function<unsigned int(unsigned int)> acc, unsigned int h) {
-        auto go = std::make_shared<std::function<unsigned int(unsigned int)>>();
-        *go = [=](unsigned int x) mutable -> unsigned int {
+        auto go_impl = [=](auto &_self_go,
+                           unsigned int x) mutable -> unsigned int {
           if (x <= 0) {
             return acc(h);
           } else {
             unsigned int x_ = x - 1;
-            return ((*go)(x_) + 1);
+            return (_self_go(_self_go, x_) + 1);
           }
         };
-        return [=](unsigned int x) mutable -> unsigned int {
-          go;
-          return (*go)(x);
+        auto go = [=](unsigned int x) mutable -> unsigned int {
+          return go_impl(go_impl, x);
         };
+        return go;
       },
       [](unsigned int x) { return x; }, l)(_x0);
 }

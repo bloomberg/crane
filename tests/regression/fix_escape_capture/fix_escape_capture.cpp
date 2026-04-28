@@ -6,16 +6,18 @@
 __attribute__((pure))
 std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
 FixEscapeCapture::make_pair_fn(unsigned int base) {
-  auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
-  *add = [=](unsigned int x) mutable -> unsigned int {
+  auto add_impl = [=](auto &_self_add, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return base;
     } else {
       unsigned int x_ = x - 1;
-      return ((*add)(x_) + 1);
+      return (_self_add(_self_add, x_) + 1);
     }
   };
-  return std::make_pair(base, (*add));
+  auto add = [=](unsigned int x) mutable -> unsigned int {
+    return add_impl(add_impl, x);
+  };
+  return std::make_pair(base, add);
 }
 
 /// Same pattern with a non-recursive local fixpoint to isolate the
@@ -23,14 +25,17 @@ FixEscapeCapture::make_pair_fn(unsigned int base) {
 __attribute__((pure))
 std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
 FixEscapeCapture::make_pair_fn2(unsigned int base) {
-  auto id_add = std::make_shared<std::function<unsigned int(unsigned int)>>();
-  *id_add = [=](unsigned int x) mutable -> unsigned int {
+  auto id_add_impl = [=](auto &_self_id_add,
+                         unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return base;
     } else {
       unsigned int x_ = x - 1;
-      return ((*id_add)(x_) + 1);
+      return (_self_id_add(_self_id_add, x_) + 1);
     }
   };
-  return std::make_pair((*id_add)(base), (*id_add));
+  auto id_add = [=](unsigned int x) mutable -> unsigned int {
+    return id_add_impl(id_add_impl, x);
+  };
+  return std::make_pair(id_add(base), id_add);
 }

@@ -12,17 +12,19 @@ FixEscapeMatch::make_fn_from_head(const List<unsigned int> &l) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(l.v());
-    auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
-    *add = [=](unsigned int x) mutable -> unsigned int {
+    auto add_impl = [=](auto &_self_add,
+                        unsigned int x) mutable -> unsigned int {
       if (x <= 0) {
         return d_a0;
       } else {
         unsigned int x_ = x - 1;
-        return ((*add)(x_) + 1);
+        return (_self_add(_self_add, x_) + 1);
       }
     };
-    return std::make_optional<std::function<unsigned int(unsigned int)>>(
-        (*add));
+    auto add = [=](unsigned int x) mutable -> unsigned int {
+      return add_impl(add_impl, x);
+    };
+    return std::make_optional<std::function<unsigned int(unsigned int)>>(add);
   }
 }
 
@@ -41,18 +43,20 @@ FixEscapeMatch::make_fn_from_pair(const List<unsigned int> &l) {
     } else {
       const auto &[d_a00, d_a10] =
           std::get<typename List<unsigned int>::Cons>(d_a1_value.v());
-      auto combine =
-          std::make_shared<std::function<unsigned int(unsigned int)>>();
-      *combine = [=](unsigned int x) mutable -> unsigned int {
+      auto combine_impl = [=](auto &_self_combine,
+                              unsigned int x) mutable -> unsigned int {
         if (x <= 0) {
           return (d_a0 + d_a00);
         } else {
           unsigned int x_ = x - 1;
-          return ((*combine)(x_) + 1);
+          return (_self_combine(_self_combine, x_) + 1);
         }
       };
+      auto combine = [=](unsigned int x) mutable -> unsigned int {
+        return combine_impl(combine_impl, x);
+      };
       return std::make_optional<std::function<unsigned int(unsigned int)>>(
-          (*combine));
+          combine);
     }
   }
 }

@@ -19,15 +19,18 @@ FixChainBuild::build_chain(unsigned int n) {
     auto _cs = build_chain(n_);
     const unsigned int &_x = _cs.first;
     const std::function<unsigned int(unsigned int)> &prev = _cs.second;
-    auto step = std::make_shared<std::function<unsigned int(unsigned int)>>();
-    *step = [=](unsigned int x) mutable -> unsigned int {
+    auto step_impl = [=](auto &_self_step,
+                         unsigned int x) mutable -> unsigned int {
       if (x <= 0) {
         return n;
       } else {
         unsigned int x_ = x - 1;
-        return (prev((*step)(x_)) + 1);
+        return (prev(_self_step(_self_step, x_)) + 1);
       }
     };
-    return std::make_pair(n, (*step));
+    auto step = [=](unsigned int x) mutable -> unsigned int {
+      return step_impl(step_impl, x);
+    };
+    return std::make_pair(n, step);
   }
 }

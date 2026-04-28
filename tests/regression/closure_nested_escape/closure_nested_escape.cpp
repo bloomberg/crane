@@ -13,23 +13,27 @@
 __attribute__((pure)) std::pair<std::function<unsigned int(unsigned int)>,
                                 std::function<unsigned int(unsigned int)>>
 ClosureNestedEscape::make_pair_fix(unsigned int n) {
-  auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
-  *add = [=](unsigned int x) mutable -> unsigned int {
+  auto add_impl = [=](auto &_self_add, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return n;
     } else {
       unsigned int x_ = x - 1;
-      return ((*add)(x_) + 1);
+      return (_self_add(_self_add, x_) + 1);
     }
   };
-  auto mul = std::make_shared<std::function<unsigned int(unsigned int)>>();
-  *mul = [=](unsigned int x) mutable -> unsigned int {
+  auto add = [=](unsigned int x) mutable -> unsigned int {
+    return add_impl(add_impl, x);
+  };
+  auto mul_impl = [=](auto &_self_mul, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return 0u;
     } else {
       unsigned int x_ = x - 1;
-      return (n + (*mul)(x_));
+      return (n + _self_mul(_self_mul, x_));
     }
   };
-  return std::make_pair((*add), (*mul));
+  auto mul = [=](unsigned int x) mutable -> unsigned int {
+    return mul_impl(mul_impl, x);
+  };
+  return std::make_pair(add, mul);
 }

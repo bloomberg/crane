@@ -25,17 +25,20 @@ ClosureMapEscape::map_to_adders(
         std::get<typename ClosureMapEscape::mylist<unsigned int>::Mycons>(
             l.v());
     ClosureMapEscape::mylist<unsigned int> d_a1_value = *(d_a1);
-    auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
-    *add = [=](unsigned int x) mutable -> unsigned int {
+    auto add_impl = [=](auto &_self_add,
+                        unsigned int x) mutable -> unsigned int {
       if (x <= 0) {
         return d_a0;
       } else {
         unsigned int x_ = x - 1;
-        return ((*add)(x_) + 1);
+        return (_self_add(_self_add, x_) + 1);
       }
     };
+    auto add = [=](unsigned int x) mutable -> unsigned int {
+      return add_impl(add_impl, x);
+    };
     return mylist<std::function<unsigned int(unsigned int)>>::mycons(
-        (*add), map_to_adders(d_a1_value));
+        add, map_to_adders(d_a1_value));
   }
 }
 

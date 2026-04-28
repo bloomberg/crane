@@ -711,10 +711,9 @@ struct RocqBug14174 {
       }
 
       __attribute__((pure)) sig<t_A> sig_of_sig2() const {
-        std::shared_ptr<sig2<t_A>> _self = std::make_shared<sig2<t_A>>(*(this));
+        sig2<t_A> _self = *(this);
         return sig<t_A>::exist([=]() mutable {
-          auto &&_sv = *(_self);
-          const auto &[d_x] = std::get<typename sig2<t_A>::Exist2>(_sv.v());
+          const auto &[d_x] = std::get<typename sig2<t_A>::Exist2>(_self.v());
           return d_x;
         }());
       }
@@ -956,19 +955,16 @@ struct RocqBug14174 {
       }
 
       __attribute__((pure)) sigT<t_A, t_P> sigT_of_sigT2() const {
-        std::shared_ptr<sigT2<t_A, t_P, t_Q>> _self =
-            std::make_shared<sigT2<t_A, t_P, t_Q>>(*(this));
+        sigT2<t_A, t_P, t_Q> _self = *(this);
         return sigT<t_A, t_P>::existt(
             [=]() mutable {
-              auto &&_sv = *(_self);
               const auto &[d_x, d_a1, d_a2] =
-                  std::get<typename sigT2<t_A, t_P, t_Q>::ExistT2>(_sv.v());
+                  std::get<typename sigT2<t_A, t_P, t_Q>::ExistT2>(_self.v());
               return d_x;
             }(),
             [=]() mutable {
-              auto &&_sv0 = *(_self);
               const auto &[d_x0, d_a10, d_a20] =
-                  std::get<typename sigT2<t_A, t_P, t_Q>::ExistT2>(_sv0.v());
+                  std::get<typename sigT2<t_A, t_P, t_Q>::ExistT2>(_self.v());
               return d_a10;
             }());
       }
@@ -1210,16 +1206,16 @@ struct RocqBug14174 {
     template <typename T1, MapsTo<sig<T1>, T1> F0>
     __attribute__((pure)) static sig<std::function<T1(Nat)>>
     dependent_choice(F0 &&h, const T1 x0) {
-      auto f = std::make_shared<std::function<T1(Nat)>>();
-      *f = [&](Nat n) -> T1 {
+      auto f_impl = [&](auto &_self_f, Nat n) -> T1 {
         if (std::holds_alternative<typename Nat::O>(n.v())) {
           return x0;
         } else {
           const auto &[d_a0] = std::get<typename Nat::S>(n.v());
-          return h((*f)(*(d_a0))).proj1_sig();
+          return h(_self_f(_self_f, *(d_a0))).proj1_sig();
         }
       };
-      return sig<std::function<T1(Nat)>>::exist((*f));
+      auto f = [=](Nat n) mutable -> T1 { return f_impl(f_impl, n); };
+      return sig<std::function<T1(Nat)>>::exist(f);
     }
 
     template <typename a> using Exc = Option<a>;

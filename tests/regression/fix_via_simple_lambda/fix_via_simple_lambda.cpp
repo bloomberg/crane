@@ -16,28 +16,32 @@
 __attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
 FixViaSimpleLambda::make_combined(const unsigned int &n) {
   unsigned int base = (n * 2u);
-  auto double_add =
-      std::make_shared<std::function<unsigned int(unsigned int)>>();
-  *double_add = [=](unsigned int x) mutable -> unsigned int {
+  auto double_add_impl = [=](auto &_self_double_add,
+                             unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return base;
     } else {
       unsigned int x_ = x - 1;
-      return (2u + (*double_add)(x_));
+      return (2u + _self_double_add(_self_double_add, x_));
     }
   };
-  auto triple_add =
-      std::make_shared<std::function<unsigned int(unsigned int)>>();
-  *triple_add = [=](unsigned int x) mutable -> unsigned int {
+  auto double_add = [=](unsigned int x) mutable -> unsigned int {
+    return double_add_impl(double_add_impl, x);
+  };
+  auto triple_add_impl = [=](auto &_self_triple_add,
+                             unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return base;
     } else {
       unsigned int x_ = x - 1;
-      return (3u + (*triple_add)(x_));
+      return (3u + _self_triple_add(_self_triple_add, x_));
     }
+  };
+  auto triple_add = [=](unsigned int x) mutable -> unsigned int {
+    return triple_add_impl(triple_add_impl, x);
   };
   return std::make_optional<std::function<unsigned int(unsigned int)>>(
       [=](const unsigned int &x) mutable {
-        return ((*double_add)(x) + (*triple_add)(x));
+        return (double_add(x) + triple_add(x));
       });
 }

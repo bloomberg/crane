@@ -22,16 +22,19 @@ struct FixComposeEscape {
   __attribute__((pure)) static unsigned int
   compose_add(const unsigned int &base, F1 &&g, unsigned int _x0) {
     return [=]() mutable {
-      auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
-      *add = [=](unsigned int x) mutable -> unsigned int {
+      auto add_impl = [=](auto &_self_add,
+                          unsigned int x) mutable -> unsigned int {
         if (x <= 0) {
           return base;
         } else {
           unsigned int x_ = x - 1;
-          return ((*add)(x_) + 1);
+          return (_self_add(_self_add, x_) + 1);
         }
       };
-      return [=](const unsigned int &x) mutable { return g((*add)(x)); };
+      auto add = [=](unsigned int x) mutable -> unsigned int {
+        return add_impl(add_impl, x);
+      };
+      return [=](const unsigned int &x) mutable { return g(add(x)); };
     }()(_x0);
   }
 

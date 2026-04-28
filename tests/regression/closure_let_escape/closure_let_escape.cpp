@@ -14,16 +14,18 @@
 __attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
 ClosureLetEscape::make_fn_fix(const unsigned int &n) {
   unsigned int base = (n * 2u);
-  auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
-  *add = [=](unsigned int x) mutable -> unsigned int {
+  auto add_impl = [=](auto &_self_add, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return base;
     } else {
       unsigned int x_ = x - 1;
-      return ((*add)(x_) + 1);
+      return (_self_add(_self_add, x_) + 1);
     }
   };
-  return std::make_optional<std::function<unsigned int(unsigned int)>>((*add));
+  auto add = [=](unsigned int x) mutable -> unsigned int {
+    return add_impl(add_impl, x);
+  };
+  return std::make_optional<std::function<unsigned int(unsigned int)>>(add);
 }
 
 /// test3: Captures from multiple let bindings.
@@ -32,15 +34,17 @@ __attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
 ClosureLetEscape::make_fn_multi(const unsigned int &n) {
   unsigned int a = (n + 1u);
   unsigned int b = (a * 3u);
-  auto helper = std::make_shared<std::function<unsigned int(unsigned int)>>();
-  *helper = [=](unsigned int x) mutable -> unsigned int {
+  auto helper_impl = [=](auto &_self_helper,
+                         unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return (a + b);
     } else {
       unsigned int x_ = x - 1;
-      return ((*helper)(x_) + 1);
+      return (_self_helper(_self_helper, x_) + 1);
     }
   };
-  return std::make_optional<std::function<unsigned int(unsigned int)>>(
-      (*helper));
+  auto helper = [=](unsigned int x) mutable -> unsigned int {
+    return helper_impl(helper_impl, x);
+  };
+  return std::make_optional<std::function<unsigned int(unsigned int)>>(helper);
 }

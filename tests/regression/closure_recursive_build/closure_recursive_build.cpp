@@ -13,16 +13,19 @@ ClosureRecursiveBuild::build_adders(unsigned int n) {
     return fn_list::fnil();
   } else {
     unsigned int n_ = n - 1;
-    auto adder = std::make_shared<std::function<unsigned int(unsigned int)>>();
-    *adder = [=](unsigned int x) mutable -> unsigned int {
+    auto adder_impl = [=](auto &_self_adder,
+                          unsigned int x) mutable -> unsigned int {
       if (x <= 0) {
         return n;
       } else {
         unsigned int x_ = x - 1;
-        return ((*adder)(x_) + 1);
+        return (_self_adder(_self_adder, x_) + 1);
       }
     };
-    return fn_list::fcons((*adder), build_adders(n_));
+    auto adder = [=](unsigned int x) mutable -> unsigned int {
+      return adder_impl(adder_impl, x);
+    };
+    return fn_list::fcons(adder, build_adders(n_));
   }
 }
 

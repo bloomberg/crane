@@ -154,10 +154,10 @@ template <typename K, typename V> struct CHT {
     }
   }
   std::monostate put(const K k, const V v) const {
-    bsl::shared_ptr<CHT<K, V>> _self = bsl::make_shared<CHT<K, V>>(*(this));
+    CHT<K, V> _self = *(this);
     return stm::atomically([&] {
       return [=]() mutable {
-        (*(_self)).stm_put(k, v);
+        _self.stm_put(k, v);
         return std::monostate{};
       }();
     });

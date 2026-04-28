@@ -13,14 +13,16 @@
 /// INDUCTIVE constructor, not a pair.
 __attribute__((pure)) ClosureInCtor::box
 ClosureInCtor::make_box_fix(unsigned int n) {
-  auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
-  *add = [=](unsigned int x) mutable -> unsigned int {
+  auto add_impl = [=](auto &_self_add, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return n;
     } else {
       unsigned int x_ = x - 1;
-      return ((*add)(x_) + 1);
+      return (_self_add(_self_add, x_) + 1);
     }
   };
-  return box::box0((*add));
+  auto add = [=](unsigned int x) mutable -> unsigned int {
+    return add_impl(add_impl, x);
+  };
+  return box::box0(add);
 }

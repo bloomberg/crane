@@ -934,6 +934,14 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
       else
         let dst_s = render dst_ty in
         CPPfun_call (CPPraw dst_s, [derefed])
+    | Tshared_ptr inner, _ ->
+      (* shared_ptr<T> → T: dereference; if inner type differs from dst,
+         apply a converting constructor after dereferencing. *)
+      let derefed = CPPderef expr in
+      if inner = dst_ty then derefed
+      else
+        let dst_s = render dst_ty in
+        CPPfun_call (CPPraw dst_s, [derefed])
     | _, Tunique_ptr inner ->
       (* T → unique_ptr<T>: wrap in make_unique *)
       CPPfun_call (CPPmk_unique inner, [expr])
@@ -2373,18 +2381,12 @@ let rec convert_ml_type_to_cpp_type
              field declaration time, so it still needs indirection, but unique
              ownership plus explicit clone is enough. *)
           Tunique_ptr core
-        else if
-          (is_self_ref || is_mutual_sibling)
-          && not (Table.is_coinductive g)
-        then
-          (* Non-uniform recursion such as [tree<T>] containing
-             [tree<pair<T,T>>] cannot use unique_ptr with the default deleter:
-             destructor instantiation expands through an infinite sequence of
-             template arguments.  Keep these rare fields behind shared_ptr while
-             preserving value-shaped public APIs through clone adapters. *)
-          Tshared_ptr core
-        else if Table.is_coinductive g then
-          (* Coinductives still use shared_ptr during the lazy-thunk phase. *)
+        else if is_self_ref || is_mutual_sibling then
+          (* Non-uniform recursion and coinductive self-references use
+             shared_ptr.  Non-uniform recursion cannot use unique_ptr
+             because destructor instantiation diverges.  Coinductive
+             recursive fields need shared_ptr because the lazy thunk
+             copies the tail reference ([=] capture). *)
           Tshared_ptr core
         else if is_local then
           (* Local non-self inductive: value type, no pointer wrapping *)
@@ -5564,13 +5566,11 @@ and gen_cpp_case (typ : ml_type) t env pv =
     tctx.move_dead_after <- Escape.IntSet.empty;
     let scrut_expr = gen_expr env t in
     tctx.move_dead_after <- saved_dead_visit;
-    (* Build variant accessor.  For value types (non-coinductive), use
-       [scrut.v()] (dot access).  For coinductive types (shared_ptr), use
-       [scrut->v()] (arrow access).  Exception: [this] is always a pointer
-       even for value types, so method bodies always use [this->v()]. *)
+    (* Build variant accessor.  All inductives (including coinductives)
+       are value types and use [scrut.v()] (dot access).  Exception:
+       [this] is always a pointer, so method bodies use [this->v()]. *)
     let scrut_is_ptr =
-      is_coinductive
-      || (match scrut_expr with CPPthis -> true | _ -> false)
+      match scrut_expr with CPPthis -> true | _ -> false
     in
     let scrut_v =
       if scrut_is_ptr then
@@ -6254,6 +6254,135 @@ and gen_local_fix_shared_ptr env renamed_ids funs_with_params =
   in
   (decls, defs, deref_subst)
 
+(** Generate local fixpoint declarations using the Y-combinator pattern
+    for escaping fixpoints.
+
+    Replaces the [shared_ptr<std::function>] pattern with a generic-lambda
+    self-passing pattern:
+    {v
+      auto go_impl = [=](auto &_self, A... args) mutable -> R {
+        ... _self(_self, args) ...
+      };
+      auto go = [=](A... args) mutable -> R {
+        return go_impl(go_impl, args...);
+      };
+    v}
+
+    No heap allocation, no [std::function] type erasure.  The [auto &_self]
+    parameter uses C++14 generic lambdas.
+
+    For mutual recursion with N functions, each impl takes N self parameters:
+    {v
+      auto f_impl = [=](auto &_sf, auto &_sg, A...) { ... _sg(_sf, _sg, ...) ... };
+      auto g_impl = [=](auto &_sf, auto &_sg, A...) { ... _sf(_sf, _sg, ...) ... };
+      auto f = [=](A...) { return f_impl(f_impl, g_impl, ...); };
+      auto g = [=](A...) { return g_impl(f_impl, g_impl, ...); };
+    v}
+
+    @return [(decls, defs, deref_subst)] where [defs] is empty and
+    [deref_subst] is the identity function (no dereferencing needed).
+    @see gen_local_fix_by_ref for the non-escaping alternative. *)
+and gen_local_fix_ycomb env renamed_ids funs_with_params =
+  let tvars = get_current_type_vars () in
+  let ret_ty ty =
+    match convert_ml_type_to_cpp_type env Refset'.empty tvars ty with
+    | Tfun (_, t) ->
+      ( match t with
+      | Minicpp.Tvar (_, None) -> None
+      | _ -> Some t )
+    | _ -> None
+  in
+  (* Create self-parameter IDs and impl IDs for each fixpoint. *)
+  let self_ids =
+    List.map
+      (fun (id, _) -> Id.of_string ("_self_" ^ Id.to_string id))
+      renamed_ids
+  in
+  let impl_ids =
+    List.map
+      (fun (id, _) -> Id.of_string (Id.to_string id ^ "_impl"))
+      renamed_ids
+  in
+  (* The self-parameter CPP vars, in reversed order for prepending to
+     reversed arg lists in CPPfun_call nodes. *)
+  let self_vars_rev = List.rev_map (fun id -> CPPvar id) self_ids in
+  (* Rewrite recursive calls in a body: for each fix_id, replace
+     CPPfun_call(CPPvar fix_id, args) with
+     CPPfun_call(CPPvar self_id, args @ self_vars_rev). *)
+  let find_self_id id =
+    let rec aux ids sids =
+      match (ids, sids) with
+      | (fix_id, _) :: _, sid :: _ when Id.equal id fix_id -> Some sid
+      | _ :: ids', _ :: sids' -> aux ids' sids'
+      | _ -> None
+    in
+    aux renamed_ids self_ids
+  in
+  let rec rewrite_expr e =
+    match e with
+    | CPPfun_call (CPPvar id, args) -> (
+      match find_self_id id with
+      | Some self_id ->
+        CPPfun_call
+          (CPPvar self_id, List.map rewrite_expr args @ self_vars_rev)
+      | None -> CPPfun_call (CPPvar id, List.map rewrite_expr args) )
+    | _ -> map_expr rewrite_expr rewrite_stmt Fun.id e
+  and rewrite_stmt s = map_stmt rewrite_expr rewrite_stmt Fun.id s in
+  (* Generate impl lambdas: each takes all self params (auto &) + original params. *)
+  let impl_stmts =
+    List.map2
+      (fun ((_fix_id, fty), impl_id) (args, body) ->
+        let self_params =
+          List.rev_map (fun sid -> (Tref Tauto, Some sid)) self_ids
+        in
+        let orig_params =
+          List.map
+            (fun (id, ty) ->
+              (convert_ml_type_to_cpp_type env Refset'.empty tvars ty, Some id))
+            args
+        in
+        Sasgn
+          ( impl_id,
+            Some Tauto,
+            CPPlambda
+              ( orig_params @ self_params,
+                ret_ty fty,
+                List.map rewrite_stmt body,
+                true ) ))
+      (List.combine renamed_ids impl_ids)
+      funs_with_params
+  in
+  (* Generate wrapper lambdas: forward to impl with all impl_ids prepended. *)
+  let impl_vars_rev = List.rev_map (fun id -> CPPvar id) impl_ids in
+  let wrapper_stmts =
+    List.map2
+      (fun ((fix_id, fty), impl_id) (args, _body) ->
+        let orig_params =
+          List.map
+            (fun (id, ty) ->
+              (convert_ml_type_to_cpp_type env Refset'.empty tvars ty, Some id))
+            args
+        in
+        let fwd_args =
+          List.rev_map (fun (id, _) -> CPPvar id) args @ impl_vars_rev
+        in
+        let rty = ret_ty fty in
+        let call = CPPfun_call (CPPvar impl_id, fwd_args) in
+        let wrapper_body =
+          match rty with
+          | None -> [Sexpr call]
+          | _ -> [Sreturn (Some call)]
+        in
+        Sasgn
+          ( fix_id,
+            Some Tauto,
+            CPPlambda (orig_params, rty, wrapper_body, true) ))
+      (List.combine renamed_ids impl_ids)
+      funs_with_params
+  in
+  let deref_subst stmts = stmts in
+  (impl_stmts @ wrapper_stmts, [], deref_subst)
+
 (** Generate C++ statements from an ML AST. The continuation [k] transforms the
     final expression into a statement (e.g., return, assignment). Handles
     let-bindings, pattern matching, fix expressions, and monadic operations. *)
@@ -6495,7 +6624,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       in
       if any_escapes then
         let decls, defs, deref_subst =
-          gen_local_fix_shared_ptr env renamed_ids funs_with_params
+          gen_local_fix_ycomb env renamed_ids funs_with_params
         in
         decls @ defs @ deref_subst cont
       else
@@ -7217,9 +7346,8 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
   | MLfix (x, ids, funs, _) ->
     (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
        RHS of a let-binding.  Since the fixpoint value itself is returned (not
-       called in place), it will always escape, so we unconditionally use the
-       shared_ptr pattern via gen_local_fix_shared_ptr.  The result is
-       [*fix_name], dereferencing the shared_ptr to yield the std::function. *)
+       called in place), it will always escape.  Use the Y-combinator pattern:
+       the generated wrapper lambda [fix_name] is already a plain callable. *)
     let next_tvar = ref 1 in
     let resolve_metas = resolve_type_metas ~next_tvar in
     Array.iter (fun (_, ty) -> resolve_metas ty) ids;
@@ -7238,45 +7366,10 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       List.map (fun (_, params, body) -> (params, body)) funs_compiled
     in
     let decls, defs, _deref_subst =
-      gen_local_fix_shared_ptr env renamed_ids funs_with_params
+      gen_local_fix_ycomb env renamed_ids funs_with_params
     in
-    (* Return a wrapper closure that owns the shared cell and dispatches
-       through it.  Returning [*fix_name] copies a std::function whose target
-       may itself capture the same heap cell; libc++ can trip over that
-       self-referential copy. *)
-    let fix_id, fix_ty = List.nth renamed_ids x in
-    let params =
-      match List.nth funs_with_params x with
-      | params, _ -> params
-    in
-    let tvars = get_current_type_vars () in
-    let cpp_params =
-      List.map
-        (fun (id, ty) ->
-          (convert_ml_type_to_cpp_type env Refset'.empty tvars ty, Some id))
-        params
-    in
-    let ret_ty =
-      match convert_ml_type_to_cpp_type env Refset'.empty tvars fix_ty with
-      | Tfun (_, Tvar (_, None)) -> None
-      | Tfun (_, t) -> Some t
-      | _ -> None
-    in
-    let call_args = List.rev_map (fun (id, _) -> CPPvar id) params in
-    let wrapper =
-      CPPlambda
-        ( cpp_params,
-          ret_ty,
-          [
-            Sexpr (CPPvar fix_id);
-            Sreturn
-              (Some
-                 (CPPfun_call
-                    (CPPraw ("(*" ^ Id.to_string fix_id ^ ")"), call_args)));
-          ],
-          true )
-    in
-    decls @ defs @ [k wrapper]
+    let fix_id = fst (List.nth renamed_ids x) in
+    decls @ defs @ [k (CPPvar fix_id)]
   (* | MLapp (MLglob (h, _), a1 :: a2 :: l) when is_hoist h -> gen_stmts env k
      (MLapp (a1, a2::[])) *)
   | MLapp (MLglob (r, bind_tys), a1 :: a2 :: l) when is_bind r ->
@@ -10133,8 +10226,7 @@ let set_method_ns_for_locals () =
   let full_ns =
     List.fold_left
       (fun acc g ->
-        if Table.has_recursive_fields g && not (Table.is_coinductive g)
-           && not (is_enum_inductive g)
+        if Table.has_recursive_fields g && not (is_enum_inductive g)
         then Refset'.add g acc
         else acc)
       tctx.method_self_ns
@@ -10815,11 +10907,19 @@ let replace_this_in_lambdas self_type stmts =
   let needs_self = List.exists lambda_captures_this_stmt stmts in
   if not needs_self then stmts
   else
+    (* Determine whether _self is a value type (non-enum).
+       Coinductives and regular inductives are both value types. *)
+    let is_value_self =
+      match self_type with
+      | Tglob (self_ref, _, _) -> not (is_enum_inductive self_ref)
+      | _ -> false
+    in
     (* Substitute CPPthis and CPPshared_from_this → CPPvar "_self" inside
-       by-value lambda bodies.  Both refer to the receiver object through
-       the raw [this] pointer; replacing with [_self] (a captured shared_ptr)
-       keeps the object alive after the method returns. *)
+       by-value lambda bodies.  For value-type _self, also collapse
+       CPPderef(CPPthis) → CPPvar "_self" to avoid dereferencing a value. *)
     let rec subst_expr = function
+      | CPPderef (CPPthis | CPPshared_from_this _) when is_value_self ->
+        CPPvar self_id
       | CPPthis | CPPshared_from_this _ -> CPPvar self_id
       | e -> map_expr subst_expr subst_stmt id_type e
     and subst_stmt s =
@@ -10832,17 +10932,13 @@ let replace_this_in_lambdas self_type stmts =
     and walk_stmt s =
       map_stmt walk_expr walk_stmt id_type s
     in
-    let self_expr =
-      match self_type with
-      | Tglob (self_ref, _, _)
-        when (not (Table.is_coinductive self_ref))
-             && not (is_enum_inductive self_ref) ->
-        CPPfun_call (CPPmk_shared self_type, [CPPderef CPPthis])
-      | _ -> CPPshared_from_this self_type
+    let self_expr, self_ty =
+      if is_value_self then
+        (CPPderef CPPthis, Some self_type)
+      else
+        (CPPshared_from_this self_type, Some (Tshared_ptr self_type))
     in
-    let self_binding =
-      Sasgn (self_id, Some (Tshared_ptr self_type), self_expr)
-    in
+    let self_binding = Sasgn (self_id, self_ty, self_expr) in
     self_binding :: List.map walk_stmt stmts
 
 (** Check if a C++ type contains [Tshared_ptr] anywhere in its structure.
@@ -10988,11 +11084,9 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let method_ns = Refset'.add name Refset'.empty in
   let rec strip_self_ptr ty =
     match ty with
-    | Tshared_ptr (Tglob (g, _, _)) when
-        not (Table.is_coinductive g) && not (is_enum_inductive g) ->
+    | Tshared_ptr (Tglob (g, _, _)) when not (is_enum_inductive g) ->
       (match ty with Tshared_ptr inner -> inner | _ -> ty)
-    | Tunique_ptr (Tglob (g, _, _)) when
-        not (Table.is_coinductive g) && not (is_enum_inductive g) ->
+    | Tunique_ptr (Tglob (g, _, _)) when not (is_enum_inductive g) ->
       (match ty with Tunique_ptr inner -> inner | _ -> ty)
     | Tglob (r, args, es) ->
       Tglob (r, List.map strip_self_ptr args, es)
@@ -11197,8 +11291,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let full_method_ns =
     List.fold_left
       (fun acc g ->
-        if Table.has_recursive_fields g && not (Table.is_coinductive g)
-           && not (is_enum_inductive g)
+        if Table.has_recursive_fields g && not (is_enum_inductive g)
         then Refset'.add g acc
         else acc)
       method_ns
@@ -11447,12 +11540,9 @@ let gen_ind_header_v2
           de_tparams = [];
         } )
     else
-      (* The main struct type: Tree or Tree<A> for value types,
-         shared_ptr<Tree<A>> for coinductive types *)
-      let self_ty =
-        if is_coinductive then Tshared_ptr (Tglob (name, ty_vars, []))
-        else Tglob (name, ty_vars, [])
-      in
+      (* The main struct type: all inductives (including coinductives)
+         are value types. *)
+      let self_ty = Tglob (name, ty_vars, []) in
 
       (* 1. Constructor alternative structs (simple, just fields, no make) *)
       let constructor_structs =
@@ -11638,8 +11728,6 @@ let gen_ind_header_v2
          (passed by value, std::move'd into the struct initializer).
          Recursive (unique_ptr) fields take the inner type by value and
          are wrapped in make_unique internally. *)
-      let inner_ty = Tglob (name, ty_vars, []) in
-
       let ind_type_name = Common.pp_global_name Type name in
 
       let mk_factory_methods ret_ty wrap_expr i tys_list =
@@ -11709,9 +11797,9 @@ let gen_ind_header_v2
             (fun (j, storage_ty, api_ty) ->
               let param_ty =
                 match storage_ty with
-                | Tunique_ptr inner when not is_coinductive ->
+                | Tunique_ptr inner ->
                   Tref (Tmod (TMconst, inner))
-                | Tshared_ptr inner when not is_coinductive ->
+                | Tshared_ptr inner ->
                   Tref (Tmod (TMconst, inner))
                 | _ -> api_ty
               in
@@ -11767,9 +11855,11 @@ let gen_ind_header_v2
                   gen_clone_field_expr
                     ~src_ty:api_ty ~dst_ty:storage_ty var
               end
-              | Tunique_ptr inner when not is_coinductive ->
+              | Tunique_ptr inner ->
                 CPPfun_call (CPPmk_unique inner, [var])
-              | Tshared_ptr _ when not is_coinductive ->
+              | Tshared_ptr inner when is_coinductive ->
+                CPPfun_call (CPPmk_shared inner, [var])
+              | Tshared_ptr _ ->
                 CPPraw
                   ("(static_cast<void>("
                   ^ Id.to_string (param_name_of j)
@@ -11796,21 +11886,18 @@ let gen_ind_header_v2
           (Array.to_list
              (Array.mapi
                 (mk_factory_methods self_ty
-                   (if is_coinductive then
-                      fun s -> CPPfun_call (CPPmk_shared inner_ty, [s])
-                    else
-                      (* Wrap constructor struct in parent type constructor:
-                         O{} → Nat(O{}) — needed because constructors are
-                         explicit. Use CPPglob with the inductive ref so
-                         the printer emits the correct name (handles both
-                         top-level and module-nested inductives). *)
-                      fun s -> CPPfun_call (mk_cppglob name [], [s]) ) )
+                   (* Wrap constructor struct in parent type constructor:
+                      O{} → Nat(O{}) — needed because constructors are
+                      explicit. Use CPPglob with the inductive ref so
+                      the printer emits the correct name (handles both
+                      top-level and module-nested inductives). *)
+                   (fun s -> CPPfun_call (mk_cppglob name [], [s])) )
                 tys ) )
       in
 
       (* For coinductive types, add lazy_ factory method. lazy_ accepts
-         std::function<shared_ptr<T>()> and adapts it to
-         std::function<variant_t()> for the lazy constructor. *)
+         std::function<T()> and adapts it to std::function<variant_t()>
+         for the lazy constructor.  Returns T (value type). *)
       let lazy_factory =
         if is_coinductive then
           let lazy_name = Id.of_string "lazy_" in
@@ -11828,9 +11915,11 @@ let gen_ind_header_v2
                       CPPfun_call (CPPvar (Id.of_string "thunk"), []) );
                   Sreturn
                     (Some
-                       (CPPmethod_call
-                          (CPPvar (Id.of_string "_tmp"), Id.of_string "v", [])
-                       ) );
+                       (CPPfun_call
+                          ( CPPmember
+                              ( CPPvar (Id.of_string "_tmp"),
+                                Id.of_string "v" ),
+                            [] ) ) );
                 ],
                 true )
           in
@@ -11839,11 +11928,10 @@ let gen_ind_header_v2
               ( CPPvar (Id.of_string_soft "std::function<variant_t()>"),
                 [adapter_lambda] )
           in
-          let make_shared_expr =
-            CPPfun_call
-              (CPPmk_shared (Tglob (name, ty_vars, [])), [thunk_arg])
+          let ctor_expr =
+            CPPfun_call (mk_cppglob name ty_vars, [thunk_arg])
           in
-          let body = [Sreturn (Some make_shared_expr)] in
+          let body = [Sreturn (Some ctor_expr)] in
           [
             ( Ffundef (lazy_name, Tmod (TMstatic, self_ty), params, body),
               VPublic,
