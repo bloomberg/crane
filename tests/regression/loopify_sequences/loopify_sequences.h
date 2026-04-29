@@ -196,7 +196,7 @@ struct LoopifySequences {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<List<T1>> lists = _f.lists;
+        const List<List<T1>> &lists = _f.lists;
         if (std::holds_alternative<typename List<List<T1>>::Nil>(lists.v())) {
           _result = List<T1>::nil();
         } else {
@@ -563,17 +563,17 @@ struct LoopifySequences {
   __attribute__((pure)) static List<unsigned int>
   drop_while(F0 &&p, const List<unsigned int> &l) {
     List<unsigned int> _result;
-    List<unsigned int> _loop_l = l;
+    const List<unsigned int> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l->v())) {
         _result = List<unsigned int>::nil();
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (p(d_a0)) {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
         } else {
           _result = List<unsigned int>::cons(d_a0, *(d_a1));
           break;
@@ -628,7 +628,7 @@ struct LoopifySequences {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = true;
         } else {

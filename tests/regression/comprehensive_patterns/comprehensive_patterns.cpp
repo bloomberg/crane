@@ -668,7 +668,7 @@ ComprehensivePatterns::count_down(const unsigned int &n,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      const unsigned int &n = _f.n;
       if (n <= 0) {
         _result = r.nc_a;
       } else {
@@ -759,7 +759,7 @@ ComprehensivePatterns::sum_proj(const unsigned int &n,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      const unsigned int &n = _f.n;
       if (n <= 0) {
         _result = 0u;
       } else {
@@ -1016,7 +1016,7 @@ ComprehensivePatterns::sum_values(const unsigned int &n,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      const unsigned int &n = _f.n;
       if (n <= 0) {
         _result = 0u;
       } else {
@@ -1083,7 +1083,7 @@ ComprehensivePatterns::sum_with_state(const unsigned int &n,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      const unsigned int &n = _f.n;
       if (n <= 0) {
         _result = r.cf_val;
       } else {
@@ -1142,7 +1142,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::accum_with_state(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      const unsigned int &n = _f.n;
       if (n <= 0) {
         _result = s.lb_value;
       } else {

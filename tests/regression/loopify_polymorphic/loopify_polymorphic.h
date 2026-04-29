@@ -150,7 +150,7 @@ struct LoopifyPolymorphic {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> l = _f.l;
+        const List<T1> &l = _f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -186,7 +186,7 @@ struct LoopifyPolymorphic {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> l = _f.l;
+        const List<T1> &l = _f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = List<T1>::nil();
         } else {
@@ -233,20 +233,20 @@ struct LoopifyPolymorphic {
   template <typename T1>
   __attribute__((pure)) static std::optional<T1> poly_last(const List<T1> &l) {
     std::optional<T1> _result;
-    List<T1> _loop_l = l;
+    const List<T1> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
         _result = std::optional<T1>();
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<T1>::Cons>(_loop_l.v());
+            std::get<typename List<T1>::Cons>(_loop_l->v());
         auto &&_sv = *(d_a1);
         if (std::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
           _result = std::make_optional<T1>(d_a0);
           break;
         } else {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
         }
       }
     }
@@ -319,20 +319,20 @@ struct LoopifyPolymorphic {
   __attribute__((pure)) static std::optional<T1> poly_nth(const unsigned int &n,
                                                           const List<T1> &l) {
     std::optional<T1> _result;
-    List<T1> _loop_l = l;
+    const List<T1> *_loop_l = &l;
     unsigned int _loop_n = n;
     while (true) {
-      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
         _result = std::optional<T1>();
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<T1>::Cons>(_loop_l.v());
+            std::get<typename List<T1>::Cons>(_loop_l->v());
         if (_loop_n == 0u) {
           _result = std::make_optional<T1>(d_a0);
           break;
         } else {
-          List<T1> _next_l = *(d_a1);
+          const List<T1> *_next_l = d_a1.get();
           unsigned int _next_n =
               (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
           _loop_l = std::move(_next_l);
@@ -442,7 +442,7 @@ struct LoopifyPolymorphic {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<std::pair<T1, T2>> l = _f.l;
+        const List<std::pair<T1, T2>> &l = _f.l;
         if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(
                 l.v())) {
           _result = std::make_pair(List<T1>::nil(), List<T2>::nil());
@@ -488,7 +488,7 @@ struct LoopifyPolymorphic {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> l = _f.l;
+        const List<T1> &l = _f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = std::make_pair(List<T1>::nil(), List<T1>::nil());
         } else {
@@ -516,19 +516,19 @@ struct LoopifyPolymorphic {
   __attribute__((pure)) static bool poly_member(F0 &&eq, const T1 x,
                                                 const List<T1> &l) {
     bool _result;
-    List<T1> _loop_l = l;
+    const List<T1> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
         _result = false;
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<T1>::Cons>(_loop_l.v());
+            std::get<typename List<T1>::Cons>(_loop_l->v());
         if (eq(x, d_a0)) {
           _result = true;
           break;
         } else {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
         }
       }
     }

@@ -22,7 +22,7 @@ LoopifyListPairing::unzip(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<std::pair<unsigned int, unsigned int>> l = _f.l;
+      const List<std::pair<unsigned int, unsigned int>> &l = _f.l;
       if (std::holds_alternative<
               typename List<std::pair<unsigned int, unsigned int>>::Nil>(
               l.v())) {
@@ -69,7 +69,7 @@ LoopifyListPairing::swizzle(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());
@@ -110,7 +110,7 @@ LoopifyListPairing::partition(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());
@@ -306,7 +306,7 @@ LoopifyListPairing::split_even_odd(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());

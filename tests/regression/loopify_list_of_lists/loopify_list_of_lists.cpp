@@ -22,7 +22,7 @@ LoopifyListOfLists::intercalate(const List<unsigned int> &sep,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> ll = _f.ll;
+      const List<List<unsigned int>> &ll = _f.ll;
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = List<unsigned int>::nil();
@@ -117,17 +117,17 @@ LoopifyListOfLists::map_tl(const List<List<unsigned int>> &ll) {
 __attribute__((pure)) bool
 LoopifyListOfLists::all_empty(const List<List<unsigned int>> &ll) {
   bool _result;
-  List<List<unsigned int>> _loop_ll = ll;
+  const List<List<unsigned int>> *_loop_ll = &ll;
   while (true) {
     if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-            _loop_ll.v())) {
+            _loop_ll->v())) {
       _result = true;
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll.v());
+          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a0.v())) {
-        _loop_ll = *(d_a1);
+        _loop_ll = d_a1.get();
       } else {
         _result = false;
         break;
@@ -212,7 +212,7 @@ LoopifyListOfLists::list_len(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -249,7 +249,7 @@ LoopifyListOfLists::total_length(const List<List<unsigned int>> &ll) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> ll = _f.ll;
+      const List<List<unsigned int>> &ll = _f.ll;
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = 0u;
@@ -292,7 +292,7 @@ LoopifyListOfLists::flatten(const List<List<unsigned int>> &ll) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> ll = _f.ll;
+      const List<List<unsigned int>> &ll = _f.ll;
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = List<unsigned int>::nil();
@@ -330,7 +330,7 @@ LoopifyListOfLists::count_total(const List<List<unsigned int>> &ll) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> ll = _f.ll;
+      const List<List<unsigned int>> &ll = _f.ll;
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = 0u;
@@ -385,17 +385,17 @@ LoopifyListOfLists::firsts(const List<List<unsigned int>> &ll) {
 __attribute__((pure)) bool
 LoopifyListOfLists::all_nil(const List<List<unsigned int>> &ll) {
   bool _result;
-  List<List<unsigned int>> _loop_ll = ll;
+  const List<List<unsigned int>> *_loop_ll = &ll;
   while (true) {
     if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-            _loop_ll.v())) {
+            _loop_ll->v())) {
       _result = true;
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll.v());
+          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a0.v())) {
-        _loop_ll = *(d_a1);
+        _loop_ll = d_a1.get();
       } else {
         _result = false;
         break;
@@ -473,7 +473,7 @@ LoopifyListOfLists::max_length(const List<List<unsigned int>> &ll) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> ll = _f.ll;
+      const List<List<unsigned int>> &ll = _f.ll;
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = 0u;

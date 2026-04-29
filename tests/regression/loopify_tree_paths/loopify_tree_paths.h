@@ -384,7 +384,7 @@ struct LoopifyTreePaths {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          const unsigned int acc = _f.acc;
+          const unsigned int &acc = _f.acc;
           auto &&_sv = *(_self);
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             if (acc == target) {

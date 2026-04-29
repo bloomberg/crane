@@ -127,7 +127,7 @@ struct DeepApp {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> m = _f.m;
+        const mylist<T1> &m = _f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
           _result = f;
         } else {
@@ -165,7 +165,7 @@ struct DeepApp {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> m = _f.m;
+        const mylist<T1> &m = _f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
           _result = f;
         } else {
@@ -270,7 +270,7 @@ struct DeepApp {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> l = _f.l;
+        const mylist<T1> &l = _f.l;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
           _result = 0u;
         } else {

@@ -19,7 +19,7 @@ LoopifyAlgorithms::len_impl(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -360,16 +360,17 @@ __attribute__((pure)) List<unsigned int>
 LoopifyAlgorithms::rev_impl(List<unsigned int> acc,
                             const List<unsigned int> &l) {
   List<unsigned int> _result;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   List<unsigned int> _loop_acc = std::move(acc);
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       _result = std::move(_loop_acc);
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-      List<unsigned int> _next_l = *(d_a1);
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      const List<unsigned int> *_next_l = d_a1.get();
       List<unsigned int> _next_acc =
           List<unsigned int>::cons(d_a0, std::move(_loop_acc));
       _loop_l = std::move(_next_l);
@@ -383,13 +384,13 @@ __attribute__((pure)) bool
 LoopifyAlgorithms::list_eq_impl(const List<unsigned int> &l1,
                                 const List<unsigned int> &l2) {
   bool _result;
-  List<unsigned int> _loop_l2 = l2;
-  List<unsigned int> _loop_l1 = l1;
+  const List<unsigned int> *_loop_l2 = &l2;
+  const List<unsigned int> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
-            _loop_l1.v())) {
+            _loop_l1->v())) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l2.v())) {
+              _loop_l2->v())) {
         _result = true;
         break;
       } else {
@@ -398,17 +399,17 @@ LoopifyAlgorithms::list_eq_impl(const List<unsigned int> &l1,
       }
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l1.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l2.v())) {
+              _loop_l2->v())) {
         _result = false;
         break;
       } else {
         const auto &[d_a00, d_a10] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l2.v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l2->v());
         if (d_a0 == d_a00) {
-          List<unsigned int> _next_l2 = *(d_a10);
-          List<unsigned int> _next_l1 = *(d_a1);
+          const List<unsigned int> *_next_l2 = d_a10.get();
+          const List<unsigned int> *_next_l1 = d_a1.get();
           _loop_l2 = std::move(_next_l2);
           _loop_l1 = std::move(_next_l1);
         } else {
@@ -582,7 +583,7 @@ LoopifyAlgorithms::max_prefix_sum(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -633,7 +634,7 @@ LoopifyAlgorithms::weighted_sum(unsigned int i, const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       unsigned int i = _f.i;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
@@ -672,7 +673,7 @@ LoopifyAlgorithms::step_sum(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -728,7 +729,7 @@ LoopifyAlgorithms::suffix_sums(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = List<unsigned int>::nil();
       } else {

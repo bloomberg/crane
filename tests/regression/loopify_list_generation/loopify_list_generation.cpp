@@ -77,7 +77,7 @@ LoopifyListGeneration::cycle(const unsigned int &n,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      const unsigned int &n = _f.n;
       if (n <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -141,7 +141,7 @@ __attribute__((pure)) List<unsigned int> LoopifyListGeneration::replicate_list(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<std::pair<unsigned int, unsigned int>> l = _f.l;
+      const List<std::pair<unsigned int, unsigned int>> &l = _f.l;
       if (std::holds_alternative<
               typename List<std::pair<unsigned int, unsigned int>>::Nil>(
               l.v())) {

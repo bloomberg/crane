@@ -108,9 +108,9 @@ LoopifyCombinatorics::perms_choices_fuel(const unsigned int &fuel,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> orig = _f.orig;
-      const List<unsigned int> choices = _f.choices;
-      const unsigned int fuel = _f.fuel;
+      const List<unsigned int> &orig = _f.orig;
+      const List<unsigned int> &choices = _f.choices;
+      const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<List<unsigned int>>::nil();
       } else {
@@ -180,7 +180,7 @@ LoopifyCombinatorics::len_list(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -217,7 +217,7 @@ LoopifyCombinatorics::factorial_impl(const unsigned int &n) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      const unsigned int &n = _f.n;
       if (n <= 0) {
         _result = 1u;
       } else {
@@ -259,7 +259,7 @@ LoopifyCombinatorics::subsequences(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = List<List<unsigned int>>::cons(
             List<unsigned int>::nil(), List<List<unsigned int>>::nil());
@@ -372,7 +372,7 @@ LoopifyCombinatorics::cartesian(const List<unsigned int> &l1,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l2 = _f.l2;
+      const List<unsigned int> &l2 = _f.l2;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
         _result = List<std::pair<unsigned int, unsigned int>>::nil();
       } else {
@@ -410,7 +410,7 @@ LoopifyCombinatorics::power_set(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = List<List<unsigned int>>::cons(
             List<unsigned int>::nil(), List<List<unsigned int>>::nil());
@@ -579,7 +579,7 @@ LoopifyCombinatorics::elem(const unsigned int &x, const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = false;
       } else {
@@ -615,7 +615,7 @@ LoopifyCombinatorics::len_impl(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -655,8 +655,8 @@ LoopifyCombinatorics::dedup_fuel(const unsigned int &fuel,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
-      const unsigned int fuel = _f.fuel;
+      const List<unsigned int> &l = _f.l;
+      const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<unsigned int>::nil();
       } else {

@@ -173,16 +173,16 @@ struct LoopifyHofs {
   template <typename T1, MapsTo<T1, T1, T1> F0>
   static T1 foldl1_aux(F0 &&f, const T1 acc, const List<T1> &l) {
     T1 _result;
-    List<T1> _loop_l = l;
+    const List<T1> *_loop_l = &l;
     T1 _loop_acc = acc;
     while (true) {
-      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
         _result = _loop_acc;
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<T1>::Cons>(_loop_l.v());
-        List<T1> _next_l = *(d_a1);
+            std::get<typename List<T1>::Cons>(_loop_l->v());
+        const List<T1> *_next_l = d_a1.get();
         T1 _next_acc = f(_loop_acc, d_a0);
         _loop_l = std::move(_next_l);
         _loop_acc = std::move(_next_acc);
@@ -205,16 +205,16 @@ struct LoopifyHofs {
   template <typename T1, MapsTo<bool, T1> F0>
   __attribute__((pure)) static bool forall_(F0 &&p, const List<T1> &l) {
     bool _result;
-    List<T1> _loop_l = l;
+    const List<T1> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
         _result = true;
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<T1>::Cons>(_loop_l.v());
+            std::get<typename List<T1>::Cons>(_loop_l->v());
         if (p(d_a0)) {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
         } else {
           _result = false;
           break;
@@ -228,19 +228,19 @@ struct LoopifyHofs {
   template <typename T1, MapsTo<bool, T1> F0>
   __attribute__((pure)) static bool exists_fn(F0 &&p, const List<T1> &l) {
     bool _result;
-    List<T1> _loop_l = l;
+    const List<T1> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
         _result = false;
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<T1>::Cons>(_loop_l.v());
+            std::get<typename List<T1>::Cons>(_loop_l->v());
         if (p(d_a0)) {
           _result = true;
           break;
         } else {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
         }
       }
     }
@@ -251,16 +251,16 @@ struct LoopifyHofs {
   template <typename T1, MapsTo<bool, T1> F0>
   __attribute__((pure)) static List<T1> drop_while(F0 &&p, const List<T1> &l) {
     List<T1> _result;
-    List<T1> _loop_l = l;
+    const List<T1> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
         _result = List<T1>::nil();
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<T1>::Cons>(_loop_l.v());
+            std::get<typename List<T1>::Cons>(_loop_l->v());
         if (p(d_a0)) {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
         } else {
           _result = List<T1>::cons(d_a0, *(d_a1));
           break;
@@ -320,7 +320,7 @@ struct LoopifyHofs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> l = _f.l;
+        const List<T1> &l = _f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = List<T2>::nil();
         } else {
@@ -358,7 +358,7 @@ struct LoopifyHofs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> l1 = _f.l1;
+        const List<T1> &l1 = _f.l1;
         std::function<List<std::pair<T1, T2>>(T1, List<T2>)> pair_with;
         pair_with = [&](T1 x, List<T2> l) -> List<std::pair<T1, T2>> {
           struct _Enter {
@@ -587,7 +587,7 @@ struct LoopifyHofs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -638,7 +638,7 @@ struct LoopifyHofs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = List<unsigned int>::cons(acc, List<unsigned int>::nil());
         } else {
@@ -683,7 +683,7 @@ struct LoopifyHofs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = List<unsigned int>::nil();
         } else {
@@ -732,7 +732,7 @@ struct LoopifyHofs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = List<T1>::nil();
         } else {
@@ -772,7 +772,7 @@ struct LoopifyHofs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = List<unsigned int>::nil();
         } else {
@@ -820,7 +820,7 @@ struct LoopifyHofs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = true;
         } else {
@@ -900,7 +900,7 @@ struct LoopifyHofs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -985,7 +985,7 @@ struct LoopifyHofs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -1037,7 +1037,7 @@ struct LoopifyHofs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = acc;
         } else {
@@ -1077,7 +1077,7 @@ struct LoopifyHofs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(List<unsigned int>::nil(),
                                    List<unsigned int>::nil());
@@ -1124,20 +1124,20 @@ struct LoopifyHofs {
   template <MapsTo<bool, unsigned int> F0>
   __attribute__((pure)) static bool any(F0 &&p, const List<unsigned int> &l) {
     bool _result;
-    List<unsigned int> _loop_l = l;
+    const List<unsigned int> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l->v())) {
         _result = false;
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (p(d_a0)) {
           _result = true;
           break;
         } else {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
         }
       }
     }
@@ -1149,17 +1149,17 @@ struct LoopifyHofs {
   template <MapsTo<bool, unsigned int> F0>
   __attribute__((pure)) static bool all(F0 &&p, const List<unsigned int> &l) {
     bool _result;
-    List<unsigned int> _loop_l = l;
+    const List<unsigned int> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l->v())) {
         _result = true;
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (p(d_a0)) {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
         } else {
           _result = false;
           break;
@@ -1208,7 +1208,7 @@ struct LoopifyHofs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(List<unsigned int>::nil(),
                                    List<unsigned int>::nil());
@@ -1315,7 +1315,7 @@ struct LoopifyHofs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         unsigned int acc = _f.acc;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(acc, List<unsigned int>::nil());

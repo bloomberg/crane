@@ -20,7 +20,7 @@ LoopifyComparators::maximum_by(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -68,7 +68,7 @@ LoopifyComparators::minimum_by(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -217,7 +217,7 @@ LoopifyComparators::insertion_sort(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = List<unsigned int>::nil();
       } else {

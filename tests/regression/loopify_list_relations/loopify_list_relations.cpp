@@ -23,8 +23,8 @@ LoopifyListRelations::is_prefix_of(const List<unsigned int> &l1,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l2 = _f.l2;
-      const List<unsigned int> l1 = _f.l1;
+      const List<unsigned int> &l2 = _f.l2;
+      const List<unsigned int> &l1 = _f.l1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
         _result = true;
       } else {
@@ -133,10 +133,10 @@ __attribute__((pure)) bool
 LoopifyListRelations::is_infix_of_aux(const List<unsigned int> &needle,
                                       const List<unsigned int> &haystack) {
   bool _result;
-  List<unsigned int> _loop_haystack = haystack;
+  const List<unsigned int> *_loop_haystack = &haystack;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
-            _loop_haystack.v())) {
+            _loop_haystack->v())) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               needle.v())) {
         _result = true;
@@ -147,12 +147,12 @@ LoopifyListRelations::is_infix_of_aux(const List<unsigned int> &needle,
       }
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_haystack.v());
-      if (is_prefix_of(needle, _loop_haystack)) {
+          std::get<typename List<unsigned int>::Cons>(_loop_haystack->v());
+      if (is_prefix_of(needle, *(_loop_haystack))) {
         _result = true;
         break;
       } else {
-        _loop_haystack = *(d_a1);
+        _loop_haystack = d_a1.get();
       }
     }
   }
@@ -235,8 +235,8 @@ LoopifyListRelations::list_eq(const List<unsigned int> &l1,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l2 = _f.l2;
-      const List<unsigned int> l1 = _f.l1;
+      const List<unsigned int> &l2 = _f.l2;
+      const List<unsigned int> &l1 = _f.l1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
           _result = true;
@@ -267,13 +267,13 @@ __attribute__((pure)) unsigned int
 LoopifyListRelations::list_compare(const List<unsigned int> &l1,
                                    const List<unsigned int> &l2) {
   unsigned int _result;
-  List<unsigned int> _loop_l2 = l2;
-  List<unsigned int> _loop_l1 = l1;
+  const List<unsigned int> *_loop_l2 = &l2;
+  const List<unsigned int> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
-            _loop_l1.v())) {
+            _loop_l1->v())) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l2.v())) {
+              _loop_l2->v())) {
         _result = 0u;
         break;
       } else {
@@ -282,14 +282,14 @@ LoopifyListRelations::list_compare(const List<unsigned int> &l1,
       }
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l1.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l2.v())) {
+              _loop_l2->v())) {
         _result = 2u;
         break;
       } else {
         const auto &[d_a00, d_a10] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l2.v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l2->v());
         if (d_a0 < d_a00) {
           _result = 1u;
           break;
@@ -298,8 +298,8 @@ LoopifyListRelations::list_compare(const List<unsigned int> &l1,
             _result = 2u;
             break;
           } else {
-            List<unsigned int> _next_l2 = *(d_a10);
-            List<unsigned int> _next_l1 = *(d_a1);
+            const List<unsigned int> *_next_l2 = d_a10.get();
+            const List<unsigned int> *_next_l1 = d_a1.get();
             _loop_l2 = std::move(_next_l2);
             _loop_l1 = std::move(_next_l1);
           }

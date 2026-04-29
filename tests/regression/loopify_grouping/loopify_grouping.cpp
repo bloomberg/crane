@@ -45,8 +45,8 @@ LoopifyGrouping::group_fuel(const unsigned int &fuel,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
-      const unsigned int fuel = _f.fuel;
+      const List<unsigned int> &l = _f.l;
+      const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<List<unsigned int>>::nil();
       } else {
@@ -90,19 +90,20 @@ LoopifyGrouping::group(const List<unsigned int> &l) {
 __attribute__((pure)) bool LoopifyGrouping::elem(const unsigned int &x,
                                                  const List<unsigned int> &l) {
   bool _result;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       _result = false;
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (x == d_a0) {
         _result = true;
         break;
       } else {
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
       }
     }
   }
@@ -129,7 +130,7 @@ LoopifyGrouping::nub(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = List<unsigned int>::nil();
       } else {
@@ -209,7 +210,7 @@ LoopifyGrouping::partition3(const unsigned int &pivot,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(std::make_pair(List<unsigned int>::nil(),
                                                 List<unsigned int>::nil()),
@@ -223,7 +224,7 @@ LoopifyGrouping::partition3(const unsigned int &pivot,
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
       unsigned int d_a0 = _f._s0;
-      const unsigned int pivot = _f._s1;
+      const unsigned int &pivot = _f._s1;
       const std::pair<List<unsigned int>, List<unsigned int>> &p =
           _result.first;
       const List<unsigned int> &greater = _result.second;
@@ -269,7 +270,7 @@ LoopifyGrouping::count_elem(const unsigned int &x,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {

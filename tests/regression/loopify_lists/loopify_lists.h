@@ -131,7 +131,7 @@ struct LoopifyLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> l = _f.l;
+        const list<T1> &l = _f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
@@ -168,7 +168,7 @@ struct LoopifyLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> l = _f.l;
+        const list<T1> &l = _f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
@@ -325,7 +325,7 @@ struct LoopifyLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const unsigned int n = _f.n;
+        const unsigned int &n = _f.n;
         std::function<list<T1>(list<T1>, list<T1>)> app;
         app = [&](list<T1> l1, list<T1> l2) -> list<T1> {
           struct _Enter {
@@ -468,7 +468,7 @@ struct LoopifyLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> l = _f.l;
+        const list<T1> &l = _f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result =
               list<list<T1>>::cons(list<T1>::nil(), list<list<T1>>::nil());
@@ -999,7 +999,7 @@ struct LoopifyLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<unsigned int> l = _f.l;
+        const list<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(std::make_pair(list<unsigned int>::nil(),
                                                   list<unsigned int>::nil()),
@@ -1197,7 +1197,7 @@ struct LoopifyLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> l = _f.l;
+        const list<T1> &l = _f.l;
         const T3 acc = _f.acc;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = std::make_pair(acc, list<T2>::nil());
@@ -1335,7 +1335,7 @@ struct LoopifyLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<list<T1>> l = _f.l;
+        const list<list<T1>> &l = _f.l;
         if (std::holds_alternative<typename list<list<T1>>::Nil>(l.v())) {
           _result = list<T1>::nil();
         } else {

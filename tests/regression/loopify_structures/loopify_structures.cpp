@@ -33,8 +33,8 @@ __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyStructures::nested> l = _f.l;
-      const unsigned int fuel = _f.fuel;
+      const List<LoopifyStructures::nested> &l = _f.l;
+      const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
       } else {
@@ -142,8 +142,8 @@ LoopifyStructures::flatten_nested_list_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyStructures::nested> l = _f.l;
-      const unsigned int fuel = _f.fuel;
+      const List<LoopifyStructures::nested> &l = _f.l;
+      const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -187,22 +187,22 @@ LoopifyStructures::flatten_nested_list_fuel(
 __attribute__((pure)) std::optional<unsigned int>
 LoopifyStructures::find_first_some(const List<std::optional<unsigned int>> &l) {
   std::optional<unsigned int> _result;
-  List<std::optional<unsigned int>> _loop_l = l;
+  const List<std::optional<unsigned int>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<std::optional<unsigned int>>::Nil>(
-            _loop_l.v())) {
+            _loop_l->v())) {
       _result = std::optional<unsigned int>();
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<std::optional<unsigned int>>::Cons>(
-              _loop_l.v());
+              _loop_l->v());
       if (d_a0.has_value()) {
         const unsigned int &v = *d_a0;
         _result = std::make_optional<unsigned int>(v);
         break;
       } else {
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
       }
     }
   }

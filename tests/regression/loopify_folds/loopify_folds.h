@@ -145,17 +145,17 @@ struct LoopifyFolds {
   __attribute__((pure)) static unsigned int
   fold_left(F0 &&f, unsigned int acc, const List<unsigned int> &l) {
     unsigned int _result;
-    List<unsigned int> _loop_l = l;
+    const List<unsigned int> *_loop_l = &l;
     unsigned int _loop_acc = std::move(acc);
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l->v())) {
         _result = _loop_acc;
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-        List<unsigned int> _next_l = *(d_a1);
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+        const List<unsigned int> *_next_l = d_a1.get();
         unsigned int _next_acc = f(_loop_acc, d_a0);
         _loop_l = std::move(_next_l);
         _loop_acc = std::move(_next_acc);
@@ -185,7 +185,7 @@ struct LoopifyFolds {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = acc;
         } else {
@@ -319,7 +319,7 @@ struct LoopifyFolds {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -366,7 +366,7 @@ struct LoopifyFolds {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         unsigned int acc = _f.acc;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(acc, List<unsigned int>::nil());

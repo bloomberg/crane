@@ -20,7 +20,7 @@ LoopifyAdvancedPatterns::len_impl(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -92,7 +92,7 @@ LoopifyAdvancedPatterns::multi_guard(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -144,7 +144,7 @@ LoopifyAdvancedPatterns::four_elem(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -210,7 +210,7 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::nested_pattern(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>
-          l = _f.l;
+          &l = _f.l;
       if (std::holds_alternative<typename List<std::pair<
               std::pair<unsigned int, unsigned int>, unsigned int>>::Nil>(
               l.v())) {
@@ -237,34 +237,35 @@ __attribute__((pure)) unsigned int
 LoopifyAdvancedPatterns::guard_accum(unsigned int acc,
                                      const List<unsigned int> &l) {
   unsigned int _result;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_acc = std::move(acc);
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       _result = _loop_acc;
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (100u < d_a0) {
-        List<unsigned int> _next_l = *(d_a1);
+        const List<unsigned int> *_next_l = d_a1.get();
         unsigned int _next_acc = (_loop_acc * 2u);
         _loop_l = std::move(_next_l);
         _loop_acc = std::move(_next_acc);
       } else {
         if (50u < d_a0) {
-          List<unsigned int> _next_l = *(d_a1);
+          const List<unsigned int> *_next_l = d_a1.get();
           unsigned int _next_acc = (_loop_acc + d_a0);
           _loop_l = std::move(_next_l);
           _loop_acc = std::move(_next_acc);
         } else {
           if (0u < d_a0) {
-            List<unsigned int> _next_l = *(d_a1);
+            const List<unsigned int> *_next_l = d_a1.get();
             unsigned int _next_acc = (_loop_acc + 1u);
             _loop_l = std::move(_next_l);
             _loop_acc = std::move(_next_acc);
           } else {
-            _loop_l = *(d_a1);
+            _loop_l = d_a1.get();
           }
         }
       }
@@ -349,7 +350,7 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::sum_shapes(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyAdvancedPatterns::shape> l = _f.l;
+      const List<LoopifyAdvancedPatterns::shape> &l = _f.l;
       if (std::holds_alternative<
               typename List<LoopifyAdvancedPatterns::shape>::Nil>(l.v())) {
         _result = 0u;
@@ -390,7 +391,7 @@ LoopifyAdvancedPatterns::count_by_shape(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyAdvancedPatterns::shape> l = _f.l;
+      const List<LoopifyAdvancedPatterns::shape> &l = _f.l;
       if (std::holds_alternative<
               typename List<LoopifyAdvancedPatterns::shape>::Nil>(l.v())) {
         _result = std::make_pair(std::make_pair(0u, 0u), 0u);

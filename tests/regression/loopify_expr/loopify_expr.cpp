@@ -22,7 +22,7 @@ LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyExpr::shape> l = _f.l;
+      const List<LoopifyExpr::shape> &l = _f.l;
       if (std::holds_alternative<typename List<LoopifyExpr::shape>::Nil>(
               l.v())) {
         _result = 0u;
@@ -79,7 +79,7 @@ LoopifyExpr::count_by_shape(const List<LoopifyExpr::shape> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyExpr::shape> l = _f.l;
+      const List<LoopifyExpr::shape> &l = _f.l;
       if (std::holds_alternative<typename List<LoopifyExpr::shape>::Nil>(
               l.v())) {
         _result = std::make_pair(std::make_pair(0u, 0u), 0u);

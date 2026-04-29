@@ -309,7 +309,7 @@ struct LoopifyPredicates {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = true;
         } else {
@@ -347,7 +347,7 @@ struct LoopifyPredicates {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = false;
         } else {
@@ -369,21 +369,21 @@ struct LoopifyPredicates {
   find_index_aux(F0 &&p, const List<unsigned int> &l, unsigned int idx) {
     std::optional<unsigned int> _result;
     unsigned int _loop_idx = std::move(idx);
-    List<unsigned int> _loop_l = l;
+    const List<unsigned int> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l->v())) {
         _result = std::optional<unsigned int>();
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (p(d_a0)) {
           _result = std::make_optional<unsigned int>(_loop_idx);
           break;
         } else {
           unsigned int _next_idx = (_loop_idx + 1u);
-          List<unsigned int> _next_l = *(d_a1);
+          const List<unsigned int> *_next_l = d_a1.get();
           _loop_idx = std::move(_next_idx);
           _loop_l = std::move(_next_l);
         }

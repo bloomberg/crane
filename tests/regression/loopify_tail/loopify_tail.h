@@ -127,7 +127,7 @@ struct LoopifyTail {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> l = _f.l;
+        const list<T1> &l = _f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
@@ -164,7 +164,7 @@ struct LoopifyTail {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> l = _f.l;
+        const list<T1> &l = _f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
@@ -182,16 +182,16 @@ struct LoopifyTail {
 
   template <typename T1> static T1 last(const T1 x, const list<T1> &l) {
     T1 _result;
-    list<T1> _loop_l = l;
+    const list<T1> *_loop_l = &l;
     T1 _loop_x = x;
     while (true) {
-      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = _loop_x;
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename list<T1>::Cons>(_loop_l.v());
-        list<T1> _next_l = *(d_a1);
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        const list<T1> *_next_l = d_a1.get();
         T1 _next_x = d_a0;
         _loop_l = std::move(_next_l);
         _loop_x = std::move(_next_x);
@@ -204,16 +204,16 @@ struct LoopifyTail {
   __attribute__((pure)) static unsigned int length_acc(unsigned int acc,
                                                        const list<T1> &l) {
     unsigned int _result;
-    list<T1> _loop_l = l;
+    const list<T1> *_loop_l = &l;
     unsigned int _loop_acc = std::move(acc);
     while (true) {
-      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = _loop_acc;
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename list<T1>::Cons>(_loop_l.v());
-        list<T1> _next_l = *(d_a1);
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        const list<T1> *_next_l = d_a1.get();
         unsigned int _next_acc = (_loop_acc + 1);
         _loop_l = std::move(_next_l);
         _loop_acc = std::move(_next_acc);
@@ -239,16 +239,16 @@ struct LoopifyTail {
   template <typename T1, typename T2, MapsTo<T2, T2, T1> F0>
   static T2 fold_left(F0 &&f, const T2 acc, const list<T1> &l) {
     T2 _result;
-    list<T1> _loop_l = l;
+    const list<T1> *_loop_l = &l;
     T2 _loop_acc = acc;
     while (true) {
-      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = _loop_acc;
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename list<T1>::Cons>(_loop_l.v());
-        list<T1> _next_l = *(d_a1);
+            std::get<typename list<T1>::Cons>(_loop_l->v());
+        const list<T1> *_next_l = d_a1.get();
         T2 _next_acc = f(_loop_acc, d_a0);
         _loop_l = std::move(_next_l);
         _loop_acc = std::move(_next_acc);

@@ -89,7 +89,7 @@ LoopifyStrings::repeat_string(const List<unsigned int> &s,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      const unsigned int &n = _f.n;
       if (n <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -128,7 +128,7 @@ LoopifyStrings::repeat_with_sep(List<unsigned int> s,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      const unsigned int &n = _f.n;
       if (n <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -174,8 +174,8 @@ __attribute__((pure)) List<unsigned int> LoopifyStrings::string_chain_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      const unsigned int &n = _f.n;
+      const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -223,7 +223,7 @@ LoopifyStrings::reverse(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = List<unsigned int>::nil();
       } else {
@@ -264,8 +264,8 @@ LoopifyStrings::list_eq(const List<unsigned int> &l1,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l2 = _f.l2;
-      const List<unsigned int> l1 = _f.l1;
+      const List<unsigned int> &l2 = _f.l2;
+      const List<unsigned int> &l1 = _f.l1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
           _result = true;
@@ -358,7 +358,7 @@ LoopifyStrings::intercalate(const List<unsigned int> &sep,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> ll = _f.ll;
+      const List<List<unsigned int>> &ll = _f.ll;
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = List<unsigned int>::nil();

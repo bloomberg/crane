@@ -134,7 +134,7 @@ struct LoopifyExtrema {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -187,7 +187,7 @@ struct LoopifyExtrema {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -240,7 +240,7 @@ struct LoopifyExtrema {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -294,7 +294,7 @@ struct LoopifyExtrema {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> l = _f.l;
+        const List<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -335,15 +335,15 @@ struct LoopifyExtrema {
   __attribute__((pure)) static bool adjacent_all(F0 &&p,
                                                  const List<unsigned int> &l) {
     bool _result;
-    List<unsigned int> _loop_l = l;
+    const List<unsigned int> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l->v())) {
         _result = true;
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         auto &&_sv0 = *(d_a1);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv0.v())) {
@@ -353,7 +353,7 @@ struct LoopifyExtrema {
           const auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(_sv0.v());
           if (p(d_a0, d_a00)) {
-            _loop_l = *(d_a1);
+            _loop_l = d_a1.get();
           } else {
             _result = false;
             break;

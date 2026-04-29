@@ -26,7 +26,7 @@ LoopifyMoreTrees::mirror(const LoopifyMoreTrees::tree &t) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyMoreTrees::tree t = _f.t;
+      const LoopifyMoreTrees::tree &t = _f.t;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
               t.v())) {
         _result = tree::leaf();
@@ -75,8 +75,8 @@ LoopifyMoreTrees::same_shape(const LoopifyMoreTrees::tree &t1,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyMoreTrees::tree t2 = _f.t2;
-      const LoopifyMoreTrees::tree t1 = _f.t1;
+      const LoopifyMoreTrees::tree &t2 = _f.t2;
+      const LoopifyMoreTrees::tree &t1 = _f.t1;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
               t1.v())) {
         if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
@@ -138,7 +138,7 @@ LoopifyMoreTrees::tree_to_list(const LoopifyMoreTrees::tree &t) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyMoreTrees::tree t = _f.t;
+      const LoopifyMoreTrees::tree &t = _f.t;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
               t.v())) {
         _result = List<unsigned int>::nil();
@@ -193,7 +193,7 @@ LoopifyMoreTrees::count_nodes(const LoopifyMoreTrees::tree &t) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyMoreTrees::tree t = _f.t;
+      const LoopifyMoreTrees::tree &t = _f.t;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
               t.v())) {
         _result = 0u;
@@ -302,7 +302,7 @@ LoopifyMoreTrees::sum_of_max_branches(const LoopifyMoreTrees::tree &t) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyMoreTrees::tree t = _f.t;
+      const LoopifyMoreTrees::tree &t = _f.t;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
               t.v())) {
         _result = 0u;
@@ -350,7 +350,7 @@ LoopifyMoreTrees::insert_bst(unsigned int x, const LoopifyMoreTrees::tree &t) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyMoreTrees::tree t = _f.t;
+      const LoopifyMoreTrees::tree &t = _f.t;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
               t.v())) {
         _result = tree::node(tree::leaf(), x, tree::leaf());
@@ -396,7 +396,7 @@ LoopifyMoreTrees::build_bst(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = tree::leaf();
       } else {
@@ -463,7 +463,7 @@ LoopifyMoreTrees::flatten(const List<List<unsigned int>> &ll) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> ll = _f.ll;
+      const List<List<unsigned int>> &ll = _f.ll;
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = List<unsigned int>::nil();
@@ -573,7 +573,7 @@ LoopifyMoreTrees::concat_map_children(const List<LoopifyMoreTrees::tree> &lt) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyMoreTrees::tree> lt = _f.lt;
+      const List<LoopifyMoreTrees::tree> &lt = _f.lt;
       if (std::holds_alternative<typename List<LoopifyMoreTrees::tree>::Nil>(
               lt.v())) {
         _result = List<LoopifyMoreTrees::tree>::nil();

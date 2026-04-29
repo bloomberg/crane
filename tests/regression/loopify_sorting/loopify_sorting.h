@@ -149,7 +149,7 @@ struct LoopifySorting {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> l = _f.l;
+        const List<T1> &l = _f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -192,7 +192,7 @@ struct LoopifySorting {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> l = _f.l;
+        const List<T1> &l = _f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = std::make_pair(List<T1>::nil(), List<T1>::nil());
         } else {

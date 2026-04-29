@@ -128,7 +128,7 @@ struct LoopifyOption {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> l = _f.l;
+        const list<T1> &l = _f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
@@ -165,7 +165,7 @@ struct LoopifyOption {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> l = _f.l;
+        const list<T1> &l = _f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
@@ -186,19 +186,19 @@ struct LoopifyOption {
   __attribute__((pure)) static std::optional<T1> find_opt(F0 &&p,
                                                           const list<T1> &l) {
     std::optional<T1> _result;
-    list<T1> _loop_l = l;
+    const list<T1> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = std::optional<T1>();
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename list<T1>::Cons>(_loop_l.v());
+            std::get<typename list<T1>::Cons>(_loop_l->v());
         if (p(d_a0)) {
           _result = std::make_optional<T1>(d_a0);
           break;
         } else {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
         }
       }
     }
@@ -209,20 +209,20 @@ struct LoopifyOption {
   template <typename T1>
   __attribute__((pure)) static std::optional<T1> last_opt(const list<T1> &l) {
     std::optional<T1> _result;
-    list<T1> _loop_l = l;
+    const list<T1> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = std::optional<T1>();
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename list<T1>::Cons>(_loop_l.v());
+            std::get<typename list<T1>::Cons>(_loop_l->v());
         auto &&_sv = *(d_a1);
         if (std::holds_alternative<typename list<T1>::Nil>(_sv.v())) {
           _result = std::make_optional<T1>(d_a0);
           break;
         } else {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
         }
       }
     }
@@ -234,20 +234,20 @@ struct LoopifyOption {
   __attribute__((pure)) static std::optional<T1> nth_opt(const unsigned int &n,
                                                          const list<T1> &l) {
     std::optional<T1> _result;
-    list<T1> _loop_l = l;
+    const list<T1> *_loop_l = &l;
     unsigned int _loop_n = n;
     while (true) {
-      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = std::optional<T1>();
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename list<T1>::Cons>(_loop_l.v());
+            std::get<typename list<T1>::Cons>(_loop_l->v());
         if (_loop_n == 0u) {
           _result = std::make_optional<T1>(d_a0);
           break;
         } else {
-          list<T1> _next_l = *(d_a1);
+          const list<T1> *_next_l = d_a1.get();
           unsigned int _next_n =
               (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
           _loop_l = std::move(_next_l);
@@ -286,20 +286,20 @@ struct LoopifyOption {
   find_index_aux(F0 &&p, const list<T1> &l, unsigned int i) {
     std::optional<unsigned int> _result;
     unsigned int _loop_i = std::move(i);
-    list<T1> _loop_l = l;
+    const list<T1> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = std::optional<unsigned int>();
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename list<T1>::Cons>(_loop_l.v());
+            std::get<typename list<T1>::Cons>(_loop_l->v());
         if (p(d_a0)) {
           _result = std::make_optional<unsigned int>(_loop_i);
           break;
         } else {
           unsigned int _next_i = (_loop_i + 1);
-          list<T1> _next_l = *(d_a1);
+          const list<T1> *_next_l = d_a1.get();
           _loop_i = std::move(_next_i);
           _loop_l = std::move(_next_l);
         }

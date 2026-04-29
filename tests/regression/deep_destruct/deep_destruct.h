@@ -128,7 +128,7 @@ struct DeepDestruct {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> m = _f.m;
+        const mylist<T1> &m = _f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
           _result = f;
         } else {
@@ -166,7 +166,7 @@ struct DeepDestruct {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> m = _f.m;
+        const mylist<T1> &m = _f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
           _result = f;
         } else {

@@ -130,7 +130,7 @@ struct LoopifyPatterns {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> l = _f.l;
+        const list<T1> &l = _f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
@@ -167,7 +167,7 @@ struct LoopifyPatterns {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> l = _f.l;
+        const list<T1> &l = _f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
@@ -249,7 +249,7 @@ struct LoopifyPatterns {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<unsigned int> l = _f.l;
+        const list<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -315,7 +315,7 @@ struct LoopifyPatterns {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> l = _f.l;
+        const list<T1> &l = _f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = list<list<T1>>::cons(list<T1>::cons(x, list<T1>::nil()),
                                          list<list<T1>>::nil());
@@ -506,7 +506,7 @@ struct LoopifyPatterns {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<unsigned int> l = _f.l;
+        const list<unsigned int> &l = _f.l;
         if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(std::make_pair(list<unsigned int>::nil(),
                                                   list<unsigned int>::nil()),

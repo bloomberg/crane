@@ -44,7 +44,7 @@ __attribute__((pure)) List<unsigned int> LoopifySearchOpt::longest_run_fuel(
     const unsigned int &fuel, List<unsigned int> current,
     List<unsigned int> best, const List<unsigned int> &l) {
   List<unsigned int> _result;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   List<unsigned int> _loop_best = std::move(best);
   List<unsigned int> _loop_current = std::move(current);
   unsigned int _loop_fuel = fuel;
@@ -55,7 +55,7 @@ __attribute__((pure)) List<unsigned int> LoopifySearchOpt::longest_run_fuel(
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l->v())) {
         unsigned int len_curr = _loop_current.length();
         unsigned int len_best = _loop_best.length();
         if (len_best < len_curr) {
@@ -67,10 +67,10 @@ __attribute__((pure)) List<unsigned int> LoopifySearchOpt::longest_run_fuel(
         }
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _loop_current.v_mut())) {
-          List<unsigned int> _next_l = *(d_a1);
+          const List<unsigned int> *_next_l = d_a1.get();
           List<unsigned int> _next_best = std::move(_loop_best);
           List<unsigned int> _next_current =
               List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
@@ -83,7 +83,7 @@ __attribute__((pure)) List<unsigned int> LoopifySearchOpt::longest_run_fuel(
           auto &[d_a00, d_a10] = std::get<typename List<unsigned int>::Cons>(
               _loop_current.v_mut());
           if (d_a0 == d_a00) {
-            List<unsigned int> _next_l = *(d_a1);
+            const List<unsigned int> *_next_l = d_a1.get();
             List<unsigned int> _next_best = std::move(_loop_best);
             List<unsigned int> _next_current =
                 List<unsigned int>::cons(d_a0, _loop_current);
@@ -101,7 +101,7 @@ __attribute__((pure)) List<unsigned int> LoopifySearchOpt::longest_run_fuel(
             } else {
               new_best = std::move(_loop_best);
             }
-            List<unsigned int> _next_l = *(d_a1);
+            const List<unsigned int> *_next_l = d_a1.get();
             List<unsigned int> _next_best = std::move(new_best);
             List<unsigned int> _next_current =
                 List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
@@ -155,9 +155,9 @@ __attribute__((pure)) unsigned int LoopifySearchOpt::knapsack_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<std::pair<unsigned int, unsigned int>> items = _f.items;
-      const unsigned int capacity = _f.capacity;
-      const unsigned int fuel = _f.fuel;
+      const List<std::pair<unsigned int, unsigned int>> &items = _f.items;
+      const unsigned int &capacity = _f.capacity;
+      const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
       } else {
@@ -231,9 +231,9 @@ LoopifySearchOpt::subset_sum_fuel(const unsigned int &fuel,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
-      const unsigned int target = _f.target;
-      const unsigned int fuel = _f.fuel;
+      const List<unsigned int> &l = _f.l;
+      const unsigned int &target = _f.target;
+      const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = false;
       } else {
@@ -291,7 +291,7 @@ LoopifySearchOpt::majority(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(0u, 0u);
       } else {

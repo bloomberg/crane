@@ -26,8 +26,8 @@ LoopifyNumericSequences::collatz_length_fuel(const unsigned int &fuel,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      const unsigned int &n = _f.n;
+      const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
       } else {
@@ -151,8 +151,8 @@ LoopifyNumericSequences::tribonacci_fuel(const unsigned int &fuel,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      const unsigned int &n = _f.n;
+      const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
       } else {
@@ -232,8 +232,8 @@ LoopifyNumericSequences::staircase_fuel(const unsigned int &fuel,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      const unsigned int &n = _f.n;
+      const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 1u;
       } else {
@@ -294,8 +294,8 @@ LoopifyNumericSequences::digitsum_fuel(const unsigned int &fuel,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      const unsigned int &n = _f.n;
+      const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
       } else {
@@ -344,8 +344,8 @@ LoopifyNumericSequences::dec_to_bin_fuel(const unsigned int &fuel,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      const unsigned int &n = _f.n;
+      const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
       } else {
@@ -374,18 +374,19 @@ __attribute__((pure)) unsigned int
 LoopifyNumericSequences::alternate_sum(const bool &sign, unsigned int acc,
                                        const List<unsigned int> &l) {
   unsigned int _result;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_acc = std::move(acc);
   bool _loop_sign = sign;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       _result = _loop_acc;
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_sign) {
-        List<unsigned int> _next_l = *(d_a1);
+        const List<unsigned int> *_next_l = d_a1.get();
         unsigned int _next_acc = (_loop_acc + d_a0);
         bool _next_sign = false;
         _loop_l = std::move(_next_l);
@@ -393,7 +394,7 @@ LoopifyNumericSequences::alternate_sum(const bool &sign, unsigned int acc,
         _loop_sign = std::move(_next_sign);
       } else {
         if (d_a0 <= _loop_acc) {
-          List<unsigned int> _next_l = *(d_a1);
+          const List<unsigned int> *_next_l = d_a1.get();
           unsigned int _next_acc =
               (((_loop_acc - d_a0) > _loop_acc ? 0 : (_loop_acc - d_a0)));
           bool _next_sign = true;
@@ -401,7 +402,7 @@ LoopifyNumericSequences::alternate_sum(const bool &sign, unsigned int acc,
           _loop_acc = std::move(_next_acc);
           _loop_sign = std::move(_next_sign);
         } else {
-          List<unsigned int> _next_l = *(d_a1);
+          const List<unsigned int> *_next_l = d_a1.get();
           unsigned int _next_acc = 0u;
           bool _next_sign = true;
           _loop_l = std::move(_next_l);
@@ -435,7 +436,7 @@ LoopifyNumericSequences::sum_divisors_aux(const unsigned int &n,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int d = _f.d;
+      const unsigned int &d = _f.d;
       if (d <= 0) {
         _result = 0u;
       } else {

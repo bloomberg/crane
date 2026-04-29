@@ -310,7 +310,7 @@ struct LoopifySpecialRecursion {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const unsigned int n = _f.n;
+        const unsigned int &n = _f.n;
         if (n <= 0) {
           _result = x;
         } else {

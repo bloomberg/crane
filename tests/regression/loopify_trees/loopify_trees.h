@@ -316,7 +316,7 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          const tree<t_A> t2 = _f.t2;
+          const tree<t_A> &t2 = _f.t2;
           auto &&_sv = *(_self);
           if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
             if (std::holds_alternative<typename tree<t_A>::Leaf>(t2.v())) {
@@ -1850,7 +1850,7 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const simple_tree *_self = _f._self;
-          const unsigned int n = _f.n;
+          const unsigned int &n = _f.n;
           auto &&_sv = *(_self);
           if (std::holds_alternative<typename simple_tree::SLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename simple_tree::SLeaf>(_sv.v());

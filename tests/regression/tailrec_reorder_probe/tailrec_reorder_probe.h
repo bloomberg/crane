@@ -129,7 +129,7 @@ struct TailrecReorderProbe {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> m = _f.m;
+        const mylist<T1> &m = _f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
           _result = f;
         } else {
@@ -167,7 +167,7 @@ struct TailrecReorderProbe {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> m = _f.m;
+        const mylist<T1> &m = _f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
           _result = f;
         } else {
@@ -199,16 +199,16 @@ struct TailrecReorderProbe {
                                                         mylist<T1> acc) {
     mylist<T1> _result;
     mylist<T1> _loop_acc = std::move(acc);
-    mylist<T1> _loop_l = l;
+    const mylist<T1> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l.v())) {
+      if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l->v())) {
         _result = std::move(_loop_acc);
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<T1>::Mycons>(_loop_l.v());
+            std::get<typename mylist<T1>::Mycons>(_loop_l->v());
         mylist<T1> _next_acc = mylist<T1>::mycons(d_a0, std::move(_loop_acc));
-        mylist<T1> _next_l = *(d_a1);
+        const mylist<T1> *_next_l = d_a1.get();
         _loop_acc = std::move(_next_acc);
         _loop_l = std::move(_next_l);
       }
@@ -250,7 +250,7 @@ struct TailrecReorderProbe {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> l = _f.l;
+        const mylist<T1> &l = _f.l;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
           _result = 0u;
         } else {

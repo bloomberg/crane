@@ -754,20 +754,20 @@ struct LoopifyStructures {
   __attribute__((pure)) static std::optional<unsigned int>
   find_opt(F0 &&p, const List<unsigned int> &l) {
     std::optional<unsigned int> _result;
-    List<unsigned int> _loop_l = l;
+    const List<unsigned int> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l->v())) {
         _result = std::optional<unsigned int>();
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (p(d_a0)) {
           _result = std::make_optional<unsigned int>(d_a0);
           break;
         } else {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
         }
       }
     }

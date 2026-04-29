@@ -106,6 +106,23 @@ let rec is_value_type_ret = function
   | Tnamespace (_, t) -> is_value_type_ret t
   | _ -> false
 
+(** Whether a C++ type is trivially copyable (scalars, pointers, enums).
+    For these types, copying is cheaper than indirecting through a reference,
+    so frame-field bindings should remain copies rather than [const T&]. *)
+let rec is_trivially_copyable_type = function
+  | Tvoid | Tauto | Tunknown | Ttodo | Tany -> true
+  | Tptr _ | Tref _ -> true
+  | Tmod (_, t) | Tnamespace (_, t) -> is_trivially_copyable_type t
+  | Tdecltype _ -> true
+  | Tvar _ -> true
+  | Tid (id, []) | Tid_external (id, []) ->
+    let s = Id.to_string id in
+    s = "unsigned int" || s = "int" || s = "bool" || s = "char"
+    || s = "double" || s = "float" || s = "size_t"
+    || s = "uint64_t" || s = "int64_t" || s = "uint32_t" || s = "int32_t"
+  | Tglob (r, _, _) -> Table.is_enum_inductive r
+  | _ -> false
+
 (** {2 Mutual recursion table}
 
     Functions register their bodies here so mutual pairs can be detected and
@@ -884,9 +901,23 @@ let tail_shadow_arg shadow_ty arg =
   | _ -> arg
 
 let tail_pointer_safe_flags check params body =
-  ignore check;
-  ignore body;
-  List.map (fun _ -> false) params
+  let calls = collect_stmts check ~in_visitor:false body in
+  if calls = [] then
+    List.map (fun _ -> false) params
+  else
+    List.mapi
+      (fun i (id, ty) ->
+        match borrowed_value_param_pointee ty with
+        | None -> false
+        | Some _ ->
+          List.for_all
+            (fun cs ->
+              match List.nth_opt cs.cs_args i with
+              | Some (CPPderef _) -> true
+              | Some (CPPvar arg_id) -> Id.equal arg_id id
+              | _ -> false)
+            calls)
+      params
 
 let rewrite_borrowed_shadow_uses shadow_params stmts =
   let ptr_shadows =
@@ -917,6 +948,7 @@ let rewrite_borrowed_shadow_uses shadow_params stmts =
   let rec expr = function
     | CPPfun_call (CPPmember (CPPvar id, meth), args) when is_ptr_shadow id ->
       CPPmethod_call (CPPvar id, meth, List.map expr args)
+    | CPPvar id when is_ptr_shadow id -> CPPderef (CPPvar id)
     | e -> map_expr expr stmt Fun.id e
   and stmt = function
     | Smatch (branches, default) ->
@@ -925,7 +957,9 @@ let rewrite_borrowed_shadow_uses shadow_params stmts =
             (fun br ->
               let ptr_scrutinee = expr_mentions_ptr_shadow br.smb_scrutinee in
               { br with
-                smb_scrutinee = expr br.smb_scrutinee;
+                smb_scrutinee =
+                  (if ptr_scrutinee then br.smb_scrutinee
+                   else expr br.smb_scrutinee);
                 smb_extra_conds = List.map expr br.smb_extra_conds;
                 smb_reuse =
                   Option.map
@@ -3030,13 +3064,16 @@ let make_cont_bindings ~offset cont_vars cont_types =
   List.mapi
     (fun i id ->
       let ty = List.nth cont_types i in
-      let ty_opt = if ty = Tunknown then None else Some ty in
       let field_expr =
         CPPmember (CPPvar (Id.of_string "_f"),
                    Id.of_string ("_s" ^ string_of_int (offset + i)))
       in
-      let rhs = match ty with Tunique_ptr _ -> CPPmove field_expr | _ -> field_expr in
-      Sasgn (id, ty_opt, rhs))
+      match ty with
+      | Tunique_ptr _ -> Sasgn (id, Some ty, CPPmove field_expr)
+      | Tunknown -> Sasgn (id, None, field_expr)
+      | Tmod (TMconst, inner) when not (is_trivially_copyable_type inner) ->
+        Sasgn (id, Some (Tref (Tmod (TMconst, inner))), field_expr)
+      | _ -> Sasgn (id, Some ty, field_expr))
     cont_vars
 
 (** Build a type environment from continuation variables and their types,
@@ -5157,16 +5194,24 @@ let make_stack_init varying_params =
          [],
          List.map (fun (id, _) -> CPPvar id) varying_params ))
 
-(** Generate parameter copy statements that read frame fields into locals.
-    Produces [auto name = _f.name;] for each varying parameter.
+(** Generate parameter bindings that read frame fields into locals.
+    For trivially copyable types (scalars, pointers, enums), produces a copy.
+    For non-trivially-copyable types (inductives, strings, etc.), produces a
+    [const T&] reference to the frame field to avoid deep copies.
 
-    @param pp_type Type printer function
-    @param varying_params The parameters to copy from the frame
-    @return List of raw C++ assignment statements *)
+    @param varying_params The parameters to bind from the frame
+    @return List of assignment statements *)
 let make_param_copies varying_params =
   List.map
     (fun (id, ty) ->
-      Sasgn (id, Some (strip_ref_type ty),
+      let stripped = strip_ref_type ty in
+      let bind_ty =
+        match stripped with
+        | Tmod (TMconst, inner) when not (is_trivially_copyable_type inner) ->
+          Tref (Tmod (TMconst, inner))
+        | _ -> stripped
+      in
+      Sasgn (id, Some bind_ty,
              CPPmember (CPPvar (Id.of_string "_f"), id)))
     varying_params
 

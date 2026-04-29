@@ -81,6 +81,24 @@ public:
   }
 
   // MANIPULATORS
+  ~List() {
+    std::vector<std::unique_ptr<List>> _stack;
+    auto _drain = [&](List &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1)
+          _stack.push_back(std::move(_alt.d_a1));
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node)
+        _drain(*_node);
+    }
+  }
+
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
@@ -759,6 +777,26 @@ struct ComprehensivePatterns {
     }
 
     // MANIPULATORS
+    ~Tree() {
+      std::vector<std::unique_ptr<Tree>> _stack;
+      auto _drain = [&](Tree &_node) {
+        if (std::holds_alternative<Node>(_node.d_v_)) {
+          auto &_alt = std::get<Node>(_node.d_v_);
+          if (_alt.d_a0)
+            _stack.push_back(std::move(_alt.d_a0));
+          if (_alt.d_a2)
+            _stack.push_back(std::move(_alt.d_a2));
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node)
+          _drain(*_node);
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
@@ -771,11 +809,11 @@ struct ComprehensivePatterns {
 
     __attribute__((pure)) Tree flip_tree() const {
       auto &&_sv = *(this);
-      if (std::holds_alternative<typename Tree::Leaf>(_sv.v_mut())) {
-        auto &[d_a0] = std::get<typename Tree::Leaf>(_sv.v_mut());
+      if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
+        auto &[d_a0] = std::get<typename Tree::Leaf>(_sv.v());
         return Tree::node(*(this), d_a0, *(this));
       } else {
-        auto &[d_a0, d_a1, d_a2] = std::get<typename Tree::Node>(_sv.v_mut());
+        auto &[d_a0, d_a1, d_a2] = std::get<typename Tree::Node>(_sv.v());
         return Tree::leaf(d_a1);
       }
     }

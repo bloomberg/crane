@@ -54,7 +54,7 @@ LoopifySorting::insertion_sort(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = List<unsigned int>::nil();
       } else {
@@ -167,7 +167,7 @@ LoopifySorting::merge_sort_fuel(const unsigned int &fuel,
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       List<unsigned int> l = _f.l;
-      const unsigned int fuel = _f.fuel;
+      const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);
       } else {
@@ -230,7 +230,7 @@ LoopifySorting::partition(const unsigned int &pivot,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());
@@ -243,7 +243,7 @@ LoopifySorting::partition(const unsigned int &pivot,
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
       unsigned int d_a0 = _f._s0;
-      const unsigned int pivot = _f._s1;
+      const unsigned int &pivot = _f._s1;
       const List<unsigned int> &lo = _result.first;
       const List<unsigned int> &hi = _result.second;
       if (d_a0 <= pivot) {
@@ -285,7 +285,7 @@ LoopifySorting::quicksort_fuel(const unsigned int &fuel, List<unsigned int> l) {
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       List<unsigned int> l = _f.l;
-      const unsigned int fuel = _f.fuel;
+      const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);
       } else {
@@ -324,17 +324,18 @@ __attribute__((pure)) bool
 LoopifySorting::is_sorted_aux(const unsigned int &prev,
                               const List<unsigned int> &l) {
   bool _result;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_prev = prev;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       _result = true;
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_prev <= d_a0) {
-        List<unsigned int> _next_l = *(d_a1);
+        const List<unsigned int> *_next_l = d_a1.get();
         unsigned int _next_prev = d_a0;
         _loop_l = std::move(_next_l);
         _loop_prev = std::move(_next_prev);

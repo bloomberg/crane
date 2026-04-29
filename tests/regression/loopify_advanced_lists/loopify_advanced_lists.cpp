@@ -20,7 +20,7 @@ LoopifyAdvancedLists::product(const List<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 1u;
       } else {
@@ -216,7 +216,7 @@ LoopifyAdvancedLists::concat_lists(const List<List<unsigned int>> &ll) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> ll = _f.ll;
+      const List<List<unsigned int>> &ll = _f.ll;
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = List<unsigned int>::nil();

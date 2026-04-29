@@ -27,8 +27,8 @@ LoopifySpecialRecursion::process_twice_fuel(const unsigned int &fuel,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
-      const unsigned int fuel = _f.fuel;
+      const List<unsigned int> &l = _f.l;
+      const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -87,7 +87,7 @@ LoopifySpecialRecursion::double_append(const List<unsigned int> &l1,
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       List<unsigned int> l2 = _f.l2;
-      const List<unsigned int> l1 = _f.l1;
+      const List<unsigned int> &l1 = _f.l1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
         _result = std::move(l2);
       } else {
@@ -208,7 +208,7 @@ LoopifySpecialRecursion::collect_sorted(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifySpecialRecursion::tree t = _f.t;
+      const LoopifySpecialRecursion::tree &t = _f.t;
       if (std::holds_alternative<typename LoopifySpecialRecursion::tree::Leaf>(
               t.v())) {
         _result = List<unsigned int>::nil();
@@ -252,8 +252,8 @@ LoopifySpecialRecursion::sum_odd_indices_aux(const List<unsigned int> &l,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int idx = _f.idx;
-      const List<unsigned int> l = _f.l;
+      const unsigned int &idx = _f.idx;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -308,7 +308,7 @@ LoopifySpecialRecursion::categorize_by(const unsigned int &k,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> l = _f.l;
+      const List<unsigned int> &l = _f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -398,7 +398,7 @@ LoopifySpecialRecursion::merge_levels(const List<List<unsigned int>> &ll) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> ll = _f.ll;
+      const List<List<unsigned int>> &ll = _f.ll;
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = List<unsigned int>::nil();

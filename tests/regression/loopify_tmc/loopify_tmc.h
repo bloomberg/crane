@@ -130,7 +130,7 @@ struct LoopifyTmc {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> l = _f.l;
+        const list<T1> &l = _f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
@@ -167,7 +167,7 @@ struct LoopifyTmc {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> l = _f.l;
+        const list<T1> &l = _f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {

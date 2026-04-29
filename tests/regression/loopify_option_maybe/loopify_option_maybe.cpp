@@ -3,19 +3,20 @@
 __attribute__((pure)) std::optional<unsigned int>
 LoopifyOptionMaybe::find_even(const List<unsigned int> &l) {
   std::optional<unsigned int> _result;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       _result = std::optional<unsigned int>();
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if ((2u ? d_a0 % 2u : d_a0) == 0u) {
         _result = std::make_optional<unsigned int>(d_a0);
         break;
       } else {
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
       }
     }
   }
@@ -26,19 +27,20 @@ __attribute__((pure)) std::optional<unsigned int>
 LoopifyOptionMaybe::find_greater(const unsigned int &threshold,
                                  const List<unsigned int> &l) {
   std::optional<unsigned int> _result;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       _result = std::optional<unsigned int>();
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (threshold < d_a0) {
         _result = std::make_optional<unsigned int>(d_a0);
         break;
       } else {
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
       }
     }
   }
@@ -49,24 +51,24 @@ __attribute__((pure)) std::optional<unsigned int> LoopifyOptionMaybe::lookup(
     const unsigned int &key,
     const List<std::pair<unsigned int, unsigned int>> &l) {
   std::optional<unsigned int> _result;
-  List<std::pair<unsigned int, unsigned int>> _loop_l = l;
+  const List<std::pair<unsigned int, unsigned int>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename List<std::pair<unsigned int, unsigned int>>::Nil>(
-            _loop_l.v())) {
+            _loop_l->v())) {
       _result = std::optional<unsigned int>();
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-              _loop_l.v());
+              _loop_l->v());
       const unsigned int &k = d_a0.first;
       const unsigned int &v = d_a0.second;
       if (key == k) {
         _result = std::make_optional<unsigned int>(v);
         break;
       } else {
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
       }
     }
   }
@@ -171,20 +173,21 @@ LoopifyOptionMaybe::find_index_even_aux(const List<unsigned int> &l,
                                         unsigned int idx) {
   std::optional<unsigned int> _result;
   unsigned int _loop_idx = std::move(idx);
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       _result = std::optional<unsigned int>();
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if ((2u ? d_a0 % 2u : d_a0) == 0u) {
         _result = std::make_optional<unsigned int>(_loop_idx);
         break;
       } else {
         unsigned int _next_idx = (_loop_idx + 1u);
-        List<unsigned int> _next_l = *(d_a1);
+        const List<unsigned int> *_next_l = d_a1.get();
         _loop_idx = std::move(_next_idx);
         _loop_l = std::move(_next_l);
       }

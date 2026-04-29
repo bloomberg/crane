@@ -26,7 +26,7 @@ LoopifyPairs::unzip(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyPairs::list<std::pair<unsigned int, unsigned int>> l = _f.l;
+      const LoopifyPairs::list<std::pair<unsigned int, unsigned int>> &l = _f.l;
       if (std::holds_alternative<typename LoopifyPairs::list<
               std::pair<unsigned int, unsigned int>>::Nil>(l.v())) {
         _result = std::make_pair(list<unsigned int>::nil(),
@@ -80,7 +80,7 @@ LoopifyPairs::partition3(const unsigned int &pivot,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyPairs::list<unsigned int> l = _f.l;
+      const LoopifyPairs::list<unsigned int> &l = _f.l;
       if (std::holds_alternative<
               typename LoopifyPairs::list<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(list<unsigned int>::nil(),
@@ -95,7 +95,7 @@ LoopifyPairs::partition3(const unsigned int &pivot,
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
       unsigned int d_a0 = _f._s0;
-      const unsigned int pivot = _f._s1;
+      const unsigned int &pivot = _f._s1;
       const LoopifyPairs::list<unsigned int> &lt = _result.first;
       const std::pair<LoopifyPairs::list<unsigned int>,
                       LoopifyPairs::list<unsigned int>> &p = _result.second;
@@ -139,7 +139,7 @@ LoopifyPairs::min_max(const LoopifyPairs::list<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyPairs::list<unsigned int> l = _f.l;
+      const LoopifyPairs::list<unsigned int> &l = _f.l;
       if (std::holds_alternative<
               typename LoopifyPairs::list<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(0u, 0u);
@@ -188,7 +188,7 @@ LoopifyPairs::sum_and_count(const LoopifyPairs::list<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyPairs::list<unsigned int> l = _f.l;
+      const LoopifyPairs::list<unsigned int> &l = _f.l;
       if (std::holds_alternative<
               typename LoopifyPairs::list<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(0u, 0u);
@@ -231,7 +231,7 @@ LoopifyPairs::sum_prod_count(const LoopifyPairs::list<unsigned int> &l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyPairs::list<unsigned int> l = _f.l;
+      const LoopifyPairs::list<unsigned int> &l = _f.l;
       if (std::holds_alternative<
               typename LoopifyPairs::list<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(0u, std::make_pair(1u, 0u));
