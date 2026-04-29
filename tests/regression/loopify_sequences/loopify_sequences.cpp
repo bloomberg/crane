@@ -44,7 +44,7 @@ __attribute__((pure)) List<unsigned int>
 LoopifySequences::collatz_list_fuel(const unsigned int &fuel, unsigned int n) {
   struct _Enter {
     unsigned int n;
-    const unsigned int fuel;
+    unsigned int fuel;
   };
 
   using _Frame = std::variant<_Enter>;
@@ -56,7 +56,7 @@ LoopifySequences::collatz_list_fuel(const unsigned int &fuel, unsigned int n) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     auto _f = std::move(std::get<_Enter>(_frame));
-    unsigned int n = _f.n;
+    unsigned int n = std::move(_f.n);
     const unsigned int &fuel = _f.fuel;
     if (fuel <= 0) {
       _result = List<unsigned int>::nil();
@@ -192,11 +192,11 @@ __attribute__((pure)) List<unsigned int>
 LoopifySequences::repeat_string(const List<unsigned int> &s,
                                 const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
-    const List<unsigned int> _s0;
+    List<unsigned int> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -231,12 +231,12 @@ LoopifySequences::repeat_with_sep(List<unsigned int> s,
                                   const List<unsigned int> &sep,
                                   const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
     List<unsigned int> _s0;
-    const List<unsigned int> _s1;
+    List<unsigned int> _s1;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -276,13 +276,13 @@ __attribute__((pure)) List<unsigned int> LoopifySequences::string_chain_fuel(
     const unsigned int &n, const List<unsigned int> &sep,
     const List<unsigned int> &end_marker) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {
-    const List<unsigned int> _s0;
-    const List<unsigned int> _s1;
+    List<unsigned int> _s0;
+    List<unsigned int> _s1;
     decltype(std::declval<const List<unsigned int> &>().app(
         std::declval<const List<unsigned int> &>())) _s2;
   };
@@ -446,11 +446,11 @@ LoopifySequences::replace_at(const unsigned int &idx, unsigned int value,
 __attribute__((pure)) List<unsigned int>
 LoopifySequences::cycle(const unsigned int &n, const List<unsigned int> &l) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
-    const List<unsigned int> _s0;
+    List<unsigned int> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -616,7 +616,7 @@ LoopifySequences::is_palindrome(const List<unsigned int> &s) {
 __attribute__((pure)) List<List<unsigned int>>
 LoopifySequences::string_subsequences(const List<unsigned int> &s) {
   struct _Enter {
-    const List<unsigned int> s;
+    List<unsigned int> s;
   };
 
   struct _Call1 {
@@ -646,7 +646,7 @@ LoopifySequences::string_subsequences(const List<unsigned int> &s) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       List<List<unsigned int>> sub_rest = _result;
       std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
           map_prepend_c;
@@ -669,7 +669,7 @@ LoopifySequences::string_subsequences(const List<unsigned int> &s) {
           _stack.pop_back();
           if (std::holds_alternative<_Enter>(_frame)) {
             auto _f = std::move(std::get<_Enter>(_frame));
-            List<List<unsigned int>> lsts = _f.lsts;
+            List<List<unsigned int>> lsts = std::move(_f.lsts);
             if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                     lsts.v())) {
               _result = List<List<unsigned int>>::nil();

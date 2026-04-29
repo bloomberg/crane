@@ -70,7 +70,7 @@ List<unsigned int> LoopifyItreeSeq::countdown_list(unsigned int n) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      unsigned int n = _f.n;
+      unsigned int n = std::move(_f.n);
       if (n <= 0) {
         _result = List<unsigned int>::cons(0u, List<unsigned int>::nil());
       } else {
@@ -80,7 +80,7 @@ List<unsigned int> LoopifyItreeSeq::countdown_list(unsigned int n) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int n = _f._s0;
+      unsigned int n = std::move(_f._s0);
       List<unsigned int> rest = _result;
       _result = List<unsigned int>::cons(n, rest);
     }

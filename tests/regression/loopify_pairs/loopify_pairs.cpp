@@ -42,8 +42,8 @@ LoopifyPairs::unzip(
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int x = _f._s0;
-      unsigned int y = _f._s1;
+      unsigned int x = std::move(_f._s0);
+      unsigned int y = std::move(_f._s1);
       const LoopifyPairs::list<unsigned int> &xs = _result.first;
       const LoopifyPairs::list<unsigned int> &ys = _result.second;
       _result = std::make_pair(list<unsigned int>::cons(x, xs),
@@ -65,7 +65,7 @@ LoopifyPairs::partition3(const unsigned int &pivot,
 
   struct _Call1 {
     unsigned int _s0;
-    const unsigned int _s1;
+    unsigned int _s1;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -95,7 +95,7 @@ LoopifyPairs::partition3(const unsigned int &pivot,
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const unsigned int &pivot = _f._s1;
       const LoopifyPairs::list<unsigned int> &lt = _result.first;
       const std::pair<LoopifyPairs::list<unsigned int>,
@@ -158,7 +158,7 @@ LoopifyPairs::min_max(const LoopifyPairs::list<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const unsigned int &mn = _result.first;
       const unsigned int &mx = _result.second;
       _result =
@@ -201,7 +201,7 @@ LoopifyPairs::sum_and_count(const LoopifyPairs::list<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const unsigned int &s = _result.first;
       const unsigned int &c = _result.second;
       _result = std::make_pair((d_a0 + s), (c + 1));
@@ -244,7 +244,7 @@ LoopifyPairs::sum_prod_count(const LoopifyPairs::list<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const unsigned int &s = _result.first;
       const std::pair<unsigned int, unsigned int> &p0 = _result.second;
       const unsigned int &p = p0.first;

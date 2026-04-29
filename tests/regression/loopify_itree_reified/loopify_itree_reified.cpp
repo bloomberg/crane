@@ -7,8 +7,8 @@ __attribute__((pure)) unsigned int
 LoopifyItreeReified::count_taus(const unsigned int &fuel,
                                 const std::shared_ptr<ITree<unsigned int>> &t) {
   struct _Enter {
-    const std::shared_ptr<ITree<unsigned int>> t;
-    const unsigned int fuel;
+    std::shared_ptr<ITree<unsigned int>> t;
+    unsigned int fuel;
   };
 
   struct _Call1 {};

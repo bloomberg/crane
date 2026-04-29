@@ -183,7 +183,7 @@ struct LoopifyPredicates {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        List<unsigned int> l = _f.l;
+        List<unsigned int> l = std::move(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 l.v_mut())) {
           _result = std::make_pair(List<unsigned int>::nil(),
@@ -200,7 +200,7 @@ struct LoopifyPredicates {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = _f._s0;
+        unsigned int d_a0 = std::move(_f._s0);
         const List<unsigned int> &yes = _result.first;
         const List<unsigned int> &no = _result.second;
         _result = std::make_pair(List<unsigned int>::cons(d_a0, yes), no);
@@ -230,7 +230,7 @@ struct LoopifyPredicates {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        List<unsigned int> l = _f.l;
+        List<unsigned int> l = std::move(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 l.v_mut())) {
           _result = std::make_pair(List<unsigned int>::nil(),
@@ -247,7 +247,7 @@ struct LoopifyPredicates {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = _f._s0;
+        unsigned int d_a0 = std::move(_f._s0);
         const List<unsigned int> &before = _result.first;
         const List<unsigned int> &after = _result.second;
         _result = std::make_pair(List<unsigned int>::cons(d_a0, before), after);

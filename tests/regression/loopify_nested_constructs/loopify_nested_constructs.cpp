@@ -3,7 +3,7 @@
 __attribute__((pure)) unsigned int
 LoopifyNestedConstructs::multi_let(const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
@@ -93,7 +93,7 @@ LoopifyNestedConstructs::nested_if(const unsigned int &n) {
 __attribute__((pure)) unsigned int
 LoopifyNestedConstructs::deep_nest(const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {};
@@ -129,7 +129,7 @@ LoopifyNestedConstructs::deep_nest(const unsigned int &n) {
 __attribute__((pure)) unsigned int
 LoopifyNestedConstructs::let_nested(const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
@@ -167,12 +167,12 @@ __attribute__((pure)) unsigned int
 LoopifyNestedConstructs::mod_pattern_fuel(const unsigned int &fuel,
                                           const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {
-    const unsigned int _s0;
+    unsigned int _s0;
     decltype(1u) _s1;
   };
 
@@ -216,11 +216,11 @@ __attribute__((pure))
 std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
 LoopifyNestedConstructs::tuple_constr(const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
-    const unsigned int _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -258,11 +258,11 @@ LoopifyNestedConstructs::tuple_constr(const unsigned int &n) {
 __attribute__((pure)) unsigned int
 LoopifyNestedConstructs::alternating_ops(const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
-    const unsigned int _s0;
+    unsigned int _s0;
   };
 
   struct _Call2 {
@@ -307,8 +307,8 @@ __attribute__((pure)) bool
 LoopifyNestedConstructs::chained_comp_fuel(const unsigned int &fuel,
                                            const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -370,7 +370,7 @@ LoopifyNestedConstructs::chained_comp(const unsigned int &n) {
 __attribute__((pure)) unsigned int
 LoopifyNestedConstructs::compute_with_lets(const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
@@ -406,13 +406,13 @@ LoopifyNestedConstructs::compute_with_lets(const unsigned int &n) {
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int n__ = _f._s0;
+      unsigned int n__ = std::move(_f._s0);
       unsigned int x = _result;
       _stack.emplace_back(_Call2{x});
       _stack.emplace_back(_Enter{n__});
     } else {
       auto _f = std::move(std::get<_Call2>(_frame));
-      unsigned int x = _f._s0;
+      unsigned int x = std::move(_f._s0);
       unsigned int y = _result;
       unsigned int z = (x + y);
       _result = (z * 2u);
@@ -424,11 +424,11 @@ LoopifyNestedConstructs::compute_with_lets(const unsigned int &n) {
 __attribute__((pure)) unsigned int
 LoopifyNestedConstructs::nested_match(const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
-    const unsigned int _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;

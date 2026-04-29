@@ -3,11 +3,11 @@
 __attribute__((pure)) unsigned int
 LoopifyClassics::factorial(const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
-    const unsigned int _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -38,7 +38,7 @@ LoopifyClassics::factorial(const unsigned int &n) {
 
 __attribute__((pure)) unsigned int LoopifyClassics::fib(const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
@@ -88,14 +88,14 @@ __attribute__((pure)) unsigned int
 LoopifyClassics::ack_fuel(const unsigned int &fuel, const unsigned int &m,
                           const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int m;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int m;
+    unsigned int fuel;
   };
 
   struct _Call1 {
     unsigned int _s0;
-    const unsigned int _s1;
+    unsigned int _s1;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -130,7 +130,7 @@ LoopifyClassics::ack_fuel(const unsigned int &fuel, const unsigned int &m,
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int fuel_ = _f._s0;
+      unsigned int fuel_ = std::move(_f._s0);
       const unsigned int &m = _f._s1;
       unsigned int inner = _result;
       _stack.emplace_back(
@@ -149,9 +149,9 @@ __attribute__((pure)) unsigned int
 LoopifyClassics::binomial_fuel(const unsigned int &fuel, const unsigned int &n,
                                const unsigned int &k) {
   struct _Enter {
-    const unsigned int k;
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int k;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -217,9 +217,9 @@ __attribute__((pure)) unsigned int
 LoopifyClassics::pascal_fuel(const unsigned int &fuel, const unsigned int &row,
                              const unsigned int &col) {
   struct _Enter {
-    const unsigned int col;
-    const unsigned int row;
-    const unsigned int fuel;
+    unsigned int col;
+    unsigned int row;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -319,11 +319,11 @@ __attribute__((pure)) unsigned int LoopifyClassics::gcd(const unsigned int &a,
 __attribute__((pure)) unsigned int
 LoopifyClassics::power(const unsigned int &base, const unsigned int &exp) {
   struct _Enter {
-    const unsigned int exp;
+    unsigned int exp;
   };
 
   struct _Call1 {
-    const unsigned int _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -355,11 +355,11 @@ LoopifyClassics::power(const unsigned int &base, const unsigned int &exp) {
 __attribute__((pure)) unsigned int
 LoopifyClassics::sum_to(const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
-    const unsigned int _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -391,7 +391,7 @@ LoopifyClassics::sum_to(const unsigned int &n) {
 __attribute__((pure)) unsigned int
 LoopifyClassics::sum_squares(const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {

@@ -26,8 +26,8 @@ __attribute__((pure)) List<List<unsigned int>>
 LoopifyGrouping::group_fuel(const unsigned int &fuel,
                             const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
-    const unsigned int fuel;
+    List<unsigned int> l;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -73,8 +73,8 @@ LoopifyGrouping::group_fuel(const unsigned int &fuel,
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
-      unsigned int d_a00 = _f._s1;
+      unsigned int d_a0 = std::move(_f._s0);
+      unsigned int d_a00 = std::move(_f._s1);
       List<List<unsigned int>> rec_result = _result;
       _result = prepend_to_groups(d_a0, d_a0 == d_a00, std::move(rec_result));
     }
@@ -141,7 +141,7 @@ LoopifyGrouping::nub(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       List<unsigned int> rest = _result;
       if (elem(d_a0, rest)) {
         _result = std::move(rest);
@@ -196,7 +196,7 @@ LoopifyGrouping::partition3(const unsigned int &pivot,
 
   struct _Call1 {
     unsigned int _s0;
-    const unsigned int _s1;
+    unsigned int _s1;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -224,7 +224,7 @@ LoopifyGrouping::partition3(const unsigned int &pivot,
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const unsigned int &pivot = _f._s1;
       const std::pair<List<unsigned int>, List<unsigned int>> &p =
           _result.first;

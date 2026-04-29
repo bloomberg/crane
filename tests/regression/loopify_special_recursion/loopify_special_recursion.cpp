@@ -4,8 +4,8 @@ __attribute__((pure)) List<unsigned int>
 LoopifySpecialRecursion::process_twice_fuel(const unsigned int &fuel,
                                             const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
-    const unsigned int fuel;
+    List<unsigned int> l;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -44,14 +44,14 @@ LoopifySpecialRecursion::process_twice_fuel(const unsigned int &fuel,
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
-      unsigned int fuel_ = _f._s1;
+      unsigned int d_a0 = std::move(_f._s0);
+      unsigned int fuel_ = std::move(_f._s1);
       List<unsigned int> first = _result;
       _stack.emplace_back(_Call2{d_a0});
       _stack.emplace_back(_Enter{std::move(first), fuel_});
     } else {
       auto _f = std::move(std::get<_Call2>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       List<unsigned int> second = _result;
       _result = List<unsigned int>::cons(d_a0, std::move(second));
     }
@@ -86,7 +86,7 @@ LoopifySpecialRecursion::double_append(const List<unsigned int> &l1,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      List<unsigned int> l2 = _f.l2;
+      List<unsigned int> l2 = std::move(_f.l2);
       const List<unsigned int> &l1 = *(_f.l1);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
         _result = std::move(l2);
@@ -98,7 +98,7 @@ LoopifySpecialRecursion::double_append(const List<unsigned int> &l1,
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       List<unsigned int> rest = _result;
       _result = List<unsigned int>::cons(d_a0, rest.app(rest));
     }
@@ -235,7 +235,7 @@ __attribute__((pure)) unsigned int
 LoopifySpecialRecursion::sum_odd_indices_aux(const List<unsigned int> &l,
                                              const unsigned int &idx) {
   struct _Enter {
-    const unsigned int idx;
+    unsigned int idx;
     const List<unsigned int> *l;
   };
 

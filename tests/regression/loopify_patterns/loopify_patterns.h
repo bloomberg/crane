@@ -266,7 +266,7 @@ struct LoopifyPatterns {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = _f._s0;
+        unsigned int d_a0 = std::move(_f._s0);
         F0 f = _f._s1;
         unsigned int rest_max = _result;
         unsigned int fx = f(d_a0);
@@ -296,7 +296,7 @@ struct LoopifyPatterns {
   __attribute__((pure)) static list<list<T1>>
   insert_everywhere(const T1 x, const list<T1> &l) {
     struct _Enter {
-      const list<T1> l;
+      list<T1> l;
     };
 
     struct _Call1 {
@@ -340,7 +340,7 @@ struct LoopifyPatterns {
               _stack.pop_back();
               if (std::holds_alternative<_Enter>(_frame)) {
                 auto _f = std::move(std::get<_Enter>(_frame));
-                list<list<T1>> lsts = _f.lsts;
+                list<list<T1>> lsts = std::move(_f.lsts);
                 if (std::holds_alternative<typename list<list<T1>>::Nil>(
                         lsts.v())) {
                   _result = list<list<T1>>::nil();
@@ -519,7 +519,7 @@ struct LoopifyPatterns {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = _f._s0;
+        unsigned int d_a0 = std::move(_f._s0);
         F0 p = _f._s1;
         F1 q = _f._s2;
         const std::pair<list<unsigned int>, list<unsigned int>> &p0 =

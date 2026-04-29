@@ -130,13 +130,13 @@ __attribute__((pure)) unsigned int LoopifySearchOpt::knapsack_fuel(
     const List<std::pair<unsigned int, unsigned int>> &items) {
   struct _Enter {
     const List<std::pair<unsigned int, unsigned int>> *items;
-    const unsigned int capacity;
-    const unsigned int fuel;
+    unsigned int capacity;
+    unsigned int fuel;
   };
 
   struct _Call1 {
     const List<std::pair<unsigned int, unsigned int>> *_s0;
-    const unsigned int _s1;
+    unsigned int _s1;
     unsigned int _s2;
     unsigned int _s3;
   };
@@ -208,13 +208,13 @@ LoopifySearchOpt::subset_sum_fuel(const unsigned int &fuel,
                                   const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
-    const unsigned int target;
-    const unsigned int fuel;
+    unsigned int target;
+    unsigned int fuel;
   };
 
   struct _Call1 {
     const List<unsigned int> *_s0;
-    const unsigned int _s1;
+    unsigned int _s1;
     unsigned int _s2;
   };
 
@@ -303,7 +303,7 @@ LoopifySearchOpt::majority(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const unsigned int &cand = _result.first;
       const unsigned int &count = _result.second;
       if (d_a0 == cand) {
@@ -419,8 +419,8 @@ LoopifySearchOpt::binary_search_fuel(const unsigned int &fuel,
               _stack.pop_back();
               if (std::holds_alternative<_Enter>(_frame)) {
                 auto _f = std::move(std::get<_Enter>(_frame));
-                List<unsigned int> xs = _f.xs;
-                unsigned int n = _f.n;
+                List<unsigned int> xs = std::move(_f.xs);
+                unsigned int n = std::move(_f.n);
                 if (n <= 0) {
                   _result = List<unsigned int>::nil();
                 } else {

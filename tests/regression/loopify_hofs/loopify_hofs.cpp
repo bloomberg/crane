@@ -91,7 +91,7 @@ LoopifyHofs::head_default(unsigned int default0, const List<unsigned int> &l) {
 __attribute__((pure)) List<List<unsigned int>>
 LoopifyHofs::subsequences(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    List<unsigned int> l;
   };
 
   struct _Call1 {
@@ -121,7 +121,7 @@ LoopifyHofs::subsequences(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       List<List<unsigned int>> rest = _result;
       std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
           map_cons_x;
@@ -144,7 +144,7 @@ LoopifyHofs::subsequences(const List<unsigned int> &l) {
           _stack.pop_back();
           if (std::holds_alternative<_Enter>(_frame)) {
             auto _f = std::move(std::get<_Enter>(_frame));
-            List<List<unsigned int>> lsts = _f.lsts;
+            List<List<unsigned int>> lsts = std::move(_f.lsts);
             if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                     lsts.v())) {
               _result = List<List<unsigned int>>::nil();
@@ -320,7 +320,7 @@ LoopifyHofs::longest_run(const List<unsigned int> &l) {
 __attribute__((pure)) List<List<unsigned int>>
 LoopifyHofs::power_set(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    List<unsigned int> l;
   };
 
   struct _Call1 {
@@ -350,7 +350,7 @@ LoopifyHofs::power_set(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       List<List<unsigned int>> sub = _result;
       std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
           map_cons_x;
@@ -373,7 +373,7 @@ LoopifyHofs::power_set(const List<unsigned int> &l) {
           _stack.pop_back();
           if (std::holds_alternative<_Enter>(_frame)) {
             auto _f = std::move(std::get<_Enter>(_frame));
-            List<List<unsigned int>> lsts = _f.lsts;
+            List<List<unsigned int>> lsts = std::move(_f.lsts);
             if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                     lsts.v())) {
               _result = List<List<unsigned int>>::nil();

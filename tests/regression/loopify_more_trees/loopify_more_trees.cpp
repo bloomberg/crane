@@ -246,8 +246,8 @@ LoopifyMoreTrees::tree_max(LoopifyMoreTrees::tree t1,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      LoopifyMoreTrees::tree t2 = _f.t2;
-      LoopifyMoreTrees::tree t1 = _f.t1;
+      LoopifyMoreTrees::tree t2 = std::move(_f.t2);
+      LoopifyMoreTrees::tree t1 = std::move(_f.t1);
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
               t1.v_mut())) {
         _result = std::move(t2);

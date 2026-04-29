@@ -367,7 +367,7 @@ struct LoopifyFolds {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List<unsigned int> &l = *(_f.l);
-        unsigned int acc = _f.acc;
+        unsigned int acc = std::move(_f.acc);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(acc, List<unsigned int>::nil());
         } else {
@@ -381,7 +381,7 @@ struct LoopifyFolds {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int y = _f._s0;
+        unsigned int y = std::move(_f._s0);
         const unsigned int &final_acc = _result.first;
         const List<unsigned int> &ys = _result.second;
         _result = std::make_pair(final_acc, List<unsigned int>::cons(y, ys));

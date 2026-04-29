@@ -144,7 +144,7 @@ LoopifySorting::merge_sort_fuel(const unsigned int &fuel,
                                 List<unsigned int> l) {
   struct _Enter {
     List<unsigned int> l;
-    const unsigned int fuel;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -166,7 +166,7 @@ LoopifySorting::merge_sort_fuel(const unsigned int &fuel,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      List<unsigned int> l = _f.l;
+      List<unsigned int> l = std::move(_f.l);
       const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);
@@ -217,7 +217,7 @@ LoopifySorting::partition(const unsigned int &pivot,
 
   struct _Call1 {
     unsigned int _s0;
-    const unsigned int _s1;
+    unsigned int _s1;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -242,7 +242,7 @@ LoopifySorting::partition(const unsigned int &pivot,
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const unsigned int &pivot = _f._s1;
       const List<unsigned int> &lo = _result.first;
       const List<unsigned int> &hi = _result.second;
@@ -260,7 +260,7 @@ __attribute__((pure)) List<unsigned int>
 LoopifySorting::quicksort_fuel(const unsigned int &fuel, List<unsigned int> l) {
   struct _Enter {
     List<unsigned int> l;
-    const unsigned int fuel;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -284,7 +284,7 @@ LoopifySorting::quicksort_fuel(const unsigned int &fuel, List<unsigned int> l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      List<unsigned int> l = _f.l;
+      List<unsigned int> l = std::move(_f.l);
       const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);

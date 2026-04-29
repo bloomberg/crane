@@ -3088,6 +3088,11 @@ let make_cont_bindings ~offset cont_vars cont_types =
       | Tunknown -> Sasgn (id, None, field_expr)
       | Tmod (TMconst, inner) when not (is_trivially_copyable_type inner) ->
         Sasgn (id, Some (Tref (Tmod (TMconst, inner))), field_expr)
+      | t when not (is_trivially_copyable_type t) ->
+        (* Move from frame field to avoid O(n) deep copy of owned value types
+           (e.g. [List<T>]).  Safe because [_f] was obtained via
+           [std::move(std::get<...>(_frame))] and this field is not used again. *)
+        Sasgn (id, Some ty, CPPmove field_expr)
       | _ -> Sasgn (id, Some ty, field_expr))
     cont_vars
 
@@ -5032,25 +5037,35 @@ let make_stack_init ?(pointer_safe = []) varying_params =
 
 (** Generate parameter bindings that read frame fields into locals.
     For trivially copyable types (scalars, pointers, enums), produces a copy.
-    For non-trivially-copyable types (inductives, strings, etc.), produces a
-    [const T&] reference to the frame field to avoid deep copies.
+    For non-trivially-copyable const-ref types (invariant borrowed params stored by
+    pointer), produces a [const T&] reference to the frame field.
+    For non-trivially-copyable owned types (e.g. [List<T>]), produces a move to
+    avoid an O(n) deep copy — safe because [_f] was moved off the stack.
+    For trivially-copyable scalars, produces a plain copy.
 
     @param varying_params The parameters to bind from the frame
     @return List of assignment statements *)
 let make_param_copies ?(pointer_safe = []) varying_params =
+  (* Helper: choose the right binding expression for a frame field access. *)
+  let bind_field id ty =
+    let stripped = strip_ref_type ty in
+    let f = CPPmember (CPPvar (Id.of_string "_f"), id) in
+    match stripped with
+    | Tmod (TMconst, inner) when not (is_trivially_copyable_type inner) ->
+      (* Const-ref param stored in frame: bind by [const T&] reference, cheaper
+         than cloning. *)
+      Sasgn (id, Some (Tref (Tmod (TMconst, inner))), f)
+    | t when not (is_trivially_copyable_type t) ->
+      (* Owned non-trivial type (e.g. [List<T>]): move from frame field to avoid
+         an O(n) deep-copy.  [_f] was obtained via [std::move(std::get<...>(_frame))]
+         so the field is safe to consume. *)
+      Sasgn (id, Some t, CPPmove f)
+    | _ ->
+      (* Trivially copyable (scalar, pointer, enum): plain copy is fine. *)
+      Sasgn (id, Some stripped, f)
+  in
   if pointer_safe = [] then
-    List.map
-      (fun (id, ty) ->
-        let stripped = strip_ref_type ty in
-        let bind_ty =
-          match stripped with
-          | Tmod (TMconst, inner) when not (is_trivially_copyable_type inner) ->
-            Tref (Tmod (TMconst, inner))
-          | _ -> stripped
-        in
-        Sasgn (id, Some bind_ty,
-               CPPmember (CPPvar (Id.of_string "_f"), id)))
-      varying_params
+    List.map (fun (id, ty) -> bind_field id ty) varying_params
   else
     List.map2
       (fun safe (id, ty) ->
@@ -5064,15 +5079,7 @@ let make_param_copies ?(pointer_safe = []) varying_params =
             Sasgn (id, Some stripped,
                    CPPmember (CPPvar (Id.of_string "_f"), id))
         else
-          let stripped = strip_ref_type ty in
-          let bind_ty =
-            match stripped with
-            | Tmod (TMconst, inner) when not (is_trivially_copyable_type inner) ->
-              Tref (Tmod (TMconst, inner))
-            | _ -> stripped
-          in
-          Sasgn (id, Some bind_ty,
-                 CPPmember (CPPvar (Id.of_string "_f"), id)))
+          bind_field id ty)
       pointer_safe varying_params
 
 (** Compute pointer-safe flags for each Call frame by analyzing which
@@ -5295,11 +5302,11 @@ let transform_multi check _pp_type params ret_ty body =
   in
   (* Build struct definitions *)
   let enter_fields =
-    List.map (fun (id, ty) -> (id, strip_ref_type ty)) varying_params
+    List.map (fun (id, ty) -> (id, strip_ref_and_const_type ty)) varying_params
   in
   let after_fields =
     List.mapi
-      (fun i (_, ty) -> (Id.of_string ("_a" ^ string_of_int i), strip_ref_type ty))
+      (fun i (_, ty) -> (Id.of_string ("_a" ^ string_of_int i), strip_ref_and_const_type ty))
       varying_params
   in
   let enter_ty = Tvar (0, Some (Id.of_string "_Enter")) in
@@ -5501,7 +5508,11 @@ let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
       (fun safe (id, ty) ->
         match safe, borrowed_value_param_pointee ty with
         | true, Some t -> (id, Tptr (Tmod (TMconst, t)))
-        | _ -> (id, strip_ref_type ty))
+        (* strip_ref_and_const_type: removes the [const T&] wrapper that
+           e.g. a [const unsigned int &fuel] param carries.  Keeping [const]
+           in the struct field would prevent the struct from being
+           move-assignable (breaks [std::variant] in some compilers). *)
+        | _ -> (id, strip_ref_and_const_type ty))
       pointer_safe_varying varying_params
   in
   let call_structs =
@@ -5523,7 +5534,7 @@ let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
                   | Tunknown ->
                     let expr = List.nth cf.cf_saved_exprs j in
                     make_decltype_ty pp_type cf.cf_env expr
-                  | _ -> strip_ref_type ty
+                  | _ -> strip_ref_and_const_type ty
               in
               (Id.of_string ("_s" ^ string_of_int j), field_ty))
             cf.cf_saved_types

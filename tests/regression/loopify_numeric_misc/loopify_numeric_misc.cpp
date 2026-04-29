@@ -40,7 +40,7 @@ LoopifyNumericMisc::sum_abs(const List<unsigned int> &l) {
 __attribute__((pure)) unsigned int
 LoopifyNumericMisc::alternating_ops(const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
@@ -329,7 +329,7 @@ LoopifyNumericMisc::list_min(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       unsigned int min_rest = _result;
       if (d_a0 < min_rest) {
         _result = d_a0;

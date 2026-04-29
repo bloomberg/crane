@@ -308,11 +308,11 @@ struct LoopifyLists {
   __attribute__((pure)) static list<T1> replicate_list(const unsigned int &n,
                                                        const list<T1> &l) {
     struct _Enter {
-      const unsigned int n;
+      unsigned int n;
     };
 
     struct _Call1 {
-      const list<T1> _s0;
+      list<T1> _s0;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -345,8 +345,8 @@ struct LoopifyLists {
             _stack.pop_back();
             if (std::holds_alternative<_Enter>(_frame)) {
               auto _f = std::move(std::get<_Enter>(_frame));
-              list<T1> l2 = _f.l2;
-              list<T1> l1 = _f.l1;
+              list<T1> l2 = std::move(_f.l2);
+              list<T1> l1 = std::move(_f.l1);
               if (std::holds_alternative<typename list<T1>::Nil>(l1.v())) {
                 _result = std::move(l2);
               } else {
@@ -400,7 +400,7 @@ struct LoopifyLists {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          unsigned int i = _f.i;
+          unsigned int i = std::move(_f.i);
           if (i <= 0) {
             _result = list<T1>::nil();
           } else {
@@ -451,7 +451,7 @@ struct LoopifyLists {
   template <typename T1>
   __attribute__((pure)) static list<list<T1>> inits(const list<T1> &l) {
     struct _Enter {
-      const list<T1> l;
+      list<T1> l;
     };
 
     struct _Call1 {
@@ -494,7 +494,7 @@ struct LoopifyLists {
               _stack.pop_back();
               if (std::holds_alternative<_Enter>(_frame)) {
                 auto _f = std::move(std::get<_Enter>(_frame));
-                list<list<T1>> ys = _f.ys;
+                list<list<T1>> ys = std::move(_f.ys);
                 if (std::holds_alternative<typename list<list<T1>>::Nil>(
                         ys.v())) {
                   _result = list<list<T1>>::nil();
@@ -618,8 +618,8 @@ struct LoopifyLists {
             _stack.pop_back();
             if (std::holds_alternative<_Enter>(_frame)) {
               auto _f = std::move(std::get<_Enter>(_frame));
-              list<T1> lst = _f.lst;
-              unsigned int k = _f.k;
+              list<T1> lst = std::move(_f.lst);
+              unsigned int k = std::move(_f.k);
               if (k <= 0) {
                 _result = list<T1>::nil();
               } else {
@@ -714,7 +714,7 @@ struct LoopifyLists {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          list<T1> l0 = _f.l0;
+          list<T1> l0 = std::move(_f.l0);
           if (std::holds_alternative<typename list<T1>::Nil>(l0.v())) {
             _result = 0u;
           } else {
@@ -915,7 +915,7 @@ struct LoopifyLists {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          list<T1> l = _f.l;
+          list<T1> l = std::move(_f.l);
           if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
             _result = 0u;
           } else {
@@ -1012,7 +1012,7 @@ struct LoopifyLists {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = _f._s0;
+        unsigned int d_a0 = std::move(_f._s0);
         F0 p = _f._s1;
         F1 q = _f._s2;
         const std::pair<list<unsigned int>, list<unsigned int>> &p0 =
@@ -1069,7 +1069,7 @@ struct LoopifyLists {
             _stack.pop_back();
             if (std::holds_alternative<_Enter>(_frame)) {
               auto _f = std::move(std::get<_Enter>(_frame));
-              list<list<T1>> l = _f.l;
+              list<list<T1>> l = std::move(_f.l);
               if (std::holds_alternative<typename list<list<T1>>::Nil>(l.v())) {
                 _result = list<T1>::nil();
               } else {
@@ -1109,7 +1109,7 @@ struct LoopifyLists {
             _stack.pop_back();
             if (std::holds_alternative<_Enter>(_frame)) {
               auto _f = std::move(std::get<_Enter>(_frame));
-              list<list<T1>> l = _f.l;
+              list<list<T1>> l = std::move(_f.l);
               if (std::holds_alternative<typename list<list<T1>>::Nil>(l.v())) {
                 _result = list<list<T1>>::nil();
               } else {
@@ -1180,7 +1180,7 @@ struct LoopifyLists {
   map_accum_l(F0 &&f, const T3 acc, const list<T1> &l) {
     struct _Enter {
       const list<T1> *l;
-      const T3 acc;
+      T3 acc;
     };
 
     struct _Call1 {
@@ -1318,7 +1318,7 @@ struct LoopifyLists {
   template <typename T1>
   __attribute__((pure)) static list<T1> flatten(const list<list<T1>> &l) {
     struct _Enter {
-      const list<list<T1>> l;
+      list<list<T1>> l;
     };
 
     struct _Call1 {
@@ -1361,8 +1361,8 @@ struct LoopifyLists {
               _stack.pop_back();
               if (std::holds_alternative<_Enter>(_frame)) {
                 auto _f = std::move(std::get<_Enter>(_frame));
-                list<T1> l2 = _f.l2;
-                list<T1> l1 = _f.l1;
+                list<T1> l2 = std::move(_f.l2);
+                list<T1> l1 = std::move(_f.l1);
                 if (std::holds_alternative<typename list<T1>::Nil>(l1.v())) {
                   _result = std::move(l2);
                 } else {
@@ -1469,7 +1469,7 @@ struct LoopifyLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        list<unsigned int> l = _f.l;
+        list<unsigned int> l = std::move(_f.l);
         if (std::holds_alternative<typename list<unsigned int>::Nil>(
                 l.v_mut())) {
           _result = std::make_pair(list<unsigned int>::nil(),
@@ -1486,7 +1486,7 @@ struct LoopifyLists {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = _f._s0;
+        unsigned int d_a0 = std::move(_f._s0);
         const list<unsigned int> &a = _result.first;
         const list<unsigned int> &b = _result.second;
         _result = std::make_pair(list<unsigned int>::cons(d_a0, a), b);

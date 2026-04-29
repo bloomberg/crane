@@ -4,21 +4,21 @@ __attribute__((pure)) unsigned int
 LoopifyMultiRecursion::mixed_arith_fuel(const unsigned int &fuel,
                                         const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {
-    const unsigned int _s0;
-    const unsigned int _s1;
-    const unsigned int _s2;
-    const unsigned int _s3;
+    unsigned int _s0;
+    unsigned int _s1;
+    unsigned int _s2;
+    unsigned int _s3;
   };
 
   struct _Call2 {
     unsigned int _s0;
-    const unsigned int _s1;
-    const unsigned int _s2;
+    unsigned int _s1;
+    unsigned int _s2;
   };
 
   struct _Call3 {
@@ -86,8 +86,8 @@ LoopifyMultiRecursion::bool_or_chain_fuel(const unsigned int &fuel,
                                           const unsigned int &n,
                                           const unsigned int &target) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -156,8 +156,8 @@ __attribute__((pure)) bool
 LoopifyMultiRecursion::bool_and_chain_fuel(const unsigned int &fuel,
                                            const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -365,18 +365,18 @@ __attribute__((pure)) unsigned int
 LoopifyMultiRecursion::hofstadter_q_fuel(const unsigned int &fuel,
                                          const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {
     unsigned int _s0;
-    const unsigned int _s1;
+    unsigned int _s1;
   };
 
   struct _Call2 {
     unsigned int _s0;
-    const unsigned int _s1;
+    unsigned int _s1;
     unsigned int _s2;
   };
 
@@ -428,16 +428,16 @@ LoopifyMultiRecursion::hofstadter_q_fuel(const unsigned int &fuel,
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int fuel_ = _f._s0;
+      unsigned int fuel_ = std::move(_f._s0);
       const unsigned int &n = _f._s1;
       unsigned int q1 = _result;
       _stack.emplace_back(_Call2{fuel_, n, q1});
       _stack.emplace_back(_Enter{(((n - 2u) > n ? 0 : (n - 2u))), fuel_});
     } else if (std::holds_alternative<_Call2>(_frame)) {
       auto _f = std::move(std::get<_Call2>(_frame));
-      unsigned int fuel_ = _f._s0;
+      unsigned int fuel_ = std::move(_f._s0);
       const unsigned int &n = _f._s1;
-      unsigned int q1 = _f._s2;
+      unsigned int q1 = std::move(_f._s2);
       unsigned int q2 = _result;
       _stack.emplace_back(_Call3{(((n - q1) > n ? 0 : (n - q1))), fuel_});
       _stack.emplace_back(_Enter{(((n - q2) > n ? 0 : (n - q2))), fuel_});

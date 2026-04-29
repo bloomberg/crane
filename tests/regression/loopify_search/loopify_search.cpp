@@ -82,7 +82,7 @@ LoopifySearch::majority(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const unsigned int &cand = _result.first;
       const unsigned int &count = _result.second;
       if (d_a0 == cand) {
@@ -377,8 +377,8 @@ LoopifySearch::longest_run(const List<unsigned int> &l) {
 __attribute__((pure)) unsigned int
 LoopifySearch::collatz_fuel(const unsigned int &fuel, const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {};
@@ -689,7 +689,7 @@ __attribute__((pure)) List<unsigned int>
 LoopifySearch::quicksort_fuel(const unsigned int &fuel, List<unsigned int> l) {
   struct _Enter {
     List<unsigned int> l;
-    const unsigned int fuel;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -713,7 +713,7 @@ LoopifySearch::quicksort_fuel(const unsigned int &fuel, List<unsigned int> l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      List<unsigned int> l = _f.l;
+      List<unsigned int> l = std::move(_f.l);
       const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);
@@ -797,8 +797,8 @@ LoopifySearch::split_list(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
-      unsigned int d_a00 = _f._s1;
+      unsigned int d_a0 = std::move(_f._s0);
+      unsigned int d_a00 = std::move(_f._s1);
       const List<unsigned int> &a = _result.first;
       const List<unsigned int> &b = _result.second;
       _result = std::make_pair(List<unsigned int>::cons(d_a0, a),
@@ -882,7 +882,7 @@ __attribute__((pure)) List<unsigned int>
 LoopifySearch::merge_sort_fuel(const unsigned int &fuel, List<unsigned int> l) {
   struct _Enter {
     List<unsigned int> l;
-    const unsigned int fuel;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -904,7 +904,7 @@ LoopifySearch::merge_sort_fuel(const unsigned int &fuel, List<unsigned int> l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      List<unsigned int> l = _f.l;
+      List<unsigned int> l = std::move(_f.l);
       const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);
@@ -1017,9 +1017,9 @@ LoopifySearch::perms_choices_fuel(const unsigned int &fuel,
                                   const List<unsigned int> &choices,
                                   const List<unsigned int> &orig) {
   struct _Enter {
-    const List<unsigned int> orig;
-    const List<unsigned int> choices;
-    const unsigned int fuel;
+    List<unsigned int> orig;
+    List<unsigned int> choices;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -1229,7 +1229,7 @@ LoopifySearch::min_element(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       unsigned int min_rest = _result;
       if (d_a0 <= min_rest) {
         _result = d_a0;

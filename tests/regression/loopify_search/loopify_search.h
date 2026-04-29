@@ -225,7 +225,7 @@ struct LoopifySearch {
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
         F0 cmp = _f._s0;
-        unsigned int d_a0 = _f._s1;
+        unsigned int d_a0 = std::move(_f._s1);
         unsigned int m = _result;
         if (cmp(d_a0, m) == 1u) {
           _result = d_a0;

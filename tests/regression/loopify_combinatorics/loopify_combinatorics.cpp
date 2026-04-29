@@ -75,9 +75,9 @@ LoopifyCombinatorics::perms_choices_fuel(const unsigned int &fuel,
                                          const List<unsigned int> &choices,
                                          const List<unsigned int> &orig) {
   struct _Enter {
-    const List<unsigned int> orig;
-    const List<unsigned int> choices;
-    const unsigned int fuel;
+    List<unsigned int> orig;
+    List<unsigned int> choices;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -201,11 +201,11 @@ LoopifyCombinatorics::len_list(const List<unsigned int> &l) {
 __attribute__((pure)) unsigned int
 LoopifyCombinatorics::factorial_impl(const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
-    const unsigned int _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -243,7 +243,7 @@ LoopifyCombinatorics::permutations(const List<unsigned int> &l) {
 __attribute__((pure)) List<List<unsigned int>>
 LoopifyCombinatorics::subsequences(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    List<unsigned int> l;
   };
 
   struct _Call1 {
@@ -273,7 +273,7 @@ LoopifyCombinatorics::subsequences(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       List<List<unsigned int>> rest = _result;
       std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
           map_prepend;
@@ -296,7 +296,7 @@ LoopifyCombinatorics::subsequences(const List<unsigned int> &l) {
           _stack.pop_back();
           if (std::holds_alternative<_Enter>(_frame)) {
             auto _f = std::move(std::get<_Enter>(_frame));
-            List<List<unsigned int>> lst = _f.lst;
+            List<List<unsigned int>> lst = std::move(_f.lst);
             if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                     lst.v())) {
               _result = List<List<unsigned int>>::nil();
@@ -395,7 +395,7 @@ LoopifyCombinatorics::cartesian(const List<unsigned int> &l1,
 __attribute__((pure)) List<List<unsigned int>>
 LoopifyCombinatorics::power_set(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    List<unsigned int> l;
   };
 
   struct _Call1 {
@@ -425,7 +425,7 @@ LoopifyCombinatorics::power_set(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       List<List<unsigned int>> rest = _result;
       std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
           map_add_x;
@@ -448,7 +448,7 @@ LoopifyCombinatorics::power_set(const List<unsigned int> &l) {
           _stack.pop_back();
           if (std::holds_alternative<_Enter>(_frame)) {
             auto _f = std::move(std::get<_Enter>(_frame));
-            List<List<unsigned int>> lst = _f.lst;
+            List<List<unsigned int>> lst = std::move(_f.lst);
             if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                     lst.v())) {
               _result = List<List<unsigned int>>::nil();
@@ -495,7 +495,7 @@ LoopifyCombinatorics::insert_everywhere(unsigned int x, List<unsigned int> l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      List<unsigned int> l = _f.l;
+      List<unsigned int> l = std::move(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v_mut())) {
         _result = List<List<unsigned int>>::cons(
             List<unsigned int>::cons(x, List<unsigned int>::nil()),
@@ -509,9 +509,9 @@ LoopifyCombinatorics::insert_everywhere(unsigned int x, List<unsigned int> l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
-      List<unsigned int> l = _f._s1;
-      unsigned int x = _f._s2;
+      unsigned int d_a0 = std::move(_f._s0);
+      List<unsigned int> l = std::move(_f._s1);
+      unsigned int x = std::move(_f._s2);
       List<List<unsigned int>> rest = _result;
       std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
           prepend_y;
@@ -534,7 +534,7 @@ LoopifyCombinatorics::insert_everywhere(unsigned int x, List<unsigned int> l) {
           _stack.pop_back();
           if (std::holds_alternative<_Enter>(_frame)) {
             auto _f = std::move(std::get<_Enter>(_frame));
-            List<List<unsigned int>> lsts = _f.lsts;
+            List<List<unsigned int>> lsts = std::move(_f.lsts);
             if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                     lsts.v())) {
               _result = List<List<unsigned int>>::nil();
@@ -640,7 +640,7 @@ LoopifyCombinatorics::dedup_fuel(const unsigned int &fuel,
                                  const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
-    const unsigned int fuel;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -674,7 +674,7 @@ LoopifyCombinatorics::dedup_fuel(const unsigned int &fuel,
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       List<unsigned int> rest = _result;
       if (elem(d_a0, rest)) {
         _result = std::move(rest);

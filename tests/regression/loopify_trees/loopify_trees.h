@@ -1824,7 +1824,7 @@ struct LoopifyTrees {
 
       struct _Enter {
         const simple_tree *_self;
-        const unsigned int n;
+        unsigned int n;
       };
 
       struct _Call1 {

@@ -184,7 +184,7 @@ __attribute__((pure)) unsigned int
 LoopifyTrees::count_paths(const LoopifyTrees::tree<unsigned int> &t,
                           const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
     const LoopifyTrees::tree<unsigned int> *t;
   };
 
@@ -282,7 +282,7 @@ LoopifyTrees::sum_rose_list_fuel(const unsigned int &fuel,
                                  const List<LoopifyTrees::rose> &cs) {
   struct _Enter {
     const List<LoopifyTrees::rose> *cs;
-    const unsigned int fuel;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -342,7 +342,7 @@ LoopifyTrees::flatten_rose_list_fuel(const unsigned int &fuel,
                                      const List<LoopifyTrees::rose> &cs) {
   struct _Enter {
     const List<LoopifyTrees::rose> *cs;
-    const unsigned int fuel;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -453,8 +453,8 @@ LoopifyTrees::tree_max(LoopifyTrees::tree<unsigned int> t1,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      LoopifyTrees::tree<unsigned int> t2 = _f.t2;
-      LoopifyTrees::tree<unsigned int> t1 = _f.t1;
+      LoopifyTrees::tree<unsigned int> t2 = std::move(_f.t2);
+      LoopifyTrees::tree<unsigned int> t1 = std::move(_f.t1);
       if (std::holds_alternative<
               typename LoopifyTrees::tree<unsigned int>::Leaf>(t1.v_mut())) {
         if (std::holds_alternative<
@@ -999,8 +999,8 @@ LoopifyTrees::all_paths_sum(const LoopifyTrees::tree<unsigned int> &t) {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        LoopifyTrees::tree<unsigned int> tree0 = _f.tree0;
-        unsigned int acc = _f.acc;
+        LoopifyTrees::tree<unsigned int> tree0 = std::move(_f.tree0);
+        unsigned int acc = std::move(_f.acc);
         if (std::holds_alternative<
                 typename LoopifyTrees::tree<unsigned int>::Leaf>(tree0.v())) {
           _result = acc;

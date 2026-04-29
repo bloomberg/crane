@@ -5,12 +5,12 @@ LoopifyListGenerators::cycle_fuel(const unsigned int &fuel,
                                   const unsigned int &n,
                                   const List<unsigned int> &l) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {
-    const List<unsigned int> _s0;
+    List<unsigned int> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;

@@ -151,7 +151,7 @@ struct LoopifyExtrema {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = _f._s0;
+        unsigned int d_a0 = std::move(_f._s0);
         F0 f = _f._s1;
         unsigned int rest_max = _result;
         unsigned int fx = f(d_a0);
@@ -204,7 +204,7 @@ struct LoopifyExtrema {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = _f._s0;
+        unsigned int d_a0 = std::move(_f._s0);
         F0 f = _f._s1;
         unsigned int rest_min = _result;
         unsigned int fx = f(d_a0);
@@ -257,7 +257,7 @@ struct LoopifyExtrema {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = _f._s0;
+        unsigned int d_a0 = std::move(_f._s0);
         F0 f = _f._s1;
         unsigned int rest_best = _result;
         unsigned int fx = f(d_a0);
@@ -311,7 +311,7 @@ struct LoopifyExtrema {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = _f._s0;
+        unsigned int d_a0 = std::move(_f._s0);
         F0 f = _f._s1;
         unsigned int rest_best = _result;
         unsigned int fx = f(d_a0);

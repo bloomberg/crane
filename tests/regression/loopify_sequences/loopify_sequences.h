@@ -183,7 +183,7 @@ struct LoopifySequences {
 
     struct _Call1 {
       List<T1> _s0;
-      const List<T1> _s1;
+      List<T1> _s1;
     };
 
     using _Frame = std::variant<_Enter, _Call1>;
@@ -246,7 +246,7 @@ struct LoopifySequences {
           _stack.pop_back();
           if (std::holds_alternative<_Enter>(_frame)) {
             auto _f = std::move(std::get<_Enter>(_frame));
-            List<T1> rest = _f.rest;
+            List<T1> rest = std::move(_f.rest);
             if (std::holds_alternative<typename List<T1>::Nil>(rest.v())) {
               _result = List<T1>::nil();
             } else {
@@ -323,7 +323,7 @@ struct LoopifySequences {
               _stack.pop_back();
               if (std::holds_alternative<_Enter>(_frame)) {
                 auto _f = std::move(std::get<_Enter>(_frame));
-                List<List<T1>> l = _f.l;
+                List<List<T1>> l = std::move(_f.l);
                 if (std::holds_alternative<typename List<List<T1>>::Nil>(
                         l.v())) {
                   _result = List<T1>::nil();
@@ -365,7 +365,7 @@ struct LoopifySequences {
               _stack.pop_back();
               if (std::holds_alternative<_Enter>(_frame)) {
                 auto _f = std::move(std::get<_Enter>(_frame));
-                List<List<T1>> l = _f.l;
+                List<List<T1>> l = std::move(_f.l);
                 if (std::holds_alternative<typename List<List<T1>>::Nil>(
                         l.v())) {
                   _result = List<List<T1>>::nil();

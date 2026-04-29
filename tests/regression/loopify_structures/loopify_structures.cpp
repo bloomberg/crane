@@ -7,7 +7,7 @@ __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
     const unsigned int &fuel, const List<LoopifyStructures::nested> &l) {
   struct _Enter {
     const List<LoopifyStructures::nested> *l;
-    const unsigned int fuel;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -116,7 +116,7 @@ LoopifyStructures::flatten_nested_list_fuel(
     const unsigned int &fuel, const List<LoopifyStructures::nested> &l) {
   struct _Enter {
     const List<LoopifyStructures::nested> *l;
-    const unsigned int fuel;
+    unsigned int fuel;
   };
 
   struct _Call1 {

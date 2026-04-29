@@ -62,7 +62,7 @@ LoopifyListSubsequences::inits_fuel(const unsigned int &fuel,
                                     const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
-    const unsigned int fuel;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -98,7 +98,7 @@ LoopifyListSubsequences::inits_fuel(const unsigned int &fuel,
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       List<List<unsigned int>> rest = _result;
       _result = List<List<unsigned int>>::cons(
           List<unsigned int>::nil(), map_cons_helper(d_a0, std::move(rest)));
@@ -229,7 +229,7 @@ __attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
 LoopifyListSubsequences::split_at(const unsigned int &n, List<unsigned int> l) {
   struct _Enter {
     List<unsigned int> l;
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
@@ -246,7 +246,7 @@ LoopifyListSubsequences::split_at(const unsigned int &n, List<unsigned int> l) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      List<unsigned int> l = _f.l;
+      List<unsigned int> l = std::move(_f.l);
       const unsigned int &n = _f.n;
       if (n <= 0) {
         _result = std::make_pair(List<unsigned int>::nil(), std::move(l));
@@ -265,7 +265,7 @@ LoopifyListSubsequences::split_at(const unsigned int &n, List<unsigned int> l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const List<unsigned int> &before = _result.first;
       const List<unsigned int> &after = _result.second;
       _result = std::make_pair(List<unsigned int>::cons(d_a0, before), after);

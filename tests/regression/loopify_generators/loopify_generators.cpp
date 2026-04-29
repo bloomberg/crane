@@ -5,11 +5,11 @@
 __attribute__((pure)) List<unsigned int>
 LoopifyGenerators::cycle(const unsigned int &n, const List<unsigned int> &l) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
-    const List<unsigned int> _s0;
+    List<unsigned int> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -181,8 +181,8 @@ __attribute__((pure)) List<unsigned int>
 LoopifyGenerators::build_list_fuel(const unsigned int &fuel,
                                    const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -221,7 +221,7 @@ LoopifyGenerators::build_list_fuel(const unsigned int &fuel,
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int n_ = _f._s0;
+      unsigned int n_ = std::move(_f._s0);
       List<unsigned int> half_result = _result;
       _result = half_result.app(List<unsigned int>::cons(n_, half_result));
     }

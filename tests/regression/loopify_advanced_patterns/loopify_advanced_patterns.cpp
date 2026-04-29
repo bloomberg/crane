@@ -406,7 +406,7 @@ LoopifyAdvancedPatterns::count_by_shape(
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      LoopifyAdvancedPatterns::shape d_a0 = _f._s0;
+      LoopifyAdvancedPatterns::shape d_a0 = std::move(_f._s0);
       const std::pair<unsigned int, unsigned int> &p = _result.first;
       const unsigned int &triangles = _result.second;
       const unsigned int &circles = p.first;

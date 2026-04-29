@@ -78,7 +78,7 @@ LoopifyAlgorithms::sieve_fuel(const unsigned int &fuel, List<unsigned int> l) {
             _stack.pop_back();
             if (std::holds_alternative<_Enter>(_frame)) {
               auto _f = std::move(std::get<_Enter>(_frame));
-              List<unsigned int> rest = _f.rest;
+              List<unsigned int> rest = std::move(_f.rest);
               if (std::holds_alternative<typename List<unsigned int>::Nil>(
                       rest.v())) {
                 _result = List<unsigned int>::nil();
@@ -314,7 +314,7 @@ LoopifyAlgorithms::nub_aux(const List<unsigned int> &l,
             _stack.pop_back();
             if (std::holds_alternative<_Enter>(_frame)) {
               auto _f = std::move(std::get<_Enter>(_frame));
-              List<unsigned int> rest = _f.rest;
+              List<unsigned int> rest = std::move(_f.rest);
               if (std::holds_alternative<typename List<unsigned int>::Nil>(
                       rest.v())) {
                 _result = List<unsigned int>::nil();
@@ -597,7 +597,7 @@ LoopifyAlgorithms::max_prefix_sum(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       unsigned int rest = _result;
       unsigned int sum = (d_a0 + rest);
       if (rest == 0u) {
@@ -638,7 +638,7 @@ LoopifyAlgorithms::weighted_sum(unsigned int i, const List<unsigned int> &l) {
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<unsigned int> &l = *(_f.l);
-      unsigned int i = _f.i;
+      unsigned int i = std::move(_f.i);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -743,7 +743,7 @@ LoopifyAlgorithms::suffix_sums(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       List<unsigned int> rest = _result;
       _result = List<unsigned int>::cons((d_a0 + head_nat(0u, rest)), rest);
     }

@@ -307,7 +307,7 @@ struct LoopifyGenerators {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          unsigned int i = _f.i;
+          unsigned int i = std::move(_f.i);
           if (i <= 0) {
             _result = List<unsigned int>::nil();
           } else {

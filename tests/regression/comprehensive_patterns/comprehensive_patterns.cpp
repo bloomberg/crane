@@ -651,7 +651,7 @@ __attribute__((pure)) unsigned int
 ComprehensivePatterns::count_down(const unsigned int &n,
                                   const ComprehensivePatterns::NC &r) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
@@ -742,7 +742,7 @@ __attribute__((pure)) unsigned int
 ComprehensivePatterns::sum_proj(const unsigned int &n,
                                 const ComprehensivePatterns::NC &r) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
@@ -998,7 +998,7 @@ __attribute__((pure)) unsigned int
 ComprehensivePatterns::sum_values(const unsigned int &n,
                                   const ComprehensivePatterns::StateStmt &s) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
@@ -1066,7 +1066,7 @@ __attribute__((pure)) unsigned int
 ComprehensivePatterns::sum_with_state(const unsigned int &n,
                                       const ComprehensivePatterns::RCF &r) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
@@ -1124,7 +1124,7 @@ ComprehensivePatterns::odd_count(const unsigned int &n,
 __attribute__((pure)) unsigned int ComprehensivePatterns::accum_with_state(
     const unsigned int &n, const ComprehensivePatterns::StateLB &s) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {

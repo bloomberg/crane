@@ -4,8 +4,8 @@ __attribute__((pure)) unsigned int
 LoopifyNumericSequences::collatz_length_fuel(const unsigned int &fuel,
                                              const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -119,21 +119,21 @@ __attribute__((pure)) unsigned int
 LoopifyNumericSequences::tribonacci_fuel(const unsigned int &fuel,
                                          const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {
-    const unsigned int _s0;
-    const unsigned int _s1;
-    const unsigned int _s2;
-    const unsigned int _s3;
+    unsigned int _s0;
+    unsigned int _s1;
+    unsigned int _s2;
+    unsigned int _s3;
   };
 
   struct _Call2 {
     unsigned int _s0;
-    const unsigned int _s1;
-    const unsigned int _s2;
+    unsigned int _s1;
+    unsigned int _s2;
   };
 
   struct _Call3 {
@@ -200,21 +200,21 @@ __attribute__((pure)) unsigned int
 LoopifyNumericSequences::staircase_fuel(const unsigned int &fuel,
                                         const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {
-    const unsigned int _s0;
-    const unsigned int _s1;
-    const unsigned int _s2;
-    const unsigned int _s3;
+    unsigned int _s0;
+    unsigned int _s1;
+    unsigned int _s2;
+    unsigned int _s3;
   };
 
   struct _Call2 {
     unsigned int _s0;
-    const unsigned int _s1;
-    const unsigned int _s2;
+    unsigned int _s1;
+    unsigned int _s2;
   };
 
   struct _Call3 {
@@ -275,8 +275,8 @@ __attribute__((pure)) unsigned int
 LoopifyNumericSequences::digitsum_fuel(const unsigned int &fuel,
                                        const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -324,8 +324,8 @@ __attribute__((pure)) unsigned int
 LoopifyNumericSequences::dec_to_bin_fuel(const unsigned int &fuel,
                                          const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {
@@ -419,11 +419,11 @@ __attribute__((pure)) unsigned int
 LoopifyNumericSequences::sum_divisors_aux(const unsigned int &n,
                                           const unsigned int &d) {
   struct _Enter {
-    const unsigned int d;
+    unsigned int d;
   };
 
   struct _Call1 {
-    const unsigned int _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;

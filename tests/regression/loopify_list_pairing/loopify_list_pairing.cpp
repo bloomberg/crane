@@ -38,8 +38,8 @@ LoopifyListPairing::unzip(
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int a = _f._s0;
-      unsigned int b = _f._s1;
+      unsigned int a = std::move(_f._s0);
+      unsigned int b = std::move(_f._s1);
       const List<unsigned int> &xs = _result.first;
       const List<unsigned int> &ys = _result.second;
       _result = std::make_pair(List<unsigned int>::cons(a, xs),
@@ -81,7 +81,7 @@ LoopifyListPairing::swizzle(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const List<unsigned int> &odds = _result.first;
       const List<unsigned int> &evens = _result.second;
       _result = std::make_pair(List<unsigned int>::cons(d_a0, evens), odds);
@@ -122,7 +122,7 @@ LoopifyListPairing::partition(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const List<unsigned int> &yes = _result.first;
       const List<unsigned int> &no = _result.second;
       if ((2u ? d_a0 % 2u : d_a0) == 0u) {
@@ -318,7 +318,7 @@ LoopifyListPairing::split_even_odd(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const List<unsigned int> &evens = _result.first;
       const List<unsigned int> &odds = _result.second;
       if ((2u ? d_a0 % 2u : d_a0) == 0u) {

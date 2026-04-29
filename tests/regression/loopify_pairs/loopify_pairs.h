@@ -336,7 +336,7 @@ struct LoopifyPairs {
   split_at(const unsigned int &n, list<T1> l) {
     struct _Enter {
       list<T1> l;
-      const unsigned int n;
+      unsigned int n;
     };
 
     struct _Call1 {
@@ -353,7 +353,7 @@ struct LoopifyPairs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        list<T1> l = _f.l;
+        list<T1> l = std::move(_f.l);
         const unsigned int &n = _f.n;
         if (n <= 0) {
           _result = std::make_pair(list<T1>::nil(), std::move(l));
@@ -517,7 +517,7 @@ struct LoopifyPairs {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const list<unsigned int> &l = *(_f.l);
-        unsigned int acc = _f.acc;
+        unsigned int acc = std::move(_f.acc);
         if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(acc, list<unsigned int>::nil());
         } else {
@@ -531,7 +531,7 @@ struct LoopifyPairs {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int y = _f._s0;
+        unsigned int y = std::move(_f._s0);
         const unsigned int &final_acc = _result.first;
         const list<unsigned int> &ys = _result.second;
         _result = std::make_pair(final_acc, list<unsigned int>::cons(y, ys));

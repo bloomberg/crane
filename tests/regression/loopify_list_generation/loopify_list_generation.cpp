@@ -61,11 +61,11 @@ __attribute__((pure)) List<unsigned int>
 LoopifyListGeneration::cycle(const unsigned int &n,
                              const List<unsigned int> &l) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
-    const List<unsigned int> _s0;
+    List<unsigned int> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;

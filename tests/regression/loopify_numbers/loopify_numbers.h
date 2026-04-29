@@ -213,7 +213,7 @@ struct LoopifyNumbers {
   __attribute__((pure)) static unsigned int nest_apply(const unsigned int &n,
                                                        F1 &&f, unsigned int x) {
     struct _Enter {
-      const unsigned int n;
+      unsigned int n;
     };
 
     struct _Call1 {};

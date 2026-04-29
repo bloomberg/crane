@@ -575,7 +575,7 @@ LoopifyListRelations::union_(const List<unsigned int> &l1,
                 _stack.pop_back();
                 if (std::holds_alternative<_Enter>(_frame)) {
                   auto _f = std::move(std::get<_Enter>(_frame));
-                  List<unsigned int> ys = _f.ys;
+                  List<unsigned int> ys = std::move(_f.ys);
                   if (std::holds_alternative<typename List<unsigned int>::Nil>(
                           ys.v())) {
                     _result = false;
@@ -653,7 +653,7 @@ LoopifyListRelations::intersection(const List<unsigned int> &l1,
                 _stack.pop_back();
                 if (std::holds_alternative<_Enter>(_frame)) {
                   auto _f = std::move(std::get<_Enter>(_frame));
-                  List<unsigned int> ys = _f.ys;
+                  List<unsigned int> ys = std::move(_f.ys);
                   if (std::holds_alternative<typename List<unsigned int>::Nil>(
                           ys.v())) {
                     _result = false;

@@ -941,7 +941,7 @@ struct LoopifyStructures {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const ltree *_self = _f._self;
-          ltree t2 = _f.t2;
+          ltree t2 = std::move(_f.t2);
           auto &&_sv = *(_self);
           if (std::holds_alternative<typename ltree::LLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename ltree::LLeaf>(_sv.v());

@@ -114,7 +114,7 @@ LoopifyListWindows::span_eq(const unsigned int &first, List<unsigned int> lst) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      List<unsigned int> lst = _f.lst;
+      List<unsigned int> lst = std::move(_f.lst);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               lst.v_mut())) {
         _result = std::make_pair(List<unsigned int>::nil(),
@@ -131,7 +131,7 @@ LoopifyListWindows::span_eq(const unsigned int &first, List<unsigned int> lst) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const List<unsigned int> &s = _result.first;
       const List<unsigned int> &r = _result.second;
       _result = std::make_pair(List<unsigned int>::cons(d_a0, s), r);

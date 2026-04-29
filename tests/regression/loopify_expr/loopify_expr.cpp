@@ -91,7 +91,7 @@ LoopifyExpr::count_by_shape(const List<LoopifyExpr::shape> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      LoopifyExpr::shape d_a0 = _f._s0;
+      LoopifyExpr::shape d_a0 = std::move(_f._s0);
       const std::pair<unsigned int, unsigned int> &p = _result.first;
       const unsigned int &t = _result.second;
       const unsigned int &c = p.first;

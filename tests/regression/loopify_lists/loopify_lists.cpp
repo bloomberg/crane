@@ -310,7 +310,7 @@ LoopifyLists::max_prefix_sum(const LoopifyLists::list<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       unsigned int rest = _result;
       unsigned int sum = (d_a0 + rest);
       if (0u <= sum) {
@@ -387,7 +387,7 @@ LoopifyLists::weighted_sum(unsigned int i,
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const LoopifyLists::list<unsigned int> &l = *(_f.l);
-      unsigned int i = _f.i;
+      unsigned int i = std::move(_f.i);
       if (std::holds_alternative<
               typename LoopifyLists::list<unsigned int>::Nil>(l.v())) {
         _result = 0u;
@@ -1039,7 +1039,7 @@ LoopifyLists::swizzle(const LoopifyLists::list<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const LoopifyLists::list<unsigned int> &odds = _result.first;
       const LoopifyLists::list<unsigned int> &evens = _result.second;
       _result = std::make_pair(list<unsigned int>::cons(d_a0, evens), odds);
@@ -1337,7 +1337,7 @@ LoopifyLists::double_append(const LoopifyLists::list<unsigned int> &l1,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      LoopifyLists::list<unsigned int> l2 = _f.l2;
+      LoopifyLists::list<unsigned int> l2 = std::move(_f.l2);
       const LoopifyLists::list<unsigned int> &l1 = *(_f.l1);
       if (std::holds_alternative<
               typename LoopifyLists::list<unsigned int>::Nil>(l1.v())) {
@@ -1350,7 +1350,7 @@ LoopifyLists::double_append(const LoopifyLists::list<unsigned int> &l1,
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       LoopifyLists::list<unsigned int> rest = _result;
       _result = list<unsigned int>::cons(d_a0, app_helper(rest, rest));
     }
@@ -1409,7 +1409,7 @@ LoopifyLists::split_at(const unsigned int &n,
                        LoopifyLists::list<unsigned int> l) {
   struct _Enter {
     LoopifyLists::list<unsigned int> l;
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
@@ -1427,7 +1427,7 @@ LoopifyLists::split_at(const unsigned int &n,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      LoopifyLists::list<unsigned int> l = _f.l;
+      LoopifyLists::list<unsigned int> l = std::move(_f.l);
       const unsigned int &n = _f.n;
       if (std::holds_alternative<
               typename LoopifyLists::list<unsigned int>::Nil>(l.v_mut())) {
@@ -1446,7 +1446,7 @@ LoopifyLists::split_at(const unsigned int &n,
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const LoopifyLists::list<unsigned int> &a = _result.first;
       const LoopifyLists::list<unsigned int> &b = _result.second;
       _result = std::make_pair(list<unsigned int>::cons(d_a0, a), b);
@@ -1496,8 +1496,8 @@ LoopifyLists::unzip(
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int a = _f._s0;
-      unsigned int b = _f._s1;
+      unsigned int a = std::move(_f._s0);
+      unsigned int b = std::move(_f._s1);
       const LoopifyLists::list<unsigned int> &xs = _result.first;
       const LoopifyLists::list<unsigned int> &ys = _result.second;
       _result = std::make_pair(list<unsigned int>::cons(a, xs),
@@ -1715,7 +1715,7 @@ LoopifyLists::maximum(const LoopifyLists::list<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       unsigned int max_rest = _result;
       if (max_rest <= d_a0) {
         _result = d_a0;
@@ -1766,7 +1766,7 @@ LoopifyLists::minmax(const LoopifyLists::list<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const unsigned int &lo = _result.first;
       const unsigned int &hi = _result.second;
       _result =
@@ -1839,7 +1839,7 @@ LoopifyLists::intercalate(
 
   struct _Call1 {
     LoopifyLists::list<unsigned int> _s0;
-    const LoopifyLists::list<unsigned int> _s1;
+    LoopifyLists::list<unsigned int> _s1;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -1917,7 +1917,7 @@ LoopifyLists::majority(const LoopifyLists::list<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const unsigned int &cand = _result.first;
       const unsigned int &cnt = _result.second;
       if (d_a0 == cand) {
@@ -2042,7 +2042,7 @@ LoopifyLists::sum_and_count(const LoopifyLists::list<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       const unsigned int &s = _result.first;
       const unsigned int &c = _result.second;
       _result = std::make_pair((d_a0 + s), (c + 1));

@@ -361,7 +361,7 @@ struct LoopifyTreePaths {
 
       struct _Enter {
         const tree *_self;
-        const unsigned int acc;
+        unsigned int acc;
       };
 
       struct _Call1 {

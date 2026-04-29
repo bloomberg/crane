@@ -36,7 +36,7 @@ LoopifyComparators::maximum_by(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       unsigned int m = _result;
       if (m < d_a0) {
         _result = d_a0;
@@ -84,7 +84,7 @@ LoopifyComparators::minimum_by(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = _f._s0;
+      unsigned int d_a0 = std::move(_f._s0);
       unsigned int m = _result;
       if (d_a0 < m) {
         _result = d_a0;

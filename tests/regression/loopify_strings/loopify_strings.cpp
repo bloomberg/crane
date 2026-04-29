@@ -73,11 +73,11 @@ __attribute__((pure)) List<unsigned int>
 LoopifyStrings::repeat_string(const List<unsigned int> &s,
                               const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
-    const List<unsigned int> _s0;
+    List<unsigned int> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -111,12 +111,12 @@ LoopifyStrings::repeat_with_sep(List<unsigned int> s,
                                 const List<unsigned int> &sep,
                                 const unsigned int &n) {
   struct _Enter {
-    const unsigned int n;
+    unsigned int n;
   };
 
   struct _Call1 {
     List<unsigned int> _s0;
-    const List<unsigned int> _s1;
+    List<unsigned int> _s1;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -155,14 +155,14 @@ __attribute__((pure)) List<unsigned int> LoopifyStrings::string_chain_fuel(
     const unsigned int &n, const List<unsigned int> &sep,
     const List<unsigned int> &end_marker) {
   struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
+    unsigned int n;
+    unsigned int fuel;
   };
 
   struct _Call1 {
-    const List<unsigned int> _s0;
-    const List<unsigned int> _s1;
-    const List<unsigned int> _s2;
+    List<unsigned int> _s0;
+    List<unsigned int> _s1;
+    List<unsigned int> _s2;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -347,7 +347,7 @@ LoopifyStrings::intercalate(const List<unsigned int> &sep,
 
   struct _Call1 {
     List<unsigned int> _s0;
-    const List<unsigned int> _s1;
+    List<unsigned int> _s1;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;

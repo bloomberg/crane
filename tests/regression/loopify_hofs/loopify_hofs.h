@@ -378,7 +378,7 @@ struct LoopifyHofs {
             _stack.pop_back();
             if (std::holds_alternative<_Enter>(_frame)) {
               auto _f = std::move(std::get<_Enter>(_frame));
-              List<T2> l = _f.l;
+              List<T2> l = std::move(_f.l);
               if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
                 _result = List<std::pair<T1, T2>>::nil();
               } else {
@@ -649,8 +649,8 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int acc = _f._s0;
-        unsigned int d_a0 = _f._s1;
+        unsigned int acc = std::move(_f._s0);
+        unsigned int d_a0 = std::move(_f._s1);
         F0 f = _f._s2;
         List<unsigned int> rest = _result;
         unsigned int h = head_default(acc, rest);
@@ -700,7 +700,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = _f._s0;
+        unsigned int d_a0 = std::move(_f._s0);
         F0 f = _f._s1;
         List<unsigned int> rest = _result;
         unsigned int h = head_default(d_a0, rest);
@@ -783,7 +783,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = _f._s0;
+        unsigned int d_a0 = std::move(_f._s0);
         F0 f = _f._s1;
         List<unsigned int> rest = _result;
         auto _cs = f(d_a0);
@@ -917,7 +917,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = _f._s0;
+        unsigned int d_a0 = std::move(_f._s0);
         F0 f = _f._s1;
         unsigned int rest_max = _result;
         unsigned int fx = f(d_a0);
@@ -1003,7 +1003,7 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
         F0 cmp = _f._s0;
-        unsigned int d_a0 = _f._s1;
+        unsigned int d_a0 = std::move(_f._s1);
         unsigned int m = _result;
         if (0u <= cmp(d_a0, m)) {
           _result = d_a0;
@@ -1089,7 +1089,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = _f._s0;
+        unsigned int d_a0 = std::move(_f._s0);
         F0 p = _f._s1;
         const List<unsigned int> &yes = _result.first;
         const List<unsigned int> &no = _result.second;
@@ -1225,7 +1225,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = _f._s0;
+        unsigned int d_a0 = std::move(_f._s0);
         const List<unsigned int> &taken = _result.first;
         const List<unsigned int> &rest = _result.second;
         _result = std::make_pair(List<unsigned int>::cons(d_a0, taken), rest);
@@ -1316,7 +1316,7 @@ struct LoopifyHofs {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List<unsigned int> &l = *(_f.l);
-        unsigned int acc = _f.acc;
+        unsigned int acc = std::move(_f.acc);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(acc, List<unsigned int>::nil());
         } else {
@@ -1330,7 +1330,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int y = _f._s0;
+        unsigned int y = std::move(_f._s0);
         const unsigned int &acc__ = _result.first;
         const List<unsigned int> &ys = _result.second;
         _result = std::make_pair(acc__, List<unsigned int>::cons(y, ys));
