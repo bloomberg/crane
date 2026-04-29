@@ -110,7 +110,7 @@ struct DeepDestruct {
   template <typename T1, typename T2, MapsTo<T2, T1, mylist<T1>, T2> F1>
   static T2 mylist_rect(const T2 f, F1 &&f0, const mylist<T1> &m) {
     struct _Enter {
-      const mylist<T1> m;
+      const mylist<T1> *m;
     };
 
     struct _Call1 {
@@ -122,20 +122,20 @@ struct DeepDestruct {
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{m});
+    _stack.emplace_back(_Enter{&m});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> &m = _f.m;
+        const mylist<T1> &m = *(_f.m);
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<T1>::Mycons>(m.v());
           _stack.emplace_back(_Call1{*(d_a1), d_a0});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -148,7 +148,7 @@ struct DeepDestruct {
   template <typename T1, typename T2, MapsTo<T2, T1, mylist<T1>, T2> F1>
   static T2 mylist_rec(const T2 f, F1 &&f0, const mylist<T1> &m) {
     struct _Enter {
-      const mylist<T1> m;
+      const mylist<T1> *m;
     };
 
     struct _Call1 {
@@ -160,20 +160,20 @@ struct DeepDestruct {
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{m});
+    _stack.emplace_back(_Enter{&m});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> &m = _f.m;
+        const mylist<T1> &m = *(_f.m);
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<T1>::Mycons>(m.v());
           _stack.emplace_back(_Call1{*(d_a1), d_a0});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));

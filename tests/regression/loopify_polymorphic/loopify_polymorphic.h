@@ -133,7 +133,7 @@ struct LoopifyPolymorphic {
   template <typename T1>
   __attribute__((pure)) static unsigned int poly_length(const List<T1> &l) {
     struct _Enter {
-      const List<T1> l;
+      const List<T1> *l;
     };
 
     struct _Call1 {
@@ -144,19 +144,19 @@ struct LoopifyPolymorphic {
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> &l = _f.l;
+        const List<T1> &l = *(_f.l);
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = 0u;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
           _stack.emplace_back(_Call1{1u});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -169,7 +169,7 @@ struct LoopifyPolymorphic {
   template <typename T1>
   __attribute__((pure)) static List<T1> poly_reverse(const List<T1> &l) {
     struct _Enter {
-      const List<T1> l;
+      const List<T1> *l;
     };
 
     struct _Call1 {
@@ -180,19 +180,19 @@ struct LoopifyPolymorphic {
     List<T1> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> &l = _f.l;
+        const List<T1> &l = *(_f.l);
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = List<T1>::nil();
         } else {
           const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
           _stack.emplace_back(_Call1{List<T1>::cons(d_a0, List<T1>::nil())});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -424,7 +424,7 @@ struct LoopifyPolymorphic {
   __attribute__((pure)) static std::pair<List<T1>, List<T2>>
   poly_unzip(const List<std::pair<T1, T2>> &l) {
     struct _Enter {
-      const List<std::pair<T1, T2>> l;
+      const List<std::pair<T1, T2>> *l;
     };
 
     struct _Call1 {
@@ -436,13 +436,13 @@ struct LoopifyPolymorphic {
     std::pair<List<T1>, List<T2>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<std::pair<T1, T2>> &l = _f.l;
+        const List<std::pair<T1, T2>> &l = *(_f.l);
         if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(
                 l.v())) {
           _result = std::make_pair(List<T1>::nil(), List<T2>::nil());
@@ -452,7 +452,7 @@ struct LoopifyPolymorphic {
           const T1 &a = d_a0.first;
           const T2 &b = d_a0.second;
           _stack.emplace_back(_Call1{a, b});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -470,7 +470,7 @@ struct LoopifyPolymorphic {
   __attribute__((pure)) static std::pair<List<T1>, List<T1>>
   poly_partition(F0 &&p, const List<T1> &l) {
     struct _Enter {
-      const List<T1> l;
+      const List<T1> *l;
     };
 
     struct _Call1 {
@@ -482,19 +482,19 @@ struct LoopifyPolymorphic {
     std::pair<List<T1>, List<T1>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> &l = _f.l;
+        const List<T1> &l = *(_f.l);
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = std::make_pair(List<T1>::nil(), List<T1>::nil());
         } else {
           const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
           _stack.emplace_back(_Call1{d_a0, p});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));

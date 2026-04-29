@@ -5198,12 +5198,19 @@ and find_combine_op_stmt check = function
 
     @param varying_params The parameters to include in the Enter frame
     @return A raw C++ statement pushing the initial Enter frame *)
-let make_stack_init varying_params =
+let make_stack_init ?(pointer_safe = []) varying_params =
   make_stack_push
     (CPPstruct_id
        ( Id.of_string "_Enter",
          [],
-         List.map (fun (id, _) -> CPPvar id) varying_params ))
+         if pointer_safe = [] then
+           List.map (fun (id, _) -> CPPvar id) varying_params
+         else
+           List.map2
+             (fun safe (id, _) ->
+               let v = CPPvar id in
+               if safe then CPPunop ("&", v) else v)
+             pointer_safe varying_params ))
 
 (** Generate parameter bindings that read frame fields into locals.
     For trivially copyable types (scalars, pointers, enums), produces a copy.
@@ -5212,19 +5219,172 @@ let make_stack_init varying_params =
 
     @param varying_params The parameters to bind from the frame
     @return List of assignment statements *)
-let make_param_copies varying_params =
-  List.map
-    (fun (id, ty) ->
-      let stripped = strip_ref_type ty in
-      let bind_ty =
-        match stripped with
-        | Tmod (TMconst, inner) when not (is_trivially_copyable_type inner) ->
-          Tref (Tmod (TMconst, inner))
-        | _ -> stripped
-      in
-      Sasgn (id, Some bind_ty,
-             CPPmember (CPPvar (Id.of_string "_f"), id)))
-    varying_params
+let make_param_copies ?(pointer_safe = []) varying_params =
+  if pointer_safe = [] then
+    List.map
+      (fun (id, ty) ->
+        let stripped = strip_ref_type ty in
+        let bind_ty =
+          match stripped with
+          | Tmod (TMconst, inner) when not (is_trivially_copyable_type inner) ->
+            Tref (Tmod (TMconst, inner))
+          | _ -> stripped
+        in
+        Sasgn (id, Some bind_ty,
+               CPPmember (CPPvar (Id.of_string "_f"), id)))
+      varying_params
+  else
+    List.map2
+      (fun safe (id, ty) ->
+        if safe then
+          match borrowed_value_param_pointee ty with
+          | Some t ->
+            Sasgn (id, Some (Tref (Tmod (TMconst, t))),
+                   CPPderef (CPPmember (CPPvar (Id.of_string "_f"), id)))
+          | None ->
+            let stripped = strip_ref_type ty in
+            Sasgn (id, Some stripped,
+                   CPPmember (CPPvar (Id.of_string "_f"), id))
+        else
+          let stripped = strip_ref_type ty in
+          let bind_ty =
+            match stripped with
+            | Tmod (TMconst, inner) when not (is_trivially_copyable_type inner) ->
+              Tref (Tmod (TMconst, inner))
+            | _ -> stripped
+          in
+          Sasgn (id, Some bind_ty,
+                 CPPmember (CPPvar (Id.of_string "_f"), id)))
+      pointer_safe varying_params
+
+(** Compute pointer-safe flags for each Call frame by analyzing which
+    frame fields appear as [_Enter] push args at pointer-safe positions.
+    Propagates transitively through Call-to-Call chains (e.g. when
+    [_Call1] handler pushes [_Call2\{_f._s1\}] and [_Call2._s1] is used
+    at a pointer-safe position in [_Enter]).
+    Returns [(frame_name, bool list)] for frames with any pointer-safe
+    field. *)
+let compute_frame_pointer_safe pointer_safe_varying frames =
+  if not (List.exists Fun.id pointer_safe_varying) then []
+  else
+  let n_enter = List.length pointer_safe_varying in
+  let is_field_access j = function
+    | CPPmember (CPPvar f, field_id) ->
+      Id.to_string f = "_f"
+      && Id.to_string field_id = "_s" ^ string_of_int j
+    | _ -> false
+  in
+  (* Find all struct pushes in handler body: returns (name, args) list *)
+  let find_struct_pushes stmts =
+    let result = ref [] in
+    let rec scan = function
+      | Sexpr (CPPfun_call (_callee, [CPPstruct_id (name, _, args)])) ->
+        result := (Id.to_string name, args) :: !result
+      | s ->
+        iter_stmt_children ~on_expr:(fun _ -> ())
+          ~on_stmts:(List.iter scan) s
+    in
+    List.iter scan stmts;
+    !result
+  in
+  (* Mutable flags per frame *)
+  let flag_arrays =
+    List.map
+      (fun cf ->
+        (cf.cf_name, Array.make (List.length cf.cf_saved_types) false))
+      frames
+  in
+  let get_flags name =
+    match List.assoc_opt name flag_arrays with
+    | Some arr -> Some arr
+    | None -> None
+  in
+  (* Step 1: seed from _Enter push args *)
+  List.iter
+    (fun cf ->
+      let pushes = find_struct_pushes cf.cf_handler in
+      List.iter
+        (fun (push_name, args) ->
+          if push_name = "_Enter" && List.length args = n_enter then
+            match get_flags cf.cf_name with
+            | Some arr ->
+              for j = 0 to Array.length arr - 1 do
+                if not arr.(j) then
+                  let is_used =
+                    List.exists2
+                      (fun safe arg -> safe && is_field_access j arg)
+                      pointer_safe_varying args
+                  in
+                  if is_used then arr.(j) <- true
+              done
+            | None -> ())
+        pushes)
+    frames;
+  (* Step 2: propagate through Call-to-Call chains until fixpoint *)
+  let changed = ref true in
+  while !changed do
+    changed := false;
+    List.iter
+      (fun cf ->
+        let pushes = find_struct_pushes cf.cf_handler in
+        List.iter
+          (fun (push_name, args) ->
+            match get_flags push_name with
+            | Some target_arr when List.length args = Array.length target_arr ->
+              (* If target_arr[k] is true and args[k] is _f._sJ,
+                 then cf's field J must also be pointer-safe *)
+              List.iteri
+                (fun k arg ->
+                  if target_arr.(k) then
+                    match get_flags cf.cf_name with
+                    | Some src_arr ->
+                      for j = 0 to Array.length src_arr - 1 do
+                        if (not src_arr.(j)) && is_field_access j arg then (
+                          src_arr.(j) <- true;
+                          changed := true)
+                      done
+                    | None -> ())
+                args
+            | _ -> ())
+          pushes)
+      frames
+  done;
+  (* Collect results *)
+  List.filter_map
+    (fun (name, arr) ->
+      let flags = Array.to_list arr in
+      if List.exists Fun.id flags then Some (name, flags) else None)
+    flag_arrays
+
+(** Rewrite frame push expressions so that pointer-safe positions use
+    [&x] (for variables) or [x.get()] (for dereferences) instead of
+    deep-copying.  Handles both [_Enter] and [_CallN] pushes.
+
+    @param frame_pointer_safe [(frame_name, bool list)] mapping *)
+let adjust_frame_push_args frame_pointer_safe stmts =
+  if frame_pointer_safe = [] then stmts
+  else
+    let lookup name_s = List.assoc_opt name_s frame_pointer_safe in
+    let adjust_arg safe arg =
+      if not safe then arg
+      else
+        match arg with
+        | CPPderef inner ->
+          CPPfun_call (CPPmember (inner, Id.of_string "get"), [])
+        | CPPvar _ -> CPPunop ("&", arg)
+        | _ -> arg
+    in
+    let rec on_stmt = function
+      | Sexpr (CPPfun_call (callee, [CPPstruct_id (name, targs, args)])) -> (
+        match lookup (Id.to_string name) with
+        | Some flags when List.length args = List.length flags ->
+          let args' = List.map2 adjust_arg flags args in
+          Sexpr (CPPfun_call (callee, [CPPstruct_id (name, targs, args')]))
+        | _ -> map_stmt Fun.id on_stmt Fun.id
+                 (Sexpr (CPPfun_call (callee, [CPPstruct_id (name, targs, args)]))))
+      | s -> map_stmt Fun.id on_stmt Fun.id s
+    in
+    List.map on_stmt stmts
 
 (** Build one branch of the frame-dispatch [Smatch].
 
@@ -5478,7 +5638,9 @@ let make_decltype_ty pp_type env expr =
     @return Transformed body with frame-based stack structure *)
 let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
   let varying = find_varying_params check params body in
+  let pointer_safe = tail_pointer_safe_flags check params body in
   let varying_params = filter_by_mask varying params in
+  let pointer_safe_varying = filter_by_mask varying pointer_safe in
   let varying_param_types = List.map snd varying_params in
   (* Build initial type env from params and body declarations *)
   let env =
@@ -5509,24 +5671,42 @@ let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
   then
     body
   else
+  (* Compute pointer-safe flags for Call frames *)
+  let frame_ps_map =
+    compute_frame_pointer_safe pointer_safe_varying frames
+  in
+  let all_frame_ps =
+    ("_Enter", pointer_safe_varying) :: frame_ps_map
+  in
   (* Build struct definitions *)
   let enter_fields =
-    List.map
-      (fun (id, ty) -> (id, strip_ref_type ty))
-      varying_params
+    List.map2
+      (fun safe (id, ty) ->
+        match safe, borrowed_value_param_pointee ty with
+        | true, Some t -> (id, Tptr (Tmod (TMconst, t)))
+        | _ -> (id, strip_ref_type ty))
+      pointer_safe_varying varying_params
   in
   let call_structs =
     List.map
       (fun cf ->
+        let cf_ps =
+          match List.assoc_opt cf.cf_name frame_ps_map with
+          | Some flags -> flags
+          | None -> List.map (fun _ -> false) cf.cf_saved_types
+        in
         let fields =
           List.mapi
             (fun j ty ->
               let field_ty =
-                match ty with
-                | Tunknown ->
-                  let expr = List.nth cf.cf_saved_exprs j in
-                  make_decltype_ty pp_type cf.cf_env expr
-                | _ -> strip_ref_type ty
+                if List.nth cf_ps j then
+                  Tptr (Tmod (TMconst, strip_ref_and_const_type ty))
+                else
+                  match ty with
+                  | Tunknown ->
+                    let expr = List.nth cf.cf_saved_exprs j in
+                    make_decltype_ty pp_type cf.cf_env expr
+                  | _ -> strip_ref_type ty
               in
               (Id.of_string ("_s" ^ string_of_int j), field_ty))
             cf.cf_saved_types
@@ -5545,12 +5725,15 @@ let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
     @ call_structs
     @ [Susing (Id.of_string "_Frame", Tvariant variant_tys)]
   in
-  let init_push = make_stack_init varying_params in
+  let init_push =
+    make_stack_init ~pointer_safe:pointer_safe_varying varying_params
+  in
   (* Enter handler: copy frame fields to locals (only varying params; invariant
      params are captured directly from function scope) *)
   let enter_body =
-    make_param_copies varying_params
-    @ rewritten_body in
+    make_param_copies ~pointer_safe:pointer_safe_varying varying_params
+    @ adjust_frame_push_args all_frame_ps rewritten_body
+  in
   let enter_branch = make_frame_branch "_Enter" enter_body in
   (* Call handlers *)
   let call_branches =

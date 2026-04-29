@@ -168,7 +168,7 @@ struct LoopifyFolds {
   __attribute__((pure)) static unsigned int
   fold_right(F0 &&f, const List<unsigned int> &l, unsigned int acc) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -179,20 +179,20 @@ struct LoopifyFolds {
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = acc;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
           _stack.emplace_back(_Call1{d_a0});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -302,7 +302,7 @@ struct LoopifyFolds {
   __attribute__((pure)) static unsigned int
   foldr1(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -313,13 +313,13 @@ struct LoopifyFolds {
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -331,7 +331,7 @@ struct LoopifyFolds {
             _result = d_a0;
           } else {
             _stack.emplace_back(_Call1{d_a0});
-            _stack.emplace_back(_Enter{*(d_a1)});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
@@ -348,7 +348,7 @@ struct LoopifyFolds {
   __attribute__((pure)) static std::pair<unsigned int, List<unsigned int>>
   map_accum(F0 &&f, unsigned int acc, const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
       unsigned int acc;
     };
 
@@ -360,13 +360,13 @@ struct LoopifyFolds {
     std::pair<unsigned int, List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l, acc});
+    _stack.emplace_back(_Enter{&l, acc});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         unsigned int acc = _f.acc;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(acc, List<unsigned int>::nil());
@@ -377,7 +377,7 @@ struct LoopifyFolds {
           const unsigned int &acc_ = _cs.first;
           const unsigned int &y = _cs.second;
           _stack.emplace_back(_Call1{y});
-          _stack.emplace_back(_Enter{*(d_a1), acc_});
+          _stack.emplace_back(_Enter{d_a1.get(), acc_});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));

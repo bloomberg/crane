@@ -3,7 +3,7 @@
 __attribute__((pure)) unsigned int
 LoopifyAdvancedLists::product(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -14,20 +14,20 @@ LoopifyAdvancedLists::product(const List<unsigned int> &l) {
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 1u;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         _stack.emplace_back(_Call1{d_a0});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -202,7 +202,7 @@ LoopifyAdvancedLists::interleave(List<unsigned int> l1, List<unsigned int> l2) {
 __attribute__((pure)) List<unsigned int>
 LoopifyAdvancedLists::concat_lists(const List<List<unsigned int>> &ll) {
   struct _Enter {
-    const List<List<unsigned int>> ll;
+    const List<List<unsigned int>> *ll;
   };
 
   struct _Call1 {
@@ -213,13 +213,13 @@ LoopifyAdvancedLists::concat_lists(const List<List<unsigned int>> &ll) {
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{ll});
+  _stack.emplace_back(_Enter{&ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> &ll = _f.ll;
+      const List<List<unsigned int>> &ll = *(_f.ll);
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = List<unsigned int>::nil();
@@ -227,7 +227,7 @@ LoopifyAdvancedLists::concat_lists(const List<List<unsigned int>> &ll) {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
         _stack.emplace_back(_Call1{d_a0});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));

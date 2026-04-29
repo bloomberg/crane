@@ -3,7 +3,7 @@
 __attribute__((pure)) unsigned int
 LoopifyNumericMisc::sum_abs(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -14,20 +14,20 @@ LoopifyNumericMisc::sum_abs(const List<unsigned int> &l) {
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         _stack.emplace_back(_Call1{d_a0});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -88,7 +88,7 @@ LoopifyNumericMisc::alternating_ops(const unsigned int &n) {
 __attribute__((pure)) unsigned int
 LoopifyNumericMisc::count_even(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -99,13 +99,13 @@ LoopifyNumericMisc::count_even(const List<unsigned int> &l) {
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -113,9 +113,9 @@ LoopifyNumericMisc::count_even(const List<unsigned int> &l) {
             std::get<typename List<unsigned int>::Cons>(l.v());
         if ((2u ? d_a0 % 2u : d_a0) == 0u) {
           _stack.emplace_back(_Call1{1u});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         } else {
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {
@@ -129,7 +129,7 @@ LoopifyNumericMisc::count_even(const List<unsigned int> &l) {
 __attribute__((pure)) unsigned int
 LoopifyNumericMisc::count_odd(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -140,13 +140,13 @@ LoopifyNumericMisc::count_odd(const List<unsigned int> &l) {
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -154,9 +154,9 @@ LoopifyNumericMisc::count_odd(const List<unsigned int> &l) {
             std::get<typename List<unsigned int>::Cons>(l.v());
         if ((2u ? d_a0 % 2u : d_a0) == 1u) {
           _stack.emplace_back(_Call1{1u});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         } else {
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {
@@ -170,7 +170,7 @@ LoopifyNumericMisc::count_odd(const List<unsigned int> &l) {
 __attribute__((pure)) unsigned int
 LoopifyNumericMisc::product(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -181,20 +181,20 @@ LoopifyNumericMisc::product(const List<unsigned int> &l) {
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 1u;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         _stack.emplace_back(_Call1{d_a0});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -207,7 +207,7 @@ LoopifyNumericMisc::product(const List<unsigned int> &l) {
 __attribute__((pure)) unsigned int
 LoopifyNumericMisc::sum_of_squares(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -219,20 +219,20 @@ LoopifyNumericMisc::sum_of_squares(const List<unsigned int> &l) {
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         _stack.emplace_back(_Call1{(d_a0 * d_a0)});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -254,7 +254,7 @@ __attribute__((pure)) unsigned int LoopifyNumericMisc::max_two(unsigned int a,
 __attribute__((pure)) unsigned int
 LoopifyNumericMisc::list_max(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -265,13 +265,13 @@ LoopifyNumericMisc::list_max(const List<unsigned int> &l) {
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -282,7 +282,7 @@ LoopifyNumericMisc::list_max(const List<unsigned int> &l) {
           _result = d_a0;
         } else {
           _stack.emplace_back(_Call1{d_a0});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {
@@ -296,7 +296,7 @@ LoopifyNumericMisc::list_max(const List<unsigned int> &l) {
 __attribute__((pure)) unsigned int
 LoopifyNumericMisc::list_min(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -307,13 +307,13 @@ LoopifyNumericMisc::list_min(const List<unsigned int> &l) {
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -324,7 +324,7 @@ LoopifyNumericMisc::list_min(const List<unsigned int> &l) {
           _result = d_a0;
         } else {
           _stack.emplace_back(_Call1{d_a0});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {

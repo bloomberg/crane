@@ -5,7 +5,7 @@
 __attribute__((pure)) unsigned int
 LoopifyDecltype::count_true(const List<bool> &xs) {
   struct _Enter {
-    const List<bool> xs;
+    const List<bool> *xs;
   };
 
   struct _Call1 {
@@ -16,19 +16,19 @@ LoopifyDecltype::count_true(const List<bool> &xs) {
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{xs});
+  _stack.emplace_back(_Enter{&xs});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<bool> &xs = _f.xs;
+      const List<bool> &xs = *(_f.xs);
       if (std::holds_alternative<typename List<bool>::Nil>(xs.v())) {
         _result = 0u;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs.v());
         _stack.emplace_back(_Call1{(d_a0 ? 1u : 0u)});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -41,7 +41,7 @@ LoopifyDecltype::count_true(const List<bool> &xs) {
 __attribute__((pure)) unsigned int
 LoopifyDecltype::sum_flagged(const List<LoopifyDecltype::item> &xs) {
   struct _Enter {
-    const List<LoopifyDecltype::item> xs;
+    const List<LoopifyDecltype::item> *xs;
   };
 
   struct _Call1 {
@@ -52,13 +52,13 @@ LoopifyDecltype::sum_flagged(const List<LoopifyDecltype::item> &xs) {
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{xs});
+  _stack.emplace_back(_Enter{&xs});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyDecltype::item> &xs = _f.xs;
+      const List<LoopifyDecltype::item> &xs = *(_f.xs);
       if (std::holds_alternative<typename List<LoopifyDecltype::item>::Nil>(
               xs.v())) {
         _result = 0u;
@@ -66,7 +66,7 @@ LoopifyDecltype::sum_flagged(const List<LoopifyDecltype::item> &xs) {
         const auto &[d_a0, d_a1] =
             std::get<typename List<LoopifyDecltype::item>::Cons>(xs.v());
         _stack.emplace_back(_Call1{(d_a0.item_flag ? d_a0.item_val : 0u)});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));

@@ -75,7 +75,7 @@ __attribute__((pure)) List<unsigned int>
 LoopifyListCombining::intercalate(const List<unsigned int> &sep,
                                   const List<List<unsigned int>> &ll) {
   struct _Enter {
-    const List<List<unsigned int>> ll;
+    const List<List<unsigned int>> *ll;
   };
 
   struct _Call1 {
@@ -87,13 +87,13 @@ LoopifyListCombining::intercalate(const List<unsigned int> &sep,
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{ll});
+  _stack.emplace_back(_Enter{&ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> &ll = _f.ll;
+      const List<List<unsigned int>> &ll = *(_f.ll);
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = List<unsigned int>::nil();
@@ -106,7 +106,7 @@ LoopifyListCombining::intercalate(const List<unsigned int> &sep,
           _result = d_a0;
         } else {
           _stack.emplace_back(_Call1{d_a0, sep});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {
@@ -120,7 +120,7 @@ LoopifyListCombining::intercalate(const List<unsigned int> &sep,
 __attribute__((pure)) List<unsigned int>
 LoopifyListCombining::concat(const List<List<unsigned int>> &ll) {
   struct _Enter {
-    const List<List<unsigned int>> ll;
+    const List<List<unsigned int>> *ll;
   };
 
   struct _Call1 {
@@ -131,13 +131,13 @@ LoopifyListCombining::concat(const List<List<unsigned int>> &ll) {
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{ll});
+  _stack.emplace_back(_Enter{&ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> &ll = _f.ll;
+      const List<List<unsigned int>> &ll = *(_f.ll);
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = List<unsigned int>::nil();
@@ -145,7 +145,7 @@ LoopifyListCombining::concat(const List<List<unsigned int>> &ll) {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
         _stack.emplace_back(_Call1{d_a0});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -158,7 +158,7 @@ LoopifyListCombining::concat(const List<List<unsigned int>> &ll) {
 __attribute__((pure)) List<unsigned int>
 LoopifyListCombining::mapcat(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -172,13 +172,13 @@ LoopifyListCombining::mapcat(const List<unsigned int> &l) {
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = List<unsigned int>::nil();
       } else {
@@ -186,7 +186,7 @@ LoopifyListCombining::mapcat(const List<unsigned int> &l) {
             std::get<typename List<unsigned int>::Cons>(l.v());
         _stack.emplace_back(_Call1{List<unsigned int>::cons(
             d_a0, List<unsigned int>::cons(d_a0, List<unsigned int>::nil()))});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -245,7 +245,7 @@ __attribute__((pure)) List<unsigned int>
 LoopifyListCombining::concat_sep(unsigned int sep,
                                  const List<List<unsigned int>> &ll) {
   struct _Enter {
-    const List<List<unsigned int>> ll;
+    const List<List<unsigned int>> *ll;
   };
 
   struct _Call1 {
@@ -257,13 +257,13 @@ LoopifyListCombining::concat_sep(unsigned int sep,
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{ll});
+  _stack.emplace_back(_Enter{&ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> &ll = _f.ll;
+      const List<List<unsigned int>> &ll = *(_f.ll);
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = List<unsigned int>::nil();
@@ -276,7 +276,7 @@ LoopifyListCombining::concat_sep(unsigned int sep,
           _result = d_a0;
         } else {
           _stack.emplace_back(_Call1{d_a0, sep});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {

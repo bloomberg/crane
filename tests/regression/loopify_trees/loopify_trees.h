@@ -291,12 +291,12 @@ struct LoopifyTrees {
 
       struct _Enter {
         const tree *_self;
-        const tree<t_A> t2;
+        const tree<t_A> *t2;
       };
 
       struct _Call1 {
         tree<t_A> *_s0;
-        tree<t_A> _s1;
+        const tree<t_A> *_s1;
         decltype(true) _s2;
       };
 
@@ -309,14 +309,14 @@ struct LoopifyTrees {
       bool _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(16);
-      _stack.emplace_back(_Enter{_self, t2});
+      _stack.emplace_back(_Enter{_self, &t2});
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          const tree<t_A> &t2 = _f.t2;
+          const tree<t_A> &t2 = *(_f.t2);
           auto &&_sv = *(_self);
           if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
             if (std::holds_alternative<typename tree<t_A>::Leaf>(t2.v())) {
@@ -332,8 +332,8 @@ struct LoopifyTrees {
             } else {
               const auto &[d_a00, d_a10, d_a20] =
                   std::get<typename tree<t_A>::Node>(t2.v());
-              _stack.emplace_back(_Call1{d_a0.get(), *(d_a20), true});
-              _stack.emplace_back(_Enter{d_a2.get(), *(d_a00)});
+              _stack.emplace_back(_Call1{d_a0.get(), d_a20.get(), true});
+              _stack.emplace_back(_Enter{d_a2.get(), d_a00.get()});
             }
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {

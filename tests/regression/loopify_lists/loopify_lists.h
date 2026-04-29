@@ -113,7 +113,7 @@ struct LoopifyLists {
   template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
   static T2 list_rect(const T2 f, F1 &&f0, const list<T1> &l) {
     struct _Enter {
-      const list<T1> l;
+      const list<T1> *l;
     };
 
     struct _Call1 {
@@ -125,19 +125,19 @@ struct LoopifyLists {
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = _f.l;
+        const list<T1> &l = *(_f.l);
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
           _stack.emplace_back(_Call1{*(d_a1), d_a0});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -150,7 +150,7 @@ struct LoopifyLists {
   template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
   static T2 list_rec(const T2 f, F1 &&f0, const list<T1> &l) {
     struct _Enter {
-      const list<T1> l;
+      const list<T1> *l;
     };
 
     struct _Call1 {
@@ -162,19 +162,19 @@ struct LoopifyLists {
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = _f.l;
+        const list<T1> &l = *(_f.l);
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
           _stack.emplace_back(_Call1{*(d_a1), d_a0});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -978,7 +978,7 @@ struct LoopifyLists {
       std::pair<list<unsigned int>, list<unsigned int>>, list<unsigned int>>
   partition3(F0 &&p, F1 &&q, const list<unsigned int> &l) {
     struct _Enter {
-      const list<unsigned int> l;
+      const list<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -993,13 +993,13 @@ struct LoopifyLists {
         _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<unsigned int> &l = _f.l;
+        const list<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(std::make_pair(list<unsigned int>::nil(),
                                                   list<unsigned int>::nil()),
@@ -1008,7 +1008,7 @@ struct LoopifyLists {
           const auto &[d_a0, d_a1] =
               std::get<typename list<unsigned int>::Cons>(l.v());
           _stack.emplace_back(_Call1{d_a0, p, q});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -1179,7 +1179,7 @@ struct LoopifyLists {
   __attribute__((pure)) static std::pair<T3, list<T2>>
   map_accum_l(F0 &&f, const T3 acc, const list<T1> &l) {
     struct _Enter {
-      const list<T1> l;
+      const list<T1> *l;
       const T3 acc;
     };
 
@@ -1191,13 +1191,13 @@ struct LoopifyLists {
     std::pair<T3, list<T2>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l, acc});
+    _stack.emplace_back(_Enter{&l, acc});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = _f.l;
+        const list<T1> &l = *(_f.l);
         const T3 acc = _f.acc;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = std::make_pair(acc, list<T2>::nil());
@@ -1207,7 +1207,7 @@ struct LoopifyLists {
           const T3 &acc_ = _cs.first;
           const T2 &y = _cs.second;
           _stack.emplace_back(_Call1{y});
-          _stack.emplace_back(_Enter{*(d_a1), acc_});
+          _stack.emplace_back(_Enter{d_a1.get(), acc_});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));

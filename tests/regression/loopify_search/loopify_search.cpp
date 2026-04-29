@@ -54,7 +54,7 @@ __attribute__((pure)) unsigned int LoopifySearch::knapsack(
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
 LoopifySearch::majority(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -65,20 +65,20 @@ LoopifySearch::majority(const List<unsigned int> &l) {
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(0u, 0u);
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         _stack.emplace_back(_Call1{d_a0});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -757,7 +757,7 @@ LoopifySearch::quicksort(const List<unsigned int> &l) {
 __attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
 LoopifySearch::split_list(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -769,13 +769,13 @@ LoopifySearch::split_list(const List<unsigned int> &l) {
   std::pair<List<unsigned int>, List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());
@@ -792,7 +792,7 @@ LoopifySearch::split_list(const List<unsigned int> &l) {
           const auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(_sv0.v());
           _stack.emplace_back(_Call1{d_a0, d_a00});
-          _stack.emplace_back(_Enter{*(d_a10)});
+          _stack.emplace_back(_Enter{d_a10.get()});
         }
       }
     } else {
@@ -1196,7 +1196,7 @@ LoopifySearch::all_indices(const unsigned int &x, const List<unsigned int> &l) {
 __attribute__((pure)) unsigned int
 LoopifySearch::min_element(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -1207,13 +1207,13 @@ LoopifySearch::min_element(const List<unsigned int> &l) {
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -1224,7 +1224,7 @@ LoopifySearch::min_element(const List<unsigned int> &l) {
           _result = d_a0;
         } else {
           _stack.emplace_back(_Call1{d_a0});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {

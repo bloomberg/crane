@@ -4,7 +4,7 @@ __attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
 LoopifyListPairing::unzip(
     const List<std::pair<unsigned int, unsigned int>> &l) {
   struct _Enter {
-    const List<std::pair<unsigned int, unsigned int>> l;
+    const List<std::pair<unsigned int, unsigned int>> *l;
   };
 
   struct _Call1 {
@@ -16,13 +16,13 @@ LoopifyListPairing::unzip(
   std::pair<List<unsigned int>, List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<std::pair<unsigned int, unsigned int>> &l = _f.l;
+      const List<std::pair<unsigned int, unsigned int>> &l = *(_f.l);
       if (std::holds_alternative<
               typename List<std::pair<unsigned int, unsigned int>>::Nil>(
               l.v())) {
@@ -34,7 +34,7 @@ LoopifyListPairing::unzip(
         const unsigned int &a = d_a0.first;
         const unsigned int &b = d_a0.second;
         _stack.emplace_back(_Call1{a, b});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -52,7 +52,7 @@ LoopifyListPairing::unzip(
 __attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
 LoopifyListPairing::swizzle(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -63,13 +63,13 @@ LoopifyListPairing::swizzle(const List<unsigned int> &l) {
   std::pair<List<unsigned int>, List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());
@@ -77,7 +77,7 @@ LoopifyListPairing::swizzle(const List<unsigned int> &l) {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         _stack.emplace_back(_Call1{d_a0});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -93,7 +93,7 @@ LoopifyListPairing::swizzle(const List<unsigned int> &l) {
 __attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
 LoopifyListPairing::partition(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -104,13 +104,13 @@ LoopifyListPairing::partition(const List<unsigned int> &l) {
   std::pair<List<unsigned int>, List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());
@@ -118,7 +118,7 @@ LoopifyListPairing::partition(const List<unsigned int> &l) {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         _stack.emplace_back(_Call1{d_a0});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -289,7 +289,7 @@ LoopifyListPairing::zipWith(const List<unsigned int> &l1,
 __attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
 LoopifyListPairing::split_even_odd(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -300,13 +300,13 @@ LoopifyListPairing::split_even_odd(const List<unsigned int> &l) {
   std::pair<List<unsigned int>, List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());
@@ -314,7 +314,7 @@ LoopifyListPairing::split_even_odd(const List<unsigned int> &l) {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         _stack.emplace_back(_Call1{d_a0});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));

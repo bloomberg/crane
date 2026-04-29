@@ -4,8 +4,8 @@ __attribute__((pure)) bool
 LoopifyListRelations::is_prefix_of(const List<unsigned int> &l1,
                                    const List<unsigned int> &l2) {
   struct _Enter {
-    const List<unsigned int> l2;
-    const List<unsigned int> l1;
+    const List<unsigned int> *l2;
+    const List<unsigned int> *l1;
   };
 
   struct _Call1 {
@@ -17,14 +17,14 @@ LoopifyListRelations::is_prefix_of(const List<unsigned int> &l1,
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l2, l1});
+  _stack.emplace_back(_Enter{&l2, &l1});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l2 = _f.l2;
-      const List<unsigned int> &l1 = _f.l1;
+      const List<unsigned int> &l2 = *(_f.l2);
+      const List<unsigned int> &l1 = *(_f.l1);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
         _result = true;
       } else {
@@ -36,7 +36,7 @@ LoopifyListRelations::is_prefix_of(const List<unsigned int> &l1,
           const auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(l2.v());
           _stack.emplace_back(_Call1{d_a0 == d_a00});
-          _stack.emplace_back(_Enter{*(d_a10), *(d_a1)});
+          _stack.emplace_back(_Enter{d_a10.get(), d_a1.get()});
         }
       }
     } else {
@@ -216,8 +216,8 @@ __attribute__((pure)) bool
 LoopifyListRelations::list_eq(const List<unsigned int> &l1,
                               const List<unsigned int> &l2) {
   struct _Enter {
-    const List<unsigned int> l2;
-    const List<unsigned int> l1;
+    const List<unsigned int> *l2;
+    const List<unsigned int> *l1;
   };
 
   struct _Call1 {
@@ -229,14 +229,14 @@ LoopifyListRelations::list_eq(const List<unsigned int> &l1,
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l2, l1});
+  _stack.emplace_back(_Enter{&l2, &l1});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l2 = _f.l2;
-      const List<unsigned int> &l1 = _f.l1;
+      const List<unsigned int> &l2 = *(_f.l2);
+      const List<unsigned int> &l1 = *(_f.l1);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
           _result = true;
@@ -252,7 +252,7 @@ LoopifyListRelations::list_eq(const List<unsigned int> &l1,
           const auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(l2.v());
           _stack.emplace_back(_Call1{d_a0 == d_a00});
-          _stack.emplace_back(_Enter{*(d_a10), *(d_a1)});
+          _stack.emplace_back(_Enter{d_a10.get(), d_a1.get()});
         }
       }
     } else {

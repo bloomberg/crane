@@ -109,7 +109,7 @@ struct LoopifyTail {
   template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
   static T2 list_rect(const T2 f, F1 &&f0, const list<T1> &l) {
     struct _Enter {
-      const list<T1> l;
+      const list<T1> *l;
     };
 
     struct _Call1 {
@@ -121,19 +121,19 @@ struct LoopifyTail {
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = _f.l;
+        const list<T1> &l = *(_f.l);
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
           _stack.emplace_back(_Call1{*(d_a1), d_a0});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -146,7 +146,7 @@ struct LoopifyTail {
   template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
   static T2 list_rec(const T2 f, F1 &&f0, const list<T1> &l) {
     struct _Enter {
-      const list<T1> l;
+      const list<T1> *l;
     };
 
     struct _Call1 {
@@ -158,19 +158,19 @@ struct LoopifyTail {
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = _f.l;
+        const list<T1> &l = *(_f.l);
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
           _stack.emplace_back(_Call1{*(d_a1), d_a0});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));

@@ -69,7 +69,7 @@ LoopifySpecialRecursion::double_append(const List<unsigned int> &l1,
                                        List<unsigned int> l2) {
   struct _Enter {
     List<unsigned int> l2;
-    const List<unsigned int> l1;
+    const List<unsigned int> *l1;
   };
 
   struct _Call1 {
@@ -80,21 +80,21 @@ LoopifySpecialRecursion::double_append(const List<unsigned int> &l1,
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l2, l1});
+  _stack.emplace_back(_Enter{l2, &l1});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       List<unsigned int> l2 = _f.l2;
-      const List<unsigned int> &l1 = _f.l1;
+      const List<unsigned int> &l1 = *(_f.l1);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
         _result = std::move(l2);
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l1.v());
         _stack.emplace_back(_Call1{d_a0});
-        _stack.emplace_back(_Enter{std::move(l2), *(d_a1)});
+        _stack.emplace_back(_Enter{std::move(l2), d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -186,11 +186,11 @@ __attribute__((pure)) List<unsigned int>
 LoopifySpecialRecursion::collect_sorted(
     const LoopifySpecialRecursion::tree &t) {
   struct _Enter {
-    const LoopifySpecialRecursion::tree t;
+    const LoopifySpecialRecursion::tree *t;
   };
 
   struct _Call1 {
-    LoopifySpecialRecursion::tree _s0;
+    const LoopifySpecialRecursion::tree *_s0;
     unsigned int _s1;
   };
 
@@ -203,21 +203,21 @@ LoopifySpecialRecursion::collect_sorted(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{t});
+  _stack.emplace_back(_Enter{&t});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifySpecialRecursion::tree &t = _f.t;
+      const LoopifySpecialRecursion::tree &t = *(_f.t);
       if (std::holds_alternative<typename LoopifySpecialRecursion::tree::Leaf>(
               t.v())) {
         _result = List<unsigned int>::nil();
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename LoopifySpecialRecursion::tree::Node>(t.v());
-        _stack.emplace_back(_Call1{*(d_a0), d_a1});
-        _stack.emplace_back(_Enter{*(d_a2)});
+        _stack.emplace_back(_Call1{d_a0.get(), d_a1});
+        _stack.emplace_back(_Enter{d_a2.get()});
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -236,7 +236,7 @@ LoopifySpecialRecursion::sum_odd_indices_aux(const List<unsigned int> &l,
                                              const unsigned int &idx) {
   struct _Enter {
     const unsigned int idx;
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -247,14 +247,14 @@ LoopifySpecialRecursion::sum_odd_indices_aux(const List<unsigned int> &l,
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{idx, l});
+  _stack.emplace_back(_Enter{idx, &l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int &idx = _f.idx;
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -262,9 +262,9 @@ LoopifySpecialRecursion::sum_odd_indices_aux(const List<unsigned int> &l,
             std::get<typename List<unsigned int>::Cons>(l.v());
         if ((2u ? idx % 2u : idx) == 1u) {
           _stack.emplace_back(_Call1{d_a0});
-          _stack.emplace_back(_Enter{(idx + 1u), *(d_a1)});
+          _stack.emplace_back(_Enter{(idx + 1u), d_a1.get()});
         } else {
-          _stack.emplace_back(_Enter{(idx + 1u), *(d_a1)});
+          _stack.emplace_back(_Enter{(idx + 1u), d_a1.get()});
         }
       }
     } else {
@@ -284,7 +284,7 @@ __attribute__((pure)) unsigned int
 LoopifySpecialRecursion::categorize_by(const unsigned int &k,
                                        const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -303,13 +303,13 @@ LoopifySpecialRecursion::categorize_by(const unsigned int &k,
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -317,14 +317,14 @@ LoopifySpecialRecursion::categorize_by(const unsigned int &k,
             std::get<typename List<unsigned int>::Cons>(l.v());
         if (k < d_a0) {
           _stack.emplace_back(_Call1{3u});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         } else {
           if (d_a0 == k) {
             _stack.emplace_back(_Call2{2u});
-            _stack.emplace_back(_Enter{*(d_a1)});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             _stack.emplace_back(_Call3{1u});
-            _stack.emplace_back(_Enter{*(d_a1)});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       }
@@ -383,7 +383,7 @@ LoopifySpecialRecursion::between(const unsigned int &lo, const unsigned int &hi,
 __attribute__((pure)) List<unsigned int>
 LoopifySpecialRecursion::merge_levels(const List<List<unsigned int>> &ll) {
   struct _Enter {
-    const List<List<unsigned int>> ll;
+    const List<List<unsigned int>> *ll;
   };
 
   struct _Call1 {
@@ -394,13 +394,13 @@ LoopifySpecialRecursion::merge_levels(const List<List<unsigned int>> &ll) {
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{ll});
+  _stack.emplace_back(_Enter{&ll});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> &ll = _f.ll;
+      const List<List<unsigned int>> &ll = *(_f.ll);
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = List<unsigned int>::nil();
@@ -408,7 +408,7 @@ LoopifySpecialRecursion::merge_levels(const List<List<unsigned int>> &ll) {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
         _stack.emplace_back(_Call1{d_a0});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));

@@ -219,25 +219,25 @@ LoopifyMultiRecursion::bool_and_chain(const unsigned int &n) {
 __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_count_leaves(
     const LoopifyMultiRecursion::quadtree &t) {
   struct _Enter {
-    const LoopifyMultiRecursion::quadtree t;
+    const LoopifyMultiRecursion::quadtree *t;
   };
 
   struct _Call1 {
-    const LoopifyMultiRecursion::quadtree _s0;
-    const LoopifyMultiRecursion::quadtree _s1;
-    const LoopifyMultiRecursion::quadtree _s2;
+    const LoopifyMultiRecursion::quadtree *_s0;
+    const LoopifyMultiRecursion::quadtree *_s1;
+    const LoopifyMultiRecursion::quadtree *_s2;
   };
 
   struct _Call2 {
     unsigned int _s0;
-    const LoopifyMultiRecursion::quadtree _s1;
-    const LoopifyMultiRecursion::quadtree _s2;
+    const LoopifyMultiRecursion::quadtree *_s1;
+    const LoopifyMultiRecursion::quadtree *_s2;
   };
 
   struct _Call3 {
     unsigned int _s0;
     unsigned int _s1;
-    const LoopifyMultiRecursion::quadtree _s2;
+    const LoopifyMultiRecursion::quadtree *_s2;
   };
 
   struct _Call4 {
@@ -250,21 +250,21 @@ __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_count_leaves(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{t});
+  _stack.emplace_back(_Enter{&t});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyMultiRecursion::quadtree &t = _f.t;
+      const LoopifyMultiRecursion::quadtree &t = *(_f.t);
       if (std::holds_alternative<
               typename LoopifyMultiRecursion::quadtree::QLeaf>(t.v())) {
         _result = 1u;
       } else {
         const auto &[d_a0, d_a1, d_a2, d_a3] =
             std::get<typename LoopifyMultiRecursion::quadtree::QQuad>(t.v());
-        _stack.emplace_back(_Call1{*(d_a2), *(d_a1), *(d_a0)});
-        _stack.emplace_back(_Enter{*(d_a3)});
+        _stack.emplace_back(_Call1{d_a2.get(), d_a1.get(), d_a0.get()});
+        _stack.emplace_back(_Enter{d_a3.get()});
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -289,27 +289,27 @@ __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_count_leaves(
 __attribute__((pure)) unsigned int
 LoopifyMultiRecursion::quad_depth(const LoopifyMultiRecursion::quadtree &t) {
   struct _Enter {
-    const LoopifyMultiRecursion::quadtree t;
+    const LoopifyMultiRecursion::quadtree *t;
   };
 
   struct _Call1 {
-    const LoopifyMultiRecursion::quadtree _s0;
-    const LoopifyMultiRecursion::quadtree _s1;
-    const LoopifyMultiRecursion::quadtree _s2;
+    const LoopifyMultiRecursion::quadtree *_s0;
+    const LoopifyMultiRecursion::quadtree *_s1;
+    const LoopifyMultiRecursion::quadtree *_s2;
     decltype(1u) _s3;
   };
 
   struct _Call2 {
     unsigned int _s0;
-    const LoopifyMultiRecursion::quadtree _s1;
-    const LoopifyMultiRecursion::quadtree _s2;
+    const LoopifyMultiRecursion::quadtree *_s1;
+    const LoopifyMultiRecursion::quadtree *_s2;
     decltype(1u) _s3;
   };
 
   struct _Call3 {
     unsigned int _s0;
     unsigned int _s1;
-    const LoopifyMultiRecursion::quadtree _s2;
+    const LoopifyMultiRecursion::quadtree *_s2;
     decltype(1u) _s3;
   };
 
@@ -324,21 +324,21 @@ LoopifyMultiRecursion::quad_depth(const LoopifyMultiRecursion::quadtree &t) {
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{t});
+  _stack.emplace_back(_Enter{&t});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyMultiRecursion::quadtree &t = _f.t;
+      const LoopifyMultiRecursion::quadtree &t = *(_f.t);
       if (std::holds_alternative<
               typename LoopifyMultiRecursion::quadtree::QLeaf>(t.v())) {
         _result = 0u;
       } else {
         const auto &[d_a0, d_a1, d_a2, d_a3] =
             std::get<typename LoopifyMultiRecursion::quadtree::QQuad>(t.v());
-        _stack.emplace_back(_Call1{*(d_a2), *(d_a1), *(d_a0), 1u});
-        _stack.emplace_back(_Enter{*(d_a3)});
+        _stack.emplace_back(_Call1{d_a2.get(), d_a1.get(), d_a0.get(), 1u});
+        _stack.emplace_back(_Enter{d_a3.get()});
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       auto _f = std::move(std::get<_Call1>(_frame));

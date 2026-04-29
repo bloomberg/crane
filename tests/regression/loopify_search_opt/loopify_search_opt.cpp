@@ -129,13 +129,13 @@ __attribute__((pure)) unsigned int LoopifySearchOpt::knapsack_fuel(
     const unsigned int &fuel, const unsigned int &capacity,
     const List<std::pair<unsigned int, unsigned int>> &items) {
   struct _Enter {
-    const List<std::pair<unsigned int, unsigned int>> items;
+    const List<std::pair<unsigned int, unsigned int>> *items;
     const unsigned int capacity;
     const unsigned int fuel;
   };
 
   struct _Call1 {
-    List<std::pair<unsigned int, unsigned int>> _s0;
+    const List<std::pair<unsigned int, unsigned int>> *_s0;
     const unsigned int _s1;
     unsigned int _s2;
     unsigned int _s3;
@@ -150,13 +150,13 @@ __attribute__((pure)) unsigned int LoopifySearchOpt::knapsack_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{items, capacity, fuel});
+  _stack.emplace_back(_Enter{&items, capacity, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<std::pair<unsigned int, unsigned int>> &items = _f.items;
+      const List<std::pair<unsigned int, unsigned int>> &items = *(_f.items);
       const unsigned int &capacity = _f.capacity;
       const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
@@ -174,11 +174,11 @@ __attribute__((pure)) unsigned int LoopifySearchOpt::knapsack_fuel(
           const unsigned int &weight = d_a0.first;
           const unsigned int &value = d_a0.second;
           if (capacity < weight) {
-            _stack.emplace_back(_Enter{*(d_a1), capacity, fuel_});
+            _stack.emplace_back(_Enter{d_a1.get(), capacity, fuel_});
           } else {
-            _stack.emplace_back(_Call1{*(d_a1), capacity, fuel_, value});
+            _stack.emplace_back(_Call1{d_a1.get(), capacity, fuel_, value});
             _stack.emplace_back(_Enter{
-                *(d_a1),
+                d_a1.get(),
                 (((capacity - weight) > capacity ? 0 : (capacity - weight))),
                 fuel_});
           }
@@ -207,13 +207,13 @@ LoopifySearchOpt::subset_sum_fuel(const unsigned int &fuel,
                                   const unsigned int &target,
                                   const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
     const unsigned int target;
     const unsigned int fuel;
   };
 
   struct _Call1 {
-    List<unsigned int> _s0;
+    const List<unsigned int> *_s0;
     const unsigned int _s1;
     unsigned int _s2;
   };
@@ -226,13 +226,13 @@ LoopifySearchOpt::subset_sum_fuel(const unsigned int &fuel,
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l, target, fuel});
+  _stack.emplace_back(_Enter{&l, target, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       const unsigned int &target = _f.target;
       const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
@@ -245,11 +245,11 @@ LoopifySearchOpt::subset_sum_fuel(const unsigned int &fuel,
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
           if (target < d_a0) {
-            _stack.emplace_back(_Enter{*(d_a1), target, fuel_});
+            _stack.emplace_back(_Enter{d_a1.get(), target, fuel_});
           } else {
-            _stack.emplace_back(_Call1{*(d_a1), target, fuel_});
+            _stack.emplace_back(_Call1{d_a1.get(), target, fuel_});
             _stack.emplace_back(_Enter{
-                *(d_a1), (((target - d_a0) > target ? 0 : (target - d_a0))),
+                d_a1.get(), (((target - d_a0) > target ? 0 : (target - d_a0))),
                 fuel_});
           }
         }
@@ -275,7 +275,7 @@ LoopifySearchOpt::subset_sum(const unsigned int &target,
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
 LoopifySearchOpt::majority(const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -286,20 +286,20 @@ LoopifySearchOpt::majority(const List<unsigned int> &l) {
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(0u, 0u);
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         _stack.emplace_back(_Call1{d_a0});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));

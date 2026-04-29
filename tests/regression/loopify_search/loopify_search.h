@@ -135,7 +135,7 @@ struct LoopifySearch {
   template <typename T1>
   __attribute__((pure)) static unsigned int len_impl(const List<T1> &l) {
     struct _Enter {
-      const List<T1> l;
+      const List<T1> *l;
     };
 
     struct _Call1 {};
@@ -144,19 +144,19 @@ struct LoopifySearch {
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> &l = _f.l;
+        const List<T1> &l = *(_f.l);
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = 0u;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
           _stack.emplace_back(_Call1{});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -189,7 +189,7 @@ struct LoopifySearch {
   __attribute__((pure)) static unsigned int
   maximum_by(F0 &&cmp, const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -201,13 +201,13 @@ struct LoopifySearch {
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -219,7 +219,7 @@ struct LoopifySearch {
             _result = d_a0;
           } else {
             _stack.emplace_back(_Call1{cmp, d_a0});
-            _stack.emplace_back(_Enter{*(d_a1)});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
@@ -336,7 +336,7 @@ struct LoopifySearch {
   __attribute__((pure)) static List<List<unsigned int>>
   concat_map(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -347,20 +347,20 @@ struct LoopifySearch {
     List<List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = List<List<unsigned int>>::nil();
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
           _stack.emplace_back(_Call1{f(d_a0)});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));

@@ -303,7 +303,7 @@ struct LoopifyHofs {
   template <typename T1, typename T2, MapsTo<List<T2>, T1> F0>
   __attribute__((pure)) static List<T2> flat_map(F0 &&f, const List<T1> &l) {
     struct _Enter {
-      const List<T1> l;
+      const List<T1> *l;
     };
 
     struct _Call1 {
@@ -314,19 +314,19 @@ struct LoopifyHofs {
     List<T2> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> &l = _f.l;
+        const List<T1> &l = *(_f.l);
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = List<T2>::nil();
         } else {
           const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
           _stack.emplace_back(_Call1{f(d_a0)});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -341,7 +341,7 @@ struct LoopifyHofs {
   __attribute__((pure)) static List<std::pair<T1, T2>>
   all_pairs(const List<T1> &l1, const List<T2> &l2) {
     struct _Enter {
-      const List<T1> l1;
+      const List<T1> *l1;
     };
 
     struct _Call1 {
@@ -352,13 +352,13 @@ struct LoopifyHofs {
     List<std::pair<T1, T2>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l1});
+    _stack.emplace_back(_Enter{&l1});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> &l1 = _f.l1;
+        const List<T1> &l1 = *(_f.l1);
         std::function<List<std::pair<T1, T2>>(T1, List<T2>)> pair_with;
         pair_with = [&](T1 x, List<T2> l) -> List<std::pair<T1, T2>> {
           struct _Enter {
@@ -400,7 +400,7 @@ struct LoopifyHofs {
           const auto &[d_a00, d_a10] =
               std::get<typename List<T1>::Cons>(l1.v());
           _stack.emplace_back(_Call1{pair_with(d_a00, l2)});
-          _stack.emplace_back(_Enter{*(d_a10)});
+          _stack.emplace_back(_Enter{d_a10.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -570,7 +570,7 @@ struct LoopifyHofs {
   __attribute__((pure)) static unsigned int
   foldr1(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -581,13 +581,13 @@ struct LoopifyHofs {
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -599,7 +599,7 @@ struct LoopifyHofs {
             _result = d_a0;
           } else {
             _stack.emplace_back(_Call1{d_a0});
-            _stack.emplace_back(_Enter{*(d_a1)});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
@@ -619,7 +619,7 @@ struct LoopifyHofs {
   __attribute__((pure)) static List<unsigned int>
   scanr(F0 &&f, unsigned int acc, const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -632,20 +632,20 @@ struct LoopifyHofs {
     List<unsigned int> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = List<unsigned int>::cons(acc, List<unsigned int>::nil());
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
           _stack.emplace_back(_Call1{acc, d_a0, f});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -665,7 +665,7 @@ struct LoopifyHofs {
   __attribute__((pure)) static List<unsigned int>
   scanr1(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -677,13 +677,13 @@ struct LoopifyHofs {
     List<unsigned int> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = List<unsigned int>::nil();
         } else {
@@ -695,7 +695,7 @@ struct LoopifyHofs {
             _result = List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
           } else {
             _stack.emplace_back(_Call1{d_a0, f});
-            _stack.emplace_back(_Enter{*(d_a1)});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
@@ -715,7 +715,7 @@ struct LoopifyHofs {
   __attribute__((pure)) static List<T1> mapcat(F0 &&f,
                                                const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -726,20 +726,20 @@ struct LoopifyHofs {
     List<T1> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = List<T1>::nil();
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
           _stack.emplace_back(_Call1{f(d_a0)});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -754,7 +754,7 @@ struct LoopifyHofs {
   __attribute__((pure)) static List<unsigned int>
   map_maybe(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -766,20 +766,20 @@ struct LoopifyHofs {
     List<unsigned int> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = List<unsigned int>::nil();
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
           _stack.emplace_back(_Call1{d_a0, f});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -803,7 +803,7 @@ struct LoopifyHofs {
   __attribute__((pure)) static bool bool_all(F0 &&p,
                                              const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -814,20 +814,20 @@ struct LoopifyHofs {
     bool _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = true;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
           _stack.emplace_back(_Call1{p(d_a0)});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -882,7 +882,7 @@ struct LoopifyHofs {
   __attribute__((pure)) static unsigned int
   max_by(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -894,13 +894,13 @@ struct LoopifyHofs {
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -912,7 +912,7 @@ struct LoopifyHofs {
             _result = f(d_a0);
           } else {
             _stack.emplace_back(_Call1{d_a0, f});
-            _stack.emplace_back(_Enter{*(d_a1)});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
@@ -967,7 +967,7 @@ struct LoopifyHofs {
   __attribute__((pure)) static unsigned int
   maximum_by(F0 &&cmp, const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -979,13 +979,13 @@ struct LoopifyHofs {
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -997,7 +997,7 @@ struct LoopifyHofs {
             _result = d_a0;
           } else {
             _stack.emplace_back(_Call1{cmp, d_a0});
-            _stack.emplace_back(_Enter{*(d_a1)});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
@@ -1020,7 +1020,7 @@ struct LoopifyHofs {
   __attribute__((pure)) static unsigned int
   fold_right(F0 &&f, const List<unsigned int> &l, unsigned int acc) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -1031,20 +1031,20 @@ struct LoopifyHofs {
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = acc;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
           _stack.emplace_back(_Call1{d_a0});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -1059,7 +1059,7 @@ struct LoopifyHofs {
   __attribute__((pure)) static std::pair<List<unsigned int>, List<unsigned int>>
   partition(F0 &&p, const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -1071,13 +1071,13 @@ struct LoopifyHofs {
     std::pair<List<unsigned int>, List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(List<unsigned int>::nil(),
                                    List<unsigned int>::nil());
@@ -1085,7 +1085,7 @@ struct LoopifyHofs {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
           _stack.emplace_back(_Call1{d_a0, p});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -1191,7 +1191,7 @@ struct LoopifyHofs {
   __attribute__((pure)) static std::pair<List<unsigned int>, List<unsigned int>>
   span_split(F0 &&p, const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -1202,13 +1202,13 @@ struct LoopifyHofs {
     std::pair<List<unsigned int>, List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(List<unsigned int>::nil(),
                                    List<unsigned int>::nil());
@@ -1217,7 +1217,7 @@ struct LoopifyHofs {
               std::get<typename List<unsigned int>::Cons>(l.v());
           if (p(d_a0)) {
             _stack.emplace_back(_Call1{d_a0});
-            _stack.emplace_back(_Enter{*(d_a1)});
+            _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             _result = std::make_pair(List<unsigned int>::nil(),
                                      List<unsigned int>::cons(d_a0, *(d_a1)));
@@ -1297,7 +1297,7 @@ struct LoopifyHofs {
   __attribute__((pure)) static std::pair<unsigned int, List<unsigned int>>
   map_accum_l(F0 &&f, unsigned int acc, const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
       unsigned int acc;
     };
 
@@ -1309,13 +1309,13 @@ struct LoopifyHofs {
     std::pair<unsigned int, List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l, acc});
+    _stack.emplace_back(_Enter{&l, acc});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         unsigned int acc = _f.acc;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(acc, List<unsigned int>::nil());
@@ -1326,7 +1326,7 @@ struct LoopifyHofs {
           const unsigned int &acc_ = _cs.first;
           const unsigned int &y = _cs.second;
           _stack.emplace_back(_Call1{y});
-          _stack.emplace_back(_Enter{*(d_a1), acc_});
+          _stack.emplace_back(_Enter{d_a1.get(), acc_});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));

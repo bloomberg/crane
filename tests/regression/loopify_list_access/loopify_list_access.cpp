@@ -177,7 +177,7 @@ __attribute__((pure)) List<unsigned int> LoopifyListAccess::lookup_all(
 __attribute__((pure)) unsigned int
 LoopifyListAccess::count(const unsigned int &x, const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
   };
 
   struct _Call1 {
@@ -188,13 +188,13 @@ LoopifyListAccess::count(const unsigned int &x, const List<unsigned int> &l) {
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -202,9 +202,9 @@ LoopifyListAccess::count(const unsigned int &x, const List<unsigned int> &l) {
             std::get<typename List<unsigned int>::Cons>(l.v());
         if (x == d_a0) {
           _stack.emplace_back(_Call1{1u});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         } else {
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {

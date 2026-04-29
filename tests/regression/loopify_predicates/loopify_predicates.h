@@ -292,7 +292,7 @@ struct LoopifyPredicates {
   __attribute__((pure)) static bool forall_pred(F0 &&p,
                                                 const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -303,20 +303,20 @@ struct LoopifyPredicates {
     bool _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = true;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
           _stack.emplace_back(_Call1{p(d_a0)});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));
@@ -330,7 +330,7 @@ struct LoopifyPredicates {
   __attribute__((pure)) static bool exists_pred(F0 &&p,
                                                 const List<unsigned int> &l) {
     struct _Enter {
-      const List<unsigned int> l;
+      const List<unsigned int> *l;
     };
 
     struct _Call1 {
@@ -341,20 +341,20 @@ struct LoopifyPredicates {
     bool _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = _f.l;
+        const List<unsigned int> &l = *(_f.l);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = false;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
           _stack.emplace_back(_Call1{p(d_a0)});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Call1>(_frame));

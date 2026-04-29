@@ -61,7 +61,7 @@ __attribute__((pure)) List<List<unsigned int>>
 LoopifyListSubsequences::inits_fuel(const unsigned int &fuel,
                                     const List<unsigned int> &l) {
   struct _Enter {
-    const List<unsigned int> l;
+    const List<unsigned int> *l;
     const unsigned int fuel;
   };
 
@@ -73,13 +73,13 @@ LoopifyListSubsequences::inits_fuel(const unsigned int &fuel,
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{&l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = _f.l;
+      const List<unsigned int> &l = *(_f.l);
       const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<List<unsigned int>>::cons(
@@ -93,7 +93,7 @@ LoopifyListSubsequences::inits_fuel(const unsigned int &fuel,
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
           _stack.emplace_back(_Call1{d_a0});
-          _stack.emplace_back(_Enter{*(d_a1), fuel_});
+          _stack.emplace_back(_Enter{d_a1.get(), fuel_});
         }
       }
     } else {

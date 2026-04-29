@@ -5,7 +5,7 @@
 __attribute__((pure)) unsigned int
 LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
   struct _Enter {
-    const List<LoopifyExpr::shape> l;
+    const List<LoopifyExpr::shape> *l;
   };
 
   struct _Call1 {
@@ -16,13 +16,13 @@ LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyExpr::shape> &l = _f.l;
+      const List<LoopifyExpr::shape> &l = *(_f.l);
       if (std::holds_alternative<typename List<LoopifyExpr::shape>::Nil>(
               l.v())) {
         _result = 0u;
@@ -47,7 +47,7 @@ LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
           }
         }();
         _stack.emplace_back(_Call1{val});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));
@@ -62,7 +62,7 @@ __attribute__((pure))
 std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
 LoopifyExpr::count_by_shape(const List<LoopifyExpr::shape> &l) {
   struct _Enter {
-    const List<LoopifyExpr::shape> l;
+    const List<LoopifyExpr::shape> *l;
   };
 
   struct _Call1 {
@@ -73,13 +73,13 @@ LoopifyExpr::count_by_shape(const List<LoopifyExpr::shape> &l) {
   std::pair<std::pair<unsigned int, unsigned int>, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyExpr::shape> &l = _f.l;
+      const List<LoopifyExpr::shape> &l = *(_f.l);
       if (std::holds_alternative<typename List<LoopifyExpr::shape>::Nil>(
               l.v())) {
         _result = std::make_pair(std::make_pair(0u, 0u), 0u);
@@ -87,7 +87,7 @@ LoopifyExpr::count_by_shape(const List<LoopifyExpr::shape> &l) {
         const auto &[d_a0, d_a1] =
             std::get<typename List<LoopifyExpr::shape>::Cons>(l.v());
         _stack.emplace_back(_Call1{d_a0});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));

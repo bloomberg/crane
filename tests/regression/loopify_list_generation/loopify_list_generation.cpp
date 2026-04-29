@@ -125,7 +125,7 @@ LoopifyListGeneration::iterate(const unsigned int &n, unsigned int x) {
 __attribute__((pure)) List<unsigned int> LoopifyListGeneration::replicate_list(
     const List<std::pair<unsigned int, unsigned int>> &l) {
   struct _Enter {
-    const List<std::pair<unsigned int, unsigned int>> l;
+    const List<std::pair<unsigned int, unsigned int>> *l;
   };
 
   struct _Call1 {
@@ -136,13 +136,13 @@ __attribute__((pure)) List<unsigned int> LoopifyListGeneration::replicate_list(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<std::pair<unsigned int, unsigned int>> &l = _f.l;
+      const List<std::pair<unsigned int, unsigned int>> &l = *(_f.l);
       if (std::holds_alternative<
               typename List<std::pair<unsigned int, unsigned int>>::Nil>(
               l.v())) {
@@ -154,7 +154,7 @@ __attribute__((pure)) List<unsigned int> LoopifyListGeneration::replicate_list(
         const unsigned int &x = d_a0.second;
         List<unsigned int> rep = replicate(n, x);
         _stack.emplace_back(_Call1{std::move(rep)});
-        _stack.emplace_back(_Enter{*(d_a1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Call1>(_frame));

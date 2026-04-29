@@ -6,7 +6,7 @@
 __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
     const unsigned int &fuel, const List<LoopifyStructures::nested> &l) {
   struct _Enter {
-    const List<LoopifyStructures::nested> l;
+    const List<LoopifyStructures::nested> *l;
     const unsigned int fuel;
   };
 
@@ -15,7 +15,7 @@ __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
   };
 
   struct _Call2 {
-    List<LoopifyStructures::nested> _s0;
+    const List<LoopifyStructures::nested> *_s0;
     unsigned int _s1;
   };
 
@@ -27,13 +27,13 @@ __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{&l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyStructures::nested> &l = _f.l;
+      const List<LoopifyStructures::nested> &l = *(_f.l);
       const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
@@ -50,12 +50,12 @@ __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
             const auto &[d_a00] =
                 std::get<typename LoopifyStructures::nested::Elem>(d_a0.v());
             _stack.emplace_back(_Call1{d_a00});
-            _stack.emplace_back(_Enter{*(d_a1), f});
+            _stack.emplace_back(_Enter{d_a1.get(), f});
           } else {
             const auto &[d_a00] =
                 std::get<typename LoopifyStructures::nested::NList>(d_a0.v());
-            _stack.emplace_back(_Call2{*(d_a00), f});
-            _stack.emplace_back(_Enter{*(d_a1), f});
+            _stack.emplace_back(_Call2{d_a00.get(), f});
+            _stack.emplace_back(_Enter{d_a1.get(), f});
           }
         }
       }
@@ -115,7 +115,7 @@ __attribute__((pure)) List<unsigned int>
 LoopifyStructures::flatten_nested_list_fuel(
     const unsigned int &fuel, const List<LoopifyStructures::nested> &l) {
   struct _Enter {
-    const List<LoopifyStructures::nested> l;
+    const List<LoopifyStructures::nested> *l;
     const unsigned int fuel;
   };
 
@@ -124,7 +124,7 @@ LoopifyStructures::flatten_nested_list_fuel(
   };
 
   struct _Call2 {
-    List<LoopifyStructures::nested> _s0;
+    const List<LoopifyStructures::nested> *_s0;
     unsigned int _s1;
   };
 
@@ -136,13 +136,13 @@ LoopifyStructures::flatten_nested_list_fuel(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{&l, fuel});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyStructures::nested> &l = _f.l;
+      const List<LoopifyStructures::nested> &l = *(_f.l);
       const unsigned int &fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<unsigned int>::nil();
@@ -159,12 +159,12 @@ LoopifyStructures::flatten_nested_list_fuel(
             const auto &[d_a00] =
                 std::get<typename LoopifyStructures::nested::Elem>(d_a0.v());
             _stack.emplace_back(_Call1{d_a00});
-            _stack.emplace_back(_Enter{*(d_a1), f});
+            _stack.emplace_back(_Enter{d_a1.get(), f});
           } else {
             const auto &[d_a00] =
                 std::get<typename LoopifyStructures::nested::NList>(d_a0.v());
-            _stack.emplace_back(_Call2{*(d_a00), f});
-            _stack.emplace_back(_Enter{*(d_a1), f});
+            _stack.emplace_back(_Call2{d_a00.get(), f});
+            _stack.emplace_back(_Enter{d_a1.get(), f});
           }
         }
       }
