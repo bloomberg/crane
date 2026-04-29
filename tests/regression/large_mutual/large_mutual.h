@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
@@ -133,6 +134,38 @@ struct LargeMutual {
     __attribute__((pure)) static stmt sskip() { return stmt(SSkip{}); }
 
     // MANIPULATORS
+    ~stmt() {
+      std::vector<std::unique_ptr<stmt>> _stack;
+      auto _drain = [&](stmt &_node) {
+        if (std::holds_alternative<SSeq>(_node.d_v_)) {
+          auto &_alt = std::get<SSeq>(_node.d_v_);
+          if (_alt.d_a0)
+            _stack.push_back(std::move(_alt.d_a0));
+          if (_alt.d_a1)
+            _stack.push_back(std::move(_alt.d_a1));
+        }
+        if (std::holds_alternative<SIf>(_node.d_v_)) {
+          auto &_alt = std::get<SIf>(_node.d_v_);
+          if (_alt.d_a1)
+            _stack.push_back(std::move(_alt.d_a1));
+          if (_alt.d_a2)
+            _stack.push_back(std::move(_alt.d_a2));
+        }
+        if (std::holds_alternative<SWhile>(_node.d_v_)) {
+          auto &_alt = std::get<SWhile>(_node.d_v_);
+          if (_alt.d_a1)
+            _stack.push_back(std::move(_alt.d_a1));
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node)
+          _drain(*_node);
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
@@ -257,6 +290,40 @@ struct LargeMutual {
     }
 
     // MANIPULATORS
+    ~expr() {
+      std::vector<std::unique_ptr<expr>> _stack;
+      auto _drain = [&](expr &_node) {
+        if (std::holds_alternative<EAdd>(_node.d_v_)) {
+          auto &_alt = std::get<EAdd>(_node.d_v_);
+          if (_alt.d_a0)
+            _stack.push_back(std::move(_alt.d_a0));
+          if (_alt.d_a1)
+            _stack.push_back(std::move(_alt.d_a1));
+        }
+        if (std::holds_alternative<EMul>(_node.d_v_)) {
+          auto &_alt = std::get<EMul>(_node.d_v_);
+          if (_alt.d_a0)
+            _stack.push_back(std::move(_alt.d_a0));
+          if (_alt.d_a1)
+            _stack.push_back(std::move(_alt.d_a1));
+        }
+        if (std::holds_alternative<ECond>(_node.d_v_)) {
+          auto &_alt = std::get<ECond>(_node.d_v_);
+          if (_alt.d_a1)
+            _stack.push_back(std::move(_alt.d_a1));
+          if (_alt.d_a2)
+            _stack.push_back(std::move(_alt.d_a2));
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node)
+          _drain(*_node);
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
@@ -402,6 +469,38 @@ struct LargeMutual {
     }
 
     // MANIPULATORS
+    ~bexpr() {
+      std::vector<std::unique_ptr<bexpr>> _stack;
+      auto _drain = [&](bexpr &_node) {
+        if (std::holds_alternative<BAnd>(_node.d_v_)) {
+          auto &_alt = std::get<BAnd>(_node.d_v_);
+          if (_alt.d_a0)
+            _stack.push_back(std::move(_alt.d_a0));
+          if (_alt.d_a1)
+            _stack.push_back(std::move(_alt.d_a1));
+        }
+        if (std::holds_alternative<BOr>(_node.d_v_)) {
+          auto &_alt = std::get<BOr>(_node.d_v_);
+          if (_alt.d_a0)
+            _stack.push_back(std::move(_alt.d_a0));
+          if (_alt.d_a1)
+            _stack.push_back(std::move(_alt.d_a1));
+        }
+        if (std::holds_alternative<BNot>(_node.d_v_)) {
+          auto &_alt = std::get<BNot>(_node.d_v_);
+          if (_alt.d_a0)
+            _stack.push_back(std::move(_alt.d_a0));
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node)
+          _drain(*_node);
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS

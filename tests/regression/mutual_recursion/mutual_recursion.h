@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
@@ -106,6 +107,31 @@ struct MutualRecursion {
     }
 
     // MANIPULATORS
+    ~expr() {
+      std::vector<std::unique_ptr<expr>> _stack;
+      auto _drain = [&](expr &_node) {
+        if (std::holds_alternative<BinOp>(_node.d_v_)) {
+          auto &_alt = std::get<BinOp>(_node.d_v_);
+          if (_alt.d_a1)
+            _stack.push_back(std::move(_alt.d_a1));
+          if (_alt.d_a2)
+            _stack.push_back(std::move(_alt.d_a2));
+        }
+        if (std::holds_alternative<UnOp>(_node.d_v_)) {
+          auto &_alt = std::get<UnOp>(_node.d_v_);
+          if (_alt.d_a1)
+            _stack.push_back(std::move(_alt.d_a1));
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node)
+          _drain(*_node);
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS

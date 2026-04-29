@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
@@ -79,6 +80,24 @@ public:
   }
 
   // MANIPULATORS
+  ~List() {
+    std::vector<std::unique_ptr<List>> _stack;
+    auto _drain = [&](List &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1)
+          _stack.push_back(std::move(_alt.d_a1));
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node)
+        _drain(*_node);
+    }
+  }
+
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
@@ -257,6 +276,69 @@ public:
   }
 
   // MANIPULATORS
+  ~Uint() {
+    std::vector<std::unique_ptr<Uint>> _stack;
+    auto _drain = [&](Uint &_node) {
+      if (std::holds_alternative<D0>(_node.d_v_)) {
+        auto &_alt = std::get<D0>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D1>(_node.d_v_)) {
+        auto &_alt = std::get<D1>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D2>(_node.d_v_)) {
+        auto &_alt = std::get<D2>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D3>(_node.d_v_)) {
+        auto &_alt = std::get<D3>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D4>(_node.d_v_)) {
+        auto &_alt = std::get<D4>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D5>(_node.d_v_)) {
+        auto &_alt = std::get<D5>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D6>(_node.d_v_)) {
+        auto &_alt = std::get<D6>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D7>(_node.d_v_)) {
+        auto &_alt = std::get<D7>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D8>(_node.d_v_)) {
+        auto &_alt = std::get<D8>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D9>(_node.d_v_)) {
+        auto &_alt = std::get<D9>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node)
+        _drain(*_node);
+    }
+  }
+
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
@@ -524,6 +606,99 @@ public:
   }
 
   // MANIPULATORS
+  ~Uint0() {
+    std::vector<std::unique_ptr<Uint0>> _stack;
+    auto _drain = [&](Uint0 &_node) {
+      if (std::holds_alternative<D10>(_node.d_v_)) {
+        auto &_alt = std::get<D10>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D11>(_node.d_v_)) {
+        auto &_alt = std::get<D11>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D12>(_node.d_v_)) {
+        auto &_alt = std::get<D12>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D13>(_node.d_v_)) {
+        auto &_alt = std::get<D13>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D14>(_node.d_v_)) {
+        auto &_alt = std::get<D14>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D15>(_node.d_v_)) {
+        auto &_alt = std::get<D15>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D16>(_node.d_v_)) {
+        auto &_alt = std::get<D16>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D17>(_node.d_v_)) {
+        auto &_alt = std::get<D17>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D18>(_node.d_v_)) {
+        auto &_alt = std::get<D18>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<D19>(_node.d_v_)) {
+        auto &_alt = std::get<D19>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<Da>(_node.d_v_)) {
+        auto &_alt = std::get<Da>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<Db>(_node.d_v_)) {
+        auto &_alt = std::get<Db>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<Dc>(_node.d_v_)) {
+        auto &_alt = std::get<Dc>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<Dd>(_node.d_v_)) {
+        auto &_alt = std::get<Dd>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<De>(_node.d_v_)) {
+        auto &_alt = std::get<De>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+      if (std::holds_alternative<Df>(_node.d_v_)) {
+        auto &_alt = std::get<Df>(_node.d_v_);
+        if (_alt.d_a0)
+          _stack.push_back(std::move(_alt.d_a0));
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node)
+        _drain(*_node);
+    }
+  }
+
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS

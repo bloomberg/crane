@@ -79,6 +79,24 @@ public:
   }
 
   // MANIPULATORS
+  ~List() {
+    std::vector<std::unique_ptr<List>> _stack;
+    auto _drain = [&](List &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1)
+          _stack.push_back(std::move(_alt.d_a1));
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node)
+        _drain(*_node);
+    }
+  }
+
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
@@ -331,6 +349,30 @@ struct LoopifyStructures {
     }
 
     // MANIPULATORS
+    ~quadtree() {
+      std::vector<std::unique_ptr<quadtree>> _stack;
+      auto _drain = [&](quadtree &_node) {
+        if (std::holds_alternative<Quad>(_node.d_v_)) {
+          auto &_alt = std::get<Quad>(_node.d_v_);
+          if (_alt.d_a0)
+            _stack.push_back(std::move(_alt.d_a0));
+          if (_alt.d_a1)
+            _stack.push_back(std::move(_alt.d_a1));
+          if (_alt.d_a2)
+            _stack.push_back(std::move(_alt.d_a2));
+          if (_alt.d_a3)
+            _stack.push_back(std::move(_alt.d_a3));
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node)
+          _drain(*_node);
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
@@ -843,6 +885,26 @@ struct LoopifyStructures {
     }
 
     // MANIPULATORS
+    ~ltree() {
+      std::vector<std::unique_ptr<ltree>> _stack;
+      auto _drain = [&](ltree &_node) {
+        if (std::holds_alternative<LNode>(_node.d_v_)) {
+          auto &_alt = std::get<LNode>(_node.d_v_);
+          if (_alt.d_a1)
+            _stack.push_back(std::move(_alt.d_a1));
+          if (_alt.d_a2)
+            _stack.push_back(std::move(_alt.d_a2));
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node)
+          _drain(*_node);
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
@@ -881,8 +943,8 @@ struct LoopifyStructures {
           const ltree *_self = _f._self;
           ltree t2 = _f.t2;
           auto &&_sv = *(_self);
-          if (std::holds_alternative<typename ltree::LLeaf>(_sv.v_mut())) {
-            auto &[d_a0] = std::get<typename ltree::LLeaf>(_sv.v_mut());
+          if (std::holds_alternative<typename ltree::LLeaf>(_sv.v())) {
+            const auto &[d_a0] = std::get<typename ltree::LLeaf>(_sv.v());
             if (std::holds_alternative<typename ltree::LLeaf>(t2.v_mut())) {
               auto &[d_a00] = std::get<typename ltree::LLeaf>(t2.v_mut());
               _result = ltree::lleaf((d_a0 <= d_a00 ? d_a00 : d_a0));
@@ -890,8 +952,8 @@ struct LoopifyStructures {
               _result = t2;
             }
           } else {
-            auto &[d_a0, d_a1, d_a2] =
-                std::get<typename ltree::LNode>(_sv.v_mut());
+            const auto &[d_a0, d_a1, d_a2] =
+                std::get<typename ltree::LNode>(_sv.v());
             if (std::holds_alternative<typename ltree::LLeaf>(t2.v_mut())) {
               _result = *(_self);
             } else {

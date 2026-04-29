@@ -1807,7 +1807,17 @@ and pp_cpp_stmt env args = function
         Some obj
       | _ -> None
     in
-    let is_owned = first_br.smb_is_owned in
+    let is_receiver_obj = function
+      | CPPthis | CPPderef CPPthis -> true
+      | _ -> false
+    in
+    let is_owned =
+      first_br.smb_is_owned
+      &&
+      match scrut_obj_opt with
+      | Some obj -> not (is_receiver_obj obj)
+      | None -> true
+    in
     let v_access name =
       if is_value_type then
         name ^ (if is_owned then ".v_mut()" else ".v()")
@@ -2366,6 +2376,10 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     in
     h (sname ++ str "() = delete;")
   | Fraw s ->
+    if Common.contains_substring s "std::vector" then
+      require_header "vector";
+    if Common.contains_substring s "std::unique_ptr" then
+      require_header "memory";
     (* Replace %SELF% placeholder with actual struct name if available *)
     let s =
       match struct_name with

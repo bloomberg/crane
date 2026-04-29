@@ -5606,11 +5606,6 @@ and gen_cpp_case (typ : ml_type) t env pv =
       | MLmagic (MLrel i) -> Some i
       | _ -> None
     in
-    let scrut_is_owned =
-      match scrut_db with
-      | Some i -> Escape.IntSet.mem i tctx.move_owned_vars
-      | None -> false
-    in
     let is_coinductive = is_coinductive_type typ in
     (* Allocate a unique [_m] name for this match level.  All branches of
        the same match reuse this name (each [if (auto* _m = ...)] creates
@@ -5629,6 +5624,19 @@ and gen_cpp_case (typ : ml_type) t env pv =
     tctx.move_dead_after <- Escape.IntSet.empty;
     let scrut_expr = gen_expr env t in
     tctx.move_dead_after <- saved_dead_visit;
+    (* Methodification rewrites the receiver parameter to [this] (or [*this]
+       when the value is needed).  Ownership analysis may still mark the
+       original parameter as owned, but a const method cannot decompose the
+       receiver through [v_mut()].  Treat receiver matches as borrowed so
+       generated access goes through [v()]. *)
+    let scrut_is_owned =
+      match scrut_expr with
+      | CPPthis | CPPderef CPPthis -> false
+      | _ -> (
+        match scrut_db with
+        | Some i -> Escape.IntSet.mem i tctx.move_owned_vars
+        | None -> false )
+    in
     (* Build variant accessor.  All inductives (including coinductives)
        are value types and use [scrut.v()] (dot access).  Exception:
        [this] is always a pointer, so method bodies use [this->v()]. *)
@@ -11758,6 +11766,90 @@ let gen_ind_header_v2
           []
       in
 
+      (* Value-type inductives store direct recursive fields as
+         [std::unique_ptr].  The default destructor recursively destroys a deep
+         list/tree through the C++ call stack, which overflows on the deep
+         regression tests.  For direct self-recursive fields, drain those
+         pointers iteratively before the variant is destroyed. *)
+      let iterative_destructor =
+        if is_coinductive then []
+        else
+          let rec is_direct_self_ref = function
+            | Miniml.Tglob (r, args, _) ->
+              Environ.QGlobRef.equal Environ.empty_env r name
+              && List.length args = List.length vars
+              && List.for_all
+                   (fun (j, arg) ->
+                     match arg with
+                     | Miniml.Tvar k | Miniml.Tvar' k -> k = j + 1
+                     | Miniml.Tmeta {contents = Some (Miniml.Tvar k)}
+                     | Miniml.Tmeta {contents = Some (Miniml.Tvar' k)} ->
+                       k = j + 1
+                     | _ -> false)
+                   (List.mapi (fun j a -> (j, a)) args)
+            | Miniml.Tmeta {contents = Some t} -> is_direct_self_ref t
+            | _ -> false
+          in
+          let ctor_moves =
+            Array.to_list
+              (Array.mapi
+                 (fun i tys_list ->
+                   let recursive_fields =
+                     List.filter_map
+                       (fun (j, ty) ->
+                         if is_direct_self_ref ty then
+                           let cname =
+                             ctor_struct_name_of_ref ~fallback_idx:i cnames.(i)
+                           in
+                           Some (Id.to_string (lookup_ctor_field_name cname j))
+                         else None)
+                       (List.mapi (fun j ty -> (j, ty)) tys_list)
+                   in
+                   match recursive_fields with
+                   | [] -> None
+                   | fields ->
+                     let ctor_id =
+                       Id.to_string (ctor_struct_id_of_ref ~fallback_idx:i cnames.(i))
+                     in
+                     let moves =
+                       List.map
+                         (fun field ->
+                           "        if (_alt." ^ field
+                           ^ ") _stack.push_back(std::move(_alt." ^ field
+                           ^ "));")
+                         fields
+                     in
+                     Some
+                       (String.concat "\n"
+                          (("      if (std::holds_alternative<" ^ ctor_id
+                            ^ ">(_node.d_v_)) {")
+                           :: ("        auto &_alt = std::get<" ^ ctor_id
+                               ^ ">(_node.d_v_);")
+                           :: moves @ ["      }"])))
+                 tys)
+              |> List.filter_map Fun.id
+          in
+          match ctor_moves with
+          | [] -> []
+          | moves ->
+            let body =
+              String.concat "\n"
+                (["~%SELF%() {";
+                  "  std::vector<std::unique_ptr<%SELF%>> _stack;";
+                  "  auto _drain = [&](%SELF% &_node) {"]
+                 @ moves
+                 @ ["  };";
+                    "  _drain(*this);";
+                    "  while (!_stack.empty()) {";
+                    "    auto _node = std::move(_stack.back());";
+                    "    _stack.pop_back();";
+                    "    if (_node) _drain(*_node);";
+                    "  }";
+                    "}"])
+            in
+            [(Fraw body, VPublic, SManipulators)]
+      in
+
       (* For coinductive types, add public constructor accepting
          std::function<variant_t()> (public so make_shared can access it) *)
       let lazy_ctor =
@@ -12572,6 +12664,7 @@ let gen_ind_header_v2
         @ lazy_ctor
         @ factory_methods
         @ lazy_factory
+        @ iterative_destructor
         @ v_mut_accessor
         @ method_manipulators
         @ [v_accessor]

@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
@@ -81,6 +82,24 @@ struct RecRecord {
     }
 
     // MANIPULATORS
+    ~rlist() {
+      std::vector<std::unique_ptr<rlist>> _stack;
+      auto _drain = [&](rlist &_node) {
+        if (std::holds_alternative<Rcons>(_node.d_v_)) {
+          auto &_alt = std::get<Rcons>(_node.d_v_);
+          if (_alt.d_a1)
+            _stack.push_back(std::move(_alt.d_a1));
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node)
+          _drain(*_node);
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS

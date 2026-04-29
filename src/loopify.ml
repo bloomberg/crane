@@ -722,6 +722,27 @@ let map_visit_lambdas ~ret_ty ~rewrite lambdas =
 
 (** {2 This→_self substitution for method loopification} *)
 
+(** True when an expression refers to the method receiver. *)
+let rec expr_contains_this = function
+  | CPPthis -> true
+  | e ->
+    let found = ref false in
+    iter_expr_children
+      ~on_expr:(fun e' -> if expr_contains_this e' then found := true)
+      ~on_stmts:(fun stmts ->
+        if List.exists stmt_contains_this stmts then found := true)
+      e;
+    !found
+
+and stmt_contains_this s =
+  let found = ref false in
+  iter_stmt_children
+    ~on_expr:(fun e -> if expr_contains_this e then found := true)
+    ~on_stmts:(fun stmts ->
+      if List.exists stmt_contains_this stmts then found := true)
+    s;
+  !found
+
 (** Replace [CPPthis] with [CPPvar self_id] throughout an expression. *)
 let rec this_to_self_expr (self_id : Id.t) (e : cpp_expr) : cpp_expr =
   match e with
@@ -731,7 +752,30 @@ let rec this_to_self_expr (self_id : Id.t) (e : cpp_expr) : cpp_expr =
 
 (** Replace [CPPthis] with [CPPvar self_id] throughout a statement. *)
 and this_to_self_stmt (self_id : Id.t) (s : cpp_stmt) : cpp_stmt =
-  map_stmt (this_to_self_expr self_id) (this_to_self_stmt self_id) Fun.id s
+  match s with
+  | Smatch (branches, default) ->
+    Smatch
+      ( List.map
+          (fun br ->
+            let receiver_match = expr_contains_this br.smb_scrutinee in
+            { br with
+              smb_scrutinee = this_to_self_expr self_id br.smb_scrutinee;
+              smb_extra_conds =
+                List.map (this_to_self_expr self_id) br.smb_extra_conds;
+              smb_reuse =
+                Option.map
+                  (fun (cond, rf, stmts) ->
+                    ( this_to_self_expr self_id cond,
+                      rf,
+                      List.map (this_to_self_stmt self_id) stmts ))
+                  br.smb_reuse;
+              smb_is_owned =
+                if receiver_match then false else br.smb_is_owned;
+              smb_body = List.map (this_to_self_stmt self_id) br.smb_body })
+          branches,
+        Option.map (List.map (this_to_self_stmt self_id)) default )
+  | _ ->
+    map_stmt (this_to_self_expr self_id) (this_to_self_stmt self_id) Fun.id s
 
 (** {2 Variable substitution} *)
 
@@ -816,6 +860,87 @@ let is_moveable_param_type = function
   | Tmod (TMconst, _) -> false
   | _ -> true
 
+let borrowed_value_param_pointee = function
+  | Tref (Tmod (TMconst, t)) when is_value_type_ret t -> Some t
+  | Tmod (TMconst, Tref t) when is_value_type_ret t -> Some t
+  | _ -> None
+
+let tail_shadow_type ~pointer_safe ty =
+  match (pointer_safe, borrowed_value_param_pointee ty) with
+  | true, Some t -> Tptr (Tmod (TMconst, t))
+  | _ -> ty
+
+let tail_shadow_init orig_id shadow_ty ty =
+  match shadow_ty, borrowed_value_param_pointee ty with
+  | Tptr _, Some _ -> CPPunop ("&", CPPvar orig_id)
+  | _ ->
+    if is_moveable_param_type ty then CPPmove (CPPvar orig_id)
+    else CPPvar orig_id
+
+let tail_shadow_arg shadow_ty arg =
+  match shadow_ty, arg with
+  | Tptr _, CPPderef inner -> CPPfun_call (CPPmember (inner, Id.of_string "get"), [])
+  | Tptr _, CPPvar _ -> CPPunop ("&", arg)
+  | _ -> arg
+
+let tail_pointer_safe_flags check params body =
+  ignore check;
+  ignore body;
+  List.map (fun _ -> false) params
+
+let rewrite_borrowed_shadow_uses shadow_params stmts =
+  let ptr_shadows =
+    List.filter_map
+      (fun (id, ty) -> match ty with Tptr _ -> Some id | _ -> None)
+      shadow_params
+  in
+  let is_ptr_shadow id = List.exists (Id.equal id) ptr_shadows in
+  let rec expr_mentions_ptr_shadow = function
+    | CPPvar id when is_ptr_shadow id -> true
+    | e ->
+      let found = ref false in
+      iter_expr_children
+        ~on_expr:(fun e' -> if expr_mentions_ptr_shadow e' then found := true)
+        ~on_stmts:(fun stmts ->
+          if List.exists stmt_mentions_ptr_shadow stmts then found := true)
+        e;
+      !found
+  and stmt_mentions_ptr_shadow s =
+    let found = ref false in
+    iter_stmt_children
+      ~on_expr:(fun e -> if expr_mentions_ptr_shadow e then found := true)
+      ~on_stmts:(fun stmts ->
+        if List.exists stmt_mentions_ptr_shadow stmts then found := true)
+      s;
+    !found
+  in
+  let rec expr = function
+    | CPPfun_call (CPPmember (CPPvar id, meth), args) when is_ptr_shadow id ->
+      CPPmethod_call (CPPvar id, meth, List.map expr args)
+    | e -> map_expr expr stmt Fun.id e
+  and stmt = function
+    | Smatch (branches, default) ->
+      Smatch
+        ( List.map
+            (fun br ->
+              let ptr_scrutinee = expr_mentions_ptr_shadow br.smb_scrutinee in
+              { br with
+                smb_scrutinee = expr br.smb_scrutinee;
+                smb_extra_conds = List.map expr br.smb_extra_conds;
+                smb_reuse =
+                  Option.map
+                    (fun (cond, rf, stmts) ->
+                      (expr cond, rf, List.map stmt stmts))
+                    br.smb_reuse;
+                smb_is_value_type =
+                  if ptr_scrutinee then false else br.smb_is_value_type;
+                smb_body = List.map stmt br.smb_body })
+            branches,
+          Option.map (List.map stmt) default )
+    | s -> map_stmt expr stmt Fun.id s
+  in
+  List.map stmt stmts
+
 (** Assign [expr] to the [_result] accumulator variable.
     Generates the statement list [[\[_result = expr;\]]]. *)
 let assign_result expr =
@@ -836,7 +961,12 @@ let assign_result_and_stop expr =
     Self-assignments (_loop_x = _loop_x) are skipped entirely. When there is
     only one non-trivial assignment the temps are unnecessary but harmless. *)
 let make_shadow_updates shadow_params args =
-  let pairs = List.combine shadow_params args in
+  let pairs =
+    List.map
+      (fun ((shadow_id, ty), arg) ->
+        ((shadow_id, ty), tail_shadow_arg ty arg))
+      (List.combine shadow_params args)
+  in
   (* Identify which params actually change *)
   let non_trivial =
     List.filter
@@ -1195,9 +1325,14 @@ and strip_loopify_stmt = function
     @return Transformed body with while loop structure *)
 let transform_tail ?(param_inits = []) check _pp_type params ret_ty body =
   let varying = find_varying_params check params body in
+  let pointer_safe = tail_pointer_safe_flags check params body in
   let varying_params = filter_by_mask varying params in
+  let varying_pointer_safe = filter_by_mask varying pointer_safe in
   let shadow_params =
-    List.map (fun (id, ty) -> (shadow_name id, ty)) varying_params
+    List.map2
+      (fun (id, ty) safe -> (shadow_name id, tail_shadow_type ~pointer_safe:safe ty))
+      varying_params
+      varying_pointer_safe
   in
   let subs =
     List.map2 (fun (id, _) (sid, _) -> (id, sid)) varying_params shadow_params
@@ -1206,20 +1341,21 @@ let transform_tail ?(param_inits = []) check _pp_type params ret_ty body =
   (* Shadow variable declarations (only for varying params) *)
   let shadow_decls =
     List.map2
-      (fun (orig_id, ty) (shadow_id, _) ->
+      (fun (orig_id, ty) (shadow_id, shadow_ty) ->
         let init_expr =
           match List.assoc_opt orig_id param_inits with
           | Some custom -> custom
-          | None ->
-            if is_moveable_param_type ty then CPPmove (CPPvar orig_id)
-            else CPPvar orig_id
+          | None -> tail_shadow_init orig_id shadow_ty ty
         in
-        Sasgn (shadow_id, Some (strip_ref_and_const_type ty), init_expr) )
+        Sasgn (shadow_id, Some (strip_ref_and_const_type shadow_ty), init_expr) )
       varying_params
       shadow_params
   in
   (* Substitute param references in body *)
-  let body' = List.map (subst_stmt subs) body in
+  let body' =
+    List.map (subst_stmt subs) body
+    |> rewrite_borrowed_shadow_uses shadow_params
+  in
   (* Rewrite recursive calls (list-level rewrite handles void tail-call
      pattern [Sexpr call; Sreturn None] → [Sreturn (Some call)]) *)
   let body'' =
