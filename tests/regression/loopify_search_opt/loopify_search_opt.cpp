@@ -4,15 +4,16 @@ __attribute__((pure)) List<unsigned int>
 LoopifySearchOpt::lis(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       *(_write) =
           std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       auto &&_sv0 = *(d_a1);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
         *(_write) = std::make_unique<List<unsigned int>>(
@@ -28,10 +29,10 @@ LoopifySearchOpt::lis(const List<unsigned int> &l) {
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
           continue;
         } else {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
           continue;
         }
       }
@@ -75,7 +76,7 @@ __attribute__((pure)) List<unsigned int> LoopifySearchOpt::longest_run_fuel(
           List<unsigned int> _next_current =
               List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
           unsigned int _next_fuel = fuel_;
-          _loop_l = std::move(_next_l);
+          _loop_l = _next_l;
           _loop_best = std::move(_next_best);
           _loop_current = std::move(_next_current);
           _loop_fuel = std::move(_next_fuel);
@@ -88,7 +89,7 @@ __attribute__((pure)) List<unsigned int> LoopifySearchOpt::longest_run_fuel(
             List<unsigned int> _next_current =
                 List<unsigned int>::cons(d_a0, _loop_current);
             unsigned int _next_fuel = fuel_;
-            _loop_l = std::move(_next_l);
+            _loop_l = _next_l;
             _loop_best = std::move(_next_best);
             _loop_current = std::move(_next_current);
             _loop_fuel = std::move(_next_fuel);
@@ -106,7 +107,7 @@ __attribute__((pure)) List<unsigned int> LoopifySearchOpt::longest_run_fuel(
             List<unsigned int> _next_current =
                 List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
             unsigned int _next_fuel = fuel_;
-            _loop_l = std::move(_next_l);
+            _loop_l = _next_l;
             _loop_best = std::move(_next_best);
             _loop_current = std::move(_next_current);
             _loop_fuel = std::move(_next_fuel);

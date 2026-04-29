@@ -32,7 +32,7 @@ TailrecReorderProbe::dual_accum(
       const TailrecReorderProbe::mylist<unsigned int> *_next_l = d_a1.get();
       _loop_acc2 = std::move(_next_acc2);
       _loop_acc1 = std::move(_next_acc1);
-      _loop_l = std::move(_next_l);
+      _loop_l = _next_l;
     }
   }
   return _result;
@@ -75,8 +75,8 @@ TailrecReorderProbe::weave(const TailrecReorderProbe::mylist<unsigned int> &l1,
         const TailrecReorderProbe::mylist<unsigned int> *_next_l2 = d_a10.get();
         const TailrecReorderProbe::mylist<unsigned int> *_next_l1 = d_a1.get();
         _loop_acc = std::move(_next_acc);
-        _loop_l2 = std::move(_next_l2);
-        _loop_l1 = std::move(_next_l1);
+        _loop_l2 = _next_l2;
+        _loop_l1 = _next_l1;
       }
     }
   }

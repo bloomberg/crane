@@ -50,18 +50,18 @@ __attribute__((pure)) List<unsigned int>
 LoopifyListOfLists::map_hd(const List<List<unsigned int>> &ll) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<List<unsigned int>> _loop_ll = ll;
+  const List<List<unsigned int>> *_loop_ll = &ll;
   while (true) {
     if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-            _loop_ll.v())) {
+            _loop_ll->v())) {
       *(_write) =
           std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll.v());
+          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a0.v())) {
-        _loop_ll = *(d_a1);
+        _loop_ll = d_a1.get();
         continue;
       } else {
         const auto &[d_a00, d_a10] =
@@ -72,7 +72,7 @@ LoopifyListOfLists::map_hd(const List<List<unsigned int>> &ll) {
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_ll = *(d_a1);
+        _loop_ll = d_a1.get();
         continue;
       }
     }
@@ -84,18 +84,18 @@ __attribute__((pure)) List<List<unsigned int>>
 LoopifyListOfLists::map_tl(const List<List<unsigned int>> &ll) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
-  List<List<unsigned int>> _loop_ll = ll;
+  const List<List<unsigned int>> *_loop_ll = &ll;
   while (true) {
     if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-            _loop_ll.v())) {
+            _loop_ll->v())) {
       *(_write) = std::make_unique<List<List<unsigned int>>>(
           List<List<unsigned int>>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll.v());
+          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a0.v())) {
-        _loop_ll = *(d_a1);
+        _loop_ll = d_a1.get();
         continue;
       } else {
         const auto &[d_a00, d_a10] =
@@ -106,7 +106,7 @@ LoopifyListOfLists::map_tl(const List<List<unsigned int>> &ll) {
         _write = &std::get<typename List<List<unsigned int>>::Cons>(
                       (*_write)->v_mut())
                       .d_a1;
-        _loop_ll = *(d_a1);
+        _loop_ll = d_a1.get();
         continue;
       }
     }
@@ -352,18 +352,18 @@ __attribute__((pure)) List<unsigned int>
 LoopifyListOfLists::firsts(const List<List<unsigned int>> &ll) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<List<unsigned int>> _loop_ll = ll;
+  const List<List<unsigned int>> *_loop_ll = &ll;
   while (true) {
     if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-            _loop_ll.v())) {
+            _loop_ll->v())) {
       *(_write) =
           std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll.v());
+          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a0.v())) {
-        _loop_ll = *(d_a1);
+        _loop_ll = d_a1.get();
         continue;
       } else {
         const auto &[d_a00, d_a10] =
@@ -374,7 +374,7 @@ LoopifyListOfLists::firsts(const List<List<unsigned int>> &ll) {
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_ll = *(d_a1);
+        _loop_ll = d_a1.get();
         continue;
       }
     }
@@ -412,27 +412,27 @@ LoopifyListOfLists::zip_lists(const List<List<unsigned int>> &ll1,
       _head{};
   std::unique_ptr<List<std::pair<List<unsigned int>, List<unsigned int>>>>
       *_write = &_head;
-  List<List<unsigned int>> _loop_ll2 = ll2;
-  List<List<unsigned int>> _loop_ll1 = ll1;
+  const List<List<unsigned int>> *_loop_ll2 = &ll2;
+  const List<List<unsigned int>> *_loop_ll1 = &ll1;
   while (true) {
     if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-            _loop_ll1.v())) {
+            _loop_ll1->v())) {
       *(_write) = std::make_unique<
           List<std::pair<List<unsigned int>, List<unsigned int>>>>(
           List<std::pair<List<unsigned int>, List<unsigned int>>>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll1.v());
+          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll1->v());
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-              _loop_ll2.v())) {
+              _loop_ll2->v())) {
         *(_write) = std::make_unique<
             List<std::pair<List<unsigned int>, List<unsigned int>>>>(
             List<std::pair<List<unsigned int>, List<unsigned int>>>::nil());
         break;
       } else {
         const auto &[d_a00, d_a10] =
-            std::get<typename List<List<unsigned int>>::Cons>(_loop_ll2.v());
+            std::get<typename List<List<unsigned int>>::Cons>(_loop_ll2->v());
         auto _cell = std::make_unique<
             List<std::pair<List<unsigned int>, List<unsigned int>>>>(
             typename List<std::pair<List<unsigned int>, List<unsigned int>>>::
@@ -442,10 +442,10 @@ LoopifyListOfLists::zip_lists(const List<List<unsigned int>> &ll1,
             std::pair<List<unsigned int>, List<unsigned int>>>::Cons>(
                       (*_write)->v_mut())
                       .d_a1;
-        List<List<unsigned int>> _next_ll2 = *(d_a10);
-        List<List<unsigned int>> _next_ll1 = *(d_a1);
-        _loop_ll2 = std::move(_next_ll2);
-        _loop_ll1 = std::move(_next_ll1);
+        const List<List<unsigned int>> *_next_ll2 = d_a10.get();
+        const List<List<unsigned int>> *_next_ll1 = d_a1.get();
+        _loop_ll2 = _next_ll2;
+        _loop_ll1 = _next_ll1;
         continue;
       }
     }

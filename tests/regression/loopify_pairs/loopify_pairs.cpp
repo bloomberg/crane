@@ -260,16 +260,16 @@ __attribute__((pure)) LoopifyPairs::list<unsigned int> LoopifyPairs::lookup_all(
     const LoopifyPairs::list<std::pair<unsigned int, unsigned int>> &l) {
   std::unique_ptr<LoopifyPairs::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyPairs::list<unsigned int>> *_write = &_head;
-  LoopifyPairs::list<std::pair<unsigned int, unsigned int>> _loop_l = l;
+  const LoopifyPairs::list<std::pair<unsigned int, unsigned int>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyPairs::list<
-            std::pair<unsigned int, unsigned int>>::Nil>(_loop_l.v())) {
+            std::pair<unsigned int, unsigned int>>::Nil>(_loop_l->v())) {
       *(_write) = std::make_unique<LoopifyPairs::list<unsigned int>>(
           list<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename LoopifyPairs::list<
-          std::pair<unsigned int, unsigned int>>::Cons>(_loop_l.v());
+          std::pair<unsigned int, unsigned int>>::Cons>(_loop_l->v());
       const unsigned int &k = d_a0.first;
       const unsigned int &v = d_a0.second;
       if (k == key) {
@@ -279,10 +279,10 @@ __attribute__((pure)) LoopifyPairs::list<unsigned int> LoopifyPairs::lookup_all(
         _write =
             &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       } else {
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       }
     }
@@ -298,17 +298,17 @@ LoopifyPairs::swap_pairs(
       _head{};
   std::unique_ptr<LoopifyPairs::list<std::pair<unsigned int, unsigned int>>>
       *_write = &_head;
-  LoopifyPairs::list<std::pair<unsigned int, unsigned int>> _loop_l = l;
+  const LoopifyPairs::list<std::pair<unsigned int, unsigned int>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyPairs::list<
-            std::pair<unsigned int, unsigned int>>::Nil>(_loop_l.v())) {
+            std::pair<unsigned int, unsigned int>>::Nil>(_loop_l->v())) {
       *(_write) = std::make_unique<
           LoopifyPairs::list<std::pair<unsigned int, unsigned int>>>(
           list<std::pair<unsigned int, unsigned int>>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename LoopifyPairs::list<
-          std::pair<unsigned int, unsigned int>>::Cons>(_loop_l.v());
+          std::pair<unsigned int, unsigned int>>::Cons>(_loop_l->v());
       const unsigned int &a = d_a0.first;
       const unsigned int &b = d_a0.second;
       auto _cell = std::make_unique<
@@ -320,7 +320,7 @@ LoopifyPairs::swap_pairs(
           &std::get<typename list<std::pair<unsigned int, unsigned int>>::Cons>(
                (*_write)->v_mut())
                .d_a1;
-      _loop_l = *(d_a1);
+      _loop_l = d_a1.get();
       continue;
     }
   }

@@ -193,8 +193,8 @@ struct LoopifyTail {
             std::get<typename list<T1>::Cons>(_loop_l->v());
         const list<T1> *_next_l = d_a1.get();
         T1 _next_x = d_a0;
-        _loop_l = std::move(_next_l);
-        _loop_x = std::move(_next_x);
+        _loop_l = _next_l;
+        _loop_x = _next_x;
       }
     }
     return _result;
@@ -215,7 +215,7 @@ struct LoopifyTail {
             std::get<typename list<T1>::Cons>(_loop_l->v());
         const list<T1> *_next_l = d_a1.get();
         unsigned int _next_acc = (_loop_acc + 1);
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
         _loop_acc = std::move(_next_acc);
       }
     }
@@ -250,8 +250,8 @@ struct LoopifyTail {
             std::get<typename list<T1>::Cons>(_loop_l->v());
         const list<T1> *_next_l = d_a1.get();
         T2 _next_acc = f(_loop_acc, d_a0);
-        _loop_l = std::move(_next_l);
-        _loop_acc = std::move(_next_acc);
+        _loop_l = _next_l;
+        _loop_acc = _next_acc;
       }
     }
     return _result;

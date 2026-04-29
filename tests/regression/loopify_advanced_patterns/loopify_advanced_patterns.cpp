@@ -41,26 +41,27 @@ __attribute__((pure)) List<unsigned int>
 LoopifyAdvancedPatterns::as_guard(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       *(_write) =
           std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-      if (3u < len_impl(_loop_l)) {
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+      if (3u < len_impl(*(_loop_l))) {
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       } else {
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       }
     }
@@ -250,19 +251,19 @@ LoopifyAdvancedPatterns::guard_accum(unsigned int acc,
       if (100u < d_a0) {
         const List<unsigned int> *_next_l = d_a1.get();
         unsigned int _next_acc = (_loop_acc * 2u);
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
         _loop_acc = std::move(_next_acc);
       } else {
         if (50u < d_a0) {
           const List<unsigned int> *_next_l = d_a1.get();
           unsigned int _next_acc = (_loop_acc + d_a0);
-          _loop_l = std::move(_next_l);
+          _loop_l = _next_l;
           _loop_acc = std::move(_next_acc);
         } else {
           if (0u < d_a0) {
             const List<unsigned int> *_next_l = d_a1.get();
             unsigned int _next_acc = (_loop_acc + 1u);
-            _loop_l = std::move(_next_l);
+            _loop_l = _next_l;
             _loop_acc = std::move(_next_acc);
           } else {
             _loop_l = d_a1.get();
@@ -279,16 +280,17 @@ LoopifyAdvancedPatterns::cons_computed(const unsigned int &n,
                                        const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_n = n;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       *(_write) =
           std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       unsigned int next_n;
       if (0u < _loop_n) {
         next_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
@@ -300,9 +302,9 @@ LoopifyAdvancedPatterns::cons_computed(const unsigned int &n,
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      List<unsigned int> _next_l = *(d_a1);
+      const List<unsigned int> *_next_l = d_a1.get();
       unsigned int _next_n = next_n;
-      _loop_l = std::move(_next_l);
+      _loop_l = _next_l;
       _loop_n = std::move(_next_n);
       continue;
     }
@@ -432,16 +434,17 @@ LoopifyAdvancedPatterns::replace_at(const unsigned int &idx, unsigned int value,
                                     const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_idx = idx;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       *(_write) =
           std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_idx == 0u) {
         *(_write) = std::make_unique<List<unsigned int>>(
             List<unsigned int>::cons(value, *(d_a1)));
@@ -453,10 +456,10 @@ LoopifyAdvancedPatterns::replace_at(const unsigned int &idx, unsigned int value,
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        List<unsigned int> _next_l = *(d_a1);
+        const List<unsigned int> *_next_l = d_a1.get();
         unsigned int _next_idx =
             (((_loop_idx - 1u) > _loop_idx ? 0 : (_loop_idx - 1u)));
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
         _loop_idx = std::move(_next_idx);
         continue;
       }

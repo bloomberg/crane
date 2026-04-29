@@ -42,16 +42,16 @@ LoopifyListWindows::map_cons_helper(unsigned int x,
                                     const List<List<unsigned int>> &ll) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
-  List<List<unsigned int>> _loop_ll = ll;
+  const List<List<unsigned int>> *_loop_ll = &ll;
   while (true) {
     if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-            _loop_ll.v())) {
+            _loop_ll->v())) {
       *(_write) = std::make_unique<List<List<unsigned int>>>(
           List<List<unsigned int>>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll.v());
+          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll->v());
       auto _cell = std::make_unique<List<List<unsigned int>>>(
           typename List<List<unsigned int>>::Cons(
               List<unsigned int>::cons(x, d_a0), nullptr));
@@ -59,7 +59,7 @@ LoopifyListWindows::map_cons_helper(unsigned int x,
       _write =
           &std::get<typename List<List<unsigned int>>::Cons>((*_write)->v_mut())
                .d_a1;
-      _loop_ll = *(d_a1);
+      _loop_ll = d_a1.get();
       continue;
     }
   }
@@ -144,15 +144,16 @@ __attribute__((pure)) List<unsigned int>
 LoopifyListWindows::differences(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       *(_write) =
           std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       auto &&_sv = *(d_a1);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
         *(_write) =
@@ -175,7 +176,7 @@ LoopifyListWindows::differences(const List<unsigned int> &l) {
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
           continue;
         }
       }
@@ -188,15 +189,16 @@ __attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
 LoopifyListWindows::sliding_pairs(const List<unsigned int> &l) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       *(_write) = std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
           List<std::pair<unsigned int, unsigned int>>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       auto &&_sv = *(d_a1);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
         *(_write) =
@@ -224,7 +226,7 @@ LoopifyListWindows::sliding_pairs(const List<unsigned int> &l) {
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
                    .d_a1;
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
           continue;
         }
       }
@@ -305,7 +307,7 @@ __attribute__((pure)) List<unsigned int>
 LoopifyListWindows::take(const unsigned int &n, const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -315,22 +317,22 @@ LoopifyListWindows::take(const unsigned int &n, const List<unsigned int> &l) {
     } else {
       unsigned int n_ = _loop_n - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l->v())) {
         *(_write) =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        List<unsigned int> _next_l = *(d_a1);
+        const List<unsigned int> *_next_l = d_a1.get();
         unsigned int _next_n = n_;
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
         _loop_n = std::move(_next_n);
         continue;
       }
@@ -345,7 +347,7 @@ LoopifyListWindows::windows_fuel(const unsigned int &fuel,
                                  const List<unsigned int> &l) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
@@ -355,28 +357,28 @@ LoopifyListWindows::windows_fuel(const unsigned int &fuel,
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l->v())) {
         *(_write) = std::make_unique<List<List<unsigned int>>>(
             List<List<unsigned int>>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-        if (len(_loop_l) < n) {
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+        if (len(*(_loop_l)) < n) {
           *(_write) = std::make_unique<List<List<unsigned int>>>(
               List<List<unsigned int>>::nil());
           break;
         } else {
           auto _cell = std::make_unique<List<List<unsigned int>>>(
-              typename List<List<unsigned int>>::Cons(take(n, _loop_l),
+              typename List<List<unsigned int>>::Cons(take(n, *(_loop_l)),
                                                       nullptr));
           *(_write) = std::move(_cell);
           _write = &std::get<typename List<List<unsigned int>>::Cons>(
                         (*_write)->v_mut())
                         .d_a1;
-          List<unsigned int> _next_l = *(d_a1);
+          const List<unsigned int> *_next_l = d_a1.get();
           unsigned int _next_fuel = fuel_;
-          _loop_l = std::move(_next_l);
+          _loop_l = _next_l;
           _loop_fuel = std::move(_next_fuel);
           continue;
         }

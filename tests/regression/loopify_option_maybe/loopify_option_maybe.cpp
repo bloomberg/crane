@@ -80,18 +80,18 @@ __attribute__((pure)) List<unsigned int> LoopifyOptionMaybe::lookup_all(
     const List<std::pair<unsigned int, unsigned int>> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<std::pair<unsigned int, unsigned int>> _loop_l = l;
+  const List<std::pair<unsigned int, unsigned int>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename List<std::pair<unsigned int, unsigned int>>::Nil>(
-            _loop_l.v())) {
+            _loop_l->v())) {
       *(_write) =
           std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-              _loop_l.v());
+              _loop_l->v());
       const unsigned int &k = d_a0.first;
       const unsigned int &v = d_a0.second;
       if (key == k) {
@@ -101,10 +101,10 @@ __attribute__((pure)) List<unsigned int> LoopifyOptionMaybe::lookup_all(
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       } else {
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       }
     }
@@ -138,17 +138,17 @@ __attribute__((pure)) List<unsigned int>
 LoopifyOptionMaybe::catMaybes(const List<std::optional<unsigned int>> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<std::optional<unsigned int>> _loop_l = l;
+  const List<std::optional<unsigned int>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<std::optional<unsigned int>>::Nil>(
-            _loop_l.v())) {
+            _loop_l->v())) {
       *(_write) =
           std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<std::optional<unsigned int>>::Cons>(
-              _loop_l.v());
+              _loop_l->v());
       if (d_a0.has_value()) {
         const unsigned int &x = *d_a0;
         auto _cell = std::make_unique<List<unsigned int>>(
@@ -157,10 +157,10 @@ LoopifyOptionMaybe::catMaybes(const List<std::optional<unsigned int>> &l) {
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       } else {
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       }
     }
@@ -189,7 +189,7 @@ LoopifyOptionMaybe::find_index_even_aux(const List<unsigned int> &l,
         unsigned int _next_idx = (_loop_idx + 1u);
         const List<unsigned int> *_next_l = d_a1.get();
         _loop_idx = std::move(_next_idx);
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
       }
     }
   }

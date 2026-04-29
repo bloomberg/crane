@@ -250,7 +250,7 @@ struct LoopifyOption {
           const list<T1> *_next_l = d_a1.get();
           unsigned int _next_n =
               (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-          _loop_l = std::move(_next_l);
+          _loop_l = _next_l;
           _loop_n = std::move(_next_n);
         }
       }
@@ -301,7 +301,7 @@ struct LoopifyOption {
           unsigned int _next_i = (_loop_i + 1);
           const list<T1> *_next_l = d_a1.get();
           _loop_i = std::move(_next_i);
-          _loop_l = std::move(_next_l);
+          _loop_l = _next_l;
         }
       }
     }

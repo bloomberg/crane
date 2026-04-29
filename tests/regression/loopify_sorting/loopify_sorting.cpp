@@ -337,7 +337,7 @@ LoopifySorting::is_sorted_aux(const unsigned int &prev,
       if (_loop_prev <= d_a0) {
         const List<unsigned int> *_next_l = d_a1.get();
         unsigned int _next_prev = d_a0;
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
         _loop_prev = std::move(_next_prev);
       } else {
         _result = false;
@@ -364,15 +364,16 @@ __attribute__((pure)) List<unsigned int>
 LoopifySorting::remove_duplicates(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       *(_write) =
           std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       auto &&_sv0 = *(d_a1);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
         *(_write) = std::make_unique<List<unsigned int>>(
@@ -382,7 +383,7 @@ LoopifySorting::remove_duplicates(const List<unsigned int> &l) {
         const auto &[d_a00, d_a10] =
             std::get<typename List<unsigned int>::Cons>(_sv0.v());
         if (d_a0 == d_a00) {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
           continue;
         } else {
           auto _cell = std::make_unique<List<unsigned int>>(
@@ -391,7 +392,7 @@ LoopifySorting::remove_duplicates(const List<unsigned int> &l) {
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
           continue;
         }
       }
@@ -406,23 +407,24 @@ LoopifySorting::uniq_sorted_aux(const unsigned int &prev, const bool &seen,
                                 const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   bool _loop_seen = seen;
   unsigned int _loop_prev = prev;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       *(_write) =
           std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_seen) {
         if (_loop_prev == d_a0) {
-          List<unsigned int> _next_l = *(d_a1);
+          const List<unsigned int> *_next_l = d_a1.get();
           bool _next_seen = true;
           unsigned int _next_prev = d_a0;
-          _loop_l = std::move(_next_l);
+          _loop_l = _next_l;
           _loop_seen = std::move(_next_seen);
           _loop_prev = std::move(_next_prev);
           continue;
@@ -433,10 +435,10 @@ LoopifySorting::uniq_sorted_aux(const unsigned int &prev, const bool &seen,
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          List<unsigned int> _next_l = *(d_a1);
+          const List<unsigned int> *_next_l = d_a1.get();
           bool _next_seen = true;
           unsigned int _next_prev = d_a0;
-          _loop_l = std::move(_next_l);
+          _loop_l = _next_l;
           _loop_seen = std::move(_next_seen);
           _loop_prev = std::move(_next_prev);
           continue;
@@ -448,10 +450,10 @@ LoopifySorting::uniq_sorted_aux(const unsigned int &prev, const bool &seen,
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        List<unsigned int> _next_l = *(d_a1);
+        const List<unsigned int> *_next_l = d_a1.get();
         bool _next_seen = true;
         unsigned int _next_prev = d_a0;
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
         _loop_seen = std::move(_next_seen);
         _loop_prev = std::move(_next_prev);
         continue;

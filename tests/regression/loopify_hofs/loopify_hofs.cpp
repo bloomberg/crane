@@ -25,8 +25,8 @@ LoopifyHofs::is_prefix_of(const List<unsigned int> &l1,
         if (d_a0 == d_a00) {
           const List<unsigned int> *_next_l2 = d_a10.get();
           const List<unsigned int> *_next_l1 = d_a1.get();
-          _loop_l2 = std::move(_next_l2);
-          _loop_l1 = std::move(_next_l1);
+          _loop_l2 = _next_l2;
+          _loop_l1 = _next_l1;
         } else {
           _result = false;
           break;
@@ -43,18 +43,18 @@ LoopifyHofs::lookup_all(const unsigned int &key,
                         const List<std::pair<unsigned int, unsigned int>> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<std::pair<unsigned int, unsigned int>> _loop_l = l;
+  const List<std::pair<unsigned int, unsigned int>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename List<std::pair<unsigned int, unsigned int>>::Nil>(
-            _loop_l.v())) {
+            _loop_l->v())) {
       *(_write) =
           std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-              _loop_l.v());
+              _loop_l->v());
       const unsigned int &k = d_a0.first;
       const unsigned int &v = d_a0.second;
       if (k == key) {
@@ -64,10 +64,10 @@ LoopifyHofs::lookup_all(const unsigned int &key,
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       } else {
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       }
     }
@@ -173,15 +173,16 @@ __attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
 LoopifyHofs::pair_with_all(unsigned int x, const List<unsigned int> &l) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       *(_write) = std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
           List<std::pair<unsigned int, unsigned int>>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       auto _cell =
           std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
               typename List<std::pair<unsigned int, unsigned int>>::Cons(
@@ -191,7 +192,7 @@ LoopifyHofs::pair_with_all(unsigned int x, const List<unsigned int> &l) {
           &std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                (*_write)->v_mut())
                .d_a1;
-      _loop_l = *(d_a1);
+      _loop_l = d_a1.get();
       continue;
     }
   }

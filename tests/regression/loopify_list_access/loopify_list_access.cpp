@@ -20,7 +20,7 @@ LoopifyListAccess::nth(const unsigned int &n, const List<unsigned int> &l) {
         const List<unsigned int> *_next_l = d_a1.get();
         unsigned int _next_n =
             (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
         _loop_n = std::move(_next_n);
       }
     }
@@ -73,7 +73,7 @@ LoopifyListAccess::index_of_aux(const unsigned int &x,
         unsigned int _next_idx = (_loop_idx + 1u);
         const List<unsigned int> *_next_l = d_a1.get();
         _loop_idx = std::move(_next_idx);
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
       }
     }
   }
@@ -142,18 +142,18 @@ __attribute__((pure)) List<unsigned int> LoopifyListAccess::lookup_all(
     const List<std::pair<unsigned int, unsigned int>> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<std::pair<unsigned int, unsigned int>> _loop_l = l;
+  const List<std::pair<unsigned int, unsigned int>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename List<std::pair<unsigned int, unsigned int>>::Nil>(
-            _loop_l.v())) {
+            _loop_l->v())) {
       *(_write) =
           std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-              _loop_l.v());
+              _loop_l->v());
       const unsigned int &k = d_a0.first;
       const unsigned int &v = d_a0.second;
       if (k == key) {
@@ -163,10 +163,10 @@ __attribute__((pure)) List<unsigned int> LoopifyListAccess::lookup_all(
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       } else {
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       }
     }
@@ -236,7 +236,7 @@ LoopifyListAccess::elem_at_eq(const unsigned int &idx, const unsigned int &val,
         const List<unsigned int> *_next_l = d_a1.get();
         unsigned int _next_idx =
             (((_loop_idx - 1u) > _loop_idx ? 0 : (_loop_idx - 1u)));
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
         _loop_idx = std::move(_next_idx);
       }
     }
@@ -265,7 +265,7 @@ LoopifyListAccess::nth_default(const unsigned int &n, unsigned int default0,
         const List<unsigned int> *_next_l = d_a1.get();
         unsigned int _next_n =
             (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
         _loop_n = std::move(_next_n);
       }
     }

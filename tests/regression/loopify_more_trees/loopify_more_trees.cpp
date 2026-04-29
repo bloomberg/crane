@@ -419,24 +419,24 @@ LoopifyMoreTrees::append_lists(const List<unsigned int> &l1,
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l2 = std::move(l2);
-  List<unsigned int> _loop_l1 = l1;
+  const List<unsigned int> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
-            _loop_l1.v())) {
+            _loop_l1->v())) {
       *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l1.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       auto _cell = std::make_unique<List<unsigned int>>(
           typename List<unsigned int>::Cons(d_a0, nullptr));
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
       List<unsigned int> _next_l2 = std::move(_loop_l2);
-      List<unsigned int> _next_l1 = *(d_a1);
+      const List<unsigned int> *_next_l1 = d_a1.get();
       _loop_l2 = std::move(_next_l2);
-      _loop_l1 = std::move(_next_l1);
+      _loop_l1 = _next_l1;
       continue;
     }
   }
@@ -485,23 +485,23 @@ __attribute__((pure)) List<List<unsigned int>>
 LoopifyMoreTrees::map_tree_to_list(const List<LoopifyMoreTrees::tree> &lt) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
-  List<LoopifyMoreTrees::tree> _loop_lt = lt;
+  const List<LoopifyMoreTrees::tree> *_loop_lt = &lt;
   while (true) {
     if (std::holds_alternative<typename List<LoopifyMoreTrees::tree>::Nil>(
-            _loop_lt.v())) {
+            _loop_lt->v())) {
       *(_write) = std::make_unique<List<List<unsigned int>>>(
           List<List<unsigned int>>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<LoopifyMoreTrees::tree>::Cons>(_loop_lt.v());
+          std::get<typename List<LoopifyMoreTrees::tree>::Cons>(_loop_lt->v());
       auto _cell = std::make_unique<List<List<unsigned int>>>(
           typename List<List<unsigned int>>::Cons(tree_to_list(d_a0), nullptr));
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename List<List<unsigned int>>::Cons>((*_write)->v_mut())
                .d_a1;
-      _loop_lt = *(d_a1);
+      _loop_lt = d_a1.get();
       continue;
     }
   }
@@ -527,16 +527,16 @@ LoopifyMoreTrees::append_trees(const List<LoopifyMoreTrees::tree> &l1,
   std::unique_ptr<List<LoopifyMoreTrees::tree>> _head{};
   std::unique_ptr<List<LoopifyMoreTrees::tree>> *_write = &_head;
   List<LoopifyMoreTrees::tree> _loop_l2 = std::move(l2);
-  List<LoopifyMoreTrees::tree> _loop_l1 = l1;
+  const List<LoopifyMoreTrees::tree> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename List<LoopifyMoreTrees::tree>::Nil>(
-            _loop_l1.v())) {
+            _loop_l1->v())) {
       *(_write) =
           std::make_unique<List<LoopifyMoreTrees::tree>>(std::move(_loop_l2));
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<LoopifyMoreTrees::tree>::Cons>(_loop_l1.v());
+          std::get<typename List<LoopifyMoreTrees::tree>::Cons>(_loop_l1->v());
       auto _cell = std::make_unique<List<LoopifyMoreTrees::tree>>(
           typename List<LoopifyMoreTrees::tree>::Cons(d_a0, nullptr));
       *(_write) = std::move(_cell);
@@ -544,9 +544,9 @@ LoopifyMoreTrees::append_trees(const List<LoopifyMoreTrees::tree> &l1,
                     (*_write)->v_mut())
                     .d_a1;
       List<LoopifyMoreTrees::tree> _next_l2 = std::move(_loop_l2);
-      List<LoopifyMoreTrees::tree> _next_l1 = *(d_a1);
+      const List<LoopifyMoreTrees::tree> *_next_l1 = d_a1.get();
       _loop_l2 = std::move(_next_l2);
-      _loop_l1 = std::move(_next_l1);
+      _loop_l1 = _next_l1;
       continue;
     }
   }

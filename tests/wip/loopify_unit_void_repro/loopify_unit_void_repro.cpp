@@ -21,7 +21,7 @@ void LoopifyUnitVoidRepro::loop(unsigned int x, unsigned int y,
       }();
       const List<bool> *_next_cells = d_a1.get();
       unsigned int _next_x = (_loop_x + cell_size);
-      _loop_cells = std::move(_next_cells);
+      _loop_cells = _next_cells;
       _loop_x = std::move(_next_x);
     }
   }

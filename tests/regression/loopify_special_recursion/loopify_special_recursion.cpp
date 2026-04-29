@@ -110,15 +110,16 @@ __attribute__((pure)) List<unsigned int>
 LoopifySpecialRecursion::remove_if_sum_even(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       *(_write) =
           std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       unsigned int next_val = [&]() {
         auto &&_sv0 = *(d_a1);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
@@ -131,7 +132,7 @@ LoopifySpecialRecursion::remove_if_sum_even(const List<unsigned int> &l) {
         }
       }();
       if ((2u ? (d_a0 + next_val) % 2u : (d_a0 + next_val)) == 0u) {
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
@@ -140,7 +141,7 @@ LoopifySpecialRecursion::remove_if_sum_even(const List<unsigned int> &l) {
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       }
     }
@@ -346,15 +347,16 @@ LoopifySpecialRecursion::between(const unsigned int &lo, const unsigned int &hi,
                                  const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       *(_write) =
           std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (lo <= d_a0) {
         if (d_a0 <= hi) {
           auto _cell = std::make_unique<List<unsigned int>>(
@@ -363,14 +365,14 @@ LoopifySpecialRecursion::between(const unsigned int &lo, const unsigned int &hi,
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
           continue;
         } else {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
           continue;
         }
       } else {
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       }
     }

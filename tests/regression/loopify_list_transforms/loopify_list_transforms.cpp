@@ -45,24 +45,25 @@ LoopifyListTransforms::prefix_sums(unsigned int acc,
                                    const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_acc = std::move(acc);
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_loop_l.v())) {
+    if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            _loop_l->v())) {
       *(_write) = std::make_unique<List<unsigned int>>(
           List<unsigned int>::cons(_loop_acc, List<unsigned int>::nil()));
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       auto _cell = std::make_unique<List<unsigned int>>(
           typename List<unsigned int>::Cons(_loop_acc, nullptr));
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      List<unsigned int> _next_l = *(d_a1);
+      const List<unsigned int> *_next_l = d_a1.get();
       unsigned int _next_acc = (_loop_acc + d_a0);
-      _loop_l = std::move(_next_l);
+      _loop_l = _next_l;
       _loop_acc = std::move(_next_acc);
       continue;
     }
@@ -75,7 +76,7 @@ LoopifyListTransforms::sliding_pairs_fuel(const unsigned int &fuel,
                                           const List<unsigned int> &l) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
@@ -85,14 +86,14 @@ LoopifyListTransforms::sliding_pairs_fuel(const unsigned int &fuel,
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l->v())) {
         *(_write) =
             std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                 List<std::pair<unsigned int, unsigned int>>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         auto &&_sv0 = *(d_a1);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv0.v())) {
@@ -113,9 +114,9 @@ LoopifyListTransforms::sliding_pairs_fuel(const unsigned int &fuel,
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
                    .d_a1;
-          List<unsigned int> _next_l = *(d_a1);
+          const List<unsigned int> *_next_l = d_a1.get();
           unsigned int _next_fuel = fuel_;
-          _loop_l = std::move(_next_l);
+          _loop_l = _next_l;
           _loop_fuel = std::move(_next_fuel);
           continue;
         }
@@ -145,7 +146,7 @@ LoopifyListTransforms::differences_fuel(const unsigned int &fuel,
                                         const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
@@ -155,13 +156,13 @@ LoopifyListTransforms::differences_fuel(const unsigned int &fuel,
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l->v())) {
         *(_write) =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         auto &&_sv0 = *(d_a1);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv0.v())) {
@@ -178,9 +179,9 @@ LoopifyListTransforms::differences_fuel(const unsigned int &fuel,
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          List<unsigned int> _next_l = *(d_a1);
+          const List<unsigned int> *_next_l = d_a1.get();
           unsigned int _next_fuel = fuel_;
-          _loop_l = std::move(_next_l);
+          _loop_l = _next_l;
           _loop_fuel = std::move(_next_fuel);
           continue;
         }
@@ -201,7 +202,7 @@ LoopifyListTransforms::take(const unsigned int &n,
                             const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -211,22 +212,22 @@ LoopifyListTransforms::take(const unsigned int &n,
     } else {
       unsigned int n_ = _loop_n - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l->v())) {
         *(_write) =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        List<unsigned int> _next_l = *(d_a1);
+        const List<unsigned int> *_next_l = d_a1.get();
         unsigned int _next_n = n_;
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
         _loop_n = std::move(_next_n);
         continue;
       }
@@ -367,7 +368,7 @@ LoopifyListTransforms::uniq_sorted_fuel(const unsigned int &fuel,
                                         const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<unsigned int> _loop_l = l;
+  const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
@@ -377,13 +378,13 @@ LoopifyListTransforms::uniq_sorted_fuel(const unsigned int &fuel,
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l->v())) {
         *(_write) =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         auto &&_sv0 = *(d_a1);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv0.v())) {
@@ -394,9 +395,9 @@ LoopifyListTransforms::uniq_sorted_fuel(const unsigned int &fuel,
           const auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(_sv0.v());
           if (d_a0 == d_a00) {
-            List<unsigned int> _next_l = *(d_a1);
+            const List<unsigned int> *_next_l = d_a1.get();
             unsigned int _next_fuel = fuel_;
-            _loop_l = std::move(_next_l);
+            _loop_l = _next_l;
             _loop_fuel = std::move(_next_fuel);
             continue;
           } else {
@@ -406,9 +407,9 @@ LoopifyListTransforms::uniq_sorted_fuel(const unsigned int &fuel,
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            List<unsigned int> _next_l = *(d_a1);
+            const List<unsigned int> *_next_l = d_a1.get();
             unsigned int _next_fuel = fuel_;
-            _loop_l = std::move(_next_l);
+            _loop_l = _next_l;
             _loop_fuel = std::move(_next_fuel);
             continue;
           }

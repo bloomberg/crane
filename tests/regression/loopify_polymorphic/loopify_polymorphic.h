@@ -120,7 +120,7 @@ public:
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
         const List *_next_self = d_a1.get();
         List<t_A> _next_m = std::move(_loop_m);
-        _loop_self = std::move(_next_self);
+        _loop_self = _next_self;
         _loop_m = std::move(_next_m);
         continue;
       }
@@ -208,22 +208,22 @@ struct LoopifyPolymorphic {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
     List<T1> _loop_l2 = std::move(l2);
-    List<T1> _loop_l1 = l1;
+    const List<T1> *_loop_l1 = &l1;
     while (true) {
-      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l1.v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l1->v())) {
         *(_write) = std::make_unique<List<T1>>(std::move(_loop_l2));
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<T1>::Cons>(_loop_l1.v());
+            std::get<typename List<T1>::Cons>(_loop_l1->v());
         auto _cell =
             std::make_unique<List<T1>>(typename List<T1>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).d_a1;
         List<T1> _next_l2 = std::move(_loop_l2);
-        List<T1> _next_l1 = *(d_a1);
+        const List<T1> *_next_l1 = d_a1.get();
         _loop_l2 = std::move(_next_l2);
-        _loop_l1 = std::move(_next_l1);
+        _loop_l1 = _next_l1;
         continue;
       }
     }
@@ -258,7 +258,7 @@ struct LoopifyPolymorphic {
                                                   const List<T1> &l) {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
-    List<T1> _loop_l = l;
+    const List<T1> *_loop_l = &l;
     unsigned int _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
@@ -266,19 +266,19 @@ struct LoopifyPolymorphic {
         break;
       } else {
         unsigned int n_ = _loop_n - 1;
-        if (std::holds_alternative<typename List<T1>::Nil>(_loop_l.v())) {
+        if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
           *(_write) = std::make_unique<List<T1>>(List<T1>::nil());
           break;
         } else {
           const auto &[d_a0, d_a1] =
-              std::get<typename List<T1>::Cons>(_loop_l.v());
+              std::get<typename List<T1>::Cons>(_loop_l->v());
           auto _cell = std::make_unique<List<T1>>(
               typename List<T1>::Cons(d_a0, nullptr));
           *(_write) = std::move(_cell);
           _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).d_a1;
-          List<T1> _next_l = *(d_a1);
+          const List<T1> *_next_l = d_a1.get();
           unsigned int _next_n = n_;
-          _loop_l = std::move(_next_l);
+          _loop_l = _next_l;
           _loop_n = std::move(_next_n);
           continue;
         }
@@ -335,7 +335,7 @@ struct LoopifyPolymorphic {
           const List<T1> *_next_l = d_a1.get();
           unsigned int _next_n =
               (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-          _loop_l = std::move(_next_l);
+          _loop_l = _next_l;
           _loop_n = std::move(_next_n);
         }
       }
@@ -361,19 +361,19 @@ struct LoopifyPolymorphic {
   __attribute__((pure)) static List<T2> poly_map(F0 &&f, const List<T1> &l) {
     std::unique_ptr<List<T2>> _head{};
     std::unique_ptr<List<T2>> *_write = &_head;
-    List<T1> _loop_l = l;
+    const List<T1> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
         *(_write) = std::make_unique<List<T2>>(List<T2>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<T1>::Cons>(_loop_l.v());
+            std::get<typename List<T1>::Cons>(_loop_l->v());
         auto _cell = std::make_unique<List<T2>>(
             typename List<T2>::Cons(f(d_a0), nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<T2>::Cons>((*_write)->v_mut()).d_a1;
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       }
     }
@@ -385,23 +385,23 @@ struct LoopifyPolymorphic {
   poly_zip(const List<T1> &l1, const List<T2> &l2) {
     std::unique_ptr<List<std::pair<T1, T2>>> _head{};
     std::unique_ptr<List<std::pair<T1, T2>>> *_write = &_head;
-    List<T2> _loop_l2 = l2;
-    List<T1> _loop_l1 = l1;
+    const List<T2> *_loop_l2 = &l2;
+    const List<T1> *_loop_l1 = &l1;
     while (true) {
-      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l1.v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l1->v())) {
         *(_write) = std::make_unique<List<std::pair<T1, T2>>>(
             List<std::pair<T1, T2>>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<T1>::Cons>(_loop_l1.v());
-        if (std::holds_alternative<typename List<T2>::Nil>(_loop_l2.v())) {
+            std::get<typename List<T1>::Cons>(_loop_l1->v());
+        if (std::holds_alternative<typename List<T2>::Nil>(_loop_l2->v())) {
           *(_write) = std::make_unique<List<std::pair<T1, T2>>>(
               List<std::pair<T1, T2>>::nil());
           break;
         } else {
           const auto &[d_a00, d_a10] =
-              std::get<typename List<T2>::Cons>(_loop_l2.v());
+              std::get<typename List<T2>::Cons>(_loop_l2->v());
           auto _cell = std::make_unique<List<std::pair<T1, T2>>>(
               typename List<std::pair<T1, T2>>::Cons(
                   std::make_pair(d_a0, d_a00), nullptr));
@@ -409,10 +409,10 @@ struct LoopifyPolymorphic {
           _write = &std::get<typename List<std::pair<T1, T2>>::Cons>(
                         (*_write)->v_mut())
                         .d_a1;
-          List<T2> _next_l2 = *(d_a10);
-          List<T1> _next_l1 = *(d_a1);
-          _loop_l2 = std::move(_next_l2);
-          _loop_l1 = std::move(_next_l1);
+          const List<T2> *_next_l2 = d_a10.get();
+          const List<T1> *_next_l1 = d_a1.get();
+          _loop_l2 = _next_l2;
+          _loop_l1 = _next_l1;
           continue;
         }
       }

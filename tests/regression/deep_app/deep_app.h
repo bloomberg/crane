@@ -195,23 +195,23 @@ struct DeepApp {
     std::unique_ptr<mylist<T1>> _head{};
     std::unique_ptr<mylist<T1>> *_write = &_head;
     mylist<T1> _loop_l2 = std::move(l2);
-    mylist<T1> _loop_l1 = l1;
+    const mylist<T1> *_loop_l1 = &l1;
     while (true) {
-      if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l1.v())) {
+      if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l1->v())) {
         *(_write) = std::make_unique<mylist<T1>>(std::move(_loop_l2));
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<T1>::Mycons>(_loop_l1.v());
+            std::get<typename mylist<T1>::Mycons>(_loop_l1->v());
         auto _cell = std::make_unique<mylist<T1>>(
             typename mylist<T1>::Mycons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write =
             &std::get<typename mylist<T1>::Mycons>((*_write)->v_mut()).d_a1;
         mylist<T1> _next_l2 = std::move(_loop_l2);
-        mylist<T1> _next_l1 = *(d_a1);
+        const mylist<T1> *_next_l1 = d_a1.get();
         _loop_l2 = std::move(_next_l2);
-        _loop_l1 = std::move(_next_l1);
+        _loop_l1 = _next_l1;
         continue;
       }
     }
@@ -222,20 +222,20 @@ struct DeepApp {
   __attribute__((pure)) static mylist<T2> map(F0 &&f, const mylist<T1> &l) {
     std::unique_ptr<mylist<T2>> _head{};
     std::unique_ptr<mylist<T2>> *_write = &_head;
-    mylist<T1> _loop_l = l;
+    const mylist<T1> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l.v())) {
+      if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l->v())) {
         *(_write) = std::make_unique<mylist<T2>>(mylist<T2>::mynil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<T1>::Mycons>(_loop_l.v());
+            std::get<typename mylist<T1>::Mycons>(_loop_l->v());
         auto _cell = std::make_unique<mylist<T2>>(
             typename mylist<T2>::Mycons(f(d_a0), nullptr));
         *(_write) = std::move(_cell);
         _write =
             &std::get<typename mylist<T2>::Mycons>((*_write)->v_mut()).d_a1;
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       }
     }

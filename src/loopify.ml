@@ -951,6 +951,10 @@ let rewrite_borrowed_shadow_uses shadow_params stmts =
     | CPPvar id when is_ptr_shadow id -> CPPderef (CPPvar id)
     | e -> map_expr expr stmt Fun.id e
   and stmt = function
+    | Sexpr (CPPbinop ("=", CPPvar id, rhs)) when is_ptr_shadow id ->
+      (* Assignment to a pointer shadow: keep the LHS as a raw pointer
+         (don't dereference it), only rewrite the RHS. *)
+      Sexpr (CPPbinop ("=", CPPvar id, expr rhs))
     | Smatch (branches, default) ->
       Smatch
         ( List.map
@@ -1043,12 +1047,15 @@ let make_shadow_updates shadow_params args =
     in
     let updates =
       List.map
-        (fun ((shadow_id, _ty), _arg) ->
-          Sexpr
-            (CPPbinop
-               ( "=",
-                 CPPvar shadow_id,
-                 CPPmove (CPPvar (temp_name shadow_id)) ) ) )
+        (fun ((shadow_id, ty), _arg) ->
+          let rhs =
+            let stripped = strip_ref_and_const_type ty in
+            if is_trivially_copyable_type stripped then
+              CPPvar (temp_name shadow_id)
+            else
+              CPPmove (CPPvar (temp_name shadow_id))
+          in
+          Sexpr (CPPbinop ("=", CPPvar shadow_id, rhs)))
         non_trivial
     in
     temp_decls @ updates
@@ -2562,9 +2569,13 @@ let rec rewrite_tmc_visit_stmt ~vt_ret check pp_expr ti varying shadow_params = 
 let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
   let vt_ret = if is_value_type_ret ret_ty then Some ret_ty else None in
   let varying = find_varying_params check params body in
+  let pointer_safe = tail_pointer_safe_flags check params body in
   let varying_params = filter_by_mask varying params in
+  let varying_pointer_safe = filter_by_mask varying pointer_safe in
   let shadow_params =
-    List.map (fun (id, ty) -> (shadow_name id, ty)) varying_params
+    List.map2
+      (fun (id, ty) safe -> (shadow_name id, tail_shadow_type ~pointer_safe:safe ty))
+      varying_params varying_pointer_safe
   in
   let subs =
     List.map2 (fun (id, _) (sid, _) -> (id, sid)) varying_params shadow_params
@@ -2587,21 +2598,20 @@ let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
      so the shadow variable becomes a mutable shared_ptr<T>. *)
   let shadow_decls =
     List.map2
-      (fun (orig_id, ty) (shadow_id, _) ->
+      (fun (orig_id, ty) (shadow_id, shadow_ty) ->
         let has_custom_init = List.mem_assoc orig_id param_inits in
         let init_expr =
           match List.assoc_opt orig_id param_inits with
           | Some custom -> custom
-          | None ->
-            if (not has_custom_init) && is_moveable_param_type ty
-            then CPPmove (CPPvar orig_id)
-            else CPPvar orig_id
+          | None -> tail_shadow_init orig_id shadow_ty ty
         in
-        let shadow_ty =
-          if has_custom_init then strip_ref_type ty
-          else strip_ref_and_const_type ty
+        let decl_ty = match shadow_ty with
+          | Tptr _ -> shadow_ty
+          | _ ->
+            if has_custom_init then strip_ref_type ty
+            else strip_ref_and_const_type ty
         in
-        Sasgn (shadow_id, Some shadow_ty, init_expr) )
+        Sasgn (shadow_id, Some decl_ty, init_expr) )
       varying_params
       shadow_params
   in
@@ -2613,6 +2623,7 @@ let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
       (rewrite_tmc_visit_stmt ~vt_ret check pp_expr ti varying shadow_params)
       body'
     |> strip_unnecessary_blocks
+    |> rewrite_borrowed_shadow_uses shadow_params
   in
   (* For value-type returns, dereference _head (shared_ptr → value) *)
   let ret_expr = match vt_ret with
@@ -5500,7 +5511,9 @@ let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
   else
   (* Build struct definitions *)
   let enter_fields =
-    List.map (fun (id, ty) -> (id, strip_ref_type ty)) varying_params
+    List.map
+      (fun (id, ty) -> (id, strip_ref_type ty))
+      varying_params
   in
   let call_structs =
     List.map
@@ -5535,7 +5548,9 @@ let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
   let init_push = make_stack_init varying_params in
   (* Enter handler: copy frame fields to locals (only varying params; invariant
      params are captured directly from function scope) *)
-  let enter_body = make_param_copies varying_params @ rewritten_body in
+  let enter_body =
+    make_param_copies varying_params
+    @ rewritten_body in
   let enter_branch = make_frame_branch "_Enter" enter_body in
   (* Call handlers *)
   let call_branches =

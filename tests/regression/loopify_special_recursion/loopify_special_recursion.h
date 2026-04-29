@@ -157,7 +157,7 @@ public:
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
         const List *_next_self = d_a1.get();
         List<t_A> _next_m = std::move(_loop_m);
-        _loop_self = std::move(_next_self);
+        _loop_self = _next_self;
         _loop_m = std::move(_next_m);
         continue;
       }

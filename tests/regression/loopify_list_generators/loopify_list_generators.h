@@ -158,7 +158,7 @@ public:
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
         const List *_next_self = d_a1.get();
         List<t_A> _next_m = std::move(_loop_m);
-        _loop_self = std::move(_next_self);
+        _loop_self = _next_self;
         _loop_m = std::move(_next_m);
         continue;
       }
@@ -347,35 +347,35 @@ struct LoopifyListGenerators {
   zip_with(F0 &&f, const List<unsigned int> &l1, const List<unsigned int> &l2) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
-    List<unsigned int> _loop_l2 = l2;
-    List<unsigned int> _loop_l1 = l1;
+    const List<unsigned int> *_loop_l2 = &l2;
+    const List<unsigned int> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l1.v())) {
+              _loop_l1->v())) {
         *(_write) =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l1.v());
+            std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _loop_l2.v())) {
+                _loop_l2->v())) {
           *(_write) =
               std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
           break;
         } else {
           const auto &[d_a00, d_a10] =
-              std::get<typename List<unsigned int>::Cons>(_loop_l2.v());
+              std::get<typename List<unsigned int>::Cons>(_loop_l2->v());
           auto _cell = std::make_unique<List<unsigned int>>(
               typename List<unsigned int>::Cons(f(d_a0, d_a00), nullptr));
           *(_write) = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          List<unsigned int> _next_l2 = *(d_a10);
-          List<unsigned int> _next_l1 = *(d_a1);
-          _loop_l2 = std::move(_next_l2);
-          _loop_l1 = std::move(_next_l1);
+          const List<unsigned int> *_next_l2 = d_a10.get();
+          const List<unsigned int> *_next_l1 = d_a1.get();
+          _loop_l2 = _next_l2;
+          _loop_l1 = _next_l1;
           continue;
         }
       }

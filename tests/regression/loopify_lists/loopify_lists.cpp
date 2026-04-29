@@ -198,17 +198,17 @@ LoopifyLists::between(const unsigned int &lo, const unsigned int &hi,
                       const LoopifyLists::list<unsigned int> &l) {
   std::unique_ptr<LoopifyLists::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyLists::list<unsigned int>> *_write = &_head;
-  LoopifyLists::list<unsigned int> _loop_l = l;
+  const LoopifyLists::list<unsigned int> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<unsigned int>::Nil>(
-            _loop_l.v())) {
+            _loop_l->v())) {
       *(_write) = std::make_unique<LoopifyLists::list<unsigned int>>(
           list<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename LoopifyLists::list<unsigned int>::Cons>(
-              _loop_l.v());
+              _loop_l->v());
       if ((lo <= d_a0 && d_a0 <= hi)) {
         auto _cell = std::make_unique<LoopifyLists::list<unsigned int>>(
             typename list<unsigned int>::Cons(d_a0, nullptr));
@@ -216,10 +216,10 @@ LoopifyLists::between(const unsigned int &lo, const unsigned int &hi,
         _write =
             &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       } else {
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       }
     }
@@ -328,17 +328,17 @@ __attribute__((pure)) LoopifyLists::list<unsigned int>
 LoopifyLists::pairwise_sum(const LoopifyLists::list<unsigned int> &l) {
   std::unique_ptr<LoopifyLists::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyLists::list<unsigned int>> *_write = &_head;
-  LoopifyLists::list<unsigned int> _loop_l = l;
+  const LoopifyLists::list<unsigned int> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<unsigned int>::Nil>(
-            _loop_l.v())) {
+            _loop_l->v())) {
       *(_write) = std::make_unique<LoopifyLists::list<unsigned int>>(
           list<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename LoopifyLists::list<unsigned int>::Cons>(
-              _loop_l.v());
+              _loop_l->v());
       auto &&_sv0 = *(d_a1);
       if (std::holds_alternative<
               typename LoopifyLists::list<unsigned int>::Nil>(_sv0.v())) {
@@ -354,7 +354,7 @@ LoopifyLists::pairwise_sum(const LoopifyLists::list<unsigned int> &l) {
         _write =
             &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l = *(d_a10);
+        _loop_l = d_a10.get();
         continue;
       }
     }
@@ -411,26 +411,26 @@ LoopifyLists::prefix_sums(unsigned int acc,
                           const LoopifyLists::list<unsigned int> &l) {
   std::unique_ptr<LoopifyLists::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyLists::list<unsigned int>> *_write = &_head;
-  LoopifyLists::list<unsigned int> _loop_l = l;
+  const LoopifyLists::list<unsigned int> *_loop_l = &l;
   unsigned int _loop_acc = std::move(acc);
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<unsigned int>::Nil>(
-            _loop_l.v())) {
+            _loop_l->v())) {
       *(_write) = std::make_unique<LoopifyLists::list<unsigned int>>(
           list<unsigned int>::cons(_loop_acc, list<unsigned int>::nil()));
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename LoopifyLists::list<unsigned int>::Cons>(
-              _loop_l.v());
+              _loop_l->v());
       auto _cell = std::make_unique<LoopifyLists::list<unsigned int>>(
           typename list<unsigned int>::Cons(_loop_acc, nullptr));
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      LoopifyLists::list<unsigned int> _next_l = *(d_a1);
+      const LoopifyLists::list<unsigned int> *_next_l = d_a1.get();
       unsigned int _next_acc = (_loop_acc + d_a0);
-      _loop_l = std::move(_next_l);
+      _loop_l = _next_l;
       _loop_acc = std::move(_next_acc);
       continue;
     }
@@ -443,17 +443,17 @@ __attribute__((pure)) LoopifyLists::list<unsigned int>
 LoopifyLists::uniq_sorted(const LoopifyLists::list<unsigned int> &l) {
   std::unique_ptr<LoopifyLists::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyLists::list<unsigned int>> *_write = &_head;
-  LoopifyLists::list<unsigned int> _loop_l = l;
+  const LoopifyLists::list<unsigned int> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<unsigned int>::Nil>(
-            _loop_l.v())) {
+            _loop_l->v())) {
       *(_write) = std::make_unique<LoopifyLists::list<unsigned int>>(
           list<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename LoopifyLists::list<unsigned int>::Cons>(
-              _loop_l.v());
+              _loop_l->v());
       auto &&_sv0 = *(d_a1);
       if (std::holds_alternative<
               typename LoopifyLists::list<unsigned int>::Nil>(_sv0.v())) {
@@ -464,7 +464,7 @@ LoopifyLists::uniq_sorted(const LoopifyLists::list<unsigned int> &l) {
         const auto &[d_a00, d_a10] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(_sv0.v());
         if (d_a0 == d_a00) {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
           continue;
         } else {
           auto _cell = std::make_unique<LoopifyLists::list<unsigned int>>(
@@ -473,7 +473,7 @@ LoopifyLists::uniq_sorted(const LoopifyLists::list<unsigned int> &l) {
           _write =
               &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
           continue;
         }
       }
@@ -488,7 +488,7 @@ LoopifyLists::take_n(const unsigned int &n,
                      const LoopifyLists::list<unsigned int> &l) {
   std::unique_ptr<LoopifyLists::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyLists::list<unsigned int>> *_write = &_head;
-  LoopifyLists::list<unsigned int> _loop_l = l;
+  const LoopifyLists::list<unsigned int> *_loop_l = &l;
   unsigned int _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -498,23 +498,23 @@ LoopifyLists::take_n(const unsigned int &n,
     } else {
       unsigned int m = _loop_n - 1;
       if (std::holds_alternative<
-              typename LoopifyLists::list<unsigned int>::Nil>(_loop_l.v())) {
+              typename LoopifyLists::list<unsigned int>::Nil>(_loop_l->v())) {
         *(_write) = std::make_unique<LoopifyLists::list<unsigned int>>(
             list<unsigned int>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(
-                _loop_l.v());
+                _loop_l->v());
         auto _cell = std::make_unique<LoopifyLists::list<unsigned int>>(
             typename list<unsigned int>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write =
             &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        LoopifyLists::list<unsigned int> _next_l = *(d_a1);
+        const LoopifyLists::list<unsigned int> *_next_l = d_a1.get();
         unsigned int _next_n = m;
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
         _loop_n = std::move(_next_n);
         continue;
       }
@@ -567,7 +567,7 @@ LoopifyLists::windows_aux(const unsigned int &fuel, const unsigned int &n,
   std::unique_ptr<LoopifyLists::list<LoopifyLists::list<unsigned int>>> _head{};
   std::unique_ptr<LoopifyLists::list<LoopifyLists::list<unsigned int>>>
       *_write = &_head;
-  LoopifyLists::list<unsigned int> _loop_l = l;
+  const LoopifyLists::list<unsigned int> *_loop_l = &l;
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
@@ -578,7 +578,7 @@ LoopifyLists::windows_aux(const unsigned int &fuel, const unsigned int &n,
     } else {
       unsigned int f = _loop_fuel - 1;
       if (std::holds_alternative<
-              typename LoopifyLists::list<unsigned int>::Nil>(_loop_l.v())) {
+              typename LoopifyLists::list<unsigned int>::Nil>(_loop_l->v())) {
         *(_write) = std::make_unique<
             LoopifyLists::list<LoopifyLists::list<unsigned int>>>(
             list<LoopifyLists::list<unsigned int>>::nil());
@@ -586,14 +586,14 @@ LoopifyLists::windows_aux(const unsigned int &fuel, const unsigned int &n,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(
-                _loop_l.v());
-        if (len_list(_loop_l) < n) {
+                _loop_l->v());
+        if (len_list(*(_loop_l)) < n) {
           *(_write) = std::make_unique<
               LoopifyLists::list<LoopifyLists::list<unsigned int>>>(
               list<LoopifyLists::list<unsigned int>>::nil());
           break;
         } else {
-          LoopifyLists::list<unsigned int> window = take_n(n, _loop_l);
+          LoopifyLists::list<unsigned int> window = take_n(n, *(_loop_l));
           if (std::holds_alternative<
                   typename LoopifyLists::list<unsigned int>::Nil>(
                   window.v_mut())) {
@@ -612,9 +612,9 @@ LoopifyLists::windows_aux(const unsigned int &fuel, const unsigned int &n,
                      typename list<LoopifyLists::list<unsigned int>>::Cons>(
                      (*_write)->v_mut())
                      .d_a1;
-            LoopifyLists::list<unsigned int> _next_l = *(d_a1);
+            const LoopifyLists::list<unsigned int> *_next_l = d_a1.get();
             unsigned int _next_fuel = f;
-            _loop_l = std::move(_next_l);
+            _loop_l = _next_l;
             _loop_fuel = std::move(_next_fuel);
             continue;
           }
@@ -658,8 +658,8 @@ LoopifyLists::is_prefix_of(const LoopifyLists::list<unsigned int> &l1,
         if (d_a0 == d_a00) {
           const LoopifyLists::list<unsigned int> *_next_l2 = d_a10.get();
           const LoopifyLists::list<unsigned int> *_next_l1 = d_a1.get();
-          _loop_l2 = std::move(_next_l2);
-          _loop_l1 = std::move(_next_l1);
+          _loop_l2 = _next_l2;
+          _loop_l1 = _next_l1;
         } else {
           _result = false;
           break;
@@ -676,16 +676,16 @@ __attribute__((pure)) LoopifyLists::list<unsigned int> LoopifyLists::lookup_all(
     const LoopifyLists::list<std::pair<unsigned int, unsigned int>> &l) {
   std::unique_ptr<LoopifyLists::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyLists::list<unsigned int>> *_write = &_head;
-  LoopifyLists::list<std::pair<unsigned int, unsigned int>> _loop_l = l;
+  const LoopifyLists::list<std::pair<unsigned int, unsigned int>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<
-            std::pair<unsigned int, unsigned int>>::Nil>(_loop_l.v())) {
+            std::pair<unsigned int, unsigned int>>::Nil>(_loop_l->v())) {
       *(_write) = std::make_unique<LoopifyLists::list<unsigned int>>(
           list<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename LoopifyLists::list<
-          std::pair<unsigned int, unsigned int>>::Cons>(_loop_l.v());
+          std::pair<unsigned int, unsigned int>>::Cons>(_loop_l->v());
       const unsigned int &k = d_a0.first;
       const unsigned int &v = d_a0.second;
       if (k == key) {
@@ -695,10 +695,10 @@ __attribute__((pure)) LoopifyLists::list<unsigned int> LoopifyLists::lookup_all(
         _write =
             &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       } else {
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       }
     }
@@ -916,17 +916,17 @@ __attribute__((pure)) LoopifyLists::list<unsigned int>
 LoopifyLists::compress(const LoopifyLists::list<unsigned int> &l) {
   std::unique_ptr<LoopifyLists::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyLists::list<unsigned int>> *_write = &_head;
-  LoopifyLists::list<unsigned int> _loop_l = l;
+  const LoopifyLists::list<unsigned int> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<unsigned int>::Nil>(
-            _loop_l.v())) {
+            _loop_l->v())) {
       *(_write) = std::make_unique<LoopifyLists::list<unsigned int>>(
           list<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename LoopifyLists::list<unsigned int>::Cons>(
-              _loop_l.v());
+              _loop_l->v());
       auto &&_sv0 = *(d_a1);
       if (std::holds_alternative<
               typename LoopifyLists::list<unsigned int>::Nil>(_sv0.v())) {
@@ -937,7 +937,7 @@ LoopifyLists::compress(const LoopifyLists::list<unsigned int> &l) {
         const auto &[d_a00, d_a10] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(_sv0.v());
         if (d_a0 == d_a00) {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
           continue;
         } else {
           auto _cell = std::make_unique<LoopifyLists::list<unsigned int>>(
@@ -946,7 +946,7 @@ LoopifyLists::compress(const LoopifyLists::list<unsigned int> &l) {
           _write =
               &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
           continue;
         }
       }
@@ -963,10 +963,10 @@ LoopifyLists::group_pairs(const LoopifyLists::list<unsigned int> &l) {
       _head{};
   std::unique_ptr<LoopifyLists::list<std::pair<unsigned int, unsigned int>>>
       *_write = &_head;
-  LoopifyLists::list<unsigned int> _loop_l = l;
+  const LoopifyLists::list<unsigned int> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<unsigned int>::Nil>(
-            _loop_l.v())) {
+            _loop_l->v())) {
       *(_write) = std::make_unique<
           LoopifyLists::list<std::pair<unsigned int, unsigned int>>>(
           list<std::pair<unsigned int, unsigned int>>::nil());
@@ -974,7 +974,7 @@ LoopifyLists::group_pairs(const LoopifyLists::list<unsigned int> &l) {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename LoopifyLists::list<unsigned int>::Cons>(
-              _loop_l.v());
+              _loop_l->v());
       auto &&_sv0 = *(d_a1);
       if (std::holds_alternative<
               typename LoopifyLists::list<unsigned int>::Nil>(_sv0.v())) {
@@ -995,7 +995,7 @@ LoopifyLists::group_pairs(const LoopifyLists::list<unsigned int> &l) {
                  typename list<std::pair<unsigned int, unsigned int>>::Cons>(
                  (*_write)->v_mut())
                  .d_a1;
-        _loop_l = *(d_a10);
+        _loop_l = d_a10.get();
         continue;
       }
     }
@@ -1072,7 +1072,7 @@ LoopifyLists::index_of_aux(const unsigned int &x,
         unsigned int _next_i = (_loop_i + 1);
         const LoopifyLists::list<unsigned int> *_next_l = d_a1.get();
         _loop_i = std::move(_next_i);
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
       }
     }
   }
@@ -1233,7 +1233,7 @@ LoopifyLists::rev_helper(LoopifyLists::list<unsigned int> acc,
       const LoopifyLists::list<unsigned int> *_next_l = d_a1.get();
       LoopifyLists::list<unsigned int> _next_acc =
           list<unsigned int>::cons(d_a0, std::move(_loop_acc));
-      _loop_l = std::move(_next_l);
+      _loop_l = _next_l;
       _loop_acc = std::move(_next_acc);
     }
   }
@@ -1288,26 +1288,26 @@ LoopifyLists::app_helper(const LoopifyLists::list<unsigned int> &l1,
   std::unique_ptr<LoopifyLists::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyLists::list<unsigned int>> *_write = &_head;
   LoopifyLists::list<unsigned int> _loop_l2 = std::move(l2);
-  LoopifyLists::list<unsigned int> _loop_l1 = l1;
+  const LoopifyLists::list<unsigned int> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<unsigned int>::Nil>(
-            _loop_l1.v())) {
+            _loop_l1->v())) {
       *(_write) = std::make_unique<LoopifyLists::list<unsigned int>>(
           std::move(_loop_l2));
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename LoopifyLists::list<unsigned int>::Cons>(
-              _loop_l1.v());
+              _loop_l1->v());
       auto _cell = std::make_unique<LoopifyLists::list<unsigned int>>(
           typename list<unsigned int>::Cons(d_a0, nullptr));
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
       LoopifyLists::list<unsigned int> _next_l2 = std::move(_loop_l2);
-      LoopifyLists::list<unsigned int> _next_l1 = *(d_a1);
+      const LoopifyLists::list<unsigned int> *_next_l1 = d_a1.get();
       _loop_l2 = std::move(_next_l2);
-      _loop_l1 = std::move(_next_l1);
+      _loop_l1 = _next_l1;
       continue;
     }
   }
@@ -1363,17 +1363,17 @@ __attribute__((pure)) LoopifyLists::list<unsigned int>
 LoopifyLists::remove_if_sum_even(const LoopifyLists::list<unsigned int> &l) {
   std::unique_ptr<LoopifyLists::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyLists::list<unsigned int>> *_write = &_head;
-  LoopifyLists::list<unsigned int> _loop_l = l;
+  const LoopifyLists::list<unsigned int> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<unsigned int>::Nil>(
-            _loop_l.v())) {
+            _loop_l->v())) {
       *(_write) = std::make_unique<LoopifyLists::list<unsigned int>>(
           list<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename LoopifyLists::list<unsigned int>::Cons>(
-              _loop_l.v());
+              _loop_l->v());
       auto &&_sv0 = *(d_a1);
       if (std::holds_alternative<
               typename LoopifyLists::list<unsigned int>::Nil>(_sv0.v())) {
@@ -1384,7 +1384,7 @@ LoopifyLists::remove_if_sum_even(const LoopifyLists::list<unsigned int> &l) {
         const auto &[d_a00, d_a10] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(_sv0.v());
         if ((2u ? (d_a0 + d_a00) % 2u : (d_a0 + d_a00)) == 0u) {
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
           continue;
         } else {
           auto _cell = std::make_unique<LoopifyLists::list<unsigned int>>(
@@ -1393,7 +1393,7 @@ LoopifyLists::remove_if_sum_even(const LoopifyLists::list<unsigned int> &l) {
           _write =
               &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
           continue;
         }
       }
@@ -1530,7 +1530,7 @@ LoopifyLists::nth(const unsigned int &n,
         const LoopifyLists::list<unsigned int> *_next_l = d_a1.get();
         unsigned int _next_n =
             (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
         _loop_n = std::move(_next_n);
       }
     }
@@ -1601,17 +1601,17 @@ __attribute__((pure)) LoopifyLists::list<unsigned int>
 LoopifyLists::init(const LoopifyLists::list<unsigned int> &l) {
   std::unique_ptr<LoopifyLists::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyLists::list<unsigned int>> *_write = &_head;
-  LoopifyLists::list<unsigned int> _loop_l = l;
+  const LoopifyLists::list<unsigned int> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<unsigned int>::Nil>(
-            _loop_l.v())) {
+            _loop_l->v())) {
       *(_write) = std::make_unique<LoopifyLists::list<unsigned int>>(
           list<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename LoopifyLists::list<unsigned int>::Cons>(
-              _loop_l.v());
+              _loop_l->v());
       auto &&_sv = *(d_a1);
       if (std::holds_alternative<
               typename LoopifyLists::list<unsigned int>::Nil>(_sv.v())) {
@@ -1625,7 +1625,7 @@ LoopifyLists::init(const LoopifyLists::list<unsigned int> &l) {
         _write =
             &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l = *(d_a1);
+        _loop_l = d_a1.get();
         continue;
       }
     }
@@ -1945,12 +1945,12 @@ LoopifyLists::zip3(const LoopifyLists::list<unsigned int> &l1,
   std::unique_ptr<LoopifyLists::list<
       std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>> *_write =
       &_head;
-  LoopifyLists::list<unsigned int> _loop_l3 = l3;
-  LoopifyLists::list<unsigned int> _loop_l2 = l2;
-  LoopifyLists::list<unsigned int> _loop_l1 = l1;
+  const LoopifyLists::list<unsigned int> *_loop_l3 = &l3;
+  const LoopifyLists::list<unsigned int> *_loop_l2 = &l2;
+  const LoopifyLists::list<unsigned int> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<unsigned int>::Nil>(
-            _loop_l1.v())) {
+            _loop_l1->v())) {
       *(_write) = std::make_unique<LoopifyLists::list<
           std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>>(
           list<std::pair<std::pair<unsigned int, unsigned int>,
@@ -1959,9 +1959,9 @@ LoopifyLists::zip3(const LoopifyLists::list<unsigned int> &l1,
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename LoopifyLists::list<unsigned int>::Cons>(
-              _loop_l1.v());
+              _loop_l1->v());
       if (std::holds_alternative<
-              typename LoopifyLists::list<unsigned int>::Nil>(_loop_l2.v())) {
+              typename LoopifyLists::list<unsigned int>::Nil>(_loop_l2->v())) {
         *(_write) = std::make_unique<LoopifyLists::list<
             std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>>(
             list<std::pair<std::pair<unsigned int, unsigned int>,
@@ -1970,9 +1970,10 @@ LoopifyLists::zip3(const LoopifyLists::list<unsigned int> &l1,
       } else {
         const auto &[d_a00, d_a10] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(
-                _loop_l2.v());
+                _loop_l2->v());
         if (std::holds_alternative<
-                typename LoopifyLists::list<unsigned int>::Nil>(_loop_l3.v())) {
+                typename LoopifyLists::list<unsigned int>::Nil>(
+                _loop_l3->v())) {
           *(_write) = std::make_unique<LoopifyLists::list<
               std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>>(
               list<std::pair<std::pair<unsigned int, unsigned int>,
@@ -1981,7 +1982,7 @@ LoopifyLists::zip3(const LoopifyLists::list<unsigned int> &l1,
         } else {
           const auto &[d_a01, d_a11] =
               std::get<typename LoopifyLists::list<unsigned int>::Cons>(
-                  _loop_l3.v());
+                  _loop_l3->v());
           auto _cell = std::make_unique<LoopifyLists::list<
               std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>>(
               typename list<std::pair<std::pair<unsigned int, unsigned int>,
@@ -1993,12 +1994,12 @@ LoopifyLists::zip3(const LoopifyLists::list<unsigned int> &l1,
               std::pair<unsigned int, unsigned int>, unsigned int>>::Cons>(
                         (*_write)->v_mut())
                         .d_a1;
-          LoopifyLists::list<unsigned int> _next_l3 = *(d_a11);
-          LoopifyLists::list<unsigned int> _next_l2 = *(d_a10);
-          LoopifyLists::list<unsigned int> _next_l1 = *(d_a1);
-          _loop_l3 = std::move(_next_l3);
-          _loop_l2 = std::move(_next_l2);
-          _loop_l1 = std::move(_next_l1);
+          const LoopifyLists::list<unsigned int> *_next_l3 = d_a11.get();
+          const LoopifyLists::list<unsigned int> *_next_l2 = d_a10.get();
+          const LoopifyLists::list<unsigned int> *_next_l1 = d_a1.get();
+          _loop_l3 = _next_l3;
+          _loop_l2 = _next_l2;
+          _loop_l1 = _next_l1;
           continue;
         }
       }
@@ -2072,7 +2073,7 @@ LoopifyLists::elem_at(const unsigned int &n,
         const LoopifyLists::list<unsigned int> *_next_l = d_a1.get();
         unsigned int _next_n =
             (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
         _loop_n = std::move(_next_n);
       }
     }

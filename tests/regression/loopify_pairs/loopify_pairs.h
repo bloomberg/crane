@@ -239,23 +239,23 @@ struct LoopifyPairs {
                                                            const list<T2> &l2) {
     std::unique_ptr<list<std::pair<T1, T2>>> _head{};
     std::unique_ptr<list<std::pair<T1, T2>>> *_write = &_head;
-    list<T2> _loop_l2 = l2;
-    list<T1> _loop_l1 = l1;
+    const list<T2> *_loop_l2 = &l2;
+    const list<T1> *_loop_l1 = &l1;
     while (true) {
-      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1.v())) {
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1->v())) {
         *(_write) = std::make_unique<list<std::pair<T1, T2>>>(
             list<std::pair<T1, T2>>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename list<T1>::Cons>(_loop_l1.v());
-        if (std::holds_alternative<typename list<T2>::Nil>(_loop_l2.v())) {
+            std::get<typename list<T1>::Cons>(_loop_l1->v());
+        if (std::holds_alternative<typename list<T2>::Nil>(_loop_l2->v())) {
           *(_write) = std::make_unique<list<std::pair<T1, T2>>>(
               list<std::pair<T1, T2>>::nil());
           break;
         } else {
           const auto &[d_a00, d_a10] =
-              std::get<typename list<T2>::Cons>(_loop_l2.v());
+              std::get<typename list<T2>::Cons>(_loop_l2->v());
           auto _cell = std::make_unique<list<std::pair<T1, T2>>>(
               typename list<std::pair<T1, T2>>::Cons(
                   std::make_pair(d_a0, d_a00), nullptr));
@@ -263,10 +263,10 @@ struct LoopifyPairs {
           _write = &std::get<typename list<std::pair<T1, T2>>::Cons>(
                         (*_write)->v_mut())
                         .d_a1;
-          list<T2> _next_l2 = *(d_a10);
-          list<T1> _next_l1 = *(d_a1);
-          _loop_l2 = std::move(_next_l2);
-          _loop_l1 = std::move(_next_l1);
+          const list<T2> *_next_l2 = d_a10.get();
+          const list<T1> *_next_l1 = d_a1.get();
+          _loop_l2 = _next_l2;
+          _loop_l1 = _next_l1;
           continue;
         }
       }
@@ -279,32 +279,32 @@ struct LoopifyPairs {
   zip3(const list<T1> &l1, const list<T2> &l2, const list<T3> &l3) {
     std::unique_ptr<list<std::pair<T1, std::pair<T2, T3>>>> _head{};
     std::unique_ptr<list<std::pair<T1, std::pair<T2, T3>>>> *_write = &_head;
-    list<T3> _loop_l3 = l3;
-    list<T2> _loop_l2 = l2;
-    list<T1> _loop_l1 = l1;
+    const list<T3> *_loop_l3 = &l3;
+    const list<T2> *_loop_l2 = &l2;
+    const list<T1> *_loop_l1 = &l1;
     while (true) {
-      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1.v())) {
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1->v())) {
         *(_write) = std::make_unique<list<std::pair<T1, std::pair<T2, T3>>>>(
             list<std::pair<T1, std::pair<T2, T3>>>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename list<T1>::Cons>(_loop_l1.v());
-        if (std::holds_alternative<typename list<T2>::Nil>(_loop_l2.v())) {
+            std::get<typename list<T1>::Cons>(_loop_l1->v());
+        if (std::holds_alternative<typename list<T2>::Nil>(_loop_l2->v())) {
           *(_write) = std::make_unique<list<std::pair<T1, std::pair<T2, T3>>>>(
               list<std::pair<T1, std::pair<T2, T3>>>::nil());
           break;
         } else {
           const auto &[d_a00, d_a10] =
-              std::get<typename list<T2>::Cons>(_loop_l2.v());
-          if (std::holds_alternative<typename list<T3>::Nil>(_loop_l3.v())) {
+              std::get<typename list<T2>::Cons>(_loop_l2->v());
+          if (std::holds_alternative<typename list<T3>::Nil>(_loop_l3->v())) {
             *(_write) =
                 std::make_unique<list<std::pair<T1, std::pair<T2, T3>>>>(
                     list<std::pair<T1, std::pair<T2, T3>>>::nil());
             break;
           } else {
             const auto &[d_a01, d_a11] =
-                std::get<typename list<T3>::Cons>(_loop_l3.v());
+                std::get<typename list<T3>::Cons>(_loop_l3->v());
             auto _cell =
                 std::make_unique<list<std::pair<T1, std::pair<T2, T3>>>>(
                     typename list<std::pair<T1, std::pair<T2, T3>>>::Cons(
@@ -316,12 +316,12 @@ struct LoopifyPairs {
                      typename list<std::pair<T1, std::pair<T2, T3>>>::Cons>(
                      (*_write)->v_mut())
                      .d_a1;
-            list<T3> _next_l3 = *(d_a11);
-            list<T2> _next_l2 = *(d_a10);
-            list<T1> _next_l1 = *(d_a1);
-            _loop_l3 = std::move(_next_l3);
-            _loop_l2 = std::move(_next_l2);
-            _loop_l1 = std::move(_next_l1);
+            const list<T3> *_next_l3 = d_a11.get();
+            const list<T2> *_next_l2 = d_a10.get();
+            const list<T1> *_next_l1 = d_a1.get();
+            _loop_l3 = _next_l3;
+            _loop_l2 = _next_l2;
+            _loop_l1 = _next_l1;
             continue;
           }
         }

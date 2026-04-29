@@ -450,16 +450,16 @@ struct LoopifyPatterns {
   take_until(F0 &&p, const list<unsigned int> &l) {
     std::unique_ptr<list<unsigned int>> _head{};
     std::unique_ptr<list<unsigned int>> *_write = &_head;
-    list<unsigned int> _loop_l = l;
+    const list<unsigned int> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<unsigned int>::Nil>(
-              _loop_l.v())) {
+              _loop_l->v())) {
         *(_write) =
             std::make_unique<list<unsigned int>>(list<unsigned int>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename list<unsigned int>::Cons>(_loop_l.v());
+            std::get<typename list<unsigned int>::Cons>(_loop_l->v());
         if (p(d_a0)) {
           *(_write) =
               std::make_unique<list<unsigned int>>(list<unsigned int>::nil());
@@ -471,7 +471,7 @@ struct LoopifyPatterns {
           _write =
               &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          _loop_l = *(d_a1);
+          _loop_l = d_a1.get();
           continue;
         }
       }

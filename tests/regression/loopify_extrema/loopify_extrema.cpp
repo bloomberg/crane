@@ -178,8 +178,8 @@ LoopifyExtrema::lex_compare(const List<unsigned int> &l1,
           } else {
             const List<unsigned int> *_next_l2 = d_a10.get();
             const List<unsigned int> *_next_l1 = d_a1.get();
-            _loop_l2 = std::move(_next_l2);
-            _loop_l1 = std::move(_next_l1);
+            _loop_l2 = _next_l2;
+            _loop_l1 = _next_l1;
           }
         }
       }

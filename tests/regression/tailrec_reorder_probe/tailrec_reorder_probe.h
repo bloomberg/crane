@@ -210,7 +210,7 @@ struct TailrecReorderProbe {
         mylist<T1> _next_acc = mylist<T1>::mycons(d_a0, std::move(_loop_acc));
         const mylist<T1> *_next_l = d_a1.get();
         _loop_acc = std::move(_next_acc);
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
       }
     }
     return _result;

@@ -50,7 +50,7 @@ LoopifyTail::nth(const unsigned int &n,
         const LoopifyTail::list<unsigned int> *_next_l = d_a1.get();
         unsigned int _next_n =
             (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-        _loop_l = std::move(_next_l);
+        _loop_l = _next_l;
         _loop_n = std::move(_next_n);
       }
     }
