@@ -839,7 +839,7 @@ LoopifyLists::flatten_nested_fuel(
         if (std::holds_alternative<
                 typename LoopifyLists::list<unsigned int>::Nil>(d_a0.v())) {
           LoopifyLists::list<LoopifyLists::list<unsigned int>> _next_l =
-              *(d_a1);
+              std::move(*(d_a1));
           unsigned int _next_fuel = f;
           _loop_l = std::move(_next_l);
           _loop_fuel = std::move(_next_fuel);
@@ -1125,8 +1125,8 @@ LoopifyLists::interleave(LoopifyLists::list<unsigned int> l1,
                  std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1->v_mut())
                  .d_a1;
-        LoopifyLists::list<unsigned int> _next_l2 = *(d_a10);
-        LoopifyLists::list<unsigned int> _next_l1 = *(d_a1);
+        LoopifyLists::list<unsigned int> _next_l2 = std::move(*(d_a10));
+        LoopifyLists::list<unsigned int> _next_l1 = std::move(*(d_a1));
         _loop_l2 = std::move(_next_l2);
         _loop_l1 = std::move(_next_l1);
         continue;
@@ -1586,7 +1586,7 @@ LoopifyLists::drop(const unsigned int &n, LoopifyLists::list<unsigned int> l) {
         _result = _loop_l;
         break;
       } else {
-        LoopifyLists::list<unsigned int> _next_l = *(d_a1);
+        LoopifyLists::list<unsigned int> _next_l = std::move(*(d_a1));
         unsigned int _next_n =
             (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
         _loop_l = std::move(_next_l);

@@ -387,7 +387,7 @@ LoopifySearchOpt::binary_search_fuel(const unsigned int &fuel,
                 } else {
                   const auto &[d_a02, d_a12] =
                       std::get<typename List<unsigned int>::Cons>(_loop_xs.v());
-                  List<unsigned int> _next_xs = *(d_a12);
+                  List<unsigned int> _next_xs = std::move(*(d_a12));
                   unsigned int _next_n = n_;
                   _loop_xs = std::move(_next_xs);
                   _loop_n = std::move(_next_n);
@@ -465,7 +465,7 @@ LoopifySearchOpt::binary_search_fuel(const unsigned int &fuel,
                   auto &[d_a04, d_a14] =
                       std::get<typename List<unsigned int>::Cons>(
                           _loop_xs.v_mut());
-                  List<unsigned int> _next_xs = *(d_a14);
+                  List<unsigned int> _next_xs = std::move(*(d_a14));
                   unsigned int _next_n = n_;
                   _loop_xs = std::move(_next_xs);
                   _loop_n = std::move(_next_n);

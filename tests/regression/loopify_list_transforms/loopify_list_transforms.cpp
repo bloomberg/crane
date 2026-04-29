@@ -254,7 +254,7 @@ LoopifyListTransforms::drop(const unsigned int &n, List<unsigned int> l) {
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-        List<unsigned int> _next_l = *(d_a1);
+        List<unsigned int> _next_l = std::move(*(d_a1));
         unsigned int _next_n = n_;
         _loop_l = std::move(_next_l);
         _loop_n = std::move(_next_n);

@@ -440,7 +440,7 @@ struct LoopifyLists {
         *(_write) = std::move(_cell);
         _write =
             &std::get<typename list<list<T1>>::Cons>((*_write)->v_mut()).d_a1;
-        _loop_l = *(d_a1);
+        _loop_l = std::move(*(d_a1));
         continue;
       }
     }
@@ -658,7 +658,7 @@ struct LoopifyLists {
               } else {
                 auto &[d_a00, d_a10] =
                     std::get<typename list<T1>::Cons>(_loop_lst.v_mut());
-                list<T1> _next_lst = *(d_a10);
+                list<T1> _next_lst = std::move(*(d_a10));
                 unsigned int _next_k = m;
                 _loop_lst = std::move(_next_lst);
                 _loop_k = std::move(_next_k);
@@ -846,7 +846,7 @@ struct LoopifyLists {
             _write = &std::get<typename list<std::pair<T1, T1>>::Cons>(
                           (*_write)->v_mut())
                           .d_a1;
-            list<T1> _next_l2 = *(d_a10);
+            list<T1> _next_l2 = std::move(*(d_a10));
             list<T1> _next_l1 = list<T1>::nil();
             unsigned int _next_fuel = f;
             _loop_l2 = std::move(_next_l2);
@@ -866,7 +866,7 @@ struct LoopifyLists {
                           (*_write)->v_mut())
                           .d_a1;
             list<T1> _next_l2 = list<T1>::nil();
-            list<T1> _next_l1 = *(d_a1);
+            list<T1> _next_l1 = std::move(*(d_a1));
             unsigned int _next_fuel = f;
             _loop_l2 = std::move(_next_l2);
             _loop_l1 = std::move(_next_l1);
@@ -882,8 +882,8 @@ struct LoopifyLists {
             _write = &std::get<typename list<std::pair<T1, T1>>::Cons>(
                           (*_write)->v_mut())
                           .d_a1;
-            list<T1> _next_l2 = *(d_a10);
-            list<T1> _next_l1 = *(d_a1);
+            list<T1> _next_l2 = std::move(*(d_a10));
+            list<T1> _next_l1 = std::move(*(d_a1));
             unsigned int _next_fuel = f;
             _loop_l2 = std::move(_next_l2);
             _loop_l1 = std::move(_next_l1);

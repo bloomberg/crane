@@ -237,7 +237,7 @@ LoopifySearch::drop_impl(const unsigned int &k, List<unsigned int> l) {
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-        List<unsigned int> _next_l = *(d_a1);
+        List<unsigned int> _next_l = std::move(*(d_a1));
         unsigned int _next_k = m;
         _loop_l = std::move(_next_l);
         _loop_k = std::move(_next_k);
@@ -600,7 +600,7 @@ LoopifySearch::nub_fuel(const unsigned int &fuel, List<unsigned int> l) {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
         if (elem_impl(d_a0, *(d_a1))) {
-          List<unsigned int> _next_l = *(d_a1);
+          List<unsigned int> _next_l = std::move(*(d_a1));
           unsigned int _next_fuel = f;
           _loop_l = std::move(_next_l);
           _loop_fuel = std::move(_next_fuel);
@@ -612,7 +612,7 @@ LoopifySearch::nub_fuel(const unsigned int &fuel, List<unsigned int> l) {
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          List<unsigned int> _next_l = *(d_a1);
+          List<unsigned int> _next_l = std::move(*(d_a1));
           unsigned int _next_fuel = f;
           _loop_l = std::move(_next_l);
           _loop_fuel = std::move(_next_fuel);
@@ -845,7 +845,7 @@ LoopifySearch::merge_sorted_fuel(const unsigned int &fuel,
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            List<unsigned int> _next_l1 = *(d_a1);
+            List<unsigned int> _next_l1 = std::move(*(d_a1));
             unsigned int _next_fuel = f;
             _loop_l1 = std::move(_next_l1);
             _loop_fuel = std::move(_next_fuel);
@@ -857,7 +857,7 @@ LoopifySearch::merge_sorted_fuel(const unsigned int &fuel,
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            List<unsigned int> _next_l2 = *(d_a10);
+            List<unsigned int> _next_l2 = std::move(*(d_a10));
             unsigned int _next_fuel = f;
             _loop_l2 = std::move(_next_l2);
             _loop_fuel = std::move(_next_fuel);

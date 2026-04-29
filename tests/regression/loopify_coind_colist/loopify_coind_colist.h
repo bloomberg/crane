@@ -223,7 +223,7 @@ struct LoopifyCoindColist {
               typename List<T1>::Cons(d_a0, nullptr));
           *(_write) = std::move(_cell);
           _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).d_a1;
-          colist<T1> _next_l = *(d_a1);
+          colist<T1> _next_l = std::move(*(d_a1));
           unsigned int _next_fuel = f;
           _loop_l = std::move(_next_l);
           _loop_fuel = std::move(_next_fuel);

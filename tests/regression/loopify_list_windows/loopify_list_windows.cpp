@@ -84,7 +84,7 @@ LoopifyListWindows::drop(const unsigned int &m, List<unsigned int> xs) {
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_xs.v_mut());
-        List<unsigned int> _next_xs = *(d_a1);
+        List<unsigned int> _next_xs = std::move(*(d_a1));
         unsigned int _next_m = m_;
         _loop_xs = std::move(_next_xs);
         _loop_m = std::move(_next_m);
@@ -296,7 +296,7 @@ LoopifyListWindows::tails(List<unsigned int> l) {
       _write =
           &std::get<typename List<List<unsigned int>>::Cons>((*_write)->v_mut())
                .d_a1;
-      _loop_l = *(d_a1);
+      _loop_l = std::move(*(d_a1));
       continue;
     }
   }

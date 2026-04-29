@@ -833,10 +833,10 @@ LoopifySequences::lis(List<unsigned int> l) {
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          _loop_l = *(d_a1);
+          _loop_l = std::move(*(d_a1));
           continue;
         } else {
-          _loop_l = *(d_a1);
+          _loop_l = std::move(*(d_a1));
           continue;
         }
       }

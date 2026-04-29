@@ -78,7 +78,7 @@ LoopifyGenerators::zip_longest_aux(const List<unsigned int> &l1,
                    (*_write)->v_mut())
                    .d_a1;
           unsigned int _next_fuel = f;
-          List<unsigned int> _next_l2 = *(d_a10);
+          List<unsigned int> _next_l2 = std::move(*(d_a10));
           List<unsigned int> _next_l1 = List<unsigned int>::nil();
           _loop_fuel = std::move(_next_fuel);
           _loop_l2 = std::move(_next_l2);
@@ -102,7 +102,7 @@ LoopifyGenerators::zip_longest_aux(const List<unsigned int> &l1,
                    .d_a1;
           unsigned int _next_fuel = f;
           List<unsigned int> _next_l2 = List<unsigned int>::nil();
-          List<unsigned int> _next_l1 = *(d_a1);
+          List<unsigned int> _next_l1 = std::move(*(d_a1));
           _loop_fuel = std::move(_next_fuel);
           _loop_l2 = std::move(_next_l2);
           _loop_l1 = std::move(_next_l1);
@@ -121,8 +121,8 @@ LoopifyGenerators::zip_longest_aux(const List<unsigned int> &l1,
                    (*_write)->v_mut())
                    .d_a1;
           unsigned int _next_fuel = f;
-          List<unsigned int> _next_l2 = *(d_a10);
-          List<unsigned int> _next_l1 = *(d_a1);
+          List<unsigned int> _next_l2 = std::move(*(d_a10));
+          List<unsigned int> _next_l1 = std::move(*(d_a1));
           _loop_fuel = std::move(_next_fuel);
           _loop_l2 = std::move(_next_l2);
           _loop_l1 = std::move(_next_l1);

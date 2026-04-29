@@ -305,7 +305,7 @@ struct LoopifyPolymorphic {
         } else {
           auto &[d_a0, d_a1] =
               std::get<typename List<T1>::Cons>(_loop_l.v_mut());
-          List<T1> _next_l = *(d_a1);
+          List<T1> _next_l = std::move(*(d_a1));
           unsigned int _next_n = n_;
           _loop_l = std::move(_next_l);
           _loop_n = std::move(_next_n);

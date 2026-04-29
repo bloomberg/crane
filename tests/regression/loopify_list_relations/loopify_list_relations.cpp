@@ -75,7 +75,7 @@ LoopifyListRelations::is_suffix_of(const List<unsigned int> &l1,
           } else {
             auto &[d_a0, d_a1] =
                 std::get<typename List<unsigned int>::Cons>(_loop_xs.v_mut());
-            List<unsigned int> _next_xs = *(d_a1);
+            List<unsigned int> _next_xs = std::move(*(d_a1));
             unsigned int _next_n = n_;
             _loop_xs = std::move(_next_xs);
             _loop_n = std::move(_next_n);
@@ -112,8 +112,8 @@ LoopifyListRelations::is_suffix_of(const List<unsigned int> &l1,
             const auto &[d_a01, d_a11] =
                 std::get<typename List<unsigned int>::Cons>(_loop_b.v());
             if (d_a00 == d_a01) {
-              List<unsigned int> _next_b = *(d_a11);
-              List<unsigned int> _next_a = *(d_a10);
+              List<unsigned int> _next_b = std::move(*(d_a11));
+              List<unsigned int> _next_a = std::move(*(d_a10));
               _loop_b = std::move(_next_b);
               _loop_a = std::move(_next_a);
             } else {
@@ -459,8 +459,8 @@ LoopifyListRelations::interleave(List<unsigned int> l1, List<unsigned int> l2) {
                  std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1->v_mut())
                  .d_a1;
-        List<unsigned int> _next_l2 = *(d_a10);
-        List<unsigned int> _next_l1 = *(d_a1);
+        List<unsigned int> _next_l2 = std::move(*(d_a10));
+        List<unsigned int> _next_l1 = std::move(*(d_a1));
         _loop_l2 = std::move(_next_l2);
         _loop_l1 = std::move(_next_l1);
         continue;
@@ -506,7 +506,7 @@ LoopifyListRelations::merge_fuel(const unsigned int &fuel,
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            List<unsigned int> _next_l1 = *(d_a1);
+            List<unsigned int> _next_l1 = std::move(*(d_a1));
             unsigned int _next_fuel = fuel_;
             _loop_l1 = std::move(_next_l1);
             _loop_fuel = std::move(_next_fuel);
@@ -518,7 +518,7 @@ LoopifyListRelations::merge_fuel(const unsigned int &fuel,
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            List<unsigned int> _next_l2 = *(d_a10);
+            List<unsigned int> _next_l2 = std::move(*(d_a10));
             unsigned int _next_fuel = fuel_;
             _loop_l2 = std::move(_next_l2);
             _loop_fuel = std::move(_next_fuel);

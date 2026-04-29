@@ -26,7 +26,7 @@ LoopifySorting::insert(unsigned int x, List<unsigned int> l) {
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l = *(d_a1);
+        _loop_l = std::move(*(d_a1));
         continue;
       }
     }
@@ -107,7 +107,7 @@ LoopifySorting::merge_fuel(const unsigned int &fuel, List<unsigned int> l1,
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            List<unsigned int> _next_l1 = *(d_a1);
+            List<unsigned int> _next_l1 = std::move(*(d_a1));
             unsigned int _next_fuel = f;
             _loop_l1 = std::move(_next_l1);
             _loop_fuel = std::move(_next_fuel);
@@ -119,7 +119,7 @@ LoopifySorting::merge_fuel(const unsigned int &fuel, List<unsigned int> l1,
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            List<unsigned int> _next_l2 = *(d_a10);
+            List<unsigned int> _next_l2 = std::move(*(d_a10));
             unsigned int _next_fuel = f;
             _loop_l2 = std::move(_next_l2);
             _loop_fuel = std::move(_next_fuel);

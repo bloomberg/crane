@@ -292,7 +292,7 @@ struct LoopifySequences {
               const auto &[d_a0, d_a1] =
                   std::get<typename List<List<T1>>::Cons>(_loop_l.v());
               if (std::holds_alternative<typename List<T1>::Nil>(d_a0.v())) {
-                _loop_l = *(d_a1);
+                _loop_l = std::move(*(d_a1));
               } else {
                 _result = false;
                 break;

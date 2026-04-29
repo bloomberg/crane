@@ -152,7 +152,7 @@ struct LoopifyPredicates {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
         if (p(d_a0)) {
-          _loop_l = *(d_a1);
+          _loop_l = std::move(*(d_a1));
         } else {
           _result = _loop_l;
           break;

@@ -173,7 +173,7 @@ LoopifyListPairing::zip_longest_fuel(const unsigned int &fuel,
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
                    .d_a1;
-          List<unsigned int> _next_l2 = *(d_a10);
+          List<unsigned int> _next_l2 = std::move(*(d_a10));
           List<unsigned int> _next_l1 = List<unsigned int>::nil();
           unsigned int _next_fuel = fuel_;
           _loop_l2 = std::move(_next_l2);
@@ -197,7 +197,7 @@ LoopifyListPairing::zip_longest_fuel(const unsigned int &fuel,
                    (*_write)->v_mut())
                    .d_a1;
           List<unsigned int> _next_l2 = List<unsigned int>::nil();
-          List<unsigned int> _next_l1 = *(d_a1);
+          List<unsigned int> _next_l1 = std::move(*(d_a1));
           unsigned int _next_fuel = fuel_;
           _loop_l2 = std::move(_next_l2);
           _loop_l1 = std::move(_next_l1);
@@ -216,8 +216,8 @@ LoopifyListPairing::zip_longest_fuel(const unsigned int &fuel,
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
                    .d_a1;
-          List<unsigned int> _next_l2 = *(d_a10);
-          List<unsigned int> _next_l1 = *(d_a1);
+          List<unsigned int> _next_l2 = std::move(*(d_a10));
+          List<unsigned int> _next_l1 = std::move(*(d_a1));
           unsigned int _next_fuel = fuel_;
           _loop_l2 = std::move(_next_l2);
           _loop_l1 = std::move(_next_l1);

@@ -1020,7 +1020,14 @@ let assign_result_and_stop expr =
     = std::move(_next_a); _loop_b = std::move(_next_b);
 
     Self-assignments (_loop_x = _loop_x) are skipped entirely. When there is
-    only one non-trivial assignment the temps are unnecessary but harmless. *)
+    only one non-trivial assignment the temps are unnecessary but harmless.
+
+    When a next-value expression is [CPPderef] (i.e., advancing a list to its
+    tail via [*(d_a1)]) and the type is non-trivially-copyable, we wrap it in
+    [CPPmove].  The dereference target is a field inside the loop variable that
+    this same update will overwrite, so the underlying [unique_ptr] will be
+    null-ed before the old value is destroyed — making the move safe and
+    reducing the cost from O(n) deep-copy to O(1). *)
 let make_shadow_updates shadow_params args =
   let pairs =
     List.map
@@ -1037,13 +1044,22 @@ let make_shadow_updates shadow_params args =
         | _ -> true )
       pairs
   in
+  (* Choose the RHS expression for a shadow update.  When the next value is a
+     [CPPderef] into an owned structure (e.g. [*(d_a1)] from a cons-cell
+     pattern match), move instead of copying to avoid an O(n) deep-copy. *)
+  let make_rhs ty arg =
+    let stripped = strip_ref_and_const_type ty in
+    match arg with
+    | CPPderef _ when not (is_trivially_copyable_type stripped) -> CPPmove arg
+    | _ -> arg
+  in
   if List.length non_trivial <= 1 then
     (* 0 or 1 assignment — no hazard possible, assign directly *)
     List.filter_map
-      (fun ((shadow_id, _ty), arg) ->
+      (fun ((shadow_id, ty), arg) ->
         match arg with
         | CPPvar id when Id.equal id shadow_id -> None
-        | _ -> Some (Sasgn (shadow_id, None, arg)) )
+        | _ -> Some (Sasgn (shadow_id, None, make_rhs ty arg)) )
       pairs
   else (* 2+ assignments — use temporaries *)
     let temp_name (id : Id.t) : Id.t =
@@ -1065,7 +1081,8 @@ let make_shadow_updates shadow_params args =
     let temp_decls =
       List.map
         (fun ((shadow_id, ty), arg) ->
-          Sasgn (temp_name shadow_id, Some (strip_ref_and_const_type ty), arg) )
+          Sasgn (temp_name shadow_id, Some (strip_ref_and_const_type ty),
+                 make_rhs ty arg))
         non_trivial
     in
     let updates =
