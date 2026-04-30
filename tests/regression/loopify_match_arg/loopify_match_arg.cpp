@@ -8,15 +8,17 @@ LoopifyMatchArg::count_dots(const List<LoopifyMatchArg::Cell> &xs) {
     const List<LoopifyMatchArg::Cell> *xs;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume1 {
     decltype(1u) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&xs});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -31,7 +33,7 @@ LoopifyMatchArg::count_dots(const List<LoopifyMatchArg::Cell> &xs) {
             std::get<typename List<LoopifyMatchArg::Cell>::Cons>(xs.v());
         switch (d_a0) {
         case Cell::e_DOT: {
-          _stack.emplace_back(_Call1{1u});
+          _stack.emplace_back(_Resume1{1u});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
         default: {
@@ -40,7 +42,7 @@ LoopifyMatchArg::count_dots(const List<LoopifyMatchArg::Cell> &xs) {
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -54,15 +56,17 @@ unsigned int LoopifyMatchArg::my_length(const List<LoopifyMatchArg::Cell> &xs) {
     const List<LoopifyMatchArg::Cell> *xs;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume1 {
     decltype(1u) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&xs});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -75,11 +79,11 @@ unsigned int LoopifyMatchArg::my_length(const List<LoopifyMatchArg::Cell> &xs) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<LoopifyMatchArg::Cell>::Cons>(xs.v());
-        _stack.emplace_back(_Call1{1u});
+        _stack.emplace_back(_Resume1{1u});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_f._s0 + _result);
     }
   }

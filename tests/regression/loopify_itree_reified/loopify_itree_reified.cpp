@@ -11,13 +11,15 @@ LoopifyItreeReified::count_taus(const unsigned int &fuel,
     unsigned int fuel;
   };
 
-  struct _Call1 {};
+  /// Continuation: saves across recursive call.
+  struct _Resume1 {};
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{t, fuel});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -40,7 +42,7 @@ LoopifyItreeReified::count_taus(const unsigned int &fuel,
           const auto &_itf =
               *std::get_if<typename ITree<unsigned int>::Tau>(&_cs);
           auto t_ = _itf.next;
-          _stack.emplace_back(_Call1{});
+          _stack.emplace_back(_Resume1{});
           _stack.emplace_back(_Enter{t_, fuel_});
         } else {
           const auto &_itf =
@@ -51,7 +53,7 @@ LoopifyItreeReified::count_taus(const unsigned int &fuel,
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_result + 1);
     }
   }

@@ -137,16 +137,19 @@ struct LoopifyExtrema {
       const List<unsigned int> *l;
     };
 
-    struct _Call1 {
-      unsigned int _s0;
-      F0 _s1;
+    /// Continuation: saves [d_a0, f] across recursive call, then processes
+    /// rest.
+    struct _Cont1 {
+      unsigned int d_a0;
+      F0 f;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Cont1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -163,14 +166,14 @@ struct LoopifyExtrema {
                   _sv.v())) {
             _result = f(d_a0);
           } else {
-            _stack.emplace_back(_Call1{d_a0, f});
+            _stack.emplace_back(_Cont1{d_a0, f});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = std::move(_f._s0);
-        F0 f = _f._s1;
+        auto _f = std::move(std::get<_Cont1>(_frame));
+        unsigned int d_a0 = std::move(_f.d_a0);
+        F0 f = _f.f;
         unsigned int rest_max = _result;
         unsigned int fx = f(d_a0);
         if (rest_max < fx) {
@@ -189,16 +192,19 @@ struct LoopifyExtrema {
       const List<unsigned int> *l;
     };
 
-    struct _Call1 {
-      unsigned int _s0;
-      F0 _s1;
+    /// Continuation: saves [d_a0, f] across recursive call, then processes
+    /// rest.
+    struct _Cont1 {
+      unsigned int d_a0;
+      F0 f;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Cont1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -215,14 +221,14 @@ struct LoopifyExtrema {
                   _sv.v())) {
             _result = f(d_a0);
           } else {
-            _stack.emplace_back(_Call1{d_a0, f});
+            _stack.emplace_back(_Cont1{d_a0, f});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = std::move(_f._s0);
-        F0 f = _f._s1;
+        auto _f = std::move(std::get<_Cont1>(_frame));
+        unsigned int d_a0 = std::move(_f.d_a0);
+        F0 f = _f.f;
         unsigned int rest_min = _result;
         unsigned int fx = f(d_a0);
         if (fx < rest_min) {
@@ -241,16 +247,19 @@ struct LoopifyExtrema {
       const List<unsigned int> *l;
     };
 
-    struct _Call1 {
-      unsigned int _s0;
-      F0 _s1;
+    /// Continuation: saves [d_a0, f] across recursive call, then processes
+    /// rest.
+    struct _Cont1 {
+      unsigned int d_a0;
+      F0 f;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Cont1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -267,14 +276,14 @@ struct LoopifyExtrema {
                   _sv.v())) {
             _result = d_a0;
           } else {
-            _stack.emplace_back(_Call1{d_a0, f});
+            _stack.emplace_back(_Cont1{d_a0, f});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = std::move(_f._s0);
-        F0 f = _f._s1;
+        auto _f = std::move(std::get<_Cont1>(_frame));
+        unsigned int d_a0 = std::move(_f.d_a0);
+        F0 f = _f.f;
         unsigned int rest_best = _result;
         unsigned int fx = f(d_a0);
         unsigned int f_rest = f(rest_best);
@@ -294,16 +303,19 @@ struct LoopifyExtrema {
       const List<unsigned int> *l;
     };
 
-    struct _Call1 {
-      unsigned int _s0;
-      F0 _s1;
+    /// Continuation: saves [d_a0, f] across recursive call, then processes
+    /// rest.
+    struct _Cont1 {
+      unsigned int d_a0;
+      F0 f;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Cont1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -320,14 +332,14 @@ struct LoopifyExtrema {
                   _sv.v())) {
             _result = d_a0;
           } else {
-            _stack.emplace_back(_Call1{d_a0, f});
+            _stack.emplace_back(_Cont1{d_a0, f});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = std::move(_f._s0);
-        F0 f = _f._s1;
+        auto _f = std::move(std::get<_Cont1>(_frame));
+        unsigned int d_a0 = std::move(_f.d_a0);
+        F0 f = _f.f;
         unsigned int rest_best = _result;
         unsigned int fx = f(d_a0);
         unsigned int f_rest = f(rest_best);

@@ -165,25 +165,29 @@ struct MoveSafety {
         const tree *_self;
       };
 
-      struct _Call1 {
+      /// Intermediate: saves [_s0, _s1, d_a1, _s3], dispatches next recursive
+      /// call.
+      struct _After2 {
         tree *_s0;
         tree _s1;
-        unsigned int _s2;
+        unsigned int d_a1;
         tree _s3;
       };
 
-      struct _Call2 {
-        T1 _s0;
+      /// Combiner: receives first result, combines with second recursive call.
+      struct _Combine1 {
+        T1 _result;
         tree _s1;
-        unsigned int _s2;
+        unsigned int d_a1;
         tree _s3;
       };
 
-      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      using _Frame = std::variant<_Enter, _After2, _Combine1>;
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
+      /// Frame dispatch: _Enter, _After2, _Combine1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -196,17 +200,17 @@ struct MoveSafety {
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_Call1{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After2{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
-        } else if (std::holds_alternative<_Call1>(_frame)) {
-          auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(
-              _Call2{_result, std::move(_f._s1), _f._s2, std::move(_f._s3)});
+        } else if (std::holds_alternative<_After2>(_frame)) {
+          auto _f = std::move(std::get<_After2>(_frame));
+          _stack.emplace_back(_Combine1{_result, std::move(_f._s1), _f.d_a1,
+                                        std::move(_f._s3)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
-          auto _f = std::move(std::get<_Call2>(_frame));
-          _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+          auto _f = std::move(std::get<_Combine1>(_frame));
+          _result = f0(_f._s3, _result, _f.d_a1, _f._s1, _f._result);
         }
       }
       return _result;
@@ -220,25 +224,29 @@ struct MoveSafety {
         const tree *_self;
       };
 
-      struct _Call1 {
+      /// Intermediate: saves [_s0, _s1, d_a1, _s3], dispatches next recursive
+      /// call.
+      struct _After2 {
         tree *_s0;
         tree _s1;
-        unsigned int _s2;
+        unsigned int d_a1;
         tree _s3;
       };
 
-      struct _Call2 {
-        T1 _s0;
+      /// Combiner: receives first result, combines with second recursive call.
+      struct _Combine1 {
+        T1 _result;
         tree _s1;
-        unsigned int _s2;
+        unsigned int d_a1;
         tree _s3;
       };
 
-      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      using _Frame = std::variant<_Enter, _After2, _Combine1>;
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
+      /// Frame dispatch: _Enter, _After2, _Combine1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -251,17 +259,17 @@ struct MoveSafety {
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_Call1{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After2{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
-        } else if (std::holds_alternative<_Call1>(_frame)) {
-          auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(
-              _Call2{_result, std::move(_f._s1), _f._s2, std::move(_f._s3)});
+        } else if (std::holds_alternative<_After2>(_frame)) {
+          auto _f = std::move(std::get<_After2>(_frame));
+          _stack.emplace_back(_Combine1{_result, std::move(_f._s1), _f.d_a1,
+                                        std::move(_f._s3)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
-          auto _f = std::move(std::get<_Call2>(_frame));
-          _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+          auto _f = std::move(std::get<_Combine1>(_frame));
+          _result = f0(_f._s3, _result, _f.d_a1, _f._s1, _f._result);
         }
       }
       return _result;

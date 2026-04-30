@@ -804,23 +804,26 @@ struct ComprehensivePatterns {
         const Tree *_self;
       };
 
-      struct _Call1 {
+      /// Intermediate: saves [_s0, _s1], dispatches next recursive call.
+      struct _After2 {
         Tree *_s0;
         decltype((std::declval<unsigned int &>() +
                   std::declval<const StateLB &>().lb_value)) _s1;
       };
 
-      struct _Call2 {
-        unsigned int _s0;
+      /// Combiner: receives first result, combines with second recursive call.
+      struct _Combine1 {
+        unsigned int _result;
         decltype((std::declval<unsigned int &>() +
                   std::declval<const StateLB &>().lb_value)) _s1;
       };
 
-      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      using _Frame = std::variant<_Enter, _After2, _Combine1>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
+      /// Frame dispatch: _Enter, _After2, _Combine1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -834,16 +837,16 @@ struct ComprehensivePatterns {
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(_Call1{d_a0.get(), (d_a1 + s.lb_value)});
+            _stack.emplace_back(_After2{d_a0.get(), (d_a1 + s.lb_value)});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
-        } else if (std::holds_alternative<_Call1>(_frame)) {
-          auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(_Call2{_result, _f._s1});
+        } else if (std::holds_alternative<_After2>(_frame)) {
+          auto _f = std::move(std::get<_After2>(_frame));
+          _stack.emplace_back(_Combine1{_result, _f._s1});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
-          auto _f = std::move(std::get<_Call2>(_frame));
-          _result = ((_f._s1 + _result) + _f._s0);
+          auto _f = std::move(std::get<_Combine1>(_frame));
+          _result = ((_f._s1 + _result) + _f._result);
         }
       }
       return _result;
@@ -856,21 +859,24 @@ struct ComprehensivePatterns {
         const Tree *_self;
       };
 
-      struct _Call1 {
+      /// Intermediate: saves [_s0, d_a1], dispatches next recursive call.
+      struct _After2 {
         Tree *_s0;
-        unsigned int _s1;
+        unsigned int d_a1;
       };
 
-      struct _Call2 {
-        unsigned int _s0;
-        unsigned int _s1;
+      /// Combiner: receives first result, combines with second recursive call.
+      struct _Combine1 {
+        unsigned int _result;
+        unsigned int d_a1;
       };
 
-      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      using _Frame = std::variant<_Enter, _After2, _Combine1>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
+      /// Frame dispatch: _Enter, _After2, _Combine1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -884,16 +890,16 @@ struct ComprehensivePatterns {
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(_Call1{d_a0.get(), d_a1});
+            _stack.emplace_back(_After2{d_a0.get(), d_a1});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
-        } else if (std::holds_alternative<_Call1>(_frame)) {
-          auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(_Call2{_result, _f._s1});
+        } else if (std::holds_alternative<_After2>(_frame)) {
+          auto _f = std::move(std::get<_After2>(_frame));
+          _stack.emplace_back(_Combine1{_result, _f.d_a1});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
-          auto _f = std::move(std::get<_Call2>(_frame));
-          _result = ((_f._s1 + _result) + _f._s0);
+          auto _f = std::move(std::get<_Combine1>(_frame));
+          _result = ((_f.d_a1 + _result) + _f._result);
         }
       }
       return _result;
@@ -908,25 +914,29 @@ struct ComprehensivePatterns {
         const Tree *_self;
       };
 
-      struct _Call1 {
+      /// Intermediate: saves [_s0, _s1, d_a1, _s3], dispatches next recursive
+      /// call.
+      struct _After2 {
         Tree *_s0;
         Tree _s1;
-        unsigned int _s2;
+        unsigned int d_a1;
         Tree _s3;
       };
 
-      struct _Call2 {
-        T1 _s0;
+      /// Combiner: receives first result, combines with second recursive call.
+      struct _Combine1 {
+        T1 _result;
         Tree _s1;
-        unsigned int _s2;
+        unsigned int d_a1;
         Tree _s3;
       };
 
-      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      using _Frame = std::variant<_Enter, _After2, _Combine1>;
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
+      /// Frame dispatch: _Enter, _After2, _Combine1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -940,17 +950,17 @@ struct ComprehensivePatterns {
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(_Call1{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After2{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
-        } else if (std::holds_alternative<_Call1>(_frame)) {
-          auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(
-              _Call2{_result, std::move(_f._s1), _f._s2, std::move(_f._s3)});
+        } else if (std::holds_alternative<_After2>(_frame)) {
+          auto _f = std::move(std::get<_After2>(_frame));
+          _stack.emplace_back(_Combine1{_result, std::move(_f._s1), _f.d_a1,
+                                        std::move(_f._s3)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
-          auto _f = std::move(std::get<_Call2>(_frame));
-          _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+          auto _f = std::move(std::get<_Combine1>(_frame));
+          _result = f0(_f._s3, _result, _f.d_a1, _f._s1, _f._result);
         }
       }
       return _result;
@@ -965,25 +975,29 @@ struct ComprehensivePatterns {
         const Tree *_self;
       };
 
-      struct _Call1 {
+      /// Intermediate: saves [_s0, _s1, d_a1, _s3], dispatches next recursive
+      /// call.
+      struct _After2 {
         Tree *_s0;
         Tree _s1;
-        unsigned int _s2;
+        unsigned int d_a1;
         Tree _s3;
       };
 
-      struct _Call2 {
-        T1 _s0;
+      /// Combiner: receives first result, combines with second recursive call.
+      struct _Combine1 {
+        T1 _result;
         Tree _s1;
-        unsigned int _s2;
+        unsigned int d_a1;
         Tree _s3;
       };
 
-      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      using _Frame = std::variant<_Enter, _After2, _Combine1>;
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
+      /// Frame dispatch: _Enter, _After2, _Combine1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -997,17 +1011,17 @@ struct ComprehensivePatterns {
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(_Call1{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After2{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
-        } else if (std::holds_alternative<_Call1>(_frame)) {
-          auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(
-              _Call2{_result, std::move(_f._s1), _f._s2, std::move(_f._s3)});
+        } else if (std::holds_alternative<_After2>(_frame)) {
+          auto _f = std::move(std::get<_After2>(_frame));
+          _stack.emplace_back(_Combine1{_result, std::move(_f._s1), _f.d_a1,
+                                        std::move(_f._s3)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
-          auto _f = std::move(std::get<_Call2>(_frame));
-          _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+          auto _f = std::move(std::get<_Combine1>(_frame));
+          _result = f0(_f._s3, _result, _f.d_a1, _f._s1, _f._result);
         }
       }
       return _result;

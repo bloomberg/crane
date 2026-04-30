@@ -9,15 +9,17 @@ LoopifyListGenerators::cycle_fuel(const unsigned int &fuel,
     unsigned int fuel;
   };
 
-  struct _Call1 {
-    List<unsigned int> _s0;
+  /// Continuation: saves [l] across recursive call.
+  struct _Resume1 {
+    List<unsigned int> l;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -36,14 +38,14 @@ LoopifyListGenerators::cycle_fuel(const unsigned int &fuel,
           if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
             _result = List<unsigned int>::nil();
           } else {
-            _stack.emplace_back(_Call1{l});
+            _stack.emplace_back(_Resume1{l});
             _stack.emplace_back(_Enter{n_, fuel_});
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = _f._s0.app(_result);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = _f.l.app(_result);
     }
   }
   return _result;
@@ -113,15 +115,17 @@ LoopifyListGenerators::replicate_each(const unsigned int &n,
     const List<unsigned int> *l;
   };
 
-  struct _Call1 {
-    List<unsigned int> _s0;
+  /// Continuation: saves [reps] across recursive call.
+  struct _Resume1 {
+    List<unsigned int> reps;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -134,12 +138,12 @@ LoopifyListGenerators::replicate_each(const unsigned int &n,
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         List<unsigned int> reps = replicate_elem(n, d_a0);
-        _stack.emplace_back(_Call1{std::move(reps)});
+        _stack.emplace_back(_Resume1{std::move(reps)});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = _f._s0.app(_result);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = _f.reps.app(_result);
     }
   }
   return _result;

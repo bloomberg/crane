@@ -93,15 +93,17 @@ LoopifyHofs::subsequences(const List<unsigned int> &l) {
     List<unsigned int> l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -115,12 +117,12 @@ LoopifyHofs::subsequences(const List<unsigned int> &l) {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
-        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Cont1{d_a0});
         _stack.emplace_back(_Enter{d_a1_value});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       List<List<unsigned int>> rest = _result;
       std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
           map_cons_x;
@@ -129,15 +131,17 @@ LoopifyHofs::subsequences(const List<unsigned int> &l) {
         struct _Enter {
           List<List<unsigned int>> lsts;
         };
-        struct _Call1 {
+        /// Continuation: saves [_s0] across recursive call.
+        struct _Resume1 {
           decltype(List<unsigned int>::cons(
               d_a0, std::declval<List<unsigned int> &>())) _s0;
         };
-        using _Frame = std::variant<_Enter, _Call1>;
+        using _Frame = std::variant<_Enter, _Resume1>;
         List<List<unsigned int>> _result{};
         std::vector<_Frame> _stack;
         _stack.reserve(16);
         _stack.emplace_back(_Enter{lsts});
+        /// Frame dispatch: _Enter, _Resume1.
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
           _stack.pop_back();
@@ -151,11 +155,11 @@ LoopifyHofs::subsequences(const List<unsigned int> &l) {
               const auto &[d_a00, d_a10] =
                   std::get<typename List<List<unsigned int>>::Cons>(lsts.v());
               _stack.emplace_back(
-                  _Call1{List<unsigned int>::cons(d_a0, d_a00)});
+                  _Resume1{List<unsigned int>::cons(d_a0, d_a00)});
               _stack.emplace_back(_Enter{*(d_a10)});
             }
           } else {
-            auto _f = std::move(std::get<_Call1>(_frame));
+            auto _f = std::move(std::get<_Resume1>(_frame));
             _result = List<List<unsigned int>>::cons(_f._s0, _result);
           }
         }
@@ -206,16 +210,18 @@ LoopifyHofs::cartesian(const List<unsigned int> &l1,
     const List<unsigned int> *l1;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume1 {
     decltype(pair_with_all(std::declval<unsigned int &>(),
                            std::declval<const List<unsigned int> &>())) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   List<std::pair<unsigned int, unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l1});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -227,11 +233,11 @@ LoopifyHofs::cartesian(const List<unsigned int> &l1,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l1.v());
-        _stack.emplace_back(_Call1{pair_with_all(d_a0, l2)});
+        _stack.emplace_back(_Resume1{pair_with_all(d_a0, l2)});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = _f._s0.app(_result);
     }
   }
@@ -320,15 +326,17 @@ List<List<unsigned int>> LoopifyHofs::power_set(const List<unsigned int> &l) {
     List<unsigned int> l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -342,12 +350,12 @@ List<List<unsigned int>> LoopifyHofs::power_set(const List<unsigned int> &l) {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
-        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Cont1{d_a0});
         _stack.emplace_back(_Enter{d_a1_value});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       List<List<unsigned int>> sub = _result;
       std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
           map_cons_x;
@@ -356,15 +364,17 @@ List<List<unsigned int>> LoopifyHofs::power_set(const List<unsigned int> &l) {
         struct _Enter {
           List<List<unsigned int>> lsts;
         };
-        struct _Call1 {
+        /// Continuation: saves [_s0] across recursive call.
+        struct _Resume1 {
           decltype(List<unsigned int>::cons(
               d_a0, std::declval<List<unsigned int> &>())) _s0;
         };
-        using _Frame = std::variant<_Enter, _Call1>;
+        using _Frame = std::variant<_Enter, _Resume1>;
         List<List<unsigned int>> _result{};
         std::vector<_Frame> _stack;
         _stack.reserve(16);
         _stack.emplace_back(_Enter{lsts});
+        /// Frame dispatch: _Enter, _Resume1.
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
           _stack.pop_back();
@@ -378,11 +388,11 @@ List<List<unsigned int>> LoopifyHofs::power_set(const List<unsigned int> &l) {
               const auto &[d_a00, d_a10] =
                   std::get<typename List<List<unsigned int>>::Cons>(lsts.v());
               _stack.emplace_back(
-                  _Call1{List<unsigned int>::cons(d_a0, d_a00)});
+                  _Resume1{List<unsigned int>::cons(d_a0, d_a00)});
               _stack.emplace_back(_Enter{*(d_a10)});
             }
           } else {
-            auto _f = std::move(std::get<_Call1>(_frame));
+            auto _f = std::move(std::get<_Resume1>(_frame));
             _result = List<List<unsigned int>>::cons(_f._s0, _result);
           }
         }

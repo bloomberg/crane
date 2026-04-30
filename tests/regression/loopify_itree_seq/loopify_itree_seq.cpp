@@ -56,15 +56,17 @@ List<unsigned int> LoopifyItreeSeq::countdown_list(unsigned int n) {
     unsigned int n;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [n] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int n;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -75,12 +77,12 @@ List<unsigned int> LoopifyItreeSeq::countdown_list(unsigned int n) {
         _result = List<unsigned int>::cons(0u, List<unsigned int>::nil());
       } else {
         unsigned int n_ = n - 1;
-        _stack.emplace_back(_Call1{n});
+        _stack.emplace_back(_Cont1{n});
         _stack.emplace_back(_Enter{n_});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int n = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int n = std::move(_f.n);
       List<unsigned int> rest = _result;
       _result = List<unsigned int>::cons(n, rest);
     }

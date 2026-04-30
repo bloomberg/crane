@@ -132,23 +132,27 @@ unsigned int LoopifySearchOpt::knapsack_fuel(
     unsigned int fuel;
   };
 
-  struct _Call1 {
+  /// Intermediate: saves [_s0, capacity, fuel_, value], dispatches next
+  /// recursive call.
+  struct _After2 {
     const List<std::pair<unsigned int, unsigned int>> *_s0;
-    unsigned int _s1;
-    unsigned int _s2;
-    unsigned int _s3;
+    unsigned int capacity;
+    unsigned int fuel_;
+    unsigned int value;
   };
 
-  struct _Call2 {
-    unsigned int _s0;
-    unsigned int _s1;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine1 {
+    unsigned int _result;
+    unsigned int value;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
+  using _Frame = std::variant<_Enter, _After2, _Combine1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&items, capacity, fuel});
+  /// Frame dispatch: _Enter, _After2, _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -174,7 +178,7 @@ unsigned int LoopifySearchOpt::knapsack_fuel(
           if (capacity < weight) {
             _stack.emplace_back(_Enter{d_a1.get(), capacity, fuel_});
           } else {
-            _stack.emplace_back(_Call1{d_a1.get(), capacity, fuel_, value});
+            _stack.emplace_back(_After2{d_a1.get(), capacity, fuel_, value});
             _stack.emplace_back(_Enter{
                 d_a1.get(),
                 (((capacity - weight) > capacity ? 0 : (capacity - weight))),
@@ -182,13 +186,13 @@ unsigned int LoopifySearchOpt::knapsack_fuel(
           }
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _stack.emplace_back(_Call2{_result, _f._s3});
-      _stack.emplace_back(_Enter{_f._s0, _f._s1, _f._s2});
+    } else if (std::holds_alternative<_After2>(_frame)) {
+      auto _f = std::move(std::get<_After2>(_frame));
+      _stack.emplace_back(_Combine1{_result, _f.value});
+      _stack.emplace_back(_Enter{_f._s0, _f.capacity, _f.fuel_});
     } else {
-      auto _f = std::move(std::get<_Call2>(_frame));
-      _result = std::max(_result, (_f._s1 + _f._s0));
+      auto _f = std::move(std::get<_Combine1>(_frame));
+      _result = std::max(_result, (_f.value + _f._result));
     }
   }
   return _result;
@@ -209,21 +213,24 @@ bool LoopifySearchOpt::subset_sum_fuel(const unsigned int &fuel,
     unsigned int fuel;
   };
 
-  struct _Call1 {
+  /// Intermediate: saves [_s0, target, fuel_], dispatches next recursive call.
+  struct _After2 {
     const List<unsigned int> *_s0;
-    unsigned int _s1;
-    unsigned int _s2;
+    unsigned int target;
+    unsigned int fuel_;
   };
 
-  struct _Call2 {
-    bool _s0;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine1 {
+    bool _result;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
+  using _Frame = std::variant<_Enter, _After2, _Combine1>;
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l, target, fuel});
+  /// Frame dispatch: _Enter, _After2, _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -244,20 +251,20 @@ bool LoopifySearchOpt::subset_sum_fuel(const unsigned int &fuel,
           if (target < d_a0) {
             _stack.emplace_back(_Enter{d_a1.get(), target, fuel_});
           } else {
-            _stack.emplace_back(_Call1{d_a1.get(), target, fuel_});
+            _stack.emplace_back(_After2{d_a1.get(), target, fuel_});
             _stack.emplace_back(_Enter{
                 d_a1.get(), (((target - d_a0) > target ? 0 : (target - d_a0))),
                 fuel_});
           }
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _stack.emplace_back(_Call2{_result});
-      _stack.emplace_back(_Enter{_f._s0, _f._s1, _f._s2});
+    } else if (std::holds_alternative<_After2>(_frame)) {
+      auto _f = std::move(std::get<_After2>(_frame));
+      _stack.emplace_back(_Combine1{_result});
+      _stack.emplace_back(_Enter{_f._s0, _f.target, _f.fuel_});
     } else {
-      auto _f = std::move(std::get<_Call2>(_frame));
-      _result = (_result || _f._s0);
+      auto _f = std::move(std::get<_Combine1>(_frame));
+      _result = (_result || _f._result);
     }
   }
   return _result;
@@ -274,15 +281,17 @@ LoopifySearchOpt::majority(const List<unsigned int> &l) {
     const List<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -294,12 +303,12 @@ LoopifySearchOpt::majority(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Cont1{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       const unsigned int &cand = _result.first;
       const unsigned int &count = _result.second;
       if (d_a0 == cand) {
@@ -401,14 +410,16 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int &fuel,
               List<unsigned int> xs;
               unsigned int n;
             };
-            struct _Call1 {
-              unsigned int _s0;
+            /// Continuation: saves [d_a03] across recursive call.
+            struct _Resume1 {
+              unsigned int d_a03;
             };
-            using _Frame = std::variant<_Enter, _Call1>;
+            using _Frame = std::variant<_Enter, _Resume1>;
             List<unsigned int> _result{};
             std::vector<_Frame> _stack;
             _stack.reserve(16);
             _stack.emplace_back(_Enter{xs, n});
+            /// Frame dispatch: _Enter, _Resume1.
             while (!_stack.empty()) {
               _Frame _frame = std::move(_stack.back());
               _stack.pop_back();
@@ -426,13 +437,13 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int &fuel,
                   } else {
                     const auto &[d_a03, d_a13] =
                         std::get<typename List<unsigned int>::Cons>(xs.v());
-                    _stack.emplace_back(_Call1{d_a03});
+                    _stack.emplace_back(_Resume1{d_a03});
                     _stack.emplace_back(_Enter{*(d_a13), n_});
                   }
                 }
               } else {
-                auto _f = std::move(std::get<_Call1>(_frame));
-                _result = List<unsigned int>::cons(_f._s0, _result);
+                auto _f = std::move(std::get<_Resume1>(_frame));
+                _result = List<unsigned int>::cons(_f.d_a03, _result);
               }
             }
             return _result;

@@ -7,16 +7,18 @@ bool LoopifyListRelations::is_prefix_of(const List<unsigned int> &l1,
     const List<unsigned int> *l1;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume1 {
     decltype(std::declval<unsigned int &>() ==
              std::declval<unsigned int &>()) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l2, &l1});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -34,12 +36,12 @@ bool LoopifyListRelations::is_prefix_of(const List<unsigned int> &l1,
         } else {
           const auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(l2.v());
-          _stack.emplace_back(_Call1{d_a0 == d_a00});
+          _stack.emplace_back(_Resume1{d_a0 == d_a00});
           _stack.emplace_back(_Enter{d_a10.get(), d_a1.get()});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_f._s0 && _result);
     }
   }
@@ -215,16 +217,18 @@ bool LoopifyListRelations::list_eq(const List<unsigned int> &l1,
     const List<unsigned int> *l1;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume1 {
     decltype(std::declval<unsigned int &>() ==
              std::declval<unsigned int &>()) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l2, &l1});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -246,12 +250,12 @@ bool LoopifyListRelations::list_eq(const List<unsigned int> &l1,
         } else {
           const auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(l2.v());
-          _stack.emplace_back(_Call1{d_a0 == d_a00});
+          _stack.emplace_back(_Resume1{d_a0 == d_a00});
           _stack.emplace_back(_Enter{d_a10.get(), d_a1.get()});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_f._s0 && _result);
     }
   }
@@ -552,15 +556,17 @@ List<unsigned int> LoopifyListRelations::union_(const List<unsigned int> &l1,
               struct _Enter {
                 List<unsigned int> ys;
               };
-              struct _Call1 {
+              /// Continuation: saves [_s0] across recursive call.
+              struct _Resume1 {
                 decltype(std::declval<unsigned int &>() ==
                          std::declval<unsigned int &>()) _s0;
               };
-              using _Frame = std::variant<_Enter, _Call1>;
+              using _Frame = std::variant<_Enter, _Resume1>;
               bool _result{};
               std::vector<_Frame> _stack;
               _stack.reserve(16);
               _stack.emplace_back(_Enter{ys});
+              /// Frame dispatch: _Enter, _Resume1.
               while (!_stack.empty()) {
                 _Frame _frame = std::move(_stack.back());
                 _stack.pop_back();
@@ -573,11 +579,11 @@ List<unsigned int> LoopifyListRelations::union_(const List<unsigned int> &l1,
                   } else {
                     const auto &[d_a0, d_a1] =
                         std::get<typename List<unsigned int>::Cons>(ys.v());
-                    _stack.emplace_back(_Call1{y == d_a0});
+                    _stack.emplace_back(_Resume1{y == d_a0});
                     _stack.emplace_back(_Enter{*(d_a1)});
                   }
                 } else {
-                  auto _f = std::move(std::get<_Call1>(_frame));
+                  auto _f = std::move(std::get<_Resume1>(_frame));
                   _result = (_f._s0 || _result);
                 }
               }
@@ -630,15 +636,17 @@ LoopifyListRelations::intersection(const List<unsigned int> &l1,
               struct _Enter {
                 List<unsigned int> ys;
               };
-              struct _Call1 {
+              /// Continuation: saves [_s0] across recursive call.
+              struct _Resume1 {
                 decltype(std::declval<unsigned int &>() ==
                          std::declval<unsigned int &>()) _s0;
               };
-              using _Frame = std::variant<_Enter, _Call1>;
+              using _Frame = std::variant<_Enter, _Resume1>;
               bool _result{};
               std::vector<_Frame> _stack;
               _stack.reserve(16);
               _stack.emplace_back(_Enter{ys});
+              /// Frame dispatch: _Enter, _Resume1.
               while (!_stack.empty()) {
                 _Frame _frame = std::move(_stack.back());
                 _stack.pop_back();
@@ -651,11 +659,11 @@ LoopifyListRelations::intersection(const List<unsigned int> &l1,
                   } else {
                     const auto &[d_a0, d_a1] =
                         std::get<typename List<unsigned int>::Cons>(ys.v());
-                    _stack.emplace_back(_Call1{y == d_a0});
+                    _stack.emplace_back(_Resume1{y == d_a0});
                     _stack.emplace_back(_Enter{*(d_a1)});
                   }
                 } else {
-                  auto _f = std::move(std::get<_Call1>(_frame));
+                  auto _f = std::move(std::get<_Resume1>(_frame));
                   _result = (_f._s0 || _result);
                 }
               }

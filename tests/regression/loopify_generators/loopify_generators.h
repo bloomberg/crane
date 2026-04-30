@@ -308,16 +308,18 @@ struct LoopifyGenerators {
       struct _Enter {
         unsigned int i;
       };
-      struct _Call1 {
+      /// Continuation: saves [_s0] across recursive call.
+      struct _Resume1 {
         decltype(f((((n - std::declval<unsigned int &>()) > n
                          ? 0
                          : (n - std::declval<unsigned int &>()))))) _s0;
       };
-      using _Frame = std::variant<_Enter, _Call1>;
+      using _Frame = std::variant<_Enter, _Resume1>;
       List<unsigned int> _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(16);
       _stack.emplace_back(_Enter{i});
+      /// Frame dispatch: _Enter, _Resume1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -328,11 +330,11 @@ struct LoopifyGenerators {
             _result = List<unsigned int>::nil();
           } else {
             unsigned int j = i - 1;
-            _stack.emplace_back(_Call1{f((((n - i) > n ? 0 : (n - i))))});
+            _stack.emplace_back(_Resume1{f((((n - i) > n ? 0 : (n - i))))});
             _stack.emplace_back(_Enter{j});
           }
         } else {
-          auto _f = std::move(std::get<_Call1>(_frame));
+          auto _f = std::move(std::get<_Resume1>(_frame));
           _result = List<unsigned int>::cons(_f._s0, _result);
         }
       }

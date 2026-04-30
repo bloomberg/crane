@@ -62,15 +62,17 @@ List<unsigned int> LoopifyListGeneration::cycle(const unsigned int &n,
     unsigned int n;
   };
 
-  struct _Call1 {
-    List<unsigned int> _s0;
+  /// Continuation: saves [l] across recursive call.
+  struct _Resume1 {
+    List<unsigned int> l;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -81,12 +83,12 @@ List<unsigned int> LoopifyListGeneration::cycle(const unsigned int &n,
         _result = List<unsigned int>::nil();
       } else {
         unsigned int n_ = n - 1;
-        _stack.emplace_back(_Call1{l});
+        _stack.emplace_back(_Resume1{l});
         _stack.emplace_back(_Enter{n_});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = _f._s0.app(_result);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = _f.l.app(_result);
     }
   }
   return _result;
@@ -126,15 +128,17 @@ List<unsigned int> LoopifyListGeneration::replicate_list(
     const List<std::pair<unsigned int, unsigned int>> *l;
   };
 
-  struct _Call1 {
-    List<unsigned int> _s0;
+  /// Continuation: saves [rep] across recursive call.
+  struct _Resume1 {
+    List<unsigned int> rep;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -151,12 +155,12 @@ List<unsigned int> LoopifyListGeneration::replicate_list(
         const unsigned int &n = d_a0.first;
         const unsigned int &x = d_a0.second;
         List<unsigned int> rep = replicate(n, x);
-        _stack.emplace_back(_Call1{std::move(rep)});
+        _stack.emplace_back(_Resume1{std::move(rep)});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = _f._s0.app(_result);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = _f.rep.app(_result);
     }
   }
   return _result;

@@ -64,15 +64,17 @@ LoopifyListSubsequences::inits_fuel(const unsigned int &fuel,
     unsigned int fuel;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l, fuel});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -91,13 +93,13 @@ LoopifyListSubsequences::inits_fuel(const unsigned int &fuel,
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Cont1{d_a0});
           _stack.emplace_back(_Enter{d_a1.get(), fuel_});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       List<List<unsigned int>> rest = _result;
       _result = List<List<unsigned int>>::cons(
           List<unsigned int>::nil(), map_cons_helper(d_a0, std::move(rest)));
@@ -229,15 +231,17 @@ LoopifyListSubsequences::split_at(const unsigned int &n, List<unsigned int> l) {
     unsigned int n;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<List<unsigned int>, List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l, n});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -256,13 +260,13 @@ LoopifyListSubsequences::split_at(const unsigned int &n, List<unsigned int> l) {
         } else {
           auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v_mut());
-          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Cont1{d_a0});
           _stack.emplace_back(_Enter{*(d_a1), n_});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       const List<unsigned int> &before = _result.first;
       const List<unsigned int> &after = _result.second;
       _result = std::make_pair(List<unsigned int>::cons(d_a0, before), after);

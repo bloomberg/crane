@@ -134,16 +134,18 @@ struct LoopifyPatterns {
       const list<T1> *l;
     };
 
-    struct _Call1 {
+    /// Continuation: saves [_s0, d_a0] across recursive call.
+    struct _Resume1 {
       list<T1> _s0;
-      T1 _s1;
+      T1 d_a0;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Resume1>;
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Resume1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -154,12 +156,12 @@ struct LoopifyPatterns {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Call1{*(d_a1), d_a0});
+          _stack.emplace_back(_Resume1{*(d_a1), d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        _result = f0(_f._s1, _f._s0, _result);
+        auto _f = std::move(std::get<_Resume1>(_frame));
+        _result = f0(_f.d_a0, _f._s0, _result);
       }
     }
     return _result;
@@ -171,16 +173,18 @@ struct LoopifyPatterns {
       const list<T1> *l;
     };
 
-    struct _Call1 {
+    /// Continuation: saves [_s0, d_a0] across recursive call.
+    struct _Resume1 {
       list<T1> _s0;
-      T1 _s1;
+      T1 d_a0;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Resume1>;
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Resume1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -191,12 +195,12 @@ struct LoopifyPatterns {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Call1{*(d_a1), d_a0});
+          _stack.emplace_back(_Resume1{*(d_a1), d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        _result = f0(_f._s1, _f._s0, _result);
+        auto _f = std::move(std::get<_Resume1>(_frame));
+        _result = f0(_f.d_a0, _f._s0, _result);
       }
     }
     return _result;
@@ -247,16 +251,19 @@ struct LoopifyPatterns {
       const list<unsigned int> *l;
     };
 
-    struct _Call1 {
-      unsigned int _s0;
-      F0 _s1;
+    /// Continuation: saves [d_a0, f] across recursive call, then processes
+    /// rest.
+    struct _Cont1 {
+      unsigned int d_a0;
+      F0 f;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Cont1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -273,14 +280,14 @@ struct LoopifyPatterns {
                   _sv.v())) {
             _result = f(d_a0);
           } else {
-            _stack.emplace_back(_Call1{d_a0, f});
+            _stack.emplace_back(_Cont1{d_a0, f});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = std::move(_f._s0);
-        F0 f = _f._s1;
+        auto _f = std::move(std::get<_Cont1>(_frame));
+        unsigned int d_a0 = std::move(_f.d_a0);
+        F0 f = _f.f;
         unsigned int rest_max = _result;
         unsigned int fx = f(d_a0);
         if (fx < rest_max) {
@@ -311,17 +318,19 @@ struct LoopifyPatterns {
       list<T1> l;
     };
 
-    struct _Call1 {
+    /// Continuation: saves [_s0] across recursive call.
+    struct _Resume1 {
       decltype(list<T1>::cons(std::declval<const T1 &>(),
                               list<T1>::cons(std::declval<T1 &>(),
                                              std::declval<list<T1> &>()))) _s0;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Resume1>;
     list<list<T1>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{l});
+    /// Frame dispatch: _Enter, _Resume1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -339,14 +348,16 @@ struct LoopifyPatterns {
             struct _Enter {
               list<list<T1>> lsts;
             };
-            struct _Call1 {
+            /// Continuation: saves [_s0] across recursive call.
+            struct _Resume1 {
               decltype(list<T1>::cons(d_a0, std::declval<list<T1> &>())) _s0;
             };
-            using _Frame = std::variant<_Enter, _Call1>;
+            using _Frame = std::variant<_Enter, _Resume1>;
             list<list<T1>> _result{};
             std::vector<_Frame> _stack;
             _stack.reserve(16);
             _stack.emplace_back(_Enter{lsts});
+            /// Frame dispatch: _Enter, _Resume1.
             while (!_stack.empty()) {
               _Frame _frame = std::move(_stack.back());
               _stack.pop_back();
@@ -359,22 +370,22 @@ struct LoopifyPatterns {
                 } else {
                   const auto &[d_a00, d_a10] =
                       std::get<typename list<list<T1>>::Cons>(lsts.v());
-                  _stack.emplace_back(_Call1{list<T1>::cons(d_a0, d_a00)});
+                  _stack.emplace_back(_Resume1{list<T1>::cons(d_a0, d_a00)});
                   _stack.emplace_back(_Enter{*(d_a10)});
                 }
               } else {
-                auto _f = std::move(std::get<_Call1>(_frame));
+                auto _f = std::move(std::get<_Resume1>(_frame));
                 _result = list<list<T1>>::cons(_f._s0, _result);
               }
             }
             return _result;
           };
           _stack.emplace_back(
-              _Call1{list<T1>::cons(x, list<T1>::cons(d_a0, d_a1_value))});
+              _Resume1{list<T1>::cons(x, list<T1>::cons(d_a0, d_a1_value))});
           _stack.emplace_back(_Enter{d_a1_value});
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
+        auto _f = std::move(std::get<_Resume1>(_frame));
         _result = list<list<T1>>::cons(_f._s0, map_cons_h(_result));
       }
     }
@@ -491,19 +502,22 @@ struct LoopifyPatterns {
       const list<unsigned int> *l;
     };
 
-    struct _Call1 {
-      unsigned int _s0;
-      F0 _s1;
-      F1 _s2;
+    /// Continuation: saves [d_a0, p, q] across recursive call, then processes
+    /// rest.
+    struct _Cont1 {
+      unsigned int d_a0;
+      F0 p;
+      F1 q;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Cont1>;
     std::pair<std::pair<list<unsigned int>, list<unsigned int>>,
               list<unsigned int>>
         _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -517,14 +531,14 @@ struct LoopifyPatterns {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename list<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Call1{d_a0, p, q});
+          _stack.emplace_back(_Cont1{d_a0, p, q});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int d_a0 = std::move(_f._s0);
-        F0 p = _f._s1;
-        F1 q = _f._s2;
+        auto _f = std::move(std::get<_Cont1>(_frame));
+        unsigned int d_a0 = std::move(_f.d_a0);
+        F0 p = _f.p;
+        F1 q = _f.q;
         const std::pair<list<unsigned int>, list<unsigned int>> &p0 =
             _result.first;
         const list<unsigned int> &cs = _result.second;

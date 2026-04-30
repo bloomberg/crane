@@ -38,15 +38,17 @@ unsigned int LoopifyLists::step_sum(const LoopifyLists::list<unsigned int> &l) {
     const LoopifyLists::list<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [contribution] across recursive call.
+  struct _Resume1 {
+    unsigned int contribution;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -65,12 +67,12 @@ unsigned int LoopifyLists::step_sum(const LoopifyLists::list<unsigned int> &l) {
         } else {
           contribution = (d_a0 * 2u);
         }
-        _stack.emplace_back(_Call1{contribution});
+        _stack.emplace_back(_Resume1{contribution});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = (_f._s0 + _result);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = (_f.contribution + _result);
     }
   }
   return _result;
@@ -83,15 +85,17 @@ unsigned int LoopifyLists::sum_abs(const LoopifyLists::list<unsigned int> &l,
     const LoopifyLists::list<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [abs_val] across recursive call.
+  struct _Resume1 {
+    unsigned int abs_val;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -110,12 +114,12 @@ unsigned int LoopifyLists::sum_abs(const LoopifyLists::list<unsigned int> &l,
         } else {
           abs_val = (((base - d_a0) > base ? 0 : (base - d_a0)));
         }
-        _stack.emplace_back(_Call1{abs_val});
+        _stack.emplace_back(_Resume1{abs_val});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = (_f._s0 + _result);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = (_f.abs_val + _result);
     }
   }
   return _result;
@@ -128,18 +132,20 @@ LoopifyLists::four_elem(const LoopifyLists::list<unsigned int> &l) {
     const LoopifyLists::list<unsigned int> *l;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0, _s1] across recursive call.
+  struct _Resume1 {
     decltype((std::declval<unsigned int &>() +
               std::declval<unsigned int &>())) _s0;
     decltype((std::declval<unsigned int &>() +
               std::declval<unsigned int &>())) _s1;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -176,14 +182,14 @@ LoopifyLists::four_elem(const LoopifyLists::list<unsigned int> &l) {
               const auto &[d_a02, d_a12] =
                   std::get<typename LoopifyLists::list<unsigned int>::Cons>(
                       _sv2.v());
-              _stack.emplace_back(_Call1{(d_a0 + d_a00), (d_a01 + d_a02)});
+              _stack.emplace_back(_Resume1{(d_a0 + d_a00), (d_a01 + d_a02)});
               _stack.emplace_back(_Enter{d_a12.get()});
             }
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_f._s0 + (_f._s1 + _result));
     }
   }
@@ -233,15 +239,17 @@ LoopifyLists::categorize(const unsigned int &k,
     const LoopifyLists::list<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [score] across recursive call.
+  struct _Resume1 {
+    unsigned int score;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -264,12 +272,12 @@ LoopifyLists::categorize(const unsigned int &k,
             score = 1u;
           }
         }
-        _stack.emplace_back(_Call1{score});
+        _stack.emplace_back(_Resume1{score});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = (_f._s0 + _result);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = (_f.score + _result);
     }
   }
   return _result;
@@ -282,15 +290,17 @@ LoopifyLists::max_prefix_sum(const LoopifyLists::list<unsigned int> &l) {
     const LoopifyLists::list<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -303,12 +313,12 @@ LoopifyLists::max_prefix_sum(const LoopifyLists::list<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Cont1{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       unsigned int rest = _result;
       unsigned int sum = (d_a0 + rest);
       if (0u <= sum) {
@@ -369,16 +379,18 @@ LoopifyLists::weighted_sum(unsigned int i,
     unsigned int i;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume1 {
     decltype((std::declval<unsigned int &>() *
               std::declval<unsigned int &>())) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l, i});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -392,11 +404,11 @@ LoopifyLists::weighted_sum(unsigned int i,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{(i * d_a0)});
+        _stack.emplace_back(_Resume1{(i * d_a0)});
         _stack.emplace_back(_Enter{d_a1.get(), (i + 1)});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -527,13 +539,15 @@ unsigned int LoopifyLists::len_list(const LoopifyLists::list<unsigned int> &l) {
     const LoopifyLists::list<unsigned int> *l;
   };
 
-  struct _Call1 {};
+  /// Continuation: saves across recursive call.
+  struct _Resume1 {};
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -546,11 +560,11 @@ unsigned int LoopifyLists::len_list(const LoopifyLists::list<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{});
+        _stack.emplace_back(_Resume1{});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_result + 1);
     }
   }
@@ -733,15 +747,17 @@ unsigned int LoopifyLists::product(const LoopifyLists::list<unsigned int> &l) {
     const LoopifyLists::list<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call.
+  struct _Resume1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -754,12 +770,12 @@ unsigned int LoopifyLists::product(const LoopifyLists::list<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Resume1{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = (_f._s0 * _result);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = (_f.d_a0 * _result);
     }
   }
   return _result;
@@ -771,15 +787,17 @@ unsigned int LoopifyLists::sum_list(const LoopifyLists::list<unsigned int> &l) {
     const LoopifyLists::list<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call.
+  struct _Resume1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -792,12 +810,12 @@ unsigned int LoopifyLists::sum_list(const LoopifyLists::list<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Resume1{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = (_f._s0 + _result);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = (_f.d_a0 + _result);
     }
   }
   return _result;
@@ -865,15 +883,17 @@ unsigned int LoopifyLists::sum_list_lengths(
     const LoopifyLists::list<LoopifyLists::list<unsigned int>> *l;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume1 {
     decltype(len_list(std::declval<LoopifyLists::list<unsigned int> &>())) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -886,11 +906,11 @@ unsigned int LoopifyLists::sum_list_lengths(
       } else {
         const auto &[d_a0, d_a1] = std::get<typename LoopifyLists::list<
             LoopifyLists::list<unsigned int>>::Cons>(l.v());
-        _stack.emplace_back(_Call1{len_list(d_a0)});
+        _stack.emplace_back(_Resume1{len_list(d_a0)});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -1001,16 +1021,18 @@ LoopifyLists::swizzle(const LoopifyLists::list<unsigned int> &l) {
     const LoopifyLists::list<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<LoopifyLists::list<unsigned int>, LoopifyLists::list<unsigned int>>
       _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1024,12 +1046,12 @@ LoopifyLists::swizzle(const LoopifyLists::list<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Cont1{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       const LoopifyLists::list<unsigned int> &odds = _result.first;
       const LoopifyLists::list<unsigned int> &evens = _result.second;
       _result = std::make_pair(list<unsigned int>::cons(d_a0, evens), odds);
@@ -1237,16 +1259,18 @@ LoopifyLists::reverse_insert(unsigned int x,
     const LoopifyLists::list<unsigned int> *l;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0, d_a0] across recursive call.
+  struct _Resume1 {
     decltype(list<unsigned int>::nil()) _s0;
-    unsigned int _s1;
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   LoopifyLists::list<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1259,12 +1283,12 @@ LoopifyLists::reverse_insert(unsigned int x,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{list<unsigned int>::nil(), d_a0});
+        _stack.emplace_back(_Resume1{list<unsigned int>::nil(), d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = rev_helper(_f._s0, list<unsigned int>::cons(_f._s1, _result));
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = rev_helper(_f._s0, list<unsigned int>::cons(_f.d_a0, _result));
     }
   }
   return _result;
@@ -1312,15 +1336,17 @@ LoopifyLists::double_append(const LoopifyLists::list<unsigned int> &l1,
     const LoopifyLists::list<unsigned int> *l1;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   LoopifyLists::list<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l2, &l1});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1334,12 +1360,12 @@ LoopifyLists::double_append(const LoopifyLists::list<unsigned int> &l1,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(l1.v());
-        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Cont1{d_a0});
         _stack.emplace_back(_Enter{std::move(l2), d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       LoopifyLists::list<unsigned int> rest = _result;
       _result = list<unsigned int>::cons(d_a0, app_helper(rest, rest));
     }
@@ -1400,16 +1426,18 @@ LoopifyLists::split_at(const unsigned int &n,
     unsigned int n;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<LoopifyLists::list<unsigned int>, LoopifyLists::list<unsigned int>>
       _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l, n});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1428,13 +1456,13 @@ LoopifyLists::split_at(const unsigned int &n,
         if (n == 0u) {
           _result = std::make_pair(list<unsigned int>::nil(), l);
         } else {
-          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Cont1{d_a0});
           _stack.emplace_back(_Enter{*(d_a1), (((n - 1u) > n ? 0 : (n - 1u)))});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       const LoopifyLists::list<unsigned int> &a = _result.first;
       const LoopifyLists::list<unsigned int> &b = _result.second;
       _result = std::make_pair(list<unsigned int>::cons(d_a0, a), b);
@@ -1451,17 +1479,19 @@ LoopifyLists::unzip(
     const LoopifyLists::list<std::pair<unsigned int, unsigned int>> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
-    unsigned int _s1;
+  /// Continuation: saves [a, b] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int a;
+    unsigned int b;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<LoopifyLists::list<unsigned int>, LoopifyLists::list<unsigned int>>
       _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1478,13 +1508,13 @@ LoopifyLists::unzip(
             std::pair<unsigned int, unsigned int>>::Cons>(l.v());
         const unsigned int &a = d_a0.first;
         const unsigned int &b = d_a0.second;
-        _stack.emplace_back(_Call1{a, b});
+        _stack.emplace_back(_Cont1{a, b});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int a = std::move(_f._s0);
-      unsigned int b = std::move(_f._s1);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int a = std::move(_f.a);
+      unsigned int b = std::move(_f.b);
       const LoopifyLists::list<unsigned int> &xs = _result.first;
       const LoopifyLists::list<unsigned int> &ys = _result.second;
       _result = std::make_pair(list<unsigned int>::cons(a, xs),
@@ -1626,13 +1656,15 @@ unsigned int LoopifyLists::count(const unsigned int &x,
     const LoopifyLists::list<unsigned int> *l;
   };
 
-  struct _Call1 {};
+  /// Continuation: saves across recursive call.
+  struct _Resume1 {};
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1646,14 +1678,14 @@ unsigned int LoopifyLists::count(const unsigned int &x,
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(l.v());
         if (x == d_a0) {
-          _stack.emplace_back(_Call1{});
+          _stack.emplace_back(_Resume1{});
           _stack.emplace_back(_Enter{d_a1.get()});
         } else {
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_result + 1);
     }
   }
@@ -1666,15 +1698,17 @@ unsigned int LoopifyLists::maximum(const LoopifyLists::list<unsigned int> &l) {
     const LoopifyLists::list<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1692,13 +1726,13 @@ unsigned int LoopifyLists::maximum(const LoopifyLists::list<unsigned int> &l) {
                 typename LoopifyLists::list<unsigned int>::Nil>(_sv.v())) {
           _result = d_a0;
         } else {
-          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Cont1{d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       unsigned int max_rest = _result;
       if (max_rest <= d_a0) {
         _result = d_a0;
@@ -1717,15 +1751,17 @@ LoopifyLists::minmax(const LoopifyLists::list<unsigned int> &l) {
     const LoopifyLists::list<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1743,13 +1779,13 @@ LoopifyLists::minmax(const LoopifyLists::list<unsigned int> &l) {
                 typename LoopifyLists::list<unsigned int>::Nil>(_sv.v())) {
           _result = std::make_pair(d_a0, d_a0);
         } else {
-          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Cont1{d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       const unsigned int &lo = _result.first;
       const unsigned int &hi = _result.second;
       _result =
@@ -1819,16 +1855,18 @@ LoopifyLists::list<unsigned int> LoopifyLists::intercalate(
     const LoopifyLists::list<LoopifyLists::list<unsigned int>> *lists;
   };
 
-  struct _Call1 {
-    LoopifyLists::list<unsigned int> _s0;
-    LoopifyLists::list<unsigned int> _s1;
+  /// Continuation: saves [d_a0, sep] across recursive call.
+  struct _Resume1 {
+    LoopifyLists::list<unsigned int> d_a0;
+    LoopifyLists::list<unsigned int> sep;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   LoopifyLists::list<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&lists});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1847,13 +1885,13 @@ LoopifyLists::list<unsigned int> LoopifyLists::intercalate(
                 LoopifyLists::list<unsigned int>>::Nil>(_sv.v())) {
           _result = d_a0;
         } else {
-          _stack.emplace_back(_Call1{d_a0, sep});
+          _stack.emplace_back(_Resume1{d_a0, sep});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = app_helper(_f._s0, app_helper(_f._s1, _result));
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = app_helper(_f.d_a0, app_helper(_f.sep, _result));
     }
   }
   return _result;
@@ -1867,15 +1905,17 @@ LoopifyLists::majority(const LoopifyLists::list<unsigned int> &l) {
     const LoopifyLists::list<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1893,13 +1933,13 @@ LoopifyLists::majority(const LoopifyLists::list<unsigned int> &l) {
                 typename LoopifyLists::list<unsigned int>::Nil>(_sv.v())) {
           _result = std::make_pair(d_a0, 1u);
         } else {
-          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Cont1{d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       const unsigned int &cand = _result.first;
       const unsigned int &cnt = _result.second;
       if (d_a0 == cand) {
@@ -1998,15 +2038,17 @@ LoopifyLists::sum_and_count(const LoopifyLists::list<unsigned int> &l) {
     const LoopifyLists::list<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -2019,12 +2061,12 @@ LoopifyLists::sum_and_count(const LoopifyLists::list<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Cont1{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       const unsigned int &s = _result.first;
       const unsigned int &c = _result.second;
       _result = std::make_pair((d_a0 + s), (c + 1));

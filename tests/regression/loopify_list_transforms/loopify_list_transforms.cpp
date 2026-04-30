@@ -428,15 +428,17 @@ unsigned int LoopifyListTransforms::step_sum(const List<unsigned int> &l) {
     const List<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [contribution] across recursive call.
+  struct _Resume1 {
+    unsigned int contribution;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -454,12 +456,12 @@ unsigned int LoopifyListTransforms::step_sum(const List<unsigned int> &l) {
         } else {
           contribution = (d_a0 * 2u);
         }
-        _stack.emplace_back(_Call1{contribution});
+        _stack.emplace_back(_Resume1{contribution});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = (_f._s0 + _result);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = (_f.contribution + _result);
     }
   }
   return _result;

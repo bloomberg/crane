@@ -156,15 +156,17 @@ struct LoopifyPolymorphic {
       const List<T1> *l;
     };
 
-    struct _Call1 {
+    /// Continuation: saves [_s0] across recursive call.
+    struct _Resume1 {
       decltype(1u) _s0;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Resume1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Resume1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -175,11 +177,11 @@ struct LoopifyPolymorphic {
           _result = 0u;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-          _stack.emplace_back(_Call1{1u});
+          _stack.emplace_back(_Resume1{1u});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
+        auto _f = std::move(std::get<_Resume1>(_frame));
         _result = (_f._s0 + _result);
       }
     }
@@ -191,15 +193,17 @@ struct LoopifyPolymorphic {
       const List<T1> *l;
     };
 
-    struct _Call1 {
+    /// Continuation: saves [_s0] across recursive call.
+    struct _Resume1 {
       decltype(List<T1>::cons(std::declval<T1 &>(), List<T1>::nil())) _s0;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Resume1>;
     List<T1> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Resume1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -210,11 +214,11 @@ struct LoopifyPolymorphic {
           _result = List<T1>::nil();
         } else {
           const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-          _stack.emplace_back(_Call1{List<T1>::cons(d_a0, List<T1>::nil())});
+          _stack.emplace_back(_Resume1{List<T1>::cons(d_a0, List<T1>::nil())});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
+        auto _f = std::move(std::get<_Resume1>(_frame));
         _result = _result.app(_f._s0);
       }
     }
@@ -441,16 +445,18 @@ struct LoopifyPolymorphic {
       const List<std::pair<T1, T2>> *l;
     };
 
-    struct _Call1 {
-      T1 _s0;
-      T2 _s1;
+    /// Continuation: saves [a, b] across recursive call, then processes rest.
+    struct _Cont1 {
+      T1 a;
+      T2 b;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Cont1>;
     std::pair<List<T1>, List<T2>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -465,13 +471,13 @@ struct LoopifyPolymorphic {
               std::get<typename List<std::pair<T1, T2>>::Cons>(l.v());
           const T1 &a = d_a0.first;
           const T2 &b = d_a0.second;
-          _stack.emplace_back(_Call1{a, b});
+          _stack.emplace_back(_Cont1{a, b});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        T1 a = _f._s0;
-        T2 b = _f._s1;
+        auto _f = std::move(std::get<_Cont1>(_frame));
+        T1 a = _f.a;
+        T2 b = _f.b;
         const List<T1> &as_ = _result.first;
         const List<T2> &bs = _result.second;
         _result = std::make_pair(List<T1>::cons(a, as_), List<T2>::cons(b, bs));
@@ -487,16 +493,19 @@ struct LoopifyPolymorphic {
       const List<T1> *l;
     };
 
-    struct _Call1 {
-      T1 _s0;
-      F0 _s1;
+    /// Continuation: saves [d_a0, p] across recursive call, then processes
+    /// rest.
+    struct _Cont1 {
+      T1 d_a0;
+      F0 p;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Cont1>;
     std::pair<List<T1>, List<T1>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -507,13 +516,13 @@ struct LoopifyPolymorphic {
           _result = std::make_pair(List<T1>::nil(), List<T1>::nil());
         } else {
           const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-          _stack.emplace_back(_Call1{d_a0, p});
+          _stack.emplace_back(_Cont1{d_a0, p});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        T1 d_a0 = _f._s0;
-        F0 p = _f._s1;
+        auto _f = std::move(std::get<_Cont1>(_frame));
+        T1 d_a0 = _f.d_a0;
+        F0 p = _f.p;
         const List<T1> &trues = _result.first;
         const List<T1> &falses = _result.second;
         if (p(d_a0)) {

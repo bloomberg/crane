@@ -46,14 +46,13 @@
     2. {b Transformation}: Apply appropriate strategy:
        - {!transform_tail} for tail recursion → while loop with shadow vars
        - {!transform_nontail} for non-tail → frame-based stack
-       - {!transform_multi} for multi-call → specialized frame patterns
 
     3. {b Decomposition}: Break down complex expressions with recursive calls:
        - {!decompose_single_call} for 1 recursive call
        - {!decompose_double_call} for 2 recursive calls
        - {!decompose_all_calls} for N recursive calls
 
-    4. {b Frame Generation}: Create typed frame structs ([_Enter], [_CallN])
+    4. {b Frame Generation}: Create typed frame structs ([_Enter], [_ResumeN], etc.)
        and dispatch loop with [std::visit(Overloaded\{...\}, frame)]
 
     {2 Reuse Optimization Bypass}
@@ -947,16 +946,34 @@ let is_moveable_param_type = function
   | Tmod (TMconst, _) -> false
   | _ -> true
 
+(** Extract the pointee type from a "borrowed value-type" parameter.
+
+    A borrowed value-type parameter is one declared as [const T&] where [T] is a
+    value-type inductive.  These can be optimised to [const T*] shadows that
+    avoid copying the entire value at each loop iteration.
+
+    @return [Some pointee_type] when the parameter qualifies, [None] otherwise *)
 let borrowed_value_param_pointee = function
   | Tref (Tmod (TMconst, t)) when is_value_type_ret t -> Some t
   | Tmod (TMconst, Tref t) when is_value_type_ret t -> Some t
   | _ -> None
 
+(** Compute the shadow variable type for a tail-recursive loop.
+
+    When [pointer_safe] is [true] and the parameter is a borrowed value-type
+    ([const T&] where [T] is a value-type inductive), the shadow becomes
+    [const T*] (raw pointer).  Otherwise the shadow inherits the parameter's
+    type verbatim. *)
 let tail_shadow_type ~pointer_safe ty =
   match (pointer_safe, borrowed_value_param_pointee ty) with
   | true, Some t -> Tptr (Tmod (TMconst, t))
   | _ -> ty
 
+(** Generate the initialiser expression for a shadow variable.
+
+    - Pointer-safe shadows: [& orig_id] (address-of)
+    - Moveable parameters: [std::move(orig_id)]
+    - Otherwise: plain copy *)
 let tail_shadow_init orig_id shadow_ty ty =
   match shadow_ty, borrowed_value_param_pointee ty with
   | Tptr _, Some _ -> CPPunop ("&", CPPvar orig_id)
@@ -964,12 +981,25 @@ let tail_shadow_init orig_id shadow_ty ty =
     if is_moveable_param_type ty then CPPmove (CPPvar orig_id)
     else CPPvar orig_id
 
+(** Adjust a recursive-call argument to match the shadow variable's type.
+
+    - When the shadow is a pointer and the argument is [*ptr]: use [ptr.get()]
+    - When the shadow is a pointer and the argument is a variable: [&arg]
+    - Otherwise: pass through unchanged *)
 let tail_shadow_arg shadow_ty arg =
   match shadow_ty, arg with
   | Tptr _, CPPderef inner -> CPPfun_call (CPPmember (inner, Id.of_string "get"), [])
   | Tptr _, CPPvar _ -> CPPunop ("&", arg)
   | _ -> arg
 
+(** Compute pointer-safety flags for each parameter.
+
+    A parameter is "pointer-safe" when it is a borrowed value-type ([const T&])
+    and every recursive call site passes either [*ptr] or the same variable back
+    as that argument.  This guarantees the pointer shadow will always point at a
+    live object.
+
+    @return A bool list parallel to [params]: [true] = can use [const T*] shadow *)
 let tail_pointer_safe_flags check params body =
   let calls = collect_stmts check ~in_visitor:false body in
   if calls = [] then
@@ -989,6 +1019,23 @@ let tail_pointer_safe_flags check params body =
             calls)
       params
 
+(** Rewrite references to pointer-safe shadow variables ([const T*]) so that
+    reads dereference the pointer and method calls use [->] via
+    [CPPmethod_call].
+
+    Pointer-safe shadows store a [const T*] instead of copying the value.
+    Code originally written against [const T&] needs adjustment:
+    - Bare variable access [id] becomes [*id]
+    - Member calls [id.method(args)] become [id->method(args)]
+    - Direct assignments [id = rhs] keep the LHS undereferenceed (the
+      pointer itself is being reassigned)
+    - Pattern-match scrutinees involving a pointer shadow suppress the
+      value-type flag to avoid incorrect deref codegen
+
+    @param shadow_params The shadow parameter list; only entries whose type
+                         is [Tptr _] are considered pointer-safe
+    @param stmts         Statement list to rewrite
+    @return Rewritten statements with pointer dereferences inserted *)
 let rewrite_borrowed_shadow_uses shadow_params stmts =
   let ptr_shadows =
     List.filter_map
@@ -1473,6 +1520,64 @@ and strip_loopify_stmt = function
     | _ -> Sblock stmts' )
   | s -> s
 
+(** {3 Shadow variable setup}
+
+    Both {!transform_tail} and {!transform_tmc} begin with an identical preamble:
+    determine which parameters vary across recursive calls, compute pointer-safety
+    flags, derive shadow variable names and types, and build the substitution map.
+    This shared preamble is factored into {!build_shadow_setup}. *)
+
+(** Result of the shared shadow-variable preamble for tail and TMC transforms.
+
+    Every field is purely derived from the function's parameters, its body, and
+    the call checker — no mutation, no side effects.  The record is consumed
+    immediately by the caller to build shadow declarations and substitute
+    parameter references. *)
+type shadow_setup = {
+  ss_varying : bool list;
+      (** Bitmask parallel to [params]: [true] when the parameter changes
+          across recursive calls and needs a shadow variable. *)
+  ss_varying_params : (Id.t * cpp_type) list;
+      (** Only the varying parameters (filtered by {!ss_varying}). *)
+  ss_shadow_params : (Id.t * cpp_type) list;
+      (** Shadow variable names ([_loop_X]) and types for each varying
+          parameter, respecting pointer-safety (borrowed params become
+          [const T*] shadows). *)
+  ss_subs : (Id.t * Id.t) list;
+      (** Substitution list: [(original_id, shadow_id)] pairs.  Applied to
+          the function body via {!subst_stmt} so that references to the
+          original parameter are redirected to the shadow variable. *)
+}
+
+(** Compute the shadow-variable setup shared by {!transform_tail} and
+    {!transform_tmc}.
+
+    Analyses the function body to determine which parameters vary across
+    recursive calls, computes pointer-safety flags (whether a parameter can
+    be borrowed as [const T*] instead of copied), derives shadow variable
+    names ([_loop_X]) and types, and builds the old→new substitution list.
+
+    @param check  Call checker identifying recursive calls
+    @param params Function parameters [(id, type)]
+    @param body   Function body statements
+    @return {!shadow_setup} record consumed by the caller *)
+let build_shadow_setup check params body =
+  let varying = find_varying_params check params body in
+  let pointer_safe = tail_pointer_safe_flags check params body in
+  let varying_params = filter_by_mask varying params in
+  let varying_pointer_safe = filter_by_mask varying pointer_safe in
+  let shadow_params =
+    List.map2
+      (fun (id, ty) safe ->
+        (shadow_name id, tail_shadow_type ~pointer_safe:safe ty))
+      varying_params varying_pointer_safe
+  in
+  let subs =
+    List.map2 (fun (id, _) (sid, _) -> (id, sid)) varying_params shadow_params
+  in
+  { ss_varying = varying; ss_varying_params = varying_params;
+    ss_shadow_params = shadow_params; ss_subs = subs }
+
 (** Transform a tail-recursive function body into a [while] loop with shadow variables.
 
     Tail recursion is the simplest loopification case.  Since no work happens
@@ -1521,18 +1626,9 @@ and strip_loopify_stmt = function
     @param body Function body statements
     @return Transformed body with while loop structure *)
 let transform_tail ?(param_inits = []) check _pp_type params ret_ty body =
-  let varying = find_varying_params check params body in
-  let pointer_safe = tail_pointer_safe_flags check params body in
-  let varying_params = filter_by_mask varying params in
-  let varying_pointer_safe = filter_by_mask varying pointer_safe in
-  let shadow_params =
-    List.map2
-      (fun (id, ty) safe -> (shadow_name id, tail_shadow_type ~pointer_safe:safe ty))
-      varying_params
-      varying_pointer_safe
-  in
-  let subs =
-    List.map2 (fun (id, _) (sid, _) -> (id, sid)) varying_params shadow_params
+  let { ss_varying = varying; ss_varying_params = varying_params;
+        ss_shadow_params = shadow_params; ss_subs = subs } =
+    build_shadow_setup check params body
   in
   let is_void = ret_ty = Tvoid in
   (* Shadow variable declarations (only for varying params) *)
@@ -1583,8 +1679,8 @@ let transform_tail ?(param_inits = []) check _pp_type params ret_ty body =
    argument. After the loop, the continuations are applied in reverse order to
    build the final result.
 
-   Double non-tail: uses a frame-based stack with Enter/After/Combine variants
-   and a std::visit-based while loop. See [transform_multi]. *)
+   Double non-tail: uses a frame-based stack with Enter/Call variants
+   and a while loop. See {!transform_nontail}. *)
 
 (** {3 Double-call decomposition for multi-recursive functions}
 
@@ -1625,9 +1721,6 @@ let has_n_call_expr n check body =
     | _ -> false
   in
   List.exists check_stmt body
-
-(** Check whether any return has 2+ recursive calls (multi-recursion). *)
-let has_multi_call_expr check body = has_n_call_expr 2 check body
 
 (** True if any template parameter is higher-order (a function type or
     concept constraint).  Such parameters prevent TMC because the loopified
@@ -2113,9 +2206,6 @@ and decompose_double_call check expr =
         }
     | None -> None )
   | _ -> None
-
-(** Check whether any return has 3+ recursive calls (triple-recursion). *)
-let has_triple_call_expr check body = has_n_call_expr 3 check body
 
 (** {3 TMC detection}
 
@@ -2620,17 +2710,9 @@ let rewrite_tmc_visit_stmt ~vt_ret check pp_expr ti varying shadow_params =
     @return Transformed body with TMC while loop *)
 let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
   let vt_ret = if is_value_type_ret ret_ty then Some ret_ty else None in
-  let varying = find_varying_params check params body in
-  let pointer_safe = tail_pointer_safe_flags check params body in
-  let varying_params = filter_by_mask varying params in
-  let varying_pointer_safe = filter_by_mask varying pointer_safe in
-  let shadow_params =
-    List.map2
-      (fun (id, ty) safe -> (shadow_name id, tail_shadow_type ~pointer_safe:safe ty))
-      varying_params varying_pointer_safe
-  in
-  let subs =
-    List.map2 (fun (id, _) (sid, _) -> (id, sid)) varying_params shadow_params
+  let { ss_varying = varying; ss_varying_params = varying_params;
+        ss_shadow_params = shadow_params; ss_subs = subs } =
+    build_shadow_setup check params body
   in
   (* For value-type returns, _head is unique_ptr<ret_ty> and _write points
      into the unique_ptr chain.  For pointer returns, _head is the bare type. *)
@@ -2691,13 +2773,46 @@ let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
 
 (** {3 Frame-based non-tail recursion helpers} *)
 
+(** Derive field names from saved expressions. If an expression is [CPPvar id],
+    use that variable name; otherwise fall back to ["_s{j}"]. Deduplicates by
+    appending numeric suffixes when the same name appears more than once. *)
+let derive_field_names (exprs : cpp_expr list) : Id.t list =
+  let raw_names =
+    List.mapi (fun j e ->
+      match e with
+      | CPPvar id -> Id.to_string id
+      | CPPmove (CPPvar id) -> Id.to_string id
+      | _ -> "_s" ^ string_of_int j)
+    exprs
+  in
+  (* Count occurrences of each name *)
+  let counts = Hashtbl.create 8 in
+  List.iter (fun name ->
+    let c = try Hashtbl.find counts name with Not_found -> 0 in
+    Hashtbl.replace counts name (c + 1))
+    raw_names;
+  (* Assign unique names: if a name appears once, use it as-is;
+     if it appears multiple times, append _0, _1, ... *)
+  let next_idx = Hashtbl.create 8 in
+  List.map (fun name ->
+    if Hashtbl.find counts name = 1 then
+      Id.of_string name
+    else begin
+      let idx = try Hashtbl.find next_idx name with Not_found -> 0 in
+      Hashtbl.replace next_idx name (idx + 1);
+      Id.of_string (name ^ "_" ^ string_of_int idx)
+    end)
+    raw_names
+
 (** A collected call frame — saved expression info + handler body. *)
 type call_frame_info = {
   cf_name : string;
-      (** e.g. "_Call1" — assigned when the push statement is generated *)
+      (** e.g. "_Resume0" — assigned when the push statement is generated *)
   cf_saved_types : cpp_type list;
   cf_saved_exprs : cpp_expr list;
       (** for decltype fallback when type is Tunknown *)
+  cf_field_names : Id.t list;
+      (** field names derived from saved expressions (see {!derive_field_names}) *)
   cf_env : (Id.t * cpp_type) list;
       (** type env at frame creation, for decltype resolution *)
   cf_handler : cpp_stmt list;
@@ -3123,13 +3238,13 @@ let filter_cont_vars ~exclude_id rest_free =
     @param cont_types Their types (parallel to [cont_vars])
     @param pp_type Type printer function
     @return List of raw C++ binding statements *)
-let make_cont_bindings ~offset cont_vars cont_types =
+let make_cont_bindings ~offset ~field_names cont_vars cont_types =
   List.mapi
     (fun i id ->
       let ty = List.nth cont_types i in
       let field_expr =
         CPPmember (CPPvar (Id.of_string "_f"),
-                   Id.of_string ("_s" ^ string_of_int (offset + i)))
+                   List.nth field_names (offset + i))
       in
       match ty with
       | Tunique_ptr _ -> Sasgn (id, Some ty, CPPmove field_expr)
@@ -3157,16 +3272,18 @@ let make_cont_env cont_vars cont_types env =
 (** Register a call frame in the mutable [frames_ref] accumulator.
 
     @param frames_ref Mutable reference to the list of collected frames
-    @param name Frame struct name (e.g., ["_Call1"])
+    @param name Frame struct name (e.g., ["_Resume0"])
     @param saved_types Types of saved expressions
     @param saved_exprs The saved expressions (for decltype fallback)
     @param env Type environment at frame creation point
     @param handler The handler body statements *)
 let register_frame frames_ref ~name ~saved_types ~saved_exprs ~env ~handler =
+  let field_names = derive_field_names saved_exprs in
   frames_ref :=
     !frames_ref
     @ [{cf_name = name; cf_saved_types = saved_types;
-        cf_saved_exprs = saved_exprs; cf_env = env; cf_handler = handler}]
+        cf_saved_exprs = saved_exprs; cf_field_names = field_names;
+        cf_env = env; cf_handler = handler}]
 
 (** {3 Frame-based non-tail rewrite}
 
@@ -3186,12 +3303,24 @@ let make_stack_push arg =
        ( CPPmember (CPPvar (Id.of_string "_stack"), Id.of_string "emplace_back"),
          [arg] ) )
 
-(** Read the [i]-th saved field from frame variable [_f]. Generates [_f._sI]. *)
+(** Read the [i]-th saved field from frame variable [_f] using the given
+    [names] list. Generates [_f.<name>] where [<name>] is [List.nth names i]. *)
+let frame_field_named names i =
+  CPPmember (CPPvar (Id.of_string "_f"), List.nth names i)
+
+(** Read [n] consecutive saved fields from frame [_f] using [names],
+    starting at [offset]. *)
+let frame_fields_named ?(offset = 0) names n =
+  List.init n (fun i -> frame_field_named names (offset + i))
+
+(** Read the [i]-th saved field from frame variable [_f]. Generates [_f._sI].
+    Deprecated: prefer {!frame_field_named} with derived field names. *)
 let frame_field i =
   CPPmember (CPPvar (Id.of_string "_f"), Id.of_string ("_s" ^ string_of_int i))
 
 (** Read [n] consecutive saved fields from frame [_f], starting at [offset].
-    Returns a list of expressions [[_f._s{offset}; ...; _f._s{offset+n-1}]]. *)
+    Returns a list of expressions [[_f._s{offset}; ...; _f._s{offset+n-1}]].
+    Deprecated: prefer {!frame_fields_named} with derived field names. *)
 let frame_fields ?(offset = 0) n =
   List.init n (fun i -> frame_field (offset + i))
 
@@ -3217,16 +3346,24 @@ let clone_for_frame_list types exprs =
     These helpers reduce code duplication when constructing frame instances and
     managing the frame counter. *)
 
-(** Generate a unique frame name by incrementing the counter. Returns ["_Call{id}"]
-    where {i id} is the counter's value before incrementing.
+(** Generate a unique frame name by incrementing the counter.
 
-    @param counter A mutable reference to the frame counter (starts at 0, incremented
-                   each time a frame is created)
-    @return A string like ["_Call0"], ["_Call1"], etc. *)
-let make_call_frame_name (counter : int ref) : string =
+    The [prefix] argument determines the semantic role:
+    - ["_Resume"] — single-call continuation frame
+    - ["_Combine"] — double/N-call combiner (receives left result, combines with right)
+    - ["_After"] — double/N-call intermediate (dispatches second call after first)
+    - ["_Inter"] — intermediate frame for recursive-in-saved-expression patterns
+    - ["_Final"] — final rebuild frame for recursive-in-saved-expression patterns
+    - ["_Cont"] — continuation frame in statement sequences
+
+    @param prefix  Role-based prefix (e.g. ["_Resume"])
+    @param counter A mutable reference to the frame counter (starts at 0,
+                   incremented each time a frame is created)
+    @return A string like ["_Resume0"], ["_Combine1"], etc. *)
+let make_call_frame_name (prefix : string) (counter : int ref) : string =
   let id = !counter in
   counter := id + 1;
-  "_Call" ^ string_of_int id
+  prefix ^ string_of_int id
 
 (** Construct an [_Enter] frame expression with the given arguments.
 
@@ -3247,6 +3384,7 @@ let make_enter_frame (args : cpp_expr list) : cpp_expr =
 let infer_saved_types tparams env exprs =
   List.map (infer_saved_type tparams env) exprs
 
+(** Return [true] when a C++ type contains [unique_ptr] at any depth. *)
 let rec type_contains_unique_ptr = function
   | Tunique_ptr _ -> true
   | Tmod (_, t) | Tptr t | Tref t | Tshared_ptr t | Tnamespace (_, t) ->
@@ -3256,9 +3394,19 @@ let rec type_contains_unique_ptr = function
     List.exists type_contains_unique_ptr args || type_contains_unique_ptr ret
   | _ -> false
 
+(** Check whether any saved expression would decompose into a [unique_ptr] field
+    in a frame struct.  When true, the decomposition is unsafe because
+    [unique_ptr] fields cannot be trivially copied into frames. *)
 let saved_exprs_contain_unique_ptr tparams env exprs =
   infer_saved_types tparams env exprs |> List.exists type_contains_unique_ptr
 
+(** Return [true] when decomposing [expr] into stack frames would require
+    saving a [unique_ptr]-typed sub-expression.  This is used as a guard to
+    fall back to inline execution instead of frame-based loopification,
+    because [unique_ptr] fields cannot be trivially moved into frame structs
+    when the owner expression is still live.
+
+    The check walks into all sub-expressions, lambda bodies, and branches. *)
 let rec expr_has_unique_owner_decomposition check tparams env expr =
   let has_saved_unique saved = saved_exprs_contain_unique_ptr tparams env saved in
   let self =
@@ -3403,8 +3551,8 @@ and body_has_unique_owner_decomposition check tparams env body =
 
 (** Build a decompose_single_call handler body: reads saved values from [_f._sN]
     and _result, reconstructs the expression. *)
-let build_decompose_handler (d : decomposed) n_saved =
-  let saved_vars = frame_fields n_saved in
+let build_decompose_handler (d : decomposed) ~field_names n_saved =
+  let saved_vars = frame_fields_named field_names n_saved in
   let result_var = CPPvar (Id.of_string "_result") in
   let rebuilt = d.d_rebuild saved_vars result_var in
   assign_result rebuilt
@@ -3416,6 +3564,7 @@ let build_decompose_handler (d : decomposed) n_saved =
 let build_scrutinee_handler
     ~rewrite_body
     ~saved_types
+    ~field_names
     unique_vars
     ty
     tyargs
@@ -3429,8 +3578,7 @@ let build_scrutinee_handler
         let ty = List.nth saved_types i in
         let ty_opt = if ty = Tunknown then None else Some ty in
         let field_expr =
-          CPPmember (CPPvar (Id.of_string "_f"),
-                     Id.of_string ("_s" ^ string_of_int i))
+          frame_field_named field_names i
         in
         (* Move unique_ptr fields out of the owned frame *)
         let rhs = match ty with
@@ -3536,6 +3684,58 @@ let rec find_inner_iife check = function
       Some (body, ret_ty, fun x -> CPPstructmk (name, tys, mk_args (rebuild x)))
     | None -> None )
   | _ -> None
+
+(** Handle a base-case expression (0 direct recursive calls) that may contain
+    recursive calls hidden inside a nested [std::visit] or IIFE.
+
+    When [find_inner_visit] finds a visit with recursive lambda bodies, each
+    lambda's [Sreturn (Some result)] is wrapped with [rebuild] so the
+    surrounding expression context is preserved, then the body is rewritten
+    via [rewrite_visit_body].
+
+    When [find_inner_iife] finds an immediately-invoked lambda, the same
+    return-wrapping and rewriting is applied via [rewrite_iife_body].
+
+    If neither pattern matches, falls back to [base_case e].
+
+    @param check              Call checker identifying recursive calls
+    @param e                  Expression with 0 direct calls to check
+    @param rewrite_visit_body Rewriter for visit-lambda bodies:
+                              [(lparams, extended_body) -> rewritten_body]
+    @param rewrite_iife_body  Rewriter for IIFE bodies:
+                              [extended_body -> rewritten_body]
+    @param base_case          Fallback for true base cases (no inner calls) *)
+let rewrite_base_with_inner_calls check e ~rewrite_visit_body ~rewrite_iife_body
+    ~base_case =
+  let wrap_returns_with rebuild body =
+    List.map
+      (fun stmt ->
+        match stmt with
+        | Sreturn (Some result) -> Sreturn (Some (rebuild result))
+        | s -> s )
+      body
+  in
+  match find_inner_visit check e with
+  | Some (scrut, lambdas, rebuild) ->
+    let new_lambdas =
+      List.map
+        (fun lambda ->
+          match lambda with
+          | CPPlambda (lparams, _lret_ty, body, _capture) ->
+            let extended_body = wrap_returns_with rebuild body in
+            CPPlambda (lparams, Some Tvoid,
+                       rewrite_visit_body lparams extended_body, false)
+          | e -> e )
+        lambdas
+    in
+    make_visit_stmt scrut new_lambdas
+  | None ->
+  match find_inner_iife check e with
+  | Some (iife_body, _iife_ret_ty, rebuild) ->
+    let extended_body = wrap_returns_with rebuild iife_body in
+    rewrite_iife_body extended_body
+  | None ->
+    base_case e
 
 (** {3 N-call decomposition}
 
@@ -3735,14 +3935,14 @@ type enter_rewrite_ctx = {
   er_pp_type : cpp_type -> string;
       (** Pretty-printer for types (used in [decltype] generation) *)
   er_call_counter : int ref;
-      (** Mutable counter for generating unique [_CallN] frame names *)
+      (** Mutable counter for generating unique frame names *)
   er_frames_ref : call_frame_info list ref;
       (** Mutable accumulator for generated {!call_frame_info} records *)
   er_varying_param_types : cpp_type list;
       (** Types of the varying parameters (for frame type inference) *)
 }
 
-(** Generate chained [_CallN] frames for an N-call decomposition within the
+(** Generate chained [_AfterN]/[_CombineN] frames for an N-call decomposition within the
     nontail frame-based transformation.
 
     When a single expression contains N >= 2 recursive calls (e.g.,
@@ -3779,7 +3979,7 @@ let gen_chained_call_frames ctx (acd : all_calls_decomp) =
   let saved_exprs_conv = clone_for_frame_list saved_types acd.acd_saved in
   let rec gen_frames call_idx =
     if call_idx = n_calls - 1 then (
-      let call_name = make_call_frame_name call_counter in
+      let call_name = make_call_frame_name "_Combine" call_counter in
       let n_partials = call_idx in
       let partial_types = List.init n_partials (fun _ -> ret_ty) in
       let all_saved_types = partial_types @ saved_types in
@@ -3787,9 +3987,10 @@ let gen_chained_call_frames ctx (acd : all_calls_decomp) =
         List.init n_partials (fun _ -> CPPvar (Id.of_string "_result"))
         @ saved_exprs_conv
       in
+      let all_field_names = derive_field_names all_saved_exprs in
       let handler =
-        let partials = frame_fields n_partials in
-        let saved_vars = frame_fields ~offset:n_partials n_saved in
+        let partials = frame_fields_named all_field_names n_partials in
+        let saved_vars = frame_fields_named ~offset:n_partials all_field_names n_saved in
         let all_results = partials @ [CPPvar (Id.of_string "_result")] in
         let combined = acd.acd_combine saved_vars all_results in
         assign_result combined
@@ -3798,7 +3999,7 @@ let gen_chained_call_frames ctx (acd : all_calls_decomp) =
         ~saved_types:all_saved_types ~env ~handler;
       call_name )
     else
-      let call_name = make_call_frame_name call_counter in
+      let call_name = make_call_frame_name "_After" call_counter in
       let next_name = gen_frames (call_idx + 1) in
       let n_partials = call_idx in
       let partial_types = List.init n_partials (fun _ -> ret_ty) in
@@ -3825,23 +4026,25 @@ let gen_chained_call_frames ctx (acd : all_calls_decomp) =
         @ remaining_args_conv
         @ saved_exprs_conv
       in
+      let all_field_names = derive_field_names all_saved_exprs in
       let handler =
         let n_remaining_args_for_next =
           List.length
             (filter_by_mask varying (List.nth acd.acd_calls (call_idx + 1)))
         in
         let next_args =
-          frame_fields ~offset:n_partials n_remaining_args_for_next
+          frame_fields_named ~offset:n_partials all_field_names n_remaining_args_for_next
         in
         let n_remaining_total = List.length remaining_args in
-        let next_partials = frame_fields n_partials in
+        let next_partials = frame_fields_named all_field_names n_partials in
         let after_next_args =
-          frame_fields
+          frame_fields_named
             ~offset:(n_partials + n_remaining_args_for_next)
+            all_field_names
             (n_remaining_total - n_remaining_args_for_next)
         in
         let saved_from_f =
-          frame_fields ~offset:(n_partials + n_remaining_total) n_saved
+          frame_fields_named ~offset:(n_partials + n_remaining_total) all_field_names n_saved
         in
         let next_push_args =
           next_partials
@@ -3909,6 +4112,140 @@ let lift_recursive_calls check ret_ty env expr =
   let lifted_env = List.map (fun (cid, _) -> (cid, ret_ty)) !bindings @ env in
   (new_expr, lifted_stmts, lifted_env)
 
+(** Emit a single [_ResumeN] frame for a decomposed single-call expression.
+
+    Given a {!decomposed} record [d] (from {!decompose_single_call}), this
+    function:
+    + Infers types for all saved sub-expressions.
+    + Registers a new [_CallN] frame whose handler binds frame fields back to
+      the saved expression positions and applies [make_handler] to produce the
+      handler body.
+    + Clones [unique_ptr]-typed saved expressions for safe frame storage.
+    + Returns push statements for [_CallN\{saved...\}] followed by
+      [_Enter\{rec_args\}].
+
+    {b Usage.}  The [make_handler] callback receives [(saved_field_vars,
+    result_var)] — the frame-field accessors for saved expressions and the
+    [_result] variable — and returns the handler body.  For [Sreturn] contexts
+    this is [assign_result (d.d_rebuild svs r)]; for [Sasgn] contexts this is
+    [[Sasgn (id, ty, d.d_rebuild svs r)]].
+
+    @param ctx          Enter-rewrite context (see {!enter_rewrite_ctx})
+    @param d            Single-call decomposition from {!decompose_single_call}
+    @param make_handler Callback: [(saved_vars, result_var) -> handler_stmts]
+    @return Push statements for [_CallN] + [_Enter] *)
+let emit_single_call_frame ctx (d : decomposed) ~make_handler =
+  let { er_tparams = tparams; er_env = env; er_call_counter = call_counter;
+        er_frames_ref = frames_ref; er_varying = varying; _ } = ctx
+  in
+  let call_name = make_call_frame_name "_Resume" call_counter in
+  let n_saved = List.length d.d_saved in
+  let saved_types = infer_saved_types tparams env d.d_saved in
+  let saved_exprs_conv = clone_for_frame_list saved_types d.d_saved in
+  let field_names = derive_field_names saved_exprs_conv in
+  let handler =
+    let saved_vars = frame_fields_named field_names n_saved in
+    make_handler saved_vars (CPPvar (Id.of_string "_result"))
+  in
+  register_frame frames_ref ~name:call_name ~saved_types
+    ~saved_exprs:saved_exprs_conv ~env ~handler;
+  [
+    make_stack_push (CPPstruct_id (Id.of_string call_name, [], saved_exprs_conv));
+    make_stack_push (make_enter_frame (filter_by_mask varying d.d_rec_args));
+  ]
+
+(** Emit chained [_AfterN] and [_CombineN] frames for a double-call decomposition.
+
+    When a return expression contains exactly two recursive calls
+    (e.g., [f(a) + f(b)]), both calls must be sequentialised into two separate
+    stack frames:
+
+    - [_Call1] saves the second call's arguments and any non-recursive saved
+      expressions.  Its handler pushes [_Call2] (with the first call's result)
+      and [_Enter] for the second call.
+    - [_Call2] saves the first call's result ([left]) and the non-recursive
+      expressions.  Its handler calls [make_final_handler] to combine both
+      results.
+
+    The push sequence emitted is [_Call1\{second_args, dd_saved, extra\}]
+    followed by [_Enter\{first_args\}].
+
+    [extra_saved] / [extra_types] append additional expressions and their types
+    to both frames — used by {!rewrite_enter_stmts} for continuation variables
+    that must survive across both calls.
+
+    @param ctx                Enter-rewrite context (see {!enter_rewrite_ctx})
+    @param dd                 Double-call decomposition from
+                              {!decompose_double_call}
+    @param extra_saved        Additional saved expressions (e.g., continuation
+                              variables) appended to both [_Call1] and [_Call2]
+    @param extra_types        Types of [extra_saved]
+    @param make_final_handler Callback: [(saved_vars, left_result,
+                              right_result) -> handler_stmts].  [saved_vars]
+                              are the frame-field accessors for [dd.dd_saved],
+                              [left_result] is the first call's result stored
+                              in [_Call2], [right_result] is [_result] from
+                              the second call.
+    @return Push statements for [_Call1] + [_Enter\{first_args\}] *)
+let emit_double_call_frames ctx dd ~extra_saved ~extra_types ~make_final_handler =
+  let { er_tparams = tparams; er_env = env; er_ret_ty = ret_ty;
+        er_call_counter = call_counter; er_frames_ref = frames_ref;
+        er_varying = varying; _ } = ctx
+  in
+  let n_dd_saved = List.length dd.dd_saved in
+  let n_extra = List.length extra_saved in
+  (* Combiner: receives left result, combines with right result *)
+  let call2_name = make_call_frame_name "_Combine" call_counter in
+  let call2_saved_exprs =
+    (CPPvar (Id.of_string "_result") :: dd.dd_saved) @ extra_saved
+  in
+  let call2_saved_types =
+    (ret_ty :: infer_saved_types tparams env dd.dd_saved) @ extra_types
+  in
+  let call2_field_names = derive_field_names call2_saved_exprs in
+  let call2_handler =
+    let left = frame_field_named call2_field_names 0 in
+    let saved_vars = frame_fields_named ~offset:1 call2_field_names n_dd_saved in
+    make_final_handler ~field_names:call2_field_names saved_vars left (CPPvar (Id.of_string "_result"))
+  in
+  register_frame frames_ref ~name:call2_name
+    ~saved_types:call2_saved_types ~saved_exprs:call2_saved_exprs ~env
+    ~handler:call2_handler;
+  (* After: receives first result, pushes Combine + Enter for second call *)
+  let call1_name = make_call_frame_name "_After" call_counter in
+  let second_varying = filter_by_mask varying dd.dd_second_args in
+  let call1_saved_exprs = second_varying @ dd.dd_saved @ extra_saved in
+  let call1_saved_types =
+    infer_saved_types tparams env (second_varying @ dd.dd_saved) @ extra_types
+  in
+  let call1_saved_exprs_conv =
+    clone_for_frame_list call1_saved_types call1_saved_exprs
+  in
+  let call1_field_names = derive_field_names call1_saved_exprs_conv in
+  let n_second = List.length second_varying in
+  let call1_handler =
+    let second_args = frame_fields_named call1_field_names n_second in
+    let dd_saved_from_f = frame_fields_named ~offset:n_second call1_field_names n_dd_saved in
+    let extra_from_f = frame_fields_named ~offset:(n_second + n_dd_saved) call1_field_names n_extra in
+    let call2_push_args =
+      (CPPvar (Id.of_string "_result") :: dd_saved_from_f) @ extra_from_f
+    in
+    [
+      make_stack_push
+        (CPPstruct_id (Id.of_string call2_name, [], call2_push_args));
+      make_stack_push (make_enter_frame second_args);
+    ]
+  in
+  register_frame frames_ref ~name:call1_name
+    ~saved_types:call1_saved_types ~saved_exprs:call1_saved_exprs_conv ~env
+    ~handler:call1_handler;
+  [
+    make_stack_push
+      (CPPstruct_id (Id.of_string call1_name, [], call1_saved_exprs_conv));
+    make_stack_push
+      (make_enter_frame (filter_by_mask varying dd.dd_first_args));
+  ]
+
 (** Rewrite a single return statement for the [_Enter] handler in frame-based
     non-tail recursion transformation.
 
@@ -3946,15 +4283,17 @@ let rec rewrite_enter_lambda_return ctx stmt =
        recursive and non-recursive branches. *)
     ( match decompose_single_call check scrut with
     | Some d ->
-      let call_name = make_call_frame_name call_counter in
+      let call_name = make_call_frame_name "_Resume" call_counter in
       let lambda_fvs = collect_visit_free_vars lambdas in
       let lambda_saved = List.map (fun id -> CPPvar id) lambda_fvs in
       let lambda_types = infer_saved_types tparams env lambda_saved in
       let all_saved = d.d_saved @ lambda_saved in
       let all_types = infer_saved_types tparams env d.d_saved @ lambda_types in
       let n_d = List.length d.d_saved in
+      let all_saved_conv = clone_for_frame_list all_types all_saved in
+      let all_field_names = derive_field_names all_saved_conv in
       let handler =
-        let rebuild_vars = frame_fields n_d in
+        let rebuild_vars = frame_fields_named all_field_names n_d in
         let rebuilt_scrut =
           d.d_rebuild rebuild_vars (CPPvar (Id.of_string "_result"))
         in
@@ -3964,8 +4303,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
               let ty = List.nth lambda_types i in
               let ty_opt = if ty = Tunknown then None else Some ty in
               Sasgn (id, ty_opt,
-                     CPPmember (CPPvar (Id.of_string "_f"),
-                                Id.of_string ("_s" ^ string_of_int (n_d + i)))))
+                     frame_field_named all_field_names (n_d + i)))
             lambda_fvs
         in
         let new_lambdas =
@@ -3978,8 +4316,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
         bindings @ [Sexpr (make_visit_expr rebuilt_scrut new_lambdas)]
       in
       register_frame frames_ref ~name:call_name ~saved_types:all_types
-        ~saved_exprs:all_saved ~env ~handler;
-      let all_saved_conv = clone_for_frame_list all_types all_saved in
+        ~saved_exprs:all_saved_conv ~env ~handler;
       [
         make_stack_push (CPPstruct_id (Id.of_string call_name, [], all_saved_conv));
         make_stack_push
@@ -4010,57 +4347,14 @@ let rec rewrite_enter_lambda_return ctx stmt =
   | Sreturn (Some e) ->
     let n_calls = count_calls_expr check e in
     if n_calls = 0 then
-      (* count_calls_expr doesn't count inside lambdas — check for visits with
-         recursive calls in their lambda bodies *)
-        match
-          find_inner_visit check e
-        with
-      | Some (scrut, lambdas, rebuild) ->
-        (* Push the continuation (rebuild) into each visit branch: each branch's
-           return value gets wrapped in rebuild(...) *)
-        let new_lambdas =
-          List.map
-            (fun lambda ->
-              match lambda with
-              | CPPlambda (lparams, _lret_ty, body, _capture) ->
-                let extended_body =
-                  List.map
-                    (fun stmt ->
-                      match stmt with
-                      | Sreturn (Some result) -> Sreturn (Some (rebuild result))
-                      | s -> s )
-                    body
-                in
-                let lenv = build_lambda_env lparams extended_body env in
-                let new_body =
-                  rewrite_enter_stmts { ctx with er_env = lenv } extended_body
-                in
-                CPPlambda (lparams, Some Tvoid, new_body, false)
-              | e -> e )
-            lambdas
-        in
-        make_visit_stmt scrut new_lambdas
-      | None ->
-      (* Check for IIFE containing recursive calls *)
-      match find_inner_iife check e with
-      | Some (iife_body, _iife_ret_ty, rebuild) ->
-        (* Wrap each return in the IIFE body with the surrounding rebuild *)
-        let extended_body =
-          List.map
-            (fun stmt ->
-              match stmt with
-              | Sreturn (Some result) -> Sreturn (Some (rebuild result))
-              | s -> s )
-            iife_body
-        in
-        let lenv = collect_type_env extended_body @ env in
-        let new_body =
-          rewrite_enter_stmts { ctx with er_env = lenv } extended_body
-        in
-        new_body
-      | None ->
-        (* True base case — no recursive calls anywhere *)
-        assign_result e
+      rewrite_base_with_inner_calls check e
+        ~rewrite_visit_body:(fun lparams extended_body ->
+          let lenv = build_lambda_env lparams extended_body env in
+          rewrite_enter_stmts { ctx with er_env = lenv } extended_body)
+        ~rewrite_iife_body:(fun extended_body ->
+          let lenv = collect_type_env extended_body @ env in
+          rewrite_enter_stmts { ctx with er_env = lenv } extended_body)
+        ~base_case:assign_result
     else if n_calls = 1 then
       match
         decompose_single_call check e
@@ -4074,25 +4368,40 @@ let rec rewrite_enter_lambda_return ctx stmt =
           List.filter (fun (_, _, cs_opt) -> cs_opt <> None) saved_with_calls
         in
         ( match recursive_saved with
-        | (idx, rec_saved_expr, Some rec_cs) :: _ ->
-          (* One of the saved expressions is a recursive call — decompose it
-             first *)
-          let final_call_name = make_call_frame_name call_counter in
+        | (idx, _rec_saved_expr, Some rec_cs) :: _ ->
+          (* Recursive saved expression: one of the saved sub-expressions is
+             itself a recursive call.  Example: [return g(f(a), f(b))] where
+             decompose_single_call finds the outer f(b) as the main call but
+             f(a) is a saved expression.
+
+             We chain two frames:
+             1. _Inter: saves the non-recursive saved exprs.  Its handler
+                substitutes _result for the recursive saved position and
+                pushes _Final + _Enter for the main call.
+             2. _Final: saves ALL saved exprs (with the recursive one now
+                resolved).  Its handler rebuilds the full expression.
+
+             Push order: _Inter, _Enter{rec_saved_args}
+             After _Enter completes → _Inter pops → pushes _Final, _Enter{main_args}
+             After _Enter completes → _Final pops → rebuild + assign _result *)
+          let final_call_name = make_call_frame_name "_Final" call_counter in
           let n_saved = List.length d.d_saved in
           let saved_types = infer_saved_types tparams env d.d_saved in
-          let final_handler = build_decompose_handler d n_saved in
+          let final_field_names = derive_field_names d.d_saved in
+          let final_handler = build_decompose_handler d ~field_names:final_field_names n_saved in
           register_frame frames_ref ~name:final_call_name ~saved_types
             ~saved_exprs:d.d_saved ~env ~handler:final_handler;
           (* Create intermediate Call frame that will push the final Call frame
              after getting _result *)
           let other_saved = List.filteri (fun i _ -> i <> idx) d.d_saved in
-          let inter_call_name = make_call_frame_name call_counter in
+          let inter_call_name = make_call_frame_name "_Inter" call_counter in
           let inter_saved_types =
             infer_saved_types tparams env other_saved
           in
           let n_other = List.length other_saved in
+          let inter_field_names = derive_field_names other_saved in
           let inter_handler =
-            let other_vars = frame_fields n_other in
+            let other_vars = frame_fields_named inter_field_names n_other in
             let final_saved =
               List.mapi
                 (fun i _ ->
@@ -4130,25 +4439,9 @@ let rec rewrite_enter_lambda_return ctx stmt =
                    filter_by_mask varying rec_cs.cs_args ) );
           ]
         | [] ->
-          (* No recursive calls in saved expressions — original path *)
-          let call_name = make_call_frame_name call_counter in
-          let n_saved = List.length d.d_saved in
-          let saved_types = infer_saved_types tparams env d.d_saved in
-          let handler = build_decompose_handler d n_saved in
-          let saved_exprs_conv = clone_for_frame_list saved_types d.d_saved in
-          register_frame frames_ref ~name:call_name ~saved_types
-            ~saved_exprs:saved_exprs_conv ~env ~handler;
-          let push_call =
-            make_stack_push
-              (CPPstruct_id (Id.of_string call_name, [], saved_exprs_conv))
-          in
-          let push_enter =
-            make_stack_push
-              (CPPstruct_id
-                 (Id.of_string "_Enter", [], filter_by_mask varying d.d_rec_args)
-              )
-          in
-          [push_call; push_enter]
+          (* No recursive calls in saved expressions — standard single-call frame *)
+          emit_single_call_frame ctx d
+            ~make_handler:(fun svs r -> assign_result (d.d_rebuild svs r))
         | _ ->
           assert false (* cannot happen: only one recursive call in the list *)
         )
@@ -4168,8 +4461,19 @@ let rec rewrite_enter_lambda_return ctx stmt =
               );
           ]
         else (
-          (* Nested call: e.g. f(m', f(m, n')) — compute inner call first, then
-             push Enter for outer call with result *)
+          (* Nested argument: one argument to a direct tail call is itself a
+             recursive call.  Example: [return f(m', f(m, n'))].
+
+             Strategy: compute the inner call first, then push _Enter for the
+             outer call substituting _result at the recursive argument position.
+
+             We create a _CallN frame that saves the non-recursive arguments.
+             Its handler reconstructs the full argument list with _result at
+             position [idx] and pushes _Enter for the outer call.
+
+             If the inner argument is itself a direct call, push _CallN + _Enter.
+             If it's a compound expression, decompose it via decompose_single_call
+             and chain _CallN + _InnerCall + _Enter. *)
             match
               nested_indices
             with
@@ -4180,13 +4484,14 @@ let rec rewrite_enter_lambda_return ctx stmt =
               |> List.filter (fun (i, _) -> i <> idx)
             in
             let non_rec_args = List.map snd non_rec_info in
-            let call_name = make_call_frame_name call_counter in
+            let call_name = make_call_frame_name "_Resume" call_counter in
             let saved_types =
               infer_saved_types tparams env non_rec_args
             in
             let n_saved = List.length non_rec_args in
+            let outer_field_names = derive_field_names non_rec_args in
             let handler =
-              let saved_vars = frame_fields n_saved in
+              let saved_vars = frame_fields_named outer_field_names n_saved in
               let outer_args =
                 List.init (List.length cs.cs_args) (fun i ->
                   if i = idx then
@@ -4222,13 +4527,14 @@ let rec rewrite_enter_lambda_return ctx stmt =
             | None ->
             match decompose_single_call check rec_arg with
             | Some d ->
-              let inner_call_name = make_call_frame_name call_counter in
+              let inner_call_name = make_call_frame_name "_Resume" call_counter in
               let inner_saved_types =
                 infer_saved_types tparams env d.d_saved
               in
               let inner_n = List.length d.d_saved in
+              let inner_field_names = derive_field_names d.d_saved in
               let inner_handler =
-                let inner_saved_vars = frame_fields inner_n in
+                let inner_saved_vars = frame_fields_named inner_field_names inner_n in
                 let rebuilt =
                   d.d_rebuild inner_saved_vars (CPPvar (Id.of_string "_result"))
                 in
@@ -4266,65 +4572,10 @@ let rec rewrite_enter_lambda_return ctx stmt =
           decompose_double_call check e
         with
       | Some dd ->
-        (* Chained _Call frames: 1. Push _Call1{second_args, dd_saved} +
-           _Enter{first_args} 2. _Call1 handler: save _result as left, push
-           _Call2{left, dd_saved} + _Enter{second_args} 3. _Call2 handler:
-           _result = combine(dd_saved_vars, left, _result) *)
-        let call1_name = make_call_frame_name call_counter in
-        let call2_name = make_call_frame_name call_counter in
-        let n_dd_saved = List.length dd.dd_saved in
-        (* _Call2 saves: left_result (ret_ty) + dd_saved *)
-        let call2_saved_exprs =
-          CPPvar (Id.of_string "_result") :: dd.dd_saved
-        in
-        let call2_saved_types =
-          ret_ty :: infer_saved_types tparams env dd.dd_saved
-        in
-        let call2_handler =
-          let left = frame_field 0 in
-          let saved_vars =
-            List.init n_dd_saved (fun i -> frame_field (i + 1))
-          in
-          let combined =
-            dd.dd_combine saved_vars left (CPPvar (Id.of_string "_result"))
-          in
-          assign_result combined
-        in
-        register_frame frames_ref ~name:call2_name
-          ~saved_types:call2_saved_types ~saved_exprs:call2_saved_exprs ~env
-          ~handler:call2_handler;
-        (* _Call1 saves: second_args (varying-filtered) + dd_saved *)
-        let second_varying = filter_by_mask varying dd.dd_second_args in
-        let call1_saved_exprs = second_varying @ dd.dd_saved in
-        let call1_saved_types =
-          infer_saved_types tparams env call1_saved_exprs
-        in
-        let n_second = List.length second_varying in
-        let call1_handler =
-          let second_args = frame_fields n_second in
-          let dd_saved_from_f = frame_fields ~offset:n_second n_dd_saved in
-          let call2_push_args =
-            CPPvar (Id.of_string "_result") :: dd_saved_from_f
-          in
-          [
-            make_stack_push
-              (CPPstruct_id (Id.of_string call2_name, [], call2_push_args));
-            make_stack_push
-              (CPPstruct_id (Id.of_string "_Enter", [], second_args));
-          ]
-        in
-        register_frame frames_ref ~name:call1_name
-          ~saved_types:call1_saved_types ~saved_exprs:call1_saved_exprs ~env
-          ~handler:call1_handler;
-        [
-          make_stack_push
-            (CPPstruct_id (Id.of_string call1_name, [], call1_saved_exprs));
-          make_stack_push
-            (CPPstruct_id
-               ( Id.of_string "_Enter",
-                 [],
-                 filter_by_mask varying dd.dd_first_args ) );
-        ]
+        emit_double_call_frames ctx dd
+          ~extra_saved:[] ~extra_types:[]
+          ~make_final_handler:(fun ~field_names:_ svs l r ->
+            assign_result (dd.dd_combine svs l r))
       | None ->
       (* Double decomposition failed — try N-call decomposition *)
       match decompose_all_calls check e with
@@ -4350,25 +4601,34 @@ let rec rewrite_enter_lambda_return ctx stmt =
     let rw_else = rw_stmts else_br in
     rewrite_if_with_reuse_bypass check cond rw_then rw_else
   | Scustom_case (ty, scrut, tyargs, branches, err) ->
+    (* Pattern match (std::holds_alternative + std::get dispatching).
+       Three sub-cases based on whether the scrutinee is recursive:
+       1. Direct recursive call as scrutinee → compute via _Enter, dispatch
+          result via _CallN handler containing the rebuilt case expression.
+       2. Compound expression with recursive calls in scrutinee → lift calls
+          into temp assignments, then recurse on the modified statement.
+       3. Non-recursive scrutinee → descend into branches. *)
     ( match check scrut with
     | Some cs ->
-      let call_name = make_call_frame_name call_counter in
+      let call_name = make_call_frame_name "_Resume" call_counter in
       let unique_vars = collect_branch_free_vars branches in
       let saved_exprs = List.map (fun id -> CPPvar id) unique_vars in
       let saved_types = infer_saved_types tparams env saved_exprs in
       let rw_handler = rewrite_enter_lambda_return ctx in
+      (* Clone unique_ptr-typed variables for frame storage *)
+      let saved_exprs_conv = clone_for_frame_list saved_types saved_exprs in
+      let field_names = derive_field_names saved_exprs_conv in
       let handler =
         build_scrutinee_handler
           ~rewrite_body:rw_handler
           ~saved_types
+          ~field_names
           unique_vars
           ty
           tyargs
           branches
           err
       in
-      (* Clone unique_ptr-typed variables for frame storage *)
-      let saved_exprs_conv = clone_for_frame_list saved_types saved_exprs in
       register_frame frames_ref ~name:call_name ~saved_types
         ~saved_exprs:saved_exprs_conv ~env ~handler;
       let push_call =
@@ -4437,8 +4697,14 @@ let rec rewrite_enter_lambda_return ctx stmt =
   | Sblock stmts ->
     [Sblock (rewrite_enter_stmts ctx stmts)]
   | Sasgn (id, ty_opt, e) when count_calls_expr check e >= 1 ->
-    (* Let-bound recursive call: create a Call frame with empty continuation.
-       The caller (rewrite_enter_stmts) will handle the full continuation. *)
+    (* Assignment with recursive RHS.  This handles standalone assignments that
+       appear as direct children of rewrite_enter_lambda_return (not in a
+       statement sequence with continuation).  When the same assignment appears
+       inside rewrite_enter_stmts, that function captures the "rest" of the
+       statement sequence as a continuation embedded in the Call frame handler.
+
+       Here we create a Call frame whose handler simply assigns the
+       decomposed/rebuilt expression to [id].  No continuation is embedded. *)
     let n_calls = count_calls_expr check e in
     if n_calls = 1 then
       match
@@ -4446,7 +4712,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
       with
       | Some cs ->
         (* Direct call: id = f(args) *)
-        let call_name = make_call_frame_name call_counter in
+        let call_name = make_call_frame_name "_Cont" call_counter in
         let handler = [Sasgn (id, ty_opt, CPPvar (Id.of_string "_result"))] in
         register_frame frames_ref ~name:call_name ~saved_types:[]
           ~saved_exprs:[] ~env ~handler;
@@ -4462,99 +4728,27 @@ let rec rewrite_enter_lambda_return ctx stmt =
       | None ->
       match decompose_single_call check e with
       | Some d ->
-        let call_name = make_call_frame_name call_counter in
-        let n_saved = List.length d.d_saved in
-        let saved_types = infer_saved_types tparams env d.d_saved in
-        let handler =
-          let result_bindings = frame_fields n_saved in
-          let rebuilt =
-            d.d_rebuild result_bindings (CPPvar (Id.of_string "_result"))
-          in
-          [Sasgn (id, ty_opt, rebuilt)]
-        in
-        register_frame frames_ref ~name:call_name ~saved_types
-          ~saved_exprs:d.d_saved ~env ~handler;
-        let saved_exprs_conv = clone_for_frame_list saved_types d.d_saved in
-        let push_call =
-          make_stack_push (CPPstruct_id (Id.of_string call_name, [], saved_exprs_conv))
-        in
-        let push_enter =
-          make_stack_push
-            (CPPstruct_id
-               (Id.of_string "_Enter", [], filter_by_mask varying d.d_rec_args)
-            )
-        in
-        [push_call; push_enter]
+        emit_single_call_frame ctx d
+          ~make_handler:(fun svs r -> [Sasgn (id, ty_opt, d.d_rebuild svs r)])
       | None ->
         (* Cannot decompose — execute inline *)
         [Sasgn (id, ty_opt, e)]
     else (
       (* Multiple recursive calls in Sasgn — try double decomposition *)
-        match
-          decompose_double_call check e
-        with
+        match decompose_double_call check e with
       | Some dd ->
-        let call1_name = make_call_frame_name call_counter in
-        let call2_name = make_call_frame_name call_counter in
-        let n_dd_saved = List.length dd.dd_saved in
-        (* _Call2: combine left and right results *)
-        let call2_saved_exprs =
-          CPPvar (Id.of_string "_result") :: dd.dd_saved
-        in
-        let call2_saved_types =
-          ret_ty :: infer_saved_types tparams env dd.dd_saved
-        in
-        let call2_handler =
-          let left = frame_field 0 in
-          let saved_vars =
-            List.init n_dd_saved (fun i -> frame_field (i + 1))
-          in
-          let combined =
-            dd.dd_combine saved_vars left (CPPvar (Id.of_string "_result"))
-          in
-          [Sasgn (id, ty_opt, combined)]
-        in
-        register_frame frames_ref ~name:call2_name
-          ~saved_types:call2_saved_types ~saved_exprs:call2_saved_exprs ~env
-          ~handler:call2_handler;
-        (* _Call1: save left result, push second call *)
-        let second_varying = filter_by_mask varying dd.dd_second_args in
-        let call1_saved_exprs = second_varying @ dd.dd_saved in
-        let call1_saved_types =
-          infer_saved_types tparams env call1_saved_exprs
-        in
-        let n_second = List.length second_varying in
-        let call1_handler =
-          let second_args = frame_fields n_second in
-          let dd_saved_from_f = frame_fields ~offset:n_second n_dd_saved in
-          let call2_push_args =
-            CPPvar (Id.of_string "_result") :: dd_saved_from_f
-          in
-          [
-            make_stack_push
-              (CPPstruct_id (Id.of_string call2_name, [], call2_push_args));
-            make_stack_push
-              (CPPstruct_id (Id.of_string "_Enter", [], second_args));
-          ]
-        in
-        register_frame frames_ref ~name:call1_name
-          ~saved_types:call1_saved_types ~saved_exprs:call1_saved_exprs ~env
-          ~handler:call1_handler;
-        [
-          make_stack_push
-            (CPPstruct_id (Id.of_string call1_name, [], call1_saved_exprs));
-          make_stack_push
-            (CPPstruct_id
-               ( Id.of_string "_Enter",
-                 [],
-                 filter_by_mask varying dd.dd_first_args ) );
-        ]
+        emit_double_call_frames ctx dd
+          ~extra_saved:[] ~extra_types:[]
+          ~make_final_handler:(fun ~field_names:_ svs l r ->
+            [Sasgn (id, ty_opt, dd.dd_combine svs l r)])
       | None ->
       (* Double decomposition failed — try N-call decomposition *)
       match decompose_all_calls check e with
       | Some acd when List.length acd.acd_calls >= 2 ->
         let stmts = gen_chained_call_frames ctx acd in
-        (* Patch last frame to assign to id instead of _result *)
+        (* gen_chained_call_frames generates frames whose final handler uses
+           assign_result (writes to _result).  For Sasgn we need to assign to
+           [id] instead, so we patch the last frame's handler in-place. *)
         let frames = !frames_ref in
         let last_idx = List.length frames - 1 in
         let last_frame = List.nth frames last_idx in
@@ -4562,8 +4756,9 @@ let rec rewrite_enter_lambda_return ctx stmt =
         let n_partials = List.length acd.acd_calls - 1 in
         let n_saved = List.length acd.acd_saved in
         let patched_handler =
-          let partials = frame_fields n_partials in
-          let saved_vars = frame_fields ~offset:n_partials n_saved in
+          let fnames = last_frame.cf_field_names in
+          let partials = frame_fields_named fnames n_partials in
+          let saved_vars = frame_fields_named ~offset:n_partials fnames n_saved in
           let all_results = partials @ [CPPvar (Id.of_string "_result")] in
           let combined = acd.acd_combine saved_vars all_results in
           [Sasgn (id, ty_opt, combined)]
@@ -4643,12 +4838,15 @@ and rewrite_enter_stmts ctx stmts =
        frame. [assign_expr] is the expression to assign to [id].
        [saved/types] are the frame's saved values (decomposed + continuation).
        [enter_args] are the arguments for the _Enter push. *)
-    let make_cont_handler ~offset ~assign_expr ~saved ~types ~enter_args =
+    let make_cont_handler ~offset ~make_assign_expr ~saved ~types ~enter_args =
       let cont_vars = filter_cont_vars ~exclude_id:id rest_free in
       let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
       let cont_types = infer_saved_types tparams env cont_saved in
-      let call_name = make_call_frame_name call_counter in
-      let bindings = make_cont_bindings ~offset cont_vars cont_types in
+      let call_name = make_call_frame_name "_Cont" call_counter in
+      let all_saved = saved @ cont_saved in
+      let all_field_names = derive_field_names all_saved in
+      let assign_expr = make_assign_expr all_field_names in
+      let bindings = make_cont_bindings ~offset ~field_names:all_field_names cont_vars cont_types in
       let rest_env = make_cont_env cont_vars cont_types env in
       let rest_processed =
         rewrite_enter_stmts { ctx with er_env = rest_env } rest
@@ -4680,7 +4878,7 @@ and rewrite_enter_stmts ctx stmts =
         (* Direct call: id = f(args) — no decomposition needed *)
         make_cont_handler
           ~offset:0
-          ~assign_expr:(CPPvar (Id.of_string "_result"))
+          ~make_assign_expr:(fun _fnames -> CPPvar (Id.of_string "_result"))
           ~saved:[] ~types:[]
           ~enter_args:(filter_by_mask varying cs.cs_args)
       | None ->
@@ -4689,12 +4887,10 @@ and rewrite_enter_stmts ctx stmts =
         (* Decomposed call: id = rebuild(saved, f(rec_args)) *)
         let n_d = List.length d.d_saved in
         let d_types = infer_saved_types tparams env d.d_saved in
-        let rebuilt =
-          d.d_rebuild (frame_fields n_d) (CPPvar (Id.of_string "_result"))
-        in
         make_cont_handler
           ~offset:n_d
-          ~assign_expr:rebuilt
+          ~make_assign_expr:(fun fnames ->
+            d.d_rebuild (frame_fields_named fnames n_d) (CPPvar (Id.of_string "_result")))
           ~saved:d.d_saved ~types:d_types
           ~enter_args:(filter_by_mask varying d.d_rec_args)
       | None ->
@@ -4706,72 +4902,20 @@ and rewrite_enter_stmts ctx stmts =
         let cont_vars = filter_cont_vars ~exclude_id:id rest_free in
         let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
         let cont_types = infer_saved_types tparams env cont_saved in
-        let n_cont = List.length cont_vars in
         let n_dd_saved = List.length dd.dd_saved in
-        let call2_name = make_call_frame_name call_counter in
-        let call1_name = make_call_frame_name call_counter in
-        (* _Call2: combine left and right results, then process continuation *)
-        let call2_saved_exprs =
-          (CPPvar (Id.of_string "_result") :: dd.dd_saved) @ cont_saved
-        in
-        let call2_saved_types =
-          (ret_ty :: infer_saved_types tparams env dd.dd_saved)
-          @ cont_types
-        in
-        let call2_handler =
-          let left = frame_field 0 in
-          let saved_vars = frame_fields ~offset:1 n_dd_saved in
-          let combined =
-            dd.dd_combine saved_vars left (CPPvar (Id.of_string "_result"))
-          in
-          let bindings =
-            make_cont_bindings ~offset:(1 + n_dd_saved)
-              cont_vars cont_types
-          in
-          let rest_env = make_cont_env cont_vars cont_types env in
-          let rest_processed =
-            rewrite_enter_stmts { ctx with er_env = rest_env } rest
-          in
-          bindings @ [Sasgn (id, ty_opt, combined)] @ rest_processed
-        in
-        register_frame frames_ref ~name:call2_name
-          ~saved_types:call2_saved_types ~saved_exprs:call2_saved_exprs
-          ~env ~handler:call2_handler;
-        (* _Call1: save left result, push second call *)
-        let second_varying = filter_by_mask varying dd.dd_second_args in
-        let call1_saved_exprs = second_varying @ dd.dd_saved @ cont_saved in
-        let call1_saved_types =
-          infer_saved_types tparams env (second_varying @ dd.dd_saved)
-          @ cont_types
-        in
-        let call1_saved_exprs_conv =
-          clone_for_frame_list call1_saved_types call1_saved_exprs
-        in
-        let n_second = List.length second_varying in
-        let call1_handler =
-          let second_args = frame_fields n_second in
-          let dd_saved_from_f = frame_fields ~offset:n_second n_dd_saved in
-          let cont_from_f =
-            frame_fields ~offset:(n_second + n_dd_saved) n_cont
-          in
-          let call2_push_args =
-            (CPPvar (Id.of_string "_result") :: dd_saved_from_f) @ cont_from_f
-          in
-          [
-            make_stack_push
-              (CPPstruct_id (Id.of_string call2_name, [], call2_push_args));
-            make_stack_push (make_enter_frame second_args);
-          ]
-        in
-        register_frame frames_ref ~name:call1_name
-          ~saved_types:call1_saved_types ~saved_exprs:call1_saved_exprs_conv
-          ~env ~handler:call1_handler;
-        [
-          make_stack_push
-            (CPPstruct_id (Id.of_string call1_name, [], call1_saved_exprs_conv));
-          make_stack_push
-            (make_enter_frame (filter_by_mask varying dd.dd_first_args));
-        ]
+        emit_double_call_frames ctx dd
+          ~extra_saved:cont_saved ~extra_types:cont_types
+          ~make_final_handler:(fun ~field_names svs l r ->
+            let combined = dd.dd_combine svs l r in
+            let bindings =
+              make_cont_bindings ~offset:(1 + n_dd_saved)
+                ~field_names cont_vars cont_types
+            in
+            let rest_env = make_cont_env cont_vars cont_types env in
+            let rest_processed =
+              rewrite_enter_stmts { ctx with er_env = rest_env } rest
+            in
+            bindings @ [Sasgn (id, ty_opt, combined)] @ rest_processed)
       | None ->
       (* Double decomposition failed — try N-call decomposition *)
       match decompose_all_calls check e with
@@ -4791,9 +4935,11 @@ and rewrite_enter_stmts ctx stmts =
           List.filteri (fun i _ -> i < List.length frames - 1) frames
         in
         let n_partials = n_orig_calls - 1 in
+        let patched_saved_exprs = last_frame.cf_saved_exprs @ cont_saved in
+        let patched_field_names = derive_field_names patched_saved_exprs in
         let bindings =
           make_cont_bindings ~offset:(n_partials + n_orig_saved)
-            cont_vars cont_types
+            ~field_names:patched_field_names cont_vars cont_types
         in
         let rest_env = make_cont_env cont_vars cont_types env in
         let rest_processed =
@@ -4802,8 +4948,8 @@ and rewrite_enter_stmts ctx stmts =
         (* Replace the last handler: instead of assigning _result, assign to id
            and process rest *)
         let patched_handler =
-          let partials = frame_fields n_partials in
-          let saved_vars = frame_fields ~offset:n_partials n_orig_saved in
+          let partials = frame_fields_named patched_field_names n_partials in
+          let saved_vars = frame_fields_named ~offset:n_partials patched_field_names n_orig_saved in
           let all_results = partials @ [CPPvar (Id.of_string "_result")] in
           let combined = acd.acd_combine saved_vars all_results in
           bindings @ [Sasgn (id, ty_opt, combined)] @ rest_processed
@@ -4811,7 +4957,8 @@ and rewrite_enter_stmts ctx stmts =
         let patched_last =
           { last_frame with
             cf_saved_types = last_frame.cf_saved_types @ cont_types;
-            cf_saved_exprs = last_frame.cf_saved_exprs @ cont_saved;
+            cf_saved_exprs = patched_saved_exprs;
+            cf_field_names = patched_field_names;
             cf_handler = patched_handler }
         in
         frames_ref := other_frames @ [patched_last];
@@ -4852,240 +4999,11 @@ let rewrite_enter_stmt ctx stmt =
   | [s] -> s
   | ss -> Sblock ss
 
-(** {2 Multi-recursive (frame-based) transformation}
+(** {3 Shared helpers for transform_nontail}
 
-    For functions with 2 recursive calls per expression (e.g., fib, pascal), we
-    use a frame-based stack with Enter/After/Combine variants.
-
-    The stack holds frames representing work to do:
-    - [_Enter\{params\}]: compute the function for these parameters
-    - [_After\{second_args\}]: first call done, now compute second call
-    - [_Combine\{left_result\}]: both calls done, combine results
-
-    A while loop pops frames and dispatches via std::visit. *)
-
-(** Rewrite the body for the Enter handler of a multi-recursive function.
-    - Returns with 0 calls → [_result = val;]
-    - Returns with 1 call → decompose single, push [_Combine] + [_Enter]
-    - Returns with 2 calls → decompose double, push [_After] + [_Enter]
-    - Direct tail calls → push [_Enter\{args\}] *)
-let rec rewrite_multi_enter check varying = function
-  | Sreturn (Some (CPPfun_call (CPPvisit, [scrut; CPPoverloaded lambdas])))
-    when count_calls_expr check scrut = 0
-         && List.exists
-              (fun lambda ->
-                match lambda with
-                | CPPlambda (_, _, body, _) ->
-                  collect_stmts check ~in_visitor:true body <> []
-                | _ -> false )
-              lambdas ->
-    (* Lower nested visit — recurse into each lambda body *)
-    let new_lambdas =
-      map_visit_lambdas ~ret_ty:(Some Tvoid)
-        ~rewrite:(fun _ body ->
-          List.concat_map (rewrite_multi_enter check varying) body)
-        lambdas
-    in
-    make_visit_stmt scrut new_lambdas
-  | Sreturn (Some e) ->
-    let n_calls = count_calls_expr check e in
-    if n_calls = 0 then
-      (* Check for visits with recursive calls in their lambda bodies *)
-        match
-          find_inner_visit check e
-        with
-      | Some (scrut, lambdas, rebuild) ->
-        let new_lambdas =
-          List.map
-            (fun lambda ->
-              match lambda with
-              | CPPlambda (lparams, _lret_ty, body, _capture) ->
-                let extended_body =
-                  List.map
-                    (fun stmt ->
-                      match stmt with
-                      | Sreturn (Some result) -> Sreturn (Some (rebuild result))
-                      | s -> s )
-                    body
-                in
-                CPPlambda
-                  ( lparams,
-                    Some Tvoid,
-                    List.concat_map
-                      (rewrite_multi_enter check varying)
-                      extended_body,
-                    false )
-              | e -> e )
-            lambdas
-        in
-        make_visit_stmt scrut new_lambdas
-      | None ->
-      match find_inner_iife check e with
-      | Some (iife_body, _iife_ret_ty, rebuild) ->
-        let extended_body =
-          List.map
-            (fun stmt ->
-              match stmt with
-              | Sreturn (Some result) -> Sreturn (Some (rebuild result))
-              | s -> s )
-            iife_body
-        in
-        List.concat_map (rewrite_multi_enter check varying) extended_body
-      | None ->
-        (* True base case *)
-        [Sasgn (Id.of_string "_result", None, e)]
-    else if n_calls >= 2 then
-      (* Double recursive call *)
-        match
-          decompose_double_call check e
-        with
-      | Some dd ->
-        let push_after =
-          make_stack_push
-            (CPPstruct_id
-               ( Id.of_string "_After",
-                 [],
-                 filter_by_mask varying dd.dd_second_args ))
-        in
-        let push_enter =
-          make_stack_push
-            (CPPstruct_id
-               ( Id.of_string "_Enter",
-                 [],
-                 filter_by_mask varying dd.dd_first_args ))
-        in
-        [push_after; push_enter]
-      | None ->
-        (* Cannot decompose — fall back to inline execution *)
-        [Sasgn (Id.of_string "_result", None, e)]
-    else (
-      (* Single recursive call *)
-        match
-          check e
-        with
-      | Some cs ->
-        (* Direct tail call — just push Enter *)
-        let push_enter =
-          make_stack_push
-            (CPPstruct_id
-               ( Id.of_string "_Enter",
-                 [],
-                 filter_by_mask varying cs.cs_args ))
-        in
-        [push_enter]
-      | None ->
-      match decompose_single_call check e with
-      | Some d ->
-        let push_combine =
-          make_stack_push
-            (CPPstruct_id (Id.of_string "_Combine", [], d.d_saved))
-        in
-        let push_enter =
-          make_stack_push
-            (CPPstruct_id
-               ( Id.of_string "_Enter",
-                 [],
-                 filter_by_mask varying d.d_rec_args ))
-        in
-        [push_combine; push_enter]
-      | None -> [Sasgn (Id.of_string "_result", None, e)] )
-  | Sif (cond, then_br, else_br) ->
-    let rw_then =
-      List.concat_map (rewrite_multi_enter check varying) then_br
-    in
-    let rw_else =
-      List.concat_map (rewrite_multi_enter check varying) else_br
-    in
-    rewrite_if_with_reuse_bypass check cond rw_then rw_else
-  | Sblock stmts ->
-    [Sblock (List.concat_map (rewrite_multi_enter check varying) stmts)]
-  | Scustom_case (ty, scrut, tyargs, branches, err) ->
-    [
-      Scustom_case
-        ( ty,
-          scrut,
-          tyargs,
-          List.map
-            (fun (ps, ret_ty, body) ->
-              ( ps,
-                ret_ty,
-                List.concat_map (rewrite_multi_enter check varying) body ) )
-            branches,
-          err );
-    ]
-  | Sswitch (scrut, r, branches, default) ->
-    [
-      Sswitch
-        ( scrut,
-          r,
-          List.map
-            (fun (id, body) ->
-              (id, List.concat_map (rewrite_multi_enter check varying) body) )
-            branches,
-          default );
-    ]
-  | Smatch (branches, default) ->
-    [
-      Smatch
-        ( List.map
-            (fun br ->
-              { br with
-                smb_body =
-                  List.concat_map (rewrite_multi_enter check varying) br.smb_body })
-            branches,
-          Option.map
-            (List.concat_map (rewrite_multi_enter check varying))
-            default );
-    ]
-  | s -> [s]
-
-(** Find the combining operation from the first double-call return in body. *)
-let rec find_combine_op check stmts =
-  List.find_map (find_combine_op_stmt check) stmts
-
-(** Search a single statement for a double-call return and extract its
-    combining operation. Statement-level companion of {!find_combine_op}. *)
-and find_combine_op_stmt check = function
-  | Sreturn (Some e) ->
-    if count_calls_expr check e >= 2 then
-      match
-        decompose_double_call check e
-      with
-      | Some dd ->
-        if dd.dd_saved = [] then
-          Some (fun l r -> dd.dd_combine [] l r)
-        else
-          None
-      | None -> None
-    else
-      None
-  | Sif (_, then_br, else_br) ->
-    ( match find_combine_op check then_br with
-    | Some _ as r -> r
-    | None -> find_combine_op check else_br )
-  | Sblock stmts -> find_combine_op check stmts
-  | Scustom_case (_, _, _, branches, _) ->
-    List.find_map (fun (_, _, body) -> find_combine_op check body) branches
-  | Sswitch (_, _, branches, _) ->
-    List.find_map (fun (_, body) -> find_combine_op check body) branches
-  | Smatch (branches, default) ->
-    ( match List.find_map (fun br ->
-        match br.smb_reuse with
-        | Some (_, _, stmts) ->
-          ( match find_combine_op check stmts with
-          | Some _ as r -> r
-          | None -> find_combine_op check br.smb_body )
-        | None -> find_combine_op check br.smb_body) branches with
-    | Some _ as r -> r
-    | None -> match default with Some ss -> find_combine_op check ss | None -> None )
-  | _ -> None
-
-(** {3 Shared helpers for transform_multi and transform_nontail}
-
-    Both multi-recursion and non-tail recursion transforms generate the same
-    boilerplate: struct definitions, stack initialization, parameter copies
-    from frame, frame lambdas, and the while-loop dispatch. These helpers
-    factor out the common patterns. *)
+    The non-tail recursion transform generates boilerplate: struct definitions,
+    stack initialization, parameter copies from frame, frame lambdas, and the
+    while-loop dispatch. These helpers factor out the common patterns. *)
 
 (** Generate the initial [_stack.emplace_back(_Enter\{...\})] statement.
 
@@ -5163,10 +5081,11 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
   if not (List.exists Fun.id pointer_safe_varying) then []
   else
   let n_enter = List.length pointer_safe_varying in
-  let is_field_access j = function
+  let is_field_access field_names j = function
     | CPPmember (CPPvar f, field_id) ->
       Id.to_string f = "_f"
-      && Id.to_string field_id = "_s" ^ string_of_int j
+      && j < List.length field_names
+      && Id.equal field_id (List.nth field_names j)
     | _ -> false
   in
   (* Find all struct pushes in handler body: returns (name, args) list *)
@@ -5207,7 +5126,7 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
                 if not arr.(j) then
                   let is_used =
                     List.exists2
-                      (fun safe arg -> safe && is_field_access j arg)
+                      (fun safe arg -> safe && is_field_access cf.cf_field_names j arg)
                       pointer_safe_varying args
                   in
                   if is_used then arr.(j) <- true
@@ -5234,7 +5153,7 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
                     match get_flags cf.cf_name with
                     | Some src_arr ->
                       for j = 0 to Array.length src_arr - 1 do
-                        if (not src_arr.(j)) && is_field_access j arg then (
+                        if (not src_arr.(j)) && is_field_access cf.cf_field_names j arg then (
                           src_arr.(j) <- true;
                           changed := true)
                       done
@@ -5372,7 +5291,7 @@ let make_frame_branch frame_name body =
     @param init_push   The initial stack-push statement
     @param branches    One [smatch_branch] per frame type, in dispatch order
     @return Complete statement list for the loopified function body *)
-let make_loop_and_return struct_defs ret_ty init_push branches =
+let make_loop_and_return struct_defs ret_ty init_push branches ~frame_names =
   let result_decl = Sdecl_init (Id.of_string "_result", ret_ty) in
   (* Use Tvar with Some name to avoid struct-name qualification that Tid adds *)
   let frame_ty = Tvar (0, Some (Id.of_string "_Frame")) in
@@ -5400,12 +5319,17 @@ let make_loop_and_return struct_defs ret_ty init_push branches =
       dispatch_stmt;
     ]
   in
+  let loop_comment =
+    let all_names = "_Enter" :: frame_names in
+    "/// Frame dispatch: " ^ String.concat ", " all_names ^ "."
+  in
   struct_defs
   @ [
       result_decl;
       stack_decl;
       stack_reserve;
       init_push;
+      Sraw loop_comment;
       Swhile
         (CPPunop ("!",
                   CPPfun_call
@@ -5414,87 +5338,6 @@ let make_loop_and_return struct_defs ret_ty init_push branches =
          loop_body);
       Sreturn (Some (CPPvar (Id.of_string "_result")));
     ]
-
-(** Transform a multi-recursive function body using frame-based stack.
-
-    Generates Enter/After/Combine frame structs, a std::variant stack, and a
-    while loop that dispatches via std::visit with Overloaded. *)
-let transform_multi check _pp_type params ret_ty body =
-  let varying = find_varying_params check params body in
-  let varying_params = filter_by_mask varying params in
-  let n_varying = List.length varying_params in
-  (* Extract combine operation from first double-call site *)
-  let combine_op =
-    match find_combine_op check body with
-    | Some op -> op
-    | None ->
-      (* Default to addition if we can't find it *)
-      fun l r -> CPPbinop ("+", l, r)
-  in
-  (* Build struct definitions *)
-  let enter_fields =
-    List.map (fun (id, ty) -> (id, strip_ref_and_const_type ty)) varying_params
-  in
-  let after_fields =
-    List.mapi
-      (fun i (_, ty) -> (Id.of_string ("_a" ^ string_of_int i), strip_ref_and_const_type ty))
-      varying_params
-  in
-  let enter_ty = Tvar (0, Some (Id.of_string "_Enter")) in
-  let after_ty = Tvar (0, Some (Id.of_string "_After")) in
-  let combine_ty = Tvar (0, Some (Id.of_string "_Combine")) in
-  let struct_defs =
-    [
-      Sstruct_def (Id.of_string "_Enter", enter_fields);
-      Sstruct_def (Id.of_string "_After", after_fields);
-      Sstruct_def (Id.of_string "_Combine",
-                   [(Id.of_string "_left", ret_ty)]);
-      Susing (Id.of_string "_Frame",
-              Tvariant [enter_ty; after_ty; combine_ty]);
-    ]
-  in
-  let frame_field_types =
-    ("_Enter", List.map snd enter_fields)
-    :: ("_After", List.map snd after_fields)
-    :: [("_Combine", [ret_ty])]
-  in
-  let init_push = make_stack_init varying_params in
-  (* Enter handler: copy frame fields to locals, then rewritten body *)
-  let enter_body =
-    (make_param_copies varying_params
-     @ List.concat_map (rewrite_multi_enter check varying) body)
-    |> optimize_frame_push_args frame_field_types
-  in
-  let enter_branch = make_frame_branch "_Enter" enter_body in
-  (* After handler: push Combine{_result}, then Enter{_f._a0, ...} *)
-  let after_enter_args =
-    List.init n_varying (fun i ->
-      CPPmember
-        (CPPvar (Id.of_string "_f"), Id.of_string ("_a" ^ string_of_int i)))
-  in
-  let after_body =
-    [
-      make_stack_push
-        (CPPstruct_id
-           (Id.of_string "_Combine", [], [CPPvar (Id.of_string "_result")]));
-      make_stack_push
-        (CPPstruct_id (Id.of_string "_Enter", [], after_enter_args));
-    ]
-    |> optimize_frame_push_args frame_field_types
-  in
-  let after_branch = make_frame_branch "_After" after_body in
-  (* Combine handler: _result = combine(_f._left, _result). Uses CPPbinop("=",
-     ...) instead of Sasgn so lambda_needs_capture detects the _result reference
-     and generates [&] capture. *)
-  let combine_expr =
-    combine_op
-      (CPPmember (CPPvar (Id.of_string "_f"), Id.of_string "_left"))
-      (CPPvar (Id.of_string "_result"))
-  in
-  let combine_body = assign_result combine_expr in
-  let combine_branch = make_frame_branch "_Combine" combine_body in
-  make_loop_and_return struct_defs ret_ty init_push
-    [enter_branch; after_branch; combine_branch]
 
 (** Rewrite variable references and field accesses on lambda-scoped variables
     to use std::declval, so that decltype expressions are valid at struct
@@ -5653,8 +5496,31 @@ let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
         | _ -> (id, strip_ref_and_const_type ty))
       pointer_safe_varying varying_params
   in
+  let frame_description cf =
+    let field_names_str =
+      if cf.cf_field_names = [] then ""
+      else
+        let names = List.map Id.to_string cf.cf_field_names in
+        " [" ^ String.concat ", " names ^ "]"
+    in
+    let name = cf.cf_name in
+    if Common.contains_substring name "_Resume" then
+      "Continuation: saves" ^ field_names_str ^ " across recursive call."
+    else if Common.contains_substring name "_Combine" then
+      "Combiner: receives first result, combines with second recursive call."
+    else if Common.contains_substring name "_After" then
+      "Intermediate: saves" ^ field_names_str ^ ", dispatches next recursive call."
+    else if Common.contains_substring name "_Final" then
+      "Final: rebuilds expression after inner recursive call resolves."
+    else if Common.contains_substring name "_Inter" then
+      "Intermediate: dispatches main recursive call after inner call resolves."
+    else if Common.contains_substring name "_Cont" then
+      "Continuation: saves" ^ field_names_str ^ " across recursive call, then processes rest."
+    else
+      "Frame: saves" ^ field_names_str ^ " across recursive call."
+  in
   let call_structs =
-    List.map
+    List.concat_map
       (fun cf ->
         let cf_ps =
           match List.assoc_opt cf.cf_name frame_ps_map with
@@ -5674,10 +5540,11 @@ let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
                     make_decltype_ty pp_type cf.cf_env expr
                   | _ -> strip_ref_and_const_type ty
               in
-              (Id.of_string ("_s" ^ string_of_int j), field_ty))
+              (List.nth cf.cf_field_names j, field_ty))
             cf.cf_saved_types
         in
-        Sstruct_def (Id.of_string cf.cf_name, fields))
+        [Sraw ("/// " ^ frame_description cf);
+         Sstruct_def (Id.of_string cf.cf_name, fields)])
       frames
   in
   let call_names = List.map (fun cf -> cf.cf_name) frames in
@@ -5736,6 +5603,7 @@ let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
       frames
   in
   make_loop_and_return struct_defs ret_ty init_push (enter_branch :: call_branches)
+    ~frame_names:call_names
   )
 
 (** {2 Main transformation dispatch} *)
@@ -6061,8 +5929,7 @@ let lambda_checker (lambda_name : Id.t) : call_checker =
 
     For each matched lambda whose body contains recursive calls to [id] (as
     determined by {!lambda_checker} and {!classify}), applies the appropriate
-    transformation ({!transform_tail}, {!transform_multi}, or
-    {!transform_nontail}). Lambdas without self-recursion are left unchanged but
+    transformation ({!transform_tail} or {!transform_nontail}). Lambdas without self-recursion are left unchanged but
     their bodies are recursively scanned for nested lambdas.
 
     Also descends into all nested statement structures (if/else, while loops,
@@ -6097,12 +5964,6 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
         match kind with
         | Tail_recursion -> transform_tail check pp_type params ret_ty lbody
         | Nontail_recursion ->
-          if
-            has_multi_call_expr check lbody
-            && not (has_triple_call_expr check lbody)
-          then
-            transform_multi check pp_type params ret_ty lbody
-          else
             transform_nontail check pp_type pp_expr tparams params ret_ty lbody
         | No_recursion -> assert false
       in
@@ -6330,8 +6191,8 @@ let body_contains_lazy_factory body =
     + Try to inline mutual recursion partners via {!try_inline_mutual_into},
       converting mutual recursion into self-recursion.
     + Classify the recursion pattern with {!classify} and apply the appropriate
-      strategy: {!transform_tail} for tail recursion, {!transform_multi} for
-      double-call expressions, or {!transform_nontail} for the general case.
+      strategy: {!transform_tail} for tail recursion, or {!transform_nontail}
+      for the general case (including multi-call patterns).
     + Post-pass with {!loopify_inner_lambdas} to loopify any self-recursive
       [std::function] lambdas nested within the body.
 
@@ -6358,10 +6219,8 @@ let body_contains_lazy_factory body =
          (the frame-based rewriter can't handle this yet).}
       {- {b TMC} ({!transform_tmc}) — if the recursion is "tail modulo cons"
          (exactly one recursive call wrapped in a single constructor).}
-      {- {b Multi-call} ({!transform_multi}) — if every return has exactly two
-         recursive calls (e.g. tree traversal, fibonacci).}
       {- {b General nontail} ({!transform_nontail}) — frame-based stack for all
-         other patterns.}}
+         other patterns, including multi-call (e.g. fibonacci, tree traversal).}}
 
     @return [(body', used_param_inits)] where [used_param_inits] is [true]
     when [param_inits] were consumed by the transform (TMC uses them for
@@ -6377,11 +6236,6 @@ let apply_nontail_loopification ?(param_inits = []) check pp_type pp_expr
     (transform_tmc ~param_inits check pp_expr ti params ret_ty body, true)
   | None ->
     let body' =
-      if has_multi_call_expr check body
-         && not (has_triple_call_expr check body)
-      then
-        transform_multi check pp_type params ret_ty body
-      else
         transform_nontail check pp_type pp_expr tparams params ret_ty body
     in
     (body', false)

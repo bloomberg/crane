@@ -7,15 +7,17 @@ unsigned int LoopifyPatterns::multi_let(const unsigned int &n) {
     unsigned int n;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [c] across recursive call.
+  struct _Resume1 {
+    unsigned int c;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -28,12 +30,12 @@ unsigned int LoopifyPatterns::multi_let(const unsigned int &n) {
         unsigned int m = n - 1;
         unsigned int b = (m * 2u);
         unsigned int c = (b + 3u);
-        _stack.emplace_back(_Call1{c});
+        _stack.emplace_back(_Resume1{c});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = (_f._s0 + _result);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = (_f.c + _result);
     }
   }
   return _result;
@@ -97,17 +99,19 @@ unsigned int LoopifyPatterns::deep_nest(const unsigned int &n) {
     unsigned int n;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0, _s1, _s2] across recursive call.
+  struct _Resume1 {
     decltype(1u) _s0;
     decltype(1u) _s1;
     decltype(1u) _s2;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -118,11 +122,11 @@ unsigned int LoopifyPatterns::deep_nest(const unsigned int &n) {
         _result = 0u;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Call1{1u, 1u, 1u});
+        _stack.emplace_back(_Resume1{1u, 1u, 1u});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_f._s0 + (_f._s1 + (_f._s2 + _result)));
     }
   }
@@ -138,23 +142,26 @@ bool LoopifyPatterns::bool_chain_fuel(const unsigned int &fuel,
     unsigned int fuel;
   };
 
-  struct _Call1 {
+  /// Intermediate: saves [_s0, f], dispatches next recursive call.
+  struct _After2 {
     decltype((((std::declval<const unsigned int &>() - 1u) >
                        std::declval<const unsigned int &>()
                    ? 0
                    : (std::declval<const unsigned int &>() - 1u)))) _s0;
-    unsigned int _s1;
+    unsigned int f;
   };
 
-  struct _Call2 {
-    bool _s0;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine1 {
+    bool _result;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
+  using _Frame = std::variant<_Enter, _After2, _Combine1>;
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
+  /// Frame dispatch: _Enter, _After2, _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -175,19 +182,19 @@ bool LoopifyPatterns::bool_chain_fuel(const unsigned int &fuel,
             if (n == 1u) {
               _result = false;
             } else {
-              _stack.emplace_back(_Call1{(((n - 1u) > n ? 0 : (n - 1u))), f});
+              _stack.emplace_back(_After2{(((n - 1u) > n ? 0 : (n - 1u))), f});
               _stack.emplace_back(_Enter{(((n - 2u) > n ? 0 : (n - 2u))), f});
             }
           }
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _stack.emplace_back(_Call2{_result});
-      _stack.emplace_back(_Enter{_f._s0, _f._s1});
+    } else if (std::holds_alternative<_After2>(_frame)) {
+      auto _f = std::move(std::get<_After2>(_frame));
+      _stack.emplace_back(_Combine1{_result});
+      _stack.emplace_back(_Enter{_f._s0, _f.f});
     } else {
-      auto _f = std::move(std::get<_Call2>(_frame));
-      _result = (_result || _f._s0);
+      auto _f = std::move(std::get<_Combine1>(_frame));
+      _result = (_result || _f._result);
     }
   }
   return _result;
@@ -204,19 +211,22 @@ bool LoopifyPatterns::chained_comp(const unsigned int &n) {
     unsigned int n;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Intermediate: saves [n_], dispatches next recursive call.
+  struct _After2 {
+    unsigned int n_;
   };
 
-  struct _Call2 {
-    bool _s0;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine1 {
+    bool _result;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
+  using _Frame = std::variant<_Enter, _After2, _Combine1>;
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
+  /// Frame dispatch: _Enter, _After2, _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -231,17 +241,17 @@ bool LoopifyPatterns::chained_comp(const unsigned int &n) {
           _result = true;
         } else {
           unsigned int m = n_ - 1;
-          _stack.emplace_back(_Call1{n_});
+          _stack.emplace_back(_After2{n_});
           _stack.emplace_back(_Enter{m});
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _stack.emplace_back(_Call2{_result});
-      _stack.emplace_back(_Enter{_f._s0});
+    } else if (std::holds_alternative<_After2>(_frame)) {
+      auto _f = std::move(std::get<_After2>(_frame));
+      _stack.emplace_back(_Combine1{_result});
+      _stack.emplace_back(_Enter{_f.n_});
     } else {
-      auto _f = std::move(std::get<_Call2>(_frame));
-      _result = (_result && _f._s0);
+      auto _f = std::move(std::get<_Combine1>(_frame));
+      _result = (_result && _f._result);
     }
   }
   return _result;
@@ -254,15 +264,17 @@ LoopifyPatterns::tuple_constr(const unsigned int &n) {
     unsigned int n;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [n] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int n;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<std::pair<unsigned int, unsigned int>, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -273,12 +285,12 @@ LoopifyPatterns::tuple_constr(const unsigned int &n) {
         _result = std::make_pair(std::make_pair(0u, 0u), 0u);
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Call1{n});
+        _stack.emplace_back(_Cont1{n});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      const unsigned int &n = _f._s0;
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      const unsigned int &n = _f.n;
       const std::pair<unsigned int, unsigned int> &p = _result.first;
       const unsigned int &c = _result.second;
       const unsigned int &a = p.first;
@@ -462,15 +474,17 @@ unsigned int LoopifyPatterns::mod_pattern(const unsigned int &n) {
     unsigned int n;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [n_] across recursive call.
+  struct _Resume1 {
+    unsigned int n_;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -485,13 +499,13 @@ unsigned int LoopifyPatterns::mod_pattern(const unsigned int &n) {
           _result = 1u;
         } else {
           unsigned int m = n_ - 1;
-          _stack.emplace_back(_Call1{n_});
+          _stack.emplace_back(_Resume1{n_});
           _stack.emplace_back(_Enter{m});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = ((_result + 1) ? _f._s0 % (_result + 1) : _f._s0);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = ((_result + 1) ? _f.n_ % (_result + 1) : _f.n_);
     }
   }
   return _result;
@@ -503,19 +517,22 @@ unsigned int LoopifyPatterns::alternating_ops(const unsigned int &n) {
     unsigned int n;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [n] across recursive call.
+  struct _Resume1 {
+    unsigned int n;
   };
 
-  struct _Call2 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume2 {
     decltype((std::declval<const unsigned int &>() * 2u)) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
+  using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
+  /// Frame dispatch: _Enter, _Resume1, _Resume2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -527,18 +544,18 @@ unsigned int LoopifyPatterns::alternating_ops(const unsigned int &n) {
       } else {
         unsigned int m = n - 1;
         if ((2u ? n % 2u : n) == 0u) {
-          _stack.emplace_back(_Call1{n});
+          _stack.emplace_back(_Resume1{n});
           _stack.emplace_back(_Enter{m});
         } else {
-          _stack.emplace_back(_Call2{(n * 2u)});
+          _stack.emplace_back(_Resume2{(n * 2u)});
           _stack.emplace_back(_Enter{m});
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = (_f._s0 + _result);
+    } else if (std::holds_alternative<_Resume1>(_frame)) {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = (_f.n + _result);
     } else {
-      auto _f = std::move(std::get<_Call2>(_frame));
+      auto _f = std::move(std::get<_Resume2>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -595,17 +612,19 @@ unsigned int LoopifyPatterns::nested_pattern(
         std::pair<std::pair<unsigned int, unsigned int>, unsigned int>> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
-    unsigned int _s1;
-    unsigned int _s2;
+  /// Continuation: saves [a, b, c] across recursive call.
+  struct _Resume1 {
+    unsigned int a;
+    unsigned int b;
+    unsigned int c;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -627,12 +646,12 @@ unsigned int LoopifyPatterns::nested_pattern(
         const unsigned int &c = d_a0.second;
         const unsigned int &a = p0.first;
         const unsigned int &b = p0.second;
-        _stack.emplace_back(_Call1{a, b, c});
+        _stack.emplace_back(_Resume1{a, b, c});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = (_f._s0 + (_f._s1 + (_f._s2 + _result)));
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = (_f.a + (_f.b + (_f.c + _result)));
     }
   }
   return _result;
@@ -644,15 +663,17 @@ unsigned int LoopifyPatterns::let_nested(const unsigned int &n) {
     unsigned int n;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [a] across recursive call.
+  struct _Resume1 {
+    unsigned int a;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -664,12 +685,12 @@ unsigned int LoopifyPatterns::let_nested(const unsigned int &n) {
       } else {
         unsigned int m = n - 1;
         unsigned int a = (m + 1);
-        _stack.emplace_back(_Call1{a});
+        _stack.emplace_back(_Resume1{a});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = (_f._s0 + _result);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = (_f.a + _result);
     }
   }
   return _result;
@@ -682,13 +703,15 @@ LoopifyPatterns::list_len(const LoopifyPatterns::list<unsigned int> &l) {
     const LoopifyPatterns::list<unsigned int> *l;
   };
 
-  struct _Call1 {};
+  /// Continuation: saves across recursive call.
+  struct _Resume1 {};
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -701,11 +724,11 @@ LoopifyPatterns::list_len(const LoopifyPatterns::list<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{});
+        _stack.emplace_back(_Resume1{});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_result + 1);
     }
   }
@@ -721,20 +744,23 @@ LoopifyPatterns::process_twice_fuel(const unsigned int &fuel,
     unsigned int fuel;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
-    unsigned int _s1;
+  /// Continuation: saves [d_a0, f] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
+    unsigned int f;
   };
 
-  struct _Call2 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont2 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
+  using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
   LoopifyPatterns::list<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l, fuel});
+  /// Frame dispatch: _Enter, _Cont1, _Cont2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -753,20 +779,20 @@ LoopifyPatterns::process_twice_fuel(const unsigned int &fuel,
           auto &[d_a0, d_a1] =
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                   l.v_mut());
-          _stack.emplace_back(_Call1{d_a0, f});
+          _stack.emplace_back(_Cont1{d_a0, f});
           _stack.emplace_back(_Enter{*(d_a1), f});
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
-      unsigned int f = std::move(_f._s1);
+    } else if (std::holds_alternative<_Cont1>(_frame)) {
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int f = std::move(_f.f);
       LoopifyPatterns::list<unsigned int> first = _result;
-      _stack.emplace_back(_Call2{d_a0});
+      _stack.emplace_back(_Cont2{d_a0});
       _stack.emplace_back(_Enter{std::move(first), f});
     } else {
-      auto _f = std::move(std::get<_Call2>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont2>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       LoopifyPatterns::list<unsigned int> second = _result;
       _result = list<unsigned int>::cons(d_a0, std::move(second));
     }
@@ -843,18 +869,20 @@ unsigned int LoopifyPatterns::quad_sum_pattern(
     const LoopifyPatterns::list<unsigned int> *l;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0, _s1] across recursive call.
+  struct _Resume1 {
     decltype((std::declval<unsigned int &>() +
               std::declval<unsigned int &>())) _s0;
     decltype((std::declval<unsigned int &>() +
               std::declval<unsigned int &>())) _s1;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -893,14 +921,14 @@ unsigned int LoopifyPatterns::quad_sum_pattern(
               const auto &[d_a02, d_a12] =
                   std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                       _sv2.v());
-              _stack.emplace_back(_Call1{(d_a0 + d_a00), (d_a01 + d_a02)});
+              _stack.emplace_back(_Resume1{(d_a0 + d_a00), (d_a01 + d_a02)});
               _stack.emplace_back(_Enter{d_a12.get()});
             }
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_f._s0 + (_f._s1 + _result));
     }
   }
@@ -914,15 +942,17 @@ LoopifyPatterns::multi_guard(const LoopifyPatterns::list<unsigned int> &l) {
     const LoopifyPatterns::list<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -935,12 +965,12 @@ LoopifyPatterns::multi_guard(const LoopifyPatterns::list<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Cont1{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       unsigned int rest = _result;
       if (10u < d_a0) {
         _result = (d_a0 + rest);
@@ -998,15 +1028,17 @@ LoopifyPatterns::double_append(const LoopifyPatterns::list<unsigned int> &l1,
     const LoopifyPatterns::list<unsigned int> *l1;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   LoopifyPatterns::list<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l2, &l1});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1021,12 +1053,12 @@ LoopifyPatterns::double_append(const LoopifyPatterns::list<unsigned int> &l1,
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                 l1.v());
-        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Cont1{d_a0});
         _stack.emplace_back(_Enter{std::move(l2), d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       LoopifyPatterns::list<unsigned int> rest = _result;
       _result = list<unsigned int>::cons(d_a0, append_lists(rest, rest));
     }
@@ -1043,20 +1075,23 @@ LoopifyPatterns::process_twice_alt_fuel(const unsigned int &fuel,
     unsigned int fuel;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
-    unsigned int _s1;
+  /// Continuation: saves [d_a0, f] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
+    unsigned int f;
   };
 
-  struct _Call2 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont2 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
+  using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
   LoopifyPatterns::list<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l, fuel});
+  /// Frame dispatch: _Enter, _Cont1, _Cont2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1075,20 +1110,20 @@ LoopifyPatterns::process_twice_alt_fuel(const unsigned int &fuel,
           auto &[d_a0, d_a1] =
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                   l.v_mut());
-          _stack.emplace_back(_Call1{d_a0, f});
+          _stack.emplace_back(_Cont1{d_a0, f});
           _stack.emplace_back(_Enter{*(d_a1), f});
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
-      unsigned int f = std::move(_f._s1);
+    } else if (std::holds_alternative<_Cont1>(_frame)) {
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int f = std::move(_f.f);
       LoopifyPatterns::list<unsigned int> once = _result;
-      _stack.emplace_back(_Call2{d_a0});
+      _stack.emplace_back(_Cont2{d_a0});
       _stack.emplace_back(_Enter{std::move(once), f});
     } else {
-      auto _f = std::move(std::get<_Call2>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont2>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       LoopifyPatterns::list<unsigned int> twice = _result;
       _result = list<unsigned int>::cons(d_a0, std::move(twice));
     }
@@ -1108,15 +1143,17 @@ unsigned int LoopifyPatterns::sum_if_positive_else_double(
     const LoopifyPatterns::list<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1129,12 +1166,12 @@ unsigned int LoopifyPatterns::sum_if_positive_else_double(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Cont1{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       unsigned int rest = _result;
       if (d_a0 == 0u) {
         _result = ((2u * d_a0) + rest);
@@ -1205,18 +1242,20 @@ LoopifyPatterns::four_elem(const LoopifyPatterns::list<unsigned int> &l) {
     const LoopifyPatterns::list<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
-    unsigned int _s1;
-    unsigned int _s2;
-    unsigned int _s3;
+  /// Continuation: saves [d_a0, d_a00, d_a01, d_a02] across recursive call.
+  struct _Resume1 {
+    unsigned int d_a0;
+    unsigned int d_a00;
+    unsigned int d_a01;
+    unsigned int d_a02;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1255,15 +1294,15 @@ LoopifyPatterns::four_elem(const LoopifyPatterns::list<unsigned int> &l) {
               const auto &[d_a02, d_a12] =
                   std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                       _sv2.v());
-              _stack.emplace_back(_Call1{d_a0, d_a00, d_a01, d_a02});
+              _stack.emplace_back(_Resume1{d_a0, d_a00, d_a01, d_a02});
               _stack.emplace_back(_Enter{d_a12.get()});
             }
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = (_f._s0 + (_f._s1 + (_f._s2 + (_f._s3 + _result))));
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = (_f.d_a0 + (_f.d_a00 + (_f.d_a01 + (_f.d_a02 + _result))));
     }
   }
   return _result;

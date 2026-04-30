@@ -79,30 +79,35 @@ LoopifyCombinatorics::perms_choices_fuel(const unsigned int &fuel,
     unsigned int fuel;
   };
 
-  struct _Call1 {
+  /// Intermediate: saves [remaining_0, remaining_1, f, d_a0], dispatches next
+  /// recursive call.
+  struct _After3 {
+    List<unsigned int> remaining_0;
+    List<unsigned int> remaining_1;
+    unsigned int f;
+    unsigned int d_a0;
+  };
+
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine2 {
+    List<List<unsigned int>> _result;
+    unsigned int d_a0;
+  };
+
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume1 {
     decltype(map_cons(
         std::declval<unsigned int &>(),
         List<List<unsigned int>>::cons(List<unsigned int>::nil(),
                                        List<List<unsigned int>>::nil()))) _s0;
   };
 
-  struct _Call2 {
-    List<unsigned int> _s0;
-    List<unsigned int> _s1;
-    unsigned int _s2;
-    unsigned int _s3;
-  };
-
-  struct _Call3 {
-    List<List<unsigned int>> _s0;
-    unsigned int _s1;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
+  using _Frame = std::variant<_Enter, _After3, _Combine2, _Resume1>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{orig, choices, fuel});
+  /// Frame dispatch: _Enter, _After3, _Combine2, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -125,26 +130,27 @@ LoopifyCombinatorics::perms_choices_fuel(const unsigned int &fuel,
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   remaining.v_mut())) {
             _stack.emplace_back(
-                _Call1{map_cons(d_a0, List<List<unsigned int>>::cons(
-                                          List<unsigned int>::nil(),
-                                          List<List<unsigned int>>::nil()))});
+                _Resume1{map_cons(d_a0, List<List<unsigned int>>::cons(
+                                            List<unsigned int>::nil(),
+                                            List<List<unsigned int>>::nil()))});
             _stack.emplace_back(_Enter{orig, *(d_a1), f});
           } else {
-            _stack.emplace_back(_Call2{remaining, remaining, f, d_a0});
+            _stack.emplace_back(_After3{remaining, remaining, f, d_a0});
             _stack.emplace_back(_Enter{orig, *(d_a1), f});
           }
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = _f._s0.app(_result);
-    } else if (std::holds_alternative<_Call2>(_frame)) {
-      auto _f = std::move(std::get<_Call2>(_frame));
-      _stack.emplace_back(_Call3{std::move(_result), _f._s3});
-      _stack.emplace_back(_Enter{std::move(_f._s0), std::move(_f._s1), _f._s2});
+    } else if (std::holds_alternative<_After3>(_frame)) {
+      auto _f = std::move(std::get<_After3>(_frame));
+      _stack.emplace_back(_Combine2{std::move(_result), _f.d_a0});
+      _stack.emplace_back(
+          _Enter{std::move(_f.remaining_0), std::move(_f.remaining_1), _f.f});
+    } else if (std::holds_alternative<_Combine2>(_frame)) {
+      auto _f = std::move(std::get<_Combine2>(_frame));
+      _result = map_cons(_f.d_a0, _result).app(_f._result);
     } else {
-      auto _f = std::move(std::get<_Call3>(_frame));
-      _result = map_cons(_f._s1, _result).app(_f._s0);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = _f._s0.app(_result);
     }
   }
   return _result;
@@ -167,13 +173,15 @@ unsigned int LoopifyCombinatorics::len_list(const List<unsigned int> &l) {
     const List<unsigned int> *l;
   };
 
-  struct _Call1 {};
+  /// Continuation: saves across recursive call.
+  struct _Resume1 {};
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -185,11 +193,11 @@ unsigned int LoopifyCombinatorics::len_list(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{});
+        _stack.emplace_back(_Resume1{});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_result + 1);
     }
   }
@@ -201,15 +209,17 @@ unsigned int LoopifyCombinatorics::factorial_impl(const unsigned int &n) {
     unsigned int n;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [n] across recursive call.
+  struct _Resume1 {
+    unsigned int n;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -220,12 +230,12 @@ unsigned int LoopifyCombinatorics::factorial_impl(const unsigned int &n) {
         _result = 1u;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Call1{n});
+        _stack.emplace_back(_Resume1{n});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = (_f._s0 * _result);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = (_f.n * _result);
     }
   }
   return _result;
@@ -243,15 +253,17 @@ LoopifyCombinatorics::subsequences(const List<unsigned int> &l) {
     List<unsigned int> l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -265,12 +277,12 @@ LoopifyCombinatorics::subsequences(const List<unsigned int> &l) {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
-        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Cont1{d_a0});
         _stack.emplace_back(_Enter{d_a1_value});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       List<List<unsigned int>> rest = _result;
       std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
           map_prepend;
@@ -279,15 +291,17 @@ LoopifyCombinatorics::subsequences(const List<unsigned int> &l) {
         struct _Enter {
           List<List<unsigned int>> lst;
         };
-        struct _Call1 {
+        /// Continuation: saves [_s0] across recursive call.
+        struct _Resume1 {
           decltype(List<unsigned int>::cons(
               d_a0, std::declval<List<unsigned int> &>())) _s0;
         };
-        using _Frame = std::variant<_Enter, _Call1>;
+        using _Frame = std::variant<_Enter, _Resume1>;
         List<List<unsigned int>> _result{};
         std::vector<_Frame> _stack;
         _stack.reserve(16);
         _stack.emplace_back(_Enter{lst});
+        /// Frame dispatch: _Enter, _Resume1.
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
           _stack.pop_back();
@@ -301,11 +315,11 @@ LoopifyCombinatorics::subsequences(const List<unsigned int> &l) {
               const auto &[d_a00, d_a10] =
                   std::get<typename List<List<unsigned int>>::Cons>(lst.v());
               _stack.emplace_back(
-                  _Call1{List<unsigned int>::cons(d_a0, d_a00)});
+                  _Resume1{List<unsigned int>::cons(d_a0, d_a00)});
               _stack.emplace_back(_Enter{*(d_a10)});
             }
           } else {
-            auto _f = std::move(std::get<_Call1>(_frame));
+            auto _f = std::move(std::get<_Resume1>(_frame));
             _result = List<List<unsigned int>>::cons(_f._s0, _result);
           }
         }
@@ -356,16 +370,18 @@ LoopifyCombinatorics::cartesian(const List<unsigned int> &l1,
     const List<unsigned int> *l2;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume1 {
     decltype(map_pairs(std::declval<unsigned int &>(),
                        std::declval<const List<unsigned int> &>())) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   List<std::pair<unsigned int, unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l2});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -377,11 +393,11 @@ LoopifyCombinatorics::cartesian(const List<unsigned int> &l1,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l2.v());
-        _stack.emplace_back(_Call1{map_pairs(d_a0, l1)});
+        _stack.emplace_back(_Resume1{map_pairs(d_a0, l1)});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = _f._s0.app(_result);
     }
   }
@@ -395,15 +411,17 @@ LoopifyCombinatorics::power_set(const List<unsigned int> &l) {
     List<unsigned int> l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -417,12 +435,12 @@ LoopifyCombinatorics::power_set(const List<unsigned int> &l) {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
-        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Cont1{d_a0});
         _stack.emplace_back(_Enter{d_a1_value});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       List<List<unsigned int>> rest = _result;
       std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
           map_add_x;
@@ -431,15 +449,17 @@ LoopifyCombinatorics::power_set(const List<unsigned int> &l) {
         struct _Enter {
           List<List<unsigned int>> lst;
         };
-        struct _Call1 {
+        /// Continuation: saves [_s0] across recursive call.
+        struct _Resume1 {
           decltype(List<unsigned int>::cons(
               d_a0, std::declval<List<unsigned int> &>())) _s0;
         };
-        using _Frame = std::variant<_Enter, _Call1>;
+        using _Frame = std::variant<_Enter, _Resume1>;
         List<List<unsigned int>> _result{};
         std::vector<_Frame> _stack;
         _stack.reserve(16);
         _stack.emplace_back(_Enter{lst});
+        /// Frame dispatch: _Enter, _Resume1.
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
           _stack.pop_back();
@@ -453,11 +473,11 @@ LoopifyCombinatorics::power_set(const List<unsigned int> &l) {
               const auto &[d_a00, d_a10] =
                   std::get<typename List<List<unsigned int>>::Cons>(lst.v());
               _stack.emplace_back(
-                  _Call1{List<unsigned int>::cons(d_a0, d_a00)});
+                  _Resume1{List<unsigned int>::cons(d_a0, d_a00)});
               _stack.emplace_back(_Enter{*(d_a10)});
             }
           } else {
-            auto _f = std::move(std::get<_Call1>(_frame));
+            auto _f = std::move(std::get<_Resume1>(_frame));
             _result = List<List<unsigned int>>::cons(_f._s0, _result);
           }
         }
@@ -476,17 +496,20 @@ LoopifyCombinatorics::insert_everywhere(unsigned int x, List<unsigned int> l) {
     List<unsigned int> l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
-    List<unsigned int> _s1;
-    unsigned int _s2;
+  /// Continuation: saves [d_a0, l, x] across recursive call, then processes
+  /// rest.
+  struct _Cont1 {
+    unsigned int d_a0;
+    List<unsigned int> l;
+    unsigned int x;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -501,14 +524,14 @@ LoopifyCombinatorics::insert_everywhere(unsigned int x, List<unsigned int> l) {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v_mut());
         List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
-        _stack.emplace_back(_Call1{d_a0, l, x});
+        _stack.emplace_back(_Cont1{d_a0, l, x});
         _stack.emplace_back(_Enter{d_a1_value});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
-      List<unsigned int> l = std::move(_f._s1);
-      unsigned int x = std::move(_f._s2);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
+      List<unsigned int> l = std::move(_f.l);
+      unsigned int x = std::move(_f.x);
       List<List<unsigned int>> rest = _result;
       std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
           prepend_y;
@@ -517,15 +540,17 @@ LoopifyCombinatorics::insert_everywhere(unsigned int x, List<unsigned int> l) {
         struct _Enter {
           List<List<unsigned int>> lsts;
         };
-        struct _Call1 {
+        /// Continuation: saves [_s0] across recursive call.
+        struct _Resume1 {
           decltype(List<unsigned int>::cons(
               d_a0, std::declval<List<unsigned int> &>())) _s0;
         };
-        using _Frame = std::variant<_Enter, _Call1>;
+        using _Frame = std::variant<_Enter, _Resume1>;
         List<List<unsigned int>> _result{};
         std::vector<_Frame> _stack;
         _stack.reserve(16);
         _stack.emplace_back(_Enter{lsts});
+        /// Frame dispatch: _Enter, _Resume1.
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
           _stack.pop_back();
@@ -539,11 +564,11 @@ LoopifyCombinatorics::insert_everywhere(unsigned int x, List<unsigned int> l) {
               const auto &[d_a00, d_a10] =
                   std::get<typename List<List<unsigned int>>::Cons>(lsts.v());
               _stack.emplace_back(
-                  _Call1{List<unsigned int>::cons(d_a0, d_a00)});
+                  _Resume1{List<unsigned int>::cons(d_a0, d_a00)});
               _stack.emplace_back(_Enter{*(d_a10)});
             }
           } else {
-            auto _f = std::move(std::get<_Call1>(_frame));
+            auto _f = std::move(std::get<_Resume1>(_frame));
             _result = List<List<unsigned int>>::cons(_f._s0, _result);
           }
         }
@@ -563,16 +588,18 @@ bool LoopifyCombinatorics::elem(const unsigned int &x,
     const List<unsigned int> *l;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume1 {
     decltype(std::declval<const unsigned int &>() ==
              std::declval<unsigned int &>()) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -584,11 +611,11 @@ bool LoopifyCombinatorics::elem(const unsigned int &x,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{x == d_a0});
+        _stack.emplace_back(_Resume1{x == d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_f._s0 || _result);
     }
   }
@@ -601,13 +628,15 @@ unsigned int LoopifyCombinatorics::len_impl(const List<unsigned int> &l) {
     const List<unsigned int> *l;
   };
 
-  struct _Call1 {};
+  /// Continuation: saves across recursive call.
+  struct _Resume1 {};
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -619,11 +648,11 @@ unsigned int LoopifyCombinatorics::len_impl(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{});
+        _stack.emplace_back(_Resume1{});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_result + 1);
     }
   }
@@ -639,15 +668,17 @@ LoopifyCombinatorics::dedup_fuel(const unsigned int &fuel,
     unsigned int fuel;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l, fuel});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -664,13 +695,13 @@ LoopifyCombinatorics::dedup_fuel(const unsigned int &fuel,
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Cont1{d_a0});
           _stack.emplace_back(_Enter{d_a1.get(), f});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
       List<unsigned int> rest = _result;
       if (elem(d_a0, rest)) {
         _result = std::move(rest);

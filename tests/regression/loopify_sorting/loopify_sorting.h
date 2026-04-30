@@ -157,13 +157,15 @@ struct LoopifySorting {
       const List<T1> *l;
     };
 
-    struct _Call1 {};
+    /// Continuation: saves across recursive call.
+    struct _Resume1 {};
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Resume1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Resume1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -174,11 +176,11 @@ struct LoopifySorting {
           _result = 0u;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-          _stack.emplace_back(_Call1{});
+          _stack.emplace_back(_Resume1{});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
+        auto _f = std::move(std::get<_Resume1>(_frame));
         _result = (_result + 1);
       }
     }
@@ -194,16 +196,19 @@ struct LoopifySorting {
       const List<T1> *l;
     };
 
-    struct _Call1 {
-      T1 _s0;
-      T1 _s1;
+    /// Continuation: saves [d_a0, d_a00] across recursive call, then processes
+    /// rest.
+    struct _Cont1 {
+      T1 d_a0;
+      T1 d_a00;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Cont1>;
     std::pair<List<T1>, List<T1>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -221,14 +226,14 @@ struct LoopifySorting {
           } else {
             const auto &[d_a00, d_a10] =
                 std::get<typename List<T1>::Cons>(_sv0.v());
-            _stack.emplace_back(_Call1{d_a0, d_a00});
+            _stack.emplace_back(_Cont1{d_a0, d_a00});
             _stack.emplace_back(_Enter{d_a10.get()});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        T1 d_a0 = _f._s0;
-        T1 d_a00 = _f._s1;
+        auto _f = std::move(std::get<_Cont1>(_frame));
+        T1 d_a0 = _f.d_a0;
+        T1 d_a00 = _f.d_a00;
         const List<T1> &l1 = _result.first;
         const List<T1> &l2 = _result.second;
         _result =

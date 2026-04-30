@@ -131,13 +131,15 @@ public:
       const List *_self;
     };
 
-    struct _Call1 {};
+    /// Continuation: saves across recursive call.
+    struct _Resume1 {};
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Resume1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{_self});
+    /// Frame dispatch: _Enter, _Resume1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -150,11 +152,11 @@ public:
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<t_A>::Cons>(_sv.v());
-          _stack.emplace_back(_Call1{});
+          _stack.emplace_back(_Resume1{});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
+        auto _f = std::move(std::get<_Resume1>(_frame));
         _result = (_result + 1);
       }
     }
@@ -272,16 +274,18 @@ struct LoopifyListGenerators {
           struct _Enter {
             unsigned int i;
           };
-          struct _Call1 {
+          /// Continuation: saves [_s0] across recursive call.
+          struct _Resume1 {
             decltype(f((((n - std::declval<unsigned int &>()) > n
                              ? 0
                              : (n - std::declval<unsigned int &>()))))) _s0;
           };
-          using _Frame = std::variant<_Enter, _Call1>;
+          using _Frame = std::variant<_Enter, _Resume1>;
           List<unsigned int> _result{};
           std::vector<_Frame> _stack;
           _stack.reserve(16);
           _stack.emplace_back(_Enter{i});
+          /// Frame dispatch: _Enter, _Resume1.
           while (!_stack.empty()) {
             _Frame _frame = std::move(_stack.back());
             _stack.pop_back();
@@ -292,11 +296,11 @@ struct LoopifyListGenerators {
                 _result = List<unsigned int>::nil();
               } else {
                 unsigned int i_ = i - 1;
-                _stack.emplace_back(_Call1{f((((n - i) > n ? 0 : (n - i))))});
+                _stack.emplace_back(_Resume1{f((((n - i) > n ? 0 : (n - i))))});
                 _stack.emplace_back(_Enter{i_});
               }
             } else {
-              auto _f = std::move(std::get<_Call1>(_frame));
+              auto _f = std::move(std::get<_Resume1>(_frame));
               _result = List<unsigned int>::cons(_f._s0, _result);
             }
           }
@@ -325,15 +329,17 @@ struct LoopifyListGenerators {
         struct _Enter {
           unsigned int idx;
         };
-        struct _Call1 {
+        /// Continuation: saves [_s0] across recursive call.
+        struct _Resume1 {
           decltype(List<unsigned int>::cons(f(std::declval<unsigned int &>()),
                                             List<unsigned int>::nil())) _s0;
         };
-        using _Frame = std::variant<_Enter, _Call1>;
+        using _Frame = std::variant<_Enter, _Resume1>;
         List<unsigned int> _result{};
         std::vector<_Frame> _stack;
         _stack.reserve(16);
         _stack.emplace_back(_Enter{idx});
+        /// Frame dispatch: _Enter, _Resume1.
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
           _stack.pop_back();
@@ -345,12 +351,12 @@ struct LoopifyListGenerators {
                   List<unsigned int>::cons(f(0u), List<unsigned int>::nil());
             } else {
               unsigned int idx_ = idx - 1;
-              _stack.emplace_back(_Call1{
+              _stack.emplace_back(_Resume1{
                   List<unsigned int>::cons(f(idx), List<unsigned int>::nil())});
               _stack.emplace_back(_Enter{idx_});
             }
           } else {
-            auto _f = std::move(std::get<_Call1>(_frame));
+            auto _f = std::move(std::get<_Resume1>(_frame));
             _result = _result.app(_f._s0);
           }
         }

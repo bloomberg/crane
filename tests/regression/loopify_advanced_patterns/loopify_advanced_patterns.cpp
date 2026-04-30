@@ -5,15 +5,17 @@ unsigned int LoopifyAdvancedPatterns::len_impl(const List<unsigned int> &l) {
     const List<unsigned int> *l;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume1 {
     decltype(1u) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -25,11 +27,11 @@ unsigned int LoopifyAdvancedPatterns::len_impl(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{1u});
+        _stack.emplace_back(_Resume1{1u});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -73,19 +75,22 @@ unsigned int LoopifyAdvancedPatterns::multi_guard(const List<unsigned int> &l) {
     const List<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call.
+  struct _Resume1 {
+    unsigned int d_a0;
   };
 
-  struct _Call2 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume2 {
     decltype(1u) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
+  using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1, _Resume2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -98,22 +103,22 @@ unsigned int LoopifyAdvancedPatterns::multi_guard(const List<unsigned int> &l) {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         if (10u < d_a0) {
-          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Resume1{d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         } else {
           if (0u < d_a0) {
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
-            _stack.emplace_back(_Call2{1u});
+            _stack.emplace_back(_Resume2{1u});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = (_f._s0 + _result);
+    } else if (std::holds_alternative<_Resume1>(_frame)) {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = (_f.d_a0 + _result);
     } else {
-      auto _f = std::move(std::get<_Call2>(_frame));
+      auto _f = std::move(std::get<_Resume2>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -125,18 +130,20 @@ unsigned int LoopifyAdvancedPatterns::four_elem(const List<unsigned int> &l) {
     const List<unsigned int> *l;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume1 {
     decltype((
         ((std::declval<unsigned int &>() + std::declval<unsigned int &>()) +
          std::declval<unsigned int &>()) +
         std::declval<unsigned int &>())) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -169,14 +176,14 @@ unsigned int LoopifyAdvancedPatterns::four_elem(const List<unsigned int> &l) {
             } else {
               const auto &[d_a02, d_a12] =
                   std::get<typename List<unsigned int>::Cons>(_sv2.v());
-              _stack.emplace_back(_Call1{(((d_a0 + d_a00) + d_a01) + d_a02)});
+              _stack.emplace_back(_Resume1{(((d_a0 + d_a00) + d_a01) + d_a02)});
               _stack.emplace_back(_Enter{d_a12.get()});
             }
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -191,17 +198,19 @@ unsigned int LoopifyAdvancedPatterns::nested_pattern(
         *l;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume1 {
     decltype((
         (std::declval<unsigned int &>() + std::declval<unsigned int &>()) +
         std::declval<unsigned int &>())) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -220,11 +229,11 @@ unsigned int LoopifyAdvancedPatterns::nested_pattern(
         const unsigned int &c = d_a0.second;
         const unsigned int &a = p0.first;
         const unsigned int &b = p0.second;
-        _stack.emplace_back(_Call1{((a + b) + c)});
+        _stack.emplace_back(_Resume1{((a + b) + c)});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -333,16 +342,18 @@ unsigned int LoopifyAdvancedPatterns::sum_shapes(
     const List<LoopifyAdvancedPatterns::shape> *l;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume1 {
     decltype(extract_value(
         std::declval<LoopifyAdvancedPatterns::shape &>())) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -356,11 +367,11 @@ unsigned int LoopifyAdvancedPatterns::sum_shapes(
         const auto &[d_a0, d_a1] =
             std::get<typename List<LoopifyAdvancedPatterns::shape>::Cons>(
                 l.v());
-        _stack.emplace_back(_Call1{extract_value(d_a0)});
+        _stack.emplace_back(_Resume1{extract_value(d_a0)});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -374,15 +385,17 @@ LoopifyAdvancedPatterns::count_by_shape(
     const List<LoopifyAdvancedPatterns::shape> *l;
   };
 
-  struct _Call1 {
-    LoopifyAdvancedPatterns::shape _s0;
+  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  struct _Cont1 {
+    LoopifyAdvancedPatterns::shape d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<std::pair<unsigned int, unsigned int>, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -396,12 +409,12 @@ LoopifyAdvancedPatterns::count_by_shape(
         const auto &[d_a0, d_a1] =
             std::get<typename List<LoopifyAdvancedPatterns::shape>::Cons>(
                 l.v());
-        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Cont1{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      LoopifyAdvancedPatterns::shape d_a0 = std::move(_f._s0);
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      LoopifyAdvancedPatterns::shape d_a0 = std::move(_f.d_a0);
       const std::pair<unsigned int, unsigned int> &p = _result.first;
       const unsigned int &triangles = _result.second;
       const unsigned int &circles = p.first;

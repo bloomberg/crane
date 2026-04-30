@@ -130,13 +130,15 @@ public:
       const List *_self;
     };
 
-    struct _Call1 {};
+    /// Continuation: saves across recursive call.
+    struct _Resume1 {};
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Resume1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{_self});
+    /// Frame dispatch: _Enter, _Resume1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -149,11 +151,11 @@ public:
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<t_A>::Cons>(_sv.v());
-          _stack.emplace_back(_Call1{});
+          _stack.emplace_back(_Resume1{});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
+        auto _f = std::move(std::get<_Resume1>(_frame));
         _result = (_result + 1);
       }
     }
@@ -192,15 +194,17 @@ struct LoopifyFolds {
       const List<unsigned int> *l;
     };
 
-    struct _Call1 {
-      unsigned int _s0;
+    /// Continuation: saves [d_a0] across recursive call.
+    struct _Resume1 {
+      unsigned int d_a0;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Resume1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Resume1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -212,12 +216,12 @@ struct LoopifyFolds {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Call1{d_a0});
+          _stack.emplace_back(_Resume1{d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        _result = f(_f._s0, _result);
+        auto _f = std::move(std::get<_Resume1>(_frame));
+        _result = f(_f.d_a0, _result);
       }
     }
     return _result;
@@ -324,15 +328,17 @@ struct LoopifyFolds {
       const List<unsigned int> *l;
     };
 
-    struct _Call1 {
-      unsigned int _s0;
+    /// Continuation: saves [d_a0] across recursive call.
+    struct _Resume1 {
+      unsigned int d_a0;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Resume1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Resume1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -349,13 +355,13 @@ struct LoopifyFolds {
                   _sv.v())) {
             _result = d_a0;
           } else {
-            _stack.emplace_back(_Call1{d_a0});
+            _stack.emplace_back(_Resume1{d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        _result = f(_f._s0, _result);
+        auto _f = std::move(std::get<_Resume1>(_frame));
+        _result = f(_f.d_a0, _result);
       }
     }
     return _result;
@@ -371,15 +377,17 @@ struct LoopifyFolds {
       unsigned int acc;
     };
 
-    struct _Call1 {
-      unsigned int _s0;
+    /// Continuation: saves [y] across recursive call, then processes rest.
+    struct _Cont1 {
+      unsigned int y;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Cont1>;
     std::pair<unsigned int, List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l, acc});
+    /// Frame dispatch: _Enter, _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -395,12 +403,12 @@ struct LoopifyFolds {
           auto _cs = f(acc, d_a0);
           const unsigned int &acc_ = _cs.first;
           const unsigned int &y = _cs.second;
-          _stack.emplace_back(_Call1{y});
+          _stack.emplace_back(_Cont1{y});
           _stack.emplace_back(_Enter{d_a1.get(), acc_});
         }
       } else {
-        auto _f = std::move(std::get<_Call1>(_frame));
-        unsigned int y = std::move(_f._s0);
+        auto _f = std::move(std::get<_Cont1>(_frame));
+        unsigned int y = std::move(_f.y);
         const unsigned int &final_acc = _result.first;
         const List<unsigned int> &ys = _result.second;
         _result = std::make_pair(final_acc, List<unsigned int>::cons(y, ys));

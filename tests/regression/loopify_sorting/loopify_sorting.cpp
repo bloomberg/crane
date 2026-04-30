@@ -39,15 +39,17 @@ List<unsigned int> LoopifySorting::insertion_sort(const List<unsigned int> &l) {
     const List<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call.
+  struct _Resume1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -59,12 +61,12 @@ List<unsigned int> LoopifySorting::insertion_sort(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{d_a0});
+        _stack.emplace_back(_Resume1{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _result = insert(_f._s0, _result);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = insert(_f.d_a0, _result);
     }
   }
   return _result;
@@ -144,20 +146,23 @@ List<unsigned int> LoopifySorting::merge_sort_fuel(const unsigned int &fuel,
     unsigned int fuel;
   };
 
-  struct _Call1 {
-    List<unsigned int> _s0;
-    unsigned int _s1;
+  /// Intermediate: saves [l1, f], dispatches next recursive call.
+  struct _After2 {
+    List<unsigned int> l1;
+    unsigned int f;
   };
 
-  struct _Call2 {
-    List<unsigned int> _s0;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine1 {
+    List<unsigned int> _result;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
+  using _Frame = std::variant<_Enter, _After2, _Combine1>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l, fuel});
+  /// Frame dispatch: _Enter, _After2, _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -183,18 +188,18 @@ List<unsigned int> LoopifySorting::merge_sort_fuel(const unsigned int &fuel,
             auto _cs = split<unsigned int>(l);
             const List<unsigned int> &l1 = _cs.first;
             const List<unsigned int> &l2 = _cs.second;
-            _stack.emplace_back(_Call1{l1, f});
+            _stack.emplace_back(_After2{l1, f});
             _stack.emplace_back(_Enter{l2, f});
           }
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _stack.emplace_back(_Call2{std::move(_result)});
-      _stack.emplace_back(_Enter{std::move(_f._s0), _f._s1});
+    } else if (std::holds_alternative<_After2>(_frame)) {
+      auto _f = std::move(std::get<_After2>(_frame));
+      _stack.emplace_back(_Combine1{std::move(_result)});
+      _stack.emplace_back(_Enter{std::move(_f.l1), _f.f});
     } else {
-      auto _f = std::move(std::get<_Call2>(_frame));
-      _result = merge(_result, _f._s0);
+      auto _f = std::move(std::get<_Combine1>(_frame));
+      _result = merge(_result, _f._result);
     }
   }
   return _result;
@@ -211,16 +216,19 @@ LoopifySorting::partition(const unsigned int &pivot,
     const List<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
-    unsigned int _s1;
+  /// Continuation: saves [d_a0, pivot] across recursive call, then processes
+  /// rest.
+  struct _Cont1 {
+    unsigned int d_a0;
+    unsigned int pivot;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<List<unsigned int>, List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -233,13 +241,13 @@ LoopifySorting::partition(const unsigned int &pivot,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Call1{d_a0, pivot});
+        _stack.emplace_back(_Cont1{d_a0, pivot});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      unsigned int d_a0 = std::move(_f._s0);
-      const unsigned int &pivot = _f._s1;
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      unsigned int d_a0 = std::move(_f.d_a0);
+      const unsigned int &pivot = _f.pivot;
       const List<unsigned int> &lo = _result.first;
       const List<unsigned int> &hi = _result.second;
       if (d_a0 <= pivot) {
@@ -259,22 +267,25 @@ List<unsigned int> LoopifySorting::quicksort_fuel(const unsigned int &fuel,
     unsigned int fuel;
   };
 
-  struct _Call1 {
-    List<unsigned int> _s0;
-    unsigned int _s1;
-    unsigned int _s2;
+  /// Intermediate: saves [lo, f, d_a0], dispatches next recursive call.
+  struct _After2 {
+    List<unsigned int> lo;
+    unsigned int f;
+    unsigned int d_a0;
   };
 
-  struct _Call2 {
-    List<unsigned int> _s0;
-    unsigned int _s1;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine1 {
+    List<unsigned int> _result;
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
+  using _Frame = std::variant<_Enter, _After2, _Combine1>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l, fuel});
+  /// Frame dispatch: _Enter, _After2, _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -295,17 +306,17 @@ List<unsigned int> LoopifySorting::quicksort_fuel(const unsigned int &fuel,
           auto _cs = partition(d_a0, *(d_a1));
           const List<unsigned int> &lo = _cs.first;
           const List<unsigned int> &hi = _cs.second;
-          _stack.emplace_back(_Call1{lo, f, d_a0});
+          _stack.emplace_back(_After2{lo, f, d_a0});
           _stack.emplace_back(_Enter{hi, f});
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      auto _f = std::move(std::get<_Call1>(_frame));
-      _stack.emplace_back(_Call2{std::move(_result), _f._s2});
-      _stack.emplace_back(_Enter{std::move(_f._s0), _f._s1});
+    } else if (std::holds_alternative<_After2>(_frame)) {
+      auto _f = std::move(std::get<_After2>(_frame));
+      _stack.emplace_back(_Combine1{std::move(_result), _f.d_a0});
+      _stack.emplace_back(_Enter{std::move(_f.lo), _f.f});
     } else {
-      auto _f = std::move(std::get<_Call2>(_frame));
-      _result = _result.app(List<unsigned int>::cons(_f._s1, _f._s0));
+      auto _f = std::move(std::get<_Combine1>(_frame));
+      _result = _result.app(List<unsigned int>::cons(_f.d_a0, _f._result));
     }
   }
   return _result;
