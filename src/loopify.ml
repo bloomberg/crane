@@ -353,6 +353,7 @@ let rec collect_expr (check : call_checker) expr =
       match expr with
       | CPPfun_call (_, args) -> List.concat_map (collect_expr check) args
       | CPPmethod_call (_, _, args) -> List.concat_map (collect_expr check) args
+      | CPPdot_method_call (_, _, args) -> List.concat_map (collect_expr check) args
       | _ -> []
     in
     cs :: nested
@@ -361,6 +362,8 @@ let rec collect_expr (check : call_checker) expr =
   | CPPfun_call (f, args) ->
     collect_expr check f @ List.concat_map (collect_expr check) args
   | CPPmethod_call (obj, _id, args) ->
+    collect_expr check obj @ List.concat_map (collect_expr check) args
+  | CPPdot_method_call (obj, _id, args) ->
     collect_expr check obj @ List.concat_map (collect_expr check) args
   | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
     collect_expr check e
@@ -386,11 +389,15 @@ let rec collect_expr (check : call_checker) expr =
   | CPPshared_ptr_ctor (_, e) | CPPunique_ptr_ctor (_, e) ->
     collect_expr check e
   | CPPbinop (_, e1, e2) -> collect_expr check e1 @ collect_expr check e2
+  | CPPcond (c, t, f) ->
+    collect_expr check c @ collect_expr check t @ collect_expr check f
   | CPPparray (arr, def) ->
     Array.fold_left
       (fun acc e -> acc @ collect_expr check e)
       (collect_expr check def)
       arr
+  | CPPbraced args -> List.concat_map (collect_expr check) args
+  | CPPstd_get (_, Some e) -> collect_expr check e
   | CPPvar _
    |CPPglob _
    |CPPvisit
@@ -401,6 +408,11 @@ let rec collect_expr (check : call_checker) expr =
    |CPPconvertible_to _
    |CPPabort _
    |CPPenum_val _
+   |CPPnullptr
+   |CPPstd_get (_, None)
+   |CPPstd_holds_alternative _
+   |CPPdeclval _
+   |CPPtypename_qualified _
    |CPPraw _
    |CPPbool _
    |CPPint _
@@ -474,10 +486,13 @@ and collect_stmt check ~in_visitor = function
   | Sreturn None -> []
   | Sexpr e -> collect_expr check e
   | Sasgn (_, _, e) | Sderef_asgn (_, e) -> collect_expr check e
+  | Sassign_expr (lhs, e) -> collect_expr check lhs @ collect_expr check e
   | Sif (cond, then_br, else_br) ->
     collect_expr check cond
     @ collect_stmts check ~in_visitor then_br
     @ collect_stmts check ~in_visitor else_br
+  | Sif_then (cond, then_br) ->
+    collect_expr check cond @ collect_stmts check ~in_visitor then_br
   | Swhile (cond, body) ->
     collect_expr check cond @ collect_stmts check ~in_visitor body
   | Sblock stmts -> collect_stmts check ~in_visitor stmts
@@ -606,11 +621,18 @@ let rec expr_has_recursive_branch_dependency check expr =
   | CPPmethod_call (obj, _, args) ->
     expr_has_recursive_branch_dependency check obj
     || List.exists (expr_has_recursive_branch_dependency check) args
+  | CPPdot_method_call (obj, _, args) ->
+    expr_has_recursive_branch_dependency check obj
+    || List.exists (expr_has_recursive_branch_dependency check) args
   | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
     expr_has_recursive_branch_dependency check e
   | CPPbinop (_, e1, e2) ->
     expr_has_recursive_branch_dependency check e1
     || expr_has_recursive_branch_dependency check e2
+  | CPPcond (c, t, f) ->
+    expr_has_recursive_branch_dependency check c
+    || expr_has_recursive_branch_dependency check t
+    || expr_has_recursive_branch_dependency check f
   | CPPget (e, _)
    |CPPget' (e, _)
    |CPPmember (e, _)
@@ -628,6 +650,9 @@ let rec expr_has_recursive_branch_dependency check expr =
   | CPPparray (arr, def) ->
     expr_has_recursive_branch_dependency check def
     || Array.exists (expr_has_recursive_branch_dependency check) arr
+  | CPPbraced args ->
+    List.exists (expr_has_recursive_branch_dependency check) args
+  | CPPstd_get (_, Some e) -> expr_has_recursive_branch_dependency check e
   | CPPvar _
    |CPPglob _
    |CPPvisit
@@ -638,6 +663,11 @@ let rec expr_has_recursive_branch_dependency check expr =
    |CPPconvertible_to _
    |CPPabort _
    |CPPenum_val _
+   |CPPnullptr
+   |CPPstd_get (_, None)
+   |CPPstd_holds_alternative _
+   |CPPdeclval _
+   |CPPtypename_qualified _
    |CPPraw _
    |CPPbool _
    |CPPint _
@@ -2389,7 +2419,7 @@ let build_cell_call ~vt_ret pp_expr cell =
   in
   let args =
     List.init cell.tca_n_args (fun i ->
-      if i = cell.tca_rec_field_idx then CPPraw "nullptr"
+      if i = cell.tca_rec_field_idx then CPPnullptr
       else
         match List.assoc_opt i cell.tca_non_rec_args with
         | Some e ->
@@ -3254,11 +3284,18 @@ let rec expr_has_unique_owner_decomposition check tparams env expr =
   | CPPmethod_call (obj, _, args) ->
     expr_has_unique_owner_decomposition check tparams env obj
     || List.exists (expr_has_unique_owner_decomposition check tparams env) args
+  | CPPdot_method_call (obj, _, args) ->
+    expr_has_unique_owner_decomposition check tparams env obj
+    || List.exists (expr_has_unique_owner_decomposition check tparams env) args
   | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
     expr_has_unique_owner_decomposition check tparams env e
   | CPPbinop (_, e1, e2) ->
     expr_has_unique_owner_decomposition check tparams env e1
     || expr_has_unique_owner_decomposition check tparams env e2
+  | CPPcond (c, t, f) ->
+    expr_has_unique_owner_decomposition check tparams env c
+    || expr_has_unique_owner_decomposition check tparams env t
+    || expr_has_unique_owner_decomposition check tparams env f
   | CPPget (e, _)
    |CPPget' (e, _)
    |CPPmember (e, _)
@@ -3277,6 +3314,10 @@ let rec expr_has_unique_owner_decomposition check tparams env expr =
   | CPPparray (arr, def) ->
     expr_has_unique_owner_decomposition check tparams env def
     || Array.exists (expr_has_unique_owner_decomposition check tparams env) arr
+  | CPPbraced args ->
+    List.exists (expr_has_unique_owner_decomposition check tparams env) args
+  | CPPstd_get (_, Some e) ->
+    expr_has_unique_owner_decomposition check tparams env e
   | CPPvar _
    |CPPglob _
    |CPPvisit
@@ -3287,6 +3328,11 @@ let rec expr_has_unique_owner_decomposition check tparams env expr =
    |CPPconvertible_to _
    |CPPabort _
    |CPPenum_val _
+   |CPPnullptr
+   |CPPstd_get (_, None)
+   |CPPstd_holds_alternative _
+   |CPPdeclval _
+   |CPPtypename_qualified _
    |CPPraw _
    |CPPbool _
    |CPPint _
@@ -3301,10 +3347,16 @@ let rec expr_has_unique_owner_decomposition check tparams env expr =
 and stmt_has_unique_owner_decomposition check tparams env = function
   | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) | Sderef_asgn (_, e) ->
     expr_has_unique_owner_decomposition check tparams env e
+  | Sassign_expr (lhs, e) ->
+    expr_has_unique_owner_decomposition check tparams env lhs
+    || expr_has_unique_owner_decomposition check tparams env e
   | Sif (cond, then_br, else_br) ->
     expr_has_unique_owner_decomposition check tparams env cond
     || body_has_unique_owner_decomposition check tparams env then_br
     || body_has_unique_owner_decomposition check tparams env else_br
+  | Sif_then (cond, then_br) ->
+    expr_has_unique_owner_decomposition check tparams env cond
+    || body_has_unique_owner_decomposition check tparams env then_br
   | Sswitch (scrut, _, branches, default) ->
     expr_has_unique_owner_decomposition check tparams env scrut
     || List.exists
@@ -5455,7 +5507,7 @@ let rec rewrite_field_access_for_decltype pp_type env expr =
     ( match lookup_var_type env id with
     | Some ty ->
       let base_ty = strip_ref_type ty in
-      CPPraw ("std::declval<" ^ pp_type base_ty ^ "&>()")
+      CPPdeclval (Tref base_ty)
     | None -> expr )
   | CPPget (CPPvar id, field) ->
     (* Dot access on a variable.  Strip const to get the struct type for
@@ -5468,7 +5520,7 @@ let rec rewrite_field_access_for_decltype pp_type env expr =
         | Tmod (TMconst, t) -> t
         | t -> t
       in
-      CPPraw ("std::declval<" ^ pp_type struct_ty ^ "&>()." ^ Id.to_string field)
+      CPPmember (CPPdeclval (Tref struct_ty), field)
     | None -> expr )
   | CPParrow (CPPvar id, field) ->
     (* Arrow access on a pointer variable — used by Smatch bindings
@@ -5481,7 +5533,7 @@ let rec rewrite_field_access_for_decltype pp_type env expr =
         | Tptr (Tmod (TMconst, t)) | Tptr t -> t
         | t -> t
       in
-      CPPraw ("std::declval<" ^ pp_type pointee_ty ^ "&>()." ^ Id.to_string field)
+      CPPmember (CPPdeclval (Tref pointee_ty), field)
     | None -> expr )
   | _ ->
     map_expr (rewrite_field_access_for_decltype pp_type env) Fun.id Fun.id expr

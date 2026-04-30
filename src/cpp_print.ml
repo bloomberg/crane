@@ -1173,7 +1173,7 @@ and pp_cpp_expr env args t =
           (* Dereferencing a simple variable (shared_ptr, pointer) is safe
              for by-value capture — the pointer/smart-pointer is copied. *)
           ()
-        | CPPderef _ -> found := true
+    | CPPderef _ -> found := true
         | e ->
           iter_expr_children
             ~on_expr:scan_expr
@@ -1436,6 +1436,14 @@ and pp_cpp_expr env args t =
     ++ str "("
     ++ pp_list (pp_cpp_expr env args) call_args
     ++ str ")"
+  | CPPdot_method_call (obj, method_name, call_args) ->
+    let obj = match obj with CPPmove inner -> inner | _ -> obj in
+    pp_cpp_expr env args obj
+    ++ str "."
+    ++ Id.print method_name
+    ++ str "("
+    ++ pp_list (pp_cpp_expr env args) call_args
+    ++ str ")"
   | CPPqualified (e, id) -> pp_cpp_expr env args e ++ str "::" ++ Id.print id
   | CPPconvertible_to ty ->
     require_header "concepts";
@@ -1453,6 +1461,27 @@ and pp_cpp_expr env args t =
        proper module qualification, with collision-aware capitalization. *)
     let full_name = capitalize_enum_qualified (str_global Type ind) ind in
     str full_name ++ str "::" ++ Id.print ctor
+  | CPPnullptr -> str "nullptr"
+  | CPPbraced es ->
+    str "{" ++ pp_list (pp_cpp_expr env args) es ++ str "}"
+  | CPPstd_get (ty, None) ->
+    require_header "variant";
+    str "std::get<" ++ pp_cpp_type false [] ty ++ str ">"
+  | CPPstd_get (ty, Some e) ->
+    require_header "variant";
+    str "std::get<"
+    ++ pp_cpp_type false [] ty
+    ++ str ">("
+    ++ pp_cpp_expr env args e
+    ++ str ")"
+  | CPPstd_holds_alternative ty ->
+    require_header "variant";
+    str "std::holds_alternative<" ++ pp_cpp_type false [] ty ++ str ">"
+  | CPPdeclval ty ->
+    require_header "utility";
+    str "std::declval<" ++ pp_cpp_type false [] ty ++ str ">()"
+  | CPPtypename_qualified (ty, id) ->
+    str "typename " ++ pp_cpp_type false [] ty ++ str "::" ++ Id.print id
   (* Low-level constructs for reuse optimization *)
   | CPPraw code ->
     str
@@ -1476,6 +1505,12 @@ and pp_cpp_expr env args t =
     ++ str op
     ++ str " "
     ++ paren_child rhs
+  | CPPcond (cond, then_expr, else_expr) ->
+    pp_cpp_expr env args cond
+    ++ str " ? "
+    ++ pp_cpp_expr env args then_expr
+    ++ str " : "
+    ++ pp_cpp_expr env args else_expr
   | CPPbool b -> str (if b then "true" else "false")
   | CPPint n -> str (string_of_int n)
   | CPPbrace_init -> str "{}"
@@ -1592,6 +1627,14 @@ and pp_cpp_stmt env args = function
     ++ pp_list_stmt (pp_cpp_stmt env args) else_stmts
     ++ fnl ()
     ++ str "}"
+  | Sif_then (cond, then_stmts) ->
+    str "if ("
+    ++ pp_cpp_expr env args cond
+    ++ str ") {"
+    ++ fnl ()
+    ++ pp_list_stmt (pp_cpp_stmt env args) then_stmts
+    ++ fnl ()
+    ++ str "}"
   | Sraw code ->
     if Common.contains_substring code "std::vector" then
       require_header "vector";
@@ -1629,6 +1672,11 @@ and pp_cpp_stmt env args = function
     pp_cpp_expr env args obj
     ++ str "."
     ++ Id.print field
+    ++ str " = "
+    ++ pp_cpp_expr env args e
+    ++ str ";"
+  | Sassign_expr (lhs, e) ->
+    pp_cpp_expr env args lhs
     ++ str " = "
     ++ pp_cpp_expr env args e
     ++ str ";"
@@ -2340,6 +2388,17 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     in
     let explicit_s = if is_explicit then str "explicit " else mt () in
     h (explicit_s ++ sname ++ pp_par true params_s ++ init_s ++ str " {}")
+  | Fdestructor body ->
+    let sname =
+      match struct_name with
+      | Some s -> s
+      | None -> str "UNKNOWN_STRUCT"
+    in
+    h (str "~" ++ sname ++ str "() {")
+    ++ fnl ()
+    ++ pp_list_stmt (pp_cpp_stmt env []) body
+    ++ fnl ()
+    ++ str "}"
   | Fnested_struct (id, fields) ->
     let fields_s =
       pp_cpp_fields_with_vis ~struct_name:(Id.print id) env fields

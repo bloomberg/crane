@@ -84,7 +84,7 @@ public:
       Expr *_dst;
     };
 
-    std::vector<_CloneFrame> _stack;
+    std::vector<_CloneFrame> _stack{};
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -102,19 +102,23 @@ public:
         _dst->d_v_ = EAdd{_alt.d_a0 ? std::make_unique<Expr>() : nullptr,
                           _alt.d_a1 ? std::make_unique<Expr>() : nullptr};
         auto &_dst_alt = std::get<EAdd>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-        if (_alt.d_a1)
+        }
+        if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       } else if (std::holds_alternative<EEq>(_src->v())) {
         const auto &_alt = std::get<EEq>(_src->v());
         _dst->d_v_ = EEq{_alt.d_a0 ? std::make_unique<Expr>() : nullptr,
                          _alt.d_a1 ? std::make_unique<Expr>() : nullptr};
         auto &_dst_alt = std::get<EEq>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-        if (_alt.d_a1)
+        }
+        if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       } else {
         const auto &_alt = std::get<EIf>(_src->v());
         _dst->d_v_ =
@@ -122,12 +126,15 @@ public:
                 _alt.d_a2 ? std::make_unique<Expr>() : nullptr,
                 _alt.d_a3 ? std::make_unique<Expr>() : nullptr};
         auto &_dst_alt = std::get<EIf>(_dst->d_v_);
-        if (_alt.d_a1)
+        if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
-        if (_alt.d_a2)
+        }
+        if (_alt.d_a2) {
           _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
-        if (_alt.d_a3)
+        }
+        if (_alt.d_a3) {
           _stack.push_back({_alt.d_a3.get(), _dst_alt.d_a3.get()});
+        }
       }
     }
     return _out;
@@ -156,38 +163,46 @@ public:
 
   // MANIPULATORS
   ~Expr() {
-    std::vector<std::unique_ptr<Expr>> _stack;
+    std::vector<std::unique_ptr<Expr>> _stack{};
     auto _drain = [&](Expr &_node) {
       if (std::holds_alternative<EAdd>(_node.d_v_)) {
         auto &_alt = std::get<EAdd>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
-        if (_alt.d_a1)
+        }
+        if (_alt.d_a1) {
           _stack.push_back(std::move(_alt.d_a1));
+        }
       }
       if (std::holds_alternative<EEq>(_node.d_v_)) {
         auto &_alt = std::get<EEq>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
-        if (_alt.d_a1)
+        }
+        if (_alt.d_a1) {
           _stack.push_back(std::move(_alt.d_a1));
+        }
       }
       if (std::holds_alternative<EIf>(_node.d_v_)) {
         auto &_alt = std::get<EIf>(_node.d_v_);
-        if (_alt.d_a1)
+        if (_alt.d_a1) {
           _stack.push_back(std::move(_alt.d_a1));
-        if (_alt.d_a2)
+        }
+        if (_alt.d_a2) {
           _stack.push_back(std::move(_alt.d_a2));
-        if (_alt.d_a3)
+        }
+        if (_alt.d_a3) {
           _stack.push_back(std::move(_alt.d_a3));
+        }
       }
     };
     _drain(*this);
     while (!_stack.empty()) {
       auto _node = std::move(_stack.back());
       _stack.pop_back();
-      if (_node)
+      if (_node) {
         _drain(*_node);
+      }
     }
   }
 

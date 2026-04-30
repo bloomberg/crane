@@ -61,7 +61,7 @@ struct VisitMatchBug {
         Tree *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -77,10 +77,12 @@ struct VisitMatchBug {
               Node{_alt.d_a0 ? std::make_unique<Tree>() : nullptr, _alt.d_a1,
                    _alt.d_a2 ? std::make_unique<Tree>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          }
         }
       }
       return _out;
@@ -96,22 +98,25 @@ struct VisitMatchBug {
 
     // MANIPULATORS
     ~Tree() {
-      std::vector<std::unique_ptr<Tree>> _stack;
+      std::vector<std::unique_ptr<Tree>> _stack{};
       auto _drain = [&](Tree &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back(std::move(_alt.d_a2));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 

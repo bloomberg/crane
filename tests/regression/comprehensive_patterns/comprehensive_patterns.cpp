@@ -623,7 +623,7 @@ ComprehensivePatterns::count_down(const unsigned int &n,
   };
 
   struct _Call1 {
-    decltype((std::declval<const ComprehensivePatterns::NC &>()).nc_b) _s0;
+    decltype(std::declval<const ComprehensivePatterns::NC &>().nc_b) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -711,7 +711,7 @@ ComprehensivePatterns::sum_proj(const unsigned int &n,
   };
 
   struct _Call1 {
-    decltype((std::declval<const ComprehensivePatterns::NC &>()).nc_a) _s0;
+    decltype(std::declval<const ComprehensivePatterns::NC &>().nc_a) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -961,7 +961,7 @@ ComprehensivePatterns::sum_values(const unsigned int &n,
   };
 
   struct _Call1 {
-    decltype((std::declval<const ComprehensivePatterns::StateStmt &>())
+    decltype(std::declval<const ComprehensivePatterns::StateStmt &>()
                  .stmt_value) _s0;
   };
 
@@ -1029,7 +1029,7 @@ ComprehensivePatterns::sum_with_state(const unsigned int &n,
   };
 
   struct _Call1 {
-    decltype((std::declval<const ComprehensivePatterns::RCF &>()).cf_val) _s0;
+    decltype(std::declval<const ComprehensivePatterns::RCF &>().cf_val) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -1087,7 +1087,7 @@ unsigned int ComprehensivePatterns::accum_with_state(
   };
 
   struct _Call1 {
-    decltype((std::declval<const ComprehensivePatterns::StateLB &>())
+    decltype(std::declval<const ComprehensivePatterns::StateLB &>()
                  .lb_value) _s0;
   };
 

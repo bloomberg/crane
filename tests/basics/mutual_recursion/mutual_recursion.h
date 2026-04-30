@@ -132,23 +132,22 @@ struct MutualRecursion {
     }
 
     // ACCESSORS
-    forest clone() const {
-      forest _out{};
+    forest<t_A> clone() const {
+      forest<t_A> _out{};
 
       struct _CloneFrame {
-        const forest *_src;
-        forest *_dst;
+        const forest<t_A> *_src;
+        forest<t_A> *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const forest *_src = _frame._src;
-        forest *_dst = _frame._dst;
+        const forest<t_A> *_src = _frame._src;
+        forest<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Empty>(_src->v())) {
-          const auto &_alt = std::get<Empty>(_src->v());
           _dst->d_v_ = Empty{};
         } else {
           const auto &_alt = std::get<Trees>(_src->v());
@@ -156,10 +155,11 @@ struct MutualRecursion {
               Trees{_alt.d_a0 ? std::make_unique<MutualRecursion::tree<t_A>>(
                                     _alt.d_a0->clone())
                               : nullptr,
-                    _alt.d_a1 ? std::make_unique<forest>() : nullptr};
+                    _alt.d_a1 ? std::make_unique<forest<t_A>>() : nullptr};
           auto &_dst_alt = std::get<Trees>(_dst->d_v_);
-          if (_alt.d_a1)
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         }
       }
       return _out;
@@ -187,20 +187,22 @@ struct MutualRecursion {
 
     // MANIPULATORS
     ~forest() {
-      std::vector<std::unique_ptr<forest>> _stack;
-      auto _drain = [&](forest &_node) {
+      std::vector<std::unique_ptr<forest<t_A>>> _stack{};
+      auto _drain = [&](forest<t_A> &_node) {
         if (std::holds_alternative<Trees>(_node.d_v_)) {
           auto &_alt = std::get<Trees>(_node.d_v_);
-          if (_alt.d_a1)
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 

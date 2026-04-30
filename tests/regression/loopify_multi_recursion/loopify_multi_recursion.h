@@ -75,7 +75,7 @@ struct LoopifyMultiRecursion {
         quadtree *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -93,14 +93,18 @@ struct LoopifyMultiRecursion {
                     _alt.d_a2 ? std::make_unique<quadtree>() : nullptr,
                     _alt.d_a3 ? std::make_unique<quadtree>() : nullptr};
           auto &_dst_alt = std::get<QQuad>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
-          if (_alt.d_a3)
+          }
+          if (_alt.d_a3) {
             _stack.push_back({_alt.d_a3.get(), _dst_alt.d_a3.get()});
+          }
         }
       }
       return _out;
@@ -120,26 +124,31 @@ struct LoopifyMultiRecursion {
 
     // MANIPULATORS
     ~quadtree() {
-      std::vector<std::unique_ptr<quadtree>> _stack;
+      std::vector<std::unique_ptr<quadtree>> _stack{};
       auto _drain = [&](quadtree &_node) {
         if (std::holds_alternative<QQuad>(_node.d_v_)) {
           auto &_alt = std::get<QQuad>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back(std::move(_alt.d_a2));
-          if (_alt.d_a3)
+          }
+          if (_alt.d_a3) {
             _stack.push_back(std::move(_alt.d_a3));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 

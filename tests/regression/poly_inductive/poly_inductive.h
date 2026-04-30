@@ -324,33 +324,36 @@ struct PolyInductive {
     }
 
     // ACCESSORS
-    ptree clone() const {
-      ptree _out{};
+    ptree<t_A> clone() const {
+      ptree<t_A> _out{};
 
       struct _CloneFrame {
-        const ptree *_src;
-        ptree *_dst;
+        const ptree<t_A> *_src;
+        ptree<t_A> *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const ptree *_src = _frame._src;
-        ptree *_dst = _frame._dst;
+        const ptree<t_A> *_src = _frame._src;
+        ptree<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<PLeaf>(_src->v())) {
           const auto &_alt = std::get<PLeaf>(_src->v());
           _dst->d_v_ = PLeaf{_alt.d_a0};
         } else {
           const auto &_alt = std::get<PNode>(_src->v());
-          _dst->d_v_ = PNode{_alt.d_a0 ? std::make_unique<ptree>() : nullptr,
-                             _alt.d_a1 ? std::make_unique<ptree>() : nullptr};
+          _dst->d_v_ =
+              PNode{_alt.d_a0 ? std::make_unique<ptree<t_A>>() : nullptr,
+                    _alt.d_a1 ? std::make_unique<ptree<t_A>>() : nullptr};
           auto &_dst_alt = std::get<PNode>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         }
       }
       return _out;
@@ -378,22 +381,25 @@ struct PolyInductive {
 
     // MANIPULATORS
     ~ptree() {
-      std::vector<std::unique_ptr<ptree>> _stack;
-      auto _drain = [&](ptree &_node) {
+      std::vector<std::unique_ptr<ptree<t_A>>> _stack{};
+      auto _drain = [&](ptree<t_A> &_node) {
         if (std::holds_alternative<PNode>(_node.d_v_)) {
           auto &_alt = std::get<PNode>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 

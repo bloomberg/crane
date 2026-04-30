@@ -59,7 +59,7 @@ public:
       Nat *_dst;
     };
 
-    std::vector<_CloneFrame> _stack;
+    std::vector<_CloneFrame> _stack{};
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -67,14 +67,14 @@ public:
       const Nat *_src = _frame._src;
       Nat *_dst = _frame._dst;
       if (std::holds_alternative<O>(_src->v())) {
-        const auto &_alt = std::get<O>(_src->v());
         _dst->d_v_ = O{};
       } else {
         const auto &_alt = std::get<S>(_src->v());
         _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
         auto &_dst_alt = std::get<S>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       }
     }
     return _out;
@@ -87,20 +87,22 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::unique_ptr<Nat>> _stack;
+    std::vector<std::unique_ptr<Nat>> _stack{};
     auto _drain = [&](Nat &_node) {
       if (std::holds_alternative<S>(_node.d_v_)) {
         auto &_alt = std::get<S>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
     };
     _drain(*this);
     while (!_stack.empty()) {
       auto _node = std::move(_stack.back());
       _stack.pop_back();
-      if (_node)
+      if (_node) {
         _drain(*_node);
+      }
     }
   }
 
@@ -385,7 +387,7 @@ public:
       String *_dst;
     };
 
-    std::vector<_CloneFrame> _stack;
+    std::vector<_CloneFrame> _stack{};
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -393,15 +395,15 @@ public:
       const String *_src = _frame._src;
       String *_dst = _frame._dst;
       if (std::holds_alternative<EmptyString>(_src->v())) {
-        const auto &_alt = std::get<EmptyString>(_src->v());
         _dst->d_v_ = EmptyString{};
       } else {
         const auto &_alt = std::get<String0>(_src->v());
-        _dst->d_v_ = String0{_alt.d_a0,
+        _dst->d_v_ = String0{_alt.d_a0.clone(),
                              _alt.d_a1 ? std::make_unique<String>() : nullptr};
         auto &_dst_alt = std::get<String0>(_dst->d_v_);
-        if (_alt.d_a1)
+        if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
     }
     return _out;
@@ -417,20 +419,22 @@ public:
 
   // MANIPULATORS
   ~String() {
-    std::vector<std::unique_ptr<String>> _stack;
+    std::vector<std::unique_ptr<String>> _stack{};
     auto _drain = [&](String &_node) {
       if (std::holds_alternative<String0>(_node.d_v_)) {
         auto &_alt = std::get<String0>(_node.d_v_);
-        if (_alt.d_a1)
+        if (_alt.d_a1) {
           _stack.push_back(std::move(_alt.d_a1));
+        }
       }
     };
     _drain(*this);
     while (!_stack.empty()) {
       auto _node = std::move(_stack.back());
       _stack.pop_back();
-      if (_node)
+      if (_node) {
         _drain(*_node);
+      }
     }
   }
 
@@ -640,7 +644,7 @@ struct Levenshtein {
         chain *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -648,24 +652,28 @@ struct Levenshtein {
         const chain *_src = _frame._src;
         chain *_dst = _frame._dst;
         if (std::holds_alternative<Empty>(_src->v())) {
-          const auto &_alt = std::get<Empty>(_src->v());
           _dst->d_v_ = Empty{};
         } else if (std::holds_alternative<Skip>(_src->v())) {
           const auto &_alt = std::get<Skip>(_src->v());
-          _dst->d_v_ = Skip{_alt.d_a, _alt.d_s, _alt.d_t, _alt.d_n,
+          _dst->d_v_ = Skip{_alt.d_a.clone(), _alt.d_s.clone(),
+                            _alt.d_t.clone(), _alt.d_n.clone(),
                             _alt.d_a4 ? std::make_unique<chain>() : nullptr};
           auto &_dst_alt = std::get<Skip>(_dst->d_v_);
-          if (_alt.d_a4)
+          if (_alt.d_a4) {
             _stack.push_back({_alt.d_a4.get(), _dst_alt.d_a4.get()});
+          }
         } else {
           const auto &_alt = std::get<Change>(_src->v());
-          _dst->d_v_ = Change{
-              _alt.d_s,  _alt.d_t,
-              _alt.d_u,  _alt.d_n,
-              _alt.d_a4, _alt.d_a5 ? std::make_unique<chain>() : nullptr};
+          _dst->d_v_ = Change{_alt.d_s.clone(),
+                              _alt.d_t.clone(),
+                              _alt.d_u.clone(),
+                              _alt.d_n.clone(),
+                              _alt.d_a4.clone(),
+                              _alt.d_a5 ? std::make_unique<chain>() : nullptr};
           auto &_dst_alt = std::get<Change>(_dst->d_v_);
-          if (_alt.d_a5)
+          if (_alt.d_a5) {
             _stack.push_back({_alt.d_a5.get(), _dst_alt.d_a5.get()});
+          }
         }
       }
       return _out;
@@ -688,25 +696,28 @@ struct Levenshtein {
 
     // MANIPULATORS
     ~chain() {
-      std::vector<std::unique_ptr<chain>> _stack;
+      std::vector<std::unique_ptr<chain>> _stack{};
       auto _drain = [&](chain &_node) {
         if (std::holds_alternative<Skip>(_node.d_v_)) {
           auto &_alt = std::get<Skip>(_node.d_v_);
-          if (_alt.d_a4)
+          if (_alt.d_a4) {
             _stack.push_back(std::move(_alt.d_a4));
+          }
         }
         if (std::holds_alternative<Change>(_node.d_v_)) {
           auto &_alt = std::get<Change>(_node.d_v_);
-          if (_alt.d_a5)
+          if (_alt.d_a5) {
             _stack.push_back(std::move(_alt.d_a5));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 

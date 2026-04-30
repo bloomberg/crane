@@ -60,7 +60,7 @@ struct LoopifyTreeVariants {
         ternary *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -68,7 +68,6 @@ struct LoopifyTreeVariants {
         const ternary *_src = _frame._src;
         ternary *_dst = _frame._dst;
         if (std::holds_alternative<TLeaf>(_src->v())) {
-          const auto &_alt = std::get<TLeaf>(_src->v());
           _dst->d_v_ = TLeaf{};
         } else {
           const auto &_alt = std::get<TNode>(_src->v());
@@ -77,12 +76,15 @@ struct LoopifyTreeVariants {
                              _alt.d_a2 ? std::make_unique<ternary>() : nullptr,
                              _alt.d_a3 ? std::make_unique<ternary>() : nullptr};
           auto &_dst_alt = std::get<TNode>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
-          if (_alt.d_a3)
+          }
+          if (_alt.d_a3) {
             _stack.push_back({_alt.d_a3.get(), _dst_alt.d_a3.get()});
+          }
         }
       }
       return _out;
@@ -100,24 +102,28 @@ struct LoopifyTreeVariants {
 
     // MANIPULATORS
     ~ternary() {
-      std::vector<std::unique_ptr<ternary>> _stack;
+      std::vector<std::unique_ptr<ternary>> _stack{};
       auto _drain = [&](ternary &_node) {
         if (std::holds_alternative<TNode>(_node.d_v_)) {
           auto &_alt = std::get<TNode>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back(std::move(_alt.d_a2));
-          if (_alt.d_a3)
+          }
+          if (_alt.d_a3) {
             _stack.push_back(std::move(_alt.d_a3));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 
@@ -455,7 +461,7 @@ struct LoopifyTreeVariants {
         quadtree *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -472,14 +478,18 @@ struct LoopifyTreeVariants {
                             _alt.d_a2 ? std::make_unique<quadtree>() : nullptr,
                             _alt.d_a3 ? std::make_unique<quadtree>() : nullptr};
           auto &_dst_alt = std::get<Quad>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
-          if (_alt.d_a3)
+          }
+          if (_alt.d_a3) {
             _stack.push_back({_alt.d_a3.get(), _dst_alt.d_a3.get()});
+          }
         }
       }
       return _out;
@@ -499,26 +509,31 @@ struct LoopifyTreeVariants {
 
     // MANIPULATORS
     ~quadtree() {
-      std::vector<std::unique_ptr<quadtree>> _stack;
+      std::vector<std::unique_ptr<quadtree>> _stack{};
       auto _drain = [&](quadtree &_node) {
         if (std::holds_alternative<Quad>(_node.d_v_)) {
           auto &_alt = std::get<Quad>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back(std::move(_alt.d_a2));
-          if (_alt.d_a3)
+          }
+          if (_alt.d_a3) {
             _stack.push_back(std::move(_alt.d_a3));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 
@@ -846,7 +861,7 @@ struct LoopifyTreeVariants {
         leaf_tree *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -862,10 +877,12 @@ struct LoopifyTreeVariants {
               LNode{_alt.d_a0 ? std::make_unique<leaf_tree>() : nullptr,
                     _alt.d_a1 ? std::make_unique<leaf_tree>() : nullptr};
           auto &_dst_alt = std::get<LNode>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         }
       }
       return _out;
@@ -883,22 +900,25 @@ struct LoopifyTreeVariants {
 
     // MANIPULATORS
     ~leaf_tree() {
-      std::vector<std::unique_ptr<leaf_tree>> _stack;
+      std::vector<std::unique_ptr<leaf_tree>> _stack{};
       auto _drain = [&](leaf_tree &_node) {
         if (std::holds_alternative<LNode>(_node.d_v_)) {
           auto &_alt = std::get<LNode>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 

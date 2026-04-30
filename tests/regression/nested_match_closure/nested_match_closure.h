@@ -73,7 +73,7 @@ struct NestedMatchClosure {
         tree *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -81,7 +81,6 @@ struct NestedMatchClosure {
         const tree *_src = _frame._src;
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
-          const auto &_alt = std::get<Leaf>(_src->v());
           _dst->d_v_ = Leaf{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
@@ -89,10 +88,12 @@ struct NestedMatchClosure {
               Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
                    _alt.d_a2 ? std::make_unique<tree>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          }
         }
       }
       return _out;
@@ -108,22 +109,25 @@ struct NestedMatchClosure {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::unique_ptr<tree>> _stack;
+      std::vector<std::unique_ptr<tree>> _stack{};
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back(std::move(_alt.d_a2));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 

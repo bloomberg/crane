@@ -838,6 +838,19 @@ let rec render_cpp_expr_simple = function
   | CPPget' (e, field_ref) ->
     Option.map (fun s -> s ^ "." ^ Common.pp_global_name Type field_ref)
       (render_cpp_expr_simple e)
+  | CPPmember (e, field) ->
+    Option.map (fun s -> s ^ "." ^ Id.to_string field)
+      (render_cpp_expr_simple e)
+  | CPPdot_method_call (e, method_id, []) ->
+    Option.map (fun s -> s ^ "." ^ Id.to_string method_id ^ "()")
+      (render_cpp_expr_simple e)
+  | CPParrow (e, field) ->
+    Option.map (fun s -> s ^ "->" ^ Id.to_string field)
+      (render_cpp_expr_simple e)
+  | CPPmethod_call (e, method_id, []) ->
+    Option.map (fun s -> s ^ "->" ^ Id.to_string method_id ^ "()")
+      (render_cpp_expr_simple e)
+  | CPPnullptr -> Some "nullptr"
   | CPPraw s -> Some s
   | _ -> None
 
@@ -1701,18 +1714,26 @@ let stmts_reference_var_directly (target : Id.t) (stmts : cpp_stmt list) : bool 
     | CPPstruct_id (_, _, es) | CPPnew (_, es) -> List.iter ve es
     | CPPparray (arr, e) -> Array.iter ve arr; ve e
     | CPPmethod_call (obj, _, args) -> ve obj; List.iter ve args
+    | CPPdot_method_call (obj, _, args) -> ve obj; List.iter ve args
     | CPPrequires (_, constraints, _) -> List.iter (fun (e, _) -> ve e) constraints
     | CPPbinop (_, l, r) -> ve l; ve r
+    | CPPcond (c, t, f) -> ve c; ve t; ve f
+    | CPPbraced es -> List.iter ve es
+    | CPPstd_get (_, Some e) -> ve e
     | CPPunop (_, e) -> ve e
     | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _ | CPPstring _
     | CPPuint _ | CPPfloat _ | CPPconvertible_to _ | CPPabort _ | CPPenum_val _
-    | CPPraw _ | CPPbool _ | CPPint _ | CPPbrace_init | CPPthis -> ()
+    | CPPnullptr | CPPstd_get (_, None) | CPPstd_holds_alternative _
+    | CPPdeclval _ | CPPtypename_qualified _ | CPPraw _ | CPPbool _ | CPPint _
+    | CPPbrace_init | CPPthis -> ()
   and vs = function
     | Sreturn (Some e) | Sexpr e -> ve e
     | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _
     | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> ()
     | Sasgn (_, _, e) | Sderef_asgn (_, e) -> ve e
+    | Sassign_expr (lhs, e) -> ve lhs; ve e
     | Sif (c, t, f) -> ve c; List.iter vs t; List.iter vs f
+    | Sif_then (c, t) -> ve c; List.iter vs t
     | Sswitch (e, _, branches, def) ->
       ve e;
       List.iter (fun (_, stmts) -> List.iter vs stmts) branches;
@@ -6281,9 +6302,9 @@ and gen_local_fix_shared_ptr env renamed_ids funs_with_params =
     List.fold_left
       (fun s (fix_id, _) ->
         List.map
-          (local_var_subst_stmt
+         (local_var_subst_stmt
              fix_id
-             (CPPraw ("(*" ^ Id.to_string fix_id ^ ")")))
+             (CPPderef (CPPvar fix_id)))
           s )
       stmts renamed_ids
   in
@@ -11801,7 +11822,7 @@ let gen_ind_header_v2
                            let cname =
                              ctor_struct_name_of_ref ~fallback_idx:i cnames.(i)
                            in
-                           Some (Id.to_string (lookup_ctor_field_name cname j))
+                           Some (lookup_ctor_field_name cname j)
                          else None)
                        (List.mapi (fun j ty -> (j, ty)) tys_list)
                    in
@@ -11809,45 +11830,90 @@ let gen_ind_header_v2
                    | [] -> None
                    | fields ->
                      let ctor_id =
-                       Id.to_string (ctor_struct_id_of_ref ~fallback_idx:i cnames.(i))
+                       ctor_struct_id_of_ref ~fallback_idx:i cnames.(i)
                      in
-                     let moves =
-                       List.map
-                         (fun field ->
-                           "        if (_alt." ^ field
-                           ^ ") _stack.push_back(std::move(_alt." ^ field
-                           ^ "));")
-                         fields
+                     let ctor_ty = Tid (ctor_id, []) in
+                     let node_id = Id.of_string "_node" in
+                     let alt_id = Id.of_string "_alt" in
+                     let stack_id = Id.of_string "_stack" in
+                     let d_v_id = Id.of_string "d_v_" in
+                     let body =
+                       Sasgn
+                         ( alt_id,
+                           Some (Tref Tauto),
+                           CPPstd_get
+                             ( ctor_ty,
+                               Some (CPPmember (CPPvar node_id, d_v_id)) ) )
+                       :: List.map
+                            (fun field ->
+                              let field_expr =
+                                CPPmember (CPPvar alt_id, field)
+                              in
+                              Sif_then
+                                ( field_expr,
+                                  [ Sexpr
+                                      (CPPdot_method_call
+                                         ( CPPvar stack_id,
+                                           Id.of_string "push_back",
+                                           [CPPmove field_expr] )) ] ))
+                            fields
                      in
                      Some
-                       (String.concat "\n"
-                          (("      if (std::holds_alternative<" ^ ctor_id
-                            ^ ">(_node.d_v_)) {")
-                           :: ("        auto &_alt = std::get<" ^ ctor_id
-                               ^ ">(_node.d_v_);")
-                           :: moves @ ["      }"])))
+                       (Sif_then
+                          ( CPPfun_call
+                              ( CPPstd_holds_alternative ctor_ty,
+                                [CPPmember (CPPvar node_id, d_v_id)] ),
+                            body )))
                  tys)
               |> List.filter_map Fun.id
           in
           match ctor_moves with
           | [] -> []
           | moves ->
-            let body =
-              String.concat "\n"
-                (["~%SELF%() {";
-                  "  std::vector<std::unique_ptr<%SELF%>> _stack;";
-                  "  auto _drain = [&](%SELF% &_node) {"]
-                 @ moves
-                 @ ["  };";
-                    "  _drain(*this);";
-                    "  while (!_stack.empty()) {";
-                    "    auto _node = std::move(_stack.back());";
-                    "    _stack.pop_back();";
-                    "    if (_node) _drain(*_node);";
-                    "  }";
-                    "}"])
+            let stack_id = Id.of_string "_stack" in
+            let drain_id = Id.of_string "_drain" in
+            let node_id = Id.of_string "_node" in
+            let stack_ty =
+              Tid_external
+                ( Id.of_string_soft "std::vector",
+                  [Tunique_ptr self_ty] )
             in
-            [(Fraw body, VPublic, SManipulators)]
+            let body =
+              [
+                Sdecl_init (stack_id, stack_ty);
+                Sasgn
+                  ( drain_id,
+                    Some Tauto,
+                    CPPlambda
+                      ( [(Tref self_ty, Some node_id)],
+                        None,
+                        moves,
+                        false ) );
+                Sexpr (CPPfun_call (CPPvar drain_id, [CPPunop ("*", CPPthis)]));
+                Swhile
+                  ( CPPunop
+                      ( "!",
+                        CPPdot_method_call
+                          (CPPvar stack_id, Id.of_string "empty", []) ),
+                    [ Sasgn
+                        ( node_id,
+                          Some Tauto,
+                          CPPmove
+                            (CPPdot_method_call
+                               (CPPvar stack_id, Id.of_string "back", [])) );
+                      Sexpr
+                        (CPPdot_method_call
+                           (CPPvar stack_id, Id.of_string "pop_back", []));
+                      Sif_then
+                        ( CPPvar node_id,
+                          [Sexpr
+                             (CPPfun_call
+                                ( CPPvar drain_id,
+                                  [CPPunop ("*", CPPvar node_id)] ))] );
+                    ] );
+              ]
+            in
+            [(Fdestructor body, VPublic, SManipulators)]
       in
 
       (* For coinductive types, add public constructor accepting
@@ -12228,17 +12294,20 @@ let gen_ind_header_v2
           in
           let clone_method =
             if has_direct_self_ref then
-              let clone_field_expr source_field_ty target_field_ty field_s =
-                match
-                  render_cpp_expr_simple
-                    (gen_clone_field_expr
-                       ~src_ty:source_field_ty
-                       ~dst_ty:target_field_ty
-                       (CPPraw ("_alt." ^ field_s)))
-                with
-                | Some s -> s
-                | None -> "_alt." ^ field_s
+              let out_id = Id.of_string "_out" in
+              let frame_id = Id.of_string "_CloneFrame" in
+              let stack_id = Id.of_string "_stack" in
+              let frame_var_id = Id.of_string "_frame" in
+              let src_id = Id.of_string "_src" in
+              let dst_id = Id.of_string "_dst" in
+              let alt_id = Id.of_string "_alt" in
+              let dst_alt_id = Id.of_string "_dst_alt" in
+              let frame_ty = Tid (frame_id, []) in
+              let stack_ty =
+                Tid_external (Id.of_string_soft "std::vector", [frame_ty])
               in
+              let src_ptr_ty = Tptr (Tmod (TMconst, self_ty)) in
+              let dst_ptr_ty = Tptr self_ty in
               let branch_lines =
                 Array.to_list
                   (Array.mapi
@@ -12248,7 +12317,6 @@ let gen_ind_header_v2
                        let ctor_struct_name =
                          ctor_struct_name_of_ref ~fallback_idx:i c
                        in
-                       let ctor_s = Id.to_string cname_id in
                        let fields =
                          List.mapi
                            (fun j ty ->
@@ -12284,23 +12352,28 @@ let gen_ind_header_v2
                        let ctor_args =
                          List.map
                            (fun (field_id, ml_ty, source_ty, target_ty) ->
-                             let field_s = Id.to_string field_id in
+                             let field_expr = CPPmember (CPPvar alt_id, field_id) in
                              if is_direct_self_ref ml_ty then
-                               "_alt." ^ field_s
-                               ^ " ? std::make_unique<%SELF%>() : nullptr"
+                               CPPcond
+                                 ( field_expr,
+                                   CPPfun_call (CPPmk_unique self_ty, []),
+                                   CPPnullptr )
                              else
-                               clone_field_expr source_ty target_ty field_s)
+                               gen_clone_field_expr
+                                 ~src_ty:source_ty ~dst_ty:target_ty field_expr)
                            fields
                        in
+                       let ctor_ty = Tid (cname_id, []) in
                        let assign =
-                         "      _dst->d_v_ = " ^ ctor_s ^ "{"
-                         ^ String.concat ", " ctor_args ^ "};"
+                         Sassign_expr
+                           ( CPParrow (CPPvar dst_id, d_v_id),
+                             CPPstruct_id (cname_id, [], ctor_args) )
                        in
                        let recursive_fields =
                          List.filter_map
                            (fun (field_id, ml_ty, _, _) ->
                              if is_direct_self_ref ml_ty then
-                               Some (Id.to_string field_id)
+                               Some field_id
                              else None)
                            fields
                        in
@@ -12309,60 +12382,103 @@ let gen_ind_header_v2
                          | [] -> [assign]
                          | rec_fields ->
                            assign
-                           :: ("      auto &_dst_alt = std::get<" ^ ctor_s
-                               ^ ">(_dst->d_v_);")
+                           :: Sasgn
+                                ( dst_alt_id,
+                                  Some (Tref Tauto),
+                                  CPPstd_get
+                                    ( ctor_ty,
+                                      Some
+                                        (CPParrow (CPPvar dst_id, d_v_id)) ) )
                            :: List.map
-                                (fun field ->
-                                  "      if (_alt." ^ field
-                                  ^ ") _stack.push_back({_alt." ^ field
-                                  ^ ".get(), _dst_alt." ^ field ^ ".get()});")
+                                (fun field_id ->
+                                  let src_field =
+                                    CPPmember (CPPvar alt_id, field_id)
+                                  in
+                                  let dst_field =
+                                    CPPmember (CPPvar dst_alt_id, field_id)
+                                  in
+                                  Sif_then
+                                    ( src_field,
+                                      [ Sexpr
+                                          (CPPdot_method_call
+                                             ( CPPvar stack_id,
+                                               Id.of_string "push_back",
+                                               [ CPPbraced
+                                                   [ CPPdot_method_call
+                                                       ( src_field,
+                                                         Id.of_string "get",
+                                                         [] );
+                                                     CPPdot_method_call
+                                                       ( dst_field,
+                                                         Id.of_string "get",
+                                                         [] ) ] ] )) ] ))
                                 rec_fields
                        in
-                       (ctor_s, body))
+                       {
+                         smb_scrutinee =
+                           CPPmethod_call (CPPvar src_id, Id.of_string "v", []);
+                         smb_ctor_type = ctor_ty;
+                         smb_var =
+                           (match tys_list with [] -> None | _ -> Some alt_id);
+                         smb_field_bindings = [];
+                         smb_extra_conds = [];
+                         smb_reuse = None;
+                         smb_is_value_type = false;
+                         smb_is_owned = false;
+                         smb_body = body;
+                       })
                      tys)
               in
-              let branch_pp =
-                List.mapi
-                  (fun idx (ctor_s, body) ->
-                    let prefix =
-                      if idx = 0 then
-                        "    if (std::holds_alternative<" ^ ctor_s
-                        ^ ">(_src->v())) {"
-                      else if idx = List.length branch_lines - 1 then
-                        "    } else {"
-                      else
-                        "    } else if (std::holds_alternative<" ^ ctor_s
-                        ^ ">(_src->v())) {"
-                    in
-                    let bind =
-                      "      const auto &_alt = std::get<" ^ ctor_s
-                      ^ ">(_src->v());"
-                    in
-                    String.concat "\n" (prefix :: bind :: body))
-                  branch_lines
-              in
-              let body =
-                String.concat "\n"
-                  (["%SELF% clone() const {";
-                    "  %SELF% _out{};";
-                    "  struct _CloneFrame {";
-                    "    const %SELF% *_src;";
-                    "    %SELF% *_dst;";
-                    "  };";
-                    "  std::vector<_CloneFrame> _stack;";
-                    "  _stack.push_back({this, &_out});";
-                    "  while (!_stack.empty()) {";
-                    "    auto _frame = _stack.back();";
-                    "    _stack.pop_back();";
-                    "    const %SELF% *_src = _frame._src;";
-                    "    %SELF% *_dst = _frame._dst;"]
-                   @ branch_pp
-                   @ ["    }";
-                      "  }";
-                      "  return _out;";
-                      "}"])
-              in
-              (Fraw body, VPublic, SAccessors)
+              ( Fmethod
+                  {
+                    mf_name = clone_id;
+                    mf_tparams = [];
+                    mf_ret_type = self_ty;
+                    mf_params = [];
+                    mf_body =
+                      [
+                        Sdecl_init (out_id, self_ty);
+                        Sstruct_def
+                          ( frame_id,
+                            [(src_id, src_ptr_ty); (dst_id, dst_ptr_ty)] );
+                        Sdecl_init (stack_id, stack_ty);
+                        Sexpr
+                          (CPPdot_method_call
+                             ( CPPvar stack_id,
+                               Id.of_string "push_back",
+                               [CPPbraced [CPPthis; CPPunop ("&", CPPvar out_id)]] ));
+                        Swhile
+                          ( CPPunop
+                              ( "!",
+                                CPPdot_method_call
+                                  (CPPvar stack_id, Id.of_string "empty", []) ),
+                            [ Sasgn
+                                ( frame_var_id,
+                                  Some Tauto,
+                                  CPPdot_method_call
+                                    (CPPvar stack_id, Id.of_string "back", []) );
+                              Sexpr
+                                (CPPdot_method_call
+                                   (CPPvar stack_id, Id.of_string "pop_back", []));
+                              Sasgn
+                                ( src_id,
+                                  Some src_ptr_ty,
+                                  CPPmember (CPPvar frame_var_id, src_id) );
+                              Sasgn
+                                ( dst_id,
+                                  Some dst_ptr_ty,
+                                  CPPmember (CPPvar frame_var_id, dst_id) );
+                              Smatch (branch_lines, None) ] );
+                        Sreturn (Some (CPPvar out_id));
+                      ];
+                    mf_is_const = true;
+                    mf_is_static = false;
+                    mf_is_inline = false;
+                    mf_this_pos = 0;
+                    mf_no_pure = true;
+                  },
+                VPublic,
+                SAccessors )
             else
               ( Fmethod
                   {
@@ -12416,7 +12532,7 @@ let gen_ind_header_v2
                           (CPPfun_call
                             (CPPmember (CPPvar other_id, clone_id), []),
                            d_v_id)));
-                      Sreturn (Some (CPPraw "*this"));
+                      Sreturn (Some (CPPunop ("*", CPPthis)));
                     ];
                   mf_is_const = false;
                   mf_is_static = false;
@@ -12438,7 +12554,7 @@ let gen_ind_header_v2
                     [
                       Sasgn (d_v_id, None,
                         CPPmove (CPPmember (CPPvar other_id, d_v_id)));
-                      Sreturn (Some (CPPraw "*this"));
+                      Sreturn (Some (CPPunop ("*", CPPthis)));
                     ];
                   mf_is_const = false;
                   mf_is_static = false;

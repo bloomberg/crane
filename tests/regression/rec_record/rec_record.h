@@ -50,31 +50,31 @@ struct RecRecord {
     }
 
     // ACCESSORS
-    rlist clone() const {
-      rlist _out{};
+    rlist<t_A> clone() const {
+      rlist<t_A> _out{};
 
       struct _CloneFrame {
-        const rlist *_src;
-        rlist *_dst;
+        const rlist<t_A> *_src;
+        rlist<t_A> *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const rlist *_src = _frame._src;
-        rlist *_dst = _frame._dst;
+        const rlist<t_A> *_src = _frame._src;
+        rlist<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Rnil>(_src->v())) {
-          const auto &_alt = std::get<Rnil>(_src->v());
           _dst->d_v_ = Rnil{};
         } else {
           const auto &_alt = std::get<Rcons>(_src->v());
-          _dst->d_v_ =
-              Rcons{_alt.d_a0, _alt.d_a1 ? std::make_unique<rlist>() : nullptr};
+          _dst->d_v_ = Rcons{
+              _alt.d_a0, _alt.d_a1 ? std::make_unique<rlist<t_A>>() : nullptr};
           auto &_dst_alt = std::get<Rcons>(_dst->d_v_);
-          if (_alt.d_a1)
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         }
       }
       return _out;
@@ -101,20 +101,22 @@ struct RecRecord {
 
     // MANIPULATORS
     ~rlist() {
-      std::vector<std::unique_ptr<rlist>> _stack;
-      auto _drain = [&](rlist &_node) {
+      std::vector<std::unique_ptr<rlist<t_A>>> _stack{};
+      auto _drain = [&](rlist<t_A> &_node) {
         if (std::holds_alternative<Rcons>(_node.d_v_)) {
           auto &_alt = std::get<Rcons>(_node.d_v_);
-          if (_alt.d_a1)
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 

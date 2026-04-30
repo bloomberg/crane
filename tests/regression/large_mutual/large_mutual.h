@@ -84,7 +84,7 @@ struct LargeMutual {
         stmt *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -102,10 +102,12 @@ struct LargeMutual {
           _dst->d_v_ = SSeq{_alt.d_a0 ? std::make_unique<stmt>() : nullptr,
                             _alt.d_a1 ? std::make_unique<stmt>() : nullptr};
           auto &_dst_alt = std::get<SSeq>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         } else if (std::holds_alternative<SIf>(_src->v())) {
           const auto &_alt = std::get<SIf>(_src->v());
           _dst->d_v_ =
@@ -115,10 +117,12 @@ struct LargeMutual {
                   _alt.d_a1 ? std::make_unique<stmt>() : nullptr,
                   _alt.d_a2 ? std::make_unique<stmt>() : nullptr};
           auto &_dst_alt = std::get<SIf>(_dst->d_v_);
-          if (_alt.d_a1)
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          }
         } else if (std::holds_alternative<SWhile>(_src->v())) {
           const auto &_alt = std::get<SWhile>(_src->v());
           _dst->d_v_ = SWhile{_alt.d_a0 ? std::make_unique<LargeMutual::bexpr>(
@@ -126,10 +130,10 @@ struct LargeMutual {
                                         : nullptr,
                               _alt.d_a1 ? std::make_unique<stmt>() : nullptr};
           auto &_dst_alt = std::get<SWhile>(_dst->d_v_);
-          if (_alt.d_a1)
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         } else {
-          const auto &_alt = std::get<SSkip>(_src->v());
           _dst->d_v_ = SSkip{};
         }
       }
@@ -162,34 +166,40 @@ struct LargeMutual {
 
     // MANIPULATORS
     ~stmt() {
-      std::vector<std::unique_ptr<stmt>> _stack;
+      std::vector<std::unique_ptr<stmt>> _stack{};
       auto _drain = [&](stmt &_node) {
         if (std::holds_alternative<SSeq>(_node.d_v_)) {
           auto &_alt = std::get<SSeq>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
         if (std::holds_alternative<SIf>(_node.d_v_)) {
           auto &_alt = std::get<SIf>(_node.d_v_);
-          if (_alt.d_a1)
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back(std::move(_alt.d_a2));
+          }
         }
         if (std::holds_alternative<SWhile>(_node.d_v_)) {
           auto &_alt = std::get<SWhile>(_node.d_v_);
-          if (_alt.d_a1)
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 
@@ -268,7 +278,7 @@ struct LargeMutual {
         expr *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -286,19 +296,23 @@ struct LargeMutual {
           _dst->d_v_ = EAdd{_alt.d_a0 ? std::make_unique<expr>() : nullptr,
                             _alt.d_a1 ? std::make_unique<expr>() : nullptr};
           auto &_dst_alt = std::get<EAdd>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         } else if (std::holds_alternative<EMul>(_src->v())) {
           const auto &_alt = std::get<EMul>(_src->v());
           _dst->d_v_ = EMul{_alt.d_a0 ? std::make_unique<expr>() : nullptr,
                             _alt.d_a1 ? std::make_unique<expr>() : nullptr};
           auto &_dst_alt = std::get<EMul>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         } else {
           const auto &_alt = std::get<ECond>(_src->v());
           _dst->d_v_ = ECond{_alt.d_a0 ? std::make_unique<LargeMutual::bexpr>(
@@ -307,10 +321,12 @@ struct LargeMutual {
                              _alt.d_a1 ? std::make_unique<expr>() : nullptr,
                              _alt.d_a2 ? std::make_unique<expr>() : nullptr};
           auto &_dst_alt = std::get<ECond>(_dst->d_v_);
-          if (_alt.d_a1)
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          }
         }
       }
       return _out;
@@ -339,36 +355,43 @@ struct LargeMutual {
 
     // MANIPULATORS
     ~expr() {
-      std::vector<std::unique_ptr<expr>> _stack;
+      std::vector<std::unique_ptr<expr>> _stack{};
       auto _drain = [&](expr &_node) {
         if (std::holds_alternative<EAdd>(_node.d_v_)) {
           auto &_alt = std::get<EAdd>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
         if (std::holds_alternative<EMul>(_node.d_v_)) {
           auto &_alt = std::get<EMul>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
         if (std::holds_alternative<ECond>(_node.d_v_)) {
           auto &_alt = std::get<ECond>(_node.d_v_);
-          if (_alt.d_a1)
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back(std::move(_alt.d_a2));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 
@@ -455,7 +478,7 @@ struct LargeMutual {
         bexpr *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -463,10 +486,8 @@ struct LargeMutual {
         const bexpr *_src = _frame._src;
         bexpr *_dst = _frame._dst;
         if (std::holds_alternative<BTrue>(_src->v())) {
-          const auto &_alt = std::get<BTrue>(_src->v());
           _dst->d_v_ = BTrue{};
         } else if (std::holds_alternative<BFalse>(_src->v())) {
-          const auto &_alt = std::get<BFalse>(_src->v());
           _dst->d_v_ = BFalse{};
         } else if (std::holds_alternative<BEq>(_src->v())) {
           const auto &_alt = std::get<BEq>(_src->v());
@@ -491,25 +512,30 @@ struct LargeMutual {
           _dst->d_v_ = BAnd{_alt.d_a0 ? std::make_unique<bexpr>() : nullptr,
                             _alt.d_a1 ? std::make_unique<bexpr>() : nullptr};
           auto &_dst_alt = std::get<BAnd>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         } else if (std::holds_alternative<BOr>(_src->v())) {
           const auto &_alt = std::get<BOr>(_src->v());
           _dst->d_v_ = BOr{_alt.d_a0 ? std::make_unique<bexpr>() : nullptr,
                            _alt.d_a1 ? std::make_unique<bexpr>() : nullptr};
           auto &_dst_alt = std::get<BOr>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         } else {
           const auto &_alt = std::get<BNot>(_src->v());
           _dst->d_v_ = BNot{_alt.d_a0 ? std::make_unique<bexpr>() : nullptr};
           auto &_dst_alt = std::get<BNot>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          }
         }
       }
       return _out;
@@ -546,34 +572,40 @@ struct LargeMutual {
 
     // MANIPULATORS
     ~bexpr() {
-      std::vector<std::unique_ptr<bexpr>> _stack;
+      std::vector<std::unique_ptr<bexpr>> _stack{};
       auto _drain = [&](bexpr &_node) {
         if (std::holds_alternative<BAnd>(_node.d_v_)) {
           auto &_alt = std::get<BAnd>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
         if (std::holds_alternative<BOr>(_node.d_v_)) {
           auto &_alt = std::get<BOr>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
         if (std::holds_alternative<BNot>(_node.d_v_)) {
           auto &_alt = std::get<BNot>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 

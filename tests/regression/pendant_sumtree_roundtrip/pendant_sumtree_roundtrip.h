@@ -52,31 +52,31 @@ public:
   }
 
   // ACCESSORS
-  List clone() const {
-    List _out{};
+  List<t_A> clone() const {
+    List<t_A> _out{};
 
     struct _CloneFrame {
-      const List *_src;
-      List *_dst;
+      const List<t_A> *_src;
+      List<t_A> *_dst;
     };
 
-    std::vector<_CloneFrame> _stack;
+    std::vector<_CloneFrame> _stack{};
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List *_src = _frame._src;
-      List *_dst = _frame._dst;
+      const List<t_A> *_src = _frame._src;
+      List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil0>(_src->v())) {
-        const auto &_alt = std::get<Nil0>(_src->v());
         _dst->d_v_ = Nil0{};
       } else {
         const auto &_alt = std::get<Cons0>(_src->v());
-        _dst->d_v_ =
-            Cons0{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        _dst->d_v_ = Cons0{_alt.d_a0,
+                           _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Cons0>(_dst->d_v_);
-        if (_alt.d_a1)
+        if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
     }
     return _out;
@@ -102,20 +102,22 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List>> _stack;
-    auto _drain = [&](List &_node) {
+    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons0>(_node.d_v_)) {
         auto &_alt = std::get<Cons0>(_node.d_v_);
-        if (_alt.d_a1)
+        if (_alt.d_a1) {
           _stack.push_back(std::move(_alt.d_a1));
+        }
       }
     };
     _drain(*this);
     while (!_stack.empty()) {
       auto _node = std::move(_stack.back());
       _stack.pop_back();
-      if (_node)
+      if (_node) {
         _drain(*_node);
+      }
     }
   }
 
@@ -424,7 +426,7 @@ public:
       T *_dst;
     };
 
-    std::vector<_CloneFrame> _stack;
+    std::vector<_CloneFrame> _stack{};
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -438,8 +440,9 @@ public:
         const auto &_alt = std::get<FS>(_src->v());
         _dst->d_v_ = FS{_alt.d_n, _alt.d_a1 ? std::make_unique<T>() : nullptr};
         auto &_dst_alt = std::get<FS>(_dst->d_v_);
-        if (_alt.d_a1)
+        if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
     }
     return _out;
@@ -454,20 +457,22 @@ public:
 
   // MANIPULATORS
   ~T() {
-    std::vector<std::unique_ptr<T>> _stack;
+    std::vector<std::unique_ptr<T>> _stack{};
     auto _drain = [&](T &_node) {
       if (std::holds_alternative<FS>(_node.d_v_)) {
         auto &_alt = std::get<FS>(_node.d_v_);
-        if (_alt.d_a1)
+        if (_alt.d_a1) {
           _stack.push_back(std::move(_alt.d_a1));
+        }
       }
     };
     _drain(*this);
     while (!_stack.empty()) {
       auto _node = std::move(_stack.back());
       _stack.pop_back();
-      if (_node)
+      if (_node) {
         _drain(*_node);
+      }
     }
   }
 

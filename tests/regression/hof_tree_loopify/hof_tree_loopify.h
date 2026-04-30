@@ -110,7 +110,7 @@ public:
       Uint *_dst;
     };
 
-    std::vector<_CloneFrame> _stack;
+    std::vector<_CloneFrame> _stack{};
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -118,68 +118,77 @@ public:
       const Uint *_src = _frame._src;
       Uint *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        const auto &_alt = std::get<Nil>(_src->v());
         _dst->d_v_ = Nil{};
       } else if (std::holds_alternative<D0>(_src->v())) {
         const auto &_alt = std::get<D0>(_src->v());
         _dst->d_v_ = D0{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D0>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D1>(_src->v())) {
         const auto &_alt = std::get<D1>(_src->v());
         _dst->d_v_ = D1{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D1>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D2>(_src->v())) {
         const auto &_alt = std::get<D2>(_src->v());
         _dst->d_v_ = D2{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D2>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D3>(_src->v())) {
         const auto &_alt = std::get<D3>(_src->v());
         _dst->d_v_ = D3{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D3>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D4>(_src->v())) {
         const auto &_alt = std::get<D4>(_src->v());
         _dst->d_v_ = D4{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D4>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D5>(_src->v())) {
         const auto &_alt = std::get<D5>(_src->v());
         _dst->d_v_ = D5{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D5>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D6>(_src->v())) {
         const auto &_alt = std::get<D6>(_src->v());
         _dst->d_v_ = D6{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D6>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D7>(_src->v())) {
         const auto &_alt = std::get<D7>(_src->v());
         _dst->d_v_ = D7{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D7>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D8>(_src->v())) {
         const auto &_alt = std::get<D8>(_src->v());
         _dst->d_v_ = D8{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D8>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else {
         const auto &_alt = std::get<D9>(_src->v());
         _dst->d_v_ = D9{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D9>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       }
     }
     return _out;
@@ -230,65 +239,76 @@ public:
 
   // MANIPULATORS
   ~Uint() {
-    std::vector<std::unique_ptr<Uint>> _stack;
+    std::vector<std::unique_ptr<Uint>> _stack{};
     auto _drain = [&](Uint &_node) {
       if (std::holds_alternative<D0>(_node.d_v_)) {
         auto &_alt = std::get<D0>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D1>(_node.d_v_)) {
         auto &_alt = std::get<D1>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D2>(_node.d_v_)) {
         auto &_alt = std::get<D2>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D3>(_node.d_v_)) {
         auto &_alt = std::get<D3>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D4>(_node.d_v_)) {
         auto &_alt = std::get<D4>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D5>(_node.d_v_)) {
         auto &_alt = std::get<D5>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D6>(_node.d_v_)) {
         auto &_alt = std::get<D6>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D7>(_node.d_v_)) {
         auto &_alt = std::get<D7>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D8>(_node.d_v_)) {
         auto &_alt = std::get<D8>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D9>(_node.d_v_)) {
         auto &_alt = std::get<D9>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
     };
     _drain(*this);
     while (!_stack.empty()) {
       auto _node = std::move(_stack.back());
       _stack.pop_back();
-      if (_node)
+      if (_node) {
         _drain(*_node);
+      }
     }
   }
 
@@ -434,7 +454,7 @@ public:
       Uint0 *_dst;
     };
 
-    std::vector<_CloneFrame> _stack;
+    std::vector<_CloneFrame> _stack{};
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -442,104 +462,119 @@ public:
       const Uint0 *_src = _frame._src;
       Uint0 *_dst = _frame._dst;
       if (std::holds_alternative<Nil0>(_src->v())) {
-        const auto &_alt = std::get<Nil0>(_src->v());
         _dst->d_v_ = Nil0{};
       } else if (std::holds_alternative<D10>(_src->v())) {
         const auto &_alt = std::get<D10>(_src->v());
         _dst->d_v_ = D10{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D10>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D11>(_src->v())) {
         const auto &_alt = std::get<D11>(_src->v());
         _dst->d_v_ = D11{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D11>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D12>(_src->v())) {
         const auto &_alt = std::get<D12>(_src->v());
         _dst->d_v_ = D12{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D12>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D13>(_src->v())) {
         const auto &_alt = std::get<D13>(_src->v());
         _dst->d_v_ = D13{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D13>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D14>(_src->v())) {
         const auto &_alt = std::get<D14>(_src->v());
         _dst->d_v_ = D14{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D14>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D15>(_src->v())) {
         const auto &_alt = std::get<D15>(_src->v());
         _dst->d_v_ = D15{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D15>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D16>(_src->v())) {
         const auto &_alt = std::get<D16>(_src->v());
         _dst->d_v_ = D16{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D16>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D17>(_src->v())) {
         const auto &_alt = std::get<D17>(_src->v());
         _dst->d_v_ = D17{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D17>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D18>(_src->v())) {
         const auto &_alt = std::get<D18>(_src->v());
         _dst->d_v_ = D18{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D18>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<D19>(_src->v())) {
         const auto &_alt = std::get<D19>(_src->v());
         _dst->d_v_ = D19{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D19>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<Da>(_src->v())) {
         const auto &_alt = std::get<Da>(_src->v());
         _dst->d_v_ = Da{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<Da>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<Db>(_src->v())) {
         const auto &_alt = std::get<Db>(_src->v());
         _dst->d_v_ = Db{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<Db>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<Dc>(_src->v())) {
         const auto &_alt = std::get<Dc>(_src->v());
         _dst->d_v_ = Dc{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<Dc>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<Dd>(_src->v())) {
         const auto &_alt = std::get<Dd>(_src->v());
         _dst->d_v_ = Dd{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<Dd>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<De>(_src->v())) {
         const auto &_alt = std::get<De>(_src->v());
         _dst->d_v_ = De{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<De>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else {
         const auto &_alt = std::get<Df>(_src->v());
         _dst->d_v_ = Df{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<Df>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       }
     }
     return _out;
@@ -614,95 +649,112 @@ public:
 
   // MANIPULATORS
   ~Uint0() {
-    std::vector<std::unique_ptr<Uint0>> _stack;
+    std::vector<std::unique_ptr<Uint0>> _stack{};
     auto _drain = [&](Uint0 &_node) {
       if (std::holds_alternative<D10>(_node.d_v_)) {
         auto &_alt = std::get<D10>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D11>(_node.d_v_)) {
         auto &_alt = std::get<D11>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D12>(_node.d_v_)) {
         auto &_alt = std::get<D12>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D13>(_node.d_v_)) {
         auto &_alt = std::get<D13>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D14>(_node.d_v_)) {
         auto &_alt = std::get<D14>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D15>(_node.d_v_)) {
         auto &_alt = std::get<D15>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D16>(_node.d_v_)) {
         auto &_alt = std::get<D16>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D17>(_node.d_v_)) {
         auto &_alt = std::get<D17>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D18>(_node.d_v_)) {
         auto &_alt = std::get<D18>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<D19>(_node.d_v_)) {
         auto &_alt = std::get<D19>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<Da>(_node.d_v_)) {
         auto &_alt = std::get<Da>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<Db>(_node.d_v_)) {
         auto &_alt = std::get<Db>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<Dc>(_node.d_v_)) {
         auto &_alt = std::get<Dc>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<Dd>(_node.d_v_)) {
         auto &_alt = std::get<Dd>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<De>(_node.d_v_)) {
         auto &_alt = std::get<De>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<Df>(_node.d_v_)) {
         auto &_alt = std::get<Df>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
     };
     _drain(*this);
     while (!_stack.empty()) {
       auto _node = std::move(_stack.back());
       _stack.pop_back();
-      if (_node)
+      if (_node) {
         _drain(*_node);
+      }
     }
   }
 
@@ -828,34 +880,35 @@ struct HofTreeLoopify {
     }
 
     // ACCESSORS
-    tree clone() const {
-      tree _out{};
+    tree<t_A> clone() const {
+      tree<t_A> _out{};
 
       struct _CloneFrame {
-        const tree *_src;
-        tree *_dst;
+        const tree<t_A> *_src;
+        tree<t_A> *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const tree *_src = _frame._src;
-        tree *_dst = _frame._dst;
+        const tree<t_A> *_src = _frame._src;
+        tree<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
-          const auto &_alt = std::get<Leaf>(_src->v());
           _dst->d_v_ = Leaf{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ =
-              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
-                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+          _dst->d_v_ = Node{
+              _alt.d_a0 ? std::make_unique<tree<t_A>>() : nullptr, _alt.d_a1,
+              _alt.d_a2 ? std::make_unique<tree<t_A>>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          }
         }
       }
       return _out;
@@ -884,22 +937,25 @@ struct HofTreeLoopify {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::unique_ptr<tree>> _stack;
-      auto _drain = [&](tree &_node) {
+      std::vector<std::unique_ptr<tree<t_A>>> _stack{};
+      auto _drain = [&](tree<t_A> &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back(std::move(_alt.d_a2));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 

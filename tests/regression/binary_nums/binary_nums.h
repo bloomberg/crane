@@ -64,7 +64,7 @@ public:
       Positive *_dst;
     };
 
-    std::vector<_CloneFrame> _stack;
+    std::vector<_CloneFrame> _stack{};
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -75,16 +75,17 @@ public:
         const auto &_alt = std::get<XI>(_src->v());
         _dst->d_v_ = XI{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
         auto &_dst_alt = std::get<XI>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else if (std::holds_alternative<XO>(_src->v())) {
         const auto &_alt = std::get<XO>(_src->v());
         _dst->d_v_ = XO{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
         auto &_dst_alt = std::get<XO>(_dst->d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       } else {
-        const auto &_alt = std::get<XH>(_src->v());
         _dst->d_v_ = XH{};
       }
     }
@@ -104,25 +105,28 @@ public:
 
   // MANIPULATORS
   ~Positive() {
-    std::vector<std::unique_ptr<Positive>> _stack;
+    std::vector<std::unique_ptr<Positive>> _stack{};
     auto _drain = [&](Positive &_node) {
       if (std::holds_alternative<XI>(_node.d_v_)) {
         auto &_alt = std::get<XI>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
       if (std::holds_alternative<XO>(_node.d_v_)) {
         auto &_alt = std::get<XO>(_node.d_v_);
-        if (_alt.d_a0)
+        if (_alt.d_a0) {
           _stack.push_back(std::move(_alt.d_a0));
+        }
       }
     };
     _drain(*this);
     while (!_stack.empty()) {
       auto _node = std::move(_stack.back());
       _stack.pop_back();
-      if (_node)
+      if (_node) {
         _drain(*_node);
+      }
     }
   }
 

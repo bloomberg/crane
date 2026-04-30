@@ -151,6 +151,8 @@ and cpp_stmt =
   | Sif of cpp_expr * cpp_stmt list * cpp_stmt list
       (** Conditional: condition, then-branch, else-branch (used for reuse
           optimization) *)
+  | Sif_then of cpp_expr * cpp_stmt list
+      (** Conditional without an else branch *)
   | Sraw of string  (** Raw C++ code printed verbatim *)
   | Sstruct_def of Id.t * (Id.t * cpp_type) list
       (** Local struct definition: struct Name { T1 f1; T2 f2; }; *)
@@ -160,6 +162,8 @@ and cpp_stmt =
       (** Value-initialized declaration: Type name{}; *)
   | Sassign_field of cpp_expr * Id.t * cpp_expr
       (** Field assignment for in-place mutation during memory reuse *)
+  | Sassign_expr of cpp_expr * cpp_expr
+      (** General assignment: lhs = rhs *)
   | Sderef_asgn of cpp_expr * cpp_expr
       (** Dereference assignment: [*lhs = rhs].  Used by the
           [shared_ptr<std::function>] fixpoint pattern to assign through
@@ -282,14 +286,27 @@ and cpp_expr =
       (** Member access with arrow operator: expr->member *)
   | CPPmethod_call of cpp_expr * Id.t * cpp_expr list
       (** Method call: object, method name, arguments *)
+  | CPPdot_method_call of cpp_expr * Id.t * cpp_expr list
+      (** Dot method call: object.method(args) *)
   | CPPqualified of cpp_expr * Id.t  (** Scope resolution: expr::id *)
   | CPPconvertible_to of cpp_type  (** std::convertible_to<T> type trait *)
   | CPPabort of string  (** Unreachable code marker, calls std::abort() *)
   | CPPenum_val of GlobRef.t * Id.t
       (** Enum class value: EnumType::Constructor *)
+  | CPPnullptr  (** nullptr literal *)
+  | CPPbraced of cpp_expr list  (** Braced initializer: {a, b, ...} *)
+  | CPPstd_get of cpp_type * cpp_expr option
+      (** std::get<T> or std::get<T>(expr) *)
+  | CPPstd_holds_alternative of cpp_type
+      (** std::holds_alternative<T> *)
+  | CPPdeclval of cpp_type  (** std::declval<T>() *)
+  | CPPtypename_qualified of cpp_type * Id.t
+      (** typename T::Nested *)
   | CPPraw of string  (** Raw C++ expression code *)
   | CPPbinop of string * cpp_expr * cpp_expr
       (** Binary operator for reuse optimization conditions *)
+  | CPPcond of cpp_expr * cpp_expr * cpp_expr
+      (** Ternary conditional: cond ? then_expr : else_expr *)
   | CPPbool of bool  (** Boolean literal: true/false *)
   | CPPint of int  (** Integer literal *)
   | CPPbrace_init  (** Empty brace initialization: {} *)
@@ -324,6 +341,7 @@ and cpp_field =
   | Fmethod of method_field  (** Method with full descriptor *)
   | Fconstructor of (Id.t * cpp_type) list * (Id.t * cpp_expr) list * bool
       (** Constructor: parameters, member initializer list, explicit flag *)
+  | Fdestructor of cpp_stmt list  (** Destructor body for the enclosing struct *)
   | Fnested_struct of Id.t * (cpp_field * cpp_visibility * section_tag) list
       (** Nested struct definition with visibility-annotated fields *)
   | Fnested_using of Id.t * cpp_type  (** Nested using type alias declaration *)

@@ -59,31 +59,31 @@ struct AccumClosureEscape {
     }
 
     // ACCESSORS
-    mylist clone() const {
-      mylist _out{};
+    mylist<t_A> clone() const {
+      mylist<t_A> _out{};
 
       struct _CloneFrame {
-        const mylist *_src;
-        mylist *_dst;
+        const mylist<t_A> *_src;
+        mylist<t_A> *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const mylist *_src = _frame._src;
-        mylist *_dst = _frame._dst;
+        const mylist<t_A> *_src = _frame._src;
+        mylist<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Mynil>(_src->v())) {
-          const auto &_alt = std::get<Mynil>(_src->v());
           _dst->d_v_ = Mynil{};
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->d_v_ = Mycons{_alt.d_a0,
-                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          _dst->d_v_ = Mycons{
+              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr};
           auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
-          if (_alt.d_a1)
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         }
       }
       return _out;
@@ -110,20 +110,22 @@ struct AccumClosureEscape {
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist>> _stack;
-      auto _drain = [&](mylist &_node) {
+      std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      auto _drain = [&](mylist<t_A> &_node) {
         if (std::holds_alternative<Mycons>(_node.d_v_)) {
           auto &_alt = std::get<Mycons>(_node.d_v_);
-          if (_alt.d_a1)
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 
@@ -217,7 +219,7 @@ struct AccumClosureEscape {
         tree *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -225,7 +227,6 @@ struct AccumClosureEscape {
         const tree *_src = _frame._src;
         tree *_dst = _frame._dst;
         if (std::holds_alternative<TLeaf>(_src->v())) {
-          const auto &_alt = std::get<TLeaf>(_src->v());
           _dst->d_v_ = TLeaf{};
         } else {
           const auto &_alt = std::get<TNode>(_src->v());
@@ -233,10 +234,12 @@ struct AccumClosureEscape {
               TNode{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
                     _alt.d_a2 ? std::make_unique<tree>() : nullptr};
           auto &_dst_alt = std::get<TNode>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          }
         }
       }
       return _out;
@@ -252,22 +255,25 @@ struct AccumClosureEscape {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::unique_ptr<tree>> _stack;
+      std::vector<std::unique_ptr<tree>> _stack{};
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<TNode>(_node.d_v_)) {
           auto &_alt = std::get<TNode>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back(std::move(_alt.d_a2));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 

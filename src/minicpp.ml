@@ -142,6 +142,8 @@ and cpp_stmt =
   | Sif of cpp_expr * cpp_stmt list * cpp_stmt list
     (* if-else: condition, then-branch, else-branch. Used for reuse
        optimization's use_count() check. *)
+  | Sif_then of cpp_expr * cpp_stmt list
+    (* if without else: condition and then-branch. *)
   | Sraw of string
     (* Raw C++ code, printed verbatim. Used for low-level operations in reuse
        optimization. *)
@@ -154,6 +156,9 @@ and cpp_stmt =
   | Sassign_field of cpp_expr * Id.t * cpp_expr
   (* Field assignment: obj.field = expr. Used for in-place mutation during
      memory reuse. *)
+  | Sassign_expr of cpp_expr * cpp_expr
+  (* General assignment: lhs = rhs. Used when the left-hand side is not a plain
+     local variable or direct field. *)
   | Sderef_asgn of cpp_expr * cpp_expr
   (* Dereference assignment: [*lhs = rhs;].  Introduced for the
      [shared_ptr<std::function>] fixpoint pattern where a fixpoint is
@@ -274,18 +279,32 @@ and cpp_expr =
   | CPPmember of cpp_expr * Id.t (* expr.member - for accessing v_ etc *)
   | CPParrow of cpp_expr * Id.t (* expr->member - for ptr->v_ access *)
   | CPPmethod_call of cpp_expr * Id.t * cpp_expr list (* obj->method(args) *)
+  | CPPdot_method_call of cpp_expr * Id.t * cpp_expr list (* obj.method(args) *)
   | CPPqualified of
       cpp_expr * Id.t (* expr::id - for qualified name access like Type::ctor *)
   | CPPconvertible_to of cpp_type (* std::convertible_to<T> constraint *)
   | CPPabort of string (* unreachable code / absurd case - calls std::abort() *)
   | CPPenum_val of
       GlobRef.t * Id.t (* enum class value: EnumType::Constructor *)
+  | CPPnullptr (* nullptr *)
+  | CPPbraced of cpp_expr list (* braced initializer: {a, b, ...} *)
+  | CPPstd_get of cpp_type * cpp_expr option
+    (* std::get<T> or std::get<T>(expr) *)
+  | CPPstd_holds_alternative of cpp_type
+    (* std::holds_alternative<T> *)
+  | CPPdeclval of cpp_type
+    (* std::declval<T>() *)
+  | CPPtypename_qualified of cpp_type * Id.t
+    (* typename T::Nested, usable where a dependent nested struct name is
+       required as an expression/type-name token. *)
   | CPPraw of string
     (* Raw C++ expression, printed verbatim. Used for low-level operations
        (e.g., literal "1" for use_count check). *)
   | CPPbinop of string * cpp_expr * cpp_expr
     (* Binary operator: operator string, lhs, rhs. Used for conditions in reuse
        optimization (&&, ==). *)
+  | CPPcond of cpp_expr * cpp_expr * cpp_expr
+    (* Ternary conditional: cond ? then_expr : else_expr. *)
   | CPPbool of bool (* true / false literal *)
   | CPPint of int (* integer literal *)
   | CPPbrace_init (* {} — empty brace initialization *)
@@ -315,6 +334,8 @@ and cpp_field =
       (Id.t * cpp_type) list
       * (Id.t * cpp_expr) list
       * bool (* bool = explicit *)
+  | Fdestructor of cpp_stmt list
+    (* Destructor body for the enclosing struct. *)
   (* Nested struct with its own visibility-annotated fields *)
   | Fnested_struct of Id.t * (cpp_field * cpp_visibility * section_tag) list
   (* Nested using declaration *)
@@ -426,12 +447,21 @@ let map_expr
   | CPParrow (e', id) -> CPParrow (fe e', id)
   | CPPmethod_call (obj, id, args) ->
     CPPmethod_call (fe obj, id, List.map fe args)
+  | CPPdot_method_call (obj, id, args) ->
+    CPPdot_method_call (fe obj, id, List.map fe args)
   | CPPqualified (e', id) -> CPPqualified (fe e', id)
   | CPPconvertible_to ty -> CPPconvertible_to (ft ty)
   | CPPabort _ -> e
   | CPPenum_val _ -> e
+  | CPPnullptr -> e
+  | CPPbraced args -> CPPbraced (List.map fe args)
+  | CPPstd_get (ty, e_opt) -> CPPstd_get (ft ty, Option.map fe e_opt)
+  | CPPstd_holds_alternative ty -> CPPstd_holds_alternative (ft ty)
+  | CPPdeclval ty -> CPPdeclval (ft ty)
+  | CPPtypename_qualified (ty, id) -> CPPtypename_qualified (ft ty, id)
   | CPPraw _ -> e
   | CPPbinop (op, e1, e2) -> CPPbinop (op, fe e1, fe e2)
+  | CPPcond (c, t, f) -> CPPcond (fe c, fe t, fe f)
   | CPPbool _ -> e
   | CPPint _ -> e
   | CPPbrace_init -> e
@@ -472,12 +502,14 @@ let map_stmt
   | Sassert _ -> s
   | Sif (cond, then_br, else_br) ->
     Sif (fe cond, List.map fs then_br, List.map fs else_br)
+  | Sif_then (cond, then_br) -> Sif_then (fe cond, List.map fs then_br)
   | Sraw _ -> s
   | Sstruct_def (id, fields) ->
     Sstruct_def (id, List.map (fun (fid, ty) -> (fid, ft ty)) fields)
   | Susing (id, ty) -> Susing (id, ft ty)
   | Sdecl_init (id, ty) -> Sdecl_init (id, ft ty)
   | Sassign_field (obj, field, e) -> Sassign_field (fe obj, field, fe e)
+  | Sassign_expr (lhs, e) -> Sassign_expr (fe lhs, fe e)
   | Sderef_asgn (lhs, e) -> Sderef_asgn (fe lhs, fe e)
   | Swhile (cond, body) -> Swhile (fe cond, List.map fs body)
   | Sblock stmts -> Sblock (List.map fs stmts)
@@ -512,7 +544,8 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   match e with
   | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
-  | CPPabort _ | CPPenum_val _ | CPPraw _ | CPPbool _ | CPPint _
+  | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
+  | CPPdeclval _ | CPPtypename_qualified _ | CPPraw _ | CPPbool _ | CPPint _
   | CPPbrace_init | CPPthis | CPPshared_from_this _ -> ()
   | CPPfun_call (f, args) -> on_expr f; List.iter on_expr args
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
@@ -526,9 +559,13 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
     List.iter on_expr es
   | CPPparray (arr, e') -> Array.iter on_expr arr; on_expr e'
   | CPPmethod_call (obj, _, args) -> on_expr obj; List.iter on_expr args
+  | CPPdot_method_call (obj, _, args) -> on_expr obj; List.iter on_expr args
   | CPPrequires (_, constraints, _) ->
     List.iter (fun (e', _) -> on_expr e') constraints
   | CPPbinop (_, l, r) -> on_expr l; on_expr r
+  | CPPcond (c, t, f) -> on_expr c; on_expr t; on_expr f
+  | CPPbraced args -> List.iter on_expr args
+  | CPPstd_get (_, e_opt) -> Option.iter on_expr e_opt
 
 (** Iterate over the immediate children of a [cpp_stmt], calling [on_expr]
     for child expressions and [on_stmts] for child statement lists.  Does
@@ -542,6 +579,7 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
   | Sasgn (_, _, e) -> on_expr e
   | Sif (cond, then_br, else_br) ->
     on_expr cond; on_stmts then_br; on_stmts else_br
+  | Sif_then (cond, then_br) -> on_expr cond; on_stmts then_br
   | Sswitch (scrut, _, branches, default) ->
     on_expr scrut;
     List.iter (fun (_, stmts) -> on_stmts stmts) branches;
@@ -550,6 +588,7 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
     on_expr scrut;
     List.iter (fun (_, _, stmts) -> on_stmts stmts) branches
   | Sassign_field (obj, _, e) -> on_expr obj; on_expr e
+  | Sassign_expr (lhs, e) -> on_expr lhs; on_expr e
   | Sderef_asgn (lhs, e) -> on_expr lhs; on_expr e
   | Swhile (cond, body) -> on_expr cond; on_stmts body
   | Sblock stmts -> on_stmts stmts

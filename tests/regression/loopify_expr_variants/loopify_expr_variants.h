@@ -49,31 +49,31 @@ public:
   }
 
   // ACCESSORS
-  List clone() const {
-    List _out{};
+  List<t_A> clone() const {
+    List<t_A> _out{};
 
     struct _CloneFrame {
-      const List *_src;
-      List *_dst;
+      const List<t_A> *_src;
+      List<t_A> *_dst;
     };
 
-    std::vector<_CloneFrame> _stack;
+    std::vector<_CloneFrame> _stack{};
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List *_src = _frame._src;
-      List *_dst = _frame._dst;
+      const List<t_A> *_src = _frame._src;
+      List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        const auto &_alt = std::get<Nil>(_src->v());
         _dst->d_v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ =
-            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1)
+        if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
     }
     return _out;
@@ -99,20 +99,22 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List>> _stack;
-    auto _drain = [&](List &_node) {
+    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1)
+        if (_alt.d_a1) {
           _stack.push_back(std::move(_alt.d_a1));
+        }
       }
     };
     _drain(*this);
     while (!_stack.empty()) {
       auto _node = std::move(_stack.back());
       _stack.pop_back();
-      if (_node)
+      if (_node) {
         _drain(*_node);
+      }
     }
   }
 
@@ -210,7 +212,7 @@ struct LoopifyExprVariants {
         cond_expr *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -225,10 +227,12 @@ struct LoopifyExprVariants {
           _dst->d_v_ = Add{_alt.d_a0 ? std::make_unique<cond_expr>() : nullptr,
                            _alt.d_a1 ? std::make_unique<cond_expr>() : nullptr};
           auto &_dst_alt = std::get<Add>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         } else {
           const auto &_alt = std::get<Cond>(_src->v());
           _dst->d_v_ =
@@ -236,12 +240,15 @@ struct LoopifyExprVariants {
                    _alt.d_a1 ? std::make_unique<cond_expr>() : nullptr,
                    _alt.d_a2 ? std::make_unique<cond_expr>() : nullptr};
           auto &_dst_alt = std::get<Cond>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          }
         }
       }
       return _out;
@@ -265,31 +272,37 @@ struct LoopifyExprVariants {
 
     // MANIPULATORS
     ~cond_expr() {
-      std::vector<std::unique_ptr<cond_expr>> _stack;
+      std::vector<std::unique_ptr<cond_expr>> _stack{};
       auto _drain = [&](cond_expr &_node) {
         if (std::holds_alternative<Add>(_node.d_v_)) {
           auto &_alt = std::get<Add>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
         if (std::holds_alternative<Cond>(_node.d_v_)) {
           auto &_alt = std::get<Cond>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
-          if (_alt.d_a2)
+          }
+          if (_alt.d_a2) {
             _stack.push_back(std::move(_alt.d_a2));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 
@@ -666,7 +679,7 @@ struct LoopifyExprVariants {
         arith_expr *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -682,30 +695,36 @@ struct LoopifyExprVariants {
               AAdd{_alt.d_a0 ? std::make_unique<arith_expr>() : nullptr,
                    _alt.d_a1 ? std::make_unique<arith_expr>() : nullptr};
           auto &_dst_alt = std::get<AAdd>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         } else if (std::holds_alternative<AMul>(_src->v())) {
           const auto &_alt = std::get<AMul>(_src->v());
           _dst->d_v_ =
               AMul{_alt.d_a0 ? std::make_unique<arith_expr>() : nullptr,
                    _alt.d_a1 ? std::make_unique<arith_expr>() : nullptr};
           auto &_dst_alt = std::get<AMul>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         } else {
           const auto &_alt = std::get<ADiv>(_src->v());
           _dst->d_v_ =
               ADiv{_alt.d_a0 ? std::make_unique<arith_expr>() : nullptr,
                    _alt.d_a1 ? std::make_unique<arith_expr>() : nullptr};
           auto &_dst_alt = std::get<ADiv>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         }
       }
       return _out;
@@ -733,36 +752,43 @@ struct LoopifyExprVariants {
 
     // MANIPULATORS
     ~arith_expr() {
-      std::vector<std::unique_ptr<arith_expr>> _stack;
+      std::vector<std::unique_ptr<arith_expr>> _stack{};
       auto _drain = [&](arith_expr &_node) {
         if (std::holds_alternative<AAdd>(_node.d_v_)) {
           auto &_alt = std::get<AAdd>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
         if (std::holds_alternative<AMul>(_node.d_v_)) {
           auto &_alt = std::get<AMul>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
         if (std::holds_alternative<ADiv>(_node.d_v_)) {
           auto &_alt = std::get<ADiv>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 
@@ -1175,7 +1201,7 @@ struct LoopifyExprVariants {
         bool_expr *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -1183,10 +1209,8 @@ struct LoopifyExprVariants {
         const bool_expr *_src = _frame._src;
         bool_expr *_dst = _frame._dst;
         if (std::holds_alternative<BTrue>(_src->v())) {
-          const auto &_alt = std::get<BTrue>(_src->v());
           _dst->d_v_ = BTrue{};
         } else if (std::holds_alternative<BFalse>(_src->v())) {
-          const auto &_alt = std::get<BFalse>(_src->v());
           _dst->d_v_ = BFalse{};
         } else if (std::holds_alternative<BAnd>(_src->v())) {
           const auto &_alt = std::get<BAnd>(_src->v());
@@ -1194,26 +1218,31 @@ struct LoopifyExprVariants {
               BAnd{_alt.d_a0 ? std::make_unique<bool_expr>() : nullptr,
                    _alt.d_a1 ? std::make_unique<bool_expr>() : nullptr};
           auto &_dst_alt = std::get<BAnd>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         } else if (std::holds_alternative<BOr>(_src->v())) {
           const auto &_alt = std::get<BOr>(_src->v());
           _dst->d_v_ = BOr{_alt.d_a0 ? std::make_unique<bool_expr>() : nullptr,
                            _alt.d_a1 ? std::make_unique<bool_expr>() : nullptr};
           auto &_dst_alt = std::get<BOr>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         } else {
           const auto &_alt = std::get<BNot>(_src->v());
           _dst->d_v_ =
               BNot{_alt.d_a0 ? std::make_unique<bool_expr>() : nullptr};
           auto &_dst_alt = std::get<BNot>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          }
         }
       }
       return _out;
@@ -1240,34 +1269,40 @@ struct LoopifyExprVariants {
 
     // MANIPULATORS
     ~bool_expr() {
-      std::vector<std::unique_ptr<bool_expr>> _stack;
+      std::vector<std::unique_ptr<bool_expr>> _stack{};
       auto _drain = [&](bool_expr &_node) {
         if (std::holds_alternative<BAnd>(_node.d_v_)) {
           auto &_alt = std::get<BAnd>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
         if (std::holds_alternative<BOr>(_node.d_v_)) {
           auto &_alt = std::get<BOr>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
         if (std::holds_alternative<BNot>(_node.d_v_)) {
           auto &_alt = std::get<BNot>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 
@@ -1851,7 +1886,7 @@ struct LoopifyExprVariants {
         list_expr *_dst;
       };
 
-      std::vector<_CloneFrame> _stack;
+      std::vector<_CloneFrame> _stack{};
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -1859,25 +1894,27 @@ struct LoopifyExprVariants {
         const list_expr *_src = _frame._src;
         list_expr *_dst = _frame._dst;
         if (std::holds_alternative<LNil>(_src->v())) {
-          const auto &_alt = std::get<LNil>(_src->v());
           _dst->d_v_ = LNil{};
         } else if (std::holds_alternative<LCons>(_src->v())) {
           const auto &_alt = std::get<LCons>(_src->v());
           _dst->d_v_ = LCons{
               _alt.d_a0, _alt.d_a1 ? std::make_unique<list_expr>() : nullptr};
           auto &_dst_alt = std::get<LCons>(_dst->d_v_);
-          if (_alt.d_a1)
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         } else if (std::holds_alternative<LAppend>(_src->v())) {
           const auto &_alt = std::get<LAppend>(_src->v());
           _dst->d_v_ =
               LAppend{_alt.d_a0 ? std::make_unique<list_expr>() : nullptr,
                       _alt.d_a1 ? std::make_unique<list_expr>() : nullptr};
           auto &_dst_alt = std::get<LAppend>(_dst->d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
         } else {
           const auto &_alt = std::get<LReplicate>(_src->v());
           _dst->d_v_ = LReplicate{_alt.d_a0, _alt.d_a1};
@@ -1905,27 +1942,31 @@ struct LoopifyExprVariants {
 
     // MANIPULATORS
     ~list_expr() {
-      std::vector<std::unique_ptr<list_expr>> _stack;
+      std::vector<std::unique_ptr<list_expr>> _stack{};
       auto _drain = [&](list_expr &_node) {
         if (std::holds_alternative<LCons>(_node.d_v_)) {
           auto &_alt = std::get<LCons>(_node.d_v_);
-          if (_alt.d_a1)
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
         if (std::holds_alternative<LAppend>(_node.d_v_)) {
           auto &_alt = std::get<LAppend>(_node.d_v_);
-          if (_alt.d_a0)
+          if (_alt.d_a0) {
             _stack.push_back(std::move(_alt.d_a0));
-          if (_alt.d_a1)
+          }
+          if (_alt.d_a1) {
             _stack.push_back(std::move(_alt.d_a1));
+          }
         }
       };
       _drain(*this);
       while (!_stack.empty()) {
         auto _node = std::move(_stack.back());
         _stack.pop_back();
-        if (_node)
+        if (_node) {
           _drain(*_node);
+        }
       }
     }
 
