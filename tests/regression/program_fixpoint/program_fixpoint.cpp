@@ -1,6 +1,6 @@
 #include <program_fixpoint.h>
 
-__attribute__((pure)) List<unsigned int> ProgFix::interleave_func(
+List<unsigned int> ProgFix::interleave_func(
     const SigT<List<unsigned int>, List<unsigned int>> &x) {
   List<unsigned int> l1 = x.projT1();
   List<unsigned int> l2 = x.projT2();
@@ -24,8 +24,8 @@ __attribute__((pure)) List<unsigned int> ProgFix::interleave_func(
   }
 }
 
-__attribute__((pure)) List<unsigned int>
-ProgFix::interleave(List<unsigned int> l1, List<unsigned int> l2) {
+List<unsigned int> ProgFix::interleave(List<unsigned int> l1,
+                                       List<unsigned int> l2) {
   return interleave_func(SigT<List<unsigned int>, List<unsigned int>>::existt(
       std::move(l1), std::move(l2)));
 }

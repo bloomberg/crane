@@ -1,7 +1,6 @@
 #include <large_mutual.h>
 
-__attribute__((pure)) unsigned int
-LargeMutual::expr_size(const LargeMutual::expr &e) {
+unsigned int LargeMutual::expr_size(const LargeMutual::expr &e) {
   if (std::holds_alternative<typename LargeMutual::expr::EAdd>(e.v())) {
     const auto &[d_a0, d_a1] =
         std::get<typename LargeMutual::expr::EAdd>(e.v());
@@ -20,8 +19,7 @@ LargeMutual::expr_size(const LargeMutual::expr &e) {
   }
 }
 
-__attribute__((pure)) unsigned int
-LargeMutual::bexpr_size(const LargeMutual::bexpr &b) {
+unsigned int LargeMutual::bexpr_size(const LargeMutual::bexpr &b) {
   if (std::holds_alternative<typename LargeMutual::bexpr::BEq>(b.v())) {
     const auto &[d_a0, d_a1] =
         std::get<typename LargeMutual::bexpr::BEq>(b.v());
@@ -46,8 +44,7 @@ LargeMutual::bexpr_size(const LargeMutual::bexpr &b) {
   }
 }
 
-__attribute__((pure)) unsigned int
-LargeMutual::stmt_size(const LargeMutual::stmt &s) {
+unsigned int LargeMutual::stmt_size(const LargeMutual::stmt &s) {
   if (std::holds_alternative<typename LargeMutual::stmt::SAssign>(s.v())) {
     const auto &[d_a0, d_a1] =
         std::get<typename LargeMutual::stmt::SAssign>(s.v());

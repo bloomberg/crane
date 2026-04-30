@@ -1,7 +1,6 @@
 #include <program_targets_region_scan.h>
 
-__attribute__((pure)) std::optional<unsigned int>
-ProgramTargetsRegionScan::jump_target(
+std::optional<unsigned int> ProgramTargetsRegionScan::jump_target(
     const ProgramTargetsRegionScan::instruction &i) {
   if (std::holds_alternative<
           typename ProgramTargetsRegionScan::instruction::JUN>(i.v())) {
@@ -18,12 +17,12 @@ ProgramTargetsRegionScan::jump_target(
   }
 }
 
-__attribute__((pure)) bool ProgramTargetsRegionScan::addr_in_regionb(
+bool ProgramTargetsRegionScan::addr_in_regionb(
     const unsigned int &addr, const ProgramTargetsRegionScan::layout &l) {
   return (l.base_addr <= addr && addr < (l.base_addr + l.code_size));
 }
 
-__attribute__((pure)) bool ProgramTargetsRegionScan::target_in_layoutb(
+bool ProgramTargetsRegionScan::target_in_layoutb(
     const ProgramTargetsRegionScan::layout &l,
     const ProgramTargetsRegionScan::instruction &i) {
   auto _cs = jump_target(i);
@@ -35,7 +34,7 @@ __attribute__((pure)) bool ProgramTargetsRegionScan::target_in_layoutb(
   }
 }
 
-__attribute__((pure)) bool ProgramTargetsRegionScan::program_targets_okb(
+bool ProgramTargetsRegionScan::program_targets_okb(
     const List<ProgramTargetsRegionScan::instruction> &prog,
     ProgramTargetsRegionScan::layout l) {
   return prog.forallb(

@@ -2,8 +2,7 @@
 
 /// Extract the value from the left subtree.
 /// This accesses the Node's d_a0 field (left subtree).
-__attribute__((pure)) unsigned int
-ReuseScrutinee::left_val(const ReuseScrutinee::tree &t) {
+unsigned int ReuseScrutinee::left_val(const ReuseScrutinee::tree &t) {
   if (std::holds_alternative<typename ReuseScrutinee::tree::Leaf>(t.v())) {
     return 0u;
   } else {
@@ -21,8 +20,7 @@ ReuseScrutinee::left_val(const ReuseScrutinee::tree &t) {
 }
 
 /// Extract the value from the right subtree.
-__attribute__((pure)) unsigned int
-ReuseScrutinee::right_val(const ReuseScrutinee::tree &t) {
+unsigned int ReuseScrutinee::right_val(const ReuseScrutinee::tree &t) {
   if (std::holds_alternative<typename ReuseScrutinee::tree::Leaf>(t.v())) {
     return 0u;
   } else {
@@ -40,7 +38,6 @@ ReuseScrutinee::right_val(const ReuseScrutinee::tree &t) {
 }
 
 /// Sum of left and right subtree values.
-__attribute__((pure)) unsigned int
-ReuseScrutinee::subtree_sum(const ReuseScrutinee::tree &t) {
+unsigned int ReuseScrutinee::subtree_sum(const ReuseScrutinee::tree &t) {
   return (left_val(t) + right_val(t));
 }

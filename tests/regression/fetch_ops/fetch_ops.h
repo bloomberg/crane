@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,7 +119,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct ListDef {
@@ -113,20 +132,16 @@ struct FetchOps {
     List<unsigned int> rom;
 
     // ACCESSORS
-    __attribute__((pure)) state clone() const {
-      return state{(*(this)).rom.clone()};
-    }
+    state clone() const { return state{(*(this)).rom.clone()}; }
   };
 
-  __attribute__((pure)) static unsigned int
-  fetch_byte(const state &s, const unsigned int &addr);
+  static unsigned int fetch_byte(const state &s, const unsigned int &addr);
   static inline const unsigned int fetch_default_test = fetch_byte(
       state{List<unsigned int>::cons(
           1u, List<unsigned int>::cons(2u, List<unsigned int>::nil()))},
       5u);
-  __attribute__((pure)) static unsigned int
-  fetch_byte_direct(const List<unsigned int> &rom_data,
-                    const unsigned int &addr);
+  static unsigned int fetch_byte_direct(const List<unsigned int> &rom_data,
+                                        const unsigned int &addr);
   static inline const unsigned int fetch_in_range_test = fetch_byte_direct(
       List<unsigned int>::cons(
           11u,
@@ -135,8 +150,7 @@ struct FetchOps {
       1u);
 
   template <typename T1>
-  __attribute__((pure)) static List<T1> drop(const unsigned int &n,
-                                             List<T1> l) {
+  static List<T1> drop(const unsigned int &n, List<T1> l) {
     if (n <= 0) {
       return l;
     } else {
@@ -150,7 +164,7 @@ struct FetchOps {
     }
   }
 
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  static std::pair<unsigned int, unsigned int>
   fetch_pair(const List<unsigned int> &rom_data, const unsigned int &addr);
   static inline const unsigned int fetch_pair_test = []() {
     std::pair<unsigned int, unsigned int> p = fetch_pair(
@@ -161,8 +175,7 @@ struct FetchOps {
         0u);
     return (p.first + p.second);
   }();
-  __attribute__((
-      pure)) static std::optional<std::pair<unsigned int, unsigned int>>
+  static std::optional<std::pair<unsigned int, unsigned int>>
   fetch_window(const List<unsigned int> &rom_data, const unsigned int &addr);
   static inline const unsigned int fetch_window_test = []() -> unsigned int {
     auto _cs = fetch_window(

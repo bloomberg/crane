@@ -50,15 +50,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -72,9 +91,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -101,10 +120,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  template <MapsTo<bool, t_A> F0>
-  __attribute__((pure)) bool existsb(F0 &&f) const {
+  template <MapsTo<bool, t_A> F0> bool existsb(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return false;
@@ -126,7 +144,7 @@ public:
   }
 
   template <typename T1, MapsTo<List<T1>, t_A> F0>
-  __attribute__((pure)) List<T1> flat_map(F0 &&f) const {
+  List<T1> flat_map(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return List<T1>::nil();
@@ -136,7 +154,7 @@ public:
     }
   }
 
-  __attribute__((pure)) unsigned int length() const {
+  unsigned int length() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
@@ -146,7 +164,7 @@ public:
     }
   }
 
-  __attribute__((pure)) List<t_A> app(List<t_A> m) const {
+  List<t_A> app(List<t_A> m) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return m;
@@ -248,83 +266,129 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Uint clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return Uint(Nil{});
-    } else if (std::holds_alternative<D0>(_sv.v())) {
-      const auto &[d_a0] = std::get<D0>(_sv.v());
-      return Uint(D0{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D1>(_sv.v())) {
-      const auto &[d_a0] = std::get<D1>(_sv.v());
-      return Uint(D1{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D2>(_sv.v())) {
-      const auto &[d_a0] = std::get<D2>(_sv.v());
-      return Uint(D2{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D3>(_sv.v())) {
-      const auto &[d_a0] = std::get<D3>(_sv.v());
-      return Uint(D3{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D4>(_sv.v())) {
-      const auto &[d_a0] = std::get<D4>(_sv.v());
-      return Uint(D4{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D5>(_sv.v())) {
-      const auto &[d_a0] = std::get<D5>(_sv.v());
-      return Uint(D5{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D6>(_sv.v())) {
-      const auto &[d_a0] = std::get<D6>(_sv.v());
-      return Uint(D6{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D7>(_sv.v())) {
-      const auto &[d_a0] = std::get<D7>(_sv.v());
-      return Uint(D7{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D8>(_sv.v())) {
-      const auto &[d_a0] = std::get<D8>(_sv.v());
-      return Uint(D8{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else {
-      const auto &[d_a0] = std::get<D9>(_sv.v());
-      return Uint(D9{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
+  Uint clone() const {
+    Uint _out{};
+
+    struct _CloneFrame {
+      const Uint *_src;
+      Uint *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Uint *_src = _frame._src;
+      Uint *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else if (std::holds_alternative<D0>(_src->v())) {
+        const auto &_alt = std::get<D0>(_src->v());
+        _dst->d_v_ = D0{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D0>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D1>(_src->v())) {
+        const auto &_alt = std::get<D1>(_src->v());
+        _dst->d_v_ = D1{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D1>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D2>(_src->v())) {
+        const auto &_alt = std::get<D2>(_src->v());
+        _dst->d_v_ = D2{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D2>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D3>(_src->v())) {
+        const auto &_alt = std::get<D3>(_src->v());
+        _dst->d_v_ = D3{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D3>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D4>(_src->v())) {
+        const auto &_alt = std::get<D4>(_src->v());
+        _dst->d_v_ = D4{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D4>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D5>(_src->v())) {
+        const auto &_alt = std::get<D5>(_src->v());
+        _dst->d_v_ = D5{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D5>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D6>(_src->v())) {
+        const auto &_alt = std::get<D6>(_src->v());
+        _dst->d_v_ = D6{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D6>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D7>(_src->v())) {
+        const auto &_alt = std::get<D7>(_src->v());
+        _dst->d_v_ = D7{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D7>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D8>(_src->v())) {
+        const auto &_alt = std::get<D8>(_src->v());
+        _dst->d_v_ = D8{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D8>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else {
+        const auto &_alt = std::get<D9>(_src->v());
+        _dst->d_v_ = D9{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D9>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Uint nil() { return Uint(Nil{}); }
+  static Uint nil() { return Uint(Nil{}); }
 
-  __attribute__((pure)) static Uint d0(Uint a0) {
+  static Uint d0(Uint a0) {
     return Uint(D0{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d1(Uint a0) {
+  static Uint d1(Uint a0) {
     return Uint(D1{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d2(Uint a0) {
+  static Uint d2(Uint a0) {
     return Uint(D2{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d3(Uint a0) {
+  static Uint d3(Uint a0) {
     return Uint(D3{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d4(Uint a0) {
+  static Uint d4(Uint a0) {
     return Uint(D4{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d5(Uint a0) {
+  static Uint d5(Uint a0) {
     return Uint(D5{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d6(Uint a0) {
+  static Uint d6(Uint a0) {
     return Uint(D6{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d7(Uint a0) {
+  static Uint d7(Uint a0) {
     return Uint(D7{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d8(Uint a0) {
+  static Uint d8(Uint a0) {
     return Uint(D8{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d9(Uint a0) {
+  static Uint d9(Uint a0) {
     return Uint(D9{std::make_unique<Uint>(std::move(a0))});
   }
 
@@ -395,7 +459,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Uint0 {
@@ -526,135 +590,189 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Uint0 clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil0>(_sv.v())) {
-      return Uint0(Nil0{});
-    } else if (std::holds_alternative<D10>(_sv.v())) {
-      const auto &[d_a0] = std::get<D10>(_sv.v());
-      return Uint0(
-          D10{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D11>(_sv.v())) {
-      const auto &[d_a0] = std::get<D11>(_sv.v());
-      return Uint0(
-          D11{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D12>(_sv.v())) {
-      const auto &[d_a0] = std::get<D12>(_sv.v());
-      return Uint0(
-          D12{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D13>(_sv.v())) {
-      const auto &[d_a0] = std::get<D13>(_sv.v());
-      return Uint0(
-          D13{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D14>(_sv.v())) {
-      const auto &[d_a0] = std::get<D14>(_sv.v());
-      return Uint0(
-          D14{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D15>(_sv.v())) {
-      const auto &[d_a0] = std::get<D15>(_sv.v());
-      return Uint0(
-          D15{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D16>(_sv.v())) {
-      const auto &[d_a0] = std::get<D16>(_sv.v());
-      return Uint0(
-          D16{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D17>(_sv.v())) {
-      const auto &[d_a0] = std::get<D17>(_sv.v());
-      return Uint0(
-          D17{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D18>(_sv.v())) {
-      const auto &[d_a0] = std::get<D18>(_sv.v());
-      return Uint0(
-          D18{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D19>(_sv.v())) {
-      const auto &[d_a0] = std::get<D19>(_sv.v());
-      return Uint0(
-          D19{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<Da>(_sv.v())) {
-      const auto &[d_a0] = std::get<Da>(_sv.v());
-      return Uint0(Da{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<Db>(_sv.v())) {
-      const auto &[d_a0] = std::get<Db>(_sv.v());
-      return Uint0(Db{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<Dc>(_sv.v())) {
-      const auto &[d_a0] = std::get<Dc>(_sv.v());
-      return Uint0(Dc{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<Dd>(_sv.v())) {
-      const auto &[d_a0] = std::get<Dd>(_sv.v());
-      return Uint0(Dd{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<De>(_sv.v())) {
-      const auto &[d_a0] = std::get<De>(_sv.v());
-      return Uint0(De{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else {
-      const auto &[d_a0] = std::get<Df>(_sv.v());
-      return Uint0(Df{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
+  Uint0 clone() const {
+    Uint0 _out{};
+
+    struct _CloneFrame {
+      const Uint0 *_src;
+      Uint0 *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Uint0 *_src = _frame._src;
+      Uint0 *_dst = _frame._dst;
+      if (std::holds_alternative<Nil0>(_src->v())) {
+        const auto &_alt = std::get<Nil0>(_src->v());
+        _dst->d_v_ = Nil0{};
+      } else if (std::holds_alternative<D10>(_src->v())) {
+        const auto &_alt = std::get<D10>(_src->v());
+        _dst->d_v_ = D10{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D10>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D11>(_src->v())) {
+        const auto &_alt = std::get<D11>(_src->v());
+        _dst->d_v_ = D11{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D11>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D12>(_src->v())) {
+        const auto &_alt = std::get<D12>(_src->v());
+        _dst->d_v_ = D12{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D12>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D13>(_src->v())) {
+        const auto &_alt = std::get<D13>(_src->v());
+        _dst->d_v_ = D13{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D13>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D14>(_src->v())) {
+        const auto &_alt = std::get<D14>(_src->v());
+        _dst->d_v_ = D14{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D14>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D15>(_src->v())) {
+        const auto &_alt = std::get<D15>(_src->v());
+        _dst->d_v_ = D15{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D15>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D16>(_src->v())) {
+        const auto &_alt = std::get<D16>(_src->v());
+        _dst->d_v_ = D16{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D16>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D17>(_src->v())) {
+        const auto &_alt = std::get<D17>(_src->v());
+        _dst->d_v_ = D17{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D17>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D18>(_src->v())) {
+        const auto &_alt = std::get<D18>(_src->v());
+        _dst->d_v_ = D18{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D18>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D19>(_src->v())) {
+        const auto &_alt = std::get<D19>(_src->v());
+        _dst->d_v_ = D19{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D19>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<Da>(_src->v())) {
+        const auto &_alt = std::get<Da>(_src->v());
+        _dst->d_v_ = Da{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Da>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<Db>(_src->v())) {
+        const auto &_alt = std::get<Db>(_src->v());
+        _dst->d_v_ = Db{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Db>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<Dc>(_src->v())) {
+        const auto &_alt = std::get<Dc>(_src->v());
+        _dst->d_v_ = Dc{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Dc>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<Dd>(_src->v())) {
+        const auto &_alt = std::get<Dd>(_src->v());
+        _dst->d_v_ = Dd{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Dd>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<De>(_src->v())) {
+        const auto &_alt = std::get<De>(_src->v());
+        _dst->d_v_ = De{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<De>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else {
+        const auto &_alt = std::get<Df>(_src->v());
+        _dst->d_v_ = Df{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Df>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Uint0 nil0() { return Uint0(Nil0{}); }
+  static Uint0 nil0() { return Uint0(Nil0{}); }
 
-  __attribute__((pure)) static Uint0 d10(Uint0 a0) {
+  static Uint0 d10(Uint0 a0) {
     return Uint0(D10{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d11(Uint0 a0) {
+  static Uint0 d11(Uint0 a0) {
     return Uint0(D11{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d12(Uint0 a0) {
+  static Uint0 d12(Uint0 a0) {
     return Uint0(D12{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d13(Uint0 a0) {
+  static Uint0 d13(Uint0 a0) {
     return Uint0(D13{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d14(Uint0 a0) {
+  static Uint0 d14(Uint0 a0) {
     return Uint0(D14{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d15(Uint0 a0) {
+  static Uint0 d15(Uint0 a0) {
     return Uint0(D15{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d16(Uint0 a0) {
+  static Uint0 d16(Uint0 a0) {
     return Uint0(D16{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d17(Uint0 a0) {
+  static Uint0 d17(Uint0 a0) {
     return Uint0(D17{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d18(Uint0 a0) {
+  static Uint0 d18(Uint0 a0) {
     return Uint0(D18{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d19(Uint0 a0) {
+  static Uint0 d19(Uint0 a0) {
     return Uint0(D19{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 da(Uint0 a0) {
+  static Uint0 da(Uint0 a0) {
     return Uint0(Da{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 db(Uint0 a0) {
+  static Uint0 db(Uint0 a0) {
     return Uint0(Db{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 dc(Uint0 a0) {
+  static Uint0 dc(Uint0 a0) {
     return Uint0(Dc{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 dd(Uint0 a0) {
+  static Uint0 dd(Uint0 a0) {
     return Uint0(Dd{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 de(Uint0 a0) {
+  static Uint0 de(Uint0 a0) {
     return Uint0(De{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 df(Uint0 a0) {
+  static Uint0 df(Uint0 a0) {
     return Uint0(Df{std::make_unique<Uint0>(std::move(a0))});
   }
 
@@ -755,16 +873,15 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct PeanoNat {
-  __attribute__((pure)) static bool eq_dec(const unsigned int &n,
-                                           const unsigned int &m);
+  static bool eq_dec(const unsigned int &n, const unsigned int &m);
 };
 
 struct Bool {
-  __attribute__((pure)) static bool bool_dec(const bool &b1, const bool &b2);
+  static bool bool_dec(const bool &b1, const bool &b2);
 };
 
 struct Uint1 {
@@ -806,7 +923,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Uint1 clone() const {
+  Uint1 clone() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<UIntDecimal>(_sv.v())) {
       const auto &[d_u] = std::get<UIntDecimal>(_sv.v());
@@ -818,11 +935,9 @@ public:
   }
 
   // CREATORS
-  __attribute__((pure)) static Uint1 uintdecimal(Uint u) {
-    return Uint1(UIntDecimal{std::move(u)});
-  }
+  static Uint1 uintdecimal(Uint u) { return Uint1(UIntDecimal{std::move(u)}); }
 
-  __attribute__((pure)) static Uint1 uinthexadecimal(Uint0 u) {
+  static Uint1 uinthexadecimal(Uint0 u) {
     return Uint1(UIntHexadecimal{std::move(u)});
   }
 
@@ -830,23 +945,19 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Nat {
-  __attribute__((pure)) static unsigned int tail_add(const unsigned int &n,
-                                                     unsigned int m);
-  __attribute__((pure)) static unsigned int
-  tail_addmul(unsigned int r, const unsigned int &n, const unsigned int &m);
-  __attribute__((pure)) static unsigned int tail_mul(const unsigned int &n,
-                                                     const unsigned int &m);
-  __attribute__((pure)) static unsigned int of_uint_acc(const Uint &d,
-                                                        unsigned int acc);
-  __attribute__((pure)) static unsigned int of_uint(const Uint &d);
-  __attribute__((pure)) static unsigned int of_hex_uint_acc(const Uint0 &d,
-                                                            unsigned int acc);
-  __attribute__((pure)) static unsigned int of_hex_uint(const Uint0 &d);
-  __attribute__((pure)) static unsigned int of_num_uint(const Uint1 &d);
+  static unsigned int tail_add(const unsigned int &n, unsigned int m);
+  static unsigned int tail_addmul(unsigned int r, const unsigned int &n,
+                                  const unsigned int &m);
+  static unsigned int tail_mul(const unsigned int &n, const unsigned int &m);
+  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
+  static unsigned int of_uint(const Uint &d);
+  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
+  static unsigned int of_hex_uint(const Uint0 &d);
+  static unsigned int of_num_uint(const Uint1 &d);
 };
 
 struct ValidatedVirtualCrossmatchTraceCase {
@@ -888,29 +999,26 @@ struct ValidatedVirtualCrossmatchTraceCase {
     }
   }
 
-  __attribute__((pure)) static bool hla_locus_eq_dec(const HLALocus x,
-                                                     const HLALocus y);
+  static bool hla_locus_eq_dec(const HLALocus x, const HLALocus y);
 
   struct HLAAllele {
     HLALocus hla_locus;
     unsigned int hla_group;
 
     // ACCESSORS
-    __attribute__((pure)) HLAAllele clone() const {
+    HLAAllele clone() const {
       return HLAAllele{(*(this)).hla_locus, (*(this)).hla_group};
     }
   };
 
-  __attribute__((pure)) static bool hla_allele_eq_dec(const HLAAllele &x,
-                                                      const HLAAllele &y);
-  __attribute__((pure)) static bool hla_allele_eqb(const HLAAllele &x,
-                                                   const HLAAllele &y);
+  static bool hla_allele_eq_dec(const HLAAllele &x, const HLAAllele &y);
+  static bool hla_allele_eqb(const HLAAllele &x, const HLAAllele &y);
 
   struct HLATyping {
     List<HLAAllele> hla_typed_alleles;
 
     // ACCESSORS
-    __attribute__((pure)) HLATyping clone() const {
+    HLATyping clone() const {
       return HLATyping{(*(this)).hla_typed_alleles.clone()};
     }
   };
@@ -921,16 +1029,14 @@ struct ValidatedVirtualCrossmatchTraceCase {
     bool epitope_immunogenic;
 
     // ACCESSORS
-    __attribute__((pure)) HLAEpitope clone() const {
+    HLAEpitope clone() const {
       return HLAEpitope{(*(this)).epitope_id, (*(this)).epitope_locus,
                         (*(this)).epitope_immunogenic};
     }
   };
 
-  __attribute__((pure)) static bool epitope_eq_dec(const HLAEpitope &x,
-                                                   const HLAEpitope &y);
-  __attribute__((pure)) static bool epitope_eqb(const HLAEpitope &x,
-                                                const HLAEpitope &y);
+  static bool epitope_eq_dec(const HLAEpitope &x, const HLAEpitope &y);
+  static bool epitope_eqb(const HLAEpitope &x, const HLAEpitope &y);
   static inline const HLAEpitope eplet_62GE =
       HLAEpitope{62u, HLALocus::e_LOCUS_A, true};
   static inline const HLAEpitope eplet_65QIA =
@@ -939,12 +1045,9 @@ struct ValidatedVirtualCrossmatchTraceCase {
       HLAEpitope{142u, HLALocus::e_LOCUS_B, true};
   static inline const HLAEpitope eplet_77N =
       HLAEpitope{77u, HLALocus::e_LOCUS_DR, true};
-  __attribute__((pure)) static List<HLAEpitope>
-  allele_epitopes(const HLAAllele &a);
-  __attribute__((pure)) static List<HLAEpitope>
-  typing_epitopes(const HLATyping &t);
-  __attribute__((pure)) static List<HLAEpitope>
-  epitope_dedup(const List<HLAEpitope> &l);
+  static List<HLAEpitope> allele_epitopes(const HLAAllele &a);
+  static List<HLAEpitope> typing_epitopes(const HLATyping &t);
+  static List<HLAEpitope> epitope_dedup(const List<HLAEpitope> &l);
 
   struct EpitopeAntibody {
     HLAEpitope ab_epitope;
@@ -952,7 +1055,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
     bool ab_complement_fixing;
 
     // ACCESSORS
-    __attribute__((pure)) EpitopeAntibody clone() const {
+    EpitopeAntibody clone() const {
       return EpitopeAntibody{(*(this)).ab_epitope.clone(), (*(this)).ab_mfi,
                              (*(this)).ab_complement_fixing};
     }
@@ -965,7 +1068,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
     unsigned int vxm_sensitization_events;
 
     // ACCESSORS
-    __attribute__((pure)) VirtualXMProfile clone() const {
+    VirtualXMProfile clone() const {
       return VirtualXMProfile{(*(this)).vxm_epitope_abs.clone(),
                               (*(this)).vxm_current_pra, (*(this)).vxm_peak_pra,
                               (*(this)).vxm_sensitization_events};
@@ -981,7 +1084,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
     bool mfi_cfg_validated;
 
     // ACCESSORS
-    __attribute__((pure)) MFIThresholdConfig clone() const {
+    MFIThresholdConfig clone() const {
       return MFIThresholdConfig{
           (*(this)).mfi_cfg_negative, (*(this)).mfi_cfg_weak_positive,
           (*(this)).mfi_cfg_moderate, (*(this)).mfi_cfg_strong,
@@ -989,8 +1092,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
     }
   };
 
-  __attribute__((pure)) static bool
-  mfi_config_valid(const MFIThresholdConfig &cfg);
+  static bool mfi_config_valid(const MFIThresholdConfig &cfg);
   static inline const MFIThresholdConfig example_luminex_thresholds =
       MFIThresholdConfig{1000u, 3000u, 8000u, 12000u, 1u, true};
 
@@ -998,7 +1100,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
     MFIThresholdConfig vmc_config;
 
     // ACCESSORS
-    __attribute__((pure)) ValidatedMFIConfig clone() const {
+    ValidatedMFIConfig clone() const {
       return ValidatedMFIConfig{(*(this)).vmc_config.clone()};
     }
   };
@@ -1061,17 +1163,15 @@ struct ValidatedVirtualCrossmatchTraceCase {
     }
   }
 
-  __attribute__((pure)) static MFIStrength
-  classify_mfi_with_config(const MFIThresholdConfig &cfg,
-                           const unsigned int &mfi);
-  __attribute__((pure)) static MFIStrength
-  classify_mfi_safe(const ValidatedMFIConfig &vcfg, const unsigned int &mfi);
+  static MFIStrength classify_mfi_with_config(const MFIThresholdConfig &cfg,
+                                              const unsigned int &mfi);
+  static MFIStrength classify_mfi_safe(const ValidatedMFIConfig &vcfg,
+                                       const unsigned int &mfi);
   static inline const unsigned int mfi_negative_threshold = 1000u;
-  __attribute__((pure)) static unsigned int
-  max_dsa_mfi(const VirtualXMProfile &recipient, const HLATyping &donor);
-  __attribute__((pure)) static bool
-  has_complement_fixing_dsa(const VirtualXMProfile &recipient,
-                            const HLATyping &donor);
+  static unsigned int max_dsa_mfi(const VirtualXMProfile &recipient,
+                                  const HLATyping &donor);
+  static bool has_complement_fixing_dsa(const VirtualXMProfile &recipient,
+                                        const HLATyping &donor);
   enum class VirtualXMResult {
     e_VXM_NEGATIVE,
     e_VXM_WEAKPOSITIVE,
@@ -1121,7 +1221,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
     }
   }
 
-  __attribute__((pure)) static VirtualXMResult
+  static VirtualXMResult
   virtual_crossmatch_safe(const ValidatedMFIConfig &vcfg,
                           const VirtualXMProfile &recipient,
                           const HLATyping &donor);
@@ -1176,10 +1276,10 @@ struct ValidatedVirtualCrossmatchTraceCase {
     }
   }
 
-  __attribute__((pure)) static TransplantAcceptability
+  static TransplantAcceptability
   transplant_acceptability(const VirtualXMResult vxm,
                            const bool &complement_fixing_dsa);
-  __attribute__((pure)) static TransplantAcceptability
+  static TransplantAcceptability
   full_virtual_crossmatch_safe(const ValidatedMFIConfig &vcfg,
                                const VirtualXMProfile &recipient,
                                const HLATyping &donor);
@@ -1279,14 +1379,13 @@ struct ValidatedVirtualCrossmatchTraceCase {
     TestConfidence xmu_confidence;
 
     // ACCESSORS
-    __attribute__((pure)) CrossmatchWithUncertainty clone() const {
+    CrossmatchWithUncertainty clone() const {
       return CrossmatchWithUncertainty{
           (*(this)).xmu_result, (*(this)).xmu_method, (*(this)).xmu_confidence};
     }
   };
 
-  __attribute__((pure)) static bool
-  safe_to_release(const CrossmatchWithUncertainty &xm);
+  static bool safe_to_release(const CrossmatchWithUncertainty &xm);
 
   struct SafeTransfusionOrder {
     unsigned int sto_recipient_id;
@@ -1298,7 +1397,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
     bool sto_emergency_release;
 
     // ACCESSORS
-    __attribute__((pure)) SafeTransfusionOrder clone() const {
+    SafeTransfusionOrder clone() const {
       return SafeTransfusionOrder{(*(this)).sto_recipient_id,
                                   (*(this)).sto_product_id,
                                   (*(this)).sto_compatibility_check,
@@ -1309,19 +1408,15 @@ struct ValidatedVirtualCrossmatchTraceCase {
     }
   };
 
-  __attribute__((pure)) static bool
-  order_sample_valid(const unsigned int &collection_time,
-                     const unsigned int &current_time);
-  __attribute__((pure)) static bool
-  transfusion_order_authorized(const SafeTransfusionOrder &order,
-                               const unsigned int &current_time);
-  __attribute__((pure)) static std::optional<SafeTransfusionOrder>
-  create_safe_transfusion_order(unsigned int recipient_id,
-                                unsigned int product_id, bool compat_result,
-                                CrossmatchWithUncertainty xm,
-                                unsigned int sample_time,
-                                const unsigned int &current_time,
-                                unsigned int authorizer, bool is_emergency);
+  static bool order_sample_valid(const unsigned int &collection_time,
+                                 const unsigned int &current_time);
+  static bool transfusion_order_authorized(const SafeTransfusionOrder &order,
+                                           const unsigned int &current_time);
+  static std::optional<SafeTransfusionOrder> create_safe_transfusion_order(
+      unsigned int recipient_id, unsigned int product_id, bool compat_result,
+      CrossmatchWithUncertainty xm, unsigned int sample_time,
+      const unsigned int &current_time, unsigned int authorizer,
+      bool is_emergency);
   static inline const HLATyping donor_hla = HLATyping{List<HLAAllele>::cons(
       HLAAllele{HLALocus::e_LOCUS_A, 2u},
       List<HLAAllele>::cons(
@@ -1348,8 +1443,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static inline const CrossmatchWithUncertainty bad_crossmatch =
       CrossmatchWithUncertainty{CrossmatchResult::e_XM_INCOMPATIBLE, 1u,
                                 TestConfidence::e_CONFIDENCE_HIGH};
-  __attribute__((pure)) static bool
-  risk_acceptable(const TransplantAcceptability a);
+  static bool risk_acceptable(const TransplantAcceptability a);
   static inline const bool sample_virtual_zero_negative = []() {
     switch (classify_mfi_safe(validated_luminex, 0u)) {
     case MFIStrength::e_MFI_NEGATIVE: {

@@ -3,7 +3,6 @@
 /// Return a closure wrapped in option — prevents uncurrying.
 /// The closure captures a pattern variable hd (a shared_ptr),
 /// which is an inlined _args.d_a0 inside the std::visit callback.
-__attribute__((pure))
 std::optional<std::function<ClosureEscapeMatch::mylist<unsigned int>(
     ClosureEscapeMatch::mylist<unsigned int>)>>
 ClosureEscapeMatch::make_prepender_opt(
@@ -26,7 +25,7 @@ ClosureEscapeMatch::make_prepender_opt(
 
 /// Return a closure in a pair — prevents uncurrying.
 /// Captures pattern variables x and xs.
-__attribute__((pure)) std::optional<
+std::optional<
     std::function<std::pair<unsigned int, unsigned int>(std::monostate)>>
 ClosureEscapeMatch::make_pair_fn_opt(
     const ClosureEscapeMatch::mylist<unsigned int> &l) {
@@ -48,7 +47,7 @@ ClosureEscapeMatch::make_pair_fn_opt(
 }
 
 /// Nested matches with closures returned in option.
-__attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<unsigned int(unsigned int)>>
 ClosureEscapeMatch::nested_closure_opt(
     const ClosureEscapeMatch::mylist<unsigned int> &a,
     const ClosureEscapeMatch::mylist<unsigned int> &b) {
@@ -83,7 +82,6 @@ ClosureEscapeMatch::nested_closure_opt(
 }
 
 /// Closure stored in a product, capturing shared_ptr pattern variable.
-__attribute__((pure))
 std::pair<unsigned int, std::function<ClosureEscapeMatch::mylist<unsigned int>(
                             ClosureEscapeMatch::mylist<unsigned int>)>>
 ClosureEscapeMatch::closure_in_pair(

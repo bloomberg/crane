@@ -49,22 +49,39 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Nat clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<O>(_sv.v())) {
-      return Nat(O{});
-    } else {
-      const auto &[d_a0] = std::get<S>(_sv.v());
-      return Nat(S{d_a0 ? std::make_unique<Nat>(d_a0->clone()) : nullptr});
+  Nat clone() const {
+    Nat _out{};
+
+    struct _CloneFrame {
+      const Nat *_src;
+      Nat *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Nat *_src = _frame._src;
+      Nat *_dst = _frame._dst;
+      if (std::holds_alternative<O>(_src->v())) {
+        const auto &_alt = std::get<O>(_src->v());
+        _dst->d_v_ = O{};
+      } else {
+        const auto &_alt = std::get<S>(_src->v());
+        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
+        auto &_dst_alt = std::get<S>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Nat o() { return Nat(O{}); }
+  static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(Nat a0) {
-    return Nat(S{std::make_unique<Nat>(std::move(a0))});
-  }
+  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -88,7 +105,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct RocqBug7228 {
@@ -125,22 +142,20 @@ struct RocqBug7228 {
     }
 
     // ACCESSORS
-    __attribute__((pure)) data clone() const {
+    data clone() const {
       auto &&_sv = *(this);
       const auto &[d_t] = std::get<Data0>(_sv.v());
       return data(Data0{d_t});
     }
 
     // CREATORS
-    __attribute__((pure)) static data data0(std::any t) {
-      return data(Data0{std::move(t)});
-    }
+    static data data0(std::any t) { return data(Data0{std::move(t)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename F0>
@@ -156,7 +171,7 @@ struct RocqBug7228 {
   }
 
   using t_of = std::any;
-  __attribute__((pure)) static t_of v_of(const data &d);
+  static t_of v_of(const data &d);
   static inline const data test_data =
       data::data0(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
           Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(

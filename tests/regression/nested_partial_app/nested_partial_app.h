@@ -52,25 +52,43 @@ struct NestedPartialApp {
     }
 
     // ACCESSORS
-    __attribute__((pure)) tree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
-        return tree(Leaf{});
-      } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
-        return tree(
-            Node{d_a0 ? std::make_unique<NestedPartialApp::tree>(d_a0->clone())
-                      : nullptr,
-                 d_a1,
-                 d_a2 ? std::make_unique<NestedPartialApp::tree>(d_a2->clone())
-                      : nullptr});
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          const auto &_alt = std::get<Leaf>(_src->v());
+          _dst->d_v_ = Leaf{};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ =
+              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
+    static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, unsigned int a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -99,7 +117,7 @@ struct NestedPartialApp {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
@@ -124,10 +142,9 @@ struct NestedPartialApp {
     }
   }
 
-  __attribute__((pure)) static unsigned int tree_sum(const tree &t);
+  static unsigned int tree_sum(const tree &t);
   /// 3-argument function: builds Node(t1, n, t2).
-  __attribute__((pure)) static tree build_node(tree t1, unsigned int n,
-                                               tree t2);
+  static tree build_node(tree t1, unsigned int n, tree t2);
   /// BUG HYPOTHESIS: Partially apply build_node in stages.
   /// g = build_node t1  → closure captures t1
   /// h = g 42           → closure captures t1 and 42
@@ -176,10 +193,8 @@ struct NestedPartialApp {
     }();
   }();
   /// Variation: 4-argument function, triple nesting.
-  __attribute__((pure)) static unsigned int quad_fn(const tree &a,
-                                                    const unsigned int &b,
-                                                    const unsigned int &c,
-                                                    const tree &d);
+  static unsigned int quad_fn(const tree &a, const unsigned int &b,
+                              const unsigned int &c, const tree &d);
   static inline const unsigned int triple_partial = []() {
     return []() {
       tree t = tree::node(tree::leaf(), 10u, tree::leaf());

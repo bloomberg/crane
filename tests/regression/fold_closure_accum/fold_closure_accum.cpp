@@ -1,8 +1,7 @@
 #include <fold_closure_accum.h>
 
 /// Sum all values in a tree.
-__attribute__((pure)) unsigned int
-FoldClosureAccum::tree_sum(const FoldClosureAccum::tree &t) {
+unsigned int FoldClosureAccum::tree_sum(const FoldClosureAccum::tree &t) {
   if (std::holds_alternative<typename FoldClosureAccum::tree::Leaf>(t.v())) {
     return 0u;
   } else {
@@ -21,7 +20,7 @@ FoldClosureAccum::tree_sum(const FoldClosureAccum::tree &t) {
 /// captures the previous closure (acc) and the current tree (t).
 /// If captures are by reference, the previous closure is stack-local
 /// and dies when the fold step returns, creating a dangling chain.
-__attribute__((pure)) unsigned int
+unsigned int
 FoldClosureAccum::compose_adders(const List<FoldClosureAccum::tree> &trees,
                                  const unsigned int &_x0) {
   return trees.template fold_right<std::function<unsigned int(unsigned int)>>(

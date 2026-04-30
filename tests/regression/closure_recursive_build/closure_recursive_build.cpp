@@ -7,7 +7,7 @@
 /// by &. The closures are stored in FCons constructors. After
 /// build_adders returns, all intermediate stack frames are gone,
 /// and every closure holds a dangling reference.
-__attribute__((pure)) ClosureRecursiveBuild::fn_list
+ClosureRecursiveBuild::fn_list
 ClosureRecursiveBuild::build_adders(unsigned int n) {
   if (n <= 0) {
     return fn_list::fnil();
@@ -29,7 +29,7 @@ ClosureRecursiveBuild::build_adders(unsigned int n) {
   }
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 ClosureRecursiveBuild::apply_first(const ClosureRecursiveBuild::fn_list &fl,
                                    const unsigned int &x) {
   if (std::holds_alternative<typename ClosureRecursiveBuild::fn_list::FNil>(
@@ -42,7 +42,7 @@ ClosureRecursiveBuild::apply_first(const ClosureRecursiveBuild::fn_list &fl,
   }
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 ClosureRecursiveBuild::apply_all_sum(const ClosureRecursiveBuild::fn_list &fl,
                                      const unsigned int &x) {
   if (std::holds_alternative<typename ClosureRecursiveBuild::fn_list::FNil>(

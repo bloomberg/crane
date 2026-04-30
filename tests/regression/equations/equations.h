@@ -14,8 +14,8 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct PeanoNat {
-  __attribute__((pure)) static bool even(const unsigned int &n);
-  __attribute__((pure)) static unsigned int div2(const unsigned int &n);
+  static bool even(const unsigned int &n);
+  static unsigned int div2(const unsigned int &n);
 };
 
 template <typename I, typename
@@ -30,8 +30,8 @@ concept FunctionalInduction = requires {
 
 struct Equations {
   template <MapsTo<unsigned int, std::pair<unsigned int, unsigned int>> F3>
-  __attribute__((pure)) static unsigned int
-  gcd_clause_3(unsigned int n, unsigned int n0, const bool &refine, F3 &&gcd0) {
+  static unsigned int gcd_clause_3(unsigned int n, unsigned int n0,
+                                   const bool &refine, F3 &&gcd0) {
     if (refine) {
       return gcd0(std::make_pair(
           (n + 1),
@@ -44,7 +44,7 @@ struct Equations {
   }
 
   template <MapsTo<unsigned int, std::pair<unsigned int, unsigned int>> F1>
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   gcd_functional(const std::pair<unsigned int, unsigned int> &p, F1 &&gcd0) {
     const unsigned int &n = p.first;
     const unsigned int &n0 = p.second;
@@ -61,11 +61,10 @@ struct Equations {
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  gcd(const std::pair<unsigned int, unsigned int> &x);
-  __attribute__((pure)) static unsigned int
-  gcd_unfold_clause_3(unsigned int n, unsigned int n0, const bool &refine);
-  __attribute__((pure)) static unsigned int
+  static unsigned int gcd(const std::pair<unsigned int, unsigned int> &x);
+  static unsigned int gcd_unfold_clause_3(unsigned int n, unsigned int n0,
+                                          const bool &refine);
+  static unsigned int
   gcd_unfold(const std::pair<unsigned int, unsigned int> &p);
   struct gcd_graph;
   struct gcd_clause_3_graph;
@@ -118,7 +117,7 @@ struct Equations {
     }
 
     // ACCESSORS
-    __attribute__((pure)) gcd_graph clone() const {
+    gcd_graph clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Gcd_graph_equation_1>(_sv.v())) {
         const auto &[d_y] = std::get<Gcd_graph_equation_1>(_sv.v());
@@ -138,19 +137,16 @@ struct Equations {
     }
 
     // CREATORS
-    __attribute__((pure)) static gcd_graph
-    gcd_graph_equation_1(unsigned int y) {
+    static gcd_graph gcd_graph_equation_1(unsigned int y) {
       return gcd_graph(Gcd_graph_equation_1{std::move(y)});
     }
 
-    __attribute__((pure)) static gcd_graph
-    gcd_graph_equation_2(unsigned int n) {
+    static gcd_graph gcd_graph_equation_2(unsigned int n) {
       return gcd_graph(Gcd_graph_equation_2{std::move(n)});
     }
 
-    __attribute__((pure)) static gcd_graph
-    gcd_graph_refinement_3(unsigned int n, unsigned int n0,
-                           gcd_clause_3_graph hind) {
+    static gcd_graph gcd_graph_refinement_3(unsigned int n, unsigned int n0,
+                                            gcd_clause_3_graph hind) {
       return gcd_graph(Gcd_graph_refinement_3{
           std::move(n), std::move(n0),
           std::make_unique<gcd_clause_3_graph>(std::move(hind))});
@@ -160,7 +156,7 @@ struct Equations {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   struct gcd_clause_3_graph {
@@ -211,7 +207,7 @@ struct Equations {
     }
 
     // ACCESSORS
-    __attribute__((pure)) gcd_clause_3_graph clone() const {
+    gcd_clause_3_graph clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Gcd_clause_3_graph_equation_1>(_sv.v())) {
         const auto &[d_n, d_n0, d_hind] =
@@ -231,17 +227,17 @@ struct Equations {
     }
 
     // CREATORS
-    __attribute__((pure)) static gcd_clause_3_graph
-    gcd_clause_3_graph_equation_1(unsigned int n, unsigned int n0,
-                                  gcd_graph hind) {
+    static gcd_clause_3_graph gcd_clause_3_graph_equation_1(unsigned int n,
+                                                            unsigned int n0,
+                                                            gcd_graph hind) {
       return gcd_clause_3_graph(Gcd_clause_3_graph_equation_1{
           std::move(n), std::move(n0),
           std::make_unique<gcd_graph>(std::move(hind))});
     }
 
-    __attribute__((pure)) static gcd_clause_3_graph
-    gcd_clause_3_graph_equation_2(unsigned int n, unsigned int n0,
-                                  gcd_graph hind) {
+    static gcd_clause_3_graph gcd_clause_3_graph_equation_2(unsigned int n,
+                                                            unsigned int n0,
+                                                            gcd_graph hind) {
       return gcd_clause_3_graph(Gcd_clause_3_graph_equation_2{
           std::move(n), std::move(n0),
           std::make_unique<gcd_graph>(std::move(hind))});
@@ -251,7 +247,7 @@ struct Equations {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2 = void, MapsTo<T1, unsigned int> F0,
@@ -398,7 +394,7 @@ struct Equations {
     return gcd_graph_mut<T1, T2>(_x0, _x1, _x2, _x3, _x4, _x5, _x6, _x7);
   }
 
-  __attribute__((pure)) static gcd_graph
+  static gcd_graph
   gcd_graph_correct(const std::pair<unsigned int, unsigned int> &x);
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -441,8 +437,7 @@ struct Equations {
     using fun_ind_prf_ty =
         std::function<gcd_graph(std::pair<unsigned int, unsigned int>)>;
 
-    __attribute__((pure)) static gcd_graph
-    fun_ind_prf(std::pair<unsigned int, unsigned int> a0) {
+    static gcd_graph fun_ind_prf(std::pair<unsigned int, unsigned int> a0) {
       return gcd_graph_correct(a0);
     }
   };
@@ -453,9 +448,9 @@ struct Equations {
           std::function<unsigned int(std::pair<unsigned int, unsigned int>)>>);
 
   template <MapsTo<unsigned int, unsigned int> F2>
-  __attribute__((pure)) static unsigned int
-  collatz_steps_clause_3(const unsigned int &n, const bool &refine,
-                         F2 &&collatz_steps0) {
+  static unsigned int collatz_steps_clause_3(const unsigned int &n,
+                                             const bool &refine,
+                                             F2 &&collatz_steps0) {
     if (refine) {
       return (collatz_steps0(PeanoNat::div2(n)) + 1);
     } else {
@@ -464,8 +459,8 @@ struct Equations {
   }
 
   template <MapsTo<unsigned int, unsigned int> F1>
-  __attribute__((pure)) static unsigned int
-  collatz_steps_functional(const unsigned int &n, F1 &&collatz_steps0) {
+  static unsigned int collatz_steps_functional(const unsigned int &n,
+                                               F1 &&collatz_steps0) {
     if (n <= 0) {
       return 0u;
     } else {
@@ -480,12 +475,10 @@ struct Equations {
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  collatz_steps(const unsigned int &x);
-  __attribute__((pure)) static unsigned int
-  collatz_steps_unfold_clause_3(const unsigned int &n, const bool &refine);
-  __attribute__((pure)) static unsigned int
-  collatz_steps_unfold(const unsigned int &n);
+  static unsigned int collatz_steps(const unsigned int &x);
+  static unsigned int collatz_steps_unfold_clause_3(const unsigned int &n,
+                                                    const bool &refine);
+  static unsigned int collatz_steps_unfold(const unsigned int &n);
   struct collatz_steps_graph;
   struct collatz_steps_clause_3_graph;
 
@@ -538,7 +531,7 @@ struct Equations {
     }
 
     // ACCESSORS
-    __attribute__((pure)) collatz_steps_graph clone() const {
+    collatz_steps_graph clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Collatz_steps_graph_equation_1>(_sv.v())) {
         return collatz_steps_graph(Collatz_steps_graph_equation_1{});
@@ -557,17 +550,15 @@ struct Equations {
     }
 
     // CREATORS
-    __attribute__((pure)) static collatz_steps_graph
-    collatz_steps_graph_equation_1() {
+    static collatz_steps_graph collatz_steps_graph_equation_1() {
       return collatz_steps_graph(Collatz_steps_graph_equation_1{});
     }
 
-    __attribute__((pure)) static collatz_steps_graph
-    collatz_steps_graph_equation_2() {
+    static collatz_steps_graph collatz_steps_graph_equation_2() {
       return collatz_steps_graph(Collatz_steps_graph_equation_2{});
     }
 
-    __attribute__((pure)) static collatz_steps_graph
+    static collatz_steps_graph
     collatz_steps_graph_refinement_3(unsigned int n,
                                      collatz_steps_clause_3_graph hind) {
       return collatz_steps_graph(Collatz_steps_graph_refinement_3{
@@ -579,7 +570,7 @@ struct Equations {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   struct collatz_steps_clause_3_graph {
@@ -632,7 +623,7 @@ struct Equations {
     }
 
     // ACCESSORS
-    __attribute__((pure)) collatz_steps_clause_3_graph clone() const {
+    collatz_steps_clause_3_graph clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Collatz_steps_clause_3_graph_equation_1>(
               _sv.v())) {
@@ -655,7 +646,7 @@ struct Equations {
     }
 
     // CREATORS
-    __attribute__((pure)) static collatz_steps_clause_3_graph
+    static collatz_steps_clause_3_graph
     collatz_steps_clause_3_graph_equation_1(unsigned int n,
                                             collatz_steps_graph hind) {
       return collatz_steps_clause_3_graph(
@@ -664,7 +655,7 @@ struct Equations {
               std::make_unique<collatz_steps_graph>(std::move(hind))});
     }
 
-    __attribute__((pure)) static collatz_steps_clause_3_graph
+    static collatz_steps_clause_3_graph
     collatz_steps_clause_3_graph_equation_2(unsigned int n,
                                             collatz_steps_graph hind) {
       return collatz_steps_clause_3_graph(
@@ -677,7 +668,7 @@ struct Equations {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2 = void, typename F2, typename F3,
@@ -798,8 +789,7 @@ struct Equations {
                                            _x7);
   }
 
-  __attribute__((pure)) static collatz_steps_graph
-  collatz_steps_graph_correct(const unsigned int &x);
+  static collatz_steps_graph collatz_steps_graph_correct(const unsigned int &x);
 
   template <typename T1, MapsTo<T1, unsigned int, T1> F2,
             MapsTo<T1, unsigned int, T1> F3>
@@ -829,8 +819,7 @@ struct Equations {
   struct FunctionalInduction_collatz_steps {
     using fun_ind_prf_ty = std::function<collatz_steps_graph(unsigned int)>;
 
-    __attribute__((pure)) static collatz_steps_graph
-    fun_ind_prf(unsigned int a0) {
+    static collatz_steps_graph fun_ind_prf(unsigned int a0) {
       return collatz_steps_graph_correct(a0);
     }
   };

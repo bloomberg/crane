@@ -9,12 +9,9 @@ unsigned int Opaque::safe_pred(const unsigned int &n) {
   }
 }
 
-__attribute__((pure)) unsigned int Opaque::pred_of_succ(unsigned int n) {
-  return safe_pred((n + 1));
-}
+unsigned int Opaque::pred_of_succ(unsigned int n) { return safe_pred((n + 1)); }
 
-__attribute__((pure)) bool Opaque::nat_eq_dec(const unsigned int &n,
-                                              const unsigned int &x) {
+bool Opaque::nat_eq_dec(const unsigned int &n, const unsigned int &x) {
   if (n <= 0) {
     if (x <= 0) {
       return true;
@@ -37,8 +34,7 @@ __attribute__((pure)) bool Opaque::nat_eq_dec(const unsigned int &n,
   }
 }
 
-__attribute__((pure)) bool Opaque::are_equal(const unsigned int &n,
-                                             const unsigned int &m) {
+bool Opaque::are_equal(const unsigned int &n, const unsigned int &m) {
   if (nat_eq_dec(n, m)) {
     return true;
   } else {

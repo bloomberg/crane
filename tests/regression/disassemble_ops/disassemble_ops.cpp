@@ -1,7 +1,7 @@
 #include <disassemble_ops.h>
 
-__attribute__((pure)) DisassembleOps::instruction
-DisassembleOps::decode1(const unsigned int &b1, const unsigned int &b2) {
+DisassembleOps::instruction DisassembleOps::decode1(const unsigned int &b1,
+                                                    const unsigned int &b2) {
   if ((2u ? b1 % 2u : b1) == 0u) {
     return instruction::nop2();
   } else {
@@ -9,8 +9,8 @@ DisassembleOps::decode1(const unsigned int &b1, const unsigned int &b2) {
   }
 }
 
-__attribute__((pure)) List<unsigned int>
-DisassembleOps::drop_(const unsigned int &n, List<unsigned int> l) {
+List<unsigned int> DisassembleOps::drop_(const unsigned int &n,
+                                         List<unsigned int> l) {
   if (n <= 0) {
     return l;
   } else {
@@ -25,7 +25,6 @@ DisassembleOps::drop_(const unsigned int &n, List<unsigned int> l) {
   }
 }
 
-__attribute__((pure))
 std::optional<std::pair<DisassembleOps::instruction, unsigned int>>
 DisassembleOps::disassemble1(const List<unsigned int> &rom0,
                              const unsigned int &addr) {
@@ -50,8 +49,8 @@ DisassembleOps::disassemble1(const List<unsigned int> &rom0,
   }
 }
 
-__attribute__((pure)) DisassembleOps::instruction
-DisassembleOps::decode2(const unsigned int &b1, const unsigned int &b2) {
+DisassembleOps::instruction DisassembleOps::decode2(const unsigned int &b1,
+                                                    const unsigned int &b2) {
   if (b1 == 0u) {
     return instruction::nop();
   } else {
@@ -59,7 +58,6 @@ DisassembleOps::decode2(const unsigned int &b1, const unsigned int &b2) {
   }
 }
 
-__attribute__((pure))
 std::optional<std::pair<DisassembleOps::instruction, unsigned int>>
 DisassembleOps::disassemble2(const List<unsigned int> &rom0,
                              const unsigned int &addr) {
@@ -84,8 +82,8 @@ DisassembleOps::disassemble2(const List<unsigned int> &rom0,
   }
 }
 
-__attribute__((pure)) DisassembleOps::instruction
-DisassembleOps::decode3(const unsigned int &b1, const unsigned int &b2) {
+DisassembleOps::instruction DisassembleOps::decode3(const unsigned int &b1,
+                                                    const unsigned int &b2) {
   if (b1 == 0u) {
     return instruction::nop();
   } else {
@@ -93,7 +91,6 @@ DisassembleOps::decode3(const unsigned int &b1, const unsigned int &b2) {
   }
 }
 
-__attribute__((pure))
 std::optional<std::pair<DisassembleOps::instruction, unsigned int>>
 DisassembleOps::disassemble3(const List<unsigned int> &rom0,
                              const unsigned int &addr) {
@@ -118,8 +115,8 @@ DisassembleOps::disassemble3(const List<unsigned int> &rom0,
   }
 }
 
-__attribute__((pure)) DisassembleOps::instruction
-DisassembleOps::decode4(const unsigned int &b1, const unsigned int &b2) {
+DisassembleOps::instruction DisassembleOps::decode4(const unsigned int &b1,
+                                                    const unsigned int &b2) {
   if (b1 == 0u) {
     return instruction::nop();
   } else {
@@ -127,7 +124,6 @@ DisassembleOps::decode4(const unsigned int &b1, const unsigned int &b2) {
   }
 }
 
-__attribute__((pure))
 std::optional<std::pair<DisassembleOps::instruction, unsigned int>>
 DisassembleOps::disassemble4(const List<unsigned int> &rom0,
                              const unsigned int &addr) {

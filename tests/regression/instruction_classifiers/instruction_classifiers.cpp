@@ -1,6 +1,6 @@
 #include <instruction_classifiers.h>
 
-__attribute__((pure)) unsigned int InstructionClassifiers::count_writes_acc(
+unsigned int InstructionClassifiers::count_writes_acc(
     const List<InstructionClassifiers::instr_acc> &prog) {
   if (std::holds_alternative<
           typename List<InstructionClassifiers::instr_acc>::Nil>(prog.v())) {
@@ -13,7 +13,7 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_acc(
   }
 }
 
-__attribute__((pure)) unsigned int InstructionClassifiers::count_writes_ram(
+unsigned int InstructionClassifiers::count_writes_ram(
     const List<InstructionClassifiers::instr_ram> &prog) {
   if (std::holds_alternative<
           typename List<InstructionClassifiers::instr_ram>::Nil>(prog.v())) {
@@ -26,7 +26,7 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_ram(
   }
 }
 
-__attribute__((pure)) unsigned int InstructionClassifiers::count_writes_regs(
+unsigned int InstructionClassifiers::count_writes_regs(
     const List<InstructionClassifiers::instr_regs> &prog) {
   if (std::holds_alternative<
           typename List<InstructionClassifiers::instr_regs>::Nil>(prog.v())) {
@@ -39,7 +39,7 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_regs(
   }
 }
 
-__attribute__((pure)) unsigned int InstructionClassifiers::count_jumps(
+unsigned int InstructionClassifiers::count_jumps(
     const List<InstructionClassifiers::instr_jump> &prog) {
   if (std::holds_alternative<
           typename List<InstructionClassifiers::instr_jump>::Nil>(prog.v())) {

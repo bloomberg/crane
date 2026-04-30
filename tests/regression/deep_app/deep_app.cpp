@@ -1,7 +1,7 @@
 #include <deep_app.h>
 
 /// Tail-recursive builder — loopified.
-__attribute__((pure)) DeepApp::mylist<unsigned int>
+DeepApp::mylist<unsigned int>
 DeepApp::build(unsigned int n, DeepApp::mylist<unsigned int> acc) {
   DeepApp::mylist<unsigned int> _result;
   DeepApp::mylist<unsigned int> _loop_acc = std::move(acc);
@@ -23,20 +23,19 @@ DeepApp::build(unsigned int n, DeepApp::mylist<unsigned int> acc) {
 }
 
 /// Identity map to force traversal.
-__attribute__((pure)) DeepApp::mylist<unsigned int>
+DeepApp::mylist<unsigned int>
 DeepApp::map_id(const DeepApp::mylist<unsigned int> &l) {
   return map<unsigned int, unsigned int>([](unsigned int x) { return x; }, l);
 }
 
 /// Append two lists.
-__attribute__((pure)) DeepApp::mylist<unsigned int>
+DeepApp::mylist<unsigned int>
 DeepApp::append_lists(const DeepApp::mylist<unsigned int> &_x0,
                       const DeepApp::mylist<unsigned int> &_x1) {
   return app<unsigned int>(_x0, _x1);
 }
 
-__attribute__((pure)) unsigned int
-DeepApp::head_or_zero(const DeepApp::mylist<unsigned int> &l) {
+unsigned int DeepApp::head_or_zero(const DeepApp::mylist<unsigned int> &l) {
   if (std::holds_alternative<typename DeepApp::mylist<unsigned int>::Mynil>(
           l.v())) {
     return 0u;

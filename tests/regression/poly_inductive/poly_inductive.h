@@ -45,7 +45,7 @@ struct PolyInductive {
     }
 
     // ACCESSORS
-    __attribute__((pure)) pbox<t_A> clone() const {
+    pbox<t_A> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<PBox>(_sv.v());
       return pbox<t_A>(PBox{d_a0});
@@ -57,15 +57,13 @@ struct PolyInductive {
       d_v_ = PBox{t_A(d_a0)};
     }
 
-    __attribute__((pure)) static pbox<t_A> PBox_(t_A a0) {
-      return pbox(PBox{std::move(a0)});
-    }
+    static pbox<t_A> PBox_(t_A a0) { return pbox(PBox{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     t_A punbox() const {
       auto &&_sv = *(this);
@@ -121,7 +119,7 @@ struct PolyInductive {
     }
 
     // ACCESSORS
-    __attribute__((pure)) ppair<t_A, t_B> clone() const {
+    ppair<t_A, t_B> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<PPair>(_sv.v());
       return ppair<t_A, t_B>(PPair{d_a0, d_a1});
@@ -135,7 +133,7 @@ struct PolyInductive {
       d_v_ = PPair{t_A(d_a0), t_B(d_a1)};
     }
 
-    __attribute__((pure)) static ppair<t_A, t_B> PPair_(t_A a0, t_B a1) {
+    static ppair<t_A, t_B> PPair_(t_A a0, t_B a1) {
       return ppair(PPair{std::move(a0), std::move(a1)});
     }
 
@@ -143,7 +141,7 @@ struct PolyInductive {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     t_B psnd() const {
       auto &&_sv = *(this);
@@ -212,7 +210,7 @@ struct PolyInductive {
     }
 
     // ACCESSORS
-    __attribute__((pure)) pmaybe<t_A> clone() const {
+    pmaybe<t_A> clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<PNothing>(_sv.v())) {
         return pmaybe<t_A>(PNothing{});
@@ -232,19 +230,15 @@ struct PolyInductive {
       }
     }
 
-    __attribute__((pure)) static pmaybe<t_A> pnothing() {
-      return pmaybe(PNothing{});
-    }
+    static pmaybe<t_A> pnothing() { return pmaybe(PNothing{}); }
 
-    __attribute__((pure)) static pmaybe<t_A> pjust(t_A a0) {
-      return pmaybe(PJust{std::move(a0)});
-    }
+    static pmaybe<t_A> pjust(t_A a0) { return pmaybe(PJust{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     t_A pmaybe_default(const t_A d) const {
       auto &&_sv = *(this);
@@ -257,7 +251,7 @@ struct PolyInductive {
     }
 
     template <typename T1, MapsTo<T1, t_A> F0>
-    __attribute__((pure)) pmaybe<T1> pmaybe_map(F0 &&f) const {
+    pmaybe<T1> pmaybe_map(F0 &&f) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(_sv.v())) {
         return pmaybe<T1>::pnothing();
@@ -330,19 +324,36 @@ struct PolyInductive {
     }
 
     // ACCESSORS
-    __attribute__((pure)) ptree<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<PLeaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<PLeaf>(_sv.v());
-        return ptree<t_A>(PLeaf{d_a0});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<PNode>(_sv.v());
-        return ptree<t_A>(PNode{
-            d_a0 ? std::make_unique<PolyInductive::ptree<t_A>>(d_a0->clone())
-                 : nullptr,
-            d_a1 ? std::make_unique<PolyInductive::ptree<t_A>>(d_a1->clone())
-                 : nullptr});
+    ptree clone() const {
+      ptree _out{};
+
+      struct _CloneFrame {
+        const ptree *_src;
+        ptree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const ptree *_src = _frame._src;
+        ptree *_dst = _frame._dst;
+        if (std::holds_alternative<PLeaf>(_src->v())) {
+          const auto &_alt = std::get<PLeaf>(_src->v());
+          _dst->d_v_ = PLeaf{_alt.d_a0};
+        } else {
+          const auto &_alt = std::get<PNode>(_src->v());
+          _dst->d_v_ = PNode{_alt.d_a0 ? std::make_unique<ptree>() : nullptr,
+                             _alt.d_a1 ? std::make_unique<ptree>() : nullptr};
+          auto &_dst_alt = std::get<PNode>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -358,12 +369,9 @@ struct PolyInductive {
       }
     }
 
-    __attribute__((pure)) static ptree<t_A> pleaf(t_A a0) {
-      return ptree(PLeaf{std::move(a0)});
-    }
+    static ptree<t_A> pleaf(t_A a0) { return ptree(PLeaf{std::move(a0)}); }
 
-    __attribute__((pure)) static ptree<t_A> pnode(ptree<t_A> a0,
-                                                  ptree<t_A> a1) {
+    static ptree<t_A> pnode(ptree<t_A> a0, ptree<t_A> a1) {
       return ptree(PNode{std::make_unique<ptree<t_A>>(std::move(a0)),
                          std::make_unique<ptree<t_A>>(std::move(a1))});
     }
@@ -392,9 +400,9 @@ struct PolyInductive {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int ptree_size() const {
+    unsigned int ptree_size() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename ptree<t_A>::PLeaf>(_sv.v())) {
         return 1u;

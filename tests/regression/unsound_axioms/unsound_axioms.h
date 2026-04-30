@@ -28,32 +28,29 @@ struct UnsoundAxioms {
     unsigned int f2;
 
     // ACCESSORS
-    __attribute__((pure)) Rec clone() const {
-      return Rec{(*(this)).f1, (*(this)).f2};
-    }
+    Rec clone() const { return Rec{(*(this)).f1, (*(this)).f2}; }
   };
 
-  __attribute__((pure)) static unsigned int cast_confusion(const Rec &r);
-  __attribute__((pure)) static unsigned int choose_in_match(const Rec &r);
+  static unsigned int cast_confusion(const Rec &r);
+  static unsigned int choose_in_match(const Rec &r);
 
   struct ProofRec {
     unsigned int pf_val;
     unsigned int pf_val2;
 
     // ACCESSORS
-    __attribute__((pure)) ProofRec clone() const {
+    ProofRec clone() const {
       return ProofRec{(*(this)).pf_val, (*(this)).pf_val2};
     }
   };
 
-  __attribute__((pure)) static unsigned int
-  extract_proof_computation(const ProofRec &pr);
-  __attribute__((pure)) static bool use_type_eq(unsigned int n);
+  static unsigned int extract_proof_computation(const ProofRec &pr);
+  static bool use_type_eq(unsigned int n);
   static Rec impossible_rec();
   static unsigned int use_impossible(const std::monostate &_x);
   static unsigned int from_false(const Rec &_x);
   static unsigned int prop_as_type();
-  __attribute__((pure)) static unsigned int use_prop_as_type(const Rec &r);
+  static unsigned int use_prop_as_type(const Rec &r);
 };
 
 #endif // INCLUDED_UNSOUND_AXIOMS

@@ -120,9 +120,9 @@ struct LargeEnum {
     }
   }
 
-  __attribute__((pure)) static unsigned int color_to_nat(const Color c);
-  __attribute__((pure)) static bool is_warm(const Color c);
-  __attribute__((pure)) static bool is_neutral(const Color c);
+  static unsigned int color_to_nat(const Color c);
+  static bool is_warm(const Color c);
+  static bool is_neutral(const Color c);
 
   struct tok {
     // TYPES
@@ -205,7 +205,7 @@ struct LargeEnum {
     }
 
     // ACCESSORS
-    __attribute__((pure)) tok clone() const {
+    tok clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<TNum>(_sv.v())) {
         const auto &[d_a0] = std::get<TNum>(_sv.v());
@@ -237,39 +237,35 @@ struct LargeEnum {
     }
 
     // CREATORS
-    __attribute__((pure)) static tok tnum(unsigned int a0) {
-      return tok(TNum{std::move(a0)});
-    }
+    static tok tnum(unsigned int a0) { return tok(TNum{std::move(a0)}); }
 
-    __attribute__((pure)) static tok tplus() { return tok(TPlus{}); }
+    static tok tplus() { return tok(TPlus{}); }
 
-    __attribute__((pure)) static tok tminus() { return tok(TMinus{}); }
+    static tok tminus() { return tok(TMinus{}); }
 
-    __attribute__((pure)) static tok tstar() { return tok(TStar{}); }
+    static tok tstar() { return tok(TStar{}); }
 
-    __attribute__((pure)) static tok tslash() { return tok(TSlash{}); }
+    static tok tslash() { return tok(TSlash{}); }
 
-    __attribute__((pure)) static tok tlparen() { return tok(TLParen{}); }
+    static tok tlparen() { return tok(TLParen{}); }
 
-    __attribute__((pure)) static tok trparen() { return tok(TRParen{}); }
+    static tok trparen() { return tok(TRParen{}); }
 
-    __attribute__((pure)) static tok teq() { return tok(TEq{}); }
+    static tok teq() { return tok(TEq{}); }
 
-    __attribute__((pure)) static tok tbang() { return tok(TBang{}); }
+    static tok tbang() { return tok(TBang{}); }
 
-    __attribute__((pure)) static tok tsemicolon() { return tok(TSemicolon{}); }
+    static tok tsemicolon() { return tok(TSemicolon{}); }
 
-    __attribute__((pure)) static tok tident(unsigned int a0) {
-      return tok(TIdent{std::move(a0)});
-    }
+    static tok tident(unsigned int a0) { return tok(TIdent{std::move(a0)}); }
 
-    __attribute__((pure)) static tok teof() { return tok(TEOF{}); }
+    static tok teof() { return tok(TEOF{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -340,8 +336,8 @@ struct LargeEnum {
     }
   }
 
-  __attribute__((pure)) static unsigned int tok_to_nat(const tok &t);
-  __attribute__((pure)) static bool is_operator(const tok &t);
+  static unsigned int tok_to_nat(const tok &t);
+  static bool is_operator(const tok &t);
   static inline const unsigned int test_red = color_to_nat(Color::e_RED);
   static inline const unsigned int test_pink = color_to_nat(Color::e_PINK);
   static inline const bool test_warm_red = is_warm(Color::e_RED);

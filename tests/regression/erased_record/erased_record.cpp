@@ -1,7 +1,6 @@
 #include <erased_record.h>
 
-__attribute__((pure)) unsigned int
-ErasedRecord::complex_match(const ErasedRecord::ManyProps &r) {
+unsigned int ErasedRecord::complex_match(const ErasedRecord::ManyProps &r) {
   unsigned int f0 = r.field0;
   unsigned int f1 = r.field1;
   unsigned int f2 = r.field2;
@@ -10,8 +9,7 @@ ErasedRecord::complex_match(const ErasedRecord::ManyProps &r) {
   return ((((f0 + f1) + f2) + f3) + f4);
 }
 
-__attribute__((pure)) unsigned int
-ErasedRecord::unusual_body(const ErasedRecord::ManyProps &r) {
+unsigned int ErasedRecord::unusual_body(const ErasedRecord::ManyProps &r) {
   unsigned int f0 = r.field0;
   unsigned int f1 = r.field1;
   unsigned int f2 = r.field2;
@@ -20,7 +18,7 @@ ErasedRecord::unusual_body(const ErasedRecord::ManyProps &r) {
   return ((((f0 + f1) + f2) + f3) + f4);
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 ErasedRecord::access_mostly_props(const ErasedRecord::MostlyProps &r) {
   unsigned int r1 = r.real1;
   unsigned int r2 = r.real2;

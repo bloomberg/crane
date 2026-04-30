@@ -1985,8 +1985,7 @@ and body_is_throw = function
 (** Compute the C++ function qualifier prefix as a three-way decision:
     - [constexpr] when the function is constexpr-eligible and [can_constexpr]
       is [true] (i.e. the definition is visible in the header);
-    - [__attribute__((pure))] when the return type is allocation-free; or
-    - nothing, for functions that allocate, throw, or take non-literal types.
+    - nothing otherwise.
 
     @param can_constexpr  whether this call site may use [constexpr]
     @param throws         whether the body unconditionally throws
@@ -1995,8 +1994,6 @@ and body_is_throw = function
 and fun_qualifier ~can_constexpr ~throws ~no_pure ret_ty params =
   if can_constexpr && not throws && not no_pure && is_constexpr_eligible ret_ty params then
     str "constexpr "
-  else if is_pure_return_type ret_ty && not throws && not no_pure then
-    str "__attribute__((pure)) "
   else
     mt ()
 
@@ -2775,12 +2772,7 @@ and pp_cpp_decl_raw env = function
        full definition to be visible in the header).  We don't use
        {!fun_qualifier} because [can_constexpr] is unconditionally false
        and the param list has a different shape ([Id.t option] vs [Id.t]). *)
-    let qualifier =
-      if is_pure_return_type ret_ty && not no_pure then
-        str "__attribute__((pure)) "
-      else
-        mt ()
-    in
+    let qualifier = mt () in
     h
       ( qualifier
       ++ static_kw

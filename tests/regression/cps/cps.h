@@ -50,15 +50,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -72,9 +91,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -101,9 +120,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) unsigned int length() const {
+  unsigned int length() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
@@ -115,11 +134,11 @@ public:
 };
 
 struct Nat {
-  __attribute__((pure)) static bool even(const unsigned int &n);
+  static bool even(const unsigned int &n);
 };
 
 struct CPS {
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   fact_cps(const unsigned int &n,
            const std::function<unsigned int(unsigned int)> k) {
     if (n <= 0) {
@@ -131,9 +150,9 @@ struct CPS {
     }
   }
 
-  __attribute__((pure)) static unsigned int factorial(const unsigned int &n);
+  static unsigned int factorial(const unsigned int &n);
 
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   fib_cps(const unsigned int &n,
           const std::function<unsigned int(unsigned int)> k) {
     if (n <= 0) {
@@ -152,7 +171,7 @@ struct CPS {
     }
   }
 
-  __attribute__((pure)) static unsigned int fibonacci(const unsigned int &n);
+  static unsigned int fibonacci(const unsigned int &n);
 
   struct tree {
     // TYPES
@@ -194,25 +213,42 @@ struct CPS {
     }
 
     // ACCESSORS
-    __attribute__((pure)) tree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<Leaf>(_sv.v());
-        return tree(Leaf{d_a0});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Node>(_sv.v());
-        return tree(
-            Node{d_a0 ? std::make_unique<CPS::tree>(d_a0->clone()) : nullptr,
-                 d_a1 ? std::make_unique<CPS::tree>(d_a1->clone()) : nullptr});
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          const auto &_alt = std::get<Leaf>(_src->v());
+          _dst->d_v_ = Leaf{_alt.d_a0};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ = Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static tree leaf(unsigned int a0) {
-      return tree(Leaf{std::move(a0)});
-    }
+    static tree leaf(unsigned int a0) { return tree(Leaf{std::move(a0)}); }
 
-    __attribute__((pure)) static tree node(tree a0, tree a1) {
+    static tree node(tree a0, tree a1) {
       return tree(Node{std::make_unique<tree>(std::move(a0)),
                        std::make_unique<tree>(std::move(a1))});
     }
@@ -241,7 +277,7 @@ struct CPS {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -270,7 +306,7 @@ struct CPS {
     }
   }
 
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   tree_sum_cps(const tree &t,
                const std::function<unsigned int(unsigned int)> k) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
@@ -288,9 +324,9 @@ struct CPS {
     }
   }
 
-  __attribute__((pure)) static unsigned int tree_sum(const tree &t);
+  static unsigned int tree_sum(const tree &t);
 
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   sum_cps(const List<unsigned int> &l,
           const std::function<unsigned int(unsigned int)> k) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
@@ -305,11 +341,10 @@ struct CPS {
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  list_sum(const List<unsigned int> &l);
+  static unsigned int list_sum(const List<unsigned int> &l);
 
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static unsigned int partition_cps(
+  static unsigned int partition_cps(
       F0 &&p, const List<unsigned int> &l,
       const std::function<unsigned int(List<unsigned int>, List<unsigned int>)>
           k) {
@@ -331,8 +366,7 @@ struct CPS {
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  count_evens(const List<unsigned int> &l);
+  static unsigned int count_evens(const List<unsigned int> &l);
   static inline const unsigned int test_fact_5 = factorial(5u);
   static inline const unsigned int test_fib_7 = fibonacci(7u);
   static inline const unsigned int test_tree = tree_sum(

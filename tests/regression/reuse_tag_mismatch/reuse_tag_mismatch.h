@@ -63,7 +63,7 @@ struct ReuseTagMismatch {
     }
 
     // ACCESSORS
-    __attribute__((pure)) direction clone() const {
+    direction clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<GoUp>(_sv.v())) {
         const auto &[d_a0] = std::get<GoUp>(_sv.v());
@@ -75,11 +75,11 @@ struct ReuseTagMismatch {
     }
 
     // CREATORS
-    __attribute__((pure)) static direction goup(unsigned int a0) {
+    static direction goup(unsigned int a0) {
       return direction(GoUp{std::move(a0)});
     }
 
-    __attribute__((pure)) static direction godown(unsigned int a0) {
+    static direction godown(unsigned int a0) {
       return direction(GoDown{std::move(a0)});
     }
 
@@ -87,7 +87,7 @@ struct ReuseTagMismatch {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -120,8 +120,7 @@ struct ReuseTagMismatch {
   /// - GoUp/GoDown are the same inductive (direction)
   /// - Both have arity 1
   /// But GoUp and GoDown are DIFFERENT constructors.
-  __attribute__((pure)) static direction id_or_flip(direction d,
-                                                    const bool &flip_flag);
+  static direction id_or_flip(direction d, const bool &flip_flag);
   /// test1: flip GoUp 42 -> should be GoDown 42.
   /// Match on the result:
   /// - GoUp _ => 1 (wrong, reuse bug would make this match)

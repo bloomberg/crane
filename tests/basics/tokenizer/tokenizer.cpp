@@ -56,7 +56,7 @@ Tokenizer::next_token(const std::basic_string_view<char> input,
   return aux(static_cast<unsigned int>(input.length()), int64_t(0), input);
 }
 
-__attribute__((pure)) List<std::basic_string_view<char>>
+List<std::basic_string_view<char>>
 Tokenizer::list_tokens(const std::basic_string_view<char> input,
                        const std::basic_string_view<char> soft,
                        const std::basic_string_view<char> hard) {

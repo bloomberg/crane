@@ -1,9 +1,9 @@
 #include <loopify_sequences.h>
 
 /// alternate_sum sign acc l alternating sum with sign flip.
-__attribute__((pure)) unsigned int
-LoopifySequences::alternate_sum(const unsigned int &sign, unsigned int acc,
-                                const List<unsigned int> &l) {
+unsigned int LoopifySequences::alternate_sum(const unsigned int &sign,
+                                             unsigned int acc,
+                                             const List<unsigned int> &l) {
   unsigned int _result;
   const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_acc = std::move(acc);
@@ -40,8 +40,8 @@ LoopifySequences::alternate_sum(const unsigned int &sign, unsigned int acc,
 }
 
 /// collatz_list n generates collatz sequence.
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::collatz_list_fuel(const unsigned int &fuel, unsigned int n) {
+List<unsigned int> LoopifySequences::collatz_list_fuel(const unsigned int &fuel,
+                                                       unsigned int n) {
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
@@ -76,15 +76,13 @@ LoopifySequences::collatz_list_fuel(const unsigned int &fuel, unsigned int n) {
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::collatz_list(const unsigned int &n) {
+List<unsigned int> LoopifySequences::collatz_list(const unsigned int &n) {
   return collatz_list_fuel(1000u, n);
 }
 
 /// run_sum l running sum (scanl for addition).
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::run_sum_aux(const unsigned int &acc,
-                              const List<unsigned int> &l) {
+List<unsigned int> LoopifySequences::run_sum_aux(const unsigned int &acc,
+                                                 const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -114,14 +112,14 @@ LoopifySequences::run_sum_aux(const unsigned int &acc,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::run_sum(const List<unsigned int> &l) {
+List<unsigned int> LoopifySequences::run_sum(const List<unsigned int> &l) {
   return List<unsigned int>::cons(0u, run_sum_aux(0u, l));
 }
 
 /// rotate_left n l rotates list left by n positions.
-__attribute__((pure)) List<unsigned int> LoopifySequences::rotate_left_fuel(
-    const unsigned int &fuel, const unsigned int &n, List<unsigned int> l) {
+List<unsigned int> LoopifySequences::rotate_left_fuel(const unsigned int &fuel,
+                                                      const unsigned int &n,
+                                                      List<unsigned int> l) {
   List<unsigned int> _result;
   List<unsigned int> _loop_l = std::move(l);
   unsigned int _loop_n = n;
@@ -158,15 +156,14 @@ __attribute__((pure)) List<unsigned int> LoopifySequences::rotate_left_fuel(
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::rotate_left(const unsigned int &n,
-                              const List<unsigned int> &l) {
+List<unsigned int> LoopifySequences::rotate_left(const unsigned int &n,
+                                                 const List<unsigned int> &l) {
   return rotate_left_fuel(100u, n, l);
 }
 
 /// sum_acc acc l sum with accumulator.
-__attribute__((pure)) unsigned int
-LoopifySequences::sum_acc(unsigned int acc, const List<unsigned int> &l) {
+unsigned int LoopifySequences::sum_acc(unsigned int acc,
+                                       const List<unsigned int> &l) {
   unsigned int _result;
   const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_acc = std::move(acc);
@@ -188,9 +185,8 @@ LoopifySequences::sum_acc(unsigned int acc, const List<unsigned int> &l) {
 }
 
 /// repeat_string s n repeats string n times (using list as string).
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::repeat_string(const List<unsigned int> &s,
-                                const unsigned int &n) {
+List<unsigned int> LoopifySequences::repeat_string(const List<unsigned int> &s,
+                                                   const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -226,7 +222,7 @@ LoopifySequences::repeat_string(const List<unsigned int> &s,
 }
 
 /// repeat_with_sep s sep n repeats with separator.
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifySequences::repeat_with_sep(List<unsigned int> s,
                                   const List<unsigned int> &sep,
                                   const unsigned int &n) {
@@ -271,7 +267,7 @@ LoopifySequences::repeat_with_sep(List<unsigned int> s,
 }
 
 /// string_chain s n recursive string chain: s-chain(s, n-1)-end.
-__attribute__((pure)) List<unsigned int> LoopifySequences::string_chain_fuel(
+List<unsigned int> LoopifySequences::string_chain_fuel(
     const unsigned int &fuel, const List<unsigned int> &s,
     const unsigned int &n, const List<unsigned int> &sep,
     const List<unsigned int> &end_marker) {
@@ -318,14 +314,14 @@ __attribute__((pure)) List<unsigned int> LoopifySequences::string_chain_fuel(
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int> LoopifySequences::string_chain(
+List<unsigned int> LoopifySequences::string_chain(
     const List<unsigned int> &s, const unsigned int &n,
     const List<unsigned int> &sep, const List<unsigned int> &end_marker) {
   return string_chain_fuel(1000u, s, n, sep, end_marker);
 }
 
 /// split_by_sign l base pos neg splits list based on base threshold.
-__attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
+std::pair<List<unsigned int>, List<unsigned int>>
 LoopifySequences::split_by_sign(const List<unsigned int> &l,
                                 const unsigned int &base,
                                 List<unsigned int> pos,
@@ -365,8 +361,7 @@ LoopifySequences::split_by_sign(const List<unsigned int> &l,
 }
 
 /// differences l computes differences between consecutive elements.
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::differences(const List<unsigned int> &l) {
+List<unsigned int> LoopifySequences::differences(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -403,9 +398,9 @@ LoopifySequences::differences(const List<unsigned int> &l) {
 }
 
 /// replace_at idx value l replaces element at index with value.
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::replace_at(const unsigned int &idx, unsigned int value,
-                             const List<unsigned int> &l) {
+List<unsigned int> LoopifySequences::replace_at(const unsigned int &idx,
+                                                unsigned int value,
+                                                const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -443,8 +438,8 @@ LoopifySequences::replace_at(const unsigned int &idx, unsigned int value,
 }
 
 /// cycle n l repeats list n times.
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::cycle(const unsigned int &n, const List<unsigned int> &l) {
+List<unsigned int> LoopifySequences::cycle(const unsigned int &n,
+                                           const List<unsigned int> &l) {
   struct _Enter {
     unsigned int n;
   };
@@ -484,8 +479,7 @@ LoopifySequences::cycle(const unsigned int &n, const List<unsigned int> &l) {
 }
 
 /// Helper: get first element.
-__attribute__((pure)) unsigned int
-LoopifySequences::first_elem(const List<unsigned int> &l) {
+unsigned int LoopifySequences::first_elem(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return 0u;
   } else {
@@ -496,8 +490,7 @@ LoopifySequences::first_elem(const List<unsigned int> &l) {
 }
 
 /// Helper: get last element.
-__attribute__((pure)) unsigned int
-LoopifySequences::last_elem(const List<unsigned int> &l) {
+unsigned int LoopifySequences::last_elem(const List<unsigned int> &l) {
   unsigned int _result;
   const List<unsigned int> *_loop_l = &l;
   while (true) {
@@ -521,8 +514,7 @@ LoopifySequences::last_elem(const List<unsigned int> &l) {
 }
 
 /// Helper: remove first element.
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::tail_list(const List<unsigned int> &l) {
+List<unsigned int> LoopifySequences::tail_list(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return List<unsigned int>::nil();
   } else {
@@ -533,8 +525,7 @@ LoopifySequences::tail_list(const List<unsigned int> &l) {
 }
 
 /// Helper: remove last element.
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::init_list(const List<unsigned int> &l) {
+List<unsigned int> LoopifySequences::init_list(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -568,9 +559,8 @@ LoopifySequences::init_list(const List<unsigned int> &l) {
 }
 
 /// is_palindrome s checks if list is a palindrome.
-__attribute__((pure)) bool
-LoopifySequences::is_palindrome_fuel(const unsigned int &fuel,
-                                     const List<unsigned int> &s) {
+bool LoopifySequences::is_palindrome_fuel(const unsigned int &fuel,
+                                          const List<unsigned int> &s) {
   bool _result;
   List<unsigned int> _loop_s = s;
   unsigned int _loop_fuel = fuel;
@@ -607,13 +597,12 @@ LoopifySequences::is_palindrome_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifySequences::is_palindrome(const List<unsigned int> &s) {
+bool LoopifySequences::is_palindrome(const List<unsigned int> &s) {
   return is_palindrome_fuel(1000u, s);
 }
 
 /// string_subsequences s generates all subsequences treating list as string.
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifySequences::string_subsequences(const List<unsigned int> &s) {
   struct _Enter {
     List<unsigned int> s;
@@ -694,10 +683,8 @@ LoopifySequences::string_subsequences(const List<unsigned int> &s) {
 }
 
 /// run_length_groups l groups consecutive runs into sublist lengths.
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::run_length_groups_aux(const unsigned int &prev,
-                                        unsigned int count,
-                                        const List<unsigned int> &l) {
+List<unsigned int> LoopifySequences::run_length_groups_aux(
+    const unsigned int &prev, unsigned int count, const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -756,7 +743,7 @@ LoopifySequences::run_length_groups_aux(const unsigned int &prev,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifySequences::run_length_groups(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return List<unsigned int>::nil();
@@ -768,9 +755,8 @@ LoopifySequences::run_length_groups(const List<unsigned int> &l) {
 }
 
 /// is_prefix_of l1 l2 checks if l1 is a prefix of l2.
-__attribute__((pure)) bool
-LoopifySequences::is_prefix_of(const List<unsigned int> &l1,
-                               const List<unsigned int> &l2) {
+bool LoopifySequences::is_prefix_of(const List<unsigned int> &l1,
+                                    const List<unsigned int> &l2) {
   bool _result;
   const List<unsigned int> *_loop_l2 = &l2;
   const List<unsigned int> *_loop_l1 = &l1;
@@ -805,8 +791,7 @@ LoopifySequences::is_prefix_of(const List<unsigned int> &l1,
 }
 
 /// lis l longest increasing subsequence (greedy, not optimal).
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::lis(List<unsigned int> l) {
+List<unsigned int> LoopifySequences::lis(List<unsigned int> l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l = std::move(l);
@@ -846,8 +831,8 @@ LoopifySequences::lis(List<unsigned int> l) {
 }
 
 /// Helper: check if element is in list.
-__attribute__((pure)) bool LoopifySequences::elem(const unsigned int &x,
-                                                  const List<unsigned int> &l) {
+bool LoopifySequences::elem(const unsigned int &x,
+                            const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -885,9 +870,8 @@ __attribute__((pure)) bool LoopifySequences::elem(const unsigned int &x,
 }
 
 /// Helper: filter list.
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::filter_ne(const unsigned int &x,
-                            const List<unsigned int> &l) {
+List<unsigned int> LoopifySequences::filter_ne(const unsigned int &x,
+                                               const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -919,9 +903,8 @@ LoopifySequences::filter_ne(const unsigned int &x,
 }
 
 /// nub l removes duplicates from list.
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::nub_fuel(const unsigned int &fuel,
-                           const List<unsigned int> &l) {
+List<unsigned int> LoopifySequences::nub_fuel(const unsigned int &fuel,
+                                              const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l = l;
@@ -958,13 +941,12 @@ LoopifySequences::nub_fuel(const unsigned int &fuel,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::nub(const List<unsigned int> &l) {
+List<unsigned int> LoopifySequences::nub(const List<unsigned int> &l) {
   return nub_fuel(l.length(), l);
 }
 
 /// group l groups consecutive equal elements.
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifySequences::group_fuel(const unsigned int &fuel,
                              const List<unsigned int> &l) {
   if (fuel <= 0) {
@@ -1007,14 +989,13 @@ LoopifySequences::group_fuel(const unsigned int &fuel,
   }
 }
 
-__attribute__((pure)) List<List<unsigned int>>
-LoopifySequences::group(const List<unsigned int> &l) {
+List<List<unsigned int>> LoopifySequences::group(const List<unsigned int> &l) {
   return group_fuel(l.length(), l);
 }
 
 /// Helper: get head with default.
-__attribute__((pure)) unsigned int
-LoopifySequences::head_or(unsigned int default0, const List<unsigned int> &l) {
+unsigned int LoopifySequences::head_or(unsigned int default0,
+                                       const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return default0;
   } else {
@@ -1025,7 +1006,7 @@ LoopifySequences::head_or(unsigned int default0, const List<unsigned int> &l) {
 }
 
 /// remove_if_sum_even l removes elements where sum with next is even.
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifySequences::remove_if_sum_even(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -1059,7 +1040,7 @@ LoopifySequences::remove_if_sum_even(const List<unsigned int> &l) {
 }
 
 /// run_length_encode l encodes consecutive runs: 1,1,2,2,2 -> (1,2),(2,3).
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifySequences::run_length_encode_fuel(const unsigned int &fuel,
                                          const List<unsigned int> &l) {
   if (fuel <= 0) {
@@ -1105,15 +1086,15 @@ LoopifySequences::run_length_encode_fuel(const unsigned int &fuel,
   }
 }
 
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifySequences::run_length_encode(const List<unsigned int> &l) {
   return run_length_encode_fuel(l.length(), l);
 }
 
 /// between lo hi l filters elements in range lo, hi.
-__attribute__((pure)) List<unsigned int>
-LoopifySequences::between(const unsigned int &lo, const unsigned int &hi,
-                          const List<unsigned int> &l) {
+List<unsigned int> LoopifySequences::between(const unsigned int &lo,
+                                             const unsigned int &hi,
+                                             const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;

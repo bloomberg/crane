@@ -1,8 +1,7 @@
 #include <name_clash_scope_leak.h>
 
 /// Match on list, return list. Both branches produce the same type.
-__attribute__((pure)) List<unsigned int>
-NameClashScopeLeak::rotate(const List<unsigned int> &l) {
+List<unsigned int> NameClashScopeLeak::rotate(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return List<unsigned int>::nil();
   } else {
@@ -14,9 +13,8 @@ NameClashScopeLeak::rotate(const List<unsigned int> &l) {
 }
 
 /// Two consecutive matches on different lists in the same function.
-__attribute__((pure)) unsigned int
-NameClashScopeLeak::heads_sum(const List<unsigned int> &l1,
-                              const List<unsigned int> &l2) {
+unsigned int NameClashScopeLeak::heads_sum(const List<unsigned int> &l1,
+                                           const List<unsigned int> &l2) {
   unsigned int h1 = [&]() {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
       return 0u;
@@ -39,8 +37,7 @@ NameClashScopeLeak::heads_sum(const List<unsigned int> &l1,
 }
 
 /// Match on list, and in the Cons branch, match on the tail.
-__attribute__((pure)) unsigned int
-NameClashScopeLeak::first_two_sum(const List<unsigned int> &l) {
+unsigned int NameClashScopeLeak::first_two_sum(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return 0u;
   } else {
@@ -58,8 +55,7 @@ NameClashScopeLeak::first_two_sum(const List<unsigned int> &l) {
 }
 
 /// Match where both branches contain let bindings with same name.
-__attribute__((pure)) unsigned int
-NameClashScopeLeak::branch_let_clash(const List<unsigned int> &l) {
+unsigned int NameClashScopeLeak::branch_let_clash(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return 0u;
   } else {
@@ -70,10 +66,9 @@ NameClashScopeLeak::branch_let_clash(const List<unsigned int> &l) {
 }
 
 /// Three consecutive matches, each with same binding variable name pattern.
-__attribute__((pure)) unsigned int
-NameClashScopeLeak::triple_head(const List<unsigned int> &l1,
-                                const List<unsigned int> &l2,
-                                const List<unsigned int> &l3) {
+unsigned int NameClashScopeLeak::triple_head(const List<unsigned int> &l1,
+                                             const List<unsigned int> &l2,
+                                             const List<unsigned int> &l3) {
   unsigned int a = [&]() {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
       return 0u;
@@ -105,7 +100,7 @@ NameClashScopeLeak::triple_head(const List<unsigned int> &l1,
 }
 
 /// Matching on a pair where both components are lists.
-__attribute__((pure)) unsigned int NameClashScopeLeak::pair_match(
+unsigned int NameClashScopeLeak::pair_match(
     const std::pair<List<unsigned int>, List<unsigned int>> &p) {
   const List<unsigned int> &l1 = p.first;
   const List<unsigned int> &l2 = p.second;

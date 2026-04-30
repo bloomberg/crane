@@ -1,13 +1,12 @@
 #include <encode_ops.h>
 
-__attribute__((pure)) bool
-EncodeOps::pair_in_range(const std::pair<unsigned int, unsigned int> &p) {
+bool EncodeOps::pair_in_range(const std::pair<unsigned int, unsigned int> &p) {
   const unsigned int &b1 = p.first;
   const unsigned int &b2 = p.second;
   return (b1 < 256u && b2 < 256u);
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 EncodeOps::encode_list2(const List<EncodeOps::instruction2> &prog) {
   if (std::holds_alternative<typename List<EncodeOps::instruction2>::Nil>(
           prog.v())) {
@@ -23,7 +22,7 @@ EncodeOps::encode_list2(const List<EncodeOps::instruction2> &prog) {
   }
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 EncodeOps::encode_list3(const List<EncodeOps::instruction3> &prog) {
   if (std::holds_alternative<typename List<EncodeOps::instruction3>::Nil>(
           prog.v())) {

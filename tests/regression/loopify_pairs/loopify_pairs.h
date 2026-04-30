@@ -51,17 +51,34 @@ struct LoopifyPairs {
     }
 
     // ACCESSORS
-    __attribute__((pure)) list<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Nil>(_sv.v())) {
-        return list<t_A>(Nil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-        return list<t_A>(
-            Cons{d_a0,
-                 d_a1 ? std::make_unique<LoopifyPairs::list<t_A>>(d_a1->clone())
-                      : nullptr});
+    list clone() const {
+      list _out{};
+
+      struct _CloneFrame {
+        const list *_src;
+        list *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const list *_src = _frame._src;
+        list *_dst = _frame._dst;
+        if (std::holds_alternative<Nil>(_src->v())) {
+          const auto &_alt = std::get<Nil>(_src->v());
+          _dst->d_v_ = Nil{};
+        } else {
+          const auto &_alt = std::get<Cons>(_src->v());
+          _dst->d_v_ =
+              Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<list>() : nullptr};
+          auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -76,9 +93,9 @@ struct LoopifyPairs {
       }
     }
 
-    __attribute__((pure)) static list<t_A> nil() { return list(Nil{}); }
+    static list<t_A> nil() { return list(Nil{}); }
 
-    __attribute__((pure)) static list<t_A> cons(t_A a0, list<t_A> a1) {
+    static list<t_A> cons(t_A a0, list<t_A> a1) {
       return list(
           Cons{std::move(a0), std::make_unique<list<t_A>>(std::move(a1))});
     }
@@ -105,7 +122,7 @@ struct LoopifyPairs {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
@@ -184,8 +201,7 @@ struct LoopifyPairs {
 
   /// partition p l splits into (satisfies p, doesn't satisfy p).
   template <typename T1, MapsTo<bool, T1> F0>
-  __attribute__((pure)) static std::pair<list<T1>, list<T1>>
-  partition(F0 &&p, const list<T1> &l) {
+  static std::pair<list<T1>, list<T1>> partition(F0 &&p, const list<T1> &l) {
     struct _Enter {
       const list<T1> *l;
     };
@@ -230,13 +246,12 @@ struct LoopifyPairs {
   }
 
   /// unzip l splits list of nat pairs into pair of lists.
-  __attribute__((pure)) static std::pair<list<unsigned int>, list<unsigned int>>
+  static std::pair<list<unsigned int>, list<unsigned int>>
   unzip(const list<std::pair<unsigned int, unsigned int>> &l);
 
   /// zip combines two lists into pairs.
   template <typename T1, typename T2>
-  __attribute__((pure)) static list<std::pair<T1, T2>> zip(const list<T1> &l1,
-                                                           const list<T2> &l2) {
+  static list<std::pair<T1, T2>> zip(const list<T1> &l1, const list<T2> &l2) {
     std::unique_ptr<list<std::pair<T1, T2>>> _head{};
     std::unique_ptr<list<std::pair<T1, T2>>> *_write = &_head;
     const list<T2> *_loop_l2 = &l2;
@@ -275,7 +290,7 @@ struct LoopifyPairs {
   } /// zip3 combines three lists.
 
   template <typename T1, typename T2, typename T3>
-  __attribute__((pure)) static list<std::pair<T1, std::pair<T2, T3>>>
+  static list<std::pair<T1, std::pair<T2, T3>>>
   zip3(const list<T1> &l1, const list<T2> &l2, const list<T3> &l3) {
     std::unique_ptr<list<std::pair<T1, std::pair<T2, T3>>>> _head{};
     std::unique_ptr<list<std::pair<T1, std::pair<T2, T3>>>> *_write = &_head;
@@ -332,8 +347,8 @@ struct LoopifyPairs {
 
   /// split_at n l splits at position n.
   template <typename T1>
-  __attribute__((pure)) static std::pair<list<T1>, list<T1>>
-  split_at(const unsigned int &n, list<T1> l) {
+  static std::pair<list<T1>, list<T1>> split_at(const unsigned int &n,
+                                                list<T1> l) {
     struct _Enter {
       list<T1> l;
       unsigned int n;
@@ -380,8 +395,7 @@ struct LoopifyPairs {
 
   /// swizzle separates into even/odd positions.
   template <typename T1>
-  __attribute__((pure)) static std::pair<list<T1>, list<T1>>
-  swizzle(const list<T1> &l) {
+  static std::pair<list<T1>, list<T1>> swizzle(const list<T1> &l) {
     struct _Enter {
       const list<T1> *l;
     };
@@ -432,8 +446,7 @@ struct LoopifyPairs {
 
   /// span p l splits at first element not satisfying p.
   template <typename T1, MapsTo<bool, T1> F0>
-  __attribute__((pure)) static std::pair<list<T1>, list<T1>>
-  span(F0 &&p, const list<T1> &l) {
+  static std::pair<list<T1>, list<T1>> span(F0 &&p, const list<T1> &l) {
     struct _Enter {
       const list<T1> *l;
     };
@@ -477,25 +490,24 @@ struct LoopifyPairs {
   }
 
   /// partition3 pivot l three-way partition around pivot.
-  __attribute__((pure)) static std::pair<
-      list<unsigned int>, std::pair<list<unsigned int>, list<unsigned int>>>
+  static std::pair<list<unsigned int>,
+                   std::pair<list<unsigned int>, list<unsigned int>>>
   partition3(const unsigned int &pivot, const list<unsigned int> &l);
   /// min_max l finds both min and max in one pass.
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  static std::pair<unsigned int, unsigned int>
   min_max(const list<unsigned int> &l);
   /// sum_and_count computes both in one pass.
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  static std::pair<unsigned int, unsigned int>
   sum_and_count(const list<unsigned int> &l);
   /// sum_prod_count triple accumulator.
-  __attribute__((pure)) static std::pair<unsigned int,
-                                         std::pair<unsigned int, unsigned int>>
+  static std::pair<unsigned int, std::pair<unsigned int, unsigned int>>
   sum_prod_count(const list<unsigned int> &l);
 
   /// mapAccumL f acc l map with accumulator threading.
   template <
       MapsTo<std::pair<unsigned int, unsigned int>, unsigned int, unsigned int>
           F0>
-  __attribute__((pure)) static std::pair<unsigned int, list<unsigned int>>
+  static std::pair<unsigned int, list<unsigned int>>
   mapAccumL(F0 &&f, unsigned int acc, const list<unsigned int> &l) {
     struct _Enter {
       const list<unsigned int> *l;
@@ -541,11 +553,11 @@ struct LoopifyPairs {
   }
 
   /// lookup_all key l finds all values associated with key.
-  __attribute__((pure)) static list<unsigned int>
+  static list<unsigned int>
   lookup_all(const unsigned int &key,
              const list<std::pair<unsigned int, unsigned int>> &l);
   /// swap_pairs l swaps elements in each pair.
-  __attribute__((pure)) static list<std::pair<unsigned int, unsigned int>>
+  static list<std::pair<unsigned int, unsigned int>>
   swap_pairs(const list<std::pair<unsigned int, unsigned int>> &l);
 };
 

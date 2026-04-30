@@ -96,7 +96,7 @@ struct NestedMod {
         }
 
         // ACCESSORS
-        __attribute__((pure)) shape clone() const {
+        shape clone() const {
           auto &&_sv = *(this);
           if (std::holds_alternative<Circle>(_sv.v())) {
             const auto &[d_a0] = std::get<Circle>(_sv.v());
@@ -111,16 +111,16 @@ struct NestedMod {
         }
 
         // CREATORS
-        __attribute__((pure)) static shape circle(unsigned int a0) {
+        static shape circle(unsigned int a0) {
           return shape(Circle{std::move(a0)});
         }
 
-        __attribute__((pure)) static shape square(unsigned int a0) {
+        static shape square(unsigned int a0) {
           return shape(Square{std::move(a0)});
         }
 
-        __attribute__((pure)) static shape
-        triangle(unsigned int a0, unsigned int a1, unsigned int a2) {
+        static shape triangle(unsigned int a0, unsigned int a1,
+                              unsigned int a2) {
           return shape(Triangle{std::move(a0), std::move(a1), std::move(a2)});
         }
 
@@ -128,7 +128,7 @@ struct NestedMod {
         inline variant_t &v_mut() { return d_v_; }
 
         // ACCESSORS
-        __attribute__((pure)) const variant_t &v() const { return d_v_; }
+        const variant_t &v() const { return d_v_; }
       };
 
       template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -165,12 +165,11 @@ struct NestedMod {
         }
       }
 
-      __attribute__((pure)) static unsigned int area(const shape &s);
+      static unsigned int area(const shape &s);
     };
 
-    __attribute__((pure)) static unsigned int
-    shape_with_color(const Inner::shape &s, const Color c);
-    __attribute__((pure)) static unsigned int color_code(const Color c);
+    static unsigned int shape_with_color(const Inner::shape &s, const Color c);
+    static unsigned int color_code(const Color c);
   };
 
   static inline const Outer::Inner::shape my_circle =

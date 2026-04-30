@@ -1,7 +1,6 @@
 #include <hof_tree_loopify.h>
 
-__attribute__((pure)) HofTreeLoopify::tree<unsigned int>
-HofTreeLoopify::depth_tree(unsigned int n) {
+HofTreeLoopify::tree<unsigned int> HofTreeLoopify::depth_tree(unsigned int n) {
   std::unique_ptr<HofTreeLoopify::tree<unsigned int>> _head{};
   std::unique_ptr<HofTreeLoopify::tree<unsigned int>> *_write = &_head;
   unsigned int _loop_n = std::move(n);
@@ -27,8 +26,7 @@ HofTreeLoopify::depth_tree(unsigned int n) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) unsigned int Nat::tail_add(const unsigned int &n,
-                                                 unsigned int m) {
+unsigned int Nat::tail_add(const unsigned int &n, unsigned int m) {
   unsigned int _result;
   unsigned int _loop_m = std::move(m);
   unsigned int _loop_n = n;
@@ -47,8 +45,8 @@ __attribute__((pure)) unsigned int Nat::tail_add(const unsigned int &n,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-Nat::tail_addmul(unsigned int r, const unsigned int &n, const unsigned int &m) {
+unsigned int Nat::tail_addmul(unsigned int r, const unsigned int &n,
+                              const unsigned int &m) {
   unsigned int _result;
   unsigned int _loop_n = n;
   unsigned int _loop_r = std::move(r);
@@ -67,13 +65,11 @@ Nat::tail_addmul(unsigned int r, const unsigned int &n, const unsigned int &m) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int Nat::tail_mul(const unsigned int &n,
-                                                 const unsigned int &m) {
+unsigned int Nat::tail_mul(const unsigned int &n, const unsigned int &m) {
   return Nat::tail_addmul(0u, n, m);
 }
 
-__attribute__((pure)) unsigned int Nat::of_uint_acc(const Uint &d,
-                                                    unsigned int acc) {
+unsigned int Nat::of_uint_acc(const Uint &d, unsigned int acc) {
   unsigned int _result;
   unsigned int _loop_acc = std::move(acc);
   const Uint *_loop_d = &d;
@@ -158,12 +154,9 @@ __attribute__((pure)) unsigned int Nat::of_uint_acc(const Uint &d,
   return _result;
 }
 
-__attribute__((pure)) unsigned int Nat::of_uint(const Uint &d) {
-  return Nat::of_uint_acc(d, 0u);
-}
+unsigned int Nat::of_uint(const Uint &d) { return Nat::of_uint_acc(d, 0u); }
 
-__attribute__((pure)) unsigned int Nat::of_hex_uint_acc(const Uint0 &d,
-                                                        unsigned int acc) {
+unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
   unsigned int _result;
   unsigned int _loop_acc = std::move(acc);
   const Uint0 *_loop_d = &d;
@@ -336,11 +329,11 @@ __attribute__((pure)) unsigned int Nat::of_hex_uint_acc(const Uint0 &d,
   return _result;
 }
 
-__attribute__((pure)) unsigned int Nat::of_hex_uint(const Uint0 &d) {
+unsigned int Nat::of_hex_uint(const Uint0 &d) {
   return Nat::of_hex_uint_acc(d, 0u);
 }
 
-__attribute__((pure)) unsigned int Nat::of_num_uint(const Uint1 &d) {
+unsigned int Nat::of_num_uint(const Uint1 &d) {
   if (std::holds_alternative<typename Uint1::UIntDecimal>(d.v())) {
     const auto &[d_u] = std::get<typename Uint1::UIntDecimal>(d.v());
     return Nat::of_uint(d_u);

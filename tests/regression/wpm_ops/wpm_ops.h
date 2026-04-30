@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,7 +119,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct ListDef {
@@ -110,8 +129,8 @@ struct ListDef {
 
 struct WpmOps {
   template <typename T1>
-  __attribute__((pure)) static List<T1>
-  update_nth(const unsigned int &n, const T1 x, const List<T1> &l) {
+  static List<T1> update_nth(const unsigned int &n, const T1 x,
+                             const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
@@ -130,8 +149,8 @@ struct WpmOps {
     }
   }
 
-  __attribute__((pure)) static bool nat_list_eqb(const List<unsigned int> &xs,
-                                                 const List<unsigned int> &ys);
+  static bool nat_list_eqb(const List<unsigned int> &xs,
+                           const List<unsigned int> &ys);
 
   struct state1 {
     List<unsigned int> rom1;
@@ -140,13 +159,13 @@ struct WpmOps {
     bool prom_enable1;
 
     // ACCESSORS
-    __attribute__((pure)) state1 clone() const {
+    state1 clone() const {
       return state1{(*(this)).rom1.clone(), (*(this)).prom_addr1,
                     (*(this)).prom_data1, (*(this)).prom_enable1};
     }
   };
 
-  __attribute__((pure)) static state1 execute_wpm1(const state1 &s);
+  static state1 execute_wpm1(const state1 &s);
   static inline const state1 sample1 =
       state1{List<unsigned int>::cons(
                  10u, List<unsigned int>::cons(
@@ -169,14 +188,14 @@ struct WpmOps {
     bool prom_enable2;
 
     // ACCESSORS
-    __attribute__((pure)) state2 clone() const {
+    state2 clone() const {
       return state2{(*(this)).ram_sys2.clone(), (*(this)).rom2.clone(),
                     (*(this)).prom_addr2, (*(this)).prom_data2,
                     (*(this)).prom_enable2};
     }
   };
 
-  __attribute__((pure)) static state2 execute_wpm2(const state2 &s);
+  static state2 execute_wpm2(const state2 &s);
   static inline const state2 sample2 = state2{
       List<unsigned int>::cons(
           5u, List<unsigned int>::cons(
@@ -197,14 +216,14 @@ struct WpmOps {
     bool prom_enable3;
 
     // ACCESSORS
-    __attribute__((pure)) state3 clone() const {
+    state3 clone() const {
       return state3{(*(this)).regs3.clone(), (*(this)).rom3.clone(),
                     (*(this)).prom_addr3, (*(this)).prom_data3,
                     (*(this)).prom_enable3};
     }
   };
 
-  __attribute__((pure)) static state3 execute_wpm3(const state3 &s);
+  static state3 execute_wpm3(const state3 &s);
   static inline const state3 sample3 = state3{
       List<unsigned int>::cons(
           1u, List<unsigned int>::cons(
@@ -224,13 +243,13 @@ struct WpmOps {
     bool prom_enable4;
 
     // ACCESSORS
-    __attribute__((pure)) state4 clone() const {
+    state4 clone() const {
       return state4{(*(this)).rom4.clone(), (*(this)).prom_addr4,
                     (*(this)).prom_data4, (*(this)).prom_enable4};
     }
   };
 
-  __attribute__((pure)) static state4 execute_wpm4(const state4 &s);
+  static state4 execute_wpm4(const state4 &s);
   static inline const unsigned int test_wpm_update_gate = []() {
     state4 s = state4{List<unsigned int>::cons(
                           10u, List<unsigned int>::cons(
@@ -248,13 +267,13 @@ struct WpmOps {
     bool prom_enable5;
 
     // ACCESSORS
-    __attribute__((pure)) state5 clone() const {
+    state5 clone() const {
       return state5{(*(this)).rom5.clone(), (*(this)).prom_addr5,
                     (*(this)).prom_data5, (*(this)).prom_enable5};
     }
   };
 
-  __attribute__((pure)) static state5 execute_wpm5(const state5 &s);
+  static state5 execute_wpm5(const state5 &s);
   static inline const state5 sample5 =
       state5{List<unsigned int>::cons(
                  10u, List<unsigned int>::cons(
@@ -273,13 +292,13 @@ struct WpmOps {
     bool prom_enable6;
 
     // ACCESSORS
-    __attribute__((pure)) state6 clone() const {
+    state6 clone() const {
       return state6{(*(this)).rom6.clone(), (*(this)).prom_addr6,
                     (*(this)).prom_data6, (*(this)).prom_enable6};
     }
   };
 
-  __attribute__((pure)) static state6 execute_wpm6(const state6 &s);
+  static state6 execute_wpm6(const state6 &s);
   static inline const state6 sample6 =
       state6{List<unsigned int>::cons(
                  10u, List<unsigned int>::cons(

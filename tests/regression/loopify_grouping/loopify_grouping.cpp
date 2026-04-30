@@ -1,6 +1,6 @@
 #include <loopify_grouping.h>
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyGrouping::prepend_to_groups(unsigned int x, const bool &same,
                                    List<List<unsigned int>> groups) {
   if (same) {
@@ -22,7 +22,7 @@ LoopifyGrouping::prepend_to_groups(unsigned int x, const bool &same,
   }
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyGrouping::group_fuel(const unsigned int &fuel,
                             const List<unsigned int> &l) {
   struct _Enter {
@@ -82,13 +82,11 @@ LoopifyGrouping::group_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) List<List<unsigned int>>
-LoopifyGrouping::group(const List<unsigned int> &l) {
+List<List<unsigned int>> LoopifyGrouping::group(const List<unsigned int> &l) {
   return group_fuel(l.length(), l);
 }
 
-__attribute__((pure)) bool LoopifyGrouping::elem(const unsigned int &x,
-                                                 const List<unsigned int> &l) {
+bool LoopifyGrouping::elem(const unsigned int &x, const List<unsigned int> &l) {
   bool _result;
   const List<unsigned int> *_loop_l = &l;
   while (true) {
@@ -110,8 +108,7 @@ __attribute__((pure)) bool LoopifyGrouping::elem(const unsigned int &x,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyGrouping::nub(const List<unsigned int> &l) {
+List<unsigned int> LoopifyGrouping::nub(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -153,9 +150,8 @@ LoopifyGrouping::nub(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyGrouping::remove_elem(const unsigned int &x,
-                             const List<unsigned int> &l) {
+List<unsigned int> LoopifyGrouping::remove_elem(const unsigned int &x,
+                                                const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -186,7 +182,6 @@ LoopifyGrouping::remove_elem(const unsigned int &x,
   return std::move(*(_head));
 }
 
-__attribute__((pure))
 std::pair<std::pair<List<unsigned int>, List<unsigned int>>, List<unsigned int>>
 LoopifyGrouping::partition3(const unsigned int &pivot,
                             const List<unsigned int> &l) {
@@ -250,9 +245,8 @@ LoopifyGrouping::partition3(const unsigned int &pivot,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyGrouping::count_elem(const unsigned int &x,
-                            const List<unsigned int> &l) {
+unsigned int LoopifyGrouping::count_elem(const unsigned int &x,
+                                         const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -292,7 +286,7 @@ LoopifyGrouping::count_elem(const unsigned int &x,
   return _result;
 }
 
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyGrouping::group_pairs(const List<unsigned int> &l) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;

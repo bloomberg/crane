@@ -50,15 +50,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -72,9 +91,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -101,7 +120,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct NumeralStress {
@@ -122,8 +141,7 @@ struct NumeralStress {
   /// 5. Numeral in match scrutinee
   static inline const unsigned int match_numeral = 1u;
   /// 6. Numeral inside a fixpoint
-  __attribute__((pure)) static unsigned int
-  count_from(unsigned int n, const unsigned int &target);
+  static unsigned int count_from(unsigned int n, const unsigned int &target);
   static inline const unsigned int test_count = count_from(100u, 50u);
   /// 7. Z arithmetic with literals
   static inline const int64_t z_complex =
@@ -135,18 +153,16 @@ struct NumeralStress {
     unsigned int py;
 
     // ACCESSORS
-    __attribute__((pure)) point clone() const {
-      return point{(*(this)).px, (*(this)).py};
-    }
+    point clone() const { return point{(*(this)).px, (*(this)).py}; }
   };
 
   static inline const point origin = point{0u, 0u};
   static inline const point far_point = point{999u, 888u};
   /// 9. Numeral in boolean expression
-  __attribute__((pure)) static bool check_range(const unsigned int &n);
+  static bool check_range(const unsigned int &n);
   static inline const bool test_range = check_range(50u);
   /// 10. Mixed nat and Z in one function
-  __attribute__((pure)) static int64_t mixed_arith(const unsigned int &n);
+  static int64_t mixed_arith(const unsigned int &n);
   static inline const int64_t test_mixed = mixed_arith(42u);
 };
 

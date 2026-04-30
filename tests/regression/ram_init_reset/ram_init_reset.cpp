@@ -1,13 +1,11 @@
 #include <ram_init_reset.h>
 
-__attribute__((pure)) RamInitReset::state
-RamInitReset::reset_state(const RamInitReset::state &s) {
+RamInitReset::state RamInitReset::reset_state(const RamInitReset::state &s) {
   return state{
       s.state_regs, 0u,          false,      0u, List<unsigned int>::nil(),
       s.state_ram,  default_sel, s.state_rom};
 }
 
-__attribute__((pure))
 std::pair<std::optional<unsigned int>, RamInitReset::state>
 RamInitReset::pop_stack(RamInitReset::state s) {
   auto &&_sv = s.state_stack;

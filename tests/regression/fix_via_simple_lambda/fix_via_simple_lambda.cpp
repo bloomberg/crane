@@ -13,7 +13,7 @@
 /// the fixpoints don't escape directly through a constructor —
 /// they escape INDIRECTLY by being captured in a simple lambda
 /// that is then stored in Some.
-__attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<unsigned int(unsigned int)>>
 FixViaSimpleLambda::make_combined(const unsigned int &n) {
   unsigned int base = (n * 2u);
   auto double_add_impl = [=](auto &_self_double_add,

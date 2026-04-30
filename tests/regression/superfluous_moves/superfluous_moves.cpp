@@ -1,20 +1,20 @@
 #include <superfluous_moves.h>
 
 /// Identity tick so the reproducer stays minimal while keeping the same shape.
-__attribute__((pure)) SuperfluousMoves::game_state
+SuperfluousMoves::game_state
 SuperfluousMoves::tick(SuperfluousMoves::game_state gs) {
   return gs;
 }
 
 /// Life loss used to create the branch-local gs3 value.
-__attribute__((pure)) SuperfluousMoves::game_state
+SuperfluousMoves::game_state
 SuperfluousMoves::lose_one_life(const SuperfluousMoves::game_state &gs) {
   return game_state{position{9u}, gs.ghosts,
                     (gs.lives ? gs.lives - 1 : gs.lives)};
 }
 
 /// Reduced branch reproducer without the outer option * nat wrapper.
-__attribute__((pure)) std::pair<bool, SuperfluousMoves::loop_state>
+std::pair<bool, SuperfluousMoves::loop_state>
 SuperfluousMoves::bad_branch(SuperfluousMoves::loop_state ls) {
   SuperfluousMoves::game_state gs1 = ls.ls_game;
   bool do_tick = true;

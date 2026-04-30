@@ -1,14 +1,10 @@
 #include <numeral_edge.h>
 
 /// 6. Numeral as function argument
-__attribute__((pure)) unsigned int
-NumeralEdge::take_nat(const unsigned int &n) {
-  return (n + 1u);
-}
+unsigned int NumeralEdge::take_nat(const unsigned int &n) { return (n + 1u); }
 
 /// 10. Numeral in match
-__attribute__((pure)) unsigned int
-NumeralEdge::classify(const unsigned int &n) {
+unsigned int NumeralEdge::classify(const unsigned int &n) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -23,12 +19,9 @@ NumeralEdge::classify(const unsigned int &n) {
 }
 
 /// 11. Comparison with numeral
-__attribute__((pure)) bool NumeralEdge::is_big(const unsigned int &n) {
-  return 100u <= n;
-}
+bool NumeralEdge::is_big(const unsigned int &n) { return 100u <= n; }
 
-__attribute__((pure)) unsigned int Nat::tail_add(const unsigned int &n,
-                                                 unsigned int m) {
+unsigned int Nat::tail_add(const unsigned int &n, unsigned int m) {
   if (n <= 0) {
     return m;
   } else {
@@ -37,8 +30,8 @@ __attribute__((pure)) unsigned int Nat::tail_add(const unsigned int &n,
   }
 }
 
-__attribute__((pure)) unsigned int
-Nat::tail_addmul(unsigned int r, const unsigned int &n, const unsigned int &m) {
+unsigned int Nat::tail_addmul(unsigned int r, const unsigned int &n,
+                              const unsigned int &m) {
   if (n <= 0) {
     return r;
   } else {
@@ -47,13 +40,11 @@ Nat::tail_addmul(unsigned int r, const unsigned int &n, const unsigned int &m) {
   }
 }
 
-__attribute__((pure)) unsigned int Nat::tail_mul(const unsigned int &n,
-                                                 const unsigned int &m) {
+unsigned int Nat::tail_mul(const unsigned int &n, const unsigned int &m) {
   return Nat::tail_addmul(0u, n, m);
 }
 
-__attribute__((pure)) unsigned int Nat::of_uint_acc(const Uint &d,
-                                                    unsigned int acc) {
+unsigned int Nat::of_uint_acc(const Uint &d, unsigned int acc) {
   if (std::holds_alternative<typename Uint::Nil>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint::D0>(d.v())) {
@@ -101,12 +92,9 @@ __attribute__((pure)) unsigned int Nat::of_uint_acc(const Uint &d,
   }
 }
 
-__attribute__((pure)) unsigned int Nat::of_uint(const Uint &d) {
-  return Nat::of_uint_acc(d, 0u);
-}
+unsigned int Nat::of_uint(const Uint &d) { return Nat::of_uint_acc(d, 0u); }
 
-__attribute__((pure)) unsigned int Nat::of_hex_uint_acc(const Uint0 &d,
-                                                        unsigned int acc) {
+unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
   if (std::holds_alternative<typename Uint0::Nil0>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint0::D10>(d.v())) {
@@ -221,11 +209,11 @@ __attribute__((pure)) unsigned int Nat::of_hex_uint_acc(const Uint0 &d,
   }
 }
 
-__attribute__((pure)) unsigned int Nat::of_hex_uint(const Uint0 &d) {
+unsigned int Nat::of_hex_uint(const Uint0 &d) {
   return Nat::of_hex_uint_acc(d, 0u);
 }
 
-__attribute__((pure)) unsigned int Nat::of_num_uint(const Uint1 &d) {
+unsigned int Nat::of_num_uint(const Uint1 &d) {
   if (std::holds_alternative<typename Uint1::UIntDecimal>(d.v())) {
     const auto &[d_u] = std::get<typename Uint1::UIntDecimal>(d.v());
     return Nat::of_uint(d_u);

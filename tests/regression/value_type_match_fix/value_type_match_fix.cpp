@@ -10,7 +10,7 @@
 ///
 /// This is different from pointer-based (shared_ptr) types where the
 /// field data lives on the heap and persists as long as the shared_ptr.
-__attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<unsigned int(unsigned int)>>
 ValueTypeMatchFix::make_adder_from_triple(const ValueTypeMatchFix::triple &t) {
   const auto &[d_a0, d_a1, d_a2] =
       std::get<typename ValueTypeMatchFix::triple::MkTriple>(t.v());
@@ -30,7 +30,7 @@ ValueTypeMatchFix::make_adder_from_triple(const ValueTypeMatchFix::triple &t) {
 }
 
 /// Direct capture of pattern fields (no intermediate let binding).
-__attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<unsigned int(unsigned int)>>
 ValueTypeMatchFix::make_field_adder(const ValueTypeMatchFix::triple &t) {
   const auto &[d_a0, d_a1, d_a2] =
       std::get<typename ValueTypeMatchFix::triple::MkTriple>(t.v());

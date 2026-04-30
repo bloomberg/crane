@@ -67,15 +67,15 @@ struct TimingPreservesWfSimple {
     unsigned int stack_len;
 
     // ACCESSORS
-    __attribute__((pure)) state clone() const {
+    state clone() const {
       return state{(*(this)).regs_len, (*(this)).rom_len, (*(this)).pc,
                    (*(this)).stack_len};
     }
   };
 
-  __attribute__((pure)) static bool wf(const state &s);
-  __attribute__((pure)) static unsigned int cycles(const Instr i);
-  __attribute__((pure)) static state execute(const state &s, const Instr i);
+  static bool wf(const state &s);
+  static unsigned int cycles(const Instr i);
+  static state execute(const state &s, const Instr i);
   static inline const state sample = state{4u, 4u, 100u, 2u};
   static inline const bool t =
       (wf(sample) &&

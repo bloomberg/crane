@@ -1,6 +1,6 @@
 #include <loopify_tree_paths.h>
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyTreePaths::map_cons(unsigned int x, const List<List<unsigned int>> &ll) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;

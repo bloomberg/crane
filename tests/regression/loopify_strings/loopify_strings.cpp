@@ -1,7 +1,7 @@
 #include <loopify_strings.h>
 
-__attribute__((pure)) List<unsigned int>
-LoopifyStrings::append(const List<unsigned int> &l1, List<unsigned int> l2) {
+List<unsigned int> LoopifyStrings::append(const List<unsigned int> &l1,
+                                          List<unsigned int> l2) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l2 = std::move(l2);
@@ -29,8 +29,8 @@ LoopifyStrings::append(const List<unsigned int> &l1, List<unsigned int> l2) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyStrings::join_with(unsigned int sep, const List<unsigned int> &l) {
+List<unsigned int> LoopifyStrings::join_with(unsigned int sep,
+                                             const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -69,9 +69,8 @@ LoopifyStrings::join_with(unsigned int sep, const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyStrings::repeat_string(const List<unsigned int> &s,
-                              const unsigned int &n) {
+List<unsigned int> LoopifyStrings::repeat_string(const List<unsigned int> &s,
+                                                 const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -106,7 +105,7 @@ LoopifyStrings::repeat_string(const List<unsigned int> &s,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyStrings::repeat_with_sep(List<unsigned int> s,
                                 const List<unsigned int> &sep,
                                 const unsigned int &n) {
@@ -150,7 +149,7 @@ LoopifyStrings::repeat_with_sep(List<unsigned int> s,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int> LoopifyStrings::string_chain_fuel(
+List<unsigned int> LoopifyStrings::string_chain_fuel(
     const unsigned int &fuel, const List<unsigned int> &s,
     const unsigned int &n, const List<unsigned int> &sep,
     const List<unsigned int> &end_marker) {
@@ -196,15 +195,14 @@ __attribute__((pure)) List<unsigned int> LoopifyStrings::string_chain_fuel(
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyStrings::string_chain(const List<unsigned int> &s, const unsigned int &n,
                              const List<unsigned int> &sep,
                              const List<unsigned int> &end_marker) {
   return string_chain_fuel(n, s, n, sep, end_marker);
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyStrings::reverse(const List<unsigned int> &l) {
+List<unsigned int> LoopifyStrings::reverse(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -242,9 +240,8 @@ LoopifyStrings::reverse(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifyStrings::list_eq(const List<unsigned int> &l1,
-                        const List<unsigned int> &l2) {
+bool LoopifyStrings::list_eq(const List<unsigned int> &l1,
+                             const List<unsigned int> &l2) {
   struct _Enter {
     const List<unsigned int> *l2;
     const List<unsigned int> *l1;
@@ -293,13 +290,12 @@ LoopifyStrings::list_eq(const List<unsigned int> &l1,
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifyStrings::is_palindrome(const List<unsigned int> &l) {
+bool LoopifyStrings::is_palindrome(const List<unsigned int> &l) {
   return list_eq(l, reverse(l));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyStrings::intersperse(unsigned int sep, const List<unsigned int> &l) {
+List<unsigned int> LoopifyStrings::intersperse(unsigned int sep,
+                                               const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -338,7 +334,7 @@ LoopifyStrings::intersperse(unsigned int sep, const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyStrings::intercalate(const List<unsigned int> &sep,
                             const List<List<unsigned int>> &ll) {
   struct _Enter {
@@ -384,8 +380,8 @@ LoopifyStrings::intercalate(const List<unsigned int> &sep,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyStrings::replicate(const unsigned int &n, unsigned int x) {
+List<unsigned int> LoopifyStrings::replicate(const unsigned int &n,
+                                             unsigned int x) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_n = n;
@@ -408,7 +404,7 @@ LoopifyStrings::replicate(const unsigned int &n, unsigned int x) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyStrings::run_length_aux(unsigned int current, unsigned int count,
                                const List<unsigned int> &l) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
@@ -475,7 +471,7 @@ LoopifyStrings::run_length_aux(unsigned int current, unsigned int count,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyStrings::run_length_encode(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return List<std::pair<unsigned int, unsigned int>>::nil();

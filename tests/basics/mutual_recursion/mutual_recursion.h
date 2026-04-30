@@ -12,8 +12,8 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct MutualRecursion {
-  __attribute__((pure)) static bool is_even(const unsigned int &n);
-  __attribute__((pure)) static bool is_odd(const unsigned int &n);
+  static bool is_even(const unsigned int &n);
+  static bool is_odd(const unsigned int &n);
   template <typename t_A> struct tree;
   template <typename t_A> struct forest;
 
@@ -56,7 +56,7 @@ struct MutualRecursion {
     }
 
     // ACCESSORS
-    __attribute__((pure)) tree<t_A> clone() const {
+    tree<t_A> clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<Leaf>(_sv.v());
@@ -81,11 +81,9 @@ struct MutualRecursion {
       }
     }
 
-    __attribute__((pure)) static tree<t_A> leaf(t_A a0) {
-      return tree(Leaf{std::move(a0)});
-    }
+    static tree<t_A> leaf(t_A a0) { return tree(Leaf{std::move(a0)}); }
 
-    __attribute__((pure)) static tree<t_A> node(forest<t_A> a0) {
+    static tree<t_A> node(forest<t_A> a0) {
       return tree(Node{std::make_unique<forest<t_A>>(std::move(a0))});
     }
 
@@ -93,7 +91,7 @@ struct MutualRecursion {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename t_A> struct forest {
@@ -134,18 +132,37 @@ struct MutualRecursion {
     }
 
     // ACCESSORS
-    __attribute__((pure)) forest<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Empty>(_sv.v())) {
-        return forest<t_A>(Empty{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Trees>(_sv.v());
-        return forest<t_A>(Trees{
-            d_a0 ? std::make_unique<MutualRecursion::tree<t_A>>(d_a0->clone())
-                 : nullptr,
-            d_a1 ? std::make_unique<MutualRecursion::forest<t_A>>(d_a1->clone())
-                 : nullptr});
+    forest clone() const {
+      forest _out{};
+
+      struct _CloneFrame {
+        const forest *_src;
+        forest *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const forest *_src = _frame._src;
+        forest *_dst = _frame._dst;
+        if (std::holds_alternative<Empty>(_src->v())) {
+          const auto &_alt = std::get<Empty>(_src->v());
+          _dst->d_v_ = Empty{};
+        } else {
+          const auto &_alt = std::get<Trees>(_src->v());
+          _dst->d_v_ =
+              Trees{_alt.d_a0 ? std::make_unique<MutualRecursion::tree<t_A>>(
+                                    _alt.d_a0->clone())
+                              : nullptr,
+                    _alt.d_a1 ? std::make_unique<forest>() : nullptr};
+          auto &_dst_alt = std::get<Trees>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -161,10 +178,9 @@ struct MutualRecursion {
       }
     }
 
-    __attribute__((pure)) static forest<t_A> empty() { return forest(Empty{}); }
+    static forest<t_A> empty() { return forest(Empty{}); }
 
-    __attribute__((pure)) static forest<t_A> trees(tree<t_A> a0,
-                                                   forest<t_A> a1) {
+    static forest<t_A> trees(tree<t_A> a0, forest<t_A> a1) {
       return forest(Trees{std::make_unique<tree<t_A>>(std::move(a0)),
                           std::make_unique<forest<t_A>>(std::move(a1))});
     }
@@ -191,7 +207,7 @@ struct MutualRecursion {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0,
@@ -238,8 +254,7 @@ struct MutualRecursion {
     }
   }
 
-  template <typename T1>
-  __attribute__((pure)) static unsigned int tree_size(const tree<T1> &t) {
+  template <typename T1> static unsigned int tree_size(const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return 1u;
     } else {
@@ -248,8 +263,7 @@ struct MutualRecursion {
     }
   }
 
-  template <typename T1>
-  __attribute__((pure)) static unsigned int forest_size(const forest<T1> &f) {
+  template <typename T1> static unsigned int forest_size(const forest<T1> &f) {
     if (std::holds_alternative<typename forest<T1>::Empty>(f.v())) {
       return 0u;
     } else {
@@ -258,10 +272,8 @@ struct MutualRecursion {
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  tree_sum(const tree<unsigned int> &t);
-  __attribute__((pure)) static unsigned int
-  forest_sum(const forest<unsigned int> &f);
+  static unsigned int tree_sum(const tree<unsigned int> &t);
+  static unsigned int forest_sum(const forest<unsigned int> &f);
   static inline const bool test_even_0 = is_even(0u);
   static inline const bool test_even_4 = is_even(4u);
   static inline const bool test_odd_3 = is_odd(3u);

@@ -1,7 +1,6 @@
 #include <nested_partial_app.h>
 
-__attribute__((pure)) unsigned int
-NestedPartialApp::tree_sum(const NestedPartialApp::tree &t) {
+unsigned int NestedPartialApp::tree_sum(const NestedPartialApp::tree &t) {
   if (std::holds_alternative<typename NestedPartialApp::tree::Leaf>(t.v())) {
     return 0u;
   } else {
@@ -12,16 +11,16 @@ NestedPartialApp::tree_sum(const NestedPartialApp::tree &t) {
 }
 
 /// 3-argument function: builds Node(t1, n, t2).
-__attribute__((pure)) NestedPartialApp::tree
-NestedPartialApp::build_node(NestedPartialApp::tree t1, unsigned int n,
-                             NestedPartialApp::tree t2) {
+NestedPartialApp::tree NestedPartialApp::build_node(NestedPartialApp::tree t1,
+                                                    unsigned int n,
+                                                    NestedPartialApp::tree t2) {
   return tree::node(std::move(t1), n, std::move(t2));
 }
 
 /// Variation: 4-argument function, triple nesting.
-__attribute__((pure)) unsigned int
-NestedPartialApp::quad_fn(const NestedPartialApp::tree &a,
-                          const unsigned int &b, const unsigned int &c,
-                          const NestedPartialApp::tree &d) {
+unsigned int NestedPartialApp::quad_fn(const NestedPartialApp::tree &a,
+                                       const unsigned int &b,
+                                       const unsigned int &c,
+                                       const NestedPartialApp::tree &d) {
   return (((tree_sum(a) + b) + c) + tree_sum(d));
 }

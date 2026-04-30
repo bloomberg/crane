@@ -1,33 +1,30 @@
 #include <get_pair_bound_prop.h>
 
-__attribute__((pure)) unsigned int
-GetPairBoundProp::get_reg(const GetPairBoundProp::state &s,
-                          const unsigned int &r) {
+unsigned int GetPairBoundProp::get_reg(const GetPairBoundProp::state &s,
+                                       const unsigned int &r) {
   return ListDef::template nth<unsigned int>(r, s.ex_regs, 0u);
 }
 
-__attribute__((pure)) List<unsigned int>
-GetPairBoundProp::set_reg(const GetPairBoundProp::state &s,
-                          const unsigned int &r, const unsigned int &v) {
+List<unsigned int> GetPairBoundProp::set_reg(const GetPairBoundProp::state &s,
+                                             const unsigned int &r,
+                                             const unsigned int &v) {
   return update_nth<unsigned int>(r, (16u ? v % 16u : v), s.ex_regs);
 }
 
-__attribute__((pure)) unsigned int
-GetPairBoundProp::pair_base(const unsigned int &r) {
+unsigned int GetPairBoundProp::pair_base(const unsigned int &r) {
   return (((r - (2u ? r % 2u : r)) > r ? 0 : (r - (2u ? r % 2u : r))));
 }
 
-__attribute__((pure)) unsigned int
-GetPairBoundProp::get_pair(const GetPairBoundProp::state &s,
-                           const unsigned int &r) {
+unsigned int GetPairBoundProp::get_pair(const GetPairBoundProp::state &s,
+                                        const unsigned int &r) {
   unsigned int base = pair_base(r);
   return (((16u ? get_reg(s, base) % 16u : get_reg(s, base)) * 16u) +
           (16u ? get_reg(s, (base + 1)) % 16u : get_reg(s, (base + 1))));
 }
 
-__attribute__((pure)) List<unsigned int>
-GetPairBoundProp::set_pair(const GetPairBoundProp::state &s,
-                           const unsigned int &r, const unsigned int &v) {
+List<unsigned int> GetPairBoundProp::set_pair(const GetPairBoundProp::state &s,
+                                              const unsigned int &r,
+                                              const unsigned int &v) {
   unsigned int base = pair_base(r);
   unsigned int hi = (16u ? (16u ? v / 16u : 0) % 16u : (16u ? v / 16u : 0));
   unsigned int lo = (16u ? v % 16u : v);
@@ -35,14 +32,14 @@ GetPairBoundProp::set_pair(const GetPairBoundProp::state &s,
       (base + 1), lo, update_nth<unsigned int>(base, hi, s.ex_regs));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 GetPairBoundProp::push_return(const GetPairBoundProp::state &s,
                               const unsigned int &ret) {
   return List<unsigned int>::cons((4096u ? ret % 4096u : ret), s.ex_stack)
       .firstn(2u);
 }
 
-__attribute__((pure)) GetPairBoundProp::state
+GetPairBoundProp::state
 GetPairBoundProp::execute(const GetPairBoundProp::state &s,
                           const GetPairBoundProp::instr &i) {
   if (std::holds_alternative<typename GetPairBoundProp::instr::NOP>(i.v())) {

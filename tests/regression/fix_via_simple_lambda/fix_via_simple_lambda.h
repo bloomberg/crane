@@ -23,8 +23,7 @@ struct FixViaSimpleLambda {
   /// the fixpoints don't escape directly through a constructor —
   /// they escape INDIRECTLY by being captured in a simple lambda
   /// that is then stored in Some.
-  __attribute__((
-      pure)) static std::optional<std::function<unsigned int(unsigned int)>>
+  static std::optional<std::function<unsigned int(unsigned int)>>
   make_combined(const unsigned int &n);
   /// test1: base=42, double_add(5) = 42+10 = 52,
   /// triple_add(5) = 42+15 = 57. Total = 109.

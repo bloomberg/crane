@@ -1,7 +1,6 @@
 #include <reuse_fn_in_body.h>
 
-__attribute__((pure)) unsigned int
-ReuseFnInBody::length(const ReuseFnInBody::mylist &l) {
+unsigned int ReuseFnInBody::length(const ReuseFnInBody::mylist &l) {
   if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(l.v())) {
     const auto &[d_a0, d_a1] =
         std::get<typename ReuseFnInBody::mylist::Mycons>(l.v());
@@ -11,8 +10,7 @@ ReuseFnInBody::length(const ReuseFnInBody::mylist &l) {
   }
 }
 
-__attribute__((pure)) unsigned int
-ReuseFnInBody::sum(const ReuseFnInBody::mylist &l) {
+unsigned int ReuseFnInBody::sum(const ReuseFnInBody::mylist &l) {
   if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(l.v())) {
     const auto &[d_a0, d_a1] =
         std::get<typename ReuseFnInBody::mylist::Mycons>(l.v());
@@ -38,8 +36,8 @@ ReuseFnInBody::sum(const ReuseFnInBody::mylist &l) {
 /// This is similar to reuse_use_after_move but the scrutinee
 /// is used through a DIFFERENT function (sum instead of length)
 /// AND combined with a pattern variable in an arithmetic expression.
-__attribute__((pure)) ReuseFnInBody::mylist
-ReuseFnInBody::prefix_sum(ReuseFnInBody::mylist l, const bool &b) {
+ReuseFnInBody::mylist ReuseFnInBody::prefix_sum(ReuseFnInBody::mylist l,
+                                                const bool &b) {
   if (b) {
     if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(
             l.v_mut())) {

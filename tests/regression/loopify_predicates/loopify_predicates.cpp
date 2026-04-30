@@ -1,8 +1,7 @@
 #include <loopify_predicates.h>
 
-__attribute__((pure)) List<unsigned int>
-LoopifyPredicates::remove_all(const unsigned int &x,
-                              const List<unsigned int> &l) {
+List<unsigned int> LoopifyPredicates::remove_all(const unsigned int &x,
+                                                 const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;

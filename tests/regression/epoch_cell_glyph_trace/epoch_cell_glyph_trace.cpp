@@ -1,6 +1,6 @@
 #include <epoch_cell_glyph_trace.h>
 
-__attribute__((pure)) Positive Pos::succ(const Positive &x) {
+Positive Pos::succ(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     return Positive::xo(succ(*(d_a0)));
@@ -12,7 +12,7 @@ __attribute__((pure)) Positive Pos::succ(const Positive &x) {
   }
 }
 
-__attribute__((pure)) Positive Pos::add(const Positive &x, const Positive &y) {
+Positive Pos::add(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -48,8 +48,7 @@ __attribute__((pure)) Positive Pos::add(const Positive &x, const Positive &y) {
   }
 }
 
-__attribute__((pure)) Positive Pos::add_carry(const Positive &x,
-                                              const Positive &y) {
+Positive Pos::add_carry(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -85,7 +84,7 @@ __attribute__((pure)) Positive Pos::add_carry(const Positive &x,
   }
 }
 
-__attribute__((pure)) Positive Pos::pred_double(const Positive &x) {
+Positive Pos::pred_double(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     return Positive::xi(Positive::xo(*(d_a0)));
@@ -97,7 +96,7 @@ __attribute__((pure)) Positive Pos::pred_double(const Positive &x) {
   }
 }
 
-__attribute__((pure)) Positive Pos::mul(const Positive &x, Positive y) {
+Positive Pos::mul(const Positive &x, Positive y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     return add(y, Positive::xo(mul(*(d_a0), y)));
@@ -109,9 +108,8 @@ __attribute__((pure)) Positive Pos::mul(const Positive &x, Positive y) {
   }
 }
 
-__attribute__((pure)) Comparison Pos::compare_cont(const Comparison r,
-                                                   const Positive &x,
-                                                   const Positive &y) {
+Comparison Pos::compare_cont(const Comparison r, const Positive &x,
+                             const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -143,12 +141,11 @@ __attribute__((pure)) Comparison Pos::compare_cont(const Comparison r,
   }
 }
 
-__attribute__((pure)) Comparison Pos::compare(const Positive &_x0,
-                                              const Positive &_x1) {
+Comparison Pos::compare(const Positive &_x0, const Positive &_x1) {
   return compare_cont(Comparison::e_EQ, _x0, _x1);
 }
 
-__attribute__((pure)) bool Pos::eqb(const Positive &p, const Positive &q) {
+bool Pos::eqb(const Positive &p, const Positive &q) {
   if (std::holds_alternative<typename Positive::XI>(p.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(p.v());
     if (std::holds_alternative<typename Positive::XI>(q.v())) {
@@ -174,7 +171,7 @@ __attribute__((pure)) bool Pos::eqb(const Positive &p, const Positive &q) {
   }
 }
 
-__attribute__((pure)) unsigned int Pos::to_nat(const Positive &x) {
+unsigned int Pos::to_nat(const Positive &x) {
   return iter_op<unsigned int>(
       [](unsigned int _x0, unsigned int _x1) -> unsigned int {
         return (_x0 + _x1);
@@ -182,7 +179,7 @@ __attribute__((pure)) unsigned int Pos::to_nat(const Positive &x) {
       x, 1u);
 }
 
-__attribute__((pure)) Z BinInt::double_(const Z &x) {
+Z BinInt::double_(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
@@ -194,7 +191,7 @@ __attribute__((pure)) Z BinInt::double_(const Z &x) {
   }
 }
 
-__attribute__((pure)) Z BinInt::succ_double(const Z &x) {
+Z BinInt::succ_double(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::zpos(Positive::xh());
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
@@ -206,7 +203,7 @@ __attribute__((pure)) Z BinInt::succ_double(const Z &x) {
   }
 }
 
-__attribute__((pure)) Z BinInt::pred_double(const Z &x) {
+Z BinInt::pred_double(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::zneg(Positive::xh());
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
@@ -218,7 +215,7 @@ __attribute__((pure)) Z BinInt::pred_double(const Z &x) {
   }
 }
 
-__attribute__((pure)) Z BinInt::pos_sub(const Positive &x, const Positive &y) {
+Z BinInt::pos_sub(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -254,7 +251,7 @@ __attribute__((pure)) Z BinInt::pos_sub(const Positive &x, const Positive &y) {
   }
 }
 
-__attribute__((pure)) Z BinInt::add(Z x, Z y) {
+Z BinInt::add(Z x, Z y) {
   if (std::holds_alternative<typename Z::Z0>(x.v_mut())) {
     return y;
   } else if (std::holds_alternative<typename Z::Zpos>(x.v_mut())) {
@@ -282,7 +279,7 @@ __attribute__((pure)) Z BinInt::add(Z x, Z y) {
   }
 }
 
-__attribute__((pure)) Z BinInt::opp(const Z &x) {
+Z BinInt::opp(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
@@ -294,11 +291,9 @@ __attribute__((pure)) Z BinInt::opp(const Z &x) {
   }
 }
 
-__attribute__((pure)) Z BinInt::sub(const Z &m, const Z &n) {
-  return BinInt::add(m, BinInt::opp(n));
-}
+Z BinInt::sub(const Z &m, const Z &n) { return BinInt::add(m, BinInt::opp(n)); }
 
-__attribute__((pure)) Z BinInt::mul(const Z &x, const Z &y) {
+Z BinInt::mul(const Z &x, const Z &y) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
@@ -326,7 +321,7 @@ __attribute__((pure)) Z BinInt::mul(const Z &x, const Z &y) {
   }
 }
 
-__attribute__((pure)) Comparison BinInt::compare(const Z &x, const Z &y) {
+Comparison BinInt::compare(const Z &x, const Z &y) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return Comparison::e_EQ;
@@ -354,7 +349,7 @@ __attribute__((pure)) Comparison BinInt::compare(const Z &x, const Z &y) {
   }
 }
 
-__attribute__((pure)) bool BinInt::leb(const Z &x, const Z &y) {
+bool BinInt::leb(const Z &x, const Z &y) {
   switch (BinInt::compare(x, y)) {
   case Comparison::e_GT: {
     return false;
@@ -365,7 +360,7 @@ __attribute__((pure)) bool BinInt::leb(const Z &x, const Z &y) {
   }
 }
 
-__attribute__((pure)) bool BinInt::ltb(const Z &x, const Z &y) {
+bool BinInt::ltb(const Z &x, const Z &y) {
   switch (BinInt::compare(x, y)) {
   case Comparison::e_LT: {
     return true;
@@ -376,7 +371,7 @@ __attribute__((pure)) bool BinInt::ltb(const Z &x, const Z &y) {
   }
 }
 
-__attribute__((pure)) bool BinInt::eqb(const Z &x, const Z &y) {
+bool BinInt::eqb(const Z &x, const Z &y) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return true;
@@ -402,7 +397,7 @@ __attribute__((pure)) bool BinInt::eqb(const Z &x, const Z &y) {
   }
 }
 
-__attribute__((pure)) unsigned int BinInt::to_nat(const Z &z) {
+unsigned int BinInt::to_nat(const Z &z) {
   if (std::holds_alternative<typename Z::Zpos>(z.v())) {
     const auto &[d_a0] = std::get<typename Z::Zpos>(z.v());
     return Pos::to_nat(d_a0);
@@ -411,8 +406,7 @@ __attribute__((pure)) unsigned int BinInt::to_nat(const Z &z) {
   }
 }
 
-__attribute__((pure)) std::pair<Z, Z> BinInt::pos_div_eucl(const Positive &a,
-                                                           const Z &b) {
+std::pair<Z, Z> BinInt::pos_div_eucl(const Positive &a, const Z &b) {
   if (std::holds_alternative<typename Positive::XI>(a.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(a.v());
     auto _cs = BinInt::pos_div_eucl(*(d_a0), b);
@@ -453,7 +447,7 @@ __attribute__((pure)) std::pair<Z, Z> BinInt::pos_div_eucl(const Positive &a,
   }
 }
 
-__attribute__((pure)) std::pair<Z, Z> BinInt::div_eucl(Z a, const Z &b) {
+std::pair<Z, Z> BinInt::div_eucl(Z a, const Z &b) {
   if (std::holds_alternative<typename Z::Z0>(a.v_mut())) {
     return std::make_pair(Z::z0(), Z::z0());
   } else if (std::holds_alternative<typename Z::Zpos>(a.v_mut())) {
@@ -500,21 +494,21 @@ __attribute__((pure)) std::pair<Z, Z> BinInt::div_eucl(Z a, const Z &b) {
   }
 }
 
-__attribute__((pure)) Z BinInt::div(const Z &a, const Z &b) {
+Z BinInt::div(const Z &a, const Z &b) {
   auto _cs = BinInt::div_eucl(a, b);
   const Z &q = _cs.first;
   const Z &_x = _cs.second;
   return q;
 }
 
-__attribute__((pure)) Z BinInt::modulo(const Z &a, const Z &b) {
+Z BinInt::modulo(const Z &a, const Z &b) {
   auto _cs = BinInt::div_eucl(a, b);
   const Z &_x = _cs.first;
   const Z &r = _cs.second;
   return r;
 }
 
-__attribute__((pure)) Z BinInt::abs(const Z &z) {
+Z BinInt::abs(const Z &z) {
   if (std::holds_alternative<typename Z::Z0>(z.v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(z.v())) {
@@ -526,7 +520,7 @@ __attribute__((pure)) Z BinInt::abs(const Z &z) {
   }
 }
 
-__attribute__((pure)) unsigned int EpochCellGlyphTraceCase::phase_code(
+unsigned int EpochCellGlyphTraceCase::phase_code(
     const EpochCellGlyphTraceCase::LunarPhase p) {
   switch (p) {
   case LunarPhase::e_NEWMOON: {
@@ -546,7 +540,7 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::phase_code(
   }
 }
 
-__attribute__((pure)) EpochCellGlyphTraceCase::LunarPhase
+EpochCellGlyphTraceCase::LunarPhase
 EpochCellGlyphTraceCase::phase_from_angle(const Z &angle_deg) {
   Z wrapped = BinInt::modulo(
       angle_deg,
@@ -580,7 +574,7 @@ EpochCellGlyphTraceCase::phase_from_angle(const Z &angle_deg) {
   }
 }
 
-__attribute__((pure)) unsigned int EpochCellGlyphTraceCase::zodiac_code(
+unsigned int EpochCellGlyphTraceCase::zodiac_code(
     const EpochCellGlyphTraceCase::ZodiacSign z) {
   switch (z) {
   case ZodiacSign::e_ARIES: {
@@ -624,8 +618,7 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::zodiac_code(
   }
 }
 
-__attribute__((pure)) bool
-EpochCellGlyphTraceCase::eclipse_possible_at_dial(const Z &dial_pos) {
+bool EpochCellGlyphTraceCase::eclipse_possible_at_dial(const Z &dial_pos) {
   if (BinInt::eqb(dial_pos, Z::zpos(Positive::xh()))) {
     return true;
   } else {
@@ -649,8 +642,7 @@ EpochCellGlyphTraceCase::eclipse_possible_at_dial(const Z &dial_pos) {
   }
 }
 
-__attribute__((pure)) EpochCellGlyphTraceCase::MechanismState
-EpochCellGlyphTraceCase::step(
+EpochCellGlyphTraceCase::MechanismState EpochCellGlyphTraceCase::step(
     const EpochCellGlyphTraceCase::MechanismState &s) {
   return MechanismState{
       BinInt::add(s.crank_position, Z::zpos(Positive::xh())),
@@ -668,8 +660,7 @@ EpochCellGlyphTraceCase::step(
                      zodiac_modulus)};
 }
 
-__attribute__((pure)) EpochCellGlyphTraceCase::MechanismState
-EpochCellGlyphTraceCase::step_reverse(
+EpochCellGlyphTraceCase::MechanismState EpochCellGlyphTraceCase::step_reverse(
     const EpochCellGlyphTraceCase::MechanismState &s) {
   return MechanismState{
       BinInt::sub(s.crank_position, Z::zpos(Positive::xh())),
@@ -699,7 +690,7 @@ EpochCellGlyphTraceCase::step_reverse(
           zodiac_modulus)};
 }
 
-__attribute__((pure)) EpochCellGlyphTraceCase::MechanismState
+EpochCellGlyphTraceCase::MechanismState
 EpochCellGlyphTraceCase::step_n(const unsigned int &n,
                                 EpochCellGlyphTraceCase::MechanismState s) {
   if (n <= 0) {
@@ -710,12 +701,12 @@ EpochCellGlyphTraceCase::step_n(const unsigned int &n,
   }
 }
 
-__attribute__((pure)) EpochCellGlyphTraceCase::MechanismState
+EpochCellGlyphTraceCase::MechanismState
 EpochCellGlyphTraceCase::state_at_cell(Z cell) {
   return MechanismState{cell, cell, cell, cell, cell, cell, cell};
 }
 
-__attribute__((pure)) EpochCellGlyphTraceCase::LunarPhase
+EpochCellGlyphTraceCase::LunarPhase
 EpochCellGlyphTraceCase::predict_moon_phase_from_state(
     const EpochCellGlyphTraceCase::MechanismState &s) {
   Z phase_angle = BinInt::div(
@@ -728,7 +719,7 @@ EpochCellGlyphTraceCase::predict_moon_phase_from_state(
   return phase_from_angle(std::move(phase_angle));
 }
 
-__attribute__((pure)) Z EpochCellGlyphTraceCase::predict_olympiad_year(
+Z EpochCellGlyphTraceCase::predict_olympiad_year(
     const EpochCellGlyphTraceCase::MechanismState &s) {
   return BinInt::add(
       BinInt::modulo(s.games_dial,
@@ -736,7 +727,7 @@ __attribute__((pure)) Z EpochCellGlyphTraceCase::predict_olympiad_year(
       Z::zpos(Positive::xh()));
 }
 
-__attribute__((pure)) EpochCellGlyphTraceCase::ZodiacSign
+EpochCellGlyphTraceCase::ZodiacSign
 EpochCellGlyphTraceCase::predict_zodiac_sign(
     const EpochCellGlyphTraceCase::MechanismState &s) {
   Z deg = BinInt::modulo(
@@ -820,8 +811,7 @@ EpochCellGlyphTraceCase::predict_zodiac_sign(
   }
 }
 
-__attribute__((pure)) unsigned int
-EpochCellGlyphTraceCase::eclipse_category_code(
+unsigned int EpochCellGlyphTraceCase::eclipse_category_code(
     const EpochCellGlyphTraceCase::EclipseCategory c) {
   switch (c) {
   case EclipseCategory::e_EC_TOTALLUNAR: {
@@ -844,7 +834,7 @@ EpochCellGlyphTraceCase::eclipse_category_code(
   }
 }
 
-__attribute__((pure)) unsigned int EpochCellGlyphTraceCase::glyph_code(
+unsigned int EpochCellGlyphTraceCase::glyph_code(
     const EpochCellGlyphTraceCase::DialGlyph g) {
   switch (g) {
   case DialGlyph::e_GLYPH_SIGMA: {
@@ -867,7 +857,7 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::glyph_code(
   }
 }
 
-__attribute__((pure)) bool EpochCellGlyphTraceCase::category_matches_glyph(
+bool EpochCellGlyphTraceCase::category_matches_glyph(
     const EpochCellGlyphTraceCase::EclipseCategory cat,
     const EpochCellGlyphTraceCase::DialGlyph g) {
   switch (cat) {
@@ -920,7 +910,7 @@ __attribute__((pure)) bool EpochCellGlyphTraceCase::category_matches_glyph(
   }
 }
 
-__attribute__((pure)) EpochCellGlyphTraceCase::DialGlyph
+EpochCellGlyphTraceCase::DialGlyph
 EpochCellGlyphTraceCase::glyph_at_cell(const Z &cell) {
   if (BinInt::eqb(cell, Z::z0())) {
     return DialGlyph::e_GLYPH_SIGMATOTAL;
@@ -944,7 +934,7 @@ EpochCellGlyphTraceCase::glyph_at_cell(const Z &cell) {
   }
 }
 
-__attribute__((pure)) unsigned int EpochCellGlyphTraceCase::count_total_lunar(
+unsigned int EpochCellGlyphTraceCase::count_total_lunar(
     const List<EpochCellGlyphTraceCase::HistoricalEclipse> &es) {
   if (std::holds_alternative<
           typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Nil>(
@@ -968,8 +958,7 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::count_total_lunar(
   }
 }
 
-__attribute__((pure)) unsigned int
-EpochCellGlyphTraceCase::count_visible_total_lunar(
+unsigned int EpochCellGlyphTraceCase::count_visible_total_lunar(
     const List<EpochCellGlyphTraceCase::HistoricalEclipse> &es) {
   if (std::holds_alternative<
           typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Nil>(
@@ -997,8 +986,7 @@ EpochCellGlyphTraceCase::count_visible_total_lunar(
   }
 }
 
-__attribute__((pure)) unsigned int
-EpochCellGlyphTraceCase::visible_series_checksum(
+unsigned int EpochCellGlyphTraceCase::visible_series_checksum(
     const List<EpochCellGlyphTraceCase::HistoricalEclipse> &es) {
   if (std::holds_alternative<
           typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Nil>(
@@ -1018,9 +1006,10 @@ EpochCellGlyphTraceCase::visible_series_checksum(
   }
 }
 
-__attribute__((pure)) Z EpochCellGlyphTraceCase::months_from_epoch(
-    const Z &epoch_year, const Z &eclipse_year, const Z &epoch_month,
-    const Z &eclipse_month) {
+Z EpochCellGlyphTraceCase::months_from_epoch(const Z &epoch_year,
+                                             const Z &eclipse_year,
+                                             const Z &epoch_month,
+                                             const Z &eclipse_month) {
   Z year_diff = BinInt::sub(epoch_year, eclipse_year);
   Z month_diff = BinInt::sub(eclipse_month, epoch_month);
   return BinInt::add(
@@ -1029,7 +1018,7 @@ __attribute__((pure)) Z EpochCellGlyphTraceCase::months_from_epoch(
       std::move(month_diff));
 }
 
-__attribute__((pure)) Z EpochCellGlyphTraceCase::saros_cell(
+Z EpochCellGlyphTraceCase::saros_cell(
     const Z &epoch_year, const Z &epoch_month,
     const EpochCellGlyphTraceCase::HistoricalEclipse &e) {
   Z months = months_from_epoch(epoch_year, e.he_year, epoch_month, e.he_month);
@@ -1039,15 +1028,15 @@ __attribute__((pure)) Z EpochCellGlyphTraceCase::saros_cell(
           Positive::xi(Positive::xo(Positive::xi(Positive::xh())))))))));
 }
 
-__attribute__((pure)) Z EpochCellGlyphTraceCase::saros_dial_at_month(
-    const Z &start_cell, const Z &months) {
+Z EpochCellGlyphTraceCase::saros_dial_at_month(const Z &start_cell,
+                                               const Z &months) {
   return BinInt::modulo(
       BinInt::add(start_cell, months),
       Z::zpos(Positive::xi(Positive::xi(Positive::xi(Positive::xi(
           Positive::xi(Positive::xo(Positive::xi(Positive::xh())))))))));
 }
 
-__attribute__((pure)) EpochCellGlyphTraceCase::EpochReading
+EpochCellGlyphTraceCase::EpochReading
 EpochCellGlyphTraceCase::build_epoch_reading(
     const Z &epoch_year, const Z &epoch_month,
     EpochCellGlyphTraceCase::HistoricalEclipse e) {
@@ -1055,33 +1044,33 @@ EpochCellGlyphTraceCase::build_epoch_reading(
   return EpochReading{state_at_cell(cell), e, cell, glyph_at_cell(cell)};
 }
 
-__attribute__((pure)) bool EpochCellGlyphTraceCase::reading_matches(
+bool EpochCellGlyphTraceCase::reading_matches(
     const EpochCellGlyphTraceCase::EpochReading &reading) {
   return category_matches_glyph(reading.reading_eclipse.he_category,
                                 reading.reading_glyph);
 }
 
-__attribute__((pure)) unsigned int EpochCellGlyphTraceCase::reading_phase_code(
+unsigned int EpochCellGlyphTraceCase::reading_phase_code(
     const EpochCellGlyphTraceCase::EpochReading &reading) {
   return phase_code(predict_moon_phase_from_state(reading.reading_state));
 }
 
-__attribute__((pure)) unsigned int EpochCellGlyphTraceCase::reading_zodiac_code(
+unsigned int EpochCellGlyphTraceCase::reading_zodiac_code(
     const EpochCellGlyphTraceCase::EpochReading &reading) {
   return zodiac_code(predict_zodiac_sign(reading.reading_state));
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 EpochCellGlyphTraceCase::phase_code_after_steps(const unsigned int &n) {
   return phase_code(predict_moon_phase_from_state(step_n(n, initial_state)));
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 EpochCellGlyphTraceCase::zodiac_code_after_steps(const unsigned int &n) {
   return zodiac_code(predict_zodiac_sign(step_n(n, initial_state)));
 }
 
-__attribute__((pure)) Comparison Datatypes::CompOpp(const Comparison r) {
+Comparison Datatypes::CompOpp(const Comparison r) {
   switch (r) {
   case Comparison::e_EQ: {
     return Comparison::e_EQ;
@@ -1097,7 +1086,7 @@ __attribute__((pure)) Comparison Datatypes::CompOpp(const Comparison r) {
   }
 }
 
-__attribute__((pure)) bool QArith_base::Qle_bool(const Q &x, const Q &y) {
+bool QArith_base::Qle_bool(const Q &x, const Q &y) {
   return BinInt::leb(BinInt::mul(x.Qnum, Z::zpos(y.Qden)),
                      BinInt::mul(y.Qnum, Z::zpos(x.Qden)));
 }

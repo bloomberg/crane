@@ -29,8 +29,7 @@ int64_t BindTypeInference::test4() {
   return v.size();
 }
 
-__attribute__((pure)) List<int64_t>
-BindTypeInference::intToList(const int64_t n) {
+List<int64_t> BindTypeInference::intToList(const int64_t n) {
   return List<int64_t>::cons(n, List<int64_t>::nil());
 }
 

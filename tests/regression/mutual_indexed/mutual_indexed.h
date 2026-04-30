@@ -53,7 +53,7 @@ struct MutualIndexed {
     }
 
     // ACCESSORS
-    __attribute__((pure)) EvenTree clone() const {
+    EvenTree clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<ELeaf>(_sv.v())) {
         return EvenTree(ELeaf{});
@@ -67,10 +67,9 @@ struct MutualIndexed {
     }
 
     // CREATORS
-    __attribute__((pure)) static EvenTree eleaf() { return EvenTree(ELeaf{}); }
+    static EvenTree eleaf() { return EvenTree(ELeaf{}); }
 
-    __attribute__((pure)) static EvenTree enode(unsigned int n, unsigned int a1,
-                                                OddTree a2) {
+    static EvenTree enode(unsigned int n, unsigned int a1, OddTree a2) {
       return EvenTree(ENode{std::move(n), std::move(a1),
                             std::make_unique<OddTree>(std::move(a2))});
     }
@@ -79,7 +78,7 @@ struct MutualIndexed {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   struct OddTree {
@@ -117,7 +116,7 @@ struct MutualIndexed {
     }
 
     // ACCESSORS
-    __attribute__((pure)) OddTree clone() const {
+    OddTree clone() const {
       auto &&_sv = *(this);
       const auto &[d_n, d_a1, d_a2] = std::get<ONode>(_sv.v());
       return OddTree(
@@ -127,8 +126,7 @@ struct MutualIndexed {
     }
 
     // CREATORS
-    __attribute__((pure)) static OddTree onode(unsigned int n, unsigned int a1,
-                                               EvenTree a2) {
+    static OddTree onode(unsigned int n, unsigned int a1, EvenTree a2) {
       return OddTree(ONode{std::move(n), std::move(a1),
                            std::make_unique<EvenTree>(std::move(a2))});
     }
@@ -137,7 +135,7 @@ struct MutualIndexed {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int, OddTree> F1>
@@ -174,10 +172,8 @@ struct MutualIndexed {
     return f(d_n, d_a1, *(d_a2));
   }
 
-  __attribute__((pure)) static unsigned int even_val(const unsigned int &_x,
-                                                     const EvenTree &t);
-  __attribute__((pure)) static unsigned int odd_val(const unsigned int &_x,
-                                                    const OddTree &t);
+  static unsigned int even_val(const unsigned int &_x, const EvenTree &t);
+  static unsigned int odd_val(const unsigned int &_x, const OddTree &t);
   static inline const EvenTree leaf = EvenTree::eleaf();
   static inline const OddTree tree1 =
       OddTree::onode(0u, 10u, EvenTree::eleaf());

@@ -28,7 +28,7 @@ struct EmptyMatch {
     throw std::logic_error("absurd case");
   }
 
-  __attribute__((pure)) static unsigned int from_empty(const empty &_x0);
+  static unsigned int from_empty(const empty &_x0);
 
   template <typename t_A, typename t_B> struct either {
     // TYPES
@@ -70,7 +70,7 @@ struct EmptyMatch {
     }
 
     // ACCESSORS
-    __attribute__((pure)) either<t_A, t_B> clone() const {
+    either<t_A, t_B> clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Left>(_sv.v())) {
         const auto &[d_a0] = std::get<Left>(_sv.v());
@@ -95,11 +95,9 @@ struct EmptyMatch {
       }
     }
 
-    __attribute__((pure)) static either<t_A, t_B> left(t_A a0) {
-      return either(Left{std::move(a0)});
-    }
+    static either<t_A, t_B> left(t_A a0) { return either(Left{std::move(a0)}); }
 
-    __attribute__((pure)) static either<t_A, t_B> right(t_B a0) {
+    static either<t_A, t_B> right(t_B a0) {
       return either(Right{std::move(a0)});
     }
 
@@ -107,7 +105,7 @@ struct EmptyMatch {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1> F0,

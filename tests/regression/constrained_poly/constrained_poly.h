@@ -18,18 +18,18 @@ struct ConstrainedPoly {
     t_B usnd;
 
     // ACCESSORS
-    __attribute__((pure)) UPair<t_A, t_B> clone() const {
+    UPair<t_A, t_B> clone() const {
       return UPair<t_A, t_B>{(*(this)).ufst, (*(this)).usnd};
     }
   };
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static UPair<T2, T1> swap(const UPair<T1, T2> &p) {
+  static UPair<T2, T1> swap(const UPair<T1, T2> &p) {
     return UPair<T2, T1>{p.usnd, p.ufst};
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static UPair<T1, T2> wrap_pair(const T1 a, const T2 b) {
+  static UPair<T1, T2> wrap_pair(const T1 a, const T2 b) {
     return UPair<T1, T2>{a, b};
   }
 
@@ -71,7 +71,7 @@ struct ConstrainedPoly {
     }
 
     // ACCESSORS
-    __attribute__((pure)) UOption<t_A> clone() const {
+    UOption<t_A> clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<USome>(_sv.v())) {
         const auto &[d_a0] = std::get<USome>(_sv.v());
@@ -91,19 +91,15 @@ struct ConstrainedPoly {
       }
     }
 
-    __attribute__((pure)) static UOption<t_A> usome(t_A a0) {
-      return UOption(USome{std::move(a0)});
-    }
+    static UOption<t_A> usome(t_A a0) { return UOption(USome{std::move(a0)}); }
 
-    __attribute__((pure)) static UOption<t_A> unone() {
-      return UOption(UNone{});
-    }
+    static UOption<t_A> unone() { return UOption(UNone{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
@@ -127,8 +123,7 @@ struct ConstrainedPoly {
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  __attribute__((pure)) static UOption<T2> uoption_map(F0 &&f,
-                                                       const UOption<T1> &o) {
+  static UOption<T2> uoption_map(F0 &&f, const UOption<T1> &o) {
     if (std::holds_alternative<typename UOption<T1>::USome>(o.v())) {
       const auto &[d_a0] = std::get<typename UOption<T1>::USome>(o.v());
       return UOption<T2>::usome(f(d_a0));

@@ -2,7 +2,7 @@
 
 /// Count the number of Dot cells in a list.
 /// The match on c inside the Cons branch triggers bug 2.
-__attribute__((pure)) unsigned int
+unsigned int
 LoopifyMatchArg::count_dots(const List<LoopifyMatchArg::Cell> &xs) {
   struct _Enter {
     const List<LoopifyMatchArg::Cell> *xs;
@@ -49,8 +49,7 @@ LoopifyMatchArg::count_dots(const List<LoopifyMatchArg::Cell> &xs) {
 
 /// A plain recursive length — triggers bug 1 (missing <vector>)
 /// when loopify converts it to an explicit-stack loop.
-__attribute__((pure)) unsigned int
-LoopifyMatchArg::my_length(const List<LoopifyMatchArg::Cell> &xs) {
+unsigned int LoopifyMatchArg::my_length(const List<LoopifyMatchArg::Cell> &xs) {
   struct _Enter {
     const List<LoopifyMatchArg::Cell> *xs;
   };

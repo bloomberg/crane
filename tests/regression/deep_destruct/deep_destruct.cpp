@@ -1,7 +1,7 @@
 #include <deep_destruct.h>
 
 /// Tail-recursive list builder — should compile to a loop.
-__attribute__((pure)) DeepDestruct::mylist<unsigned int>
+DeepDestruct::mylist<unsigned int>
 DeepDestruct::build_aux(unsigned int n,
                         DeepDestruct::mylist<unsigned int> acc) {
   DeepDestruct::mylist<unsigned int> _result;
@@ -23,13 +23,12 @@ DeepDestruct::build_aux(unsigned int n,
   return _result;
 }
 
-__attribute__((pure)) DeepDestruct::mylist<unsigned int>
-DeepDestruct::build(const unsigned int &n) {
+DeepDestruct::mylist<unsigned int> DeepDestruct::build(const unsigned int &n) {
   return build_aux(n, mylist<unsigned int>::mynil());
 }
 
 /// Simple accessor to observe the result.
-__attribute__((pure)) unsigned int
+unsigned int
 DeepDestruct::head_or_zero(const DeepDestruct::mylist<unsigned int> &l) {
   if (std::holds_alternative<
           typename DeepDestruct::mylist<unsigned int>::Mynil>(l.v())) {

@@ -1,7 +1,6 @@
 #include <function_vernac.h>
 
-__attribute__((pure)) Sig<unsigned int>
-FunctionVernac::div2_terminate(const unsigned int &n) {
+Sig<unsigned int> FunctionVernac::div2_terminate(const unsigned int &n) {
   if (n <= 0) {
     return Sig<unsigned int>::exist(0u);
   } else {
@@ -17,13 +16,13 @@ FunctionVernac::div2_terminate(const unsigned int &n) {
   }
 }
 
-__attribute__((pure)) unsigned int FunctionVernac::div2(const unsigned int &n) {
+unsigned int FunctionVernac::div2(const unsigned int &n) {
   auto &&_sv = div2_terminate(n);
   const auto &[d_x] = std::get<typename Sig<unsigned int>::Exist>(_sv.v());
   return d_x;
 }
 
-__attribute__((pure)) FunctionVernac::R_div2
+FunctionVernac::R_div2
 FunctionVernac::R_div2_correct(const unsigned int &n,
                                const unsigned int &_res) {
   return div2_rect<std::function<FunctionVernac::R_div2(unsigned int)>>(
@@ -47,7 +46,7 @@ FunctionVernac::R_div2_correct(const unsigned int &n,
       n)(_res);
 }
 
-__attribute__((pure)) Sig<unsigned int>
+Sig<unsigned int>
 FunctionVernac::list_sum_terminate(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return Sig<unsigned int>::exist(0u);
@@ -60,14 +59,13 @@ FunctionVernac::list_sum_terminate(const List<unsigned int> &l) {
   }
 }
 
-__attribute__((pure)) unsigned int
-FunctionVernac::list_sum(const List<unsigned int> &l) {
+unsigned int FunctionVernac::list_sum(const List<unsigned int> &l) {
   auto &&_sv = list_sum_terminate(l);
   const auto &[d_x] = std::get<typename Sig<unsigned int>::Exist>(_sv.v());
   return d_x;
 }
 
-__attribute__((pure)) FunctionVernac::R_list_sum
+FunctionVernac::R_list_sum
 FunctionVernac::R_list_sum_correct(const List<unsigned int> &l,
                                    const unsigned int &_res) {
   return list_sum_rect<std::function<FunctionVernac::R_list_sum(unsigned int)>>(

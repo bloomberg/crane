@@ -1,7 +1,6 @@
 #include <reuse_lambda_capture.h>
 
-__attribute__((pure)) unsigned int
-ReuseLambdaCapture::length(const ReuseLambdaCapture::mylist &l) {
+unsigned int ReuseLambdaCapture::length(const ReuseLambdaCapture::mylist &l) {
   if (std::holds_alternative<typename ReuseLambdaCapture::mylist::Mycons>(
           l.v())) {
     const auto &[d_a0, d_a1] =
@@ -23,7 +22,7 @@ ReuseLambdaCapture::length(const ReuseLambdaCapture::mylist &l) {
 /// // l is the same object as _rf
 /// // l.d_a1 is null -> crash
 /// return _rf;
-__attribute__((pure)) ReuseLambdaCapture::mylist
+ReuseLambdaCapture::mylist
 ReuseLambdaCapture::add_length_to_each(ReuseLambdaCapture::mylist l,
                                        const bool &b) {
   if (b) {

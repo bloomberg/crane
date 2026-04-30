@@ -48,7 +48,7 @@ struct MatchFallbackNat {
     }
 
     // ACCESSORS
-    __attribute__((pure)) maybe_nat clone() const {
+    maybe_nat clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<SomeNat>(_sv.v())) {
         const auto &[d_a0] = std::get<SomeNat>(_sv.v());
@@ -59,19 +59,17 @@ struct MatchFallbackNat {
     }
 
     // CREATORS
-    __attribute__((pure)) static maybe_nat somenat(unsigned int a0) {
+    static maybe_nat somenat(unsigned int a0) {
       return maybe_nat(SomeNat{std::move(a0)});
     }
 
-    __attribute__((pure)) static maybe_nat nonenat() {
-      return maybe_nat(NoneNat{});
-    }
+    static maybe_nat nonenat() { return maybe_nat(NoneNat{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0>
@@ -94,7 +92,7 @@ struct MatchFallbackNat {
     }
   }
 
-  __attribute__((pure)) static unsigned int fallback(const maybe_nat &x);
+  static unsigned int fallback(const maybe_nat &x);
   static inline const unsigned int t =
       (fallback(maybe_nat::nonenat()) + fallback(maybe_nat::somenat(7u)));
 };

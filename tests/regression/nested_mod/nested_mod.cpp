@@ -1,6 +1,6 @@
 #include <nested_mod.h>
 
-__attribute__((pure)) unsigned int
+unsigned int
 NestedMod::Outer::Inner::area(const NestedMod::Outer::Inner::shape &s) {
   if (std::holds_alternative<typename NestedMod::Outer::Inner::shape::Circle>(
           s.v())) {
@@ -19,7 +19,7 @@ NestedMod::Outer::Inner::area(const NestedMod::Outer::Inner::shape &s) {
   }
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 NestedMod::Outer::shape_with_color(const Inner::shape &s,
                                    const NestedMod::Outer::Color c) {
   switch (c) {
@@ -37,8 +37,7 @@ NestedMod::Outer::shape_with_color(const Inner::shape &s,
   }
 }
 
-__attribute__((pure)) unsigned int
-NestedMod::Outer::color_code(const NestedMod::Outer::Color c) {
+unsigned int NestedMod::Outer::color_code(const NestedMod::Outer::Color c) {
   switch (c) {
   case Color::e_RED: {
     return 1u;

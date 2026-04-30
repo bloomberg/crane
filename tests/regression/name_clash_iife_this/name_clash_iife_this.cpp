@@ -1,6 +1,6 @@
 #include <name_clash_iife_this.h>
 
-__attribute__((pure)) unsigned int
+unsigned int
 NameClashIifeThis::match_of_match(const NameClashIifeThis::Color c,
                                   const NameClashIifeThis::shape &s) {
   auto &&_sv = [&]() {

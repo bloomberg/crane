@@ -32,7 +32,7 @@ template <S X> struct F {
 struct N {
   using t = unsigned int;
   static inline const unsigned int zero = 0u;
-  __attribute__((pure)) static unsigned int to_nat(unsigned int n);
+  static unsigned int to_nat(unsigned int n);
 };
 
 using FN = F<N>;

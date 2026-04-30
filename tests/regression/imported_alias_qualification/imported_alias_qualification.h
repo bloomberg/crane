@@ -12,7 +12,7 @@ enum class Player { e_BLACK, e_WHITE };
 using cell = std::optional<Player>;
 
 struct AliasSource {
-  __attribute__((pure)) static cell id_cell(std::optional<Player> c);
+  static cell id_cell(std::optional<Player> c);
   static inline const cell empty_cell = std::optional<Player>();
 };
 

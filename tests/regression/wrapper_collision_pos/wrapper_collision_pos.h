@@ -11,13 +11,13 @@ concept MapsTo = std::is_invocable_v<F &, Args &...>;
 struct WrapperCollisionPos {
   struct Left {
     struct Pos {
-      __attribute__((pure)) static unsigned int id_left(unsigned int n);
+      static unsigned int id_left(unsigned int n);
     };
   };
 
   struct Right {
     struct Pos {
-      __attribute__((pure)) static unsigned int inc_right(unsigned int n);
+      static unsigned int inc_right(unsigned int n);
     };
   };
 

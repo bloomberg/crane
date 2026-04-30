@@ -1,8 +1,8 @@
 #include <sort.h>
 
-__attribute__((pure)) Sig<List<unsigned int>>
-Sort::sort_cons_prog(unsigned int a, const List<unsigned int> &,
-                     const List<unsigned int> &l_) {
+Sig<List<unsigned int>> Sort::sort_cons_prog(unsigned int a,
+                                             const List<unsigned int> &,
+                                             const List<unsigned int> &l_) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l_.v())) {
     return Sig<List<unsigned int>>::exist(
         List<unsigned int>::cons(a, List<unsigned int>::nil()));
@@ -22,8 +22,7 @@ Sort::sort_cons_prog(unsigned int a, const List<unsigned int> &,
   }
 }
 
-__attribute__((pure)) Sig<List<unsigned int>>
-Sort::isort(const List<unsigned int> &l) {
+Sig<List<unsigned int>> Sort::isort(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return Sig<List<unsigned int>>::exist(List<unsigned int>::nil());
   } else {
@@ -36,8 +35,8 @@ Sort::isort(const List<unsigned int> &l) {
   }
 }
 
-__attribute__((pure)) List<unsigned int>
-Sort::merge(List<unsigned int> l1, const List<unsigned int> &l2) {
+List<unsigned int> Sort::merge(List<unsigned int> l1,
+                               const List<unsigned int> &l2) {
   std::function<List<unsigned int>(List<unsigned int>)> merge_aux;
   merge_aux = [&](List<unsigned int> l3) -> List<unsigned int> {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
@@ -62,14 +61,13 @@ Sort::merge(List<unsigned int> l1, const List<unsigned int> &l2) {
   return merge_aux(l2);
 }
 
-__attribute__((pure)) Sig<List<unsigned int>>
-Sort::merge_prog(const List<unsigned int> &, const List<unsigned int> &l1,
-                 const List<unsigned int> &l2) {
+Sig<List<unsigned int>> Sort::merge_prog(const List<unsigned int> &,
+                                         const List<unsigned int> &l1,
+                                         const List<unsigned int> &l2) {
   return Sig<List<unsigned int>>::exist(merge(l1, l2));
 }
 
-__attribute__((pure)) Sig<List<unsigned int>>
-Sort::msort(const List<unsigned int> &_x0) {
+Sig<List<unsigned int>> Sort::msort(const List<unsigned int> &_x0) {
   return div_conq_split(
       Sig<List<unsigned int>>::exist(List<unsigned int>::nil()),
       [](unsigned int a) {
@@ -87,15 +85,15 @@ Sort::msort(const List<unsigned int> &_x0) {
       _x0);
 }
 
-__attribute__((pure)) Sig<List<unsigned int>>
-Sort::pair_merge_prog(const unsigned int &, const unsigned int &,
-                      const List<unsigned int> &, const List<unsigned int> &l_,
-                      const List<unsigned int> &l_0) {
+Sig<List<unsigned int>> Sort::pair_merge_prog(const unsigned int &,
+                                              const unsigned int &,
+                                              const List<unsigned int> &,
+                                              const List<unsigned int> &l_,
+                                              const List<unsigned int> &l_0) {
   return Sig<List<unsigned int>>::exist(merge(l_0, l_));
 }
 
-__attribute__((pure)) Sig<List<unsigned int>>
-Sort::psort(const List<unsigned int> &_x0) {
+Sig<List<unsigned int>> Sort::psort(const List<unsigned int> &_x0) {
   return div_conq_pair(
       Sig<List<unsigned int>>::exist(List<unsigned int>::nil()),
       [](unsigned int a) {
@@ -124,8 +122,7 @@ Sort::psort(const List<unsigned int> &_x0) {
       _x0);
 }
 
-__attribute__((pure)) Sig<List<unsigned int>>
-Sort::qsort(const List<unsigned int> &_x0) {
+Sig<List<unsigned int>> Sort::qsort(const List<unsigned int> &_x0) {
   return div_conq_pivot(
       Compare_dec::le_dec,
       Sig<List<unsigned int>>::exist(List<unsigned int>::nil()),
@@ -141,8 +138,7 @@ Sort::qsort(const List<unsigned int> &_x0) {
       _x0);
 }
 
-__attribute__((pure)) bool Compare_dec::le_lt_dec(const unsigned int &n,
-                                                  const unsigned int &m) {
+bool Compare_dec::le_lt_dec(const unsigned int &n, const unsigned int &m) {
   if (n <= 0) {
     return true;
   } else {
@@ -160,13 +156,11 @@ __attribute__((pure)) bool Compare_dec::le_lt_dec(const unsigned int &n,
   }
 }
 
-__attribute__((pure)) bool Compare_dec::le_gt_dec(const unsigned int &_x0,
-                                                  const unsigned int &_x1) {
+bool Compare_dec::le_gt_dec(const unsigned int &_x0, const unsigned int &_x1) {
   return Compare_dec::le_lt_dec(_x0, _x1);
 }
 
-__attribute__((pure)) bool Compare_dec::le_dec(const unsigned int &n,
-                                               const unsigned int &m) {
+bool Compare_dec::le_dec(const unsigned int &n, const unsigned int &m) {
   bool s = Compare_dec::le_gt_dec(n, m);
   if (s) {
     return true;

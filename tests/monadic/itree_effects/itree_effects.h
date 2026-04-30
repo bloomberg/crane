@@ -107,83 +107,129 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Uint clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return Uint(Nil{});
-    } else if (std::holds_alternative<D0>(_sv.v())) {
-      const auto &[d_a0] = std::get<D0>(_sv.v());
-      return Uint(D0{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D1>(_sv.v())) {
-      const auto &[d_a0] = std::get<D1>(_sv.v());
-      return Uint(D1{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D2>(_sv.v())) {
-      const auto &[d_a0] = std::get<D2>(_sv.v());
-      return Uint(D2{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D3>(_sv.v())) {
-      const auto &[d_a0] = std::get<D3>(_sv.v());
-      return Uint(D3{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D4>(_sv.v())) {
-      const auto &[d_a0] = std::get<D4>(_sv.v());
-      return Uint(D4{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D5>(_sv.v())) {
-      const auto &[d_a0] = std::get<D5>(_sv.v());
-      return Uint(D5{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D6>(_sv.v())) {
-      const auto &[d_a0] = std::get<D6>(_sv.v());
-      return Uint(D6{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D7>(_sv.v())) {
-      const auto &[d_a0] = std::get<D7>(_sv.v());
-      return Uint(D7{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D8>(_sv.v())) {
-      const auto &[d_a0] = std::get<D8>(_sv.v());
-      return Uint(D8{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else {
-      const auto &[d_a0] = std::get<D9>(_sv.v());
-      return Uint(D9{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
+  Uint clone() const {
+    Uint _out{};
+
+    struct _CloneFrame {
+      const Uint *_src;
+      Uint *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Uint *_src = _frame._src;
+      Uint *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else if (std::holds_alternative<D0>(_src->v())) {
+        const auto &_alt = std::get<D0>(_src->v());
+        _dst->d_v_ = D0{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D0>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D1>(_src->v())) {
+        const auto &_alt = std::get<D1>(_src->v());
+        _dst->d_v_ = D1{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D1>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D2>(_src->v())) {
+        const auto &_alt = std::get<D2>(_src->v());
+        _dst->d_v_ = D2{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D2>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D3>(_src->v())) {
+        const auto &_alt = std::get<D3>(_src->v());
+        _dst->d_v_ = D3{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D3>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D4>(_src->v())) {
+        const auto &_alt = std::get<D4>(_src->v());
+        _dst->d_v_ = D4{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D4>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D5>(_src->v())) {
+        const auto &_alt = std::get<D5>(_src->v());
+        _dst->d_v_ = D5{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D5>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D6>(_src->v())) {
+        const auto &_alt = std::get<D6>(_src->v());
+        _dst->d_v_ = D6{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D6>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D7>(_src->v())) {
+        const auto &_alt = std::get<D7>(_src->v());
+        _dst->d_v_ = D7{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D7>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D8>(_src->v())) {
+        const auto &_alt = std::get<D8>(_src->v());
+        _dst->d_v_ = D8{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D8>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else {
+        const auto &_alt = std::get<D9>(_src->v());
+        _dst->d_v_ = D9{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D9>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Uint nil() { return Uint(Nil{}); }
+  static Uint nil() { return Uint(Nil{}); }
 
-  __attribute__((pure)) static Uint d0(Uint a0) {
+  static Uint d0(Uint a0) {
     return Uint(D0{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d1(Uint a0) {
+  static Uint d1(Uint a0) {
     return Uint(D1{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d2(Uint a0) {
+  static Uint d2(Uint a0) {
     return Uint(D2{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d3(Uint a0) {
+  static Uint d3(Uint a0) {
     return Uint(D3{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d4(Uint a0) {
+  static Uint d4(Uint a0) {
     return Uint(D4{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d5(Uint a0) {
+  static Uint d5(Uint a0) {
     return Uint(D5{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d6(Uint a0) {
+  static Uint d6(Uint a0) {
     return Uint(D6{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d7(Uint a0) {
+  static Uint d7(Uint a0) {
     return Uint(D7{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d8(Uint a0) {
+  static Uint d8(Uint a0) {
     return Uint(D8{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d9(Uint a0) {
+  static Uint d9(Uint a0) {
     return Uint(D9{std::make_unique<Uint>(std::move(a0))});
   }
 
@@ -254,7 +300,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Uint0 {
@@ -385,135 +431,189 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Uint0 clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil0>(_sv.v())) {
-      return Uint0(Nil0{});
-    } else if (std::holds_alternative<D10>(_sv.v())) {
-      const auto &[d_a0] = std::get<D10>(_sv.v());
-      return Uint0(
-          D10{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D11>(_sv.v())) {
-      const auto &[d_a0] = std::get<D11>(_sv.v());
-      return Uint0(
-          D11{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D12>(_sv.v())) {
-      const auto &[d_a0] = std::get<D12>(_sv.v());
-      return Uint0(
-          D12{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D13>(_sv.v())) {
-      const auto &[d_a0] = std::get<D13>(_sv.v());
-      return Uint0(
-          D13{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D14>(_sv.v())) {
-      const auto &[d_a0] = std::get<D14>(_sv.v());
-      return Uint0(
-          D14{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D15>(_sv.v())) {
-      const auto &[d_a0] = std::get<D15>(_sv.v());
-      return Uint0(
-          D15{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D16>(_sv.v())) {
-      const auto &[d_a0] = std::get<D16>(_sv.v());
-      return Uint0(
-          D16{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D17>(_sv.v())) {
-      const auto &[d_a0] = std::get<D17>(_sv.v());
-      return Uint0(
-          D17{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D18>(_sv.v())) {
-      const auto &[d_a0] = std::get<D18>(_sv.v());
-      return Uint0(
-          D18{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D19>(_sv.v())) {
-      const auto &[d_a0] = std::get<D19>(_sv.v());
-      return Uint0(
-          D19{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<Da>(_sv.v())) {
-      const auto &[d_a0] = std::get<Da>(_sv.v());
-      return Uint0(Da{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<Db>(_sv.v())) {
-      const auto &[d_a0] = std::get<Db>(_sv.v());
-      return Uint0(Db{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<Dc>(_sv.v())) {
-      const auto &[d_a0] = std::get<Dc>(_sv.v());
-      return Uint0(Dc{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<Dd>(_sv.v())) {
-      const auto &[d_a0] = std::get<Dd>(_sv.v());
-      return Uint0(Dd{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<De>(_sv.v())) {
-      const auto &[d_a0] = std::get<De>(_sv.v());
-      return Uint0(De{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else {
-      const auto &[d_a0] = std::get<Df>(_sv.v());
-      return Uint0(Df{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
+  Uint0 clone() const {
+    Uint0 _out{};
+
+    struct _CloneFrame {
+      const Uint0 *_src;
+      Uint0 *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Uint0 *_src = _frame._src;
+      Uint0 *_dst = _frame._dst;
+      if (std::holds_alternative<Nil0>(_src->v())) {
+        const auto &_alt = std::get<Nil0>(_src->v());
+        _dst->d_v_ = Nil0{};
+      } else if (std::holds_alternative<D10>(_src->v())) {
+        const auto &_alt = std::get<D10>(_src->v());
+        _dst->d_v_ = D10{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D10>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D11>(_src->v())) {
+        const auto &_alt = std::get<D11>(_src->v());
+        _dst->d_v_ = D11{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D11>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D12>(_src->v())) {
+        const auto &_alt = std::get<D12>(_src->v());
+        _dst->d_v_ = D12{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D12>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D13>(_src->v())) {
+        const auto &_alt = std::get<D13>(_src->v());
+        _dst->d_v_ = D13{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D13>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D14>(_src->v())) {
+        const auto &_alt = std::get<D14>(_src->v());
+        _dst->d_v_ = D14{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D14>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D15>(_src->v())) {
+        const auto &_alt = std::get<D15>(_src->v());
+        _dst->d_v_ = D15{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D15>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D16>(_src->v())) {
+        const auto &_alt = std::get<D16>(_src->v());
+        _dst->d_v_ = D16{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D16>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D17>(_src->v())) {
+        const auto &_alt = std::get<D17>(_src->v());
+        _dst->d_v_ = D17{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D17>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D18>(_src->v())) {
+        const auto &_alt = std::get<D18>(_src->v());
+        _dst->d_v_ = D18{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D18>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D19>(_src->v())) {
+        const auto &_alt = std::get<D19>(_src->v());
+        _dst->d_v_ = D19{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D19>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<Da>(_src->v())) {
+        const auto &_alt = std::get<Da>(_src->v());
+        _dst->d_v_ = Da{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Da>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<Db>(_src->v())) {
+        const auto &_alt = std::get<Db>(_src->v());
+        _dst->d_v_ = Db{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Db>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<Dc>(_src->v())) {
+        const auto &_alt = std::get<Dc>(_src->v());
+        _dst->d_v_ = Dc{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Dc>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<Dd>(_src->v())) {
+        const auto &_alt = std::get<Dd>(_src->v());
+        _dst->d_v_ = Dd{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Dd>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<De>(_src->v())) {
+        const auto &_alt = std::get<De>(_src->v());
+        _dst->d_v_ = De{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<De>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else {
+        const auto &_alt = std::get<Df>(_src->v());
+        _dst->d_v_ = Df{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Df>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Uint0 nil0() { return Uint0(Nil0{}); }
+  static Uint0 nil0() { return Uint0(Nil0{}); }
 
-  __attribute__((pure)) static Uint0 d10(Uint0 a0) {
+  static Uint0 d10(Uint0 a0) {
     return Uint0(D10{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d11(Uint0 a0) {
+  static Uint0 d11(Uint0 a0) {
     return Uint0(D11{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d12(Uint0 a0) {
+  static Uint0 d12(Uint0 a0) {
     return Uint0(D12{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d13(Uint0 a0) {
+  static Uint0 d13(Uint0 a0) {
     return Uint0(D13{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d14(Uint0 a0) {
+  static Uint0 d14(Uint0 a0) {
     return Uint0(D14{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d15(Uint0 a0) {
+  static Uint0 d15(Uint0 a0) {
     return Uint0(D15{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d16(Uint0 a0) {
+  static Uint0 d16(Uint0 a0) {
     return Uint0(D16{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d17(Uint0 a0) {
+  static Uint0 d17(Uint0 a0) {
     return Uint0(D17{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d18(Uint0 a0) {
+  static Uint0 d18(Uint0 a0) {
     return Uint0(D18{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d19(Uint0 a0) {
+  static Uint0 d19(Uint0 a0) {
     return Uint0(D19{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 da(Uint0 a0) {
+  static Uint0 da(Uint0 a0) {
     return Uint0(Da{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 db(Uint0 a0) {
+  static Uint0 db(Uint0 a0) {
     return Uint0(Db{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 dc(Uint0 a0) {
+  static Uint0 dc(Uint0 a0) {
     return Uint0(Dc{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 dd(Uint0 a0) {
+  static Uint0 dd(Uint0 a0) {
     return Uint0(Dd{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 de(Uint0 a0) {
+  static Uint0 de(Uint0 a0) {
     return Uint0(De{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 df(Uint0 a0) {
+  static Uint0 df(Uint0 a0) {
     return Uint0(Df{std::make_unique<Uint0>(std::move(a0))});
   }
 
@@ -614,7 +714,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Uint1 {
@@ -656,7 +756,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Uint1 clone() const {
+  Uint1 clone() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<UIntDecimal>(_sv.v())) {
       const auto &[d_u] = std::get<UIntDecimal>(_sv.v());
@@ -668,11 +768,9 @@ public:
   }
 
   // CREATORS
-  __attribute__((pure)) static Uint1 uintdecimal(Uint u) {
-    return Uint1(UIntDecimal{std::move(u)});
-  }
+  static Uint1 uintdecimal(Uint u) { return Uint1(UIntDecimal{std::move(u)}); }
 
-  __attribute__((pure)) static Uint1 uinthexadecimal(Uint0 u) {
+  static Uint1 uinthexadecimal(Uint0 u) {
     return Uint1(UIntHexadecimal{std::move(u)});
   }
 
@@ -680,23 +778,19 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Nat {
-  __attribute__((pure)) static unsigned int tail_add(const unsigned int &n,
-                                                     unsigned int m);
-  __attribute__((pure)) static unsigned int
-  tail_addmul(unsigned int r, const unsigned int &n, const unsigned int &m);
-  __attribute__((pure)) static unsigned int tail_mul(const unsigned int &n,
-                                                     const unsigned int &m);
-  __attribute__((pure)) static unsigned int of_uint_acc(const Uint &d,
-                                                        unsigned int acc);
-  __attribute__((pure)) static unsigned int of_uint(const Uint &d);
-  __attribute__((pure)) static unsigned int of_hex_uint_acc(const Uint0 &d,
-                                                            unsigned int acc);
-  __attribute__((pure)) static unsigned int of_hex_uint(const Uint0 &d);
-  __attribute__((pure)) static unsigned int of_num_uint(const Uint1 &d);
+  static unsigned int tail_add(const unsigned int &n, unsigned int m);
+  static unsigned int tail_addmul(unsigned int r, const unsigned int &n,
+                                  const unsigned int &m);
+  static unsigned int tail_mul(const unsigned int &n, const unsigned int &m);
+  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
+  static unsigned int of_uint(const Uint &d);
+  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
+  static unsigned int of_hex_uint(const Uint0 &d);
+  static unsigned int of_num_uint(const Uint1 &d);
 };
 
 /// ------------------------------------------------------------------

@@ -51,15 +51,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -73,9 +92,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -102,9 +121,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) unsigned int length() const {
+  unsigned int length() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
@@ -131,8 +150,7 @@ struct Pos {
 };
 
 struct BinInt {
-  __attribute__((pure)) static int64_t pow_pos(const int64_t &z,
-                                               unsigned int _x0);
+  static int64_t pow_pos(const int64_t &z, unsigned int _x0);
 };
 
 struct ListDef {
@@ -145,13 +163,11 @@ struct Q {
   unsigned int Qden;
 
   // ACCESSORS
-  __attribute__((pure)) Q clone() const {
-    return Q{(*(this)).Qnum, (*(this)).Qden};
-  }
+  Q clone() const { return Q{(*(this)).Qnum, (*(this)).Qden}; }
 };
 
 struct Rdefinitions {
-  __attribute__((pure)) static Real Q2R(const Q &x);
+  static Real Q2R(const Q &x);
 };
 
 struct PolygonWindingAreaTraceCase {
@@ -160,9 +176,7 @@ struct PolygonWindingAreaTraceCase {
     Real lambda;
 
     // ACCESSORS
-    __attribute__((pure)) Point clone() const {
-      return Point{(*(this)).phi, (*(this)).lambda};
-    }
+    Point clone() const { return Point{(*(this)).phi, (*(this)).lambda}; }
   };
 
   static inline const Real R_earth_default = Rdefinitions::Q2R(Q{
@@ -172,8 +186,8 @@ struct PolygonWindingAreaTraceCase {
         (2u * (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u) + 1u) + 1u) + 1u)) +
                1u))))});
   static inline const Real R_earth = R_earth_default;
-  __attribute__((pure)) static Real hav(const Real theta);
-  __attribute__((pure)) static Real distance(const Point &p1, const Point &p2);
+  static Real hav(const Real theta);
+  static Real distance(const Point &p1, const Point &p2);
   using Polygon = List<Point>;
 
   template <typename T1>
@@ -183,33 +197,26 @@ struct PolygonWindingAreaTraceCase {
                                      default0);
   }
 
-  __attribute__((pure)) static Real lon_diff(const Real lon1, const Real lon2);
-  __attribute__((pure)) static Real
-  spherical_shoelace_aux(const List<Point> &pts, const List<Point> &all_pts,
-                         const unsigned int &idx);
-  __attribute__((pure)) static Real spherical_shoelace(const List<Point> &pts);
-  __attribute__((pure)) static Real
-  spherical_polygon_area(const List<Point> &poly);
-  __attribute__((pure)) static Real distance_to_central_angle(const Real d);
-  __attribute__((pure)) static Real
-  spherical_cosine_arg(const Real ca, const Real cb, const Real cab);
-  __attribute__((pure)) static Real
-  law_of_cosines_arg(const Real da, const Real db, const Real dab);
-  __attribute__((pure)) static Real
-  segment_angle(const Point &p, const Point &a, const Point &b);
-  __attribute__((pure)) static Real
-  winding_sum_aux(const Point &p, const List<Point> &pts, const Point &first);
-  __attribute__((pure)) static Real winding_sum(const Point &p,
-                                                const List<Point> &poly);
-  __attribute__((pure)) static Real winding_number(const Point &p,
-                                                   const List<Point> &poly);
-  __attribute__((pure)) static bool inside_by_winding(const Point &p,
-                                                      const List<Point> &poly);
-  __attribute__((pure)) static bool nonnegative_area(const List<Point> &poly);
-  __attribute__((pure)) static bool
-  nonnegative_segment_angle(const Point &p, const Point &a, const Point &b);
-  __attribute__((pure)) static bool
-  winding_number_gt_half(const Point &p, const List<Point> &poly);
+  static Real lon_diff(const Real lon1, const Real lon2);
+  static Real spherical_shoelace_aux(const List<Point> &pts,
+                                     const List<Point> &all_pts,
+                                     const unsigned int &idx);
+  static Real spherical_shoelace(const List<Point> &pts);
+  static Real spherical_polygon_area(const List<Point> &poly);
+  static Real distance_to_central_angle(const Real d);
+  static Real spherical_cosine_arg(const Real ca, const Real cb,
+                                   const Real cab);
+  static Real law_of_cosines_arg(const Real da, const Real db, const Real dab);
+  static Real segment_angle(const Point &p, const Point &a, const Point &b);
+  static Real winding_sum_aux(const Point &p, const List<Point> &pts,
+                              const Point &first);
+  static Real winding_sum(const Point &p, const List<Point> &poly);
+  static Real winding_number(const Point &p, const List<Point> &poly);
+  static bool inside_by_winding(const Point &p, const List<Point> &poly);
+  static bool nonnegative_area(const List<Point> &poly);
+  static bool nonnegative_segment_angle(const Point &p, const Point &a,
+                                        const Point &b);
+  static bool winding_number_gt_half(const Point &p, const List<Point> &poly);
   static inline const Point test_triangle_v1 =
       Point{Real::from_z(INT64_C(0)), Real::from_z(INT64_C(0))};
   static inline const Point test_triangle_v2 =
@@ -228,7 +235,7 @@ struct PolygonWindingAreaTraceCase {
   static inline const Point test_exterior =
       Point{(Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(2))),
             Real::from_z(INT64_C(-1))};
-  __attribute__((pure)) static Polygon test_equatorial_square(const Real delta);
+  static Polygon test_equatorial_square(const Real delta);
   static inline const Real sample_square_delta =
       (Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(10)));
   static inline const bool sample_centroid_inside =

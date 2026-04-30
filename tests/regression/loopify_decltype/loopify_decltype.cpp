@@ -2,8 +2,7 @@
 
 /// Minimal trigger: fold over a list with a conditional per-element
 /// contribution.
-__attribute__((pure)) unsigned int
-LoopifyDecltype::count_true(const List<bool> &xs) {
+unsigned int LoopifyDecltype::count_true(const List<bool> &xs) {
   struct _Enter {
     const List<bool> *xs;
   };
@@ -38,7 +37,7 @@ LoopifyDecltype::count_true(const List<bool> &xs) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 LoopifyDecltype::sum_flagged(const List<LoopifyDecltype::item> &xs) {
   struct _Enter {
     const List<LoopifyDecltype::item> *xs;

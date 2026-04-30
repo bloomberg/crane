@@ -53,7 +53,7 @@ struct DependentTypename {
       return v;
     }
 
-    __attribute__((pure)) static typename C::template t<unsigned int>
+    static typename C::template t<unsigned int>
     use_singleton(const unsigned int &_x0) {
       return C::template singleton<unsigned int>(_x0);
     }

@@ -30,8 +30,7 @@ struct CountDown {
   static void repeat_msg(const unsigned int &n, const std::string msg);
   static void run_fixpoint();
   /// Helper: compare two strings
-  __attribute__((pure)) static bool string_eq(const std::string s1,
-                                              const std::string s2);
+  static bool string_eq(const std::string s1, const std::string s2);
   static void co_count_down();
   static void co_two_prints();
   static void co_echo_loop();

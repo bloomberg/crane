@@ -1,7 +1,6 @@
 #include <loopify_classics.h>
 
-__attribute__((pure)) unsigned int
-LoopifyClassics::factorial(const unsigned int &n) {
+unsigned int LoopifyClassics::factorial(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -36,7 +35,7 @@ LoopifyClassics::factorial(const unsigned int &n) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int LoopifyClassics::fib(const unsigned int &n) {
+unsigned int LoopifyClassics::fib(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -84,9 +83,9 @@ __attribute__((pure)) unsigned int LoopifyClassics::fib(const unsigned int &n) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyClassics::ack_fuel(const unsigned int &fuel, const unsigned int &m,
-                          const unsigned int &n) {
+unsigned int LoopifyClassics::ack_fuel(const unsigned int &fuel,
+                                       const unsigned int &m,
+                                       const unsigned int &n) {
   struct _Enter {
     unsigned int n;
     unsigned int m;
@@ -140,14 +139,14 @@ LoopifyClassics::ack_fuel(const unsigned int &fuel, const unsigned int &m,
   return _result;
 }
 
-__attribute__((pure)) unsigned int LoopifyClassics::ack(const unsigned int &m,
-                                                        const unsigned int &n) {
+unsigned int LoopifyClassics::ack(const unsigned int &m,
+                                  const unsigned int &n) {
   return ack_fuel(((100u * (m + 1u)) * (n + 1u)), m, n);
 }
 
-__attribute__((pure)) unsigned int
-LoopifyClassics::binomial_fuel(const unsigned int &fuel, const unsigned int &n,
-                               const unsigned int &k) {
+unsigned int LoopifyClassics::binomial_fuel(const unsigned int &fuel,
+                                            const unsigned int &n,
+                                            const unsigned int &k) {
   struct _Enter {
     unsigned int k;
     unsigned int n;
@@ -208,14 +207,14 @@ LoopifyClassics::binomial_fuel(const unsigned int &fuel, const unsigned int &n,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyClassics::binomial(const unsigned int &n, const unsigned int &k) {
+unsigned int LoopifyClassics::binomial(const unsigned int &n,
+                                       const unsigned int &k) {
   return binomial_fuel((n * k), n, k);
 }
 
-__attribute__((pure)) unsigned int
-LoopifyClassics::pascal_fuel(const unsigned int &fuel, const unsigned int &row,
-                             const unsigned int &col) {
+unsigned int LoopifyClassics::pascal_fuel(const unsigned int &fuel,
+                                          const unsigned int &row,
+                                          const unsigned int &col) {
   struct _Enter {
     unsigned int col;
     unsigned int row;
@@ -277,14 +276,13 @@ LoopifyClassics::pascal_fuel(const unsigned int &fuel, const unsigned int &row,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyClassics::pascal(const unsigned int &row, const unsigned int &col) {
+unsigned int LoopifyClassics::pascal(const unsigned int &row,
+                                     const unsigned int &col) {
   return pascal_fuel((row * col), row, col);
 }
 
-__attribute__((pure)) unsigned int
-LoopifyClassics::gcd_fuel(const unsigned int &fuel, unsigned int a,
-                          const unsigned int &b) {
+unsigned int LoopifyClassics::gcd_fuel(const unsigned int &fuel, unsigned int a,
+                                       const unsigned int &b) {
   unsigned int _result;
   unsigned int _loop_b = b;
   unsigned int _loop_a = std::move(a);
@@ -311,13 +309,13 @@ LoopifyClassics::gcd_fuel(const unsigned int &fuel, unsigned int a,
   return _result;
 }
 
-__attribute__((pure)) unsigned int LoopifyClassics::gcd(const unsigned int &a,
-                                                        const unsigned int &b) {
+unsigned int LoopifyClassics::gcd(const unsigned int &a,
+                                  const unsigned int &b) {
   return gcd_fuel((a + b), a, b);
 }
 
-__attribute__((pure)) unsigned int
-LoopifyClassics::power(const unsigned int &base, const unsigned int &exp) {
+unsigned int LoopifyClassics::power(const unsigned int &base,
+                                    const unsigned int &exp) {
   struct _Enter {
     unsigned int exp;
   };
@@ -352,8 +350,7 @@ LoopifyClassics::power(const unsigned int &base, const unsigned int &exp) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyClassics::sum_to(const unsigned int &n) {
+unsigned int LoopifyClassics::sum_to(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -388,8 +385,7 @@ LoopifyClassics::sum_to(const unsigned int &n) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyClassics::sum_squares(const unsigned int &n) {
+unsigned int LoopifyClassics::sum_squares(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };

@@ -47,7 +47,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) SigT<t_A, t_P> clone() const {
+  SigT<t_A, t_P> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
     return SigT<t_A, t_P>(ExistT{d_x, d_a1});
@@ -61,7 +61,7 @@ public:
     d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
   }
 
-  __attribute__((pure)) static SigT<t_A, t_P> existt(t_A x, t_P a1) {
+  static SigT<t_A, t_P> existt(t_A x, t_P a1) {
     return SigT(ExistT{std::move(x), std::move(a1)});
   }
 
@@ -69,7 +69,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
   t_A projT1() const {
     auto &&_sv = *(this);
@@ -132,20 +132,16 @@ struct DoubleOppositeWitnessesCase {
     }
 
     // ACCESSORS
-    __attribute__((pure)) Path<t_A> clone() const {
-      return Path<t_A>(Path_refl{});
-    }
+    Path<t_A> clone() const { return Path<t_A>(Path_refl{}); }
 
     // CREATORS
-    __attribute__((pure)) static Path<t_A> path_refl() {
-      return Path(Path_refl{});
-    }
+    static Path<t_A> path_refl() { return Path(Path_refl{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2>
@@ -159,8 +155,7 @@ struct DoubleOppositeWitnessesCase {
   }
 
   template <typename T1>
-  __attribute__((pure)) static unsigned int path_code(const T1, const T1,
-                                                      const Path<T1> &) {
+  static unsigned int path_code(const T1, const T1, const Path<T1> &) {
     return 1u;
   }
 
@@ -182,13 +177,13 @@ struct DoubleOppositeWitnessesCase {
     std::function<Hom(Obj, Obj, Hom)> morphism_of;
 
     // ACCESSORS
-    __attribute__((pure)) Functor clone() const {
+    Functor clone() const {
       return Functor{(*(this)).object_of, (*(this)).morphism_of};
     }
   };
 
   template <PreCategory _tcI0, PreCategory _tcI1, PreCategory _tcI2>
-  __attribute__((pure)) static Functor compose_functor(Functor f, Functor g) {
+  static Functor compose_functor(Functor f, Functor g) {
     return Functor{
         [=](const std::any x) mutable { return f.object_of(g.object_of(x)); },
         [=](const std::any x, const std::any y, const std::any f0) mutable {
@@ -231,22 +226,20 @@ struct DoubleOppositeWitnessesCase {
 
   static_assert(PreStableCategory<toy_prestable>);
 
-  template <PreCategory _tcI0>
-  __attribute__((pure)) static Functor into_double_opposite_functor() {
+  template <PreCategory _tcI0> static Functor into_double_opposite_functor() {
     return Functor{
         [](const std::any x) { return x; },
         [](const std::any, const std::any, const std::any f) { return f; }};
   }
 
-  template <PreCategory _tcI0>
-  __attribute__((pure)) static Functor out_of_double_opposite_functor() {
+  template <PreCategory _tcI0> static Functor out_of_double_opposite_functor() {
     return Functor{
         [](const std::any x) { return x; },
         [](const std::any, const std::any, const std::any f) { return f; }};
   }
 
   template <PreStableCategory _tcI0>
-  __attribute__((pure)) static SigT<
+  static SigT<
       Functor,
       SigT<Functor,
            std::pair<std::function<Path<typename _tcI0::base_category::Obj>(

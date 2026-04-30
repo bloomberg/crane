@@ -1,6 +1,6 @@
 #include <region_patch_write.h>
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 RegionPatchWrite::update_region(const List<unsigned int> &rom,
                                 const unsigned int &base,
                                 const List<unsigned int> &bytes) {

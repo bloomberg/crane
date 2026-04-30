@@ -49,22 +49,39 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Nat clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<O>(_sv.v())) {
-      return Nat(O{});
-    } else {
-      const auto &[d_n] = std::get<S>(_sv.v());
-      return Nat(S{d_n ? std::make_unique<Nat>(d_n->clone()) : nullptr});
+  Nat clone() const {
+    Nat _out{};
+
+    struct _CloneFrame {
+      const Nat *_src;
+      Nat *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Nat *_src = _frame._src;
+      Nat *_dst = _frame._dst;
+      if (std::holds_alternative<O>(_src->v())) {
+        const auto &_alt = std::get<O>(_src->v());
+        _dst->d_v_ = O{};
+      } else {
+        const auto &_alt = std::get<S>(_src->v());
+        _dst->d_v_ = S{_alt.d_n ? std::make_unique<Nat>() : nullptr};
+        auto &_dst_alt = std::get<S>(_dst->d_v_);
+        if (_alt.d_n)
+          _stack.push_back({_alt.d_n.get(), _dst_alt.d_n.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Nat o() { return Nat(O{}); }
+  static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(Nat n) {
-    return Nat(S{std::make_unique<Nat>(std::move(n))});
-  }
+  static Nat s(Nat n) { return Nat(S{std::make_unique<Nat>(std::move(n))}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -88,7 +105,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
   template <typename T1, MapsTo<T1, Nat, T1> F1>
   T1 nat_rect(const T1 f, F1 &&f0) const {
@@ -113,7 +130,7 @@ public:
   }
 
   /// add m n computes the sum of m and n by recursion on m.
-  __attribute__((pure)) Nat add(Nat n) const {
+  Nat add(Nat n) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Nat::O>(_sv.v())) {
       return n;
@@ -124,7 +141,7 @@ public:
   }
 
   /// Convert a Peano nat to a machine int.
-  __attribute__((pure)) int nat_to_int() const {
+  int nat_to_int() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Nat::O>(_sv.v())) {
       return 0;

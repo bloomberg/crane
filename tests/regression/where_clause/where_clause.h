@@ -59,37 +59,56 @@ struct WhereClause {
     }
 
     // ACCESSORS
-    __attribute__((pure)) Expr clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Num>(_sv.v())) {
-        const auto &[d_a0] = std::get<Num>(_sv.v());
-        return Expr(Num{d_a0});
-      } else if (std::holds_alternative<Plus>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<Plus>(_sv.v());
-        return Expr(Plus{
-            d_a0 ? std::make_unique<WhereClause::Expr>(d_a0->clone()) : nullptr,
-            d_a1 ? std::make_unique<WhereClause::Expr>(d_a1->clone())
-                 : nullptr});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Times>(_sv.v());
-        return Expr(Times{
-            d_a0 ? std::make_unique<WhereClause::Expr>(d_a0->clone()) : nullptr,
-            d_a1 ? std::make_unique<WhereClause::Expr>(d_a1->clone())
-                 : nullptr});
+    Expr clone() const {
+      Expr _out{};
+
+      struct _CloneFrame {
+        const Expr *_src;
+        Expr *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const Expr *_src = _frame._src;
+        Expr *_dst = _frame._dst;
+        if (std::holds_alternative<Num>(_src->v())) {
+          const auto &_alt = std::get<Num>(_src->v());
+          _dst->d_v_ = Num{_alt.d_a0};
+        } else if (std::holds_alternative<Plus>(_src->v())) {
+          const auto &_alt = std::get<Plus>(_src->v());
+          _dst->d_v_ = Plus{_alt.d_a0 ? std::make_unique<Expr>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<Expr>() : nullptr};
+          auto &_dst_alt = std::get<Plus>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        } else {
+          const auto &_alt = std::get<Times>(_src->v());
+          _dst->d_v_ = Times{_alt.d_a0 ? std::make_unique<Expr>() : nullptr,
+                             _alt.d_a1 ? std::make_unique<Expr>() : nullptr};
+          auto &_dst_alt = std::get<Times>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static Expr num(unsigned int a0) {
-      return Expr(Num{std::move(a0)});
-    }
+    static Expr num(unsigned int a0) { return Expr(Num{std::move(a0)}); }
 
-    __attribute__((pure)) static Expr plus(Expr a0, Expr a1) {
+    static Expr plus(Expr a0, Expr a1) {
       return Expr(Plus{std::make_unique<Expr>(std::move(a0)),
                        std::make_unique<Expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static Expr times(Expr a0, Expr a1) {
+    static Expr times(Expr a0, Expr a1) {
       return Expr(Times{std::make_unique<Expr>(std::move(a0)),
                         std::make_unique<Expr>(std::move(a1))});
     }
@@ -125,9 +144,9 @@ struct WhereClause {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int expr_size() const {
+    unsigned int expr_size() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Expr::Num>(_sv.v())) {
         return 1u;
@@ -140,7 +159,7 @@ struct WhereClause {
       }
     }
 
-    __attribute__((pure)) unsigned int eval() const {
+    unsigned int eval() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Expr::Num>(_sv.v())) {
         const auto &[d_a0] = std::get<typename Expr::Num>(_sv.v());
@@ -248,50 +267,72 @@ struct WhereClause {
     }
 
     // ACCESSORS
-    __attribute__((pure)) BExpr clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<BTrue>(_sv.v())) {
-        return BExpr(BTrue{});
-      } else if (std::holds_alternative<BFalse>(_sv.v())) {
-        return BExpr(BFalse{});
-      } else if (std::holds_alternative<BAnd>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<BAnd>(_sv.v());
-        return BExpr(
-            BAnd{d_a0 ? std::make_unique<WhereClause::BExpr>(d_a0->clone())
-                      : nullptr,
-                 d_a1 ? std::make_unique<WhereClause::BExpr>(d_a1->clone())
-                      : nullptr});
-      } else if (std::holds_alternative<BOr>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<BOr>(_sv.v());
-        return BExpr(
-            BOr{d_a0 ? std::make_unique<WhereClause::BExpr>(d_a0->clone())
-                     : nullptr,
-                d_a1 ? std::make_unique<WhereClause::BExpr>(d_a1->clone())
-                     : nullptr});
-      } else {
-        const auto &[d_a0] = std::get<BNot>(_sv.v());
-        return BExpr(
-            BNot{d_a0 ? std::make_unique<WhereClause::BExpr>(d_a0->clone())
-                      : nullptr});
+    BExpr clone() const {
+      BExpr _out{};
+
+      struct _CloneFrame {
+        const BExpr *_src;
+        BExpr *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const BExpr *_src = _frame._src;
+        BExpr *_dst = _frame._dst;
+        if (std::holds_alternative<BTrue>(_src->v())) {
+          const auto &_alt = std::get<BTrue>(_src->v());
+          _dst->d_v_ = BTrue{};
+        } else if (std::holds_alternative<BFalse>(_src->v())) {
+          const auto &_alt = std::get<BFalse>(_src->v());
+          _dst->d_v_ = BFalse{};
+        } else if (std::holds_alternative<BAnd>(_src->v())) {
+          const auto &_alt = std::get<BAnd>(_src->v());
+          _dst->d_v_ = BAnd{_alt.d_a0 ? std::make_unique<BExpr>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<BExpr>() : nullptr};
+          auto &_dst_alt = std::get<BAnd>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        } else if (std::holds_alternative<BOr>(_src->v())) {
+          const auto &_alt = std::get<BOr>(_src->v());
+          _dst->d_v_ = BOr{_alt.d_a0 ? std::make_unique<BExpr>() : nullptr,
+                           _alt.d_a1 ? std::make_unique<BExpr>() : nullptr};
+          auto &_dst_alt = std::get<BOr>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        } else {
+          const auto &_alt = std::get<BNot>(_src->v());
+          _dst->d_v_ = BNot{_alt.d_a0 ? std::make_unique<BExpr>() : nullptr};
+          auto &_dst_alt = std::get<BNot>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static BExpr btrue() { return BExpr(BTrue{}); }
+    static BExpr btrue() { return BExpr(BTrue{}); }
 
-    __attribute__((pure)) static BExpr bfalse() { return BExpr(BFalse{}); }
+    static BExpr bfalse() { return BExpr(BFalse{}); }
 
-    __attribute__((pure)) static BExpr band(BExpr a0, BExpr a1) {
+    static BExpr band(BExpr a0, BExpr a1) {
       return BExpr(BAnd{std::make_unique<BExpr>(std::move(a0)),
                         std::make_unique<BExpr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static BExpr bor(BExpr a0, BExpr a1) {
+    static BExpr bor(BExpr a0, BExpr a1) {
       return BExpr(BOr{std::make_unique<BExpr>(std::move(a0)),
                        std::make_unique<BExpr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static BExpr bnot(BExpr a0) {
+    static BExpr bnot(BExpr a0) {
       return BExpr(BNot{std::make_unique<BExpr>(std::move(a0))});
     }
 
@@ -331,9 +372,9 @@ struct WhereClause {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) bool beval() const {
+    bool beval() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename BExpr::BTrue>(_sv.v())) {
         return true;
@@ -447,40 +488,57 @@ struct WhereClause {
     }
 
     // ACCESSORS
-    __attribute__((pure)) AExpr clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<ANum>(_sv.v())) {
-        const auto &[d_a0] = std::get<ANum>(_sv.v());
-        return AExpr(ANum{d_a0});
-      } else if (std::holds_alternative<APlus>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<APlus>(_sv.v());
-        return AExpr(
-            APlus{d_a0 ? std::make_unique<WhereClause::AExpr>(d_a0->clone())
-                       : nullptr,
-                  d_a1 ? std::make_unique<WhereClause::AExpr>(d_a1->clone())
-                       : nullptr});
-      } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<AIf>(_sv.v());
-        return AExpr(
-            AIf{d_a0.clone(),
-                d_a1 ? std::make_unique<WhereClause::AExpr>(d_a1->clone())
-                     : nullptr,
-                d_a2 ? std::make_unique<WhereClause::AExpr>(d_a2->clone())
-                     : nullptr});
+    AExpr clone() const {
+      AExpr _out{};
+
+      struct _CloneFrame {
+        const AExpr *_src;
+        AExpr *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const AExpr *_src = _frame._src;
+        AExpr *_dst = _frame._dst;
+        if (std::holds_alternative<ANum>(_src->v())) {
+          const auto &_alt = std::get<ANum>(_src->v());
+          _dst->d_v_ = ANum{_alt.d_a0};
+        } else if (std::holds_alternative<APlus>(_src->v())) {
+          const auto &_alt = std::get<APlus>(_src->v());
+          _dst->d_v_ = APlus{_alt.d_a0 ? std::make_unique<AExpr>() : nullptr,
+                             _alt.d_a1 ? std::make_unique<AExpr>() : nullptr};
+          auto &_dst_alt = std::get<APlus>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        } else {
+          const auto &_alt = std::get<AIf>(_src->v());
+          _dst->d_v_ =
+              AIf{_alt.d_a0, _alt.d_a1 ? std::make_unique<AExpr>() : nullptr,
+                  _alt.d_a2 ? std::make_unique<AExpr>() : nullptr};
+          auto &_dst_alt = std::get<AIf>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static AExpr anum(unsigned int a0) {
-      return AExpr(ANum{std::move(a0)});
-    }
+    static AExpr anum(unsigned int a0) { return AExpr(ANum{std::move(a0)}); }
 
-    __attribute__((pure)) static AExpr aplus(AExpr a0, AExpr a1) {
+    static AExpr aplus(AExpr a0, AExpr a1) {
       return AExpr(APlus{std::make_unique<AExpr>(std::move(a0)),
                          std::make_unique<AExpr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static AExpr aif(BExpr a0, AExpr a1, AExpr a2) {
+    static AExpr aif(BExpr a0, AExpr a1, AExpr a2) {
       return AExpr(AIf{std::move(a0), std::make_unique<AExpr>(std::move(a1)),
                        std::make_unique<AExpr>(std::move(a2))});
     }
@@ -516,9 +574,9 @@ struct WhereClause {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int aeval() const {
+    unsigned int aeval() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename AExpr::ANum>(_sv.v())) {
         const auto &[d_a0] = std::get<typename AExpr::ANum>(_sv.v());

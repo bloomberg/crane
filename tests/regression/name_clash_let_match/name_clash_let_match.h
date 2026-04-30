@@ -51,7 +51,7 @@ struct NameClashLetMatch {
     }
 
     // ACCESSORS
-    __attribute__((pure)) either clone() const {
+    either clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Left>(_sv.v())) {
         const auto &[d_a0] = std::get<Left>(_sv.v());
@@ -63,11 +63,9 @@ struct NameClashLetMatch {
     }
 
     // CREATORS
-    __attribute__((pure)) static either left(unsigned int a0) {
-      return either(Left{std::move(a0)});
-    }
+    static either left(unsigned int a0) { return either(Left{std::move(a0)}); }
 
-    __attribute__((pure)) static either right(unsigned int a0) {
+    static either right(unsigned int a0) {
       return either(Right{std::move(a0)});
     }
 
@@ -75,11 +73,10 @@ struct NameClashLetMatch {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// Deeply nested let-match-let-match chain
-    __attribute__((pure)) unsigned int deep_let_match(const either &e2,
-                                                      const either &e3) const {
+    unsigned int deep_let_match(const either &e2, const either &e3) const {
       unsigned int a = [&]() {
         auto &&_sv = *(this);
         if (std::holds_alternative<typename either::Left>(_sv.v())) {
@@ -112,7 +109,7 @@ struct NameClashLetMatch {
     }
 
     /// Two either values matched in sequence, same field names.
-    __attribute__((pure)) unsigned int two_eithers(const either &e2) const {
+    unsigned int two_eithers(const either &e2) const {
       unsigned int v1 = [&]() {
         auto &&_sv = *(this);
         if (std::holds_alternative<typename either::Left>(_sv.v())) {
@@ -136,7 +133,7 @@ struct NameClashLetMatch {
     }
 
     /// Match binding used in a nested let that shadows.
-    __attribute__((pure)) unsigned int match_then_let() const {
+    unsigned int match_then_let() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename either::Left>(_sv.v())) {
         const auto &[d_a0] = std::get<typename either::Left>(_sv.v());
@@ -209,15 +206,14 @@ struct NameClashLetMatch {
     }
 
     // ACCESSORS
-    __attribute__((pure)) triple clone() const {
+    triple clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] = std::get<MkTriple>(_sv.v());
       return triple(MkTriple{d_a0, d_a1, d_a2});
     }
 
     // CREATORS
-    __attribute__((pure)) static triple
-    mktriple(unsigned int a0, unsigned int a1, unsigned int a2) {
+    static triple mktriple(unsigned int a0, unsigned int a1, unsigned int a2) {
       return triple(MkTriple{std::move(a0), std::move(a1), std::move(a2)});
     }
 
@@ -225,11 +221,10 @@ struct NameClashLetMatch {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// Match on a triple, then match on an either, same-ish names
-    __attribute__((pure)) unsigned int
-    triple_then_either(const either &e) const {
+    unsigned int triple_then_either(const either &e) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =
           std::get<typename triple::MkTriple>(_sv.v());
@@ -265,10 +260,9 @@ struct NameClashLetMatch {
   };
 
   /// Variable name 'a' used in both let and match binding.
-  __attribute__((pure)) static unsigned int let_shadows_match(const either &e);
+  static unsigned int let_shadows_match(const either &e);
   /// Match where the same variable name is used in multiple branches
-  __attribute__((pure)) static unsigned int same_name_branches(const either &e,
-                                                               const triple &t);
+  static unsigned int same_name_branches(const either &e, const triple &t);
 };
 
 #endif // INCLUDED_NAME_CLASH_LET_MATCH

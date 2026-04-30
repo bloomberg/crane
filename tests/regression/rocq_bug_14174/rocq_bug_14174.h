@@ -53,22 +53,39 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Nat clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<O>(_sv.v())) {
-      return Nat(O{});
-    } else {
-      const auto &[d_a0] = std::get<S>(_sv.v());
-      return Nat(S{d_a0 ? std::make_unique<Nat>(d_a0->clone()) : nullptr});
+  Nat clone() const {
+    Nat _out{};
+
+    struct _CloneFrame {
+      const Nat *_src;
+      Nat *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Nat *_src = _frame._src;
+      Nat *_dst = _frame._dst;
+      if (std::holds_alternative<O>(_src->v())) {
+        const auto &_alt = std::get<O>(_src->v());
+        _dst->d_v_ = O{};
+      } else {
+        const auto &_alt = std::get<S>(_src->v());
+        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
+        auto &_dst_alt = std::get<S>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Nat o() { return Nat(O{}); }
+  static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(Nat a0) {
-    return Nat(S{std::make_unique<Nat>(std::move(a0))});
-  }
+  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -92,7 +109,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 template <typename t_A> struct Option {
@@ -132,7 +149,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Option<t_A> clone() const {
+  Option<t_A> clone() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<Some>(_sv.v())) {
       const auto &[d_a0] = std::get<Some>(_sv.v());
@@ -152,17 +169,15 @@ public:
     }
   }
 
-  __attribute__((pure)) static Option<t_A> some(t_A a0) {
-    return Option(Some{std::move(a0)});
-  }
+  static Option<t_A> some(t_A a0) { return Option(Some{std::move(a0)}); }
 
-  __attribute__((pure)) static Option<t_A> none() { return Option(None{}); }
+  static Option<t_A> none() { return Option(None{}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 template <typename t_A, typename t_B> struct Prod {
@@ -199,7 +214,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Prod<t_A, t_B> clone() const {
+  Prod<t_A, t_B> clone() const {
     auto &&_sv = *(this);
     const auto &[d_a0, d_a1] = std::get<Pair>(_sv.v());
     return Prod<t_A, t_B>(Pair{d_a0, d_a1});
@@ -213,7 +228,7 @@ public:
     d_v_ = Pair{t_A(d_a0), t_B(d_a1)};
   }
 
-  __attribute__((pure)) static Prod<t_A, t_B> pair(t_A a0, t_B a1) {
+  static Prod<t_A, t_B> pair(t_A a0, t_B a1) {
     return Prod(Pair{std::move(a0), std::move(a1)});
   }
 
@@ -221,7 +236,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
   t_A fst() const {
     auto &&_sv = *(this);
@@ -269,7 +284,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Sig<t_A> clone() const {
+  Sig<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist0>(_sv.v());
     return Sig<t_A>(Exist0{d_x});
@@ -281,15 +296,13 @@ public:
     d_v_ = Exist0{t_A(d_x)};
   }
 
-  __attribute__((pure)) static Sig<t_A> exist0(t_A x) {
-    return Sig(Exist0{std::move(x)});
-  }
+  static Sig<t_A> exist0(t_A x) { return Sig(Exist0{std::move(x)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 template <typename t_A> struct Sig2 {
@@ -325,7 +338,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Sig2<t_A> clone() const {
+  Sig2<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist1>(_sv.v());
     return Sig2<t_A>(Exist1{d_x});
@@ -337,15 +350,13 @@ public:
     d_v_ = Exist1{t_A(d_x)};
   }
 
-  __attribute__((pure)) static Sig2<t_A> exist1(t_A x) {
-    return Sig2(Exist1{std::move(x)});
-  }
+  static Sig2<t_A> exist1(t_A x) { return Sig2(Exist1{std::move(x)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 template <typename t_A, typename t_P> struct SigT {
@@ -382,7 +393,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) SigT<t_A, t_P> clone() const {
+  SigT<t_A, t_P> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1] = std::get<ExistT0>(_sv.v());
     return SigT<t_A, t_P>(ExistT0{d_x, d_a1});
@@ -396,7 +407,7 @@ public:
     d_v_ = ExistT0{t_A(d_x), t_P(d_a1)};
   }
 
-  __attribute__((pure)) static SigT<t_A, t_P> existt0(t_A x, t_P a1) {
+  static SigT<t_A, t_P> existt0(t_A x, t_P a1) {
     return SigT(ExistT0{std::move(x), std::move(a1)});
   }
 
@@ -404,7 +415,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 template <typename t_A, typename t_P, typename t_Q> struct SigT2 {
@@ -443,7 +454,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) SigT2<t_A, t_P, t_Q> clone() const {
+  SigT2<t_A, t_P, t_Q> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1, d_a2] = std::get<ExistT1>(_sv.v());
     return SigT2<t_A, t_P, t_Q>(ExistT1{d_x, d_a1, d_a2});
@@ -457,8 +468,7 @@ public:
     d_v_ = ExistT1{t_A(d_x), t_P(d_a1), t_Q(d_a2)};
   }
 
-  __attribute__((pure)) static SigT2<t_A, t_P, t_Q> existt1(t_A x, t_P a1,
-                                                            t_Q a2) {
+  static SigT2<t_A, t_P, t_Q> existt1(t_A x, t_P a1, t_Q a2) {
     return SigT2(ExistT1{std::move(x), std::move(a1), std::move(a2)});
   }
 
@@ -466,7 +476,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct SigTNotations {};
@@ -509,7 +519,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Sumor<t_A> clone() const {
+  Sumor<t_A> clone() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<Inleft>(_sv.v())) {
       const auto &[d_a0] = std::get<Inleft>(_sv.v());
@@ -529,17 +539,15 @@ public:
     }
   }
 
-  __attribute__((pure)) static Sumor<t_A> inleft(t_A a0) {
-    return Sumor(Inleft{std::move(a0)});
-  }
+  static Sumor<t_A> inleft(t_A a0) { return Sumor(Inleft{std::move(a0)}); }
 
-  __attribute__((pure)) static Sumor<t_A> inright() { return Sumor(Inright{}); }
+  static Sumor<t_A> inright() { return Sumor(Inright{}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct RocqBug14174 {
@@ -577,7 +585,7 @@ struct RocqBug14174 {
       }
 
       // ACCESSORS
-      __attribute__((pure)) sig<t_A> clone() const {
+      sig<t_A> clone() const {
         auto &&_sv = *(this);
         const auto &[d_x] = std::get<Exist>(_sv.v());
         return sig<t_A>(Exist{d_x});
@@ -589,15 +597,13 @@ struct RocqBug14174 {
         d_v_ = Exist{t_A(d_x)};
       }
 
-      __attribute__((pure)) static sig<t_A> exist(t_A x) {
-        return sig(Exist{std::move(x)});
-      }
+      static sig<t_A> exist(t_A x) { return sig(Exist{std::move(x)}); }
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }
 
       // ACCESSORS
-      __attribute__((pure)) const variant_t &v() const { return d_v_; }
+      const variant_t &v() const { return d_v_; }
 
       template <typename T1> T1 eq_sig_rec_uncurried() const {
         return this->eq_sig_rect_uncurried();
@@ -679,7 +685,7 @@ struct RocqBug14174 {
       }
 
       // ACCESSORS
-      __attribute__((pure)) sig2<t_A> clone() const {
+      sig2<t_A> clone() const {
         auto &&_sv = *(this);
         const auto &[d_x] = std::get<Exist2>(_sv.v());
         return sig2<t_A>(Exist2{d_x});
@@ -691,15 +697,13 @@ struct RocqBug14174 {
         d_v_ = Exist2{t_A(d_x)};
       }
 
-      __attribute__((pure)) static sig2<t_A> exist2(t_A x) {
-        return sig2(Exist2{std::move(x)});
-      }
+      static sig2<t_A> exist2(t_A x) { return sig2(Exist2{std::move(x)}); }
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }
 
       // ACCESSORS
-      __attribute__((pure)) const variant_t &v() const { return d_v_; }
+      const variant_t &v() const { return d_v_; }
 
       template <typename T1> T1 eq_sig2_rec_uncurried() const {
         return this->eq_sig2_rect_uncurried();
@@ -729,7 +733,7 @@ struct RocqBug14174 {
         return f;
       }
 
-      __attribute__((pure)) sig<t_A> sig_of_sig2() const {
+      sig<t_A> sig_of_sig2() const {
         sig2<t_A> _self = *(this);
         return sig<t_A>::exist([=]() mutable {
           const auto &[d_x] = std::get<typename sig2<t_A>::Exist2>(_self.v());
@@ -785,7 +789,7 @@ struct RocqBug14174 {
       }
 
       // ACCESSORS
-      __attribute__((pure)) sigT<t_A, t_P> clone() const {
+      sigT<t_A, t_P> clone() const {
         auto &&_sv = *(this);
         const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
         return sigT<t_A, t_P>(ExistT{d_x, d_a1});
@@ -799,7 +803,7 @@ struct RocqBug14174 {
         d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
       }
 
-      __attribute__((pure)) static sigT<t_A, t_P> existt(t_A x, t_P a1) {
+      static sigT<t_A, t_P> existt(t_A x, t_P a1) {
         return sigT(ExistT{std::move(x), std::move(a1)});
       }
 
@@ -807,7 +811,7 @@ struct RocqBug14174 {
       inline variant_t &v_mut() { return d_v_; }
 
       // ACCESSORS
-      __attribute__((pure)) const variant_t &v() const { return d_v_; }
+      const variant_t &v() const { return d_v_; }
 
       template <typename T1> T1 eq_sigT_rec_uncurried() const {
         return this->eq_sigT_rect_uncurried();
@@ -837,7 +841,7 @@ struct RocqBug14174 {
         return f;
       }
 
-      __attribute__((pure)) Prod<t_A, t_P> prod_of_sigT() const {
+      Prod<t_A, t_P> prod_of_sigT() const {
         return Prod<t_A, t_P>::pair((*(this)).projT1(), (*(this)).projT2());
       }
 
@@ -908,7 +912,7 @@ struct RocqBug14174 {
       }
 
       // ACCESSORS
-      __attribute__((pure)) sigT2<t_A, t_P, t_Q> clone() const {
+      sigT2<t_A, t_P, t_Q> clone() const {
         auto &&_sv = *(this);
         const auto &[d_x, d_a1, d_a2] = std::get<ExistT2>(_sv.v());
         return sigT2<t_A, t_P, t_Q>(ExistT2{d_x, d_a1, d_a2});
@@ -922,8 +926,7 @@ struct RocqBug14174 {
         d_v_ = ExistT2{t_A(d_x), t_P(d_a1), t_Q(d_a2)};
       }
 
-      __attribute__((pure)) static sigT2<t_A, t_P, t_Q> existt2(t_A x, t_P a1,
-                                                                t_Q a2) {
+      static sigT2<t_A, t_P, t_Q> existt2(t_A x, t_P a1, t_Q a2) {
         return sigT2(ExistT2{std::move(x), std::move(a1), std::move(a2)});
       }
 
@@ -931,7 +934,7 @@ struct RocqBug14174 {
       inline variant_t &v_mut() { return d_v_; }
 
       // ACCESSORS
-      __attribute__((pure)) const variant_t &v() const { return d_v_; }
+      const variant_t &v() const { return d_v_; }
 
       template <typename T1> T1 eq_sigT2_rec_uncurried() const {
         return this->eq_sigT2_rect_uncurried();
@@ -973,7 +976,7 @@ struct RocqBug14174 {
         return d_a2;
       }
 
-      __attribute__((pure)) sigT<t_A, t_P> sigT_of_sigT2() const {
+      sigT<t_A, t_P> sigT_of_sigT2() const {
         sigT2<t_A, t_P, t_Q> _self = *(this);
         return sigT<t_A, t_P>::existt(
             [=]() mutable {
@@ -1006,33 +1009,28 @@ struct RocqBug14174 {
     };
 
     template <typename T1>
-    __attribute__((pure)) static sig<T1>
-    sig_of_sigT(const sigT<T1, std::any> &x) {
+    static sig<T1> sig_of_sigT(const sigT<T1, std::any> &x) {
       return sig<T1>::exist(x.projT1());
     }
 
     template <typename T1>
-    __attribute__((pure)) static sigT<T1, std::any>
-    sigT_of_sig(const sig<T1> &x) {
+    static sigT<T1, std::any> sigT_of_sig(const sig<T1> &x) {
       return sigT<T1, std::any>::existt(x.proj1_sig(), std::any{});
     }
 
     template <typename T1>
-    __attribute__((pure)) static sig2<T1>
-    sig2_of_sigT2(const sigT2<T1, std::any, std::any> &x) {
+    static sig2<T1> sig2_of_sigT2(const sigT2<T1, std::any, std::any> &x) {
       return sig2<T1>::exist2(x.sigT_of_sigT2().projT1());
     }
 
     template <typename T1>
-    __attribute__((pure)) static sigT2<T1, std::any, std::any>
-    sigT2_of_sig2(const sig2<T1> &x) {
+    static sigT2<T1, std::any, std::any> sigT2_of_sig2(const sig2<T1> &x) {
       return sigT2<T1, std::any, std::any>::existt2(x.sig_of_sig2().proj1_sig(),
                                                     std::any{}, std::any{});
     }
 
     template <typename T1, typename T2>
-    __attribute__((pure)) static sigT<T1, T2>
-    sigT_of_prod(const Prod<T1, T2> &p) {
+    static sigT<T1, T2> sigT_of_prod(const Prod<T1, T2> &p) {
       return sigT<T1, T2>::existt(p.fst(), p.snd());
     }
 
@@ -1127,7 +1125,7 @@ struct RocqBug14174 {
       }
 
       // ACCESSORS
-      __attribute__((pure)) sumor<t_A> clone() const {
+      sumor<t_A> clone() const {
         auto &&_sv = *(this);
         if (std::holds_alternative<Inleft>(_sv.v())) {
           const auto &[d_a0] = std::get<Inleft>(_sv.v());
@@ -1147,19 +1145,15 @@ struct RocqBug14174 {
         }
       }
 
-      __attribute__((pure)) static sumor<t_A> inleft(t_A a0) {
-        return sumor(Inleft{std::move(a0)});
-      }
+      static sumor<t_A> inleft(t_A a0) { return sumor(Inleft{std::move(a0)}); }
 
-      __attribute__((pure)) static sumor<t_A> inright() {
-        return sumor(Inright{});
-      }
+      static sumor<t_A> inright() { return sumor(Inright{}); }
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }
 
       // ACCESSORS
-      __attribute__((pure)) const variant_t &v() const { return d_v_; }
+      const variant_t &v() const { return d_v_; }
 
       template <typename T1, MapsTo<T1, t_A> F0>
       T1 sumor_rec(F0 &&f, const T1 f0) const {
@@ -1185,16 +1179,14 @@ struct RocqBug14174 {
     };
 
     template <typename T1, typename T2, MapsTo<sig<T2>, T1> F0>
-    __attribute__((pure)) static sig<std::function<T2(T1)>> Choice(F0 &&h) {
+    static sig<std::function<T2(T1)>> Choice(F0 &&h) {
       return sig<std::function<T2(T1)>>::exist(
           [=](const T1 z) mutable { return h(z).proj1_sig(); });
     }
 
     template <typename T1, typename T2, typename T3,
               MapsTo<sigT<T2, T3>, T1> F0>
-    __attribute__((
-        pure)) static sigT<std::function<T2(T1)>, std::function<T3(T1)>>
-    Choice2(F0 &&h) {
+    static sigT<std::function<T2(T1)>, std::function<T3(T1)>> Choice2(F0 &&h) {
       return sigT<std::function<T2(T1)>, std::function<T3(T1)>>::existt(
           [=](const T1 z) mutable { return h(z).projT1(); },
           [=](const T1 z) mutable {
@@ -1206,8 +1198,7 @@ struct RocqBug14174 {
     }
 
     template <typename T1, MapsTo<Sumbool, T1> F0>
-    __attribute__((pure)) static sig<std::function<Bool0(T1)>>
-    bool_choice(F0 &&h) {
+    static sig<std::function<Bool0(T1)>> bool_choice(F0 &&h) {
       return sig<std::function<Bool0(T1)>>::exist([=](const T1 z) mutable {
         switch (h(z)) {
         case Sumbool::e_LEFT: {
@@ -1223,8 +1214,7 @@ struct RocqBug14174 {
     }
 
     template <typename T1, MapsTo<sig<T1>, T1> F0>
-    __attribute__((pure)) static sig<std::function<T1(Nat)>>
-    dependent_choice(F0 &&h, const T1 x0) {
+    static sig<std::function<T1(Nat)>> dependent_choice(F0 &&h, const T1 x0) {
       auto f_impl = [=](auto &_self_f, Nat n) mutable -> T1 {
         if (std::holds_alternative<typename Nat::O>(n.v())) {
           return x0;
@@ -1239,8 +1229,7 @@ struct RocqBug14174 {
 
     template <typename a> using Exc = Option<a>;
 
-    template <typename T1>
-    __attribute__((pure)) static Option<T1> value(const T1 x) {
+    template <typename T1> static Option<T1> value(const T1 x) {
       return Option<T1>::some(x);
     }
 

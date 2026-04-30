@@ -88,27 +88,42 @@ struct PatternImpossible {
     }
 
     // ACCESSORS
-    __attribute__((pure)) nested clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<Leaf>(_sv.v());
-        return nested(Leaf{d_a0});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Node>(_sv.v());
-        return nested(Node{
-            d_a0 ? std::make_unique<PatternImpossible::nested>(d_a0->clone())
-                 : nullptr,
-            d_a1 ? std::make_unique<PatternImpossible::nested>(d_a1->clone())
-                 : nullptr});
+    nested clone() const {
+      nested _out{};
+
+      struct _CloneFrame {
+        const nested *_src;
+        nested *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const nested *_src = _frame._src;
+        nested *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          const auto &_alt = std::get<Leaf>(_src->v());
+          _dst->d_v_ = Leaf{_alt.d_a0};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ = Node{_alt.d_a0 ? std::make_unique<nested>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<nested>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static nested leaf(unsigned int a0) {
-      return nested(Leaf{std::move(a0)});
-    }
+    static nested leaf(unsigned int a0) { return nested(Leaf{std::move(a0)}); }
 
-    __attribute__((pure)) static nested node(nested a0, nested a1) {
+    static nested node(nested a0, nested a1) {
       return nested(Node{std::make_unique<nested>(std::move(a0)),
                          std::make_unique<nested>(std::move(a1))});
     }
@@ -137,7 +152,7 @@ struct PatternImpossible {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -166,11 +181,10 @@ struct PatternImpossible {
     }
   }
 
-  __attribute__((pure)) static unsigned int complex_match(const Three x);
-  __attribute__((pure)) static unsigned int nested_match(const nested &n);
-  __attribute__((pure)) static unsigned int double_match(const Three x,
-                                                         const Three y);
-  __attribute__((pure)) static unsigned int multi_arg_pattern(const nested &n);
+  static unsigned int complex_match(const Three x);
+  static unsigned int nested_match(const nested &n);
+  static unsigned int double_match(const Three x, const Three y);
+  static unsigned int multi_arg_pattern(const nested &n);
   static inline const unsigned int test1 = complex_match(Three::e_ONE);
   static inline const unsigned int test2 =
       nested_match(nested::node(nested::leaf(5u), nested::leaf(10u)));

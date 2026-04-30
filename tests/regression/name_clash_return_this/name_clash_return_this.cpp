@@ -3,7 +3,7 @@
 /// Inner match returns shape in all branches, one branch returns the
 /// argument itself. The function takes shape as input, so it gets
 /// methodified. In the Blue branch, `s` becomes `this`.
-__attribute__((pure)) NameClashReturnThis::shape
+NameClashReturnThis::shape
 NameClashReturnThis::maybe_transform(const bool &flag,
                                      NameClashReturnThis::shape s) {
   if (flag) {
@@ -23,7 +23,7 @@ NameClashReturnThis::maybe_transform(const bool &flag,
 }
 
 /// Match on shape where one branch returns the same shape unchanged.
-__attribute__((pure)) NameClashReturnThis::shape
+NameClashReturnThis::shape
 NameClashReturnThis::identity_or_double(const NameClashReturnThis::shape &s) {
   if (std::holds_alternative<typename NameClashReturnThis::shape::Circle>(
           s.v())) {
@@ -38,7 +38,7 @@ NameClashReturnThis::identity_or_double(const NameClashReturnThis::shape &s) {
 }
 
 /// Two shapes, return one of them based on a match on the other.
-__attribute__((pure)) NameClashReturnThis::shape
+NameClashReturnThis::shape
 NameClashReturnThis::pick_shape(NameClashReturnThis::shape s1,
                                 NameClashReturnThis::shape s2) {
   if (std::holds_alternative<typename NameClashReturnThis::shape::Circle>(
@@ -50,7 +50,7 @@ NameClashReturnThis::pick_shape(NameClashReturnThis::shape s1,
 }
 
 /// Nested: match on result of a function that may return this
-__attribute__((pure)) unsigned int
+unsigned int
 NameClashReturnThis::nested_this(const NameClashReturnThis::shape &s) {
   auto &&_sv = identity_or_double(s);
   if (std::holds_alternative<typename NameClashReturnThis::shape::Circle>(

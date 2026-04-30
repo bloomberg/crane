@@ -6,7 +6,7 @@
 /// - GoUp/GoDown are the same inductive (direction)
 /// - Both have arity 1
 /// But GoUp and GoDown are DIFFERENT constructors.
-__attribute__((pure)) ReuseTagMismatch::direction
+ReuseTagMismatch::direction
 ReuseTagMismatch::id_or_flip(ReuseTagMismatch::direction d,
                              const bool &flip_flag) {
   if (flip_flag) {

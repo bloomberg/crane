@@ -19,8 +19,8 @@ struct FixComposeEscape {
   /// capture copies the std::function VALUE, including its dangling
   /// & references.
   template <MapsTo<unsigned int, unsigned int> F1>
-  __attribute__((pure)) static unsigned int
-  compose_add(const unsigned int &base, F1 &&g, unsigned int _x0) {
+  static unsigned int compose_add(const unsigned int &base, F1 &&g,
+                                  unsigned int _x0) {
     return [=]() mutable {
       auto add_impl = [=](auto &_self_add,
                           unsigned int x) mutable -> unsigned int {

@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,9 +119,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) List<t_A> skipn(const unsigned int &n) const {
+  List<t_A> skipn(const unsigned int &n) const {
     if (n <= 0) {
       return std::move(*(this));
     } else {
@@ -117,7 +136,7 @@ public:
     }
   }
 
-  __attribute__((pure)) List<t_A> firstn(const unsigned int &n) const {
+  List<t_A> firstn(const unsigned int &n) const {
     if (n <= 0) {
       return List<t_A>::nil();
     } else {
@@ -140,8 +159,8 @@ struct ListDef {
 
 struct GetPairBoundProp {
   template <typename T1>
-  __attribute__((pure)) static List<T1>
-  update_nth(const unsigned int &n, const T1 x, const List<T1> &l) {
+  static List<T1> update_nth(const unsigned int &n, const T1 x,
+                             const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
@@ -170,7 +189,7 @@ struct GetPairBoundProp {
     List<unsigned int> ex_ports;
 
     // ACCESSORS
-    __attribute__((pure)) state clone() const {
+    state clone() const {
       return state{(*(this)).ex_acc,           (*(this)).ex_regs.clone(),
                    (*(this)).ex_carry,         (*(this)).ex_pc,
                    (*(this)).ex_stack.clone(), (*(this)).ex_pair_bus,
@@ -178,17 +197,15 @@ struct GetPairBoundProp {
     }
   };
 
-  __attribute__((pure)) static unsigned int get_reg(const state &s,
-                                                    const unsigned int &r);
-  __attribute__((pure)) static List<unsigned int>
-  set_reg(const state &s, const unsigned int &r, const unsigned int &v);
-  __attribute__((pure)) static unsigned int pair_base(const unsigned int &r);
-  __attribute__((pure)) static unsigned int get_pair(const state &s,
-                                                     const unsigned int &r);
-  __attribute__((pure)) static List<unsigned int>
-  set_pair(const state &s, const unsigned int &r, const unsigned int &v);
-  __attribute__((pure)) static List<unsigned int>
-  push_return(const state &s, const unsigned int &ret);
+  static unsigned int get_reg(const state &s, const unsigned int &r);
+  static List<unsigned int> set_reg(const state &s, const unsigned int &r,
+                                    const unsigned int &v);
+  static unsigned int pair_base(const unsigned int &r);
+  static unsigned int get_pair(const state &s, const unsigned int &r);
+  static List<unsigned int> set_pair(const state &s, const unsigned int &r,
+                                     const unsigned int &v);
+  static List<unsigned int> push_return(const state &s,
+                                        const unsigned int &ret);
 
   struct instr {
     // TYPES
@@ -369,7 +386,7 @@ struct GetPairBoundProp {
     }
 
     // ACCESSORS
-    __attribute__((pure)) instr clone() const {
+    instr clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<NOP>(_sv.v())) {
         return instr(NOP{});
@@ -448,99 +465,75 @@ struct GetPairBoundProp {
     }
 
     // CREATORS
-    __attribute__((pure)) static instr nop() { return instr(NOP{}); }
+    static instr nop() { return instr(NOP{}); }
 
-    __attribute__((pure)) static instr ldm(unsigned int n) {
-      return instr(LDM{std::move(n)});
-    }
+    static instr ldm(unsigned int n) { return instr(LDM{std::move(n)}); }
 
-    __attribute__((pure)) static instr ld(unsigned int r) {
-      return instr(LD{std::move(r)});
-    }
+    static instr ld(unsigned int r) { return instr(LD{std::move(r)}); }
 
-    __attribute__((pure)) static instr xch(unsigned int r) {
-      return instr(XCH{std::move(r)});
-    }
+    static instr xch(unsigned int r) { return instr(XCH{std::move(r)}); }
 
-    __attribute__((pure)) static instr inc(unsigned int r) {
-      return instr(INC{std::move(r)});
-    }
+    static instr inc(unsigned int r) { return instr(INC{std::move(r)}); }
 
-    __attribute__((pure)) static instr add(unsigned int r) {
-      return instr(ADD{std::move(r)});
-    }
+    static instr add(unsigned int r) { return instr(ADD{std::move(r)}); }
 
-    __attribute__((pure)) static instr sub(unsigned int r) {
-      return instr(SUB{std::move(r)});
-    }
+    static instr sub(unsigned int r) { return instr(SUB{std::move(r)}); }
 
-    __attribute__((pure)) static instr iac() { return instr(IAC{}); }
+    static instr iac() { return instr(IAC{}); }
 
-    __attribute__((pure)) static instr dac() { return instr(DAC{}); }
+    static instr dac() { return instr(DAC{}); }
 
-    __attribute__((pure)) static instr clc() { return instr(CLC{}); }
+    static instr clc() { return instr(CLC{}); }
 
-    __attribute__((pure)) static instr stc() { return instr(STC{}); }
+    static instr stc() { return instr(STC{}); }
 
-    __attribute__((pure)) static instr cmc() { return instr(CMC{}); }
+    static instr cmc() { return instr(CMC{}); }
 
-    __attribute__((pure)) static instr cma() { return instr(CMA{}); }
+    static instr cma() { return instr(CMA{}); }
 
-    __attribute__((pure)) static instr clb() { return instr(CLB{}); }
+    static instr clb() { return instr(CLB{}); }
 
-    __attribute__((pure)) static instr ral() { return instr(RAL{}); }
+    static instr ral() { return instr(RAL{}); }
 
-    __attribute__((pure)) static instr rar() { return instr(RAR{}); }
+    static instr rar() { return instr(RAR{}); }
 
-    __attribute__((pure)) static instr tcc() { return instr(TCC{}); }
+    static instr tcc() { return instr(TCC{}); }
 
-    __attribute__((pure)) static instr tcs() { return instr(TCS{}); }
+    static instr tcs() { return instr(TCS{}); }
 
-    __attribute__((pure)) static instr daa() { return instr(DAA{}); }
+    static instr daa() { return instr(DAA{}); }
 
-    __attribute__((pure)) static instr kbp() { return instr(KBP{}); }
+    static instr kbp() { return instr(KBP{}); }
 
-    __attribute__((pure)) static instr jun(unsigned int a) {
-      return instr(JUN{std::move(a)});
-    }
+    static instr jun(unsigned int a) { return instr(JUN{std::move(a)}); }
 
-    __attribute__((pure)) static instr jms(unsigned int a) {
-      return instr(JMS{std::move(a)});
-    }
+    static instr jms(unsigned int a) { return instr(JMS{std::move(a)}); }
 
-    __attribute__((pure)) static instr jcn(unsigned int c, unsigned int a) {
+    static instr jcn(unsigned int c, unsigned int a) {
       return instr(JCN{std::move(c), std::move(a)});
     }
 
-    __attribute__((pure)) static instr fim(unsigned int r, unsigned int d) {
+    static instr fim(unsigned int r, unsigned int d) {
       return instr(FIM{std::move(r), std::move(d)});
     }
 
-    __attribute__((pure)) static instr src(unsigned int r) {
-      return instr(SRC{std::move(r)});
-    }
+    static instr src(unsigned int r) { return instr(SRC{std::move(r)}); }
 
-    __attribute__((pure)) static instr fin(unsigned int r) {
-      return instr(FIN{std::move(r)});
-    }
+    static instr fin(unsigned int r) { return instr(FIN{std::move(r)}); }
 
-    __attribute__((pure)) static instr jin(unsigned int r) {
-      return instr(JIN{std::move(r)});
-    }
+    static instr jin(unsigned int r) { return instr(JIN{std::move(r)}); }
 
-    __attribute__((pure)) static instr isz(unsigned int r, unsigned int a) {
+    static instr isz(unsigned int r, unsigned int a) {
       return instr(ISZ{std::move(r), std::move(a)});
     }
 
-    __attribute__((pure)) static instr bbl(unsigned int d) {
-      return instr(BBL{std::move(d)});
-    }
+    static instr bbl(unsigned int d) { return instr(BBL{std::move(d)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <
@@ -727,7 +720,7 @@ struct GetPairBoundProp {
     }
   }
 
-  __attribute__((pure)) static state execute(const state &s, const instr &i);
+  static state execute(const state &s, const instr &i);
   static inline const state sample = state{
       3u,
       List<unsigned int>::cons(

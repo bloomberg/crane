@@ -15,13 +15,11 @@ struct RecordApply {
     unsigned int _tag;
 
     // ACCESSORS
-    __attribute__((pure)) R clone() const {
-      return R{(*(this)).f, (*(this))._tag};
-    }
+    R clone() const { return R{(*(this)).f, (*(this))._tag}; }
   };
 
-  __attribute__((pure)) static unsigned int
-  apply_record(const R &r0, const unsigned int &a, const unsigned int &b);
+  static unsigned int apply_record(const R &r0, const unsigned int &a,
+                                   const unsigned int &b);
   static inline const R r =
       R{[](unsigned int x, const unsigned int &) { return x; }, 3u};
   static inline const unsigned int three = r.f(3u, 0u);

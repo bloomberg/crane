@@ -5,7 +5,6 @@
 /// SIMPLE LAMBDA VERSION: Each closure fun x => h + x captures
 /// h from the pattern match. These are simple lambdas, so they
 /// should capture by =.
-__attribute__((pure))
 AccumClosureEscape::mylist<std::function<unsigned int(unsigned int)>>
 AccumClosureEscape::build_adders(
     const AccumClosureEscape::mylist<unsigned int> &l,
@@ -27,7 +26,7 @@ AccumClosureEscape::build_adders(
 }
 
 /// Apply first closure from the list.
-__attribute__((pure)) unsigned int AccumClosureEscape::apply_first(
+unsigned int AccumClosureEscape::apply_first(
     const AccumClosureEscape::mylist<std::function<unsigned int(unsigned int)>>
         &fns,
     const unsigned int &x) {
@@ -42,7 +41,7 @@ __attribute__((pure)) unsigned int AccumClosureEscape::apply_first(
 }
 
 /// Apply all closures and sum.
-__attribute__((pure)) unsigned int AccumClosureEscape::apply_all_sum(
+unsigned int AccumClosureEscape::apply_all_sum(
     const AccumClosureEscape::mylist<std::function<unsigned int(unsigned int)>>
         &fns,
     const unsigned int &x) {

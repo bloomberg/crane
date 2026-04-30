@@ -52,24 +52,41 @@ struct ClosureRecursiveBuild {
     }
 
     // ACCESSORS
-    __attribute__((pure)) fn_list clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<FNil>(_sv.v())) {
-        return fn_list(FNil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<FCons>(_sv.v());
-        return fn_list(
-            FCons{d_a0, d_a1 ? std::make_unique<ClosureRecursiveBuild::fn_list>(
-                                   d_a1->clone())
-                             : nullptr});
+    fn_list clone() const {
+      fn_list _out{};
+
+      struct _CloneFrame {
+        const fn_list *_src;
+        fn_list *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const fn_list *_src = _frame._src;
+        fn_list *_dst = _frame._dst;
+        if (std::holds_alternative<FNil>(_src->v())) {
+          const auto &_alt = std::get<FNil>(_src->v());
+          _dst->d_v_ = FNil{};
+        } else {
+          const auto &_alt = std::get<FCons>(_src->v());
+          _dst->d_v_ = FCons{_alt.d_a0,
+                             _alt.d_a1 ? std::make_unique<fn_list>() : nullptr};
+          auto &_dst_alt = std::get<FCons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static fn_list fnil() { return fn_list(FNil{}); }
+    static fn_list fnil() { return fn_list(FNil{}); }
 
-    __attribute__((pure)) static fn_list
-    fcons(std::function<unsigned int(unsigned int)> a0, fn_list a1) {
+    static fn_list fcons(std::function<unsigned int(unsigned int)> a0,
+                         fn_list a1) {
       return fn_list(
           FCons{std::move(a0), std::make_unique<fn_list>(std::move(a1))});
     }
@@ -96,7 +113,7 @@ struct ClosureRecursiveBuild {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <
@@ -130,11 +147,9 @@ struct ClosureRecursiveBuild {
   /// by &. The closures are stored in FCons constructors. After
   /// build_adders returns, all intermediate stack frames are gone,
   /// and every closure holds a dangling reference.
-  __attribute__((pure)) static fn_list build_adders(unsigned int n);
-  __attribute__((pure)) static unsigned int apply_first(const fn_list &fl,
-                                                        const unsigned int &x);
-  __attribute__((pure)) static unsigned int
-  apply_all_sum(const fn_list &fl, const unsigned int &x);
+  static fn_list build_adders(unsigned int n);
+  static unsigned int apply_first(const fn_list &fl, const unsigned int &x);
+  static unsigned int apply_all_sum(const fn_list &fl, const unsigned int &x);
   /// test1: build_adders(3) = adder_3, adder_2, adder_1.
   /// apply_first returns adder_3(10) = 3 + 10 = 13.
   static inline const unsigned int test1 = apply_first(build_adders(3u), 10u);

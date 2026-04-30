@@ -52,22 +52,39 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Nat clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<O>(_sv.v())) {
-      return Nat(O{});
-    } else {
-      const auto &[d_a0] = std::get<S>(_sv.v());
-      return Nat(S{d_a0 ? std::make_unique<Nat>(d_a0->clone()) : nullptr});
+  Nat clone() const {
+    Nat _out{};
+
+    struct _CloneFrame {
+      const Nat *_src;
+      Nat *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Nat *_src = _frame._src;
+      Nat *_dst = _frame._dst;
+      if (std::holds_alternative<O>(_src->v())) {
+        const auto &_alt = std::get<O>(_src->v());
+        _dst->d_v_ = O{};
+      } else {
+        const auto &_alt = std::get<S>(_src->v());
+        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
+        auto &_dst_alt = std::get<S>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Nat o() { return Nat(O{}); }
+  static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(Nat a0) {
-    return Nat(S{std::make_unique<Nat>(std::move(a0))});
-  }
+  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -91,9 +108,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) Nat add(Nat m) const {
+  Nat add(Nat m) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Nat::O>(_sv.v())) {
       return m;
@@ -109,9 +126,7 @@ struct RocqBug13581 {
     std::function<t_T0(t_T0)> mixin_f;
 
     // ACCESSORS
-    __attribute__((pure)) mixin_of<t_T0> clone() const {
-      return mixin_of<t_T0>{(*(this)).mixin_f};
-    }
+    mixin_of<t_T0> clone() const { return mixin_of<t_T0>{(*(this)).mixin_f}; }
   };
 
   static inline const mixin_of<Nat> d =
@@ -122,14 +137,11 @@ struct RocqBug13581 {
     Nat x;
 
     // ACCESSORS
-    __attribute__((pure)) R<t_T0> clone() const {
-      return R<t_T0>{(*(this)).g, (*(this)).x.clone()};
-    }
+    R<t_T0> clone() const { return R<t_T0>{(*(this)).g, (*(this)).x.clone()}; }
   };
 
   template <typename T1>
-  __attribute__((pure)) static Nat y(const Nat &, const Nat &,
-                                     const R<T1> &r0) {
+  static Nat y(const Nat &, const Nat &, const R<T1> &r0) {
     return r0.x.add(r0.x);
   }
 
@@ -174,7 +186,7 @@ struct RocqBug13581 {
     }
 
     // ACCESSORS
-    __attribute__((pure)) I<t_T> clone() const {
+    I<t_T> clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<C>(_sv.v())) {
         return I<t_T>(C{});
@@ -197,9 +209,9 @@ struct RocqBug13581 {
       }
     }
 
-    __attribute__((pure)) static I<t_T> c() { return I(C{}); }
+    static I<t_T> c() { return I(C{}); }
 
-    __attribute__((pure)) static I<t_T> d(J<t_T> a0) {
+    static I<t_T> d(J<t_T> a0) {
       return I(D{std::make_unique<J<t_T>>(std::move(a0))});
     }
 
@@ -207,7 +219,7 @@ struct RocqBug13581 {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename t_T> struct J {
@@ -243,7 +255,7 @@ struct RocqBug13581 {
     }
 
     // ACCESSORS
-    __attribute__((pure)) J<t_T> clone() const {
+    J<t_T> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<E>(_sv.v());
       return J<t_T>(
@@ -257,7 +269,7 @@ struct RocqBug13581 {
       d_v_ = E{d_a0 ? std::make_unique<RocqBug13581::I<t_T>>(*d_a0) : nullptr};
     }
 
-    __attribute__((pure)) static J<t_T> e(I<t_T> a0) {
+    static J<t_T> e(I<t_T> a0) {
       return J(E{std::make_unique<I<t_T>>(std::move(a0))});
     }
 
@@ -265,7 +277,7 @@ struct RocqBug13581 {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, J<T1>> F3>

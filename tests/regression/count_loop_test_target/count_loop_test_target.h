@@ -50,7 +50,7 @@ struct CountLoopTestTarget {
     }
 
     // ACCESSORS
-    __attribute__((pure)) instruction clone() const {
+    instruction clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<ISZ>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<ISZ>(_sv.v());
@@ -61,20 +61,17 @@ struct CountLoopTestTarget {
     }
 
     // CREATORS
-    __attribute__((pure)) static instruction isz(unsigned int a0,
-                                                 unsigned int a1) {
+    static instruction isz(unsigned int a0, unsigned int a1) {
       return instruction(ISZ{std::move(a0), std::move(a1)});
     }
 
-    __attribute__((pure)) static instruction nop() {
-      return instruction(NOP{});
-    }
+    static instruction nop() { return instruction(NOP{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
@@ -97,9 +94,8 @@ struct CountLoopTestTarget {
     }
   }
 
-  __attribute__((pure)) static instruction
-  count_loop_test(unsigned int loop_addr);
-  __attribute__((pure)) static unsigned int target_of(const instruction &i);
+  static instruction count_loop_test(unsigned int loop_addr);
+  static unsigned int target_of(const instruction &i);
   static inline const unsigned int t = target_of(count_loop_test(37u));
 };
 

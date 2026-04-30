@@ -55,26 +55,43 @@ struct ReuseUseAfterMove {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mylist clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Mycons>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
-        return mylist(Mycons{
-            d_a0,
-            d_a1 ? std::make_unique<ReuseUseAfterMove::mylist>(d_a1->clone())
-                 : nullptr});
-      } else {
-        return mylist(Mynil{});
+    mylist clone() const {
+      mylist _out{};
+
+      struct _CloneFrame {
+        const mylist *_src;
+        mylist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist *_src = _frame._src;
+        mylist *_dst = _frame._dst;
+        if (std::holds_alternative<Mycons>(_src->v())) {
+          const auto &_alt = std::get<Mycons>(_src->v());
+          _dst->d_v_ = Mycons{_alt.d_a0,
+                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        } else {
+          const auto &_alt = std::get<Mynil>(_src->v());
+          _dst->d_v_ = Mynil{};
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static mylist mycons(unsigned int a0, mylist a1) {
+    static mylist mycons(unsigned int a0, mylist a1) {
       return mylist(
           Mycons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
     }
 
-    __attribute__((pure)) static mylist mynil() { return mylist(Mynil{}); }
+    static mylist mynil() { return mylist(Mynil{}); }
 
     // MANIPULATORS
     ~mylist() {
@@ -98,7 +115,7 @@ struct ReuseUseAfterMove {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, mylist, T1> F0>
@@ -121,8 +138,8 @@ struct ReuseUseAfterMove {
     }
   }
 
-  __attribute__((pure)) static unsigned int length(const mylist &l);
-  __attribute__((pure)) static unsigned int sum(const mylist &l);
+  static unsigned int length(const mylist &l);
+  static unsigned int sum(const mylist &l);
   /// BUG: The reuse optimization fires because:
   /// 1. l escapes in the else branch (returned in tail position)
   /// -> infer_owned_params marks l as owned (pass by value)
@@ -140,7 +157,7 @@ struct ReuseUseAfterMove {
   ///
   /// length(l) traverses l, hitting the null d_a1 field.
   /// Dereferencing null shared_ptr -> CRASH.
-  __attribute__((pure)) static mylist rewrite_head(mylist l, const bool &b);
+  static mylist rewrite_head(mylist l, const bool &b);
   /// test1: rewrite_head on 1, 2, 3 with true.
   /// Expected: length 1,2,3 = 3, so result = 3, 2, 3.
   /// Bug: null dereference inside length.
@@ -157,7 +174,7 @@ struct ReuseUseAfterMove {
     }
   }();
   /// test2: Use sum instead of length — same bug pattern.
-  __attribute__((pure)) static mylist rewrite_head_sum(mylist l, const bool &b);
+  static mylist rewrite_head_sum(mylist l, const bool &b);
   static inline const unsigned int test2 = []() {
     auto &&_sv0 = rewrite_head_sum(
         mylist::mycons(

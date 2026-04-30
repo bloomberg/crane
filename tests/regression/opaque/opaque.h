@@ -44,7 +44,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Sig<t_A> clone() const {
+  Sig<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist>(_sv.v());
     return Sig<t_A>(Exist{d_x});
@@ -56,24 +56,20 @@ public:
     d_v_ = Exist{t_A(d_x)};
   }
 
-  __attribute__((pure)) static Sig<t_A> exist(t_A x) {
-    return Sig(Exist{std::move(x)});
-  }
+  static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Opaque {
   static unsigned int safe_pred(const unsigned int &n);
-  __attribute__((pure)) static unsigned int pred_of_succ(unsigned int n);
-  __attribute__((pure)) static bool nat_eq_dec(const unsigned int &n,
-                                               const unsigned int &x);
-  __attribute__((pure)) static bool are_equal(const unsigned int &n,
-                                              const unsigned int &m);
+  static unsigned int pred_of_succ(unsigned int n);
+  static bool nat_eq_dec(const unsigned int &n, const unsigned int &x);
+  static bool are_equal(const unsigned int &n, const unsigned int &m);
   static Sig<unsigned int> bounded_add(const unsigned int &_x0,
                                        const unsigned int &_x1,
                                        const unsigned int &_x2);

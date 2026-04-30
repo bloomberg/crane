@@ -46,15 +46,14 @@ struct NameClashCtorField {
     }
 
     // ACCESSORS
-    __attribute__((pure)) clash1 clone() const {
+    clash1 clone() const {
       auto &&_sv = *(this);
       const auto &[d_d_a0, d_d_a1] = std::get<C1>(_sv.v());
       return clash1(C1{d_d_a0, d_d_a1});
     }
 
     // CREATORS
-    __attribute__((pure)) static clash1 c1(unsigned int d_a0,
-                                           unsigned int d_a1) {
+    static clash1 c1(unsigned int d_a0, unsigned int d_a1) {
       return clash1(C1{std::move(d_a0), std::move(d_a1)});
     }
 
@@ -62,9 +61,9 @@ struct NameClashCtorField {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int sum_clash1() const {
+    unsigned int sum_clash1() const {
       auto &&_sv = *(this);
       const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(_sv.v());
       return (d_d_a0 + d_d_a1);
@@ -125,7 +124,7 @@ struct NameClashCtorField {
     }
 
     // ACCESSORS
-    __attribute__((pure)) clash2 clone() const {
+    clash2 clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<C2a>(_sv.v())) {
         const auto &[d_v] = std::get<C2a>(_sv.v());
@@ -137,11 +136,9 @@ struct NameClashCtorField {
     }
 
     // CREATORS
-    __attribute__((pure)) static clash2 c2a(unsigned int v) {
-      return clash2(C2a{std::move(v)});
-    }
+    static clash2 c2a(unsigned int v) { return clash2(C2a{std::move(v)}); }
 
-    __attribute__((pure)) static clash2 c2b(unsigned int result) {
+    static clash2 c2b(unsigned int result) {
       return clash2(C2b{std::move(result)});
     }
 
@@ -149,9 +146,9 @@ struct NameClashCtorField {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int get_clash2() const {
+    unsigned int get_clash2() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename clash2::C2a>(_sv.v())) {
         const auto &[d_v] = std::get<typename clash2::C2a>(_sv.v());
@@ -224,15 +221,14 @@ struct NameClashCtorField {
     }
 
     // ACCESSORS
-    __attribute__((pure)) pair_ind clone() const {
+    pair_ind clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<MkPair>(_sv.v());
       return pair_ind(MkPair{d_a0, d_a1});
     }
 
     // CREATORS
-    __attribute__((pure)) static pair_ind mkpair(unsigned int a0,
-                                                 unsigned int a1) {
+    static pair_ind mkpair(unsigned int a0, unsigned int a1) {
       return pair_ind(MkPair{std::move(a0), std::move(a1)});
     }
 
@@ -240,9 +236,9 @@ struct NameClashCtorField {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) pair_ind swap_pair() const {
+    pair_ind swap_pair() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(_sv.v());
       return pair_ind::mkpair(d_a1, d_a0);
@@ -301,7 +297,7 @@ struct NameClashCtorField {
     }
 
     // ACCESSORS
-    __attribute__((pure)) box clone() const {
+    box clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Box0>(_sv.v())) {
         const auto &[d_a0] = std::get<Box0>(_sv.v());
@@ -312,19 +308,17 @@ struct NameClashCtorField {
     }
 
     // CREATORS
-    __attribute__((pure)) static box box0(pair_ind a0) {
-      return box(Box0{std::move(a0)});
-    }
+    static box box0(pair_ind a0) { return box(Box0{std::move(a0)}); }
 
-    __attribute__((pure)) static box emptybox() { return box(EmptyBox{}); }
+    static box emptybox() { return box(EmptyBox{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int unbox_sum() const {
+    unsigned int unbox_sum() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename box::Box0>(_sv.v())) {
         const auto &[d_a0] = std::get<typename box::Box0>(_sv.v());

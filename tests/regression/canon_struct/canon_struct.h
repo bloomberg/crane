@@ -11,7 +11,7 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct Bool {
-  __attribute__((pure)) static bool eqb(const bool &b1, const bool &b2);
+  static bool eqb(const bool &b1, const bool &b2);
 };
 
 template <typename I>
@@ -26,9 +26,7 @@ struct CanonStruct {
   struct nat_eqType {
     using carrier = unsigned int;
 
-    __attribute__((pure)) static bool eqb(unsigned int a0, unsigned int a1) {
-      return a0 == a1;
-    }
+    static bool eqb(unsigned int a0, unsigned int a1) { return a0 == a1; }
   };
 
   static_assert(EqType<nat_eqType>);
@@ -36,16 +34,14 @@ struct CanonStruct {
   struct bool_eqType {
     using carrier = bool;
 
-    __attribute__((pure)) static bool eqb(bool a0, bool a1) {
-      return Bool::eqb(a0, a1);
-    }
+    static bool eqb(bool a0, bool a1) { return Bool::eqb(a0, a1); }
   };
 
   static_assert(EqType<bool_eqType>);
 
   template <EqType _tcI0>
-  __attribute__((pure)) static bool same(const typename _tcI0::carrier x,
-                                         const typename _tcI0::carrier y) {
+  static bool same(const typename _tcI0::carrier x,
+                   const typename _tcI0::carrier y) {
     return _tcI0::eqb(x, y);
   }
 

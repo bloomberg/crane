@@ -19,7 +19,7 @@ void UnitVoidEdge::id_unit_fn(const unsigned int &) {
   }
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 UnitVoidEdge::match_option_unit(const std::optional<std::monostate> &o) {
   if (o.has_value()) {
     const std::monostate &_x = *o;
@@ -29,7 +29,7 @@ UnitVoidEdge::match_option_unit(const std::optional<std::monostate> &o) {
   }
 }
 
-__attribute__((pure)) std::optional<std::monostate>
+std::optional<std::monostate>
 UnitVoidEdge::return_some_tt(const unsigned int &n) {
   if (n == 0u) {
     return std::optional<std::monostate>();
@@ -42,12 +42,9 @@ void UnitVoidEdge::unit_chain(std::monostate) { return; }
 
 void UnitVoidEdge::helper_void(const unsigned int &) { return; }
 
-__attribute__((pure)) unsigned int UnitVoidEdge::use_helper(unsigned int n) {
-  return n;
-}
+unsigned int UnitVoidEdge::use_helper(unsigned int n) { return n; }
 
-__attribute__((pure)) unsigned int
-UnitVoidEdge::match_unit_nontail(const std::monostate &) {
+unsigned int UnitVoidEdge::match_unit_nontail(const std::monostate &) {
   {
     return 7u;
   }
@@ -69,9 +66,8 @@ void UnitVoidEdge::conditional_unit(const bool &b) {
   }
 }
 
-__attribute__((pure)) unsigned int
-UnitVoidEdge::double_match_unit(const std::monostate &,
-                                const std::monostate &) {
+unsigned int UnitVoidEdge::double_match_unit(const std::monostate &,
+                                             const std::monostate &) {
   {
     {
       return 99u;
@@ -79,13 +75,11 @@ UnitVoidEdge::double_match_unit(const std::monostate &,
   }
 }
 
-__attribute__((pure)) UnitVoidEdge::tagged_nat
-UnitVoidEdge::make_tagged(unsigned int n) {
+UnitVoidEdge::tagged_nat UnitVoidEdge::make_tagged(unsigned int n) {
   return tagged_nat{n, std::monostate{}};
 }
 
-__attribute__((pure)) unsigned int
-UnitVoidEdge::get_value(const UnitVoidEdge::tagged_nat &t) {
+unsigned int UnitVoidEdge::get_value(const UnitVoidEdge::tagged_nat &t) {
   return t.tn_value;
 }
 

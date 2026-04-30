@@ -47,7 +47,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Sig<t_A> clone() const {
+  Sig<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist>(_sv.v());
     return Sig<t_A>(Exist{d_x});
@@ -59,20 +59,18 @@ public:
     d_v_ = Exist{t_A(d_x)};
   }
 
-  __attribute__((pure)) static Sig<t_A> exist(t_A x) {
-    return Sig(Exist{std::move(x)});
-  }
+  static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct RocqBug10757 {
   template <typename T1, MapsTo<Bool0, T1, T1> F0, MapsTo<T1, T1> F1>
-  __attribute__((pure)) static Sig<T1>
+  static Sig<T1>
   iterate_func(F0 &&beq, F1 &&f,
                const T1 x) { // Precondition: (exists _ : le x (F x), forall z :
                              // A, le (F z) z -> le x z)
@@ -103,7 +101,7 @@ struct RocqBug10757 {
   }
 
   template <typename T1, MapsTo<Bool0, T1, T1> F0, MapsTo<T1, T1> F1>
-  __attribute__((pure)) static Sig<T1> iterate(F0 &&beq, F1 &&f, const T1 x) {
+  static Sig<T1> iterate(F0 &&beq, F1 &&f, const T1 x) {
     return iterate_func(beq, f, Sig<T1>::exist(x));
   }
 };

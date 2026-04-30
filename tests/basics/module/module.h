@@ -15,8 +15,7 @@ concept MapsTo = std::is_invocable_v<F &, Args &...>;
 enum class Comparison { e_EQ, e_LT, e_GT };
 
 struct Nat {
-  __attribute__((pure)) static Comparison compare(const unsigned int &n,
-                                                  const unsigned int &m);
+  static Comparison compare(const unsigned int &n, const unsigned int &m);
 };
 
 template <typename M>
@@ -95,23 +94,43 @@ template <OrderedType K, BaseType V> struct MakeMap {
     }
 
     // ACCESSORS
-    __attribute__((pure)) tree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Empty>(_sv.v())) {
-        return tree(Empty{});
-      } else {
-        const auto &[d_a0, d_a1, d_a2, d_a3] = std::get<Node>(_sv.v());
-        return tree(Node{
-            d_a0 ? std::make_unique<MakeMap::tree>(d_a0->clone()) : nullptr,
-            d_a1, d_a2,
-            d_a3 ? std::make_unique<MakeMap::tree>(d_a3->clone()) : nullptr});
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Empty>(_src->v())) {
+          const auto &_alt = std::get<Empty>(_src->v());
+          _dst->d_v_ = Empty{};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ =
+              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2, _alt.d_a3 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a3)
+            _stack.push_back({_alt.d_a3.get(), _dst_alt.d_a3.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static tree empty() { return tree(Empty{}); }
+    static tree empty() { return tree(Empty{}); }
 
-    __attribute__((pure)) static tree node(tree a0, key a1, value a2, tree a3) {
+    static tree node(tree a0, key a1, value a2, tree a3) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
                        std::move(a2), std::make_unique<tree>(std::move(a3))});
     }
@@ -140,7 +159,7 @@ template <OrderedType K, BaseType V> struct MakeMap {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   using t = tree;
@@ -150,8 +169,7 @@ template <OrderedType K, BaseType V> struct MakeMap {
     return v;
   }
 
-  __attribute__((pure)) static t add(const typename K::t k,
-                                     const typename V::t v, const tree &m) {
+  static t add(const typename K::t k, const typename V::t v, const tree &m) {
     if (std::holds_alternative<typename tree::Empty>(m.v())) {
       return tree::node(tree::empty(), k, v, tree::empty());
     } else {
@@ -173,8 +191,7 @@ template <OrderedType K, BaseType V> struct MakeMap {
     }
   }
 
-  __attribute__((pure)) static std::optional<value> find(const typename K::t k,
-                                                         const tree &m) {
+  static std::optional<value> find(const typename K::t k, const tree &m) {
     if (std::holds_alternative<typename tree::Empty>(m.v())) {
       return std::optional<typename V::t>();
     } else {
@@ -205,8 +222,7 @@ static_assert(BaseType<NatBase>);
 
 struct NatOrdered {
   using t = unsigned int;
-  __attribute__((pure)) static Comparison compare(const unsigned int &_x0,
-                                                  const unsigned int &_x1);
+  static Comparison compare(const unsigned int &_x0, const unsigned int &_x1);
 };
 
 static_assert(OrderedType<NatOrdered>);

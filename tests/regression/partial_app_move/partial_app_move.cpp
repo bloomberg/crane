@@ -3,8 +3,8 @@
 /// A function taking two args: tree -> nat -> nat.
 /// Partial application of this to a tree creates a
 /// closure nat -> nat in C++ via & lambda.
-__attribute__((pure)) unsigned int
-PartialAppMove::sum_values(const PartialAppMove::tree &t, unsigned int x) {
+unsigned int PartialAppMove::sum_values(const PartialAppMove::tree &t,
+                                        unsigned int x) {
   if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(t.v())) {
     return x;
   } else {
@@ -32,16 +32,14 @@ PartialAppMove::sum_values(const PartialAppMove::tree &t, unsigned int x) {
 /// Wrap a tree inside another Node.
 /// In C++, this calls tree::node() which has rvalue ref overloads.
 /// If escape analysis adds std::move(t) here, the move is REAL.
-__attribute__((pure)) PartialAppMove::tree
-PartialAppMove::wrap(PartialAppMove::tree t) {
+PartialAppMove::tree PartialAppMove::wrap(PartialAppMove::tree t) {
   return tree::node(std::move(t), 0u, tree::leaf());
 }
 
 /// BUG TRIGGER: partial application creates a & lambda capturing t,
 /// then t is passed to a constructor (actually moved via rvalue ref),
 /// then the lambda accesses the moved-from t.
-__attribute__((pure)) unsigned int
-PartialAppMove::trigger_bug(PartialAppMove::tree t) {
+unsigned int PartialAppMove::trigger_bug(PartialAppMove::tree t) {
   std::function<unsigned int(unsigned int)> f =
       [=](unsigned int _x0) mutable -> unsigned int {
     return sum_values(t, _x0);

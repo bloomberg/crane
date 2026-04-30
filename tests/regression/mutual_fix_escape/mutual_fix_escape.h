@@ -13,8 +13,8 @@ concept MapsTo = std::is_invocable_v<F &, Args &...>;
 struct MutualFixEscape {
   /// Mutual fixpoint using fix...with...for syntax, then return
   /// both functions through a pair.
-  __attribute__((pure)) static std::pair<std::function<bool(unsigned int)>,
-                                         std::function<bool(unsigned int)>>
+  static std::pair<std::function<bool(unsigned int)>,
+                   std::function<bool(unsigned int)>>
   make_even_odd(const unsigned int &_x);
   /// test1: even(4) = true, odd(3) = true. 1+1=2.
   static inline const unsigned int test1 = []() {
@@ -35,9 +35,8 @@ struct MutualFixEscape {
     }();
   }();
   /// A mutual fixpoint that captures a parameter base.
-  __attribute__((
-      pure)) static std::pair<std::function<unsigned int(unsigned int)>,
-                              std::function<unsigned int(unsigned int)>>
+  static std::pair<std::function<unsigned int(unsigned int)>,
+                   std::function<unsigned int(unsigned int)>>
   make_count_pair(unsigned int base);
   /// test3: count_even(0) = base = 10. count_odd(0) = 20.
   /// count_even(3) = 1+count_odd(2) = 1+(1+count_even(1))

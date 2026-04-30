@@ -1,6 +1,6 @@
 #include <jump_targets.h>
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 JumpTargets::collect_targets(const List<JumpTargets::instr_collection> &prog) {
   if (std::holds_alternative<typename List<JumpTargets::instr_collection>::Nil>(
           prog.v())) {
@@ -18,15 +18,13 @@ JumpTargets::collect_targets(const List<JumpTargets::instr_collection> &prog) {
   }
 }
 
-__attribute__((pure)) bool
-JumpTargets::addr_in_region(const unsigned int &addr,
-                            const JumpTargets::layout &l) {
+bool JumpTargets::addr_in_region(const unsigned int &addr,
+                                 const JumpTargets::layout &l) {
   return (l.base_ <= addr && addr < (l.base_ + l.code_));
 }
 
-__attribute__((pure)) bool
-JumpTargets::in_layout(const JumpTargets::layout &l,
-                       const JumpTargets::instr_region &i) {
+bool JumpTargets::in_layout(const JumpTargets::layout &l,
+                            const JumpTargets::instr_region &i) {
   auto _cs = i.jump_target_region();
   if (_cs.has_value()) {
     const unsigned int &a = *_cs;
@@ -36,7 +34,7 @@ JumpTargets::in_layout(const JumpTargets::layout &l,
   }
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 JumpTargets::option_nat_or_zero(const std::optional<unsigned int> &o) {
   if (o.has_value()) {
     const unsigned int &n = *o;
@@ -46,8 +44,7 @@ JumpTargets::option_nat_or_zero(const std::optional<unsigned int> &o) {
   }
 }
 
-__attribute__((pure)) unsigned int
-JumpTargets::target_default(const std::optional<unsigned int> &o) {
+unsigned int JumpTargets::target_default(const std::optional<unsigned int> &o) {
   if (o.has_value()) {
     const unsigned int &a = *o;
     return a;

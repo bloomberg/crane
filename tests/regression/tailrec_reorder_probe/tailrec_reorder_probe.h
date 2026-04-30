@@ -51,17 +51,34 @@ struct TailrecReorderProbe {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mylist<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Mynil>(_sv.v())) {
-        return mylist<t_A>(Mynil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
-        return mylist<t_A>(Mycons{
-            d_a0, d_a1 ? std::make_unique<TailrecReorderProbe::mylist<t_A>>(
-                             d_a1->clone())
-                       : nullptr});
+    mylist clone() const {
+      mylist _out{};
+
+      struct _CloneFrame {
+        const mylist *_src;
+        mylist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist *_src = _frame._src;
+        mylist *_dst = _frame._dst;
+        if (std::holds_alternative<Mynil>(_src->v())) {
+          const auto &_alt = std::get<Mynil>(_src->v());
+          _dst->d_v_ = Mynil{};
+        } else {
+          const auto &_alt = std::get<Mycons>(_src->v());
+          _dst->d_v_ = Mycons{_alt.d_a0,
+                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -76,9 +93,9 @@ struct TailrecReorderProbe {
       }
     }
 
-    __attribute__((pure)) static mylist<t_A> mynil() { return mylist(Mynil{}); }
+    static mylist<t_A> mynil() { return mylist(Mynil{}); }
 
-    __attribute__((pure)) static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+    static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
       return mylist(
           Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
@@ -105,7 +122,7 @@ struct TailrecReorderProbe {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1, mylist<T1>, T2> F1>
@@ -195,8 +212,7 @@ struct TailrecReorderProbe {
   /// This is a potential evaluation-order / use-after-free bug in the
   /// loopify pass.
   template <typename T1>
-  __attribute__((pure)) static mylist<T1> my_rev_append(const mylist<T1> &l,
-                                                        mylist<T1> acc) {
+  static mylist<T1> my_rev_append(const mylist<T1> &l, mylist<T1> acc) {
     mylist<T1> _result;
     mylist<T1> _loop_acc = std::move(acc);
     const mylist<T1> *_loop_l = &l;
@@ -216,22 +232,19 @@ struct TailrecReorderProbe {
     return _result;
   }
 
-  template <typename T1>
-  __attribute__((pure)) static mylist<T1> my_reverse(const mylist<T1> &l) {
+  template <typename T1> static mylist<T1> my_reverse(const mylist<T1> &l) {
     return my_rev_append<T1>(l, mylist<T1>::mynil());
   }
 
   /// Variant: TWO arguments depend on pattern-matched fields.
   /// l := t, acc1 := mycons h acc1, acc2 := mycons (h+1) acc2
   /// Both acc1 and acc2 need h from the OLD l.
-  __attribute__((
-      pure)) static std::pair<mylist<unsigned int>, mylist<unsigned int>>
+  static std::pair<mylist<unsigned int>, mylist<unsigned int>>
   dual_accum(const mylist<unsigned int> &l, mylist<unsigned int> acc1,
              mylist<unsigned int> acc2);
 
   template <typename T1, MapsTo<unsigned int, T1> F0>
-  __attribute__((pure)) static unsigned int mylist_sum(F0 &&f,
-                                                       const mylist<T1> &l) {
+  static unsigned int mylist_sum(F0 &&f, const mylist<T1> &l) {
     struct _Enter {
       const mylist<T1> *l;
     };
@@ -287,9 +300,9 @@ struct TailrecReorderProbe {
   }();
   /// Tail-recursive function where the recursive argument is a COMPLEX
   /// expression involving multiple pattern variables.
-  __attribute__((pure)) static mylist<unsigned int>
-  weave(const mylist<unsigned int> &l1, const mylist<unsigned int> &l2,
-        mylist<unsigned int> acc);
+  static mylist<unsigned int> weave(const mylist<unsigned int> &l1,
+                                    const mylist<unsigned int> &l2,
+                                    mylist<unsigned int> acc);
   static inline const unsigned int test_weave = mylist_sum<unsigned int>(
       [](unsigned int x) { return x; },
       weave(mylist<unsigned int>::mycons(

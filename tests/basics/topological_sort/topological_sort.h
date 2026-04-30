@@ -52,15 +52,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -74,9 +93,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -103,11 +122,10 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
   template <typename T1>
-  __attribute__((pure)) List<std::pair<t_A, T1>>
-  combine(const List<T1> &l_) const {
+  List<std::pair<t_A, T1>> combine(const List<T1> &l_) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return List<std::pair<t_A, T1>>::nil();
@@ -124,8 +142,7 @@ public:
     }
   }
 
-  template <MapsTo<bool, t_A> F0>
-  __attribute__((pure)) std::optional<t_A> find(F0 &&f) const {
+  template <MapsTo<bool, t_A> F0> std::optional<t_A> find(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return std::optional<t_A>();
@@ -139,8 +156,7 @@ public:
     }
   }
 
-  template <MapsTo<bool, t_A> F0>
-  __attribute__((pure)) List<t_A> filter(F0 &&f) const {
+  template <MapsTo<bool, t_A> F0> List<t_A> filter(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return List<t_A>::nil();
@@ -165,7 +181,7 @@ public:
     }
   }
 
-  template <typename T1> __attribute__((pure)) List<T1> concat() const {
+  template <typename T1> List<T1> concat() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<List<T1>>::Nil>(_sv.v())) {
       return List<T1>::nil();
@@ -176,8 +192,7 @@ public:
     }
   }
 
-  template <typename T1, MapsTo<T1, t_A> F0>
-  __attribute__((pure)) List<T1> map(F0 &&f) const {
+  template <typename T1, MapsTo<T1, t_A> F0> List<T1> map(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return List<T1>::nil();
@@ -187,7 +202,7 @@ public:
     }
   }
 
-  __attribute__((pure)) unsigned int length() const {
+  unsigned int length() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
@@ -197,7 +212,7 @@ public:
     }
   }
 
-  __attribute__((pure)) List<t_A> app(List<t_A> m) const {
+  List<t_A> app(List<t_A> m) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return m;
@@ -209,23 +224,22 @@ public:
 };
 
 struct ListDef {
-  __attribute__((pure)) static List<unsigned int> seq(unsigned int start,
-                                                      const unsigned int &len);
+  static List<unsigned int> seq(unsigned int start, const unsigned int &len);
 };
 
 struct ToString {
   template <typename T1, typename T2, MapsTo<std::string, T1> F0,
             MapsTo<std::string, T2> F1>
-  __attribute__((pure)) static std::string
-  pair_to_string(F0 &&p1, F1 &&p2, const std::pair<T1, T2> &x) {
+  static std::string pair_to_string(F0 &&p1, F1 &&p2,
+                                    const std::pair<T1, T2> &x) {
     const T1 &a = x.first;
     const T2 &b = x.second;
     return "("s + p1(a) + ", "s + p2(b) + ")"s;
   }
 
   template <typename T1, MapsTo<std::string, T1> F0>
-  __attribute__((pure)) static std::string
-  intersperse(F0 &&p, const std::string sep, const List<T1> &l) {
+  static std::string intersperse(F0 &&p, const std::string sep,
+                                 const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return "";
     } else {
@@ -240,8 +254,7 @@ struct ToString {
   }
 
   template <typename T1, MapsTo<std::string, T1> F0>
-  __attribute__((pure)) static std::string list_to_string(F0 &&p,
-                                                          const List<T1> &l) {
+  static std::string list_to_string(F0 &&p, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return "[]";
     } else {
@@ -262,8 +275,7 @@ struct TopologicalSort {
   template <typename node> using order = List<List<node>>;
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static List<T1>
-  get_elems(F0 &&eqb_node, const List<std::pair<T1, T1>> &l) {
+  static List<T1> get_elems(F0 &&eqb_node, const List<std::pair<T1, T1>> &l) {
     std::function<List<T1>(List<std::pair<T1, T1>>, List<T1>)> get_elems_aux;
     get_elems_aux = [&](List<std::pair<T1, T1>> l0, List<T1> h) -> List<T1> {
       if (std::holds_alternative<typename List<std::pair<T1, T1>>::Nil>(
@@ -308,8 +320,8 @@ struct TopologicalSort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static entry<T1>
-  make_entry(F0 &&eqb_node, const List<std::pair<T1, T1>> &l, const T1 e) {
+  static entry<T1> make_entry(F0 &&eqb_node, const List<std::pair<T1, T1>> &l,
+                              const T1 e) {
     return std::make_pair(
         e, l.template fold_right<List<T1>>(
                [=](const std::pair<T1, T1> &x, List<T1> ret) mutable {
@@ -323,8 +335,7 @@ struct TopologicalSort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static graph<T1> make_graph(F0 &&eqb_node,
-                                                    List<std::pair<T1, T1>> l) {
+  static graph<T1> make_graph(F0 &&eqb_node, List<std::pair<T1, T1>> l) {
     List<T1> elems = get_elems<T1>(eqb_node, l);
     return std::move(elems).template fold_right<List<entry<T1>>>(
         [=](const T1 e, List<std::pair<T1, List<T1>>> ret) mutable {
@@ -335,9 +346,8 @@ struct TopologicalSort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static List<T1>
-  graph_lookup(F0 &&eqb_node, const T1 elem,
-               const List<std::pair<T1, List<T1>>> &graph0) {
+  static List<T1> graph_lookup(F0 &&eqb_node, const T1 elem,
+                               const List<std::pair<T1, List<T1>>> &graph0) {
     auto _cs = graph0.find([=](const std::pair<T1, List<T1>> &entry0) mutable {
       return eqb_node(elem, entry0.first);
     });
@@ -352,8 +362,7 @@ struct TopologicalSort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static bool contains(F0 &&eqb_node, const T1 elem,
-                                             const List<T1> &es) {
+  static bool contains(F0 &&eqb_node, const T1 elem, const List<T1> &es) {
     auto _cs = es.find([=](const T1 x) mutable { return eqb_node(elem, x); });
     if (_cs.has_value()) {
       const T1 &_x = *_cs;
@@ -388,7 +397,7 @@ struct TopologicalSort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static std::optional<T1>
+  static std::optional<T1>
   cycle_entry(F0 &&eqb_node, const List<std::pair<T1, List<T1>>> &graph0) {
     if (std::holds_alternative<typename List<std::pair<T1, List<T1>>>::Nil>(
             graph0.v())) {
@@ -404,7 +413,7 @@ struct TopologicalSort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static List<T1>
+  static List<T1>
   cycle_extract_aux(F0 &&eqb_node, List<std::pair<T1, List<T1>>> graph0,
                     const unsigned int &counter, const T1 elem, List<T1> cycl) {
     if (counter <= 0) {
@@ -425,8 +434,8 @@ struct TopologicalSort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static List<T1>
-  cycle_extract(F0 &&eqb_node, const List<std::pair<T1, List<T1>>> &graph0) {
+  static List<T1> cycle_extract(F0 &&eqb_node,
+                                const List<std::pair<T1, List<T1>>> &graph0) {
     auto _cs = cycle_entry<T1>(eqb_node, graph0);
     if (_cs.has_value()) {
       const T1 &elem = *_cs;
@@ -437,8 +446,7 @@ struct TopologicalSort {
     }
   }
 
-  template <typename T1>
-  __attribute__((pure)) static bool null(const List<T1> &xs) {
+  template <typename T1> static bool null(const List<T1> &xs) {
     if (std::holds_alternative<typename List<T1>::Nil>(xs.v())) {
       return true;
     } else {
@@ -447,7 +455,7 @@ struct TopologicalSort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static order<T1>
+  static order<T1>
   topological_sort_aux(F0 &&eqb_node,
                        const List<std::pair<T1, List<T1>>> &graph0,
                        const unsigned int &counter) {
@@ -493,21 +501,21 @@ struct TopologicalSort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static List<List<T1>>
-  topological_sort(F0 &&eqb_node, const List<std::pair<T1, T1>> &g) {
+  static List<List<T1>> topological_sort(F0 &&eqb_node,
+                                         const List<std::pair<T1, T1>> &g) {
     List<std::pair<T1, List<T1>>> g_ = make_graph<T1>(eqb_node, g);
     return topological_sort_aux<T1>(eqb_node, g_, g_.length());
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static order<T1>
+  static order<T1>
   topological_sort_graph(F0 &&eqb_node,
                          const List<std::pair<T1, List<T1>>> &graph0) {
     return topological_sort_aux<T1>(eqb_node, graph0, graph0.length());
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static List<std::pair<T1, unsigned int>>
+  static List<std::pair<T1, unsigned int>>
   topological_rank_list(F0 &&eqb_node,
                         const List<std::pair<T1, List<T1>>> &graph0) {
     List<List<T1>> lorder = topological_sort_graph<T1>(eqb_node, graph0);

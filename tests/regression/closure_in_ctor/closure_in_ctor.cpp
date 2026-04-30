@@ -11,8 +11,7 @@
 ///
 /// Difference from fix_escape_capture: escapes through a CUSTOM
 /// INDUCTIVE constructor, not a pair.
-__attribute__((pure)) ClosureInCtor::box
-ClosureInCtor::make_box_fix(unsigned int n) {
+ClosureInCtor::box ClosureInCtor::make_box_fix(unsigned int n) {
   auto add_impl = [=](auto &_self_add, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return n;

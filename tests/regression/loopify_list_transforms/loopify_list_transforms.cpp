@@ -1,6 +1,6 @@
 #include <loopify_list_transforms.h>
 
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyListTransforms::run_length_encode(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return List<std::pair<unsigned int, unsigned int>>::nil();
@@ -40,7 +40,7 @@ LoopifyListTransforms::run_length_encode(const List<unsigned int> &l) {
   }
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListTransforms::prefix_sums(unsigned int acc,
                                    const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
@@ -71,7 +71,7 @@ LoopifyListTransforms::prefix_sums(unsigned int acc,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyListTransforms::sliding_pairs_fuel(const unsigned int &fuel,
                                           const List<unsigned int> &l) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
@@ -126,14 +126,14 @@ LoopifyListTransforms::sliding_pairs_fuel(const unsigned int &fuel,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyListTransforms::sliding_pairs(const List<unsigned int> &l) {
   unsigned int len = l.length();
   return sliding_pairs_fuel(len, l);
 }
 
-__attribute__((pure)) unsigned int
-LoopifyListTransforms::abs_diff(const unsigned int &x, const unsigned int &y) {
+unsigned int LoopifyListTransforms::abs_diff(const unsigned int &x,
+                                             const unsigned int &y) {
   if (y < x) {
     return (((x - y) > x ? 0 : (x - y)));
   } else {
@@ -141,7 +141,7 @@ LoopifyListTransforms::abs_diff(const unsigned int &x, const unsigned int &y) {
   }
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListTransforms::differences_fuel(const unsigned int &fuel,
                                         const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
@@ -191,15 +191,14 @@ LoopifyListTransforms::differences_fuel(const unsigned int &fuel,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListTransforms::differences(const List<unsigned int> &l) {
   unsigned int len = l.length();
   return differences_fuel(len, l);
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListTransforms::take(const unsigned int &n,
-                            const List<unsigned int> &l) {
+List<unsigned int> LoopifyListTransforms::take(const unsigned int &n,
+                                               const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -236,8 +235,8 @@ LoopifyListTransforms::take(const unsigned int &n,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListTransforms::drop(const unsigned int &n, List<unsigned int> l) {
+List<unsigned int> LoopifyListTransforms::drop(const unsigned int &n,
+                                               List<unsigned int> l) {
   List<unsigned int> _result;
   List<unsigned int> _loop_l = std::move(l);
   unsigned int _loop_n = n;
@@ -264,7 +263,7 @@ LoopifyListTransforms::drop(const unsigned int &n, List<unsigned int> l) {
   return _result;
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyListTransforms::chunks_of_fuel(const unsigned int &fuel,
                                       const unsigned int &n,
                                       const List<unsigned int> &l) {
@@ -309,17 +308,15 @@ LoopifyListTransforms::chunks_of_fuel(const unsigned int &fuel,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyListTransforms::chunks_of(const unsigned int &n,
                                  const List<unsigned int> &l) {
   unsigned int len = l.length();
   return chunks_of_fuel(len, n, l);
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListTransforms::rotate_left_fuel(const unsigned int &fuel,
-                                        const unsigned int &n,
-                                        List<unsigned int> l) {
+List<unsigned int> LoopifyListTransforms::rotate_left_fuel(
+    const unsigned int &fuel, const unsigned int &n, List<unsigned int> l) {
   List<unsigned int> _result;
   List<unsigned int> _loop_l = std::move(l);
   unsigned int _loop_n = n;
@@ -357,13 +354,13 @@ LoopifyListTransforms::rotate_left_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListTransforms::rotate_left(const unsigned int &n,
                                    const List<unsigned int> &l) {
   return rotate_left_fuel((n + 1u), n, l);
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListTransforms::uniq_sorted_fuel(const unsigned int &fuel,
                                         const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
@@ -420,14 +417,13 @@ LoopifyListTransforms::uniq_sorted_fuel(const unsigned int &fuel,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListTransforms::uniq_sorted(const List<unsigned int> &l) {
   unsigned int len = l.length();
   return uniq_sorted_fuel(len, l);
 }
 
-__attribute__((pure)) unsigned int
-LoopifyListTransforms::step_sum(const List<unsigned int> &l) {
+unsigned int LoopifyListTransforms::step_sum(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };

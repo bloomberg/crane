@@ -1,17 +1,16 @@
 #include <polygon_winding_area_trace.h>
 
-__attribute__((pure)) int64_t BinInt::pow_pos(const int64_t &z,
-                                              unsigned int _x0) {
+int64_t BinInt::pow_pos(const int64_t &z, unsigned int _x0) {
   return Pos::template iter<int64_t>(
       [=](int64_t _x0) mutable -> int64_t { return (z * _x0); }, INT64_C(1),
       _x0);
 }
 
-__attribute__((pure)) Real PolygonWindingAreaTraceCase::hav(const Real theta) {
+Real PolygonWindingAreaTraceCase::hav(const Real theta) {
   return r_sqr(r_sin((theta / Real::from_z(INT64_C(2)))));
 }
 
-__attribute__((pure)) Real PolygonWindingAreaTraceCase::distance(
+Real PolygonWindingAreaTraceCase::distance(
     const PolygonWindingAreaTraceCase::Point &p1,
     const PolygonWindingAreaTraceCase::Point &p2) {
   Real dphi = (p2.phi - p1.phi);
@@ -20,8 +19,7 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::distance(
   return ((Real::from_z(INT64_C(2)) * R_earth) * r_asin(r_sqrt(a)));
 }
 
-__attribute__((pure)) Real
-PolygonWindingAreaTraceCase::lon_diff(const Real lon1, const Real lon2) {
+Real PolygonWindingAreaTraceCase::lon_diff(const Real lon1, const Real lon2) {
   Real raw = (lon2 - lon1);
   if ((Real::pi() < raw)) {
     return (raw - (Real::from_z(INT64_C(2)) * Real::pi()));
@@ -34,7 +32,7 @@ PolygonWindingAreaTraceCase::lon_diff(const Real lon1, const Real lon2) {
   }
 }
 
-__attribute__((pure)) Real PolygonWindingAreaTraceCase::spherical_shoelace_aux(
+Real PolygonWindingAreaTraceCase::spherical_shoelace_aux(
     const List<PolygonWindingAreaTraceCase::Point> &pts,
     const List<PolygonWindingAreaTraceCase::Point> &all_pts,
     const unsigned int &idx) {
@@ -59,24 +57,24 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::spherical_shoelace_aux(
   }
 }
 
-__attribute__((pure)) Real PolygonWindingAreaTraceCase::spherical_shoelace(
+Real PolygonWindingAreaTraceCase::spherical_shoelace(
     const List<PolygonWindingAreaTraceCase::Point> &pts) {
   return spherical_shoelace_aux(pts, pts, 0u);
 }
 
-__attribute__((pure)) Real PolygonWindingAreaTraceCase::spherical_polygon_area(
+Real PolygonWindingAreaTraceCase::spherical_polygon_area(
     const List<PolygonWindingAreaTraceCase::Point> &poly) {
   return r_abs(
       ((r_sqr(R_earth) * spherical_shoelace(poly)) / Real::from_z(INT64_C(2))));
 }
 
-__attribute__((pure)) Real
-PolygonWindingAreaTraceCase::distance_to_central_angle(const Real d) {
+Real PolygonWindingAreaTraceCase::distance_to_central_angle(const Real d) {
   return (d / R_earth);
 }
 
-__attribute__((pure)) Real PolygonWindingAreaTraceCase::spherical_cosine_arg(
-    const Real ca, const Real cb, const Real cab) {
+Real PolygonWindingAreaTraceCase::spherical_cosine_arg(const Real ca,
+                                                       const Real cb,
+                                                       const Real cab) {
   Real num = (r_cos(cab) - (r_cos(ca) * r_cos(cb)));
   Real denom = (r_sin(ca) * r_sin(cb));
   return r_max(
@@ -88,15 +86,16 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::spherical_cosine_arg(
                               INT64_C(10), (2u * (2u * (2u * 1u) + 1u)))))))));
 }
 
-__attribute__((pure)) Real PolygonWindingAreaTraceCase::law_of_cosines_arg(
-    const Real da, const Real db, const Real dab) {
+Real PolygonWindingAreaTraceCase::law_of_cosines_arg(const Real da,
+                                                     const Real db,
+                                                     const Real dab) {
   Real ca = distance_to_central_angle(da);
   Real cb = distance_to_central_angle(db);
   Real cab = distance_to_central_angle(dab);
   return spherical_cosine_arg(ca, cb, cab);
 }
 
-__attribute__((pure)) Real PolygonWindingAreaTraceCase::segment_angle(
+Real PolygonWindingAreaTraceCase::segment_angle(
     const PolygonWindingAreaTraceCase::Point &p,
     const PolygonWindingAreaTraceCase::Point &a,
     const PolygonWindingAreaTraceCase::Point &b) {
@@ -106,7 +105,7 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::segment_angle(
   return r_acos(law_of_cosines_arg(da, db, dab));
 }
 
-__attribute__((pure)) Real PolygonWindingAreaTraceCase::winding_sum_aux(
+Real PolygonWindingAreaTraceCase::winding_sum_aux(
     const PolygonWindingAreaTraceCase::Point &p,
     const List<PolygonWindingAreaTraceCase::Point> &pts,
     const PolygonWindingAreaTraceCase::Point &first) {
@@ -131,7 +130,7 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::winding_sum_aux(
   }
 }
 
-__attribute__((pure)) Real PolygonWindingAreaTraceCase::winding_sum(
+Real PolygonWindingAreaTraceCase::winding_sum(
     const PolygonWindingAreaTraceCase::Point &p,
     const List<PolygonWindingAreaTraceCase::Point> &poly) {
   if (std::holds_alternative<
@@ -145,13 +144,13 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::winding_sum(
   }
 }
 
-__attribute__((pure)) Real PolygonWindingAreaTraceCase::winding_number(
+Real PolygonWindingAreaTraceCase::winding_number(
     const PolygonWindingAreaTraceCase::Point &p,
     const List<PolygonWindingAreaTraceCase::Point> &poly) {
   return (winding_sum(p, poly) / (Real::from_z(INT64_C(2)) * Real::pi()));
 }
 
-__attribute__((pure)) bool PolygonWindingAreaTraceCase::inside_by_winding(
+bool PolygonWindingAreaTraceCase::inside_by_winding(
     const PolygonWindingAreaTraceCase::Point &p,
     const List<PolygonWindingAreaTraceCase::Point> &poly) {
   if ((Real::pi() < winding_sum(p, poly))) {
@@ -161,7 +160,7 @@ __attribute__((pure)) bool PolygonWindingAreaTraceCase::inside_by_winding(
   }
 }
 
-__attribute__((pure)) bool PolygonWindingAreaTraceCase::nonnegative_area(
+bool PolygonWindingAreaTraceCase::nonnegative_area(
     const List<PolygonWindingAreaTraceCase::Point> &poly) {
   if ((Real::from_z(INT64_C(0)) <= spherical_polygon_area(poly))) {
     return true;
@@ -170,8 +169,7 @@ __attribute__((pure)) bool PolygonWindingAreaTraceCase::nonnegative_area(
   }
 }
 
-__attribute__((pure)) bool
-PolygonWindingAreaTraceCase::nonnegative_segment_angle(
+bool PolygonWindingAreaTraceCase::nonnegative_segment_angle(
     const PolygonWindingAreaTraceCase::Point &p,
     const PolygonWindingAreaTraceCase::Point &a,
     const PolygonWindingAreaTraceCase::Point &b) {
@@ -182,7 +180,7 @@ PolygonWindingAreaTraceCase::nonnegative_segment_angle(
   }
 }
 
-__attribute__((pure)) bool PolygonWindingAreaTraceCase::winding_number_gt_half(
+bool PolygonWindingAreaTraceCase::winding_number_gt_half(
     const PolygonWindingAreaTraceCase::Point &p,
     const List<PolygonWindingAreaTraceCase::Point> &poly) {
   if (((Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(2))) <
@@ -193,7 +191,7 @@ __attribute__((pure)) bool PolygonWindingAreaTraceCase::winding_number_gt_half(
   }
 }
 
-__attribute__((pure)) PolygonWindingAreaTraceCase::Polygon
+PolygonWindingAreaTraceCase::Polygon
 PolygonWindingAreaTraceCase::test_equatorial_square(const Real delta) {
   return List<PolygonWindingAreaTraceCase::Point>::cons(
       Point{Real::from_z(INT64_C(0)), Real::from_z(INT64_C(0))},
@@ -206,7 +204,7 @@ PolygonWindingAreaTraceCase::test_equatorial_square(const Real delta) {
                   List<PolygonWindingAreaTraceCase::Point>::nil()))));
 }
 
-__attribute__((pure)) Real Rdefinitions::Q2R(const Q &x) {
+Real Rdefinitions::Q2R(const Q &x) {
   return (Real::from_z(x.Qnum) *
           r_inv(Real::from_z(static_cast<int64_t>(x.Qden))));
 }

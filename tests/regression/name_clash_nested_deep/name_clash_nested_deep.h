@@ -52,23 +52,40 @@ struct NameClashNestedDeep {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mylist clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<MyNil>(_sv.v())) {
-        return mylist(MyNil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<MyCons>(_sv.v());
-        return mylist(MyCons{
-            d_a0,
-            d_a1 ? std::make_unique<NameClashNestedDeep::mylist>(d_a1->clone())
-                 : nullptr});
+    mylist clone() const {
+      mylist _out{};
+
+      struct _CloneFrame {
+        const mylist *_src;
+        mylist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist *_src = _frame._src;
+        mylist *_dst = _frame._dst;
+        if (std::holds_alternative<MyNil>(_src->v())) {
+          const auto &_alt = std::get<MyNil>(_src->v());
+          _dst->d_v_ = MyNil{};
+        } else {
+          const auto &_alt = std::get<MyCons>(_src->v());
+          _dst->d_v_ = MyCons{_alt.d_a0,
+                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<MyCons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static mylist mynil() { return mylist(MyNil{}); }
+    static mylist mynil() { return mylist(MyNil{}); }
 
-    __attribute__((pure)) static mylist mycons(unsigned int a0, mylist a1) {
+    static mylist mycons(unsigned int a0, mylist a1) {
       return mylist(
           MyCons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
     }
@@ -95,7 +112,7 @@ struct NameClashNestedDeep {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, mylist, T1> F1>
@@ -119,16 +136,14 @@ struct NameClashNestedDeep {
   }
 
   /// Four levels of nested matching.
-  __attribute__((pure)) static unsigned int
-  deep4(const mylist &a, const mylist &b, const mylist &c, const mylist &d);
+  static unsigned int deep4(const mylist &a, const mylist &b, const mylist &c,
+                            const mylist &d);
   /// Match in a let, then match on the let result.
-  __attribute__((pure)) static unsigned int let_match_chain(const mylist &xs,
-                                                            const mylist &ys);
+  static unsigned int let_match_chain(const mylist &xs, const mylist &ys);
   /// Matching where the same list is matched multiple times.
-  __attribute__((pure)) static unsigned int multi_match_same(const mylist &xs);
+  static unsigned int multi_match_same(const mylist &xs);
   /// Nested match where inner match scrutinee is a field from outer match.
-  __attribute__((pure)) static unsigned int
-  nested_field_match(const mylist &xs);
+  static unsigned int nested_field_match(const mylist &xs);
 };
 
 #endif // INCLUDED_NAME_CLASH_NESTED_DEEP

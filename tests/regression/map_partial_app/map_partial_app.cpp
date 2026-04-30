@@ -1,7 +1,6 @@
 #include <map_partial_app.h>
 
-__attribute__((pure)) unsigned int
-MapPartialApp::tree_sum(const MapPartialApp::tree &t) {
+unsigned int MapPartialApp::tree_sum(const MapPartialApp::tree &t) {
   if (std::holds_alternative<typename MapPartialApp::tree::Leaf>(t.v())) {
     return 0u;
   } else {
@@ -12,14 +11,12 @@ MapPartialApp::tree_sum(const MapPartialApp::tree &t) {
 }
 
 /// wrap: takes tree and nat, builds Node with leaves.
-__attribute__((pure)) MapPartialApp::tree
-MapPartialApp::wrap(MapPartialApp::tree t, unsigned int v) {
+MapPartialApp::tree MapPartialApp::wrap(MapPartialApp::tree t, unsigned int v) {
   return tree::node(std::move(t), v, tree::leaf());
 }
 
 /// Sum a list of nats.
-__attribute__((pure)) unsigned int
-MapPartialApp::sum_list(const List<unsigned int> &l) {
+unsigned int MapPartialApp::sum_list(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return 0u;
   } else {

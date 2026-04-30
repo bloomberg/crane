@@ -1,7 +1,6 @@
 #include <reuse_use_after_move.h>
 
-__attribute__((pure)) unsigned int
-ReuseUseAfterMove::length(const ReuseUseAfterMove::mylist &l) {
+unsigned int ReuseUseAfterMove::length(const ReuseUseAfterMove::mylist &l) {
   if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
           l.v())) {
     const auto &[d_a0, d_a1] =
@@ -12,8 +11,7 @@ ReuseUseAfterMove::length(const ReuseUseAfterMove::mylist &l) {
   }
 }
 
-__attribute__((pure)) unsigned int
-ReuseUseAfterMove::sum(const ReuseUseAfterMove::mylist &l) {
+unsigned int ReuseUseAfterMove::sum(const ReuseUseAfterMove::mylist &l) {
   if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
           l.v())) {
     const auto &[d_a0, d_a1] =
@@ -41,7 +39,7 @@ ReuseUseAfterMove::sum(const ReuseUseAfterMove::mylist &l) {
 ///
 /// length(l) traverses l, hitting the null d_a1 field.
 /// Dereferencing null shared_ptr -> CRASH.
-__attribute__((pure)) ReuseUseAfterMove::mylist
+ReuseUseAfterMove::mylist
 ReuseUseAfterMove::rewrite_head(ReuseUseAfterMove::mylist l, const bool &b) {
   if (b) {
     if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
@@ -58,7 +56,7 @@ ReuseUseAfterMove::rewrite_head(ReuseUseAfterMove::mylist l, const bool &b) {
 }
 
 /// test2: Use sum instead of length — same bug pattern.
-__attribute__((pure)) ReuseUseAfterMove::mylist
+ReuseUseAfterMove::mylist
 ReuseUseAfterMove::rewrite_head_sum(ReuseUseAfterMove::mylist l,
                                     const bool &b) {
   if (b) {

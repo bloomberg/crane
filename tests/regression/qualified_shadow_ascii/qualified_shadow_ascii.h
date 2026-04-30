@@ -13,7 +13,7 @@ struct QualifiedShadowAscii {
     enum class shadow { e_MK };
   };
 
-  __attribute__((pure)) static Shadow::shadow id_shadow(const Shadow::shadow x);
+  static Shadow::shadow id_shadow(const Shadow::shadow x);
   static inline const Shadow::shadow t = id_shadow(Shadow::shadow::e_MK);
 };
 

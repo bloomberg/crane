@@ -1,12 +1,11 @@
 #include <jin_uses_pair_for_jump.h>
 
-__attribute__((pure)) unsigned int
-JinUsesPairForJump::get_reg(const JinUsesPairForJump::state &s,
-                            const unsigned int &r) {
+unsigned int JinUsesPairForJump::get_reg(const JinUsesPairForJump::state &s,
+                                         const unsigned int &r) {
   return ListDef::template nth<unsigned int>(r, s.regs, 0u);
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 JinUsesPairForJump::get_reg_pair(const JinUsesPairForJump::state &s,
                                  const unsigned int &r) {
   unsigned int base =
@@ -14,12 +13,11 @@ JinUsesPairForJump::get_reg_pair(const JinUsesPairForJump::state &s,
   return ((get_reg(s, base) * 16u) + get_reg(s, (base + 1u)));
 }
 
-__attribute__((pure)) unsigned int
-JinUsesPairForJump::page_of(const unsigned int &addr) {
+unsigned int JinUsesPairForJump::page_of(const unsigned int &addr) {
   return (256u ? addr / 256u : 0);
 }
 
-__attribute__((pure)) JinUsesPairForJump::state
+JinUsesPairForJump::state
 JinUsesPairForJump::execute_jin(const JinUsesPairForJump::state &s,
                                 const unsigned int &r) {
   unsigned int next_page = page_of((s.pc + 1u));

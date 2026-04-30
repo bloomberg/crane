@@ -1,8 +1,7 @@
 #include <loopify_list_combining.h>
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListCombining::append(const List<unsigned int> &a,
-                             List<unsigned int> b) {
+List<unsigned int> LoopifyListCombining::append(const List<unsigned int> &a,
+                                                List<unsigned int> b) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_b = std::move(b);
@@ -30,7 +29,7 @@ LoopifyListCombining::append(const List<unsigned int> &a,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListCombining::intersperse(unsigned int sep,
                                   const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
@@ -71,7 +70,7 @@ LoopifyListCombining::intersperse(unsigned int sep,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListCombining::intercalate(const List<unsigned int> &sep,
                                   const List<List<unsigned int>> &ll) {
   struct _Enter {
@@ -117,7 +116,7 @@ LoopifyListCombining::intercalate(const List<unsigned int> &sep,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListCombining::concat(const List<List<unsigned int>> &ll) {
   struct _Enter {
     const List<List<unsigned int>> *ll;
@@ -155,8 +154,7 @@ LoopifyListCombining::concat(const List<List<unsigned int>> &ll) {
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListCombining::mapcat(const List<unsigned int> &l) {
+List<unsigned int> LoopifyListCombining::mapcat(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -196,9 +194,8 @@ LoopifyListCombining::mapcat(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListCombining::interleave_two(List<unsigned int> l1,
-                                     List<unsigned int> l2) {
+List<unsigned int> LoopifyListCombining::interleave_two(List<unsigned int> l1,
+                                                        List<unsigned int> l2) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l2 = std::move(l2);
@@ -241,7 +238,7 @@ LoopifyListCombining::interleave_two(List<unsigned int> l1,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListCombining::concat_sep(unsigned int sep,
                                  const List<List<unsigned int>> &ll) {
   struct _Enter {

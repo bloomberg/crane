@@ -1,7 +1,6 @@
 #include <loopify_numeric_misc.h>
 
-__attribute__((pure)) unsigned int
-LoopifyNumericMisc::sum_abs(const List<unsigned int> &l) {
+unsigned int LoopifyNumericMisc::sum_abs(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -37,8 +36,7 @@ LoopifyNumericMisc::sum_abs(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericMisc::alternating_ops(const unsigned int &n) {
+unsigned int LoopifyNumericMisc::alternating_ops(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -85,8 +83,7 @@ LoopifyNumericMisc::alternating_ops(const unsigned int &n) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericMisc::count_even(const List<unsigned int> &l) {
+unsigned int LoopifyNumericMisc::count_even(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -126,8 +123,7 @@ LoopifyNumericMisc::count_even(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericMisc::count_odd(const List<unsigned int> &l) {
+unsigned int LoopifyNumericMisc::count_odd(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -167,8 +163,7 @@ LoopifyNumericMisc::count_odd(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericMisc::product(const List<unsigned int> &l) {
+unsigned int LoopifyNumericMisc::product(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -204,8 +199,7 @@ LoopifyNumericMisc::product(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericMisc::sum_of_squares(const List<unsigned int> &l) {
+unsigned int LoopifyNumericMisc::sum_of_squares(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -242,8 +236,7 @@ LoopifyNumericMisc::sum_of_squares(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int LoopifyNumericMisc::max_two(unsigned int a,
-                                                               unsigned int b) {
+unsigned int LoopifyNumericMisc::max_two(unsigned int a, unsigned int b) {
   if (a < b) {
     return b;
   } else {
@@ -251,8 +244,7 @@ __attribute__((pure)) unsigned int LoopifyNumericMisc::max_two(unsigned int a,
   }
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericMisc::list_max(const List<unsigned int> &l) {
+unsigned int LoopifyNumericMisc::list_max(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -293,8 +285,7 @@ LoopifyNumericMisc::list_max(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericMisc::list_min(const List<unsigned int> &l) {
+unsigned int LoopifyNumericMisc::list_min(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };

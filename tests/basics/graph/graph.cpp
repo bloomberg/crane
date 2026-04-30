@@ -3,7 +3,7 @@
 /// A graph abstraction parameterized by a container type G and
 /// node type A. Provides operations for building and querying
 /// the graph.
-__attribute__((pure)) bool nat_eqb(const Nat &n, const Nat &m) {
+bool nat_eqb(const Nat &n, const Nat &m) {
   if (std::holds_alternative<typename Nat::O>(n.v())) {
     if (std::holds_alternative<typename Nat::O>(m.v())) {
       return true;

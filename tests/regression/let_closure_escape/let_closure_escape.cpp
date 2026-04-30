@@ -4,7 +4,7 @@
 /// f := sum_values t creates a & lambda bound to a variable.
 /// Box f stores the variable (not a direct lambda) in a constructor.
 /// When let_escape returns, t is destroyed → dangling reference in Box.
-__attribute__((pure)) LetClosureEscape::fn_box
+LetClosureEscape::fn_box
 LetClosureEscape::let_escape(LetClosureEscape::tree t) {
   std::function<unsigned int(unsigned int)> f =
       [=](unsigned int _x0) mutable -> unsigned int {

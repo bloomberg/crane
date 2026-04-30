@@ -10,4 +10,8 @@
 #include <bsl_type_traits.h>
 #include <bsl_variant.h>
 
-namespace BloombergLP {}
+
+namespace BloombergLP {
+
+}
+

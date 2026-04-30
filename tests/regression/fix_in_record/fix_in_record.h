@@ -27,12 +27,10 @@ struct FixInRecord {
     std::function<unsigned int(unsigned int)> fn;
 
     // ACCESSORS
-    __attribute__((pure)) fn_box clone() const {
-      return fn_box{(*(this)).label, (*(this)).fn};
-    }
+    fn_box clone() const { return fn_box{(*(this)).label, (*(this)).fn}; }
   };
 
-  __attribute__((pure)) static fn_box make_box(const unsigned int &n);
+  static fn_box make_box(const unsigned int &n);
   /// test1: n=10, base=30, fn = add where add(x) = 30+x.
   /// fn(make_box 10)(7) = 30 + 7 = 37.
   /// Bug: base captured by & in add, dangles after make_box returns.

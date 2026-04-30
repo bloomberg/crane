@@ -11,7 +11,7 @@
 /// Difference from fix_escape_capture: captures a LET-BINDING
 /// (not a function parameter). The let-binding involves a computation
 /// (n * 2), so it can't be optimized away.
-__attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<unsigned int(unsigned int)>>
 ClosureLetEscape::make_fn_fix(const unsigned int &n) {
   unsigned int base = (n * 2u);
   auto add_impl = [=](auto &_self_add, unsigned int x) mutable -> unsigned int {
@@ -30,7 +30,7 @@ ClosureLetEscape::make_fn_fix(const unsigned int &n) {
 
 /// test3: Captures from multiple let bindings.
 /// BUG: Both a and b are captured by &, both dangle.
-__attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<unsigned int(unsigned int)>>
 ClosureLetEscape::make_fn_multi(const unsigned int &n) {
   unsigned int a = (n + 1u);
   unsigned int b = (a * 3u);

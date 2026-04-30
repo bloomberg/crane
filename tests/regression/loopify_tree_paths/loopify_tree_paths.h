@@ -50,15 +50,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -72,9 +91,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -101,9 +120,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) List<t_A> app(List<t_A> m) const {
+  List<t_A> app(List<t_A> m) const {
     std::unique_ptr<List<t_A>> _head{};
     std::unique_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
@@ -170,25 +189,43 @@ struct LoopifyTreePaths {
     }
 
     // ACCESSORS
-    __attribute__((pure)) tree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
-        return tree(Leaf{});
-      } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
-        return tree(
-            Node{d_a0 ? std::make_unique<LoopifyTreePaths::tree>(d_a0->clone())
-                      : nullptr,
-                 d_a1,
-                 d_a2 ? std::make_unique<LoopifyTreePaths::tree>(d_a2->clone())
-                      : nullptr});
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          const auto &_alt = std::get<Leaf>(_src->v());
+          _dst->d_v_ = Leaf{};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ =
+              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
+    static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, unsigned int a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -217,9 +254,9 @@ struct LoopifyTreePaths {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) List<unsigned int> flatten_paths() const {
+    List<unsigned int> flatten_paths() const {
       const tree *_self = this;
 
       struct _Enter {
@@ -268,7 +305,7 @@ struct LoopifyTreePaths {
       return _result;
     }
 
-    __attribute__((pure)) unsigned int max_path_sum() const {
+    unsigned int max_path_sum() const {
       const tree *_self = this;
 
       struct _Enter {
@@ -317,7 +354,7 @@ struct LoopifyTreePaths {
       return _result;
     }
 
-    __attribute__((pure)) std::optional<List<unsigned int>>
+    std::optional<List<unsigned int>>
     find_path_sum(const unsigned int &acc, const unsigned int &target) const {
       const tree *_self = this;
       auto &&_sv = *(_self);
@@ -349,14 +386,12 @@ struct LoopifyTreePaths {
       }
     }
 
-    __attribute__((pure)) unsigned int
-    count_paths_sum(const unsigned int &target) const {
+    unsigned int count_paths_sum(const unsigned int &target) const {
       return (*(this)).count_paths_sum_aux(0u, target);
     }
 
-    __attribute__((pure)) unsigned int
-    count_paths_sum_aux(const unsigned int &acc,
-                        const unsigned int &target) const {
+    unsigned int count_paths_sum_aux(const unsigned int &acc,
+                                     const unsigned int &target) const {
       const tree *_self = this;
 
       struct _Enter {
@@ -411,7 +446,7 @@ struct LoopifyTreePaths {
       return _result;
     }
 
-    __attribute__((pure)) List<List<unsigned int>> paths() const {
+    List<List<unsigned int>> paths() const {
       const tree *_self = this;
 
       struct _Enter {
@@ -574,8 +609,8 @@ struct LoopifyTreePaths {
     }
   };
 
-  __attribute__((pure)) static List<List<unsigned int>>
-  map_cons(unsigned int x, const List<List<unsigned int>> &ll);
+  static List<List<unsigned int>> map_cons(unsigned int x,
+                                           const List<List<unsigned int>> &ll);
 
   struct bool_tree {
     // TYPES
@@ -617,27 +652,45 @@ struct LoopifyTreePaths {
     }
 
     // ACCESSORS
-    __attribute__((pure)) bool_tree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<BLeaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<BLeaf>(_sv.v());
-        return bool_tree(BLeaf{d_a0});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<BNode>(_sv.v());
-        return bool_tree(BNode{
-            d_a0 ? std::make_unique<LoopifyTreePaths::bool_tree>(d_a0->clone())
-                 : nullptr,
-            d_a1 ? std::make_unique<LoopifyTreePaths::bool_tree>(d_a1->clone())
-                 : nullptr});
+    bool_tree clone() const {
+      bool_tree _out{};
+
+      struct _CloneFrame {
+        const bool_tree *_src;
+        bool_tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const bool_tree *_src = _frame._src;
+        bool_tree *_dst = _frame._dst;
+        if (std::holds_alternative<BLeaf>(_src->v())) {
+          const auto &_alt = std::get<BLeaf>(_src->v());
+          _dst->d_v_ = BLeaf{_alt.d_a0};
+        } else {
+          const auto &_alt = std::get<BNode>(_src->v());
+          _dst->d_v_ =
+              BNode{_alt.d_a0 ? std::make_unique<bool_tree>() : nullptr,
+                    _alt.d_a1 ? std::make_unique<bool_tree>() : nullptr};
+          auto &_dst_alt = std::get<BNode>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static bool_tree bleaf(unsigned int a0) {
+    static bool_tree bleaf(unsigned int a0) {
       return bool_tree(BLeaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static bool_tree bnode(bool_tree a0, bool_tree a1) {
+    static bool_tree bnode(bool_tree a0, bool_tree a1) {
       return bool_tree(BNode{std::make_unique<bool_tree>(std::move(a0)),
                              std::make_unique<bool_tree>(std::move(a1))});
     }
@@ -666,10 +719,9 @@ struct LoopifyTreePaths {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    template <MapsTo<bool, unsigned int> F0>
-    __attribute__((pure)) bool and_search(F0 &&p) const {
+    template <MapsTo<bool, unsigned int> F0> bool and_search(F0 &&p) const {
       const bool_tree *_self = this;
 
       struct _Enter {
@@ -717,8 +769,7 @@ struct LoopifyTreePaths {
       return _result;
     }
 
-    template <MapsTo<bool, unsigned int> F0>
-    __attribute__((pure)) bool or_search(F0 &&p) const {
+    template <MapsTo<bool, unsigned int> F0> bool or_search(F0 &&p) const {
       const bool_tree *_self = this;
 
       struct _Enter {

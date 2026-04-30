@@ -9,7 +9,7 @@
 /// The callback returns cons adder acc, storing the closure.
 /// After the callback returns, n is destroyed. Later iterations and
 /// the final result contain dangling closures.
-__attribute__((pure)) List<std::function<unsigned int(unsigned int)>>
+List<std::function<unsigned int(unsigned int)>>
 FixFoldEscape::collect_adders(const List<unsigned int> &l) {
   return fold_left(
       [](List<std::function<unsigned int(unsigned int)>> acc, unsigned int n) {
@@ -31,7 +31,7 @@ FixFoldEscape::collect_adders(const List<unsigned int> &l) {
       List<std::function<unsigned int(unsigned int)>>::nil(), l);
 }
 
-__attribute__((pure)) unsigned int FixFoldEscape::apply_head(
+unsigned int FixFoldEscape::apply_head(
     const List<std::function<unsigned int(unsigned int)>> &l,
     const unsigned int &x) {
   if (std::holds_alternative<
@@ -45,7 +45,7 @@ __attribute__((pure)) unsigned int FixFoldEscape::apply_head(
   }
 }
 
-__attribute__((pure)) unsigned int FixFoldEscape::sum_apply(
+unsigned int FixFoldEscape::sum_apply(
     const List<std::function<unsigned int(unsigned int)>> &l,
     const unsigned int &x) {
   if (std::holds_alternative<

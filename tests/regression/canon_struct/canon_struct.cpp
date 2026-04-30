@@ -1,6 +1,6 @@
 #include <canon_struct.h>
 
-__attribute__((pure)) bool Bool::eqb(const bool &b1, const bool &b2) {
+bool Bool::eqb(const bool &b1, const bool &b2) {
   if (b1) {
     if (b2) {
       return true;

@@ -19,8 +19,7 @@ struct FixDirectReturn {
   /// the COPY of add (a std::function) inside the outer lambda
   /// still holds & references to the destroyed stack variables.
   template <MapsTo<unsigned int, unsigned int> F1>
-  __attribute__((pure)) static unsigned int
-  make_callback(const unsigned int &base, F1 &&_x0) {
+  static unsigned int make_callback(const unsigned int &base, F1 &&_x0) {
     return [=]() mutable {
       auto add_impl = [=](auto &_self_add,
                           unsigned int x) mutable -> unsigned int {

@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,7 +119,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct RocqBug11114 {
@@ -137,22 +156,20 @@ struct RocqBug11114 {
     }
 
     // ACCESSORS
-    __attribute__((pure)) t clone() const {
+    t clone() const {
       auto &&_sv = *(this);
       const auto &[d_k] = std::get<T0>(_sv.v());
       return t(T0{d_k});
     }
 
     // CREATORS
-    __attribute__((pure)) static t t0(unsigned int k) {
-      return t(T0{std::move(k)});
-    }
+    static t t0(unsigned int k) { return t(T0{std::move(k)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
@@ -172,13 +189,13 @@ struct RocqBug11114 {
     t _t;
 
     // ACCESSORS
-    __attribute__((pure)) pkg clone() const {
+    pkg clone() const {
       return pkg{(*(this))._sig.clone(), (*(this))._t.clone()};
     }
   };
 
   template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((pure)) static pkg map(F0 &&f, const pkg &p) {
+  static pkg map(F0 &&f, const pkg &p) {
     return pkg{p._sig, [=]() mutable {
                  auto &&_sv = p._t;
                  const auto &[d_k] = std::get<typename t::T0>(_sv.v());

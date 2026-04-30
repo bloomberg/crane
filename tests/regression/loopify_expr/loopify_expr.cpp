@@ -2,8 +2,7 @@
 
 /// sum_shapes l sums values from shapes using unified pattern.
 /// Tests or-pattern style matching in Coq.
-__attribute__((pure)) unsigned int
-LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
+unsigned int LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
   struct _Enter {
     const List<LoopifyExpr::shape> *l;
   };
@@ -58,7 +57,6 @@ LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
 }
 
 /// count_by_shape l counts shapes: (circles, squares, triangles).
-__attribute__((pure))
 std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
 LoopifyExpr::count_by_shape(const List<LoopifyExpr::shape> &l) {
   struct _Enter {

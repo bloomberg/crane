@@ -1,6 +1,6 @@
 #include <enum_switch_qualified.h>
 
-__attribute__((pure)) EnumSwitchQualified::Outer::Color
+EnumSwitchQualified::Outer::Color
 EnumSwitchQualified::Outer::flip(const EnumSwitchQualified::Outer::Color c) {
   switch (c) {
   case Color::e_RED: {
@@ -14,7 +14,7 @@ EnumSwitchQualified::Outer::flip(const EnumSwitchQualified::Outer::Color c) {
   }
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 EnumSwitchQualified::Outer::code(const EnumSwitchQualified::Outer::Color c) {
   switch (c) {
   case Color::e_RED: {

@@ -16,9 +16,8 @@ struct FixPairTwoClosures {
   /// BUG: Both f and g use & capture. They capture a, b,
   /// and each other's std::function variables. All captured references
   /// dangle after make_ops returns.
-  __attribute__((
-      pure)) static std::pair<std::function<unsigned int(unsigned int)>,
-                              std::function<unsigned int(unsigned int)>>
+  static std::pair<std::function<unsigned int(unsigned int)>,
+                   std::function<unsigned int(unsigned int)>>
   make_ops(unsigned int a, unsigned int b);
   /// test1: make_ops(10, 20). fst(3) = 10+3 = 13, snd(5) = 20+5 = 25.
   /// Total = 38.

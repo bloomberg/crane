@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,9 +119,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) unsigned int length() const {
+  unsigned int length() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
@@ -194,7 +213,7 @@ struct EncodeOps {
     }
 
     // ACCESSORS
-    __attribute__((pure)) instruction1 clone() const {
+    instruction1 clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<CLB>(_sv.v())) {
         return instruction1(CLB{});
@@ -225,59 +244,41 @@ struct EncodeOps {
     }
 
     // CREATORS
-    __attribute__((pure)) static instruction1 clb() {
-      return instruction1(CLB{});
-    }
+    static instruction1 clb() { return instruction1(CLB{}); }
 
-    __attribute__((pure)) static instruction1 cmc() {
-      return instruction1(CMC{});
-    }
+    static instruction1 cmc() { return instruction1(CMC{}); }
 
-    __attribute__((pure)) static instruction1 daa() {
-      return instruction1(DAA{});
-    }
+    static instruction1 daa() { return instruction1(DAA{}); }
 
-    __attribute__((pure)) static instruction1 fim(unsigned int a0,
-                                                  unsigned int a1) {
+    static instruction1 fim(unsigned int a0, unsigned int a1) {
       return instruction1(FIM{std::move(a0), std::move(a1)});
     }
 
-    __attribute__((pure)) static instruction1 jun(unsigned int a0) {
+    static instruction1 jun(unsigned int a0) {
       return instruction1(JUN{std::move(a0)});
     }
 
-    __attribute__((pure)) static instruction1 ldm1(unsigned int a0) {
+    static instruction1 ldm1(unsigned int a0) {
       return instruction1(LDM1{std::move(a0)});
     }
 
-    __attribute__((pure)) static instruction1 nop1() {
-      return instruction1(NOP1{});
-    }
+    static instruction1 nop1() { return instruction1(NOP1{}); }
 
-    __attribute__((pure)) static instruction1 rdm() {
-      return instruction1(RDM{});
-    }
+    static instruction1 rdm() { return instruction1(RDM{}); }
 
-    __attribute__((pure)) static instruction1 tcs() {
-      return instruction1(TCS{});
-    }
+    static instruction1 tcs() { return instruction1(TCS{}); }
 
-    __attribute__((pure)) static instruction1 wpm() {
-      return instruction1(WPM{});
-    }
+    static instruction1 wpm() { return instruction1(WPM{}); }
 
-    __attribute__((pure)) static instruction1 wr0() {
-      return instruction1(WR0{});
-    }
+    static instruction1 wr0() { return instruction1(WR0{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) std::pair<unsigned int, unsigned int>
-    encode1() const {
+    std::pair<unsigned int, unsigned int> encode1() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction1::CLB>(_sv.v())) {
         return std::make_pair(240u, 0u);
@@ -384,8 +385,7 @@ struct EncodeOps {
     }
   };
 
-  __attribute__((pure)) static bool
-  pair_in_range(const std::pair<unsigned int, unsigned int> &p);
+  static bool pair_in_range(const std::pair<unsigned int, unsigned int> &p);
   static inline const bool test_encode_bytes_in_range =
       ((((((((((pair_in_range(instruction1::clb().encode1()) &&
                 pair_in_range(instruction1::cmc().encode1())) &&
@@ -437,7 +437,7 @@ struct EncodeOps {
     }
 
     // ACCESSORS
-    __attribute__((pure)) instruction2 clone() const {
+    instruction2 clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<NOP2>(_sv.v())) {
         return instruction2(NOP2{});
@@ -448,11 +448,9 @@ struct EncodeOps {
     }
 
     // CREATORS
-    __attribute__((pure)) static instruction2 nop2() {
-      return instruction2(NOP2{});
-    }
+    static instruction2 nop2() { return instruction2(NOP2{}); }
 
-    __attribute__((pure)) static instruction2 ldm2(unsigned int a0) {
+    static instruction2 ldm2(unsigned int a0) {
       return instruction2(LDM2{std::move(a0)});
     }
 
@@ -460,10 +458,9 @@ struct EncodeOps {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) std::pair<unsigned int, unsigned int>
-    encode2() const {
+    std::pair<unsigned int, unsigned int> encode2() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction2::NOP2>(_sv.v())) {
         return std::make_pair(0u, 0u);
@@ -496,8 +493,7 @@ struct EncodeOps {
     }
   };
 
-  __attribute__((pure)) static List<unsigned int>
-  encode_list2(const List<instruction2> &prog);
+  static List<unsigned int> encode_list2(const List<instruction2> &prog);
   static inline const unsigned int test_encode_list_byte_count =
       encode_list2(
           List<instruction2>::cons(
@@ -546,7 +542,7 @@ struct EncodeOps {
     }
 
     // ACCESSORS
-    __attribute__((pure)) instruction3 clone() const {
+    instruction3 clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<NOP3>(_sv.v())) {
         return instruction3(NOP3{});
@@ -557,11 +553,9 @@ struct EncodeOps {
     }
 
     // CREATORS
-    __attribute__((pure)) static instruction3 nop3() {
-      return instruction3(NOP3{});
-    }
+    static instruction3 nop3() { return instruction3(NOP3{}); }
 
-    __attribute__((pure)) static instruction3 ldm3(unsigned int a0) {
+    static instruction3 ldm3(unsigned int a0) {
       return instruction3(LDM3{std::move(a0)});
     }
 
@@ -569,10 +563,9 @@ struct EncodeOps {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) std::pair<unsigned int, unsigned int>
-    encode3() const {
+    std::pair<unsigned int, unsigned int> encode3() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction3::NOP3>(_sv.v())) {
         return std::make_pair(0u, 0u);
@@ -605,8 +598,7 @@ struct EncodeOps {
     }
   };
 
-  __attribute__((pure)) static List<unsigned int>
-  encode_list3(const List<instruction3> &prog);
+  static List<unsigned int> encode_list3(const List<instruction3> &prog);
   static inline const unsigned int test_instruction_byte_stream_encode =
       encode_list3(
           List<instruction3>::cons(

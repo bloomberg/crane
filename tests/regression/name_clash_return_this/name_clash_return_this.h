@@ -54,7 +54,7 @@ struct NameClashReturnThis {
     }
 
     // ACCESSORS
-    __attribute__((pure)) shape clone() const {
+    shape clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Circle>(_sv.v())) {
         const auto &[d_a0] = std::get<Circle>(_sv.v());
@@ -66,12 +66,11 @@ struct NameClashReturnThis {
     }
 
     // CREATORS
-    __attribute__((pure)) static shape circle(unsigned int a0) {
+    static shape circle(unsigned int a0) {
       return shape(Circle{std::move(a0)});
     }
 
-    __attribute__((pure)) static shape square(unsigned int a0,
-                                              unsigned int a1) {
+    static shape square(unsigned int a0, unsigned int a1) {
       return shape(Square{std::move(a0), std::move(a1)});
     }
 
@@ -79,7 +78,7 @@ struct NameClashReturnThis {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -109,13 +108,13 @@ struct NameClashReturnThis {
   /// Inner match returns shape in all branches, one branch returns the
   /// argument itself. The function takes shape as input, so it gets
   /// methodified. In the Blue branch, `s` becomes `this`.
-  __attribute__((pure)) static shape maybe_transform(const bool &flag, shape s);
+  static shape maybe_transform(const bool &flag, shape s);
   /// Match on shape where one branch returns the same shape unchanged.
-  __attribute__((pure)) static shape identity_or_double(const shape &s);
+  static shape identity_or_double(const shape &s);
   /// Two shapes, return one of them based on a match on the other.
-  __attribute__((pure)) static shape pick_shape(shape s1, shape s2);
+  static shape pick_shape(shape s1, shape s2);
   /// Nested: match on result of a function that may return this
-  __attribute__((pure)) static unsigned int nested_this(const shape &s);
+  static unsigned int nested_this(const shape &s);
 };
 
 #endif // INCLUDED_NAME_CLASH_RETURN_THIS

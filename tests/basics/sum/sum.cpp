@@ -1,6 +1,6 @@
 #include <sum.h>
 
-__attribute__((pure)) unsigned int
+unsigned int
 Sum::either_to_nat(const Sum::either<unsigned int, unsigned int> &e) {
   if (std::holds_alternative<
           typename Sum::either<unsigned int, unsigned int>::Left>(e.v())) {

@@ -13,7 +13,6 @@
 /// Difference from fix_escape_match: uses a USER-DEFINED list type
 /// (not stdlib option), and the fixpoints are built RECURSIVELY
 /// from list elements (not a single fixpoint).
-__attribute__((pure))
 ClosureMapEscape::mylist<std::function<unsigned int(unsigned int)>>
 ClosureMapEscape::map_to_adders(
     const ClosureMapEscape::mylist<unsigned int> &l) {
@@ -42,7 +41,7 @@ ClosureMapEscape::map_to_adders(
   }
 }
 
-__attribute__((pure)) unsigned int ClosureMapEscape::apply_first(
+unsigned int ClosureMapEscape::apply_first(
     const ClosureMapEscape::mylist<std::function<unsigned int(unsigned int)>>
         &fns,
     const unsigned int &arg) {
@@ -56,7 +55,7 @@ __attribute__((pure)) unsigned int ClosureMapEscape::apply_first(
   }
 }
 
-__attribute__((pure)) unsigned int ClosureMapEscape::sum_apply(
+unsigned int ClosureMapEscape::sum_apply(
     const ClosureMapEscape::mylist<std::function<unsigned int(unsigned int)>>
         &fns,
     const unsigned int &arg) {

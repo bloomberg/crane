@@ -33,7 +33,7 @@ struct TypeclassMethodFunctionReturnProbe {
   };
 
   static_assert(Factory<boolFactory, Bool0>);
-  __attribute__((pure)) static Bool0 partial(const Bool0 _x0);
+  static Bool0 partial(const Bool0 _x0);
   static inline const Bool0 sample = partial(Bool0::e_FALSE0);
 };
 

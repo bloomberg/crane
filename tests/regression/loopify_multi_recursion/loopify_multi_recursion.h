@@ -13,18 +13,17 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct LoopifyMultiRecursion {
-  __attribute__((pure)) static unsigned int
-  mixed_arith_fuel(const unsigned int &fuel, const unsigned int &n);
-  __attribute__((pure)) static unsigned int mixed_arith(const unsigned int &n);
-  __attribute__((pure)) static bool
-  bool_or_chain_fuel(const unsigned int &fuel, const unsigned int &n,
-                     const unsigned int &target);
-  __attribute__((pure)) static unsigned int
-  bool_or_chain(const unsigned int &n, const unsigned int &target);
-  __attribute__((pure)) static bool
-  bool_and_chain_fuel(const unsigned int &fuel, const unsigned int &n);
-  __attribute__((pure)) static unsigned int
-  bool_and_chain(const unsigned int &n);
+  static unsigned int mixed_arith_fuel(const unsigned int &fuel,
+                                       const unsigned int &n);
+  static unsigned int mixed_arith(const unsigned int &n);
+  static bool bool_or_chain_fuel(const unsigned int &fuel,
+                                 const unsigned int &n,
+                                 const unsigned int &target);
+  static unsigned int bool_or_chain(const unsigned int &n,
+                                    const unsigned int &target);
+  static bool bool_and_chain_fuel(const unsigned int &fuel,
+                                  const unsigned int &n);
+  static unsigned int bool_and_chain(const unsigned int &n);
 
   struct quadtree {
     // TYPES
@@ -68,36 +67,51 @@ struct LoopifyMultiRecursion {
     }
 
     // ACCESSORS
-    __attribute__((pure)) quadtree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<QLeaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<QLeaf>(_sv.v());
-        return quadtree(QLeaf{d_a0});
-      } else {
-        const auto &[d_a0, d_a1, d_a2, d_a3] = std::get<QQuad>(_sv.v());
-        return quadtree(
-            QQuad{d_a0 ? std::make_unique<LoopifyMultiRecursion::quadtree>(
-                             d_a0->clone())
-                       : nullptr,
-                  d_a1 ? std::make_unique<LoopifyMultiRecursion::quadtree>(
-                             d_a1->clone())
-                       : nullptr,
-                  d_a2 ? std::make_unique<LoopifyMultiRecursion::quadtree>(
-                             d_a2->clone())
-                       : nullptr,
-                  d_a3 ? std::make_unique<LoopifyMultiRecursion::quadtree>(
-                             d_a3->clone())
-                       : nullptr});
+    quadtree clone() const {
+      quadtree _out{};
+
+      struct _CloneFrame {
+        const quadtree *_src;
+        quadtree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const quadtree *_src = _frame._src;
+        quadtree *_dst = _frame._dst;
+        if (std::holds_alternative<QLeaf>(_src->v())) {
+          const auto &_alt = std::get<QLeaf>(_src->v());
+          _dst->d_v_ = QLeaf{_alt.d_a0};
+        } else {
+          const auto &_alt = std::get<QQuad>(_src->v());
+          _dst->d_v_ =
+              QQuad{_alt.d_a0 ? std::make_unique<quadtree>() : nullptr,
+                    _alt.d_a1 ? std::make_unique<quadtree>() : nullptr,
+                    _alt.d_a2 ? std::make_unique<quadtree>() : nullptr,
+                    _alt.d_a3 ? std::make_unique<quadtree>() : nullptr};
+          auto &_dst_alt = std::get<QQuad>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.d_a3)
+            _stack.push_back({_alt.d_a3.get(), _dst_alt.d_a3.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static quadtree qleaf(unsigned int a0) {
+    static quadtree qleaf(unsigned int a0) {
       return quadtree(QLeaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static quadtree qquad(quadtree a0, quadtree a1,
-                                                quadtree a2, quadtree a3) {
+    static quadtree qquad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
       return quadtree(QQuad{std::make_unique<quadtree>(std::move(a0)),
                             std::make_unique<quadtree>(std::move(a1)),
                             std::make_unique<quadtree>(std::move(a2)),
@@ -132,7 +146,7 @@ struct LoopifyMultiRecursion {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <
@@ -169,12 +183,11 @@ struct LoopifyMultiRecursion {
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  quad_count_leaves(const quadtree &t);
-  __attribute__((pure)) static unsigned int quad_depth(const quadtree &t);
-  __attribute__((pure)) static unsigned int
-  hofstadter_q_fuel(const unsigned int &fuel, const unsigned int &n);
-  __attribute__((pure)) static unsigned int hofstadter_q(const unsigned int &n);
+  static unsigned int quad_count_leaves(const quadtree &t);
+  static unsigned int quad_depth(const quadtree &t);
+  static unsigned int hofstadter_q_fuel(const unsigned int &fuel,
+                                        const unsigned int &n);
+  static unsigned int hofstadter_q(const unsigned int &n);
 };
 
 #endif // INCLUDED_LOOPIFY_MULTI_RECURSION

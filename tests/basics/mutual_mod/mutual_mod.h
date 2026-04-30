@@ -52,7 +52,7 @@ struct EvenOdd {
     }
 
     // ACCESSORS
-    __attribute__((pure)) even_list clone() const {
+    even_list clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<ENil>(_sv.v())) {
         return even_list(ENil{});
@@ -65,9 +65,9 @@ struct EvenOdd {
     }
 
     // CREATORS
-    __attribute__((pure)) static even_list enil() { return even_list(ENil{}); }
+    static even_list enil() { return even_list(ENil{}); }
 
-    __attribute__((pure)) static even_list econs(unsigned int a0, odd_list a1) {
+    static even_list econs(unsigned int a0, odd_list a1) {
       return even_list(
           ECons{std::move(a0), std::make_unique<odd_list>(std::move(a1))});
     }
@@ -76,7 +76,7 @@ struct EvenOdd {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   struct odd_list {
@@ -113,7 +113,7 @@ struct EvenOdd {
     }
 
     // ACCESSORS
-    __attribute__((pure)) odd_list clone() const {
+    odd_list clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<OCons>(_sv.v());
       return odd_list(
@@ -122,7 +122,7 @@ struct EvenOdd {
     }
 
     // CREATORS
-    __attribute__((pure)) static odd_list ocons(unsigned int a0, even_list a1) {
+    static odd_list ocons(unsigned int a0, even_list a1) {
       return odd_list(
           OCons{std::move(a0), std::make_unique<even_list>(std::move(a1))});
     }
@@ -131,11 +131,11 @@ struct EvenOdd {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  __attribute__((pure)) static unsigned int even_length(const even_list &e);
-  __attribute__((pure)) static unsigned int odd_length(const odd_list &o);
+  static unsigned int even_length(const even_list &e);
+  static unsigned int odd_length(const odd_list &o);
   static inline const even_list two =
       even_list::econs(2u, odd_list::ocons(1u, even_list::enil()));
   static inline const odd_list three = odd_list::ocons(

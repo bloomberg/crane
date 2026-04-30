@@ -24,7 +24,7 @@ struct AxiomTypes {
     MysteryType axiom_field;
 
     // ACCESSORS
-    __attribute__((pure)) AxiomRecord clone() const {
+    AxiomRecord clone() const {
       return AxiomRecord{(*(this)).normal_field, (*(this)).axiom_field};
     }
   };
@@ -72,7 +72,7 @@ struct AxiomTypes {
     }
 
     // ACCESSORS
-    __attribute__((pure)) AxiomInductive clone() const {
+    AxiomInductive clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<AxConstr1>(_sv.v())) {
         const auto &[d_a0] = std::get<AxConstr1>(_sv.v());
@@ -84,11 +84,11 @@ struct AxiomTypes {
     }
 
     // CREATORS
-    __attribute__((pure)) static AxiomInductive axconstr1(unsigned int a0) {
+    static AxiomInductive axconstr1(unsigned int a0) {
       return AxiomInductive(AxConstr1{std::move(a0)});
     }
 
-    __attribute__((pure)) static AxiomInductive axconstr2(MysteryType a0) {
+    static AxiomInductive axconstr2(MysteryType a0) {
       return AxiomInductive(AxConstr2{std::move(a0)});
     }
 
@@ -96,7 +96,7 @@ struct AxiomTypes {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -165,16 +165,34 @@ struct AxiomTypes {
     }
 
     // ACCESSORS
-    __attribute__((pure)) list<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Nil>(_sv.v())) {
-        return list<t_A>(Nil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-        return list<t_A>(Cons{
-            d_a0, d_a1 ? std::make_unique<AxiomTypes::list<t_A>>(d_a1->clone())
-                       : nullptr});
+    list clone() const {
+      list _out{};
+
+      struct _CloneFrame {
+        const list *_src;
+        list *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const list *_src = _frame._src;
+        list *_dst = _frame._dst;
+        if (std::holds_alternative<Nil>(_src->v())) {
+          const auto &_alt = std::get<Nil>(_src->v());
+          _dst->d_v_ = Nil{};
+        } else {
+          const auto &_alt = std::get<Cons>(_src->v());
+          _dst->d_v_ =
+              Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<list>() : nullptr};
+          auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -189,9 +207,9 @@ struct AxiomTypes {
       }
     }
 
-    __attribute__((pure)) static list<t_A> nil() { return list(Nil{}); }
+    static list<t_A> nil() { return list(Nil{}); }
 
-    __attribute__((pure)) static list<t_A> cons(t_A a0, list<t_A> a1) {
+    static list<t_A> cons(t_A a0, list<t_A> a1) {
       return list(
           Cons{std::move(a0), std::make_unique<list<t_A>>(std::move(a1))});
     }
@@ -218,7 +236,7 @@ struct AxiomTypes {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, t_A, list<t_A>, T1> F1>
     T1 list_rec(const T1 f, F1 &&f0) const {

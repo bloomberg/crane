@@ -50,22 +50,39 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Nat clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<O>(_sv.v())) {
-      return Nat(O{});
-    } else {
-      const auto &[d_a0] = std::get<S>(_sv.v());
-      return Nat(S{d_a0 ? std::make_unique<Nat>(d_a0->clone()) : nullptr});
+  Nat clone() const {
+    Nat _out{};
+
+    struct _CloneFrame {
+      const Nat *_src;
+      Nat *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Nat *_src = _frame._src;
+      Nat *_dst = _frame._dst;
+      if (std::holds_alternative<O>(_src->v())) {
+        const auto &_alt = std::get<O>(_src->v());
+        _dst->d_v_ = O{};
+      } else {
+        const auto &_alt = std::get<S>(_src->v());
+        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
+        auto &_dst_alt = std::get<S>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Nat o() { return Nat(O{}); }
+  static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(Nat a0) {
-    return Nat(S{std::make_unique<Nat>(std::move(a0))});
-  }
+  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -89,7 +106,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 template <typename t_A> struct List {
@@ -130,15 +147,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -152,9 +188,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -181,7 +217,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 template <typename t_A> struct Colist {
@@ -210,15 +246,13 @@ public:
   explicit Colist(std::function<variant_t()> _thunk)
       : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-  __attribute__((pure)) static Colist<t_A> conil() { return Colist(Conil{}); }
+  static Colist<t_A> conil() { return Colist(Conil{}); }
 
-  __attribute__((pure)) static Colist<t_A> cocons(t_A a0,
-                                                  const Colist<t_A> &a1) {
+  static Colist<t_A> cocons(t_A a0, const Colist<t_A> &a1) {
     return Colist(Cocons{std::move(a0), std::make_shared<Colist<t_A>>(a1)});
   }
 
-  __attribute__((pure)) static Colist<t_A>
-  lazy_(std::function<Colist<t_A>()> thunk) {
+  static Colist<t_A> lazy_(std::function<Colist<t_A>()> thunk) {
     return Colist<t_A>(std::function<variant_t()>([=]() mutable -> variant_t {
       Colist<t_A> _tmp = thunk();
       return _tmp.v();
@@ -226,10 +260,9 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_lazyV_.force(); }
+  const variant_t &v() const { return d_lazyV_.force(); }
 
-  template <typename T1, MapsTo<T1, t_A> F0>
-  __attribute__((pure)) Colist<T1> comap(F0 &&f) const {
+  template <typename T1, MapsTo<T1, t_A> F0> Colist<T1> comap(F0 &&f) const {
     if (std::holds_alternative<typename Colist<t_A>::Conil>(this->v())) {
       return Colist<T1>::lazy_(
           []() -> Colist<T1> { return Colist<T1>::conil(); });
@@ -243,8 +276,7 @@ public:
   }
 
   template <typename T1>
-  __attribute__((pure)) static List<T1> list_of_colist(const Nat &fuel,
-                                                       const Colist<T1> l) {
+  static List<T1> list_of_colist(const Nat &fuel, const Colist<T1> l) {
     if (std::holds_alternative<typename Nat::O>(fuel.v())) {
       return List<T1>::nil();
     } else {
@@ -259,7 +291,7 @@ public:
     }
   }
 
-  __attribute__((pure)) static Colist<Nat> nats(Nat n) {
+  static Colist<Nat> nats(Nat n) {
     return Colist<Nat>::lazy_([=]() mutable -> Colist<Nat> {
       return Colist<Nat>::cocons(n, nats(Nat::s(n)));
     });

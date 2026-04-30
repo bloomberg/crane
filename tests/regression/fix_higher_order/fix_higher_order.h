@@ -12,8 +12,7 @@ concept MapsTo = std::is_invocable_v<F &, Args &...>;
 struct FixHigherOrder {
   /// A wrapper function that takes a function and stores it in Some.
   template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((
-      pure)) static std::optional<std::function<unsigned int(unsigned int)>>
+  static std::optional<std::function<unsigned int(unsigned int)>>
   wrap_fn(F0 &&f) {
     return std::make_optional<std::function<unsigned int(unsigned int)>>(f);
   }
@@ -26,8 +25,7 @@ struct FixHigherOrder {
   /// wrap_fn, the translation may use & capture. wrap_fn stores
   /// it in Some and returns. After make_wrapped returns, the
   /// captured base is destroyed.
-  __attribute__((
-      pure)) static std::optional<std::function<unsigned int(unsigned int)>>
+  static std::optional<std::function<unsigned int(unsigned int)>>
   make_wrapped(unsigned int base);
   /// test1: make_wrapped(5) -> Some(go), go(3) = 5+3 = 8.
   static inline const unsigned int test1 = []() -> unsigned int {
@@ -54,16 +52,14 @@ struct FixHigherOrder {
 
   /// Two layers of wrapping: fixpoint passed through two functions.
   template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((pure)) static std::optional<
-      std::optional<std::function<unsigned int(unsigned int)>>>
+  static std::optional<std::optional<std::function<unsigned int(unsigned int)>>>
   double_wrap(F0 &&f) {
     return std::make_optional<
         std::optional<std::function<unsigned int(unsigned int)>>>(
         std::make_optional<std::function<unsigned int(unsigned int)>>(f));
   }
 
-  __attribute__((pure)) static std::optional<
-      std::optional<std::function<unsigned int(unsigned int)>>>
+  static std::optional<std::optional<std::function<unsigned int(unsigned int)>>>
   make_double_wrapped(unsigned int base);
   /// test3: Doubly wrapped fixpoint. go(7) = 100+7 = 107.
   static inline const unsigned int test3 = []() -> unsigned int {

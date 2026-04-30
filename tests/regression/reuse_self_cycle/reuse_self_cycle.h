@@ -51,25 +51,43 @@ struct ReuseSelfCycle {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mylist clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Mycons>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
-        return mylist(Mycons{
-            d_a0, d_a1 ? std::make_unique<ReuseSelfCycle::mylist>(d_a1->clone())
-                       : nullptr});
-      } else {
-        return mylist(Mynil{});
+    mylist clone() const {
+      mylist _out{};
+
+      struct _CloneFrame {
+        const mylist *_src;
+        mylist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist *_src = _frame._src;
+        mylist *_dst = _frame._dst;
+        if (std::holds_alternative<Mycons>(_src->v())) {
+          const auto &_alt = std::get<Mycons>(_src->v());
+          _dst->d_v_ = Mycons{_alt.d_a0,
+                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        } else {
+          const auto &_alt = std::get<Mynil>(_src->v());
+          _dst->d_v_ = Mynil{};
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static mylist mycons(unsigned int a0, mylist a1) {
+    static mylist mycons(unsigned int a0, mylist a1) {
       return mylist(
           Mycons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
     }
 
-    __attribute__((pure)) static mylist mynil() { return mylist(Mynil{}); }
+    static mylist mynil() { return mylist(Mynil{}); }
 
     // MANIPULATORS
     ~mylist() {
@@ -93,7 +111,7 @@ struct ReuseSelfCycle {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, mylist, T1> F0>
@@ -116,7 +134,7 @@ struct ReuseSelfCycle {
     }
   }
 
-  __attribute__((pure)) static unsigned int length(const mylist &l);
+  static unsigned int length(const mylist &l);
   /// BUG: The reuse optimization fires and sets d_a1 = l, where l
   /// is the scrutinee (the very node being mutated).
   /// This creates a CYCLE: the node's tail points to itself.
@@ -132,7 +150,7 @@ struct ReuseSelfCycle {
   /// 2. mycons branch tail is mycons with arity 2 = 2
   /// 3. mycons is index 0 -> List.hd picks it
   /// 4. use_count() == 1 for fresh values
-  __attribute__((pure)) static mylist prepend_self(mylist l, const bool &b);
+  static mylist prepend_self(mylist l, const bool &b);
   /// test1: prepend_self(1, 2, true) should produce 1, 1, 2.
   /// In Rocq: mycons 1 (mycons 1 (mycons 2 mynil)), length = 3.
   /// With reuse bug: mycons 1 -> itself (cycle), length = infinite loop.

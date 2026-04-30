@@ -3,7 +3,7 @@
 /// Consolidated search and optimization algorithms.
 /// knapsack capacity items solves 0/1 knapsack problem.
 /// Items are (weight, value) pairs.
-__attribute__((pure)) unsigned int LoopifySearch::knapsack_fuel(
+unsigned int LoopifySearch::knapsack_fuel(
     const unsigned int &fuel, const unsigned int &capacity,
     const List<std::pair<unsigned int, unsigned int>> &items) {
   if (fuel <= 0) {
@@ -42,7 +42,7 @@ __attribute__((pure)) unsigned int LoopifySearch::knapsack_fuel(
   }
 }
 
-__attribute__((pure)) unsigned int LoopifySearch::knapsack(
+unsigned int LoopifySearch::knapsack(
     const unsigned int &capacity,
     const List<std::pair<unsigned int, unsigned int>> &items) {
   return knapsack_fuel(len_impl<std::pair<unsigned int, unsigned int>>(items),
@@ -51,7 +51,7 @@ __attribute__((pure)) unsigned int LoopifySearch::knapsack(
 
 /// majority l finds majority element using Boyer-Moore algorithm.
 /// Returns (candidate, count).
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
+std::pair<unsigned int, unsigned int>
 LoopifySearch::majority(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
@@ -101,7 +101,7 @@ LoopifySearch::majority(const List<unsigned int> &l) {
 }
 
 /// longest_increasing_subseq l finds a longest increasing subsequence (greedy).
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifySearch::longest_increasing_subseq(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -143,8 +143,8 @@ LoopifySearch::longest_increasing_subseq(const List<unsigned int> &l) {
 }
 
 /// Helper for binary search: get nth element.
-__attribute__((pure)) unsigned int
-LoopifySearch::nth_impl(const unsigned int &n, const List<unsigned int> &l) {
+unsigned int LoopifySearch::nth_impl(const unsigned int &n,
+                                     const List<unsigned int> &l) {
   unsigned int _result;
   const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_n = n;
@@ -180,8 +180,8 @@ LoopifySearch::nth_impl(const unsigned int &n, const List<unsigned int> &l) {
 }
 
 /// Helper for binary search: take first k elements.
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::take_impl(const unsigned int &k, const List<unsigned int> &l) {
+List<unsigned int> LoopifySearch::take_impl(const unsigned int &k,
+                                            const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -219,8 +219,8 @@ LoopifySearch::take_impl(const unsigned int &k, const List<unsigned int> &l) {
 }
 
 /// Helper for binary search: drop first k elements.
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::drop_impl(const unsigned int &k, List<unsigned int> l) {
+List<unsigned int> LoopifySearch::drop_impl(const unsigned int &k,
+                                            List<unsigned int> l) {
   List<unsigned int> _result;
   List<unsigned int> _loop_l = std::move(l);
   unsigned int _loop_k = k;
@@ -249,10 +249,9 @@ LoopifySearch::drop_impl(const unsigned int &k, List<unsigned int> l) {
 
 /// binary_search_fuel target sorted_list searches for target in sorted list.
 /// Returns true if found.
-__attribute__((pure)) bool
-LoopifySearch::binary_search_fuel(const unsigned int &fuel,
-                                  const unsigned int &target,
-                                  const List<unsigned int> &l) {
+bool LoopifySearch::binary_search_fuel(const unsigned int &fuel,
+                                       const unsigned int &target,
+                                       const List<unsigned int> &l) {
   bool _result;
   List<unsigned int> _loop_l = l;
   unsigned int _loop_fuel = fuel;
@@ -292,14 +291,13 @@ LoopifySearch::binary_search_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifySearch::binary_search(const unsigned int &target,
-                             const List<unsigned int> &l) {
+bool LoopifySearch::binary_search(const unsigned int &target,
+                                  const List<unsigned int> &l) {
   return binary_search_fuel(len_impl<unsigned int>(l), target, l);
 }
 
 /// longest_run l finds the longest run of consecutive equal elements.
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifySearch::longest_run_aux(List<unsigned int> current_run,
                                List<unsigned int> best_run,
                                const List<unsigned int> &l) {
@@ -367,15 +365,14 @@ LoopifySearch::longest_run_aux(List<unsigned int> current_run,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::longest_run(const List<unsigned int> &l) {
+List<unsigned int> LoopifySearch::longest_run(const List<unsigned int> &l) {
   return longest_run_aux(List<unsigned int>::nil(), List<unsigned int>::nil(),
                          l);
 }
 
 /// collatz n computes Collatz sequence length (not the list).
-__attribute__((pure)) unsigned int
-LoopifySearch::collatz_fuel(const unsigned int &fuel, const unsigned int &n) {
+unsigned int LoopifySearch::collatz_fuel(const unsigned int &fuel,
+                                         const unsigned int &n) {
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
@@ -424,14 +421,12 @@ LoopifySearch::collatz_fuel(const unsigned int &fuel, const unsigned int &n) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifySearch::collatz(const unsigned int &n) {
+unsigned int LoopifySearch::collatz(const unsigned int &n) {
   return collatz_fuel(1000u, n);
 }
 
 /// lis l simple longest increasing subsequence (greedy approach).
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::lis(const List<unsigned int> &l) {
+List<unsigned int> LoopifySearch::lis(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -472,10 +467,9 @@ LoopifySearch::lis(const List<unsigned int> &l) {
 }
 
 /// subset_sum target l checks if any subset sums to target.
-__attribute__((pure)) bool
-LoopifySearch::subset_sum_fuel(const unsigned int &fuel,
-                               const unsigned int &target,
-                               const List<unsigned int> &l) {
+bool LoopifySearch::subset_sum_fuel(const unsigned int &fuel,
+                                    const unsigned int &target,
+                                    const List<unsigned int> &l) {
   if (fuel <= 0) {
     return false;
   } else {
@@ -500,15 +494,14 @@ LoopifySearch::subset_sum_fuel(const unsigned int &fuel,
   }
 }
 
-__attribute__((pure)) bool
-LoopifySearch::subset_sum(const unsigned int &target,
-                          const List<unsigned int> &l) {
+bool LoopifySearch::subset_sum(const unsigned int &target,
+                               const List<unsigned int> &l) {
   return subset_sum_fuel((len_impl<unsigned int>(l) + 1), target, l);
 }
 
 /// sieve l removes multiples (simplified sieve of Eratosthenes).
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::sieve_fuel(const unsigned int &fuel, List<unsigned int> l) {
+List<unsigned int> LoopifySearch::sieve_fuel(const unsigned int &fuel,
+                                             List<unsigned int> l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l = std::move(l);
@@ -549,14 +542,13 @@ LoopifySearch::sieve_fuel(const unsigned int &fuel, List<unsigned int> l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::sieve(const List<unsigned int> &l) {
+List<unsigned int> LoopifySearch::sieve(const List<unsigned int> &l) {
   return sieve_fuel(len_impl<unsigned int>(l), l);
 }
 
 /// Helper: check if element is in list.
-__attribute__((pure)) bool
-LoopifySearch::elem_impl(const unsigned int &x, const List<unsigned int> &l) {
+bool LoopifySearch::elem_impl(const unsigned int &x,
+                              const List<unsigned int> &l) {
   bool _result;
   const List<unsigned int> *_loop_l = &l;
   while (true) {
@@ -579,8 +571,8 @@ LoopifySearch::elem_impl(const unsigned int &x, const List<unsigned int> &l) {
 }
 
 /// nub l removes duplicates from list.
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::nub_fuel(const unsigned int &fuel, List<unsigned int> l) {
+List<unsigned int> LoopifySearch::nub_fuel(const unsigned int &fuel,
+                                           List<unsigned int> l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l = std::move(l);
@@ -624,13 +616,12 @@ LoopifySearch::nub_fuel(const unsigned int &fuel, List<unsigned int> l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::nub(const List<unsigned int> &l) {
+List<unsigned int> LoopifySearch::nub(const List<unsigned int> &l) {
   return nub_fuel(len_impl<unsigned int>(l), l);
 }
 
 /// remove_duplicates l removes all duplicate elements.
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifySearch::remove_duplicates_fuel(const unsigned int &fuel,
                                       List<unsigned int> l) {
   std::unique_ptr<List<unsigned int>> _head{};
@@ -679,14 +670,14 @@ LoopifySearch::remove_duplicates_fuel(const unsigned int &fuel,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifySearch::remove_duplicates(const List<unsigned int> &l) {
   return remove_duplicates_fuel(len_impl<unsigned int>(l), l);
 }
 
 /// quicksort l sorts list using quicksort with filter-based partitioning.
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::quicksort_fuel(const unsigned int &fuel, List<unsigned int> l) {
+List<unsigned int> LoopifySearch::quicksort_fuel(const unsigned int &fuel,
+                                                 List<unsigned int> l) {
   struct _Enter {
     List<unsigned int> l;
     unsigned int fuel;
@@ -748,13 +739,12 @@ LoopifySearch::quicksort_fuel(const unsigned int &fuel, List<unsigned int> l) {
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::quicksort(const List<unsigned int> &l) {
+List<unsigned int> LoopifySearch::quicksort(const List<unsigned int> &l) {
   return quicksort_fuel(len_impl<unsigned int>(l), l);
 }
 
 /// Helper: split list into two roughly equal parts.
-__attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
+std::pair<List<unsigned int>, List<unsigned int>>
 LoopifySearch::split_list(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
@@ -809,9 +799,9 @@ LoopifySearch::split_list(const List<unsigned int> &l) {
 }
 
 /// Helper: merge two sorted lists with fuel.
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::merge_sorted_fuel(const unsigned int &fuel,
-                                 List<unsigned int> l1, List<unsigned int> l2) {
+List<unsigned int> LoopifySearch::merge_sorted_fuel(const unsigned int &fuel,
+                                                    List<unsigned int> l1,
+                                                    List<unsigned int> l2) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l2 = std::move(l2);
@@ -870,16 +860,15 @@ LoopifySearch::merge_sorted_fuel(const unsigned int &fuel,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::merge_sorted(const List<unsigned int> &l1,
-                            const List<unsigned int> &l2) {
+List<unsigned int> LoopifySearch::merge_sorted(const List<unsigned int> &l1,
+                                               const List<unsigned int> &l2) {
   return merge_sorted_fuel(
       (len_impl<unsigned int>(l1) + len_impl<unsigned int>(l2)), l1, l2);
 }
 
 /// merge_sort l sorts list using merge sort.
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::merge_sort_fuel(const unsigned int &fuel, List<unsigned int> l) {
+List<unsigned int> LoopifySearch::merge_sort_fuel(const unsigned int &fuel,
+                                                  List<unsigned int> l) {
   struct _Enter {
     List<unsigned int> l;
     unsigned int fuel;
@@ -941,15 +930,13 @@ LoopifySearch::merge_sort_fuel(const unsigned int &fuel, List<unsigned int> l) {
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::merge_sort(const List<unsigned int> &l) {
+List<unsigned int> LoopifySearch::merge_sort(const List<unsigned int> &l) {
   return merge_sort_fuel(len_impl<unsigned int>(l), l);
 }
 
 /// Helper: remove first occurrence of x from list.
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::remove_first(const unsigned int &x,
-                            const List<unsigned int> &l) {
+List<unsigned int> LoopifySearch::remove_first(const unsigned int &x,
+                                               const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -981,7 +968,7 @@ LoopifySearch::remove_first(const unsigned int &x,
 }
 
 /// Helper: map function that prepends element to each list.
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifySearch::map_cons(unsigned int x, const List<List<unsigned int>> &lsts) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
@@ -1012,7 +999,7 @@ LoopifySearch::map_cons(unsigned int x, const List<List<unsigned int>> &lsts) {
 /// perms_choices_fuel fuel choices orig generates permutations by iterating
 /// over choices.  Single self-recursive function for full loopification.
 /// Match on remaining is hoisted out of let-binding.
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifySearch::perms_choices_fuel(const unsigned int &fuel,
                                   const List<unsigned int> &choices,
                                   const List<unsigned int> &orig) {
@@ -1094,7 +1081,7 @@ LoopifySearch::perms_choices_fuel(const unsigned int &fuel,
 }
 
 /// permutations_fuel fuel l generates all permutations of list.
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifySearch::permutations_fuel(const unsigned int &fuel,
                                  const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
@@ -1105,16 +1092,14 @@ LoopifySearch::permutations_fuel(const unsigned int &fuel,
   }
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifySearch::permutations(const List<unsigned int> &l) {
   return permutations_fuel((len_impl<unsigned int>(l) + 1), l);
 }
 
 /// linear_search x l finds index of first occurrence of x.
-__attribute__((pure)) std::optional<unsigned int>
-LoopifySearch::linear_search_aux(const unsigned int &x,
-                                 const List<unsigned int> &l,
-                                 unsigned int idx) {
+std::optional<unsigned int> LoopifySearch::linear_search_aux(
+    const unsigned int &x, const List<unsigned int> &l, unsigned int idx) {
   std::optional<unsigned int> _result;
   unsigned int _loop_idx = std::move(idx);
   const List<unsigned int> *_loop_l = &l;
@@ -1140,16 +1125,16 @@ LoopifySearch::linear_search_aux(const unsigned int &x,
   return _result;
 }
 
-__attribute__((pure)) std::optional<unsigned int>
+std::optional<unsigned int>
 LoopifySearch::linear_search(const unsigned int &x,
                              const List<unsigned int> &l) {
   return linear_search_aux(x, l, 0u);
 }
 
 /// all_indices x l finds all indices where x occurs.
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::all_indices_aux(const unsigned int &x,
-                               const List<unsigned int> &l, unsigned int idx) {
+List<unsigned int> LoopifySearch::all_indices_aux(const unsigned int &x,
+                                                  const List<unsigned int> &l,
+                                                  unsigned int idx) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_idx = std::move(idx);
@@ -1187,14 +1172,13 @@ LoopifySearch::all_indices_aux(const unsigned int &x,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifySearch::all_indices(const unsigned int &x, const List<unsigned int> &l) {
+List<unsigned int> LoopifySearch::all_indices(const unsigned int &x,
+                                              const List<unsigned int> &l) {
   return all_indices_aux(x, l, 0u);
 }
 
 /// min_element l finds minimum element in list.
-__attribute__((pure)) unsigned int
-LoopifySearch::min_element(const List<unsigned int> &l) {
+unsigned int LoopifySearch::min_element(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };

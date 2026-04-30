@@ -14,8 +14,7 @@ struct FixEscapeCapture {
   /// A local fixpoint that captures a function parameter and is returned
   /// in a pair. The fixpoint's & capture creates a dangling reference
   /// to the captured parameter after the enclosing function returns.
-  __attribute__((pure)) static std::pair<
-      unsigned int, std::function<unsigned int(unsigned int)>>
+  static std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
   make_pair_fn(unsigned int base);
   /// Invokes the escaped fixpoint — use-after-free if & capture.
   static inline const unsigned int test_pair = []() -> unsigned int {
@@ -26,8 +25,7 @@ struct FixEscapeCapture {
   }();
   /// Same pattern with a non-recursive local fixpoint to isolate the
   /// capture issue from self-reference.
-  __attribute__((pure)) static std::pair<
-      unsigned int, std::function<unsigned int(unsigned int)>>
+  static std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
   make_pair_fn2(unsigned int base);
 
   static inline const unsigned int test_pair2 = []() -> unsigned int {

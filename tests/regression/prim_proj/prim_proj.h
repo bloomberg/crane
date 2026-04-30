@@ -14,16 +14,13 @@ struct PrimProj {
     unsigned int py;
 
     // ACCESSORS
-    __attribute__((pure)) point clone() const {
-      return point{(*(this)).px, (*(this)).py};
-    }
+    point clone() const { return point{(*(this)).px, (*(this)).py}; }
   };
 
-  __attribute__((pure)) static point add_points(const point &p1,
-                                                const point &p2);
+  static point add_points(const point &p1, const point &p2);
   static inline const point origin = point{0u, 0u};
-  __attribute__((pure)) static point
-  translate(const unsigned int &dx, const unsigned int &dy, const point &p);
+  static point translate(const unsigned int &dx, const unsigned int &dy,
+                         const point &p);
 };
 
 #endif // INCLUDED_PRIM_PROJ

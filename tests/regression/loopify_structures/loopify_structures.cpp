@@ -3,7 +3,7 @@
 /// Nested and complex data structures.
 /// Helper: sum all elements in a list of nested structures.
 /// Handles both tree and list levels in one function for full loopification.
-__attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
+unsigned int LoopifyStructures::sum_nested_list_fuel(
     const unsigned int &fuel, const List<LoopifyStructures::nested> &l) {
   struct _Enter {
     const List<LoopifyStructures::nested> *l;
@@ -75,7 +75,7 @@ __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
 }
 
 /// Helper: compute max depth among a list of nested structures.
-__attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
+unsigned int LoopifyStructures::depth_nested_list_fuel(
     const unsigned int &fuel, const List<LoopifyStructures::nested> &l) {
   if (fuel <= 0) {
     return 0u;
@@ -111,8 +111,7 @@ __attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
 }
 
 /// Helper: flatten a list of nested structures to a flat list of nats.
-__attribute__((pure)) List<unsigned int>
-LoopifyStructures::flatten_nested_list_fuel(
+List<unsigned int> LoopifyStructures::flatten_nested_list_fuel(
     const unsigned int &fuel, const List<LoopifyStructures::nested> &l) {
   struct _Enter {
     const List<LoopifyStructures::nested> *l;
@@ -184,7 +183,7 @@ LoopifyStructures::flatten_nested_list_fuel(
 }
 
 /// find_first_some l finds first Some value in list of options.
-__attribute__((pure)) std::optional<unsigned int>
+std::optional<unsigned int>
 LoopifyStructures::find_first_some(const List<std::optional<unsigned int>> &l) {
   std::optional<unsigned int> _result;
   const List<std::optional<unsigned int>> *_loop_l = &l;

@@ -51,15 +51,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -73,9 +92,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -102,7 +121,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct LoopifyCoindStream {
@@ -127,13 +146,11 @@ struct LoopifyCoindStream {
     explicit stream(std::function<variant_t()> _thunk)
         : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-    __attribute__((pure)) static stream<t_A> scons(t_A a0,
-                                                   const stream<t_A> &a1) {
+    static stream<t_A> scons(t_A a0, const stream<t_A> &a1) {
       return stream(Scons{std::move(a0), std::make_shared<stream<t_A>>(a1)});
     }
 
-    __attribute__((pure)) static stream<t_A>
-    lazy_(std::function<stream<t_A>()> thunk) {
+    static stream<t_A> lazy_(std::function<stream<t_A>()> thunk) {
       return stream<t_A>(std::function<variant_t()>([=]() mutable -> variant_t {
         stream<t_A> _tmp = thunk();
         return _tmp.v();
@@ -141,9 +158,7 @@ struct LoopifyCoindStream {
     }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const {
-      return d_lazyV_.force();
-    }
+    const variant_t &v() const { return d_lazyV_.force(); }
   };
 
   template <typename T1> static T1 hd(const stream<T1> s) {
@@ -151,15 +166,13 @@ struct LoopifyCoindStream {
     return d_a0;
   }
 
-  template <typename T1>
-  __attribute__((pure)) static stream<T1> tl(const stream<T1> s) {
+  template <typename T1> static stream<T1> tl(const stream<T1> s) {
     const auto &[d_a0, d_a1] = std::get<typename stream<T1>::Scons>(s.v());
     return stream<T1>::lazy_([=]() mutable -> stream<T1> { return *(d_a1); });
   }
 
   template <typename T1>
-  __attribute__((pure)) static List<T1> take(const unsigned int &n,
-                                             const stream<T1> s) {
+  static List<T1> take(const unsigned int &n, const stream<T1> s) {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
     stream<T1> _loop_s = s;
@@ -185,22 +198,21 @@ struct LoopifyCoindStream {
   }
 
   template <typename T1, MapsTo<T1, T1> F0>
-  __attribute__((pure)) static stream<T1> iterate(F0 &&f, const T1 x) {
+  static stream<T1> iterate(F0 &&f, const T1 x) {
     return stream<T1>::lazy_([=]() mutable -> stream<T1> {
       return stream<T1>::scons(x, iterate<T1>(f, f(x)));
     });
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  __attribute__((pure)) static stream<T2> smap(F0 &&f, const stream<T1> s) {
+  static stream<T2> smap(F0 &&f, const stream<T1> s) {
     return stream<T2>::lazy_([=]() mutable -> stream<T2> {
       return stream<T2>::scons(f(hd<T1>(s)), smap<T1, T2>(f, tl<T1>(s)));
     });
   }
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
-  __attribute__((pure)) static stream<T3> zipWith(F0 &&f, const stream<T1> s1,
-                                                  const stream<T2> s2) {
+  static stream<T3> zipWith(F0 &&f, const stream<T1> s1, const stream<T2> s2) {
     return stream<T3>::lazy_([=]() mutable -> stream<T3> {
       return stream<T3>::scons(f(hd<T1>(s1), hd<T2>(s2)),
                                zipWith<T1, T2, T3>(f, tl<T1>(s1), tl<T2>(s2)));
@@ -208,7 +220,7 @@ struct LoopifyCoindStream {
   }
 
   template <typename T1, typename T2, MapsTo<std::pair<T1, T2>, T2> F0>
-  __attribute__((pure)) static stream<T1> unfold(F0 &&f, const T2 seed) {
+  static stream<T1> unfold(F0 &&f, const T2 seed) {
     auto _cs = f(seed);
     const T1 &a = _cs.first;
     const T2 &s_ = _cs.second;

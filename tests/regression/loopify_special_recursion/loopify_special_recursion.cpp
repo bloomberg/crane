@@ -1,6 +1,6 @@
 #include <loopify_special_recursion.h>
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifySpecialRecursion::process_twice_fuel(const unsigned int &fuel,
                                             const List<unsigned int> &l) {
   struct _Enter {
@@ -59,12 +59,12 @@ LoopifySpecialRecursion::process_twice_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifySpecialRecursion::process_twice(const List<unsigned int> &l) {
   return process_twice_fuel((l.length() * l.length()), l);
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifySpecialRecursion::double_append(const List<unsigned int> &l1,
                                        List<unsigned int> l2) {
   struct _Enter {
@@ -106,7 +106,7 @@ LoopifySpecialRecursion::double_append(const List<unsigned int> &l1,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifySpecialRecursion::remove_if_sum_even(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -149,7 +149,7 @@ LoopifySpecialRecursion::remove_if_sum_even(const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifySpecialRecursion::reverse_insert(unsigned int x, List<unsigned int> l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -182,8 +182,7 @@ LoopifySpecialRecursion::reverse_insert(unsigned int x, List<unsigned int> l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifySpecialRecursion::collect_sorted(
+List<unsigned int> LoopifySpecialRecursion::collect_sorted(
     const LoopifySpecialRecursion::tree &t) {
   struct _Enter {
     const LoopifySpecialRecursion::tree *t;
@@ -231,7 +230,7 @@ LoopifySpecialRecursion::collect_sorted(
   return _result;
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 LoopifySpecialRecursion::sum_odd_indices_aux(const List<unsigned int> &l,
                                              const unsigned int &idx) {
   struct _Enter {
@@ -275,12 +274,12 @@ LoopifySpecialRecursion::sum_odd_indices_aux(const List<unsigned int> &l,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 LoopifySpecialRecursion::sum_odd_indices(const List<unsigned int> &l) {
   return sum_odd_indices_aux(l, 0u);
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 LoopifySpecialRecursion::categorize_by(const unsigned int &k,
                                        const List<unsigned int> &l) {
   struct _Enter {
@@ -342,7 +341,7 @@ LoopifySpecialRecursion::categorize_by(const unsigned int &k,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifySpecialRecursion::between(const unsigned int &lo, const unsigned int &hi,
                                  const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
@@ -380,7 +379,7 @@ LoopifySpecialRecursion::between(const unsigned int &lo, const unsigned int &hi,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifySpecialRecursion::merge_levels(const List<List<unsigned int>> &ll) {
   struct _Enter {
     const List<List<unsigned int>> *ll;

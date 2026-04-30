@@ -65,22 +65,40 @@ struct FixMoveCapture {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mylist clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Mynil>(_sv.v())) {
-        return mylist(Mynil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
-        return mylist(Mycons{
-            d_a0, d_a1 ? std::make_unique<FixMoveCapture::mylist>(d_a1->clone())
-                       : nullptr});
+    mylist clone() const {
+      mylist _out{};
+
+      struct _CloneFrame {
+        const mylist *_src;
+        mylist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist *_src = _frame._src;
+        mylist *_dst = _frame._dst;
+        if (std::holds_alternative<Mynil>(_src->v())) {
+          const auto &_alt = std::get<Mynil>(_src->v());
+          _dst->d_v_ = Mynil{};
+        } else {
+          const auto &_alt = std::get<Mycons>(_src->v());
+          _dst->d_v_ = Mycons{_alt.d_a0,
+                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static mylist mynil() { return mylist(Mynil{}); }
+    static mylist mynil() { return mylist(Mynil{}); }
 
-    __attribute__((pure)) static mylist mycons(unsigned int a0, mylist a1) {
+    static mylist mycons(unsigned int a0, mylist a1) {
       return mylist(
           Mycons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
     }
@@ -107,7 +125,7 @@ struct FixMoveCapture {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, mylist, T1> F1>
@@ -130,11 +148,11 @@ struct FixMoveCapture {
     }
   }
 
-  __attribute__((pure)) static unsigned int length(const mylist &l);
-  __attribute__((pure)) static unsigned int sum(const mylist &l);
+  static unsigned int length(const mylist &l);
+  static unsigned int sum(const mylist &l);
   /// dup_head stores l in the constructor → l escapes → owned.
   /// This means the caller passes l by value (move semantics).
-  __attribute__((pure)) static mylist dup_head(mylist l);
+  static mylist dup_head(mylist l);
   /// f l: defines a local fixpoint go that captures l by &.
   /// Then let t := dup_head l in ...:
   /// - dup_head takes l by value (owned, because l escapes in its body)
@@ -142,13 +160,13 @@ struct FixMoveCapture {
   /// - Generates dup_head(std::move(l))
   /// - l is now null in caller scope
   /// - g(3) calls fixpoint, which accesses l via & → null → CRASH
-  __attribute__((pure)) static unsigned int f(mylist l);
+  static unsigned int f(mylist l);
   static inline const unsigned int test1 = f(mylist::mycons(
       10u, mylist::mycons(20u, mylist::mycons(30u, mylist::mynil()))));
   /// Even simpler: use the fixpoint, then pass l to a consuming
   /// function. The addition's evaluation order is unspecified in C++,
   /// so we use a let-binding to force the order.
-  __attribute__((pure)) static unsigned int f2(mylist l);
+  static unsigned int f2(mylist l);
   static inline const unsigned int test2 =
       f2(mylist::mycons(5u, mylist::mycons(15u, mylist::mynil())));
 };

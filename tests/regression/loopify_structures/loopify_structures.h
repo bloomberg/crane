@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,9 +119,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) List<t_A> app(List<t_A> m) const {
+  List<t_A> app(List<t_A> m) const {
     std::unique_ptr<List<t_A>> _head{};
     std::unique_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
@@ -171,7 +190,7 @@ struct LoopifyStructures {
     }
 
     // ACCESSORS
-    __attribute__((pure)) nested clone() const {
+    nested clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Elem>(_sv.v())) {
         const auto &[d_a0] = std::get<Elem>(_sv.v());
@@ -186,11 +205,9 @@ struct LoopifyStructures {
     }
 
     // CREATORS
-    __attribute__((pure)) static nested elem(unsigned int a0) {
-      return nested(Elem{std::move(a0)});
-    }
+    static nested elem(unsigned int a0) { return nested(Elem{std::move(a0)}); }
 
-    __attribute__((pure)) static nested nlist(List<nested> a0) {
+    static nested nlist(List<nested> a0) {
       return nested(NList{std::make_unique<List<nested>>(std::move(a0))});
     }
 
@@ -198,10 +215,10 @@ struct LoopifyStructures {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// nested_flatten n flattens to a regular list.
-    __attribute__((pure)) List<unsigned int> nested_flatten() const {
+    List<unsigned int> nested_flatten() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename nested::Elem>(_sv.v())) {
         const auto &[d_a0] = std::get<typename nested::Elem>(_sv.v());
@@ -213,7 +230,7 @@ struct LoopifyStructures {
     }
 
     /// nested_depth n computes maximum nesting depth.
-    __attribute__((pure)) unsigned int nested_depth() const {
+    unsigned int nested_depth() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename nested::Elem>(_sv.v())) {
         return 0u;
@@ -224,7 +241,7 @@ struct LoopifyStructures {
     }
 
     /// nested_sum n sums all elements in a nested structure.
-    __attribute__((pure)) unsigned int nested_sum() const {
+    unsigned int nested_sum() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename nested::Elem>(_sv.v())) {
         const auto &[d_a0] = std::get<typename nested::Elem>(_sv.v());
@@ -264,14 +281,14 @@ struct LoopifyStructures {
 
   /// Helper: sum all elements in a list of nested structures.
   /// Handles both tree and list levels in one function for full loopification.
-  __attribute__((pure)) static unsigned int
-  sum_nested_list_fuel(const unsigned int &fuel, const List<nested> &l);
+  static unsigned int sum_nested_list_fuel(const unsigned int &fuel,
+                                           const List<nested> &l);
   /// Helper: compute max depth among a list of nested structures.
-  __attribute__((pure)) static unsigned int
-  depth_nested_list_fuel(const unsigned int &fuel, const List<nested> &l);
+  static unsigned int depth_nested_list_fuel(const unsigned int &fuel,
+                                             const List<nested> &l);
   /// Helper: flatten a list of nested structures to a flat list of nats.
-  __attribute__((pure)) static List<unsigned int>
-  flatten_nested_list_fuel(const unsigned int &fuel, const List<nested> &l);
+  static List<unsigned int> flatten_nested_list_fuel(const unsigned int &fuel,
+                                                     const List<nested> &l);
 
   /// Quadtree: leaf or 4-way branch.
   struct quadtree {
@@ -316,32 +333,50 @@ struct LoopifyStructures {
     }
 
     // ACCESSORS
-    __attribute__((pure)) quadtree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<QLeaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<QLeaf>(_sv.v());
-        return quadtree(QLeaf{d_a0});
-      } else {
-        const auto &[d_a0, d_a1, d_a2, d_a3] = std::get<Quad>(_sv.v());
-        return quadtree(Quad{
-            d_a0 ? std::make_unique<LoopifyStructures::quadtree>(d_a0->clone())
-                 : nullptr,
-            d_a1 ? std::make_unique<LoopifyStructures::quadtree>(d_a1->clone())
-                 : nullptr,
-            d_a2 ? std::make_unique<LoopifyStructures::quadtree>(d_a2->clone())
-                 : nullptr,
-            d_a3 ? std::make_unique<LoopifyStructures::quadtree>(d_a3->clone())
-                 : nullptr});
+    quadtree clone() const {
+      quadtree _out{};
+
+      struct _CloneFrame {
+        const quadtree *_src;
+        quadtree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const quadtree *_src = _frame._src;
+        quadtree *_dst = _frame._dst;
+        if (std::holds_alternative<QLeaf>(_src->v())) {
+          const auto &_alt = std::get<QLeaf>(_src->v());
+          _dst->d_v_ = QLeaf{_alt.d_a0};
+        } else {
+          const auto &_alt = std::get<Quad>(_src->v());
+          _dst->d_v_ = Quad{_alt.d_a0 ? std::make_unique<quadtree>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<quadtree>() : nullptr,
+                            _alt.d_a2 ? std::make_unique<quadtree>() : nullptr,
+                            _alt.d_a3 ? std::make_unique<quadtree>() : nullptr};
+          auto &_dst_alt = std::get<Quad>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.d_a3)
+            _stack.push_back({_alt.d_a3.get(), _dst_alt.d_a3.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static quadtree qleaf(unsigned int a0) {
+    static quadtree qleaf(unsigned int a0) {
       return quadtree(QLeaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static quadtree quad(quadtree a0, quadtree a1,
-                                               quadtree a2, quadtree a3) {
+    static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
       return quadtree(Quad{std::make_unique<quadtree>(std::move(a0)),
                            std::make_unique<quadtree>(std::move(a1)),
                            std::make_unique<quadtree>(std::move(a2)),
@@ -376,11 +411,11 @@ struct LoopifyStructures {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// quad_map f t applies function to all leaves.
     template <MapsTo<unsigned int, unsigned int> F0>
-    __attribute__((pure)) quadtree quad_map(F0 &&f) const {
+    quadtree quad_map(F0 &&f) const {
       const quadtree *_self = this;
 
       struct _Enter {
@@ -455,7 +490,7 @@ struct LoopifyStructures {
     }
 
     /// quad_depth t computes quadtree depth.
-    __attribute__((pure)) unsigned int quad_depth() const {
+    unsigned int quad_depth() const {
       const quadtree *_self = this;
       auto &&_sv = *(_self);
       if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
@@ -486,7 +521,7 @@ struct LoopifyStructures {
     }
 
     /// quad_sum t sums all values in quadtree.
-    __attribute__((pure)) unsigned int quad_sum() const {
+    unsigned int quad_sum() const {
       const quadtree *_self = this;
 
       struct _Enter {
@@ -759,8 +794,8 @@ struct LoopifyStructures {
 
   /// find_opt p l finds first element satisfying predicate, returns option.
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static std::optional<unsigned int>
-  find_opt(F0 &&p, const List<unsigned int> &l) {
+  static std::optional<unsigned int> find_opt(F0 &&p,
+                                              const List<unsigned int> &l) {
     std::optional<unsigned int> _result;
     const List<unsigned int> *_loop_l = &l;
     while (true) {
@@ -784,8 +819,7 @@ struct LoopifyStructures {
 
   /// map_opt f l maps option-returning function and filters out Nones.
   template <MapsTo<std::optional<unsigned int>, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  map_opt(F0 &&f, const List<unsigned int> &l) {
+  static List<unsigned int> map_opt(F0 &&f, const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
     } else {
@@ -804,8 +838,8 @@ struct LoopifyStructures {
   /// filter_map p f l filters and maps in one pass.
   template <MapsTo<bool, unsigned int> F0,
             MapsTo<unsigned int, unsigned int> F1>
-  __attribute__((pure)) static List<unsigned int>
-  filter_map(F0 &&p, F1 &&f, const List<unsigned int> &l) {
+  static List<unsigned int> filter_map(F0 &&p, F1 &&f,
+                                       const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
     } else {
@@ -820,7 +854,7 @@ struct LoopifyStructures {
   }
 
   /// find_first_some l finds first Some value in list of options.
-  __attribute__((pure)) static std::optional<unsigned int>
+  static std::optional<unsigned int>
   find_first_some(const List<std::optional<unsigned int>> &l);
 
   /// Tree type with values in leaves.
@@ -865,29 +899,43 @@ struct LoopifyStructures {
     }
 
     // ACCESSORS
-    __attribute__((pure)) ltree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<LLeaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<LLeaf>(_sv.v());
-        return ltree(LLeaf{d_a0});
-      } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<LNode>(_sv.v());
-        return ltree(LNode{
-            d_a0,
-            d_a1 ? std::make_unique<LoopifyStructures::ltree>(d_a1->clone())
-                 : nullptr,
-            d_a2 ? std::make_unique<LoopifyStructures::ltree>(d_a2->clone())
-                 : nullptr});
+    ltree clone() const {
+      ltree _out{};
+
+      struct _CloneFrame {
+        const ltree *_src;
+        ltree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const ltree *_src = _frame._src;
+        ltree *_dst = _frame._dst;
+        if (std::holds_alternative<LLeaf>(_src->v())) {
+          const auto &_alt = std::get<LLeaf>(_src->v());
+          _dst->d_v_ = LLeaf{_alt.d_a0};
+        } else {
+          const auto &_alt = std::get<LNode>(_src->v());
+          _dst->d_v_ =
+              LNode{_alt.d_a0, _alt.d_a1 ? std::make_unique<ltree>() : nullptr,
+                    _alt.d_a2 ? std::make_unique<ltree>() : nullptr};
+          auto &_dst_alt = std::get<LNode>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static ltree lleaf(unsigned int a0) {
-      return ltree(LLeaf{std::move(a0)});
-    }
+    static ltree lleaf(unsigned int a0) { return ltree(LLeaf{std::move(a0)}); }
 
-    __attribute__((pure)) static ltree lnode(unsigned int a0, ltree a1,
-                                             ltree a2) {
+    static ltree lnode(unsigned int a0, ltree a1, ltree a2) {
       return ltree(LNode{std::move(a0), std::make_unique<ltree>(std::move(a1)),
                          std::make_unique<ltree>(std::move(a2))});
     }
@@ -916,10 +964,10 @@ struct LoopifyStructures {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// ltree_max t1 t2 element-wise max of two leaf-trees.
-    __attribute__((pure)) ltree ltree_max(ltree t2) const {
+    ltree ltree_max(ltree t2) const {
       const ltree *_self = this;
 
       struct _Enter {

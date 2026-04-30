@@ -14,9 +14,7 @@ struct RecordProj {
     unsigned int y;
 
     // ACCESSORS
-    __attribute__((pure)) Point clone() const {
-      return Point{(*(this)).x, (*(this)).y};
-    }
+    Point clone() const { return Point{(*(this)).x, (*(this)).y}; }
   };
 
   struct ComplexRecord {
@@ -25,21 +23,18 @@ struct RecordProj {
     unsigned int field3;
 
     // ACCESSORS
-    __attribute__((pure)) ComplexRecord clone() const {
+    ComplexRecord clone() const {
       return ComplexRecord{(*(this)).field1, (*(this)).field2,
                            (*(this)).field3};
     }
   };
 
-  __attribute__((pure)) static unsigned int weird_access(const Point &p);
-  __attribute__((pure)) static unsigned int
-  complex_access(const ComplexRecord &c);
-  __attribute__((pure)) static unsigned int
-  nested_record_match(const Point &p1, const Point &p2);
+  static unsigned int weird_access(const Point &p);
+  static unsigned int complex_access(const ComplexRecord &c);
+  static unsigned int nested_record_match(const Point &p1, const Point &p2);
 
   template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((pure)) static unsigned int apply_to_field(F0 &&f,
-                                                           const Point &p) {
+  static unsigned int apply_to_field(F0 &&f, const Point &p) {
     unsigned int a = p.x;
     unsigned int b = p.y;
     return (f(a) + f(b));

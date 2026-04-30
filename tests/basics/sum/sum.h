@@ -51,7 +51,7 @@ struct Sum {
     }
 
     // ACCESSORS
-    __attribute__((pure)) either<t_A, t_B> clone() const {
+    either<t_A, t_B> clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Left>(_sv.v())) {
         const auto &[d_a0] = std::get<Left>(_sv.v());
@@ -76,11 +76,9 @@ struct Sum {
       }
     }
 
-    __attribute__((pure)) static either<t_A, t_B> left(t_A a0) {
-      return either(Left{std::move(a0)});
-    }
+    static either<t_A, t_B> left(t_A a0) { return either(Left{std::move(a0)}); }
 
-    __attribute__((pure)) static either<t_A, t_B> right(t_B a0) {
+    static either<t_A, t_B> right(t_B a0) {
       return either(Right{std::move(a0)});
     }
 
@@ -88,10 +86,10 @@ struct Sum {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, t_B> F0>
-    __attribute__((pure)) either<t_A, T1> map_right(F0 &&f) const {
+    either<t_A, T1> map_right(F0 &&f) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
         const auto &[d_a0] = std::get<typename either<t_A, t_B>::Left>(_sv.v());
@@ -104,7 +102,7 @@ struct Sum {
     }
 
     template <typename T1, MapsTo<T1, t_A> F0>
-    __attribute__((pure)) either<T1, t_B> map_left(F0 &&f) const {
+    either<T1, t_B> map_left(F0 &&f) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
         const auto &[d_a0] = std::get<typename either<t_A, t_B>::Left>(_sv.v());
@@ -116,7 +114,7 @@ struct Sum {
       }
     }
 
-    __attribute__((pure)) bool is_left() const {
+    bool is_left() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
         return true;
@@ -156,7 +154,7 @@ struct Sum {
       either<unsigned int, bool>::left(5u);
   static inline const either<unsigned int, bool> right_val =
       either<unsigned int, bool>::right(true);
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   either_to_nat(const either<unsigned int, unsigned int> &e);
 
   template <typename t_A, typename t_B, typename t_C> struct triple {
@@ -205,7 +203,7 @@ struct Sum {
     }
 
     // ACCESSORS
-    __attribute__((pure)) triple<t_A, t_B, t_C> clone() const {
+    triple<t_A, t_B, t_C> clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<First>(_sv.v())) {
         const auto &[d_a0] = std::get<First>(_sv.v());
@@ -239,15 +237,15 @@ struct Sum {
       }
     }
 
-    __attribute__((pure)) static triple<t_A, t_B, t_C> first(t_A a0) {
+    static triple<t_A, t_B, t_C> first(t_A a0) {
       return triple(First{std::move(a0)});
     }
 
-    __attribute__((pure)) static triple<t_A, t_B, t_C> second(t_B a0) {
+    static triple<t_A, t_B, t_C> second(t_B a0) {
       return triple(Second{std::move(a0)});
     }
 
-    __attribute__((pure)) static triple<t_A, t_B, t_C> third(t_C a0) {
+    static triple<t_A, t_B, t_C> third(t_C a0) {
       return triple(Third{std::move(a0)});
     }
 
@@ -255,7 +253,7 @@ struct Sum {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1,
               MapsTo<T1, t_C> F2>

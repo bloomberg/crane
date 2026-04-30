@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,7 +119,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct MutualRecord {
@@ -142,7 +161,7 @@ struct MutualRecord {
     }
 
     // ACCESSORS
-    __attribute__((pure)) department clone() const {
+    department clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Mk_department>(_sv.v());
       return department(Mk_department{
@@ -152,8 +171,7 @@ struct MutualRecord {
     }
 
     // CREATORS
-    __attribute__((pure)) static department mk_department(unsigned int a0,
-                                                          List<employee> a1) {
+    static department mk_department(unsigned int a0, List<employee> a1) {
       return department(Mk_department{
           std::move(a0), std::make_unique<List<employee>>(std::move(a1))});
     }
@@ -162,7 +180,7 @@ struct MutualRecord {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   struct employee {
@@ -199,15 +217,14 @@ struct MutualRecord {
     }
 
     // ACCESSORS
-    __attribute__((pure)) employee clone() const {
+    employee clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Mk_employee>(_sv.v());
       return employee(Mk_employee{d_a0, d_a1});
     }
 
     // CREATORS
-    __attribute__((pure)) static employee mk_employee(unsigned int a0,
-                                                      unsigned int a1) {
+    static employee mk_employee(unsigned int a0, unsigned int a1) {
       return employee(Mk_employee{std::move(a0), std::move(a1)});
     }
 
@@ -215,7 +232,7 @@ struct MutualRecord {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, List<employee>> F0>
@@ -244,18 +261,14 @@ struct MutualRecord {
     return f(d_a0, d_a1);
   }
 
-  __attribute__((pure)) static unsigned int dept_id(const department &d);
-  __attribute__((pure)) static List<employee>
-  dept_employees(const department &d);
-  __attribute__((pure)) static unsigned int emp_id(const employee &e);
-  __attribute__((pure)) static unsigned int emp_salary(const employee &e);
-  __attribute__((pure)) static unsigned int
-  dept_total_salary(const department &d);
-  __attribute__((pure)) static unsigned int
-  emp_list_salary(const List<employee> &l);
-  __attribute__((pure)) static unsigned int dept_count(const department &d);
-  __attribute__((pure)) static unsigned int
-  emp_list_count(const List<employee> &l);
+  static unsigned int dept_id(const department &d);
+  static List<employee> dept_employees(const department &d);
+  static unsigned int emp_id(const employee &e);
+  static unsigned int emp_salary(const employee &e);
+  static unsigned int dept_total_salary(const department &d);
+  static unsigned int emp_list_salary(const List<employee> &l);
+  static unsigned int dept_count(const department &d);
+  static unsigned int emp_list_count(const List<employee> &l);
   static inline const employee emp1 = employee::mk_employee(1u, 50u);
   static inline const employee emp2 = employee::mk_employee(2u, 60u);
   static inline const employee emp3 = employee::mk_employee(3u, 70u);

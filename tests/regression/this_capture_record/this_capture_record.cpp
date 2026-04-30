@@ -4,7 +4,7 @@
 /// treat this as a multi-argument function (preventing eta-collapse).
 /// Returns a record whose fields are closures that capture this
 /// via =, this.
-__attribute__((pure)) ThisCaptureRecord::callback_rec
+ThisCaptureRecord::callback_rec
 ThisCaptureRecord::tree_callbacks(ThisCaptureRecord::tree t,
                                   const unsigned int &flag) {
   if (flag <= 0) {
@@ -20,7 +20,6 @@ ThisCaptureRecord::tree_callbacks(ThisCaptureRecord::tree t,
 }
 
 /// Dummy use of tag to keep it around for extraction.
-__attribute__((pure)) ThisCaptureRecord::tag
-ThisCaptureRecord::mk_tag(unsigned int n) {
+ThisCaptureRecord::tag ThisCaptureRecord::mk_tag(unsigned int n) {
   return tag::mktag(n);
 }

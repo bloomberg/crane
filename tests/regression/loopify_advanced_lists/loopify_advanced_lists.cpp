@@ -1,7 +1,6 @@
 #include <loopify_advanced_lists.h>
 
-__attribute__((pure)) unsigned int
-LoopifyAdvancedLists::product(const List<unsigned int> &l) {
+unsigned int LoopifyAdvancedLists::product(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -37,8 +36,7 @@ LoopifyAdvancedLists::product(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyAdvancedLists::compress(const List<unsigned int> &l) {
+List<unsigned int> LoopifyAdvancedLists::compress(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -78,7 +76,7 @@ LoopifyAdvancedLists::compress(const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyAdvancedLists::pairwise_sum(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -114,7 +112,7 @@ LoopifyAdvancedLists::pairwise_sum(const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyAdvancedLists::group_pairs(const List<unsigned int> &l) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;
@@ -155,8 +153,8 @@ LoopifyAdvancedLists::group_pairs(const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyAdvancedLists::interleave(List<unsigned int> l1, List<unsigned int> l2) {
+List<unsigned int> LoopifyAdvancedLists::interleave(List<unsigned int> l1,
+                                                    List<unsigned int> l2) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l2 = std::move(l2);
@@ -199,7 +197,7 @@ LoopifyAdvancedLists::interleave(List<unsigned int> l1, List<unsigned int> l2) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyAdvancedLists::concat_lists(const List<List<unsigned int>> &ll) {
   struct _Enter {
     const List<List<unsigned int>> *ll;

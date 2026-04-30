@@ -1,7 +1,6 @@
 #include <loopify_extrema.h>
 
-__attribute__((pure)) unsigned int
-LoopifyExtrema::maximum(const List<unsigned int> &l) {
+unsigned int LoopifyExtrema::maximum(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -48,8 +47,7 @@ LoopifyExtrema::maximum(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyExtrema::minimum(const List<unsigned int> &l) {
+unsigned int LoopifyExtrema::minimum(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -96,7 +94,7 @@ LoopifyExtrema::minimum(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
+std::pair<unsigned int, unsigned int>
 LoopifyExtrema::minmax(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
@@ -141,9 +139,8 @@ LoopifyExtrema::minmax(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyExtrema::lex_compare(const List<unsigned int> &l1,
-                            const List<unsigned int> &l2) {
+unsigned int LoopifyExtrema::lex_compare(const List<unsigned int> &l1,
+                                         const List<unsigned int> &l2) {
   unsigned int _result;
   const List<unsigned int> *_loop_l2 = &l2;
   const List<unsigned int> *_loop_l1 = &l1;
@@ -188,8 +185,7 @@ LoopifyExtrema::lex_compare(const List<unsigned int> &l1,
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifyExtrema::all_equal(const List<unsigned int> &l) {
+bool LoopifyExtrema::all_equal(const List<unsigned int> &l) {
   bool _result;
   const List<unsigned int> *_loop_l = &l;
   while (true) {
@@ -219,8 +215,7 @@ LoopifyExtrema::all_equal(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifyExtrema::is_sorted(const List<unsigned int> &l) {
+bool LoopifyExtrema::is_sorted(const List<unsigned int> &l) {
   bool _result;
   const List<unsigned int> *_loop_l = &l;
   while (true) {

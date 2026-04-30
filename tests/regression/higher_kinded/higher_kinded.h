@@ -59,19 +59,36 @@ struct HigherKinded {
     }
 
     // ACCESSORS
-    __attribute__((pure)) Tree<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<Leaf>(_sv.v());
-        return Tree<t_A>(Leaf{d_a0});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Branch>(_sv.v());
-        return Tree<t_A>(Branch{
-            d_a0 ? std::make_unique<HigherKinded::Tree<t_A>>(d_a0->clone())
-                 : nullptr,
-            d_a1 ? std::make_unique<HigherKinded::Tree<t_A>>(d_a1->clone())
-                 : nullptr});
+    Tree clone() const {
+      Tree _out{};
+
+      struct _CloneFrame {
+        const Tree *_src;
+        Tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const Tree *_src = _frame._src;
+        Tree *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          const auto &_alt = std::get<Leaf>(_src->v());
+          _dst->d_v_ = Leaf{_alt.d_a0};
+        } else {
+          const auto &_alt = std::get<Branch>(_src->v());
+          _dst->d_v_ = Branch{_alt.d_a0 ? std::make_unique<Tree>() : nullptr,
+                              _alt.d_a1 ? std::make_unique<Tree>() : nullptr};
+          auto &_dst_alt = std::get<Branch>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -87,11 +104,9 @@ struct HigherKinded {
       }
     }
 
-    __attribute__((pure)) static Tree<t_A> leaf(t_A a0) {
-      return Tree(Leaf{std::move(a0)});
-    }
+    static Tree<t_A> leaf(t_A a0) { return Tree(Leaf{std::move(a0)}); }
 
-    __attribute__((pure)) static Tree<t_A> branch(Tree<t_A> a0, Tree<t_A> a1) {
+    static Tree<t_A> branch(Tree<t_A> a0, Tree<t_A> a1) {
       return Tree(Branch{std::make_unique<Tree<t_A>>(std::move(a0)),
                          std::make_unique<Tree<t_A>>(std::move(a1))});
     }
@@ -120,7 +135,7 @@ struct HigherKinded {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0,
@@ -150,7 +165,7 @@ struct HigherKinded {
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  __attribute__((pure)) static Tree<T2> tree_map(F0 &&f, const Tree<T1> &t) {
+  static Tree<T2> tree_map(F0 &&f, const Tree<T1> &t) {
     if (std::holds_alternative<typename Tree<T1>::Leaf>(t.v())) {
       const auto &[d_a0] = std::get<typename Tree<T1>::Leaf>(t.v());
       return Tree<T2>::leaf(f(d_a0));
@@ -173,11 +188,9 @@ struct HigherKinded {
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  tree_sum(const Tree<unsigned int> &t);
+  static unsigned int tree_sum(const Tree<unsigned int> &t);
 
-  template <typename T1>
-  __attribute__((pure)) static unsigned int tree_size(const Tree<T1> &t) {
+  template <typename T1> static unsigned int tree_size(const Tree<T1> &t) {
     return tree_fold<T1, unsigned int>(
         [](const T1) { return 1u; },
         [](unsigned int _x0, unsigned int _x1) -> unsigned int {
@@ -187,8 +200,7 @@ struct HigherKinded {
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  __attribute__((pure)) static std::optional<T2>
-  map_option(F0 &&f, const std::optional<T1> &o) {
+  static std::optional<T2> map_option(F0 &&f, const std::optional<T1> &o) {
     if (o.has_value()) {
       const T1 &x = *o;
       return std::make_optional<T2>(f(x));

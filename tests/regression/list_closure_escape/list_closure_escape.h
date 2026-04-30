@@ -52,25 +52,43 @@ struct ListClosureEscape {
     }
 
     // ACCESSORS
-    __attribute__((pure)) tree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
-        return tree(Leaf{});
-      } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
-        return tree(
-            Node{d_a0 ? std::make_unique<ListClosureEscape::tree>(d_a0->clone())
-                      : nullptr,
-                 d_a1,
-                 d_a2 ? std::make_unique<ListClosureEscape::tree>(d_a2->clone())
-                      : nullptr});
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          const auto &_alt = std::get<Leaf>(_src->v());
+          _dst->d_v_ = Leaf{};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ =
+              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
+    static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, unsigned int a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -99,9 +117,9 @@ struct ListClosureEscape {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int sum_values(unsigned int x) const {
+    unsigned int sum_values(unsigned int x) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return x;
@@ -189,24 +207,41 @@ struct ListClosureEscape {
     }
 
     // ACCESSORS
-    __attribute__((pure)) fn_list clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<FNil>(_sv.v())) {
-        return fn_list(FNil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<FCons>(_sv.v());
-        return fn_list(FCons{
-            d_a0,
-            d_a1 ? std::make_unique<ListClosureEscape::fn_list>(d_a1->clone())
-                 : nullptr});
+    fn_list clone() const {
+      fn_list _out{};
+
+      struct _CloneFrame {
+        const fn_list *_src;
+        fn_list *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const fn_list *_src = _frame._src;
+        fn_list *_dst = _frame._dst;
+        if (std::holds_alternative<FNil>(_src->v())) {
+          const auto &_alt = std::get<FNil>(_src->v());
+          _dst->d_v_ = FNil{};
+        } else {
+          const auto &_alt = std::get<FCons>(_src->v());
+          _dst->d_v_ = FCons{_alt.d_a0,
+                             _alt.d_a1 ? std::make_unique<fn_list>() : nullptr};
+          auto &_dst_alt = std::get<FCons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static fn_list fnil() { return fn_list(FNil{}); }
+    static fn_list fnil() { return fn_list(FNil{}); }
 
-    __attribute__((pure)) static fn_list
-    fcons(std::function<unsigned int(unsigned int)> a0, fn_list a1) {
+    static fn_list fcons(std::function<unsigned int(unsigned int)> a0,
+                         fn_list a1) {
       return fn_list(
           FCons{std::move(a0), std::make_unique<fn_list>(std::move(a1))});
     }
@@ -233,9 +268,9 @@ struct ListClosureEscape {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int apply_first(unsigned int x) const {
+    unsigned int apply_first(unsigned int x) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
         return x;
@@ -275,7 +310,7 @@ struct ListClosureEscape {
   /// BUG: partial applications stored in a custom list via FCons.
   /// Each lambda for (sum_values t_i) captures t_i by &.
   /// When build_fns returns, t1 and t2 are destroyed.
-  __attribute__((pure)) static fn_list build_fns(tree t1, tree t2);
+  static fn_list build_fns(tree t1, tree t2);
   static inline const unsigned int bug_list_clobber = []() {
     tree t1 = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                          tree::node(tree::leaf(), 30u, tree::leaf()));

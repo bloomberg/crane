@@ -1,7 +1,7 @@
 #include <reuse_alias.h>
 
 /// Increment the head — candidate for reuse optimization when use_count = 1.
-__attribute__((pure)) ReuseAlias::mylist<unsigned int>
+ReuseAlias::mylist<unsigned int>
 ReuseAlias::inc_head(const ReuseAlias::mylist<unsigned int> &l) {
   if (std::holds_alternative<typename ReuseAlias::mylist<unsigned int>::Mynil>(
           l.v())) {
@@ -16,14 +16,13 @@ ReuseAlias::inc_head(const ReuseAlias::mylist<unsigned int> &l) {
 /// Use the same list twice: once through inc_head, once directly.
 /// If reuse fires on the first call (because evaluation order is
 /// unspecified), the second use of l sees the already-mutated list.
-__attribute__((pure))
 std::pair<ReuseAlias::mylist<unsigned int>, ReuseAlias::mylist<unsigned int>>
 ReuseAlias::double_use(ReuseAlias::mylist<unsigned int> l) {
   return std::make_pair(inc_head(l), l);
 }
 
 /// Pass the same list to two different functions.
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
+std::pair<unsigned int, unsigned int>
 ReuseAlias::double_call(const ReuseAlias::mylist<unsigned int> &l) {
   return std::make_pair(length<unsigned int>(l),
                         length<unsigned int>(inc_head(l)));
@@ -31,7 +30,7 @@ ReuseAlias::double_call(const ReuseAlias::mylist<unsigned int> &l) {
 
 /// Alias through let-binding, then use both the alias and the original
 /// in a match.
-__attribute__((pure)) std::pair<ReuseAlias::mylist<unsigned int>, unsigned int>
+std::pair<ReuseAlias::mylist<unsigned int>, unsigned int>
 ReuseAlias::alias_and_match(ReuseAlias::mylist<unsigned int> l) {
   if (std::holds_alternative<typename ReuseAlias::mylist<unsigned int>::Mynil>(
           l.v_mut())) {
@@ -45,7 +44,6 @@ ReuseAlias::alias_and_match(ReuseAlias::mylist<unsigned int> l) {
 
 /// Build a result that refers to the scrutinee AND a pattern variable
 /// from the same match.
-__attribute__((pure))
 std::pair<ReuseAlias::mylist<unsigned int>, ReuseAlias::mylist<unsigned int>>
 ReuseAlias::scrutinee_in_branch(ReuseAlias::mylist<unsigned int> l) {
   if (std::holds_alternative<typename ReuseAlias::mylist<unsigned int>::Mynil>(
@@ -60,7 +58,7 @@ ReuseAlias::scrutinee_in_branch(ReuseAlias::mylist<unsigned int> l) {
 }
 
 /// Chain inc_head: each call might try to reuse.
-__attribute__((pure)) ReuseAlias::mylist<unsigned int>
+ReuseAlias::mylist<unsigned int>
 ReuseAlias::triple_inc(const ReuseAlias::mylist<unsigned int> &l) {
   return inc_head(inc_head(inc_head(l)));
 }

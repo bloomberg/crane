@@ -16,25 +16,21 @@ struct UseAfterMove {
     unsigned int flag;
 
     // ACCESSORS
-    __attribute__((pure)) State clone() const {
+    State clone() const {
       return State{(*(this)).value, (*(this)).data, (*(this)).flag};
     }
   };
 
-  __attribute__((pure)) static std::pair<State, unsigned int> pattern1(State s);
-  __attribute__((
-      pure)) static std::pair<std::pair<State, unsigned int>, unsigned int>
+  static std::pair<State, unsigned int> pattern1(State s);
+  static std::pair<std::pair<State, unsigned int>, unsigned int>
   pattern2(State s);
-  __attribute__((
-      pure)) static std::pair<std::pair<State, unsigned int>, unsigned int>
+  static std::pair<std::pair<State, unsigned int>, unsigned int>
   pattern3(State s);
-  __attribute__((pure)) static std::pair<State, unsigned int>
-  pattern4(State s1);
-  __attribute__((pure)) static std::pair<State, unsigned int>
-  pattern5(State s1);
-  __attribute__((pure)) static std::pair<State, unsigned int> pattern6(State s);
-  __attribute__((pure)) static std::pair<
-      std::pair<std::pair<State, unsigned int>, unsigned int>, unsigned int>
+  static std::pair<State, unsigned int> pattern4(State s1);
+  static std::pair<State, unsigned int> pattern5(State s1);
+  static std::pair<State, unsigned int> pattern6(State s);
+  static std::pair<std::pair<std::pair<State, unsigned int>, unsigned int>,
+                   unsigned int>
   pattern7(State s);
 };
 

@@ -51,25 +51,43 @@ struct ReuseFnInBody {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mylist clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Mycons>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
-        return mylist(Mycons{
-            d_a0, d_a1 ? std::make_unique<ReuseFnInBody::mylist>(d_a1->clone())
-                       : nullptr});
-      } else {
-        return mylist(Mynil{});
+    mylist clone() const {
+      mylist _out{};
+
+      struct _CloneFrame {
+        const mylist *_src;
+        mylist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist *_src = _frame._src;
+        mylist *_dst = _frame._dst;
+        if (std::holds_alternative<Mycons>(_src->v())) {
+          const auto &_alt = std::get<Mycons>(_src->v());
+          _dst->d_v_ = Mycons{_alt.d_a0,
+                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        } else {
+          const auto &_alt = std::get<Mynil>(_src->v());
+          _dst->d_v_ = Mynil{};
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static mylist mycons(unsigned int a0, mylist a1) {
+    static mylist mycons(unsigned int a0, mylist a1) {
       return mylist(
           Mycons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
     }
 
-    __attribute__((pure)) static mylist mynil() { return mylist(Mynil{}); }
+    static mylist mynil() { return mylist(Mynil{}); }
 
     // MANIPULATORS
     ~mylist() {
@@ -93,7 +111,7 @@ struct ReuseFnInBody {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, mylist, T1> F0>
@@ -116,8 +134,8 @@ struct ReuseFnInBody {
     }
   }
 
-  __attribute__((pure)) static unsigned int length(const mylist &l);
-  __attribute__((pure)) static unsigned int sum(const mylist &l);
+  static unsigned int length(const mylist &l);
+  static unsigned int sum(const mylist &l);
   /// BUG: reuse fires on the mycons branch. The body constructs
   /// mycons (sum l + h) t where l is the scrutinee.
   ///
@@ -134,7 +152,7 @@ struct ReuseFnInBody {
   /// This is similar to reuse_use_after_move but the scrutinee
   /// is used through a DIFFERENT function (sum instead of length)
   /// AND combined with a pattern variable in an arithmetic expression.
-  __attribute__((pure)) static mylist prefix_sum(mylist l, const bool &b);
+  static mylist prefix_sum(mylist l, const bool &b);
   static inline const unsigned int test1 = sum(prefix_sum(
       mylist::mycons(1u,
                      mylist::mycons(2u, mylist::mycons(3u, mylist::mynil()))),

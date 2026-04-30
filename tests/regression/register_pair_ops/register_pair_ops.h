@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,10 +119,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  template <MapsTo<bool, t_A> F0>
-  __attribute__((pure)) bool forallb(F0 &&f) const {
+  template <MapsTo<bool, t_A> F0> bool forallb(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return true;
@@ -115,16 +133,15 @@ public:
 };
 
 struct ListDef {
-  __attribute__((pure)) static List<unsigned int> seq(unsigned int start,
-                                                      const unsigned int &len);
+  static List<unsigned int> seq(unsigned int start, const unsigned int &len);
   template <typename T1>
   static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
 };
 
 struct RegisterPairOps {
   template <typename T1>
-  __attribute__((pure)) static List<T1>
-  update_nth(const unsigned int &n, const T1 x, const List<T1> &l) {
+  static List<T1> update_nth(const unsigned int &n, const T1 x,
+                             const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
@@ -147,19 +164,15 @@ struct RegisterPairOps {
     List<unsigned int> regs;
 
     // ACCESSORS
-    __attribute__((pure)) state clone() const {
-      return state{(*(this)).regs.clone()};
-    }
+    state clone() const { return state{(*(this)).regs.clone()}; }
   };
 
-  __attribute__((pure)) static unsigned int get_reg(const state &s,
-                                                    const unsigned int &r);
-  __attribute__((pure)) static state
-  set_reg(const state &s, const unsigned int &r, const unsigned int &v);
-  __attribute__((pure)) static unsigned int get_reg_pair(const state &s,
-                                                         const unsigned int &r);
-  __attribute__((pure)) static state
-  set_reg_pair(const state &s, const unsigned int &r, const unsigned int &v);
+  static unsigned int get_reg(const state &s, const unsigned int &r);
+  static state set_reg(const state &s, const unsigned int &r,
+                       const unsigned int &v);
+  static unsigned int get_reg_pair(const state &s, const unsigned int &r);
+  static state set_reg_pair(const state &s, const unsigned int &r,
+                            const unsigned int &v);
   static inline const unsigned int test_get_reg_pair_even_value = get_reg_pair(
       state{List<unsigned int>::cons(
           0u, List<unsigned int>::cons(
@@ -237,7 +250,7 @@ struct RegisterPairOps {
   static inline const bool test_set_reg_pair_preserves_other_pairs =
       get_reg_pair(set_reg_pair(sample_preserves, 0u, 171u), 2u) ==
       get_reg_pair(sample_preserves, 2u);
-  __attribute__((pure)) static unsigned int pair_base(const unsigned int &r);
+  static unsigned int pair_base(const unsigned int &r);
   static inline const state sample_register_pair =
       state{List<unsigned int>::cons(
           0u,
@@ -254,8 +267,8 @@ struct RegisterPairOps {
       get_reg(set_reg_pair(sample_register_pair, 2u, 171u), 2u) == 10u;
   static inline const bool test_set_pair_get_low =
       get_reg(set_reg_pair(sample_register_pair, 2u, 171u), 3u) == 11u;
-  __attribute__((pure)) static unsigned int pair_index(const unsigned int &r);
-  __attribute__((pure)) static bool pair_property(const unsigned int &r);
+  static unsigned int pair_index(const unsigned int &r);
+  static bool pair_property(const unsigned int &r);
   static inline const List<unsigned int> test_regs = ListDef::seq(0u, 16u);
   static inline const bool test_register_pair_architecture =
       test_regs.forallb(pair_property);

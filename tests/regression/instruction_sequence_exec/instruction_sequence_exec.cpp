@@ -1,7 +1,6 @@
 #include <instruction_sequence_exec.h>
 
-__attribute__((pure)) InstructionSequenceExec::state
-InstructionSequenceExec::execute(
+InstructionSequenceExec::state InstructionSequenceExec::execute(
     InstructionSequenceExec::state s,
     const InstructionSequenceExec::instruction &i) {
   if (std::holds_alternative<
@@ -18,8 +17,7 @@ InstructionSequenceExec::execute(
   }
 }
 
-__attribute__((pure)) InstructionSequenceExec::state
-InstructionSequenceExec::exec_program(
+InstructionSequenceExec::state InstructionSequenceExec::exec_program(
     const List<InstructionSequenceExec::instruction> &prog,
     InstructionSequenceExec::state s) {
   if (std::holds_alternative<

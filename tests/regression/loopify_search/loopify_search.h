@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,9 +119,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) List<t_A> app(List<t_A> m) const {
+  List<t_A> app(List<t_A> m) const {
     std::unique_ptr<List<t_A>> _head{};
     std::unique_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
@@ -132,8 +151,7 @@ public:
 /// Consolidated search and optimization algorithms.
 struct LoopifySearch {
   /// Internal helper: list length.
-  template <typename T1>
-  __attribute__((pure)) static unsigned int len_impl(const List<T1> &l) {
+  template <typename T1> static unsigned int len_impl(const List<T1> &l) {
     struct _Enter {
       const List<T1> *l;
     };
@@ -168,26 +186,25 @@ struct LoopifySearch {
 
   /// knapsack capacity items solves 0/1 knapsack problem.
   /// Items are (weight, value) pairs.
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   knapsack_fuel(const unsigned int &fuel, const unsigned int &capacity,
                 const List<std::pair<unsigned int, unsigned int>> &items);
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   knapsack(const unsigned int &capacity,
            const List<std::pair<unsigned int, unsigned int>> &items);
   /// majority l finds majority element using Boyer-Moore algorithm.
   /// Returns (candidate, count).
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  static std::pair<unsigned int, unsigned int>
   majority(const List<unsigned int> &l);
   /// longest_increasing_subseq l finds a longest increasing subsequence
   /// (greedy).
-  __attribute__((pure)) static List<unsigned int>
+  static List<unsigned int>
   longest_increasing_subseq(const List<unsigned int> &l);
 
   /// maximum_by cmp l finds maximum element by custom comparator.
   /// cmp x y returns: 0 if x=y, 1 if x>y, 2 if x<y
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
-  __attribute__((pure)) static unsigned int
-  maximum_by(F0 &&cmp, const List<unsigned int> &l) {
+  static unsigned int maximum_by(F0 &&cmp, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
     };
@@ -238,45 +255,42 @@ struct LoopifySearch {
   }
 
   /// Helper for binary search: get nth element.
-  __attribute__((pure)) static unsigned int
-  nth_impl(const unsigned int &n, const List<unsigned int> &l);
+  static unsigned int nth_impl(const unsigned int &n,
+                               const List<unsigned int> &l);
   /// Helper for binary search: take first k elements.
-  __attribute__((pure)) static List<unsigned int>
-  take_impl(const unsigned int &k, const List<unsigned int> &l);
+  static List<unsigned int> take_impl(const unsigned int &k,
+                                      const List<unsigned int> &l);
   /// Helper for binary search: drop first k elements.
-  __attribute__((pure)) static List<unsigned int>
-  drop_impl(const unsigned int &k, List<unsigned int> l);
+  static List<unsigned int> drop_impl(const unsigned int &k,
+                                      List<unsigned int> l);
   /// binary_search_fuel target sorted_list searches for target in sorted list.
   /// Returns true if found.
-  __attribute__((pure)) static bool
-  binary_search_fuel(const unsigned int &fuel, const unsigned int &target,
-                     const List<unsigned int> &l);
-  __attribute__((pure)) static bool binary_search(const unsigned int &target,
-                                                  const List<unsigned int> &l);
+  static bool binary_search_fuel(const unsigned int &fuel,
+                                 const unsigned int &target,
+                                 const List<unsigned int> &l);
+  static bool binary_search(const unsigned int &target,
+                            const List<unsigned int> &l);
   /// longest_run l finds the longest run of consecutive equal elements.
-  __attribute__((pure)) static List<unsigned int>
-  longest_run_aux(List<unsigned int> current_run, List<unsigned int> best_run,
-                  const List<unsigned int> &l);
-  __attribute__((pure)) static List<unsigned int>
-  longest_run(const List<unsigned int> &l);
+  static List<unsigned int> longest_run_aux(List<unsigned int> current_run,
+                                            List<unsigned int> best_run,
+                                            const List<unsigned int> &l);
+  static List<unsigned int> longest_run(const List<unsigned int> &l);
   /// collatz n computes Collatz sequence length (not the list).
-  __attribute__((pure)) static unsigned int
-  collatz_fuel(const unsigned int &fuel, const unsigned int &n);
-  __attribute__((pure)) static unsigned int collatz(const unsigned int &n);
+  static unsigned int collatz_fuel(const unsigned int &fuel,
+                                   const unsigned int &n);
+  static unsigned int collatz(const unsigned int &n);
   /// lis l simple longest increasing subsequence (greedy approach).
-  __attribute__((pure)) static List<unsigned int>
-  lis(const List<unsigned int> &l);
+  static List<unsigned int> lis(const List<unsigned int> &l);
   /// subset_sum target l checks if any subset sums to target.
-  __attribute__((pure)) static bool
-  subset_sum_fuel(const unsigned int &fuel, const unsigned int &target,
-                  const List<unsigned int> &l);
-  __attribute__((pure)) static bool subset_sum(const unsigned int &target,
-                                               const List<unsigned int> &l);
+  static bool subset_sum_fuel(const unsigned int &fuel,
+                              const unsigned int &target,
+                              const List<unsigned int> &l);
+  static bool subset_sum(const unsigned int &target,
+                         const List<unsigned int> &l);
 
   /// Helper: filter predicate.
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  filter_impl(F0 &&p, const List<unsigned int> &l) {
+  static List<unsigned int> filter_impl(F0 &&p, const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
     } else {
@@ -291,50 +305,44 @@ struct LoopifySearch {
   }
 
   /// sieve l removes multiples (simplified sieve of Eratosthenes).
-  __attribute__((pure)) static List<unsigned int>
-  sieve_fuel(const unsigned int &fuel, List<unsigned int> l);
-  __attribute__((pure)) static List<unsigned int>
-  sieve(const List<unsigned int> &l);
+  static List<unsigned int> sieve_fuel(const unsigned int &fuel,
+                                       List<unsigned int> l);
+  static List<unsigned int> sieve(const List<unsigned int> &l);
   /// Helper: check if element is in list.
-  __attribute__((pure)) static bool elem_impl(const unsigned int &x,
-                                              const List<unsigned int> &l);
+  static bool elem_impl(const unsigned int &x, const List<unsigned int> &l);
   /// nub l removes duplicates from list.
-  __attribute__((pure)) static List<unsigned int>
-  nub_fuel(const unsigned int &fuel, List<unsigned int> l);
-  __attribute__((pure)) static List<unsigned int>
-  nub(const List<unsigned int> &l);
+  static List<unsigned int> nub_fuel(const unsigned int &fuel,
+                                     List<unsigned int> l);
+  static List<unsigned int> nub(const List<unsigned int> &l);
   /// remove_duplicates l removes all duplicate elements.
-  __attribute__((pure)) static List<unsigned int>
-  remove_duplicates_fuel(const unsigned int &fuel, List<unsigned int> l);
-  __attribute__((pure)) static List<unsigned int>
-  remove_duplicates(const List<unsigned int> &l);
+  static List<unsigned int> remove_duplicates_fuel(const unsigned int &fuel,
+                                                   List<unsigned int> l);
+  static List<unsigned int> remove_duplicates(const List<unsigned int> &l);
   /// quicksort l sorts list using quicksort with filter-based partitioning.
-  __attribute__((pure)) static List<unsigned int>
-  quicksort_fuel(const unsigned int &fuel, List<unsigned int> l);
-  __attribute__((pure)) static List<unsigned int>
-  quicksort(const List<unsigned int> &l);
+  static List<unsigned int> quicksort_fuel(const unsigned int &fuel,
+                                           List<unsigned int> l);
+  static List<unsigned int> quicksort(const List<unsigned int> &l);
   /// Helper: split list into two roughly equal parts.
-  __attribute__((pure)) static std::pair<List<unsigned int>, List<unsigned int>>
+  static std::pair<List<unsigned int>, List<unsigned int>>
   split_list(const List<unsigned int> &l);
   /// Helper: merge two sorted lists with fuel.
-  __attribute__((pure)) static List<unsigned int>
-  merge_sorted_fuel(const unsigned int &fuel, List<unsigned int> l1,
-                    List<unsigned int> l2);
-  __attribute__((pure)) static List<unsigned int>
-  merge_sorted(const List<unsigned int> &l1, const List<unsigned int> &l2);
+  static List<unsigned int> merge_sorted_fuel(const unsigned int &fuel,
+                                              List<unsigned int> l1,
+                                              List<unsigned int> l2);
+  static List<unsigned int> merge_sorted(const List<unsigned int> &l1,
+                                         const List<unsigned int> &l2);
   /// merge_sort l sorts list using merge sort.
-  __attribute__((pure)) static List<unsigned int>
-  merge_sort_fuel(const unsigned int &fuel, List<unsigned int> l);
-  __attribute__((pure)) static List<unsigned int>
-  merge_sort(const List<unsigned int> &l);
+  static List<unsigned int> merge_sort_fuel(const unsigned int &fuel,
+                                            List<unsigned int> l);
+  static List<unsigned int> merge_sort(const List<unsigned int> &l);
   /// Helper: remove first occurrence of x from list.
-  __attribute__((pure)) static List<unsigned int>
-  remove_first(const unsigned int &x, const List<unsigned int> &l);
+  static List<unsigned int> remove_first(const unsigned int &x,
+                                         const List<unsigned int> &l);
 
   /// Helper: map function over list and concatenate results.
   template <MapsTo<List<List<unsigned int>>, unsigned int> F0>
-  __attribute__((pure)) static List<List<unsigned int>>
-  concat_map(F0 &&f, const List<unsigned int> &l) {
+  static List<List<unsigned int>> concat_map(F0 &&f,
+                                             const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
     };
@@ -371,35 +379,33 @@ struct LoopifySearch {
   }
 
   /// Helper: map function that prepends element to each list.
-  __attribute__((pure)) static List<List<unsigned int>>
+  static List<List<unsigned int>>
   map_cons(unsigned int x, const List<List<unsigned int>> &lsts);
   /// perms_choices_fuel fuel choices orig generates permutations by iterating
   /// over choices.  Single self-recursive function for full loopification.
   /// Match on remaining is hoisted out of let-binding.
-  __attribute__((pure)) static List<List<unsigned int>>
+  static List<List<unsigned int>>
   perms_choices_fuel(const unsigned int &fuel,
                      const List<unsigned int> &choices,
                      const List<unsigned int> &orig);
   /// permutations_fuel fuel l generates all permutations of list.
-  __attribute__((pure)) static List<List<unsigned int>>
+  static List<List<unsigned int>>
   permutations_fuel(const unsigned int &fuel, const List<unsigned int> &l);
-  __attribute__((pure)) static List<List<unsigned int>>
-  permutations(const List<unsigned int> &l);
+  static List<List<unsigned int>> permutations(const List<unsigned int> &l);
   /// linear_search x l finds index of first occurrence of x.
-  __attribute__((pure)) static std::optional<unsigned int>
+  static std::optional<unsigned int>
   linear_search_aux(const unsigned int &x, const List<unsigned int> &l,
                     unsigned int idx);
-  __attribute__((pure)) static std::optional<unsigned int>
-  linear_search(const unsigned int &x, const List<unsigned int> &l);
+  static std::optional<unsigned int> linear_search(const unsigned int &x,
+                                                   const List<unsigned int> &l);
   /// all_indices x l finds all indices where x occurs.
-  __attribute__((pure)) static List<unsigned int>
-  all_indices_aux(const unsigned int &x, const List<unsigned int> &l,
-                  unsigned int idx);
-  __attribute__((pure)) static List<unsigned int>
-  all_indices(const unsigned int &x, const List<unsigned int> &l);
+  static List<unsigned int> all_indices_aux(const unsigned int &x,
+                                            const List<unsigned int> &l,
+                                            unsigned int idx);
+  static List<unsigned int> all_indices(const unsigned int &x,
+                                        const List<unsigned int> &l);
   /// min_element l finds minimum element in list.
-  __attribute__((pure)) static unsigned int
-  min_element(const List<unsigned int> &l);
+  static unsigned int min_element(const List<unsigned int> &l);
 
   /// Binary tree for search operations.
   struct btree {
@@ -442,27 +448,42 @@ struct LoopifySearch {
     }
 
     // ACCESSORS
-    __attribute__((pure)) btree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<BLeaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<BLeaf>(_sv.v());
-        return btree(BLeaf{d_a0});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<BNode>(_sv.v());
-        return btree(
-            BNode{d_a0 ? std::make_unique<LoopifySearch::btree>(d_a0->clone())
-                       : nullptr,
-                  d_a1 ? std::make_unique<LoopifySearch::btree>(d_a1->clone())
-                       : nullptr});
+    btree clone() const {
+      btree _out{};
+
+      struct _CloneFrame {
+        const btree *_src;
+        btree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const btree *_src = _frame._src;
+        btree *_dst = _frame._dst;
+        if (std::holds_alternative<BLeaf>(_src->v())) {
+          const auto &_alt = std::get<BLeaf>(_src->v());
+          _dst->d_v_ = BLeaf{_alt.d_a0};
+        } else {
+          const auto &_alt = std::get<BNode>(_src->v());
+          _dst->d_v_ = BNode{_alt.d_a0 ? std::make_unique<btree>() : nullptr,
+                             _alt.d_a1 ? std::make_unique<btree>() : nullptr};
+          auto &_dst_alt = std::get<BNode>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static btree bleaf(unsigned int a0) {
-      return btree(BLeaf{std::move(a0)});
-    }
+    static btree bleaf(unsigned int a0) { return btree(BLeaf{std::move(a0)}); }
 
-    __attribute__((pure)) static btree bnode(btree a0, btree a1) {
+    static btree bnode(btree a0, btree a1) {
       return btree(BNode{std::make_unique<btree>(std::move(a0)),
                          std::make_unique<btree>(std::move(a1))});
     }
@@ -491,7 +512,7 @@ struct LoopifySearch {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -522,7 +543,7 @@ struct LoopifySearch {
 
   /// or_search p t searches tree with || recursion.
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static bool or_search(F0 &&p, const btree &t) {
+  static bool or_search(F0 &&p, const btree &t) {
     if (std::holds_alternative<typename btree::BLeaf>(t.v())) {
       const auto &[d_a0] = std::get<typename btree::BLeaf>(t.v());
       return p(d_a0);
@@ -534,7 +555,7 @@ struct LoopifySearch {
 
   /// find_indices p l finds all indices where predicate holds.
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
+  static List<unsigned int>
   find_indices_aux(F0 &&p, const List<unsigned int> &l, unsigned int idx) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
@@ -551,8 +572,7 @@ struct LoopifySearch {
   }
 
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  find_indices(F0 &&p, const List<unsigned int> &l) {
+  static List<unsigned int> find_indices(F0 &&p, const List<unsigned int> &l) {
     return find_indices_aux(p, l, 0u);
   }
 };

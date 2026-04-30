@@ -9,7 +9,6 @@
 /// current stack frame's parameter), prev (a local variable),
 /// and step itself. When build_chain returns, the stack frame
 /// is destroyed, and the returned closure holds dangling references.
-__attribute__((pure))
 std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
 FixChainBuild::build_chain(unsigned int n) {
   if (n <= 0) {

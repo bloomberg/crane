@@ -1,7 +1,6 @@
 #include <let_fix.h>
 
-__attribute__((pure)) unsigned int
-LetFix::local_sum(const List<unsigned int> &l) {
+unsigned int LetFix::local_sum(const List<unsigned int> &l) {
   std::function<unsigned int(unsigned int, List<unsigned int>)> go;
   go = [&](unsigned int acc, List<unsigned int> xs) -> unsigned int {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
@@ -15,8 +14,7 @@ LetFix::local_sum(const List<unsigned int> &l) {
   return go(0u, l);
 }
 
-__attribute__((pure)) List<unsigned int>
-LetFix::local_flatten(const List<List<unsigned int>> &xss) {
+List<unsigned int> LetFix::local_flatten(const List<List<unsigned int>> &xss) {
   if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(xss.v())) {
     return List<unsigned int>::nil();
   } else {
@@ -37,8 +35,7 @@ LetFix::local_flatten(const List<List<unsigned int>> &xss) {
   }
 }
 
-__attribute__((pure)) bool LetFix::local_mem(const unsigned int &n,
-                                             const List<unsigned int> &l) {
+bool LetFix::local_mem(const unsigned int &n, const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return false;
   } else {

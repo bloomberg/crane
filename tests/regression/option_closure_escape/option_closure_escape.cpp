@@ -1,8 +1,7 @@
 #include <option_closure_escape.h>
 
-__attribute__((pure)) unsigned int
-OptionClosureEscape::sum_values(const OptionClosureEscape::tree &t,
-                                unsigned int x) {
+unsigned int OptionClosureEscape::sum_values(const OptionClosureEscape::tree &t,
+                                             unsigned int x) {
   if (std::holds_alternative<typename OptionClosureEscape::tree::Leaf>(t.v())) {
     return x;
   } else {
@@ -31,7 +30,6 @@ OptionClosureEscape::sum_values(const OptionClosureEscape::tree &t,
 /// BUG: pair_escape stores a & lambda in a pair.
 /// The lambda captures parameter t by reference.
 /// When pair_escape returns, t is destroyed → dangling.
-__attribute__((pure))
 std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
 OptionClosureEscape::pair_escape(OptionClosureEscape::tree t) {
   return std::make_pair(
@@ -42,7 +40,6 @@ OptionClosureEscape::pair_escape(OptionClosureEscape::tree t) {
 }
 
 /// BUG: match_pair — & captures _args from visit scope.
-__attribute__((pure))
 std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
 OptionClosureEscape::match_pair(const OptionClosureEscape::tree &t) {
   if (std::holds_alternative<typename OptionClosureEscape::tree::Leaf>(t.v())) {

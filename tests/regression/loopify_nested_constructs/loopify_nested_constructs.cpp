@@ -1,7 +1,6 @@
 #include <loopify_nested_constructs.h>
 
-__attribute__((pure)) unsigned int
-LoopifyNestedConstructs::multi_let(const unsigned int &n) {
+unsigned int LoopifyNestedConstructs::multi_let(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -38,9 +37,8 @@ LoopifyNestedConstructs::multi_let(const unsigned int &n) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNestedConstructs::nested_if_fuel(const unsigned int &fuel,
-                                        const unsigned int &n) {
+unsigned int LoopifyNestedConstructs::nested_if_fuel(const unsigned int &fuel,
+                                                     const unsigned int &n) {
   unsigned int _result;
   unsigned int _loop_n = n;
   unsigned int _loop_fuel = fuel;
@@ -85,13 +83,11 @@ LoopifyNestedConstructs::nested_if_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNestedConstructs::nested_if(const unsigned int &n) {
+unsigned int LoopifyNestedConstructs::nested_if(const unsigned int &n) {
   return nested_if_fuel(n, n);
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNestedConstructs::deep_nest(const unsigned int &n) {
+unsigned int LoopifyNestedConstructs::deep_nest(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -126,8 +122,7 @@ LoopifyNestedConstructs::deep_nest(const unsigned int &n) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNestedConstructs::let_nested(const unsigned int &n) {
+unsigned int LoopifyNestedConstructs::let_nested(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -163,9 +158,8 @@ LoopifyNestedConstructs::let_nested(const unsigned int &n) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNestedConstructs::mod_pattern_fuel(const unsigned int &fuel,
-                                          const unsigned int &n) {
+unsigned int LoopifyNestedConstructs::mod_pattern_fuel(const unsigned int &fuel,
+                                                       const unsigned int &n) {
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
@@ -207,12 +201,10 @@ LoopifyNestedConstructs::mod_pattern_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNestedConstructs::mod_pattern(const unsigned int &n) {
+unsigned int LoopifyNestedConstructs::mod_pattern(const unsigned int &n) {
   return mod_pattern_fuel(n, n);
 }
 
-__attribute__((pure))
 std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
 LoopifyNestedConstructs::tuple_constr(const unsigned int &n) {
   struct _Enter {
@@ -255,8 +247,7 @@ LoopifyNestedConstructs::tuple_constr(const unsigned int &n) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNestedConstructs::alternating_ops(const unsigned int &n) {
+unsigned int LoopifyNestedConstructs::alternating_ops(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -303,9 +294,8 @@ LoopifyNestedConstructs::alternating_ops(const unsigned int &n) {
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifyNestedConstructs::chained_comp_fuel(const unsigned int &fuel,
-                                           const unsigned int &n) {
+bool LoopifyNestedConstructs::chained_comp_fuel(const unsigned int &fuel,
+                                                const unsigned int &n) {
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
@@ -358,8 +348,7 @@ LoopifyNestedConstructs::chained_comp_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNestedConstructs::chained_comp(const unsigned int &n) {
+unsigned int LoopifyNestedConstructs::chained_comp(const unsigned int &n) {
   if (chained_comp_fuel((n * 2u), n)) {
     return 1u;
   } else {
@@ -367,8 +356,7 @@ LoopifyNestedConstructs::chained_comp(const unsigned int &n) {
   }
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNestedConstructs::compute_with_lets(const unsigned int &n) {
+unsigned int LoopifyNestedConstructs::compute_with_lets(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -421,8 +409,7 @@ LoopifyNestedConstructs::compute_with_lets(const unsigned int &n) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNestedConstructs::nested_match(const unsigned int &n) {
+unsigned int LoopifyNestedConstructs::nested_match(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };

@@ -50,22 +50,39 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Nat clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<O>(_sv.v())) {
-      return Nat(O{});
-    } else {
-      const auto &[d_a0] = std::get<S>(_sv.v());
-      return Nat(S{d_a0 ? std::make_unique<Nat>(d_a0->clone()) : nullptr});
+  Nat clone() const {
+    Nat _out{};
+
+    struct _CloneFrame {
+      const Nat *_src;
+      Nat *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Nat *_src = _frame._src;
+      Nat *_dst = _frame._dst;
+      if (std::holds_alternative<O>(_src->v())) {
+        const auto &_alt = std::get<O>(_src->v());
+        _dst->d_v_ = O{};
+      } else {
+        const auto &_alt = std::get<S>(_src->v());
+        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
+        auto &_dst_alt = std::get<S>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Nat o() { return Nat(O{}); }
+  static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(Nat a0) {
-    return Nat(S{std::make_unique<Nat>(std::move(a0))});
-  }
+  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -89,7 +106,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 template <typename t_A> struct List {
@@ -130,15 +147,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -152,9 +188,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -181,10 +217,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  template <MapsTo<bool, t_A> F0>
-  __attribute__((pure)) List<t_A> filter(F0 &&f) const {
+  template <MapsTo<bool, t_A> F0> List<t_A> filter(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return List<t_A>::nil();
@@ -229,14 +264,13 @@ template <typename t_A> struct DirectedEdge {
   t_A edge_to;
 
   // ACCESSORS
-  __attribute__((pure)) DirectedEdge<t_A> clone() const {
+  DirectedEdge<t_A> clone() const {
     return DirectedEdge<t_A>{(*(this)).edge_from, (*(this)).edge_to};
   }
 };
 
 template <typename _tcI0, typename T1>
-__attribute__((pure)) bool directed_originates(const T1 a,
-                                               const DirectedEdge<T1> &e) {
+bool directed_originates(const T1 a, const DirectedEdge<T1> &e) {
   return _tcI0::eqb(e.edge_from, a);
 }
 
@@ -246,7 +280,7 @@ template <typename t_A> struct Directed {
   List<DirectedEdge<t_A>> directed_edges;
 
   // ACCESSORS
-  __attribute__((pure)) Directed<t_A> clone() const {
+  Directed<t_A> clone() const {
     return Directed<t_A>{(*(this)).directed_nodes.clone(),
                          (*(this)).directed_edges.clone()};
   }
@@ -255,30 +289,25 @@ template <typename t_A> struct Directed {
 template <typename _tcI0, typename T1> struct DirectedGraph {
   using edge = DirectedEdge<T1>;
 
-  __attribute__((pure)) static Directed<std::any> empty() {
+  static Directed<std::any> empty() {
     return Directed<std::any>{List<std::any>::nil(),
                               List<DirectedEdge<std::any>>::nil()};
   }
 
-  __attribute__((pure)) static Directed<std::any> add_node(Directed<std::any> g,
-                                                           T1 n) {
+  static Directed<std::any> add_node(Directed<std::any> g, T1 n) {
     return Directed<std::any>{List<std::any>::cons(n, g.directed_nodes),
                               g.directed_edges};
   }
 
-  __attribute__((pure)) static Directed<std::any> add_edge(Directed<std::any> g,
-                                                           DirectedEdge<T1> e) {
+  static Directed<std::any> add_edge(Directed<std::any> g, DirectedEdge<T1> e) {
     return Directed<std::any>{
         g.directed_nodes,
         List<DirectedEdge<std::any>>::cons(e, g.directed_edges)};
   }
 
-  __attribute__((pure)) static List<T1> nodes(Directed<std::any> g) {
-    return g.directed_nodes;
-  }
+  static List<T1> nodes(Directed<std::any> g) { return g.directed_nodes; }
 
-  __attribute__((pure)) static List<DirectedEdge<T1>>
-  edges(Directed<std::any> g, T1 n) {
+  static List<DirectedEdge<T1>> edges(Directed<std::any> g, T1 n) {
     return g.directed_edges.filter([=](DirectedEdge<T1> _x0) mutable -> bool {
       return directed_originates<_tcI0, T1>(n, _x0);
     });
@@ -291,14 +320,13 @@ template <typename t_A> struct UndirectedEdge {
   t_A edge_second;
 
   // ACCESSORS
-  __attribute__((pure)) UndirectedEdge<t_A> clone() const {
+  UndirectedEdge<t_A> clone() const {
     return UndirectedEdge<t_A>{(*(this)).edge_first, (*(this)).edge_second};
   }
 };
 
 template <typename _tcI0, typename T1>
-__attribute__((pure)) bool undirected_originates(const T1 a,
-                                                 const UndirectedEdge<T1> &e) {
+bool undirected_originates(const T1 a, const UndirectedEdge<T1> &e) {
   return (_tcI0::eqb(e.edge_first, a) || _tcI0::eqb(e.edge_second, a));
 }
 
@@ -307,7 +335,7 @@ template <typename t_A> struct Undirected {
   List<UndirectedEdge<t_A>> undirected_edges;
 
   // ACCESSORS
-  __attribute__((pure)) Undirected<t_A> clone() const {
+  Undirected<t_A> clone() const {
     return Undirected<t_A>{(*(this)).undirected_nodes.clone(),
                            (*(this)).undirected_edges.clone()};
   }
@@ -316,30 +344,26 @@ template <typename t_A> struct Undirected {
 template <typename _tcI0, typename T1> struct UndirectedGraph {
   using edge = UndirectedEdge<T1>;
 
-  __attribute__((pure)) static Undirected<std::any> empty() {
+  static Undirected<std::any> empty() {
     return Undirected<std::any>{List<std::any>::nil(),
                                 List<UndirectedEdge<std::any>>::nil()};
   }
 
-  __attribute__((pure)) static Undirected<std::any>
-  add_node(Undirected<std::any> g, T1 n) {
+  static Undirected<std::any> add_node(Undirected<std::any> g, T1 n) {
     return Undirected<std::any>{List<std::any>::cons(n, g.undirected_nodes),
                                 g.undirected_edges};
   }
 
-  __attribute__((pure)) static Undirected<std::any>
-  add_edge(Undirected<std::any> g, UndirectedEdge<T1> e) {
+  static Undirected<std::any> add_edge(Undirected<std::any> g,
+                                       UndirectedEdge<T1> e) {
     return Undirected<std::any>{
         g.undirected_nodes,
         List<UndirectedEdge<std::any>>::cons(e, g.undirected_edges)};
   }
 
-  __attribute__((pure)) static List<T1> nodes(Undirected<std::any> g) {
-    return g.undirected_nodes;
-  }
+  static List<T1> nodes(Undirected<std::any> g) { return g.undirected_nodes; }
 
-  __attribute__((pure)) static List<UndirectedEdge<T1>>
-  edges(Undirected<std::any> g, T1 n) {
+  static List<UndirectedEdge<T1>> edges(Undirected<std::any> g, T1 n) {
     return g.undirected_edges.filter(
         [=](UndirectedEdge<T1> _x0) mutable -> bool {
           return undirected_originates<_tcI0, T1>(n, _x0);
@@ -347,18 +371,15 @@ template <typename _tcI0, typename T1> struct UndirectedGraph {
   }
 };
 
-__attribute__((pure)) bool nat_eqb(const Nat &n, const Nat &m);
+bool nat_eqb(const Nat &n, const Nat &m);
 
 struct NatEq {
-  __attribute__((pure)) static bool eqb(Nat a0, Nat a1) {
-    return nat_eqb(a0, a1);
-  }
+  static bool eqb(Nat a0, Nat a1) { return nat_eqb(a0, a1); }
 };
 
 static_assert(Eq<NatEq, Nat>);
 
-template <typename _tcI0, typename T1>
-__attribute__((pure)) bool test_eq(const T1 x, const T1 y) {
+template <typename _tcI0, typename T1> bool test_eq(const T1 x, const T1 y) {
   return _tcI0::eqb(x, y);
 }
 

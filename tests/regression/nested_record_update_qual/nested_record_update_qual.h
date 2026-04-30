@@ -13,7 +13,7 @@ struct NestedRecordUpdateQual {
     unsigned int value;
   };
 
-  __attribute__((pure)) static Shadow bump(const Shadow &x);
+  static Shadow bump(const Shadow &x);
   static inline const Shadow t = bump(Shadow{1u});
 };
 

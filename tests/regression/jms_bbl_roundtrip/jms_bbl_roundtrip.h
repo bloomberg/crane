@@ -16,16 +16,14 @@ struct JmsBblRoundtrip {
     bool has_ret;
 
     // ACCESSORS
-    __attribute__((pure)) state clone() const {
+    state clone() const {
       return state{(*(this)).pc, (*(this)).ret, (*(this)).has_ret};
     }
   };
 
-  __attribute__((pure)) static unsigned int
-  addr12_of_nat(const unsigned int &n);
-  __attribute__((pure)) static state execute_jms(const state &s,
-                                                 const unsigned int &addr);
-  __attribute__((pure)) static state execute_bbl(state s);
+  static unsigned int addr12_of_nat(const unsigned int &n);
+  static state execute_jms(const state &s, const unsigned int &addr);
+  static state execute_bbl(state s);
   static inline const state sample = state{100u, 0u, false};
   static inline const bool t =
       execute_bbl(execute_jms(sample, 200u)).pc == 102u;

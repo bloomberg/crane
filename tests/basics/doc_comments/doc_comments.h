@@ -14,8 +14,7 @@ concept MapsTo = std::is_invocable_v<F &, Args &...>;
 struct DocComments {
   /// add computes the sum of two natural numbers n and m.
   /// It works by structural recursion on n.
-  __attribute__((pure)) static unsigned int add(const unsigned int &n,
-                                                unsigned int m);
+  static unsigned int add(const unsigned int &n, unsigned int m);
 
   /// A simple pair holding two values of possibly different types.
   template <typename t_A, typename t_B> struct pair {
@@ -25,7 +24,7 @@ struct DocComments {
     t_B snd;
 
     // ACCESSORS
-    __attribute__((pure)) pair<t_A, t_B> clone() const {
+    pair<t_A, t_B> clone() const {
       return pair<t_A, t_B>{(*(this)).fst, (*(this)).snd};
     }
   }; /// mylist is a polymorphic list type.
@@ -70,17 +69,34 @@ struct DocComments {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mylist<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Mynil>(_sv.v())) {
-        return mylist<t_A>(Mynil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
-        return mylist<t_A>(Mycons{
-            d_a0,
-            d_a1 ? std::make_unique<DocComments::mylist<t_A>>(d_a1->clone())
-                 : nullptr});
+    mylist clone() const {
+      mylist _out{};
+
+      struct _CloneFrame {
+        const mylist *_src;
+        mylist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist *_src = _frame._src;
+        mylist *_dst = _frame._dst;
+        if (std::holds_alternative<Mynil>(_src->v())) {
+          const auto &_alt = std::get<Mynil>(_src->v());
+          _dst->d_v_ = Mynil{};
+        } else {
+          const auto &_alt = std::get<Mycons>(_src->v());
+          _dst->d_v_ = Mycons{_alt.d_a0,
+                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -95,9 +111,9 @@ struct DocComments {
       }
     }
 
-    __attribute__((pure)) static mylist<t_A> mynil() { return mylist(Mynil{}); }
+    static mylist<t_A> mynil() { return mylist(Mynil{}); }
 
-    __attribute__((pure)) static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+    static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
       return mylist(
           Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
@@ -124,7 +140,7 @@ struct DocComments {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1, mylist<T1>, T2> F1>
@@ -147,13 +163,13 @@ struct DocComments {
     }
   }
 
-  __attribute__((pure)) static unsigned int no_doc_comment(unsigned int x);
+  static unsigned int no_doc_comment(unsigned int x);
 
   /// The identity function: returns its argument unchanged.
   template <typename T1> static T1 identity(const T1 x) { return x; }
 
   /// double n returns 2 * n.
-  __attribute__((pure)) static unsigned int double_(const unsigned int &n);
+  static unsigned int double_(const unsigned int &n);
   /// A simple color enumeration.
   enum class Color {
     /// Red color.

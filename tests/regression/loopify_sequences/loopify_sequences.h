@@ -50,15 +50,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -72,9 +91,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -101,9 +120,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) unsigned int length() const {
+  unsigned int length() const {
     const List *_self = this;
 
     struct _Enter {
@@ -140,7 +159,7 @@ public:
     return _result;
   }
 
-  __attribute__((pure)) List<t_A> app(List<t_A> m) const {
+  List<t_A> app(List<t_A> m) const {
     std::unique_ptr<List<t_A>> _head{};
     std::unique_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
@@ -169,14 +188,13 @@ public:
 
 struct LoopifySequences {
   /// alternate_sum sign acc l alternating sum with sign flip.
-  __attribute__((pure)) static unsigned int
-  alternate_sum(const unsigned int &sign, unsigned int acc,
-                const List<unsigned int> &l);
+  static unsigned int alternate_sum(const unsigned int &sign, unsigned int acc,
+                                    const List<unsigned int> &l);
 
   /// intercalate sep lists inserts sep between lists and flattens.
   template <typename T1>
-  __attribute__((pure)) static List<T1>
-  intercalate(const List<T1> &sep, const List<List<T1>> &lists) {
+  static List<T1> intercalate(const List<T1> &sep,
+                              const List<List<T1>> &lists) {
     struct _Enter {
       const List<List<T1>> *lists;
     };
@@ -220,8 +238,7 @@ struct LoopifySequences {
 
   /// join_with sep l joins list elements with separator.
   template <typename T1>
-  __attribute__((pure)) static List<T1> join_with(const T1 sep,
-                                                  const List<T1> &l) {
+  static List<T1> join_with(const T1 sep, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return List<T1>::nil();
     } else {
@@ -267,8 +284,8 @@ struct LoopifySequences {
   } /// transpose l transposes a list of lists.
 
   template <typename T1>
-  __attribute__((pure)) static List<List<T1>>
-  transpose_fuel(const unsigned int &fuel, const List<List<T1>> &ll) {
+  static List<List<T1>> transpose_fuel(const unsigned int &fuel,
+                                       const List<List<T1>> &ll) {
     std::unique_ptr<List<List<T1>>> _head{};
     std::unique_ptr<List<List<T1>>> *_write = &_head;
     List<List<T1>> _loop_ll = ll;
@@ -406,32 +423,29 @@ struct LoopifySequences {
   }
 
   template <typename T1>
-  __attribute__((pure)) static List<List<T1>>
-  transpose(const List<List<T1>> &ll) {
+  static List<List<T1>> transpose(const List<List<T1>> &ll) {
     return transpose_fuel<T1>(100u, ll);
   }
 
   /// collatz_list n generates collatz sequence.
-  __attribute__((pure)) static List<unsigned int>
-  collatz_list_fuel(const unsigned int &fuel, unsigned int n);
-  __attribute__((pure)) static List<unsigned int>
-  collatz_list(const unsigned int &n);
+  static List<unsigned int> collatz_list_fuel(const unsigned int &fuel,
+                                              unsigned int n);
+  static List<unsigned int> collatz_list(const unsigned int &n);
   /// run_sum l running sum (scanl for addition).
-  __attribute__((pure)) static List<unsigned int>
-  run_sum_aux(const unsigned int &acc, const List<unsigned int> &l);
-  __attribute__((pure)) static List<unsigned int>
-  run_sum(const List<unsigned int> &l);
+  static List<unsigned int> run_sum_aux(const unsigned int &acc,
+                                        const List<unsigned int> &l);
+  static List<unsigned int> run_sum(const List<unsigned int> &l);
   /// rotate_left n l rotates list left by n positions.
-  __attribute__((pure)) static List<unsigned int>
-  rotate_left_fuel(const unsigned int &fuel, const unsigned int &n,
-                   List<unsigned int> l);
-  __attribute__((pure)) static List<unsigned int>
-  rotate_left(const unsigned int &n, const List<unsigned int> &l);
+  static List<unsigned int> rotate_left_fuel(const unsigned int &fuel,
+                                             const unsigned int &n,
+                                             List<unsigned int> l);
+  static List<unsigned int> rotate_left(const unsigned int &n,
+                                        const List<unsigned int> &l);
 
   /// iterate f n x generates x, f x, f (f x), ... of length n.
   template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  iterate(F0 &&f, const unsigned int &n, unsigned int x) {
+  static List<unsigned int> iterate(F0 &&f, const unsigned int &n,
+                                    unsigned int x) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
     unsigned int _loop_x = std::move(x);
@@ -460,73 +474,65 @@ struct LoopifySequences {
   }
 
   /// sum_acc acc l sum with accumulator.
-  __attribute__((pure)) static unsigned int
-  sum_acc(unsigned int acc, const List<unsigned int> &l);
+  static unsigned int sum_acc(unsigned int acc, const List<unsigned int> &l);
   /// repeat_string s n repeats string n times (using list as string).
-  __attribute__((pure)) static List<unsigned int>
-  repeat_string(const List<unsigned int> &s, const unsigned int &n);
+  static List<unsigned int> repeat_string(const List<unsigned int> &s,
+                                          const unsigned int &n);
   /// repeat_with_sep s sep n repeats with separator.
-  __attribute__((pure)) static List<unsigned int>
-  repeat_with_sep(List<unsigned int> s, const List<unsigned int> &sep,
-                  const unsigned int &n);
+  static List<unsigned int> repeat_with_sep(List<unsigned int> s,
+                                            const List<unsigned int> &sep,
+                                            const unsigned int &n);
   /// string_chain s n recursive string chain: s-chain(s, n-1)-end.
-  __attribute__((pure)) static List<unsigned int>
+  static List<unsigned int>
   string_chain_fuel(const unsigned int &fuel, const List<unsigned int> &s,
                     const unsigned int &n, const List<unsigned int> &sep,
                     const List<unsigned int> &end_marker);
-  __attribute__((pure)) static List<unsigned int>
-  string_chain(const List<unsigned int> &s, const unsigned int &n,
-               const List<unsigned int> &sep,
-               const List<unsigned int> &end_marker);
+  static List<unsigned int> string_chain(const List<unsigned int> &s,
+                                         const unsigned int &n,
+                                         const List<unsigned int> &sep,
+                                         const List<unsigned int> &end_marker);
   /// split_by_sign l base pos neg splits list based on base threshold.
-  __attribute__((pure)) static std::pair<List<unsigned int>, List<unsigned int>>
+  static std::pair<List<unsigned int>, List<unsigned int>>
   split_by_sign(const List<unsigned int> &l, const unsigned int &base,
                 List<unsigned int> pos, List<unsigned int> neg);
   /// differences l computes differences between consecutive elements.
-  __attribute__((pure)) static List<unsigned int>
-  differences(const List<unsigned int> &l);
+  static List<unsigned int> differences(const List<unsigned int> &l);
   /// replace_at idx value l replaces element at index with value.
-  __attribute__((pure)) static List<unsigned int>
-  replace_at(const unsigned int &idx, unsigned int value,
-             const List<unsigned int> &l);
+  static List<unsigned int> replace_at(const unsigned int &idx,
+                                       unsigned int value,
+                                       const List<unsigned int> &l);
   /// cycle n l repeats list n times.
-  __attribute__((pure)) static List<unsigned int>
-  cycle(const unsigned int &n, const List<unsigned int> &l);
+  static List<unsigned int> cycle(const unsigned int &n,
+                                  const List<unsigned int> &l);
   /// Helper: get first element.
-  __attribute__((pure)) static unsigned int
-  first_elem(const List<unsigned int> &l);
+  static unsigned int first_elem(const List<unsigned int> &l);
   /// Helper: get last element.
-  __attribute__((pure)) static unsigned int
-  last_elem(const List<unsigned int> &l);
+  static unsigned int last_elem(const List<unsigned int> &l);
   /// Helper: remove first element.
-  __attribute__((pure)) static List<unsigned int>
-  tail_list(const List<unsigned int> &l);
+  static List<unsigned int> tail_list(const List<unsigned int> &l);
   /// Helper: remove last element.
-  __attribute__((pure)) static List<unsigned int>
-  init_list(const List<unsigned int> &l);
+  static List<unsigned int> init_list(const List<unsigned int> &l);
   /// is_palindrome s checks if list is a palindrome.
-  __attribute__((pure)) static bool
-  is_palindrome_fuel(const unsigned int &fuel, const List<unsigned int> &s);
-  __attribute__((pure)) static bool is_palindrome(const List<unsigned int> &s);
+  static bool is_palindrome_fuel(const unsigned int &fuel,
+                                 const List<unsigned int> &s);
+  static bool is_palindrome(const List<unsigned int> &s);
   /// string_subsequences s generates all subsequences treating list as string.
-  __attribute__((pure)) static List<List<unsigned int>>
+  static List<List<unsigned int>>
   string_subsequences(const List<unsigned int> &s);
   /// run_length_groups l groups consecutive runs into sublist lengths.
-  __attribute__((pure)) static List<unsigned int>
-  run_length_groups_aux(const unsigned int &prev, unsigned int count,
-                        const List<unsigned int> &l);
-  __attribute__((pure)) static List<unsigned int>
-  run_length_groups(const List<unsigned int> &l);
+  static List<unsigned int> run_length_groups_aux(const unsigned int &prev,
+                                                  unsigned int count,
+                                                  const List<unsigned int> &l);
+  static List<unsigned int> run_length_groups(const List<unsigned int> &l);
   /// is_prefix_of l1 l2 checks if l1 is a prefix of l2.
-  __attribute__((pure)) static bool is_prefix_of(const List<unsigned int> &l1,
-                                                 const List<unsigned int> &l2);
+  static bool is_prefix_of(const List<unsigned int> &l1,
+                           const List<unsigned int> &l2);
   /// lis l longest increasing subsequence (greedy, not optimal).
-  __attribute__((pure)) static List<unsigned int> lis(List<unsigned int> l);
+  static List<unsigned int> lis(List<unsigned int> l);
 
   /// take_while p l takes elements while predicate holds.
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  take_while(F0 &&p, const List<unsigned int> &l) {
+  static List<unsigned int> take_while(F0 &&p, const List<unsigned int> &l) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
     const List<unsigned int> *_loop_l = &l;
@@ -560,8 +566,7 @@ struct LoopifySequences {
 
   /// drop_while p l drops elements while predicate holds.
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  drop_while(F0 &&p, const List<unsigned int> &l) {
+  static List<unsigned int> drop_while(F0 &&p, const List<unsigned int> &l) {
     List<unsigned int> _result;
     const List<unsigned int> *_loop_l = &l;
     while (true) {
@@ -584,32 +589,27 @@ struct LoopifySequences {
   }
 
   /// Helper: check if element is in list.
-  __attribute__((pure)) static bool elem(const unsigned int &x,
-                                         const List<unsigned int> &l);
+  static bool elem(const unsigned int &x, const List<unsigned int> &l);
   /// Helper: filter list.
-  __attribute__((pure)) static List<unsigned int>
-  filter_ne(const unsigned int &x, const List<unsigned int> &l);
+  static List<unsigned int> filter_ne(const unsigned int &x,
+                                      const List<unsigned int> &l);
   /// nub l removes duplicates from list.
-  __attribute__((pure)) static List<unsigned int>
-  nub_fuel(const unsigned int &fuel, const List<unsigned int> &l);
-  __attribute__((pure)) static List<unsigned int>
-  nub(const List<unsigned int> &l);
+  static List<unsigned int> nub_fuel(const unsigned int &fuel,
+                                     const List<unsigned int> &l);
+  static List<unsigned int> nub(const List<unsigned int> &l);
   /// group l groups consecutive equal elements.
-  __attribute__((pure)) static List<List<unsigned int>>
-  group_fuel(const unsigned int &fuel, const List<unsigned int> &l);
-  __attribute__((pure)) static List<List<unsigned int>>
-  group(const List<unsigned int> &l);
+  static List<List<unsigned int>> group_fuel(const unsigned int &fuel,
+                                             const List<unsigned int> &l);
+  static List<List<unsigned int>> group(const List<unsigned int> &l);
   /// Helper: get head with default.
-  __attribute__((pure)) static unsigned int
-  head_or(unsigned int default0, const List<unsigned int> &l);
+  static unsigned int head_or(unsigned int default0,
+                              const List<unsigned int> &l);
   /// remove_if_sum_even l removes elements where sum with next is even.
-  __attribute__((pure)) static List<unsigned int>
-  remove_if_sum_even(const List<unsigned int> &l);
+  static List<unsigned int> remove_if_sum_even(const List<unsigned int> &l);
 
   /// bool_all p l checks if all elements satisfy predicate (forall with &&).
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static bool bool_all(F0 &&p,
-                                             const List<unsigned int> &l) {
+  static bool bool_all(F0 &&p, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
     };
@@ -646,14 +646,14 @@ struct LoopifySequences {
   }
 
   /// run_length_encode l encodes consecutive runs: 1,1,2,2,2 -> (1,2),(2,3).
-  __attribute__((pure)) static List<std::pair<unsigned int, unsigned int>>
+  static List<std::pair<unsigned int, unsigned int>>
   run_length_encode_fuel(const unsigned int &fuel, const List<unsigned int> &l);
-  __attribute__((pure)) static List<std::pair<unsigned int, unsigned int>>
+  static List<std::pair<unsigned int, unsigned int>>
   run_length_encode(const List<unsigned int> &l);
   /// between lo hi l filters elements in range lo, hi.
-  __attribute__((pure)) static List<unsigned int>
-  between(const unsigned int &lo, const unsigned int &hi,
-          const List<unsigned int> &l);
+  static List<unsigned int> between(const unsigned int &lo,
+                                    const unsigned int &hi,
+                                    const List<unsigned int> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_SEQUENCES

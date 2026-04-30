@@ -2,8 +2,7 @@
 
 /// Complex control flow and pattern matching edge cases.
 /// multi_let n multiple sequential let bindings before recursion.
-__attribute__((pure)) unsigned int
-LoopifyPatterns::multi_let(const unsigned int &n) {
+unsigned int LoopifyPatterns::multi_let(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -41,9 +40,8 @@ LoopifyPatterns::multi_let(const unsigned int &n) {
 }
 
 /// nested_if n deeply nested if-then-else with recursion at different depths.
-__attribute__((pure)) unsigned int
-LoopifyPatterns::nested_if_fuel(const unsigned int &fuel,
-                                const unsigned int &n) {
+unsigned int LoopifyPatterns::nested_if_fuel(const unsigned int &fuel,
+                                             const unsigned int &n) {
   unsigned int _result;
   unsigned int _loop_n = n;
   unsigned int _loop_fuel = fuel;
@@ -89,14 +87,12 @@ LoopifyPatterns::nested_if_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyPatterns::nested_if(const unsigned int &n) {
+unsigned int LoopifyPatterns::nested_if(const unsigned int &n) {
   return nested_if_fuel(1000u, n);
 }
 
 /// deep_nest n deeply nested function application.
-__attribute__((pure)) unsigned int
-LoopifyPatterns::deep_nest(const unsigned int &n) {
+unsigned int LoopifyPatterns::deep_nest(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -134,10 +130,9 @@ LoopifyPatterns::deep_nest(const unsigned int &n) {
 }
 
 /// bool_chain n target multiple recursive calls in || chain.
-__attribute__((pure)) bool
-LoopifyPatterns::bool_chain_fuel(const unsigned int &fuel,
-                                 const unsigned int &n,
-                                 const unsigned int &target) {
+bool LoopifyPatterns::bool_chain_fuel(const unsigned int &fuel,
+                                      const unsigned int &n,
+                                      const unsigned int &target) {
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
@@ -198,14 +193,13 @@ LoopifyPatterns::bool_chain_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifyPatterns::bool_chain(const unsigned int &n, const unsigned int &target) {
+bool LoopifyPatterns::bool_chain(const unsigned int &n,
+                                 const unsigned int &target) {
   return bool_chain_fuel(1000u, n, target);
 }
 
 /// chained_comp n boolean result with double recursion.
-__attribute__((pure)) bool
-LoopifyPatterns::chained_comp(const unsigned int &n) {
+bool LoopifyPatterns::chained_comp(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -254,7 +248,6 @@ LoopifyPatterns::chained_comp(const unsigned int &n) {
 }
 
 /// tuple_constr n recursive calls in multiple tuple positions.
-__attribute__((pure))
 std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
 LoopifyPatterns::tuple_constr(const unsigned int &n) {
   struct _Enter {
@@ -297,7 +290,6 @@ LoopifyPatterns::tuple_constr(const unsigned int &n) {
 }
 
 /// sum_prod_count l a_sum a_prod a_count multiple accumulator updates.
-__attribute__((pure))
 std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
 LoopifyPatterns::sum_prod_count(const LoopifyPatterns::list<unsigned int> &l,
                                 unsigned int a_sum, unsigned int a_prod,
@@ -331,8 +323,8 @@ LoopifyPatterns::sum_prod_count(const LoopifyPatterns::list<unsigned int> &l,
 }
 
 /// split_by_sign l pos neg partition with dual accumulators.
-__attribute__((pure)) std::pair<LoopifyPatterns::list<unsigned int>,
-                                LoopifyPatterns::list<unsigned int>>
+std::pair<LoopifyPatterns::list<unsigned int>,
+          LoopifyPatterns::list<unsigned int>>
 LoopifyPatterns::split_by_sign_aux(const LoopifyPatterns::list<unsigned int> &l,
                                    const unsigned int &base,
                                    LoopifyPatterns::list<unsigned int> pos,
@@ -374,8 +366,8 @@ LoopifyPatterns::split_by_sign_aux(const LoopifyPatterns::list<unsigned int> &l,
   return _result;
 }
 
-__attribute__((pure)) std::pair<LoopifyPatterns::list<unsigned int>,
-                                LoopifyPatterns::list<unsigned int>>
+std::pair<LoopifyPatterns::list<unsigned int>,
+          LoopifyPatterns::list<unsigned int>>
 LoopifyPatterns::split_by_sign(const LoopifyPatterns::list<unsigned int> &l,
                                const unsigned int &base) {
   return split_by_sign_aux(l, base, list<unsigned int>::nil(),
@@ -383,7 +375,7 @@ LoopifyPatterns::split_by_sign(const LoopifyPatterns::list<unsigned int> &l,
 }
 
 /// guard_accum acc l multiple when-style guards with different logic.
-__attribute__((pure)) unsigned int
+unsigned int
 LoopifyPatterns::guard_accum(unsigned int acc,
                              const LoopifyPatterns::list<unsigned int> &l) {
   unsigned int _result;
@@ -426,7 +418,7 @@ LoopifyPatterns::guard_accum(unsigned int acc,
 }
 
 /// cons_computed n l cons with conditional parameter change.
-__attribute__((pure)) LoopifyPatterns::list<unsigned int>
+LoopifyPatterns::list<unsigned int>
 LoopifyPatterns::cons_computed(const unsigned int &n,
                                const LoopifyPatterns::list<unsigned int> &l) {
   std::unique_ptr<LoopifyPatterns::list<unsigned int>> _head{};
@@ -465,8 +457,7 @@ LoopifyPatterns::cons_computed(const unsigned int &n,
 }
 
 /// mod_pattern n recursive call in mod expression.
-__attribute__((pure)) unsigned int
-LoopifyPatterns::mod_pattern(const unsigned int &n) {
+unsigned int LoopifyPatterns::mod_pattern(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -507,8 +498,7 @@ LoopifyPatterns::mod_pattern(const unsigned int &n) {
 }
 
 /// alternating_ops n alternating operations based on modulo.
-__attribute__((pure)) unsigned int
-LoopifyPatterns::alternating_ops(const unsigned int &n) {
+unsigned int LoopifyPatterns::alternating_ops(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -556,7 +546,7 @@ LoopifyPatterns::alternating_ops(const unsigned int &n) {
 }
 
 /// replace_at idx value l replace element at index.
-__attribute__((pure)) LoopifyPatterns::list<unsigned int>
+LoopifyPatterns::list<unsigned int>
 LoopifyPatterns::replace_at(const unsigned int &idx, unsigned int value,
                             const LoopifyPatterns::list<unsigned int> &l) {
   std::unique_ptr<LoopifyPatterns::list<unsigned int>> _head{};
@@ -597,7 +587,7 @@ LoopifyPatterns::replace_at(const unsigned int &idx, unsigned int value,
 }
 
 /// nested_pattern l three-element tuple pattern.
-__attribute__((pure)) unsigned int LoopifyPatterns::nested_pattern(
+unsigned int LoopifyPatterns::nested_pattern(
     const LoopifyPatterns::list<
         std::pair<std::pair<unsigned int, unsigned int>, unsigned int>> &l) {
   struct _Enter {
@@ -649,8 +639,7 @@ __attribute__((pure)) unsigned int LoopifyPatterns::nested_pattern(
 }
 
 /// let_nested n let with nested let in binding.
-__attribute__((pure)) unsigned int
-LoopifyPatterns::let_nested(const unsigned int &n) {
+unsigned int LoopifyPatterns::let_nested(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -687,7 +676,7 @@ LoopifyPatterns::let_nested(const unsigned int &n) {
 }
 
 /// Helper: list length.
-__attribute__((pure)) unsigned int
+unsigned int
 LoopifyPatterns::list_len(const LoopifyPatterns::list<unsigned int> &l) {
   struct _Enter {
     const LoopifyPatterns::list<unsigned int> *l;
@@ -724,7 +713,7 @@ LoopifyPatterns::list_len(const LoopifyPatterns::list<unsigned int> &l) {
 }
 
 /// process_twice l applies recursion twice: process(process(xs)).
-__attribute__((pure)) LoopifyPatterns::list<unsigned int>
+LoopifyPatterns::list<unsigned int>
 LoopifyPatterns::process_twice_fuel(const unsigned int &fuel,
                                     LoopifyPatterns::list<unsigned int> l) {
   struct _Enter {
@@ -785,13 +774,13 @@ LoopifyPatterns::process_twice_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) LoopifyPatterns::list<unsigned int>
+LoopifyPatterns::list<unsigned int>
 LoopifyPatterns::process_twice(const LoopifyPatterns::list<unsigned int> &l) {
   return process_twice_fuel(100u, l);
 }
 
 /// as_guard l uses as-pattern with guard (length check).
-__attribute__((pure)) LoopifyPatterns::list<unsigned int>
+LoopifyPatterns::list<unsigned int>
 LoopifyPatterns::as_guard_fuel(const unsigned int &fuel,
                                const LoopifyPatterns::list<unsigned int> &l) {
   std::unique_ptr<LoopifyPatterns::list<unsigned int>> _head{};
@@ -842,13 +831,13 @@ LoopifyPatterns::as_guard_fuel(const unsigned int &fuel,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) LoopifyPatterns::list<unsigned int>
+LoopifyPatterns::list<unsigned int>
 LoopifyPatterns::as_guard(const LoopifyPatterns::list<unsigned int> &l) {
   return as_guard_fuel(100u, l);
 }
 
 /// quad_sum_pattern l pattern with 4-way split.
-__attribute__((pure)) unsigned int LoopifyPatterns::quad_sum_pattern(
+unsigned int LoopifyPatterns::quad_sum_pattern(
     const LoopifyPatterns::list<unsigned int> &l) {
   struct _Enter {
     const LoopifyPatterns::list<unsigned int> *l;
@@ -919,7 +908,7 @@ __attribute__((pure)) unsigned int LoopifyPatterns::quad_sum_pattern(
 }
 
 /// multi_guard l demonstrates pattern with multiple conditional branches.
-__attribute__((pure)) unsigned int
+unsigned int
 LoopifyPatterns::multi_guard(const LoopifyPatterns::list<unsigned int> &l) {
   struct _Enter {
     const LoopifyPatterns::list<unsigned int> *l;
@@ -968,7 +957,7 @@ LoopifyPatterns::multi_guard(const LoopifyPatterns::list<unsigned int> &l) {
 }
 
 /// Internal helper for double_append.
-__attribute__((pure)) LoopifyPatterns::list<unsigned int>
+LoopifyPatterns::list<unsigned int>
 LoopifyPatterns::append_lists(const LoopifyPatterns::list<unsigned int> &l1,
                               LoopifyPatterns::list<unsigned int> l2) {
   std::unique_ptr<LoopifyPatterns::list<unsigned int>> _head{};
@@ -1001,7 +990,7 @@ LoopifyPatterns::append_lists(const LoopifyPatterns::list<unsigned int> &l1,
 }
 
 /// double_append l1 l2 uses recursive result twice: h :: (rest @ rest).
-__attribute__((pure)) LoopifyPatterns::list<unsigned int>
+LoopifyPatterns::list<unsigned int>
 LoopifyPatterns::double_append(const LoopifyPatterns::list<unsigned int> &l1,
                                LoopifyPatterns::list<unsigned int> l2) {
   struct _Enter {
@@ -1046,7 +1035,7 @@ LoopifyPatterns::double_append(const LoopifyPatterns::list<unsigned int> &l1,
 }
 
 /// process_twice_alt l applies transformation twice on recursive result.
-__attribute__((pure)) LoopifyPatterns::list<unsigned int>
+LoopifyPatterns::list<unsigned int>
 LoopifyPatterns::process_twice_alt_fuel(const unsigned int &fuel,
                                         LoopifyPatterns::list<unsigned int> l) {
   struct _Enter {
@@ -1107,14 +1096,13 @@ LoopifyPatterns::process_twice_alt_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) LoopifyPatterns::list<unsigned int>
-LoopifyPatterns::process_twice_alt(
+LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_alt(
     const LoopifyPatterns::list<unsigned int> &l) {
   return process_twice_alt_fuel(100u, l);
 }
 
 /// sum_if_positive_else_double l conditional logic on each element.
-__attribute__((pure)) unsigned int LoopifyPatterns::sum_if_positive_else_double(
+unsigned int LoopifyPatterns::sum_if_positive_else_double(
     const LoopifyPatterns::list<unsigned int> &l) {
   struct _Enter {
     const LoopifyPatterns::list<unsigned int> *l;
@@ -1159,7 +1147,7 @@ __attribute__((pure)) unsigned int LoopifyPatterns::sum_if_positive_else_double(
 }
 
 /// merge_alternating l1 l2 merges two lists by alternating elements.
-__attribute__((pure)) LoopifyPatterns::list<unsigned int>
+LoopifyPatterns::list<unsigned int>
 LoopifyPatterns::merge_alternating(LoopifyPatterns::list<unsigned int> l1,
                                    LoopifyPatterns::list<unsigned int> l2) {
   std::unique_ptr<LoopifyPatterns::list<unsigned int>> _head{};
@@ -1211,7 +1199,7 @@ LoopifyPatterns::merge_alternating(LoopifyPatterns::list<unsigned int> l1,
 }
 
 /// four_elem l four-element destructuring pattern with fallback cases.
-__attribute__((pure)) unsigned int
+unsigned int
 LoopifyPatterns::four_elem(const LoopifyPatterns::list<unsigned int> &l) {
   struct _Enter {
     const LoopifyPatterns::list<unsigned int> *l;

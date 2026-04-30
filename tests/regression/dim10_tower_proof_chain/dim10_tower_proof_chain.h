@@ -47,7 +47,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) SigT<t_A, t_P> clone() const {
+  SigT<t_A, t_P> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
     return SigT<t_A, t_P>(ExistT{d_x, d_a1});
@@ -61,7 +61,7 @@ public:
     d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
   }
 
-  __attribute__((pure)) static SigT<t_A, t_P> existt(t_A x, t_P a1) {
+  static SigT<t_A, t_P> existt(t_A x, t_P a1) {
     return SigT(ExistT{std::move(x), std::move(a1)});
   }
 
@@ -69,7 +69,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Dim10TowerProofChainCase {
@@ -83,13 +83,13 @@ struct Dim10TowerProofChainCase {
     unsigned int qpos_denom_pred;
 
     // ACCESSORS
-    __attribute__((pure)) QPos clone() const {
+    QPos clone() const {
       return QPos{(*(this)).qpos_num, (*(this)).qpos_denom_pred};
     }
   };
 
-  __attribute__((pure)) static unsigned int qpos_denom(const QPos &q);
-  __attribute__((pure)) static QPos nat_to_qpos(unsigned int n);
+  static unsigned int qpos_denom(const QPos &q);
+  static QPos nat_to_qpos(unsigned int n);
   using EventuallyZero = SigT<unsigned int, std::any>;
   using IsIntegerValued = std::any;
 
@@ -97,48 +97,39 @@ struct Dim10TowerProofChainCase {
     unsigned int go_dim;
 
     // ACCESSORS
-    __attribute__((pure)) GradedObj clone() const {
-      return GradedObj{(*(this)).go_dim};
-    }
+    GradedObj clone() const { return GradedObj{(*(this)).go_dim}; }
   };
 
   static inline const GradedObj go_zero = GradedObj{0u};
-  __attribute__((pure)) static unsigned int nat_sub(const unsigned int &n,
-                                                    const unsigned int &m);
-  __attribute__((pure)) static unsigned int
-  poly_approx_dim(const unsigned int &_x0, const unsigned int &_x1);
-  __attribute__((pure)) static unsigned int
-  layer_dim(const unsigned int &base_dim, unsigned int n);
-  __attribute__((pure)) static GradedObj layer_obj(const unsigned int &base_dim,
-                                                   const unsigned int &n);
-  __attribute__((pure)) static QPos layer_measure(const unsigned int &base_dim,
-                                                  const unsigned int &n);
-  __attribute__((pure)) static EventuallyZero
-  layer_measure_eventually_zero(unsigned int base_dim);
-  __attribute__((pure)) static GradedObj P_n_obj(const unsigned int &n,
-                                                 const GradedObj &x);
-  __attribute__((pure)) static GradedObj D_n_obj(const unsigned int &_x0,
-                                                 const unsigned int &_x1);
-  __attribute__((pure)) static QPos D_n_measure(const unsigned int &_x0,
-                                                const unsigned int &_x1);
-  __attribute__((pure)) static EventuallyZero
-  D_n_measure_eventually_zero(const unsigned int &_x0);
+  static unsigned int nat_sub(const unsigned int &n, const unsigned int &m);
+  static unsigned int poly_approx_dim(const unsigned int &_x0,
+                                      const unsigned int &_x1);
+  static unsigned int layer_dim(const unsigned int &base_dim, unsigned int n);
+  static GradedObj layer_obj(const unsigned int &base_dim,
+                             const unsigned int &n);
+  static QPos layer_measure(const unsigned int &base_dim,
+                            const unsigned int &n);
+  static EventuallyZero layer_measure_eventually_zero(unsigned int base_dim);
+  static GradedObj P_n_obj(const unsigned int &n, const GradedObj &x);
+  static GradedObj D_n_obj(const unsigned int &_x0, const unsigned int &_x1);
+  static QPos D_n_measure(const unsigned int &_x0, const unsigned int &_x1);
+  static EventuallyZero D_n_measure_eventually_zero(const unsigned int &_x0);
 
   struct GradedGoodwillieTower {
     std::function<GradedObj(unsigned int)> ggt_P;
     std::function<GradedObj(unsigned int)> ggt_D;
 
     // ACCESSORS
-    __attribute__((pure)) GradedGoodwillieTower clone() const {
+    GradedGoodwillieTower clone() const {
       return GradedGoodwillieTower{(*(this)).ggt_P, (*(this)).ggt_D};
     }
   };
 
-  __attribute__((pure)) static GradedGoodwillieTower
+  static GradedGoodwillieTower
   make_graded_goodwillie_tower(unsigned int base_dim);
-  __attribute__((pure)) static SigT<unsigned int, std::any>
+  static SigT<unsigned int, std::any>
   graded_goodwillie_layers_stabilize(const unsigned int &base_dim);
-  __attribute__((pure)) static SigT<unsigned int, std::any>
+  static SigT<unsigned int, std::any>
   graded_goodwillie_P_stabilizes(unsigned int base_dim);
   static inline const GradedGoodwillieTower dim10_tower =
       make_graded_goodwillie_tower(10u);
@@ -156,10 +147,9 @@ struct Dim10TowerProofChainCase {
         std::get<typename SigT<unsigned int, std::any>::ExistT>(s.v_mut());
     return SigT<unsigned int, std::any>::existt(d_x, std::any{});
   }();
-  __attribute__((pure)) static std::pair<
-      std::pair<std::pair<IsIntegerValued, EventuallyZero>,
-                SigT<unsigned int, std::any>>,
-      SigT<unsigned int, std::any>>
+  static std::pair<std::pair<std::pair<IsIntegerValued, EventuallyZero>,
+                             SigT<unsigned int, std::any>>,
+                   SigT<unsigned int, std::any>>
   graded_complete_proof_chain(const unsigned int &base_dim);
 
   struct GoodwillieProofChain {
@@ -168,14 +158,14 @@ struct Dim10TowerProofChainCase {
     SigT<unsigned int, std::any> gc_P_stabilize;
 
     // ACCESSORS
-    __attribute__((pure)) GoodwillieProofChain clone() const {
+    GoodwillieProofChain clone() const {
       return GoodwillieProofChain{(*(this)).gc_eventually_zero,
                                   (*(this)).gc_layers_stabilize.clone(),
                                   (*(this)).gc_P_stabilize.clone()};
     }
   };
 
-  __attribute__((pure)) static GoodwillieProofChain
+  static GoodwillieProofChain
   make_goodwillie_proof_chain(const unsigned int &base_dim);
   static inline const GoodwillieProofChain dim10_chain =
       make_goodwillie_proof_chain(10u);
@@ -190,7 +180,7 @@ struct Dim10TowerProofChainCase {
     GoodwillieProofChain dt_chain;
 
     // ACCESSORS
-    __attribute__((pure)) Dim10Bundle clone() const {
+    Dim10Bundle clone() const {
       return Dim10Bundle{(*(this)).dt_tower.clone(),
                          (*(this)).dt_chain.clone()};
     }

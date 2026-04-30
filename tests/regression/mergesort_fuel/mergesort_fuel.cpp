@@ -1,7 +1,7 @@
 #include <mergesort_fuel.h>
 
 /// * Split
-__attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
+std::pair<List<unsigned int>, List<unsigned int>>
 MergesortFuel::split(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return std::make_pair(List<unsigned int>::nil(), List<unsigned int>::nil());
@@ -23,11 +23,10 @@ MergesortFuel::split(const List<unsigned int> &l) {
                             List<unsigned int>::cons(d_a00, l2));
     }
   }
-}
+} /// * Merge
 
-/// * Merge
-__attribute__((pure)) List<unsigned int>
-MergesortFuel::merge(List<unsigned int> l1, const List<unsigned int> &l2) {
+List<unsigned int> MergesortFuel::merge(List<unsigned int> l1,
+                                        const List<unsigned int> &l2) {
   std::function<List<unsigned int>(List<unsigned int>)> merge_aux;
   merge_aux = [&](List<unsigned int> l3) -> List<unsigned int> {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
@@ -53,8 +52,8 @@ MergesortFuel::merge(List<unsigned int> l1, const List<unsigned int> &l2) {
 }
 
 /// * Fuel-based merge sort
-__attribute__((pure)) List<unsigned int>
-MergesortFuel::msort_go(const unsigned int &fuel, List<unsigned int> l) {
+List<unsigned int> MergesortFuel::msort_go(const unsigned int &fuel,
+                                           List<unsigned int> l) {
   if (fuel <= 0) {
     return l;
   } else {
@@ -78,13 +77,11 @@ MergesortFuel::msort_go(const unsigned int &fuel, List<unsigned int> l) {
 }
 
 /// * Top-level sort and correctness
-__attribute__((pure)) List<unsigned int>
-MergesortFuel::msort(const List<unsigned int> &l) {
+List<unsigned int> MergesortFuel::msort(const List<unsigned int> &l) {
   return msort_go(l.length(), l);
 }
 
-__attribute__((pure)) bool Compare_dec::le_lt_dec(const unsigned int &n,
-                                                  const unsigned int &m) {
+bool Compare_dec::le_lt_dec(const unsigned int &n, const unsigned int &m) {
   if (n <= 0) {
     return true;
   } else {

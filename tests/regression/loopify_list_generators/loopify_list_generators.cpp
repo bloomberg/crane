@@ -1,6 +1,6 @@
 #include <loopify_list_generators.h>
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListGenerators::cycle_fuel(const unsigned int &fuel,
                                   const unsigned int &n,
                                   const List<unsigned int> &l) {
@@ -49,14 +49,13 @@ LoopifyListGenerators::cycle_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListGenerators::cycle(const unsigned int &n,
-                             const List<unsigned int> &l) {
+List<unsigned int> LoopifyListGenerators::cycle(const unsigned int &n,
+                                                const List<unsigned int> &l) {
   return cycle_fuel((n * l.length()), n, l);
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListGenerators::range(unsigned int start, const unsigned int &count) {
+List<unsigned int> LoopifyListGenerators::range(unsigned int start,
+                                                const unsigned int &count) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_count = count;
@@ -83,8 +82,8 @@ LoopifyListGenerators::range(unsigned int start, const unsigned int &count) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListGenerators::replicate_elem(const unsigned int &n, unsigned int x) {
+List<unsigned int> LoopifyListGenerators::replicate_elem(const unsigned int &n,
+                                                         unsigned int x) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_n = n;
@@ -107,7 +106,7 @@ LoopifyListGenerators::replicate_elem(const unsigned int &n, unsigned int x) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListGenerators::replicate_each(const unsigned int &n,
                                       const List<unsigned int> &l) {
   struct _Enter {
@@ -146,7 +145,7 @@ LoopifyListGenerators::replicate_each(const unsigned int &n,
   return _result;
 }
 
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyListGenerators::enumerate_aux(unsigned int idx,
                                      const List<unsigned int> &l) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
@@ -181,7 +180,7 @@ LoopifyListGenerators::enumerate_aux(unsigned int idx,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyListGenerators::enumerate(const List<unsigned int> &l) {
   return enumerate_aux(0u, l);
 }

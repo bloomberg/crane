@@ -1,6 +1,6 @@
 #include <program_wf.h>
 
-__attribute__((pure)) std::optional<unsigned int>
+std::optional<unsigned int>
 ProgramWf::jump_target(const ProgramWf::instruction &i) {
   if (std::holds_alternative<typename ProgramWf::instruction::JUN>(i.v())) {
     const auto &[d_a0] = std::get<typename ProgramWf::instruction::JUN>(i.v());

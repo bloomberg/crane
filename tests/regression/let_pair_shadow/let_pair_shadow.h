@@ -70,17 +70,34 @@ struct LetPairShadow {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mylist<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Mynil>(_sv.v())) {
-        return mylist<t_A>(Mynil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
-        return mylist<t_A>(Mycons{
-            d_a0,
-            d_a1 ? std::make_unique<LetPairShadow::mylist<t_A>>(d_a1->clone())
-                 : nullptr});
+    mylist clone() const {
+      mylist _out{};
+
+      struct _CloneFrame {
+        const mylist *_src;
+        mylist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist *_src = _frame._src;
+        mylist *_dst = _frame._dst;
+        if (std::holds_alternative<Mynil>(_src->v())) {
+          const auto &_alt = std::get<Mynil>(_src->v());
+          _dst->d_v_ = Mynil{};
+        } else {
+          const auto &_alt = std::get<Mycons>(_src->v());
+          _dst->d_v_ = Mycons{_alt.d_a0,
+                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -95,9 +112,9 @@ struct LetPairShadow {
       }
     }
 
-    __attribute__((pure)) static mylist<t_A> mynil() { return mylist(Mynil{}); }
+    static mylist<t_A> mynil() { return mylist(Mynil{}); }
 
-    __attribute__((pure)) static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+    static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
       return mylist(
           Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
@@ -124,7 +141,7 @@ struct LetPairShadow {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1, mylist<T1>, T2> F1>
@@ -147,15 +164,14 @@ struct LetPairShadow {
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  mylist_sum(const mylist<unsigned int> &l);
+  static unsigned int mylist_sum(const mylist<unsigned int> &l);
 
   /// Pattern 1: map_accum — two sequential pair destructurings of
   /// function-call results in the same match branch.
   template <typename T1, typename T2, typename T3,
             MapsTo<std::pair<T3, T2>, T3, T1> F0>
-  __attribute__((pure)) static std::pair<mylist<T2>, T3>
-  map_accum(F0 &&f, const T3 acc, const mylist<T1> &l) {
+  static std::pair<mylist<T2>, T3> map_accum(F0 &&f, const T3 acc,
+                                             const mylist<T1> &l) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
       return std::make_pair(mylist<T2>::mynil(), acc);
     } else {
@@ -189,20 +205,21 @@ struct LetPairShadow {
     return (mylist_sum(l) + acc);
   }();
   /// Helper functions that return pairs (force temporary allocation).
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  add_pair(const unsigned int &a, const unsigned int &b);
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  sub_pair(const unsigned int &a, const unsigned int &b);
+  static std::pair<unsigned int, unsigned int> add_pair(const unsigned int &a,
+                                                        const unsigned int &b);
+  static std::pair<unsigned int, unsigned int> sub_pair(const unsigned int &a,
+                                                        const unsigned int &b);
   /// Pattern 2: Two destructs of function-call results in top-level body.
-  __attribute__((pure)) static unsigned int
-  double_call_destruct(const unsigned int &a, const unsigned int &b,
-                       const unsigned int &c, const unsigned int &d);
+  static unsigned int double_call_destruct(const unsigned int &a,
+                                           const unsigned int &b,
+                                           const unsigned int &c,
+                                           const unsigned int &d);
   /// test2: add_pair 3 4 = (7, 12), sub_pair 10 3 = (7, 13)
   /// 7 + 12 + 7 + 13 = 39
   static inline const unsigned int test2 =
       double_call_destruct(3u, 4u, 10u, 3u);
   /// Pattern 3: Three destructs of function-call results.
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   triple_call_destruct(const unsigned int &a, const unsigned int &b,
                        const unsigned int &c, const unsigned int &d,
                        const unsigned int &e, const unsigned int &f);

@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,10 +119,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  template <MapsTo<bool, t_A> F0>
-  __attribute__((pure)) bool forallb(F0 &&f) const {
+  template <MapsTo<bool, t_A> F0> bool forallb(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return true;
@@ -121,7 +139,7 @@ struct InstructionCycles {
     bool test_pin1;
 
     // ACCESSORS
-    __attribute__((pure)) state1 clone() const {
+    state1 clone() const {
       return state1{(*(this)).acc1, (*(this)).carry1, (*(this)).test_pin1};
     }
   };
@@ -165,7 +183,7 @@ struct InstructionCycles {
     }
 
     // ACCESSORS
-    __attribute__((pure)) instruction1 clone() const {
+    instruction1 clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<JCN1>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<JCN1>(_sv.v());
@@ -176,22 +194,19 @@ struct InstructionCycles {
     }
 
     // CREATORS
-    __attribute__((pure)) static instruction1 jcn1(unsigned int a0,
-                                                   unsigned int a1) {
+    static instruction1 jcn1(unsigned int a0, unsigned int a1) {
       return instruction1(JCN1{std::move(a0), std::move(a1)});
     }
 
-    __attribute__((pure)) static instruction1 nop1() {
-      return instruction1(NOP1{});
-    }
+    static instruction1 nop1() { return instruction1(NOP1{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int cycles_jcn(const state1 &s) const {
+    unsigned int cycles_jcn(const state1 &s) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction1::JCN1>(_sv.v())) {
         const auto &[d_a0, d_a1] =
@@ -287,7 +302,7 @@ struct InstructionCycles {
     }
 
     // ACCESSORS
-    __attribute__((pure)) instruction2 clone() const {
+    instruction2 clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<JMS2>(_sv.v())) {
         const auto &[d_a0] = std::get<JMS2>(_sv.v());
@@ -298,19 +313,17 @@ struct InstructionCycles {
     }
 
     // CREATORS
-    __attribute__((pure)) static instruction2 jms2(unsigned int a0) {
+    static instruction2 jms2(unsigned int a0) {
       return instruction2(JMS2{std::move(a0)});
     }
 
-    __attribute__((pure)) static instruction2 nop2() {
-      return instruction2(NOP2{});
-    }
+    static instruction2 nop2() { return instruction2(NOP2{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, unsigned int> F0>
     T1 instruction2_rec(F0 &&f, const T1 f0) const {
@@ -339,13 +352,10 @@ struct InstructionCycles {
     unsigned int acc2;
 
     // ACCESSORS
-    __attribute__((pure)) state2 clone() const {
-      return state2{(*(this)).acc2};
-    }
+    state2 clone() const { return state2{(*(this)).acc2}; }
   };
 
-  __attribute__((pure)) static unsigned int cycles_jms(const state2 &_x,
-                                                       const instruction2 &i);
+  static unsigned int cycles_jms(const state2 &_x, const instruction2 &i);
   static inline const unsigned int test_cycles_jms_constant =
       cycles_jms(state2{0u}, instruction2::jms2(77u));
   enum class Instr3 {
@@ -434,7 +444,7 @@ struct InstructionCycles {
     }
   }
 
-  __attribute__((pure)) static unsigned int cycles_min(const Instr3 i);
+  static unsigned int cycles_min(const Instr3 i);
   static inline const List<Instr3> all_instrs3 = List<Instr3>::cons(
       Instr3::e_NOP3,
       List<Instr3>::cons(
@@ -542,7 +552,7 @@ struct InstructionCycles {
     }
   }
 
-  __attribute__((pure)) static unsigned int cycles_max(const Instr4 i);
+  static unsigned int cycles_max(const Instr4 i);
   static inline const List<Instr4> all_instrs4 = List<Instr4>::cons(
       Instr4::e_NOP4,
       List<Instr4>::cons(
@@ -571,7 +581,7 @@ struct InstructionCycles {
     bool test5;
 
     // ACCESSORS
-    __attribute__((pure)) state5 clone() const {
+    state5 clone() const {
       return state5{(*(this)).acc5, (*(this)).carry5, (*(this)).test5};
     }
   };
@@ -620,7 +630,7 @@ struct InstructionCycles {
     }
 
     // ACCESSORS
-    __attribute__((pure)) instruction5 clone() const {
+    instruction5 clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<NOP5>(_sv.v())) {
         return instruction5(NOP5{});
@@ -634,15 +644,13 @@ struct InstructionCycles {
     }
 
     // CREATORS
-    __attribute__((pure)) static instruction5 nop5() {
-      return instruction5(NOP5{});
-    }
+    static instruction5 nop5() { return instruction5(NOP5{}); }
 
-    __attribute__((pure)) static instruction5 jcn5(unsigned int a0) {
+    static instruction5 jcn5(unsigned int a0) {
       return instruction5(JCN5{std::move(a0)});
     }
 
-    __attribute__((pure)) static instruction5 inc5(unsigned int a0) {
+    static instruction5 inc5(unsigned int a0) {
       return instruction5(INC5{std::move(a0)});
     }
 
@@ -650,9 +658,9 @@ struct InstructionCycles {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) state5 execute5(state5 s) const {
+    state5 execute5(state5 s) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction5::INC5>(_sv.v())) {
         return state5{(16u ? (s.acc5 + 1u) % 16u : (s.acc5 + 1u)), s.carry5,
@@ -662,7 +670,7 @@ struct InstructionCycles {
       }
     }
 
-    __attribute__((pure)) unsigned int cycles_sum(const state5 &s) const {
+    unsigned int cycles_sum(const state5 &s) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction5::JCN5>(_sv.v())) {
         const auto &[d_a0] = std::get<typename instruction5::JCN5>(_sv.v());
@@ -712,8 +720,8 @@ struct InstructionCycles {
     }
   };
 
-  __attribute__((pure)) static unsigned int
-  program_cycles5(const state5 &s, const List<instruction5> &prog);
+  static unsigned int program_cycles5(const state5 &s,
+                                      const List<instruction5> &prog);
   static inline const unsigned int test_instruction_cycle_sum = program_cycles5(
       state5{0u, false, true},
       List<instruction5>::cons(
@@ -738,15 +746,12 @@ struct InstructionCycles {
     unsigned int acc6;
 
     // ACCESSORS
-    __attribute__((pure)) state6 clone() const {
-      return state6{(*(this)).acc6};
-    }
+    state6 clone() const { return state6{(*(this)).acc6}; }
   };
 
-  __attribute__((pure)) static unsigned int cycles6(const state6 &_x,
-                                                    const Instruction6 _x0);
-  __attribute__((pure)) static unsigned int
-  program_cycles6(const state6 &s, const List<Instruction6> &prog);
+  static unsigned int cycles6(const state6 &_x, const Instruction6 _x0);
+  static unsigned int program_cycles6(const state6 &s,
+                                      const List<Instruction6> &prog);
   static inline const unsigned int singleton_cycles6 = program_cycles6(
       state6{0u}, List<Instruction6>::cons(Instruction6::e_NOP6,
                                            List<Instruction6>::nil()));
@@ -777,15 +782,12 @@ struct InstructionCycles {
     unsigned int acc7;
 
     // ACCESSORS
-    __attribute__((pure)) state7 clone() const {
-      return state7{(*(this)).acc7};
-    }
+    state7 clone() const { return state7{(*(this)).acc7}; }
   };
 
-  __attribute__((pure)) static unsigned int cycles7(const state7 &_x,
-                                                    const Instruction7 _x0);
-  __attribute__((pure)) static unsigned int
-  program_cycles7(const state7 &s, const List<Instruction7> &prog);
+  static unsigned int cycles7(const state7 &_x, const Instruction7 _x0);
+  static unsigned int program_cycles7(const state7 &s,
+                                      const List<Instruction7> &prog);
   static inline const unsigned int test_program_cycles_single = program_cycles7(
       state7{16u}, List<Instruction7>::cons(Instruction7::e_NOP7,
                                             List<Instruction7>::nil()));

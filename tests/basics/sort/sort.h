@@ -50,15 +50,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -72,9 +91,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -101,9 +120,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) unsigned int length() const {
+  unsigned int length() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
@@ -147,7 +166,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Sig<t_A> clone() const {
+  Sig<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist>(_sv.v());
     return Sig<t_A>(Exist{d_x});
@@ -159,24 +178,19 @@ public:
     d_v_ = Exist{t_A(d_x)};
   }
 
-  __attribute__((pure)) static Sig<t_A> exist(t_A x) {
-    return Sig(Exist{std::move(x)});
-  }
+  static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Compare_dec {
-  __attribute__((pure)) static bool le_lt_dec(const unsigned int &n,
-                                              const unsigned int &m);
-  __attribute__((pure)) static bool le_gt_dec(const unsigned int &_x0,
-                                              const unsigned int &_x1);
-  __attribute__((pure)) static bool le_dec(const unsigned int &n,
-                                           const unsigned int &m);
+  static bool le_lt_dec(const unsigned int &n, const unsigned int &m);
+  static bool le_gt_dec(const unsigned int &_x0, const unsigned int &_x1);
+  static bool le_dec(const unsigned int &n, const unsigned int &m);
 };
 
 struct Sort {
@@ -200,8 +214,7 @@ struct Sort {
   }
 
   template <typename T1>
-  __attribute__((pure)) static std::pair<List<T1>, List<T1>>
-  split(const List<T1> &ls) {
+  static std::pair<List<T1>, List<T1>> split(const List<T1> &ls) {
     if (std::holds_alternative<typename List<T1>::Nil>(ls.v())) {
       return std::make_pair(List<T1>::nil(), List<T1>::nil());
     } else {
@@ -249,8 +262,8 @@ struct Sort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static std::pair<List<T1>, List<T1>>
-  split_pivot(F0 &&le_dec0, const T1 pivot, const List<T1> &l) {
+  static std::pair<List<T1>, List<T1>> split_pivot(F0 &&le_dec0, const T1 pivot,
+                                                   const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return std::make_pair(List<T1>::nil(), List<T1>::nil());
     } else {
@@ -283,26 +296,23 @@ struct Sort {
     }
   }
 
-  __attribute__((pure)) static Sig<List<unsigned int>>
-  sort_cons_prog(unsigned int a, const List<unsigned int> &_x,
-                 const List<unsigned int> &l_);
-  __attribute__((pure)) static Sig<List<unsigned int>>
-  isort(const List<unsigned int> &l);
-  __attribute__((pure)) static List<unsigned int>
-  merge(List<unsigned int> l1, const List<unsigned int> &l2);
-  __attribute__((pure)) static Sig<List<unsigned int>>
-  merge_prog(const List<unsigned int> &_x, const List<unsigned int> &l1,
-             const List<unsigned int> &l2);
-  __attribute__((pure)) static Sig<List<unsigned int>>
-  msort(const List<unsigned int> &_x0);
-  __attribute__((pure)) static Sig<List<unsigned int>>
-  pair_merge_prog(const unsigned int &_x, const unsigned int &_x0,
-                  const List<unsigned int> &_x1, const List<unsigned int> &l_,
-                  const List<unsigned int> &l_0);
-  __attribute__((pure)) static Sig<List<unsigned int>>
-  psort(const List<unsigned int> &_x0);
-  __attribute__((pure)) static Sig<List<unsigned int>>
-  qsort(const List<unsigned int> &_x0);
+  static Sig<List<unsigned int>> sort_cons_prog(unsigned int a,
+                                                const List<unsigned int> &_x,
+                                                const List<unsigned int> &l_);
+  static Sig<List<unsigned int>> isort(const List<unsigned int> &l);
+  static List<unsigned int> merge(List<unsigned int> l1,
+                                  const List<unsigned int> &l2);
+  static Sig<List<unsigned int>> merge_prog(const List<unsigned int> &_x,
+                                            const List<unsigned int> &l1,
+                                            const List<unsigned int> &l2);
+  static Sig<List<unsigned int>> msort(const List<unsigned int> &_x0);
+  static Sig<List<unsigned int>> pair_merge_prog(const unsigned int &_x,
+                                                 const unsigned int &_x0,
+                                                 const List<unsigned int> &_x1,
+                                                 const List<unsigned int> &l_,
+                                                 const List<unsigned int> &l_0);
+  static Sig<List<unsigned int>> psort(const List<unsigned int> &_x0);
+  static Sig<List<unsigned int>> qsort(const List<unsigned int> &_x0);
 };
 
 #endif // INCLUDED_SORT

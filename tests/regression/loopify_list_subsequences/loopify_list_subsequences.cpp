@@ -1,6 +1,6 @@
 #include <loopify_list_subsequences.h>
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyListSubsequences::map_cons_helper(unsigned int x,
                                          const List<List<unsigned int>> &ll) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
@@ -29,8 +29,7 @@ LoopifyListSubsequences::map_cons_helper(unsigned int x,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<List<unsigned int>>
-LoopifyListSubsequences::tails(List<unsigned int> l) {
+List<List<unsigned int>> LoopifyListSubsequences::tails(List<unsigned int> l) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
   List<unsigned int> _loop_l = std::move(l);
@@ -57,7 +56,7 @@ LoopifyListSubsequences::tails(List<unsigned int> l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyListSubsequences::inits_fuel(const unsigned int &fuel,
                                     const List<unsigned int> &l) {
   struct _Enter {
@@ -107,12 +106,12 @@ LoopifyListSubsequences::inits_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyListSubsequences::inits(const List<unsigned int> &l) {
   return inits_fuel(l.length(), l);
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListSubsequences::init_list(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -146,8 +145,8 @@ LoopifyListSubsequences::init_list(const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListSubsequences::snoc(const List<unsigned int> &l, unsigned int x) {
+List<unsigned int> LoopifyListSubsequences::snoc(const List<unsigned int> &l,
+                                                 unsigned int x) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -172,8 +171,7 @@ LoopifyListSubsequences::snoc(const List<unsigned int> &l, unsigned int x) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) unsigned int
-LoopifyListSubsequences::last_elem(const List<unsigned int> &l) {
+unsigned int LoopifyListSubsequences::last_elem(const List<unsigned int> &l) {
   unsigned int _result;
   const List<unsigned int> *_loop_l = &l;
   while (true) {
@@ -196,9 +194,8 @@ LoopifyListSubsequences::last_elem(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyListSubsequences::nth_elem(const unsigned int &n,
-                                  const List<unsigned int> &l) {
+unsigned int LoopifyListSubsequences::nth_elem(const unsigned int &n,
+                                               const List<unsigned int> &l) {
   unsigned int _result;
   const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_n = n;
@@ -225,7 +222,7 @@ LoopifyListSubsequences::nth_elem(const unsigned int &n,
   return _result;
 }
 
-__attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
+std::pair<List<unsigned int>, List<unsigned int>>
 LoopifyListSubsequences::split_at(const unsigned int &n, List<unsigned int> l) {
   struct _Enter {
     List<unsigned int> l;

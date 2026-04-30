@@ -51,15 +51,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -73,9 +92,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -102,7 +121,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 /// Module name "Sseq" matches coinductive "sseq" -> eponymous
@@ -127,13 +146,11 @@ public:
   explicit Sseq(std::function<variant_t()> _thunk)
       : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-  __attribute__((pure)) static Sseq<t_A> scons(t_A shead,
-                                               const Sseq<t_A> &stail) {
+  static Sseq<t_A> scons(t_A shead, const Sseq<t_A> &stail) {
     return Sseq(SCons{std::move(shead), std::make_shared<Sseq<t_A>>(stail)});
   }
 
-  __attribute__((pure)) static Sseq<t_A>
-  lazy_(std::function<Sseq<t_A>()> thunk) {
+  static Sseq<t_A> lazy_(std::function<Sseq<t_A>()> thunk) {
     return Sseq<t_A>(std::function<variant_t()>([=]() mutable -> variant_t {
       Sseq<t_A> _tmp = thunk();
       return _tmp.v();
@@ -141,7 +158,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_lazyV_.force(); }
+  const variant_t &v() const { return d_lazyV_.force(); }
 
   t_A shead() const {
     const auto &[d_shead, d_stail] =
@@ -149,7 +166,7 @@ public:
     return d_shead;
   }
 
-  __attribute__((pure)) Sseq<t_A> stail() const {
+  Sseq<t_A> stail() const {
     const auto &[d_shead, d_stail] =
         std::get<typename Sseq<t_A>::SCons>(this->v());
     return Sseq<t_A>::lazy_([=]() mutable -> Sseq<t_A> { return *(d_stail); });
@@ -161,16 +178,14 @@ public:
     return f(this->shead());
   }
 
-  template <MapsTo<t_A, t_A> F0>
-  __attribute__((pure)) Sseq<t_A> smap(F0 &&f) const {
+  template <MapsTo<t_A, t_A> F0> Sseq<t_A> smap(F0 &&f) const {
     Sseq<t_A> _self = *(this);
     return Sseq<t_A>::lazy_([=]() mutable -> Sseq<t_A> {
       return Sseq<t_A>::scons(_self.double_head(f), _self.stail().smap(f));
     });
   }
 
-  template <MapsTo<t_A, t_A> F0>
-  __attribute__((pure)) Sseq<t_A> smap_direct(F0 &&f) const {
+  template <MapsTo<t_A, t_A> F0> Sseq<t_A> smap_direct(F0 &&f) const {
     Sseq<t_A> _self = *(this);
     return Sseq<t_A>::lazy_([=]() mutable -> Sseq<t_A> {
       return Sseq<t_A>::scons(f(_self.shead()), _self.stail().smap_direct(f));
@@ -178,7 +193,7 @@ public:
   }
 
   /// Take n elements
-  __attribute__((pure)) List<t_A> take(const unsigned int &n) const {
+  List<t_A> take(const unsigned int &n) const {
     if (n <= 0) {
       return List<t_A>::nil();
     } else {
@@ -187,14 +202,14 @@ public:
     }
   }
 
-  __attribute__((pure)) static Sseq<unsigned int> nats_from(unsigned int n) {
+  static Sseq<unsigned int> nats_from(unsigned int n) {
     return Sseq<unsigned int>::lazy_([=]() mutable -> Sseq<unsigned int> {
       return Sseq<unsigned int>::scons(n, nats_from((n + 1)));
     });
   }
 
   /// Sum of a list
-  __attribute__((pure)) static unsigned int sum(const List<unsigned int> &l) {
+  static unsigned int sum(const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return 0u;
     } else {

@@ -1,11 +1,10 @@
 #include <name_clash_nested_deep.h>
 
 /// Four levels of nested matching.
-__attribute__((pure)) unsigned int
-NameClashNestedDeep::deep4(const NameClashNestedDeep::mylist &a,
-                           const NameClashNestedDeep::mylist &b,
-                           const NameClashNestedDeep::mylist &c,
-                           const NameClashNestedDeep::mylist &d) {
+unsigned int NameClashNestedDeep::deep4(const NameClashNestedDeep::mylist &a,
+                                        const NameClashNestedDeep::mylist &b,
+                                        const NameClashNestedDeep::mylist &c,
+                                        const NameClashNestedDeep::mylist &d) {
   if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
           a.v())) {
     return 0u;
@@ -38,7 +37,7 @@ NameClashNestedDeep::deep4(const NameClashNestedDeep::mylist &a,
 }
 
 /// Match in a let, then match on the let result.
-__attribute__((pure)) unsigned int
+unsigned int
 NameClashNestedDeep::let_match_chain(const NameClashNestedDeep::mylist &xs,
                                      const NameClashNestedDeep::mylist &ys) {
   unsigned int hd_x = [&]() {
@@ -75,7 +74,7 @@ NameClashNestedDeep::let_match_chain(const NameClashNestedDeep::mylist &xs,
 }
 
 /// Matching where the same list is matched multiple times.
-__attribute__((pure)) unsigned int
+unsigned int
 NameClashNestedDeep::multi_match_same(const NameClashNestedDeep::mylist &xs) {
   unsigned int first = [&]() {
     if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
@@ -111,7 +110,7 @@ NameClashNestedDeep::multi_match_same(const NameClashNestedDeep::mylist &xs) {
 }
 
 /// Nested match where inner match scrutinee is a field from outer match.
-__attribute__((pure)) unsigned int
+unsigned int
 NameClashNestedDeep::nested_field_match(const NameClashNestedDeep::mylist &xs) {
   if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
           xs.v())) {

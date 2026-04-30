@@ -1,6 +1,6 @@
 #include <fold_sequence_state_trace.h>
 
-__attribute__((pure)) FoldSequenceStateTraceCase::Line
+FoldSequenceStateTraceCase::Line
 FoldSequenceStateTraceCase::line_through(const std::pair<Real, Real> &p1,
                                          const std::pair<Real, Real> &p2) {
   const Real &x1 = p1.first;
@@ -17,7 +17,7 @@ FoldSequenceStateTraceCase::line_through(const std::pair<Real, Real> &p1,
   }
 }
 
-__attribute__((pure)) FoldSequenceStateTraceCase::Line
+FoldSequenceStateTraceCase::Line
 FoldSequenceStateTraceCase::perp_bisector(const std::pair<Real, Real> &p1,
                                           const std::pair<Real, Real> &p2) {
   const Real &x1 = p1.first;
@@ -41,8 +41,7 @@ FoldSequenceStateTraceCase::perp_bisector(const std::pair<Real, Real> &p1,
   }
 }
 
-__attribute__((pure)) FoldSequenceStateTraceCase::Line
-FoldSequenceStateTraceCase::perp_through(
+FoldSequenceStateTraceCase::Line FoldSequenceStateTraceCase::perp_through(
     const std::pair<Real, Real> &p, const FoldSequenceStateTraceCase::Line &l) {
   const Real &x = p.first;
   const Real &y = p.second;
@@ -50,25 +49,25 @@ FoldSequenceStateTraceCase::perp_through(
   return Line{l.B, (-l.A), c};
 }
 
-__attribute__((pure)) FoldSequenceStateTraceCase::Fold
+FoldSequenceStateTraceCase::Fold
 FoldSequenceStateTraceCase::fold_O1(const std::pair<Real, Real> &p1,
                                     const std::pair<Real, Real> &p2) {
   return Fold::fold_line_ctor(line_through(p1, p2));
 }
 
-__attribute__((pure)) FoldSequenceStateTraceCase::Fold
+FoldSequenceStateTraceCase::Fold
 FoldSequenceStateTraceCase::fold_O2(const std::pair<Real, Real> &p1,
                                     const std::pair<Real, Real> &p2) {
   return Fold::fold_line_ctor(perp_bisector(p1, p2));
 }
 
-__attribute__((pure)) FoldSequenceStateTraceCase::Fold
+FoldSequenceStateTraceCase::Fold
 FoldSequenceStateTraceCase::fold_O4(const std::pair<Real, Real> &p,
                                     const FoldSequenceStateTraceCase::Line &l) {
   return Fold::fold_line_ctor(perp_through(p, l));
 }
 
-__attribute__((pure)) FoldSequenceStateTraceCase::ConstructionState
+FoldSequenceStateTraceCase::ConstructionState
 FoldSequenceStateTraceCase::add_fold_to_state(
     const FoldSequenceStateTraceCase::ConstructionState &st,
     const FoldSequenceStateTraceCase::FoldStep &step) {
@@ -78,7 +77,7 @@ FoldSequenceStateTraceCase::add_fold_to_state(
       List<FoldSequenceStateTraceCase::Line>::cons(new_line, st.state_lines)};
 }
 
-__attribute__((pure)) FoldSequenceStateTraceCase::ConstructionState
+FoldSequenceStateTraceCase::ConstructionState
 FoldSequenceStateTraceCase::execute_sequence(
     FoldSequenceStateTraceCase::ConstructionState st,
     const List<FoldSequenceStateTraceCase::FoldStep> &seq) {
@@ -93,8 +92,7 @@ FoldSequenceStateTraceCase::execute_sequence(
   }
 }
 
-__attribute__((pure)) unsigned int
-FoldSequenceStateTraceCase::line_count_after_sample_sequence(
+unsigned int FoldSequenceStateTraceCase::line_count_after_sample_sequence(
     const FoldSequenceStateTraceCase::ConstructionState &st) {
   return execute_sequence(st, sample_sequence).state_lines.length();
 }

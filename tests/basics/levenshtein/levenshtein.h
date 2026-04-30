@@ -51,22 +51,39 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Nat clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<O>(_sv.v())) {
-      return Nat(O{});
-    } else {
-      const auto &[d_a0] = std::get<S>(_sv.v());
-      return Nat(S{d_a0 ? std::make_unique<Nat>(d_a0->clone()) : nullptr});
+  Nat clone() const {
+    Nat _out{};
+
+    struct _CloneFrame {
+      const Nat *_src;
+      Nat *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Nat *_src = _frame._src;
+      Nat *_dst = _frame._dst;
+      if (std::holds_alternative<O>(_src->v())) {
+        const auto &_alt = std::get<O>(_src->v());
+        _dst->d_v_ = O{};
+      } else {
+        const auto &_alt = std::get<S>(_src->v());
+        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
+        auto &_dst_alt = std::get<S>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Nat o() { return Nat(O{}); }
+  static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(Nat a0) {
-    return Nat(S{std::make_unique<Nat>(std::move(a0))});
-  }
+  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -90,9 +107,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) Bool0 leb(const Nat &m) const {
+  Bool0 leb(const Nat &m) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Nat::O>(_sv.v())) {
       return Bool0::e_TRUE0;
@@ -142,7 +159,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) SigT<t_A, t_P> clone() const {
+  SigT<t_A, t_P> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
     return SigT<t_A, t_P>(ExistT{d_x, d_a1});
@@ -156,7 +173,7 @@ public:
     d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
   }
 
-  __attribute__((pure)) static SigT<t_A, t_P> existt(t_A x, t_P a1) {
+  static SigT<t_A, t_P> existt(t_A x, t_P a1) {
     return SigT(ExistT{std::move(x), std::move(a1)});
   }
 
@@ -164,7 +181,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
   t_A projT1() const {
     auto &&_sv = *(this);
@@ -176,7 +193,7 @@ public:
 enum class Sumbool { e_LEFT, e_RIGHT };
 
 struct Bool {
-  __attribute__((pure)) static Sumbool bool_dec(const Bool0 b1, const Bool0 b2);
+  static Sumbool bool_dec(const Bool0 b1, const Bool0 b2);
 };
 
 struct Ascii {
@@ -219,7 +236,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Ascii clone() const {
+  Ascii clone() const {
     auto &&_sv = *(this);
     const auto &[d_a0, d_a1, d_a2, d_a3, d_a4, d_a5, d_a6, d_a7] =
         std::get<Ascii0>(_sv.v());
@@ -227,9 +244,8 @@ public:
   }
 
   // CREATORS
-  __attribute__((pure)) static Ascii ascii0(Bool0 a0, Bool0 a1, Bool0 a2,
-                                            Bool0 a3, Bool0 a4, Bool0 a5,
-                                            Bool0 a6, Bool0 a7) {
+  static Ascii ascii0(Bool0 a0, Bool0 a1, Bool0 a2, Bool0 a3, Bool0 a4,
+                      Bool0 a5, Bool0 a6, Bool0 a7) {
     return Ascii(Ascii0{std::move(a0), std::move(a1), std::move(a2),
                         std::move(a3), std::move(a4), std::move(a5),
                         std::move(a6), std::move(a7)});
@@ -239,9 +255,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) Sumbool ascii_dec(const Ascii &b) const {
+  Sumbool ascii_dec(const Ascii &b) const {
     auto &&_sv = *(this);
     const auto &[d_a0, d_a1, d_a2, d_a3, d_a4, d_a5, d_a6, d_a7] =
         std::get<typename Ascii::Ascii0>(_sv.v());
@@ -361,24 +377,40 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) String clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<EmptyString>(_sv.v())) {
-      return String(EmptyString{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<String0>(_sv.v());
-      return String(
-          String0{d_a0.clone(),
-                  d_a1 ? std::make_unique<String>(d_a1->clone()) : nullptr});
+  String clone() const {
+    String _out{};
+
+    struct _CloneFrame {
+      const String *_src;
+      String *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const String *_src = _frame._src;
+      String *_dst = _frame._dst;
+      if (std::holds_alternative<EmptyString>(_src->v())) {
+        const auto &_alt = std::get<EmptyString>(_src->v());
+        _dst->d_v_ = EmptyString{};
+      } else {
+        const auto &_alt = std::get<String0>(_src->v());
+        _dst->d_v_ = String0{_alt.d_a0,
+                             _alt.d_a1 ? std::make_unique<String>() : nullptr};
+        auto &_dst_alt = std::get<String0>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static String emptystring() {
-    return String(EmptyString{});
-  }
+  static String emptystring() { return String(EmptyString{}); }
 
-  __attribute__((pure)) static String string0(Ascii a0, String a1) {
+  static String string0(Ascii a0, String a1) {
     return String(
         String0{std::move(a0), std::make_unique<String>(std::move(a1))});
   }
@@ -405,9 +437,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) String append(String s2) const {
+  String append(String s2) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
       return s2;
@@ -417,7 +449,7 @@ public:
     }
   }
 
-  __attribute__((pure)) Nat length() const {
+  Nat length() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
       return Nat::o();
@@ -478,7 +510,7 @@ struct Levenshtein {
     }
 
     // ACCESSORS
-    __attribute__((pure)) edit clone() const {
+    edit clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Insertion>(_sv.v())) {
         const auto &[d_a, d_s] = std::get<Insertion>(_sv.v());
@@ -493,15 +525,15 @@ struct Levenshtein {
     }
 
     // CREATORS
-    __attribute__((pure)) static edit insertion(Ascii a, String s) {
+    static edit insertion(Ascii a, String s) {
       return edit(Insertion{std::move(a), std::move(s)});
     }
 
-    __attribute__((pure)) static edit deletion(Ascii a, String s) {
+    static edit deletion(Ascii a, String s) {
       return edit(Deletion{std::move(a), std::move(s)});
     }
 
-    __attribute__((pure)) static edit update(Ascii a, Ascii a_1, String neq) {
+    static edit update(Ascii a, Ascii a_1, String neq) {
       return edit(Update{std::move(a), std::move(a_1), std::move(neq)});
     }
 
@@ -509,7 +541,7 @@ struct Levenshtein {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, Ascii, String> F0,
               MapsTo<T1, Ascii, String> F1, MapsTo<T1, Ascii, Ascii, String> F2>
@@ -600,37 +632,55 @@ struct Levenshtein {
     }
 
     // ACCESSORS
-    __attribute__((pure)) chain clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Empty>(_sv.v())) {
-        return chain(Empty{});
-      } else if (std::holds_alternative<Skip>(_sv.v())) {
-        const auto &[d_a, d_s, d_t, d_n, d_a4] = std::get<Skip>(_sv.v());
-        return chain(
-            Skip{d_a.clone(), d_s.clone(), d_t.clone(), d_n.clone(),
-                 d_a4 ? std::make_unique<Levenshtein::chain>(d_a4->clone())
-                      : nullptr});
-      } else {
-        const auto &[d_s, d_t, d_u, d_n, d_a4, d_a5] =
-            std::get<Change>(_sv.v());
-        return chain(Change{
-            d_s.clone(), d_t.clone(), d_u.clone(), d_n.clone(), d_a4.clone(),
-            d_a5 ? std::make_unique<Levenshtein::chain>(d_a5->clone())
-                 : nullptr});
+    chain clone() const {
+      chain _out{};
+
+      struct _CloneFrame {
+        const chain *_src;
+        chain *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const chain *_src = _frame._src;
+        chain *_dst = _frame._dst;
+        if (std::holds_alternative<Empty>(_src->v())) {
+          const auto &_alt = std::get<Empty>(_src->v());
+          _dst->d_v_ = Empty{};
+        } else if (std::holds_alternative<Skip>(_src->v())) {
+          const auto &_alt = std::get<Skip>(_src->v());
+          _dst->d_v_ = Skip{_alt.d_a, _alt.d_s, _alt.d_t, _alt.d_n,
+                            _alt.d_a4 ? std::make_unique<chain>() : nullptr};
+          auto &_dst_alt = std::get<Skip>(_dst->d_v_);
+          if (_alt.d_a4)
+            _stack.push_back({_alt.d_a4.get(), _dst_alt.d_a4.get()});
+        } else {
+          const auto &_alt = std::get<Change>(_src->v());
+          _dst->d_v_ = Change{
+              _alt.d_s,  _alt.d_t,
+              _alt.d_u,  _alt.d_n,
+              _alt.d_a4, _alt.d_a5 ? std::make_unique<chain>() : nullptr};
+          auto &_dst_alt = std::get<Change>(_dst->d_v_);
+          if (_alt.d_a5)
+            _stack.push_back({_alt.d_a5.get(), _dst_alt.d_a5.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static chain empty() { return chain(Empty{}); }
+    static chain empty() { return chain(Empty{}); }
 
-    __attribute__((pure)) static chain skip(Ascii a, String s, String t, Nat n,
-                                            chain a4) {
+    static chain skip(Ascii a, String s, String t, Nat n, chain a4) {
       return chain(Skip{std::move(a), std::move(s), std::move(t), std::move(n),
                         std::make_unique<chain>(std::move(a4))});
     }
 
-    __attribute__((pure)) static chain change(String s, String t, String u,
-                                              Nat n, edit a4, chain a5) {
+    static chain change(String s, String t, String u, Nat n, edit a4,
+                        chain a5) {
       return chain(Change{std::move(s), std::move(t), std::move(u),
                           std::move(n), std::move(a4),
                           std::make_unique<chain>(std::move(a5))});
@@ -663,54 +713,45 @@ struct Levenshtein {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) chain aux_eq_char(const String &, const String &,
-                                            const Ascii &, String xs, Ascii y,
-                                            String ys, Nat n) const {
+    chain aux_eq_char(const String &, const String &, const Ascii &, String xs,
+                      Ascii y, String ys, Nat n) const {
       return chain::skip(std::move(y), std::move(xs), std::move(ys),
                          std::move(n), std::move(*(this)));
     }
 
-    __attribute__((pure)) chain aux_update(const String &, const String &,
-                                           const Ascii &x, const String &xs,
-                                           const Ascii &y, const String &ys,
-                                           const Nat &n) const {
+    chain aux_update(const String &, const String &, const Ascii &x,
+                     const String &xs, const Ascii &y, const String &ys,
+                     const Nat &n) const {
       return (*(this)).update_chain(x, y, xs, ys, n);
     }
 
-    __attribute__((pure)) chain aux_delete(const String &, const String &,
-                                           const Ascii &x, const String &xs,
-                                           Ascii y, String ys,
-                                           const Nat &n) const {
+    chain aux_delete(const String &, const String &, const Ascii &x,
+                     const String &xs, Ascii y, String ys, const Nat &n) const {
       return (*(this)).delete_chain(
           x, xs, String::string0(std::move(y), std::move(ys)), n);
     }
 
-    __attribute__((pure)) chain aux_insert(const String &, const String &,
-                                           Ascii x, String xs, const Ascii &y,
-                                           const String &ys,
-                                           const Nat &n) const {
+    chain aux_insert(const String &, const String &, Ascii x, String xs,
+                     const Ascii &y, const String &ys, const Nat &n) const {
       return (*(this)).insert_chain(
           y, String::string0(std::move(x), std::move(xs)), ys, n);
     }
 
-    __attribute__((pure)) chain update_chain(Ascii c, Ascii c_, String s1,
-                                             String s2, Nat n) const {
+    chain update_chain(Ascii c, Ascii c_, String s1, String s2, Nat n) const {
       return chain::change(String::string0(c, s1), String::string0(c_, s1),
                            String::string0(c_, s2), n, edit::update(c, c_, s1),
                            chain::skip(c_, s1, s2, n, std::move(*(this))));
     }
 
-    __attribute__((pure)) chain delete_chain(Ascii c, String s1, String s2,
-                                             Nat n) const {
+    chain delete_chain(Ascii c, String s1, String s2, Nat n) const {
       return chain::change(String::string0(c, s1), s1, std::move(s2),
                            std::move(n), edit::deletion(c, s1),
                            std::move(*(this)));
     }
 
-    __attribute__((pure)) chain insert_chain(Ascii c, String s1, String s2,
-                                             Nat n) const {
+    chain insert_chain(Ascii c, String s1, String s2, Nat n) const {
       return chain::change(s1, String::string0(c, s1), String::string0(c, s2),
                            n, edit::insertion(c, s1),
                            chain::skip(c, s1, s2, n, std::move(*(this))));
@@ -757,7 +798,7 @@ struct Levenshtein {
     }
   };
 
-  __attribute__((pure)) static chain same_chain(const String &s);
+  static chain same_chain(const String &s);
 
   template <typename T1> static T1 _inserts_chain_F(const String s) {
     if (std::holds_alternative<typename String::EmptyString>(s.v())) {
@@ -769,14 +810,11 @@ struct Levenshtein {
     }
   }
 
-  __attribute__((pure)) static chain inserts_chain(const String &s1,
-                                                   const String &s2);
-  __attribute__((pure)) static chain inserts_chain_empty(const String &s);
-  __attribute__((pure)) static chain deletes_chain(const String &s1,
-                                                   const String &s2);
-  __attribute__((pure)) static chain deletes_chain_empty(const String &s);
-  __attribute__((pure)) static chain aux_both_empty(const String &_x,
-                                                    const String &_x0);
+  static chain inserts_chain(const String &s1, const String &s2);
+  static chain inserts_chain_empty(const String &s);
+  static chain deletes_chain(const String &s1, const String &s2);
+  static chain deletes_chain_empty(const String &s);
+  static chain aux_both_empty(const String &_x, const String &_x0);
 
   template <typename T1, MapsTo<Nat, T1> F3>
   static T1 min3_app(const T1 x, const T1 y, const T1 z, F3 &&f) {
@@ -813,12 +851,9 @@ struct Levenshtein {
     }
   }
 
-  __attribute__((pure)) static SigT<Nat, chain>
-  levenshtein_chain(const String &s, String _x0);
-  __attribute__((pure)) static Nat levenshtein_computed(const String &s,
-                                                        const String &t);
-  __attribute__((pure)) static Nat levenshtein(const String &_x0,
-                                               const String &_x1);
+  static SigT<Nat, chain> levenshtein_chain(const String &s, String _x0);
+  static Nat levenshtein_computed(const String &s, const String &t);
+  static Nat levenshtein(const String &_x0, const String &_x1);
 };
 
 #endif // INCLUDED_LEVENSHTEIN

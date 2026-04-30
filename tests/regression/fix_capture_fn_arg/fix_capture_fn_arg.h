@@ -21,8 +21,7 @@ struct FixCaptureFnArg {
   /// go are all destroyed. The returned closure dereferences a
   /// destroyed std::function when it calls f.
   template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((pure)) static std::pair<
-      unsigned int, std::function<unsigned int(unsigned int)>>
+  static std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
   make_transform(F0 &&f, unsigned int base) {
     auto go_impl = [=](auto &_self_go, unsigned int x) mutable -> unsigned int {
       if (x <= 0) {

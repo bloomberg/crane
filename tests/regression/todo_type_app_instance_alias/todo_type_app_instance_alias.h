@@ -16,7 +16,7 @@ concept Boxed = requires {
 
 struct TodoTypeAppInstanceAlias {
   struct natBoxed {
-    __attribute__((pure)) static unsigned int boxed_default() { return 7u; }
+    static unsigned int boxed_default() { return 7u; }
   };
 
   static_assert(Boxed<natBoxed, unsigned int>);

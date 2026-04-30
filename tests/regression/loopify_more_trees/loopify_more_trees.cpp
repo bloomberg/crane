@@ -1,6 +1,6 @@
 #include <loopify_more_trees.h>
 
-__attribute__((pure)) LoopifyMoreTrees::tree
+LoopifyMoreTrees::tree
 LoopifyMoreTrees::mirror(const LoopifyMoreTrees::tree &t) {
   struct _Enter {
     const LoopifyMoreTrees::tree *t;
@@ -48,9 +48,8 @@ LoopifyMoreTrees::mirror(const LoopifyMoreTrees::tree &t) {
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifyMoreTrees::same_shape(const LoopifyMoreTrees::tree &t1,
-                             const LoopifyMoreTrees::tree &t2) {
+bool LoopifyMoreTrees::same_shape(const LoopifyMoreTrees::tree &t1,
+                                  const LoopifyMoreTrees::tree &t2) {
   struct _Enter {
     const LoopifyMoreTrees::tree *t2;
     const LoopifyMoreTrees::tree *t1;
@@ -110,7 +109,7 @@ LoopifyMoreTrees::same_shape(const LoopifyMoreTrees::tree &t1,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyMoreTrees::tree_to_list(const LoopifyMoreTrees::tree &t) {
   struct _Enter {
     const LoopifyMoreTrees::tree *t;
@@ -162,13 +161,11 @@ LoopifyMoreTrees::tree_to_list(const LoopifyMoreTrees::tree &t) {
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifyMoreTrees::mirror_equal(const LoopifyMoreTrees::tree &t) {
+bool LoopifyMoreTrees::mirror_equal(const LoopifyMoreTrees::tree &t) {
   return same_shape(t, mirror(t));
 }
 
-__attribute__((pure)) unsigned int
-LoopifyMoreTrees::count_nodes(const LoopifyMoreTrees::tree &t) {
+unsigned int LoopifyMoreTrees::count_nodes(const LoopifyMoreTrees::tree &t) {
   struct _Enter {
     const LoopifyMoreTrees::tree *t;
   };
@@ -215,9 +212,8 @@ LoopifyMoreTrees::count_nodes(const LoopifyMoreTrees::tree &t) {
   return _result;
 }
 
-__attribute__((pure)) LoopifyMoreTrees::tree
-LoopifyMoreTrees::tree_max(LoopifyMoreTrees::tree t1,
-                           LoopifyMoreTrees::tree t2) {
+LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(LoopifyMoreTrees::tree t1,
+                                                  LoopifyMoreTrees::tree t2) {
   struct _Enter {
     LoopifyMoreTrees::tree t2;
     LoopifyMoreTrees::tree t1;
@@ -276,7 +272,7 @@ LoopifyMoreTrees::tree_max(LoopifyMoreTrees::tree t1,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 LoopifyMoreTrees::sum_of_max_branches(const LoopifyMoreTrees::tree &t) {
   struct _Enter {
     const LoopifyMoreTrees::tree *t;
@@ -324,7 +320,7 @@ LoopifyMoreTrees::sum_of_max_branches(const LoopifyMoreTrees::tree &t) {
   return _result;
 }
 
-__attribute__((pure)) LoopifyMoreTrees::tree
+LoopifyMoreTrees::tree
 LoopifyMoreTrees::insert_bst(unsigned int x, const LoopifyMoreTrees::tree &t) {
   struct _Enter {
     const LoopifyMoreTrees::tree *t;
@@ -376,7 +372,7 @@ LoopifyMoreTrees::insert_bst(unsigned int x, const LoopifyMoreTrees::tree &t) {
   return _result;
 }
 
-__attribute__((pure)) LoopifyMoreTrees::tree
+LoopifyMoreTrees::tree
 LoopifyMoreTrees::build_bst(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
@@ -413,9 +409,8 @@ LoopifyMoreTrees::build_bst(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyMoreTrees::append_lists(const List<unsigned int> &l1,
-                               List<unsigned int> l2) {
+List<unsigned int> LoopifyMoreTrees::append_lists(const List<unsigned int> &l1,
+                                                  List<unsigned int> l2) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l2 = std::move(l2);
@@ -443,7 +438,7 @@ LoopifyMoreTrees::append_lists(const List<unsigned int> &l1,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyMoreTrees::flatten(const List<List<unsigned int>> &ll) {
   struct _Enter {
     const List<List<unsigned int>> *ll;
@@ -481,7 +476,7 @@ LoopifyMoreTrees::flatten(const List<List<unsigned int>> &ll) {
   return _result;
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyMoreTrees::map_tree_to_list(const List<LoopifyMoreTrees::tree> &lt) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
@@ -508,7 +503,7 @@ LoopifyMoreTrees::map_tree_to_list(const List<LoopifyMoreTrees::tree> &lt) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<LoopifyMoreTrees::tree>
+List<LoopifyMoreTrees::tree>
 LoopifyMoreTrees::tree_children(const LoopifyMoreTrees::tree &t) {
   if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(t.v())) {
     return List<LoopifyMoreTrees::tree>::nil();
@@ -521,7 +516,7 @@ LoopifyMoreTrees::tree_children(const LoopifyMoreTrees::tree &t) {
   }
 }
 
-__attribute__((pure)) List<LoopifyMoreTrees::tree>
+List<LoopifyMoreTrees::tree>
 LoopifyMoreTrees::append_trees(const List<LoopifyMoreTrees::tree> &l1,
                                List<LoopifyMoreTrees::tree> l2) {
   std::unique_ptr<List<LoopifyMoreTrees::tree>> _head{};
@@ -553,7 +548,7 @@ LoopifyMoreTrees::append_trees(const List<LoopifyMoreTrees::tree> &l1,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<LoopifyMoreTrees::tree>
+List<LoopifyMoreTrees::tree>
 LoopifyMoreTrees::concat_map_children(const List<LoopifyMoreTrees::tree> &lt) {
   struct _Enter {
     const List<LoopifyMoreTrees::tree> *lt;
@@ -591,7 +586,7 @@ LoopifyMoreTrees::concat_map_children(const List<LoopifyMoreTrees::tree> &lt) {
   return _result;
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyMoreTrees::tree_levels_fuel(const unsigned int &fuel,
                                    const List<LoopifyMoreTrees::tree> &level) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
@@ -631,7 +626,7 @@ LoopifyMoreTrees::tree_levels_fuel(const unsigned int &fuel,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyMoreTrees::tree_levels(LoopifyMoreTrees::tree t) {
   return tree_levels_fuel(
       100u, List<LoopifyMoreTrees::tree>::cons(

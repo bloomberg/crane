@@ -1,7 +1,7 @@
 #include <name_clash_let_match.h>
 
 /// Variable name 'a' used in both let and match binding.
-__attribute__((pure)) unsigned int
+unsigned int
 NameClashLetMatch::let_shadows_match(const NameClashLetMatch::either &e) {
   unsigned int a = 100u;
   if (std::holds_alternative<typename NameClashLetMatch::either::Left>(e.v())) {
@@ -16,7 +16,7 @@ NameClashLetMatch::let_shadows_match(const NameClashLetMatch::either &e) {
 }
 
 /// Match where the same variable name is used in multiple branches
-__attribute__((pure)) unsigned int
+unsigned int
 NameClashLetMatch::same_name_branches(const NameClashLetMatch::either &e,
                                       const NameClashLetMatch::triple &t) {
   if (std::holds_alternative<typename NameClashLetMatch::either::Left>(e.v())) {

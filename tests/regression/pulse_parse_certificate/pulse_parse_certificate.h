@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,10 +119,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  template <typename T1, MapsTo<T1, t_A> F0>
-  __attribute__((pure)) List<T1> map(F0 &&f) const {
+  template <typename T1, MapsTo<T1, t_A> F0> List<T1> map(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return List<T1>::nil();
@@ -113,7 +131,7 @@ public:
     }
   }
 
-  __attribute__((pure)) unsigned int length() const {
+  unsigned int length() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
@@ -127,13 +145,10 @@ public:
 struct PulseParseCertificateCase {
   using Trace = List<bool>;
   using Runs = List<unsigned int>;
-  __attribute__((pure)) static std::optional<unsigned int>
-  first_true(const List<bool> &xs);
-  __attribute__((pure)) static std::optional<unsigned int>
-  last_true(const List<bool> &xs);
-  __attribute__((pure)) static Runs trace_to_runs(const List<bool> &xs);
-  __attribute__((pure)) static unsigned int
-  pulse_base_from_runs(const List<unsigned int> &rs);
+  static std::optional<unsigned int> first_true(const List<bool> &xs);
+  static std::optional<unsigned int> last_true(const List<bool> &xs);
+  static Runs trace_to_runs(const List<bool> &xs);
+  static unsigned int pulse_base_from_runs(const List<unsigned int> &rs);
   enum class PulseClass { e_MARKSHORT, e_MARKLONG };
 
   template <typename T1>
@@ -164,14 +179,13 @@ struct PulseParseCertificateCase {
     }
   }
 
-  __attribute__((pure)) static PulseClass
-  classify_run_with_base(unsigned int base, const unsigned int &n);
-  __attribute__((pure)) static List<PulseClass>
-  classify_runs_with_base(unsigned int base, const List<unsigned int> &rs);
-  __attribute__((pure)) static bool pulse_class_eqb(const PulseClass x,
-                                                    const PulseClass y);
-  __attribute__((pure)) static bool
-  pulse_class_list_eqb(const List<PulseClass> &xs, const List<PulseClass> &ys);
+  static PulseClass classify_run_with_base(unsigned int base,
+                                           const unsigned int &n);
+  static List<PulseClass> classify_runs_with_base(unsigned int base,
+                                                  const List<unsigned int> &rs);
+  static bool pulse_class_eqb(const PulseClass x, const PulseClass y);
+  static bool pulse_class_list_eqb(const List<PulseClass> &xs,
+                                   const List<PulseClass> &ys);
 
   struct PulseCertificate {
     std::optional<unsigned int> certificate_first_active;
@@ -181,7 +195,7 @@ struct PulseParseCertificateCase {
     List<PulseClass> certificate_classes;
 
     // ACCESSORS
-    __attribute__((pure)) PulseCertificate clone() const {
+    PulseCertificate clone() const {
       return PulseCertificate{
           (*(this)).certificate_first_active, (*(this)).certificate_last_active,
           (*(this)).certificate_runs, (*(this)).certificate_base,
@@ -189,10 +203,9 @@ struct PulseParseCertificateCase {
     }
   };
 
-  __attribute__((pure)) static bool
+  static bool
   pulse_parse_certificate_self_consistent(const PulseCertificate &cert);
-  __attribute__((pure)) static PulseCertificate
-  certify_trace(const List<bool> &xs);
+  static PulseCertificate certify_trace(const List<bool> &xs);
   static inline const Trace sample_trace = List<bool>::cons(
       false,
       List<bool>::cons(

@@ -1,30 +1,26 @@
 #include <unsound_axioms.h>
 
-__attribute__((pure)) unsigned int
-UnsoundAxioms::cast_confusion(const UnsoundAxioms::Rec &r) {
+unsigned int UnsoundAxioms::cast_confusion(const UnsoundAxioms::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   return (unsafe_cast<unsigned int, unsigned int>(a) + b);
 }
 
-__attribute__((pure)) unsigned int
-UnsoundAxioms::choose_in_match(const UnsoundAxioms::Rec &r) {
+unsigned int UnsoundAxioms::choose_in_match(const UnsoundAxioms::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int witness = choose<unsigned int>();
   return ((a + b) + witness);
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 UnsoundAxioms::extract_proof_computation(const UnsoundAxioms::ProofRec &pr) {
   unsigned int v = pr.pf_val;
   unsigned int v2 = pr.pf_val2;
   return (v + v2);
 }
 
-__attribute__((pure)) bool UnsoundAxioms::use_type_eq(unsigned int n) {
-  return n;
-}
+bool UnsoundAxioms::use_type_eq(unsigned int n) { return n; }
 
 UnsoundAxioms::Rec UnsoundAxioms::impossible_rec() {
   throw std::logic_error("unrealized axiom: "
@@ -48,8 +44,7 @@ unsigned int UnsoundAxioms::prop_as_type() {
                          "UnsoundAxioms.prop_as_type");
 }
 
-__attribute__((pure)) unsigned int
-UnsoundAxioms::use_prop_as_type(const UnsoundAxioms::Rec &r) {
+unsigned int UnsoundAxioms::use_prop_as_type(const UnsoundAxioms::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   return ((prop_as_type() + a) + b);

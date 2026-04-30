@@ -51,15 +51,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -73,9 +92,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -102,7 +121,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 template <typename t_A> struct Sig {
@@ -138,7 +157,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Sig<t_A> clone() const {
+  Sig<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist>(_sv.v());
     return Sig<t_A>(Exist{d_x});
@@ -150,21 +169,18 @@ public:
     d_v_ = Exist{t_A(d_x)};
   }
 
-  __attribute__((pure)) static Sig<t_A> exist(t_A x) {
-    return Sig(Exist{std::move(x)});
-  }
+  static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct FunctionVernac {
   template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((pure)) static unsigned int div2_F(F0 &&div3,
-                                                   const unsigned int &n) {
+  static unsigned int div2_F(F0 &&div3, const unsigned int &n) {
     if (n <= 0) {
       return 0u;
     } else {
@@ -178,9 +194,8 @@ struct FunctionVernac {
     }
   }
 
-  __attribute__((pure)) static Sig<unsigned int>
-  div2_terminate(const unsigned int &n);
-  __attribute__((pure)) static unsigned int div2(const unsigned int &n);
+  static Sig<unsigned int> div2_terminate(const unsigned int &n);
+  static unsigned int div2(const unsigned int &n);
 
   struct R_div2 {
     // TYPES
@@ -230,34 +245,51 @@ struct FunctionVernac {
     }
 
     // ACCESSORS
-    __attribute__((pure)) R_div2 clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<R_div2_0>(_sv.v())) {
-        const auto &[d_n] = std::get<R_div2_0>(_sv.v());
-        return R_div2(R_div2_0{d_n});
-      } else if (std::holds_alternative<R_div2_1>(_sv.v())) {
-        const auto &[d_n] = std::get<R_div2_1>(_sv.v());
-        return R_div2(R_div2_1{d_n});
-      } else {
-        const auto &[d_n, d_p, d_a2, d__res] = std::get<R_div2_2>(_sv.v());
-        return R_div2(R_div2_2{
-            d_n, d_p, d_a2,
-            d__res ? std::make_unique<FunctionVernac::R_div2>(d__res->clone())
-                   : nullptr});
+    R_div2 clone() const {
+      R_div2 _out{};
+
+      struct _CloneFrame {
+        const R_div2 *_src;
+        R_div2 *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const R_div2 *_src = _frame._src;
+        R_div2 *_dst = _frame._dst;
+        if (std::holds_alternative<R_div2_0>(_src->v())) {
+          const auto &_alt = std::get<R_div2_0>(_src->v());
+          _dst->d_v_ = R_div2_0{_alt.d_n};
+        } else if (std::holds_alternative<R_div2_1>(_src->v())) {
+          const auto &_alt = std::get<R_div2_1>(_src->v());
+          _dst->d_v_ = R_div2_1{_alt.d_n};
+        } else {
+          const auto &_alt = std::get<R_div2_2>(_src->v());
+          _dst->d_v_ =
+              R_div2_2{_alt.d_n, _alt.d_p, _alt.d_a2,
+                       _alt.d__res ? std::make_unique<R_div2>() : nullptr};
+          auto &_dst_alt = std::get<R_div2_2>(_dst->d_v_);
+          if (_alt.d__res)
+            _stack.push_back({_alt.d__res.get(), _dst_alt.d__res.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static R_div2 r_div2_0(unsigned int n) {
+    static R_div2 r_div2_0(unsigned int n) {
       return R_div2(R_div2_0{std::move(n)});
     }
 
-    __attribute__((pure)) static R_div2 r_div2_1(unsigned int n) {
+    static R_div2 r_div2_1(unsigned int n) {
       return R_div2(R_div2_1{std::move(n)});
     }
 
-    __attribute__((pure)) static R_div2 r_div2_2(unsigned int n, unsigned int p,
-                                                 unsigned int a2, R_div2 _res) {
+    static R_div2 r_div2_2(unsigned int n, unsigned int p, unsigned int a2,
+                           R_div2 _res) {
       return R_div2(R_div2_2{std::move(n), std::move(p), std::move(a2),
                              std::make_unique<R_div2>(std::move(_res))});
     }
@@ -284,7 +316,7 @@ struct FunctionVernac {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     template <
         typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, unsigned int> F1,
@@ -359,12 +391,10 @@ struct FunctionVernac {
     return div2_rect<T1>(_x0, _x1, _x2, _x3);
   }
 
-  __attribute__((pure)) static R_div2 R_div2_correct(const unsigned int &n,
-                                                     const unsigned int &_res);
+  static R_div2 R_div2_correct(const unsigned int &n, const unsigned int &_res);
 
   template <MapsTo<unsigned int, List<unsigned int>> F0>
-  __attribute__((pure)) static unsigned int
-  list_sum_F(F0 &&list_sum0, const List<unsigned int> &l) {
+  static unsigned int list_sum_F(F0 &&list_sum0, const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return 0u;
     } else {
@@ -374,10 +404,8 @@ struct FunctionVernac {
     }
   }
 
-  __attribute__((pure)) static Sig<unsigned int>
-  list_sum_terminate(const List<unsigned int> &l);
-  __attribute__((pure)) static unsigned int
-  list_sum(const List<unsigned int> &l);
+  static Sig<unsigned int> list_sum_terminate(const List<unsigned int> &l);
+  static unsigned int list_sum(const List<unsigned int> &l);
 
   struct R_list_sum {
     // TYPES
@@ -423,30 +451,45 @@ struct FunctionVernac {
     }
 
     // ACCESSORS
-    __attribute__((pure)) R_list_sum clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<R_list_sum_0>(_sv.v())) {
-        const auto &[d_l] = std::get<R_list_sum_0>(_sv.v());
-        return R_list_sum(R_list_sum_0{d_l.clone()});
-      } else {
-        const auto &[d_l, d_x, d_xs, d_a3, d__res] =
-            std::get<R_list_sum_1>(_sv.v());
-        return R_list_sum(R_list_sum_1{
-            d_l.clone(), d_x, d_xs.clone(), d_a3,
-            d__res
-                ? std::make_unique<FunctionVernac::R_list_sum>(d__res->clone())
-                : nullptr});
+    R_list_sum clone() const {
+      R_list_sum _out{};
+
+      struct _CloneFrame {
+        const R_list_sum *_src;
+        R_list_sum *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const R_list_sum *_src = _frame._src;
+        R_list_sum *_dst = _frame._dst;
+        if (std::holds_alternative<R_list_sum_0>(_src->v())) {
+          const auto &_alt = std::get<R_list_sum_0>(_src->v());
+          _dst->d_v_ = R_list_sum_0{_alt.d_l};
+        } else {
+          const auto &_alt = std::get<R_list_sum_1>(_src->v());
+          _dst->d_v_ = R_list_sum_1{_alt.d_l, _alt.d_x, _alt.d_xs, _alt.d_a3,
+                                    _alt.d__res ? std::make_unique<R_list_sum>()
+                                                : nullptr};
+          auto &_dst_alt = std::get<R_list_sum_1>(_dst->d_v_);
+          if (_alt.d__res)
+            _stack.push_back({_alt.d__res.get(), _dst_alt.d__res.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static R_list_sum r_list_sum_0(List<unsigned int> l) {
+    static R_list_sum r_list_sum_0(List<unsigned int> l) {
       return R_list_sum(R_list_sum_0{std::move(l)});
     }
 
-    __attribute__((pure)) static R_list_sum
-    r_list_sum_1(List<unsigned int> l, unsigned int x, List<unsigned int> xs,
-                 unsigned int a3, R_list_sum _res) {
+    static R_list_sum r_list_sum_1(List<unsigned int> l, unsigned int x,
+                                   List<unsigned int> xs, unsigned int a3,
+                                   R_list_sum _res) {
       return R_list_sum(
           R_list_sum_1{std::move(l), std::move(x), std::move(xs), std::move(a3),
                        std::make_unique<R_list_sum>(std::move(_res))});
@@ -474,7 +517,7 @@ struct FunctionVernac {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, List<unsigned int>> F0,
               MapsTo<T1, List<unsigned int>, unsigned int, List<unsigned int>,
@@ -545,8 +588,8 @@ struct FunctionVernac {
     return list_sum_rect<T1>(_x0, _x1, _x2);
   }
 
-  __attribute__((pure)) static R_list_sum
-  R_list_sum_correct(const List<unsigned int> &l, const unsigned int &_res);
+  static R_list_sum R_list_sum_correct(const List<unsigned int> &l,
+                                       const unsigned int &_res);
   static inline const unsigned int test_div2 = div2(10u);
   static inline const unsigned int test_sum = list_sum(List<unsigned int>::cons(
       1u, List<unsigned int>::cons(

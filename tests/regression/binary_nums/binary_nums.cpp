@@ -1,6 +1,6 @@
 #include <binary_nums.h>
 
-__attribute__((pure)) Positive Pos::succ(const Positive &x) {
+Positive Pos::succ(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     return Positive::xo(succ(*(d_a0)));
@@ -12,7 +12,7 @@ __attribute__((pure)) Positive Pos::succ(const Positive &x) {
   }
 }
 
-__attribute__((pure)) Positive Pos::add(const Positive &x, const Positive &y) {
+Positive Pos::add(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -48,8 +48,7 @@ __attribute__((pure)) Positive Pos::add(const Positive &x, const Positive &y) {
   }
 }
 
-__attribute__((pure)) Positive Pos::add_carry(const Positive &x,
-                                              const Positive &y) {
+Positive Pos::add_carry(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -85,7 +84,7 @@ __attribute__((pure)) Positive Pos::add_carry(const Positive &x,
   }
 }
 
-__attribute__((pure)) Positive Pos::pred_double(const Positive &x) {
+Positive Pos::pred_double(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     return Positive::xi(Positive::xo(*(d_a0)));
@@ -97,7 +96,7 @@ __attribute__((pure)) Positive Pos::pred_double(const Positive &x) {
   }
 }
 
-__attribute__((pure)) N Pos::pred_N(const Positive &x) {
+N Pos::pred_N(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     return N::npos(Positive::xo(*(d_a0)));
@@ -109,7 +108,7 @@ __attribute__((pure)) N Pos::pred_N(const Positive &x) {
   }
 }
 
-__attribute__((pure)) Pos::mask Pos::succ_double_mask(const Pos::mask &x) {
+Pos::mask Pos::succ_double_mask(const Pos::mask &x) {
   if (std::holds_alternative<typename Pos::mask::IsNul>(x.v())) {
     return mask::ispos(Positive::xh());
   } else if (std::holds_alternative<typename Pos::mask::IsPos>(x.v())) {
@@ -120,7 +119,7 @@ __attribute__((pure)) Pos::mask Pos::succ_double_mask(const Pos::mask &x) {
   }
 }
 
-__attribute__((pure)) Pos::mask Pos::double_mask(const Pos::mask &x) {
+Pos::mask Pos::double_mask(const Pos::mask &x) {
   if (std::holds_alternative<typename Pos::mask::IsNul>(x.v())) {
     return mask::isnul();
   } else if (std::holds_alternative<typename Pos::mask::IsPos>(x.v())) {
@@ -131,7 +130,7 @@ __attribute__((pure)) Pos::mask Pos::double_mask(const Pos::mask &x) {
   }
 }
 
-__attribute__((pure)) Pos::mask Pos::double_pred_mask(const Positive &x) {
+Pos::mask Pos::double_pred_mask(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     return mask::ispos(Positive::xo(Positive::xo(*(d_a0))));
@@ -143,8 +142,7 @@ __attribute__((pure)) Pos::mask Pos::double_pred_mask(const Positive &x) {
   }
 }
 
-__attribute__((pure)) Pos::mask Pos::sub_mask(const Positive &x,
-                                              const Positive &y) {
+Pos::mask Pos::sub_mask(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -176,8 +174,7 @@ __attribute__((pure)) Pos::mask Pos::sub_mask(const Positive &x,
   }
 }
 
-__attribute__((pure)) Pos::mask Pos::sub_mask_carry(const Positive &x,
-                                                    const Positive &y) {
+Pos::mask Pos::sub_mask_carry(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -205,7 +202,7 @@ __attribute__((pure)) Pos::mask Pos::sub_mask_carry(const Positive &x,
   }
 }
 
-__attribute__((pure)) Positive Pos::mul(const Positive &x, Positive y) {
+Positive Pos::mul(const Positive &x, Positive y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     return add(y, Positive::xo(mul(*(d_a0), y)));
@@ -217,9 +214,8 @@ __attribute__((pure)) Positive Pos::mul(const Positive &x, Positive y) {
   }
 }
 
-__attribute__((pure)) Comparison Pos::compare_cont(const Comparison r,
-                                                   const Positive &x,
-                                                   const Positive &y) {
+Comparison Pos::compare_cont(const Comparison r, const Positive &x,
+                             const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -251,12 +247,11 @@ __attribute__((pure)) Comparison Pos::compare_cont(const Comparison r,
   }
 }
 
-__attribute__((pure)) Comparison Pos::compare(const Positive &_x0,
-                                              const Positive &_x1) {
+Comparison Pos::compare(const Positive &_x0, const Positive &_x1) {
   return compare_cont(Comparison::e_EQ, _x0, _x1);
 }
 
-__attribute__((pure)) unsigned int Pos::to_nat(const Positive &x) {
+unsigned int Pos::to_nat(const Positive &x) {
   return iter_op<unsigned int>(
       [](unsigned int _x0, unsigned int _x1) -> unsigned int {
         return (_x0 + _x1);
@@ -264,7 +259,7 @@ __attribute__((pure)) unsigned int Pos::to_nat(const Positive &x) {
       x, 1u);
 }
 
-__attribute__((pure)) Positive Coq_Pos::succ(const Positive &x) {
+Positive Coq_Pos::succ(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     return Positive::xo(succ(*(d_a0)));
@@ -276,8 +271,7 @@ __attribute__((pure)) Positive Coq_Pos::succ(const Positive &x) {
   }
 }
 
-__attribute__((pure)) Positive Coq_Pos::add(const Positive &x,
-                                            const Positive &y) {
+Positive Coq_Pos::add(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -313,8 +307,7 @@ __attribute__((pure)) Positive Coq_Pos::add(const Positive &x,
   }
 }
 
-__attribute__((pure)) Positive Coq_Pos::add_carry(const Positive &x,
-                                                  const Positive &y) {
+Positive Coq_Pos::add_carry(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -350,7 +343,7 @@ __attribute__((pure)) Positive Coq_Pos::add_carry(const Positive &x,
   }
 }
 
-__attribute__((pure)) Positive Coq_Pos::mul(const Positive &x, Positive y) {
+Positive Coq_Pos::mul(const Positive &x, Positive y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     return add(y, Positive::xo(mul(*(d_a0), y)));
@@ -362,7 +355,7 @@ __attribute__((pure)) Positive Coq_Pos::mul(const Positive &x, Positive y) {
   }
 }
 
-__attribute__((pure)) unsigned int Coq_Pos::to_nat(const Positive &x) {
+unsigned int Coq_Pos::to_nat(const Positive &x) {
   return iter_op<unsigned int>(
       [](unsigned int _x0, unsigned int _x1) -> unsigned int {
         return (_x0 + _x1);
@@ -370,7 +363,7 @@ __attribute__((pure)) unsigned int Coq_Pos::to_nat(const Positive &x) {
       x, 1u);
 }
 
-__attribute__((pure)) N BinNat::sub(N n, const N &m) {
+N BinNat::sub(N n, const N &m) {
   if (std::holds_alternative<typename N::N0>(n.v_mut())) {
     return N::n0();
   } else {
@@ -390,7 +383,7 @@ __attribute__((pure)) N BinNat::sub(N n, const N &m) {
   }
 }
 
-__attribute__((pure)) Comparison BinNat::compare(const N &n, const N &m) {
+Comparison BinNat::compare(const N &n, const N &m) {
   if (std::holds_alternative<typename N::N0>(n.v())) {
     if (std::holds_alternative<typename N::N0>(m.v())) {
       return Comparison::e_EQ;
@@ -408,7 +401,7 @@ __attribute__((pure)) Comparison BinNat::compare(const N &n, const N &m) {
   }
 }
 
-__attribute__((pure)) N BinNat::pred(const N &n) {
+N BinNat::pred(const N &n) {
   if (std::holds_alternative<typename N::N0>(n.v())) {
     return N::n0();
   } else {
@@ -417,7 +410,7 @@ __attribute__((pure)) N BinNat::pred(const N &n) {
   }
 }
 
-__attribute__((pure)) N BinNat::add(N n, N m) {
+N BinNat::add(N n, N m) {
   if (std::holds_alternative<typename N::N0>(n.v_mut())) {
     return m;
   } else {
@@ -431,7 +424,7 @@ __attribute__((pure)) N BinNat::add(N n, N m) {
   }
 }
 
-__attribute__((pure)) N BinNat::mul(const N &n, const N &m) {
+N BinNat::mul(const N &n, const N &m) {
   if (std::holds_alternative<typename N::N0>(n.v())) {
     return N::n0();
   } else {
@@ -445,7 +438,7 @@ __attribute__((pure)) N BinNat::mul(const N &n, const N &m) {
   }
 }
 
-__attribute__((pure)) unsigned int BinNat::to_nat(const N &a) {
+unsigned int BinNat::to_nat(const N &a) {
   if (std::holds_alternative<typename N::N0>(a.v())) {
     return 0u;
   } else {
@@ -454,7 +447,7 @@ __attribute__((pure)) unsigned int BinNat::to_nat(const N &a) {
   }
 }
 
-__attribute__((pure)) Z BinInt::double_(const Z &x) {
+Z BinInt::double_(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
@@ -466,7 +459,7 @@ __attribute__((pure)) Z BinInt::double_(const Z &x) {
   }
 }
 
-__attribute__((pure)) Z BinInt::succ_double(const Z &x) {
+Z BinInt::succ_double(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::zpos(Positive::xh());
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
@@ -478,7 +471,7 @@ __attribute__((pure)) Z BinInt::succ_double(const Z &x) {
   }
 }
 
-__attribute__((pure)) Z BinInt::pred_double(const Z &x) {
+Z BinInt::pred_double(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::zneg(Positive::xh());
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
@@ -490,7 +483,7 @@ __attribute__((pure)) Z BinInt::pred_double(const Z &x) {
   }
 }
 
-__attribute__((pure)) Z BinInt::pos_sub(const Positive &x, const Positive &y) {
+Z BinInt::pos_sub(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -526,7 +519,7 @@ __attribute__((pure)) Z BinInt::pos_sub(const Positive &x, const Positive &y) {
   }
 }
 
-__attribute__((pure)) Z BinInt::add(Z x, Z y) {
+Z BinInt::add(Z x, Z y) {
   if (std::holds_alternative<typename Z::Z0>(x.v_mut())) {
     return y;
   } else if (std::holds_alternative<typename Z::Zpos>(x.v_mut())) {
@@ -554,7 +547,7 @@ __attribute__((pure)) Z BinInt::add(Z x, Z y) {
   }
 }
 
-__attribute__((pure)) Z BinInt::opp(const Z &x) {
+Z BinInt::opp(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
@@ -566,11 +559,9 @@ __attribute__((pure)) Z BinInt::opp(const Z &x) {
   }
 }
 
-__attribute__((pure)) Z BinInt::sub(const Z &m, const Z &n) {
-  return BinInt::add(m, BinInt::opp(n));
-}
+Z BinInt::sub(const Z &m, const Z &n) { return BinInt::add(m, BinInt::opp(n)); }
 
-__attribute__((pure)) Z BinInt::mul(const Z &x, const Z &y) {
+Z BinInt::mul(const Z &x, const Z &y) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
@@ -598,7 +589,7 @@ __attribute__((pure)) Z BinInt::mul(const Z &x, const Z &y) {
   }
 }
 
-__attribute__((pure)) Comparison BinInt::compare(const Z &x, const Z &y) {
+Comparison BinInt::compare(const Z &x, const Z &y) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return Comparison::e_EQ;
@@ -626,7 +617,7 @@ __attribute__((pure)) Comparison BinInt::compare(const Z &x, const Z &y) {
   }
 }
 
-__attribute__((pure)) unsigned int BinInt::to_nat(const Z &z) {
+unsigned int BinInt::to_nat(const Z &z) {
   if (std::holds_alternative<typename Z::Zpos>(z.v())) {
     const auto &[d_a0] = std::get<typename Z::Zpos>(z.v());
     return Pos::to_nat(d_a0);
@@ -635,7 +626,7 @@ __attribute__((pure)) unsigned int BinInt::to_nat(const Z &z) {
   }
 }
 
-__attribute__((pure)) Z BinInt::abs(const Z &z) {
+Z BinInt::abs(const Z &z) {
   if (std::holds_alternative<typename Z::Z0>(z.v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(z.v())) {
@@ -647,7 +638,7 @@ __attribute__((pure)) Z BinInt::abs(const Z &z) {
   }
 }
 
-__attribute__((pure)) N BinaryNums::n_max(N a, N b) {
+N BinaryNums::n_max(N a, N b) {
   switch (BinNat::compare(a, b)) {
   case Comparison::e_LT: {
     return b;
@@ -658,7 +649,7 @@ __attribute__((pure)) N BinaryNums::n_max(N a, N b) {
   }
 }
 
-__attribute__((pure)) Z BinaryNums::z_sign(const Z &z) {
+Z BinaryNums::z_sign(const Z &z) {
   if (std::holds_alternative<typename Z::Z0>(z.v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(z.v())) {
@@ -668,7 +659,7 @@ __attribute__((pure)) Z BinaryNums::z_sign(const Z &z) {
   }
 }
 
-__attribute__((pure)) Comparison Datatypes::CompOpp(const Comparison r) {
+Comparison Datatypes::CompOpp(const Comparison r) {
   switch (r) {
   case Comparison::e_EQ: {
     return Comparison::e_EQ;

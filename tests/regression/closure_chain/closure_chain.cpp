@@ -1,7 +1,6 @@
 #include <closure_chain.h>
 
-__attribute__((pure)) unsigned int
-ClosureChain::tree_sum(const ClosureChain::tree &t) {
+unsigned int ClosureChain::tree_sum(const ClosureChain::tree &t) {
   if (std::holds_alternative<typename ClosureChain::tree::Leaf>(t.v())) {
     return 0u;
   } else {
@@ -21,9 +20,9 @@ ClosureChain::tree_sum(const ClosureChain::tree &t) {
 /// BUG HYPOTHESIS: make_chain (S n') t creates a local binding
 /// f := make_chain n' t, then returns fun x => f (x + 1).
 /// If f is captured by &, it dies when make_chain returns.
-__attribute__((pure)) unsigned int
-ClosureChain::make_chain(const unsigned int &n, const ClosureChain::tree &t,
-                         unsigned int _x0) {
+unsigned int ClosureChain::make_chain(const unsigned int &n,
+                                      const ClosureChain::tree &t,
+                                      unsigned int _x0) {
   return [=]() mutable -> std::function<unsigned int(unsigned int)> {
     if (n <= 0) {
       return [=](const unsigned int &x) mutable { return (tree_sum(t) + x); };

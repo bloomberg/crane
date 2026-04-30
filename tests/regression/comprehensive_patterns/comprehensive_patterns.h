@@ -51,15 +51,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -73,9 +92,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -102,7 +121,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 template <typename t_A> struct Sig {
@@ -138,7 +157,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Sig<t_A> clone() const {
+  Sig<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist>(_sv.v());
     return Sig<t_A>(Exist{d_x});
@@ -150,15 +169,13 @@ public:
     d_v_ = Exist{t_A(d_x)};
   }
 
-  __attribute__((pure)) static Sig<t_A> exist(t_A x) {
-    return Sig(Exist{std::move(x)});
-  }
+  static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct ComprehensivePatterns {
@@ -168,91 +185,74 @@ struct ComprehensivePatterns {
     unsigned int s_c;
 
     // ACCESSORS
-    __attribute__((pure)) S clone() const {
-      return S{(*(this)).s_a, (*(this)).s_b, (*(this)).s_c};
-    }
+    S clone() const { return S{(*(this)).s_a, (*(this)).s_b, (*(this)).s_c}; }
   };
 
-  __attribute__((
-      pure)) static std::pair<std::pair<S, unsigned int>, unsigned int>
+  static std::pair<std::pair<S, unsigned int>, unsigned int>
   syntactic_variation(S s);
-  __attribute__((pure)) static std::pair<S, unsigned int> with_magic(S s);
+  static std::pair<S, unsigned int> with_magic(S s);
 
   struct L1 {
     S l1_s;
 
     // ACCESSORS
-    __attribute__((pure)) L1 clone() const {
-      return L1{(*(this)).l1_s.clone()};
-    }
+    L1 clone() const { return L1{(*(this)).l1_s.clone()}; }
   };
 
   struct L2 {
     L1 l2_l1;
 
     // ACCESSORS
-    __attribute__((pure)) L2 clone() const {
-      return L2{(*(this)).l2_l1.clone()};
-    }
+    L2 clone() const { return L2{(*(this)).l2_l1.clone()}; }
   };
 
   struct L3 {
     L2 l3_l2;
 
     // ACCESSORS
-    __attribute__((pure)) L3 clone() const {
-      return L3{(*(this)).l3_l2.clone()};
-    }
+    L3 clone() const { return L3{(*(this)).l3_l2.clone()}; }
   };
 
   struct L4 {
     L3 l4_l3;
 
     // ACCESSORS
-    __attribute__((pure)) L4 clone() const {
-      return L4{(*(this)).l4_l3.clone()};
-    }
+    L4 clone() const { return L4{(*(this)).l4_l3.clone()}; }
   };
 
   struct L5 {
     L4 l5_l4;
 
     // ACCESSORS
-    __attribute__((pure)) L5 clone() const {
-      return L5{(*(this)).l5_l4.clone()};
-    }
+    L5 clone() const { return L5{(*(this)).l5_l4.clone()}; }
   };
 
-  __attribute__((pure)) static std::pair<
+  static std::pair<
       std::pair<std::pair<std::pair<std::pair<std::pair<L5, L4>, L3>, L2>, L1>,
                 S>,
       unsigned int>
   deep_nest(L5 l5);
-  __attribute__((pure)) static std::pair<
-      std::pair<std::pair<S, unsigned int>, unsigned int>, unsigned int>
+  static std::pair<std::pair<std::pair<S, unsigned int>, unsigned int>,
+                   unsigned int>
   nested_pair_reuse(S s);
-  __attribute__((pure)) static std::pair<S, unsigned int> compose(S s);
-  __attribute__((
-      pure)) static std::pair<std::function<unsigned int(unsigned int)>, S>
+  static std::pair<S, unsigned int> compose(S s);
+  static std::pair<std::function<unsigned int(unsigned int)>, S>
   lambda_proj(S s);
-  __attribute__((pure)) static std::pair<
-      std::pair<std::pair<S, unsigned int>, unsigned int>, unsigned int>
+  static std::pair<std::pair<std::pair<S, unsigned int>, unsigned int>,
+                   unsigned int>
   proj_chain(S s);
-  __attribute__((pure)) static std::pair<
+  static std::pair<
       std::pair<std::pair<S, S>, std::pair<unsigned int, unsigned int>>,
       std::pair<std::pair<unsigned int, unsigned int>,
                 std::pair<unsigned int, unsigned int>>>
   octuple(S s);
-  __attribute__((
-      pure)) static std::pair<std::optional<std::pair<S, unsigned int>>, S>
+  static std::pair<std::optional<std::pair<S, unsigned int>>, S>
   nested_containers(S s);
-  __attribute__((
-      pure)) static std::pair<std::pair<S, unsigned int>, unsigned int>
+  static std::pair<std::pair<S, unsigned int>, unsigned int>
   match_pair(const std::pair<S, unsigned int> &p);
-  __attribute__((pure)) static List<std::pair<S, unsigned int>>
-  make_list(const unsigned int &n, S s);
-  __attribute__((pure)) static std::optional<std::pair<S, S>>
-  multi_match(const std::optional<S> &o1, const std::optional<S> &o2);
+  static List<std::pair<S, unsigned int>> make_list(const unsigned int &n, S s);
+  static std::optional<std::pair<S, S>> multi_match(const std::optional<S> &o1,
+                                                    const std::optional<S> &o2);
   enum class Three { e_A, e_B, e_C };
 
   template <typename T1>
@@ -289,18 +289,15 @@ struct ComprehensivePatterns {
     }
   }
 
-  __attribute__((pure)) static std::pair<S, unsigned int>
-  match_three(const Three t, S s);
-  __attribute__((pure)) static std::pair<S, unsigned int> let_in_arg(S s);
-  __attribute__((pure)) static std::pair<S, unsigned int> match_record(S s);
-  __attribute__((pure)) static std::pair<S, unsigned int> rebind(S s1);
-  __attribute__((
-      pure)) static std::pair<std::function<unsigned int(std::monostate)>,
-                              std::function<unsigned int(std::monostate)>>
+  static std::pair<S, unsigned int> match_three(const Three t, S s);
+  static std::pair<S, unsigned int> let_in_arg(S s);
+  static std::pair<S, unsigned int> match_record(S s);
+  static std::pair<S, unsigned int> rebind(S s1);
+  static std::pair<std::function<unsigned int(std::monostate)>,
+                   std::function<unsigned int(std::monostate)>>
   closure_pair(S s);
-  __attribute__((pure)) static Sig<S> sigma_reuse(S s);
-  __attribute__((pure)) static std::pair<unsigned int,
-                                         std::pair<unsigned int, unsigned int>>
+  static Sig<S> sigma_reuse(S s);
+  static std::pair<unsigned int, std::pair<unsigned int, unsigned int>>
   multi_proj_arg(const S &s);
 
   struct Either {
@@ -342,7 +339,7 @@ struct ComprehensivePatterns {
     }
 
     // ACCESSORS
-    __attribute__((pure)) Either clone() const {
+    Either clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Left_S>(_sv.v())) {
         const auto &[d_s] = std::get<Left_S>(_sv.v());
@@ -354,11 +351,9 @@ struct ComprehensivePatterns {
     }
 
     // CREATORS
-    __attribute__((pure)) static Either left_s(S s) {
-      return Either(Left_S{std::move(s)});
-    }
+    static Either left_s(S s) { return Either(Left_S{std::move(s)}); }
 
-    __attribute__((pure)) static Either right_n(unsigned int n) {
+    static Either right_n(unsigned int n) {
       return Either(Right_N{std::move(n)});
     }
 
@@ -366,7 +361,7 @@ struct ComprehensivePatterns {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, S> F0, MapsTo<T1, unsigned int> F1>
     T1 Either_rec(F0 &&f, F1 &&f0) const {
@@ -393,13 +388,13 @@ struct ComprehensivePatterns {
     }
   };
 
-  __attribute__((pure)) static std::pair<Either, Either> both_in_sum(S s);
+  static std::pair<Either, Either> both_in_sum(S s);
 
   struct R1 {
     unsigned int r1_val;
 
     // ACCESSORS
-    __attribute__((pure)) R1 clone() const { return R1{(*(this)).r1_val}; }
+    R1 clone() const { return R1{(*(this)).r1_val}; }
   };
 
   struct R2 {
@@ -407,7 +402,7 @@ struct ComprehensivePatterns {
     unsigned int r2_data;
 
     // ACCESSORS
-    __attribute__((pure)) R2 clone() const {
+    R2 clone() const {
       return R2{(*(this)).r2_inner.clone(), (*(this)).r2_data};
     }
   };
@@ -418,54 +413,41 @@ struct ComprehensivePatterns {
     unsigned int r3_num;
 
     // ACCESSORS
-    __attribute__((pure)) R3 clone() const {
+    R3 clone() const {
       return R3{(*(this)).r3_r2.clone(), (*(this)).r3_r1.clone(),
                 (*(this)).r3_num};
     }
   };
 
-  __attribute__((
-      pure)) static std::pair<std::pair<std::pair<R3, R2>, R1>, unsigned int>
+  static std::pair<std::pair<std::pair<R3, R2>, R1>, unsigned int>
   hard_proj_chain(R3 r3);
-  __attribute__((pure)) static std::pair<std::pair<R2, R1>, unsigned int>
-  multi_path(const R3 &r3);
-  __attribute__((pure)) static std::pair<std::pair<R2, R1>, unsigned int>
-  let_proj(R2 r2);
-  __attribute__((pure)) static unsigned int extract_val(const R1 &r1);
-  __attribute__((pure)) static std::pair<R2, unsigned int> nested_call(R2 r2);
-  __attribute__((pure)) static std::pair<std::pair<R2, R1>, unsigned int>
+  static std::pair<std::pair<R2, R1>, unsigned int> multi_path(const R3 &r3);
+  static std::pair<std::pair<R2, R1>, unsigned int> let_proj(R2 r2);
+  static unsigned int extract_val(const R1 &r1);
+  static std::pair<R2, unsigned int> nested_call(R2 r2);
+  static std::pair<std::pair<R2, R1>, unsigned int>
   multi_proj_let(unsigned int n);
-  __attribute__((pure)) static std::optional<std::pair<R2, R1>>
-  match_proj(R2 r2);
-  __attribute__((
-      pure)) static std::pair<std::pair<R1, unsigned int>, unsigned int>
+  static std::optional<std::pair<R2, R1>> match_proj(R2 r2);
+  static std::pair<std::pair<R1, unsigned int>, unsigned int>
   proj_multi_use(const R2 &r2);
-  __attribute__((
-      pure)) static std::pair<std::pair<R3, R2>, std::pair<R1, unsigned int>>
+  static std::pair<std::pair<R3, R2>, std::pair<R1, unsigned int>>
   complex_nest(R3 r3);
-  __attribute__((pure)) static R2 make_r2(unsigned int n);
-  __attribute__((pure)) static std::pair<std::pair<R2, R1>, unsigned int>
+  static R2 make_r2(unsigned int n);
+  static std::pair<std::pair<R2, R1>, unsigned int>
   from_func(const unsigned int &n);
-  __attribute__((
-      pure)) static std::pair<std::pair<R2, R1>, std::pair<R1, unsigned int>>
+  static std::pair<std::pair<R2, R1>, std::pair<R1, unsigned int>>
   pair_of_pairs(R2 r2);
-  __attribute__((pure)) static std::pair<R2, R1> cond_proj(const bool &b,
-                                                           R2 r2);
-  __attribute__((pure)) static List<std::pair<R2, R1>>
-  repeat_r2(const unsigned int &n, R2 r2);
-  __attribute__((pure)) static std::pair<std::pair<R3, R2>, R1>
-  nested_lets(R3 r3);
-  __attribute__((pure)) static std::pair<R1, unsigned int>
-  double_proj(const R3 &r3);
-  __attribute__((pure)) static std::pair<std::pair<R3, R2>, R2>
-  mixed_access(R3 r3);
-  __attribute__((pure)) static std::pair<R2, R1> return_proj_h(R2 r2);
-  __attribute__((
-      pure)) static std::pair<std::pair<std::pair<R3, R2>, R1>, unsigned int>
+  static std::pair<R2, R1> cond_proj(const bool &b, R2 r2);
+  static List<std::pair<R2, R1>> repeat_r2(const unsigned int &n, R2 r2);
+  static std::pair<std::pair<R3, R2>, R1> nested_lets(R3 r3);
+  static std::pair<R1, unsigned int> double_proj(const R3 &r3);
+  static std::pair<std::pair<R3, R2>, R2> mixed_access(R3 r3);
+  static std::pair<R2, R1> return_proj_h(R2 r2);
+  static std::pair<std::pair<std::pair<R3, R2>, R1>, unsigned int>
   all_levels(R3 r3);
-  __attribute__((pure)) static std::pair<R1, R1> let_and_proj(const R2 &r2);
-  __attribute__((pure)) static std::pair<R2, R2> multi_construct(R1 r1);
-  __attribute__((pure)) static std::optional<std::pair<R2, R1>>
+  static std::pair<R1, R1> let_and_proj(const R2 &r2);
+  static std::pair<R2, R2> multi_construct(R1 r1);
+  static std::optional<std::pair<R2, R1>>
   option_proj(const std::optional<R2> &o);
 
   struct R {
@@ -473,40 +455,29 @@ struct ComprehensivePatterns {
     unsigned int dat;
 
     // ACCESSORS
-    __attribute__((pure)) R clone() const {
-      return R{(*(this)).val, (*(this)).dat};
-    }
+    R clone() const { return R{(*(this)).val, (*(this)).dat}; }
   };
 
-  __attribute__((pure)) static std::pair<R, unsigned int> pair_inline_proj(R r);
-  __attribute__((
-      pure)) static std::pair<std::pair<R, unsigned int>, unsigned int>
+  static std::pair<R, unsigned int> pair_inline_proj(R r);
+  static std::pair<std::pair<R, unsigned int>, unsigned int>
   nested_pair_inline(R r);
-  __attribute__((pure)) static unsigned int match_bind_and_use(const R &r);
-  __attribute__((pure)) static unsigned int let_with_type(const R &r);
-  __attribute__((pure)) static unsigned int proj_of_last_use(const R &r1);
-  __attribute__((pure)) static unsigned int multi_let_same(const R &r);
-  __attribute__((pure)) static unsigned int
-  option_unwrap_proj(const std::optional<R> &o);
-  __attribute__((pure)) static std::pair<R, unsigned int>
-  fun_result_and_proj(unsigned int n);
-  __attribute__((pure)) static std::optional<unsigned int>
-  match_multi_use(const std::optional<R> &o);
-  __attribute__((
-      pure)) static std::pair<std::pair<R, unsigned int>, unsigned int>
-  tuple_proj(R r);
-  __attribute__((pure)) static std::pair<R, unsigned int> chain_to_pair(R r1);
-  __attribute__((pure)) static List<std::pair<R, unsigned int>>
-  repeat_pair(const unsigned int &n, R r);
-  __attribute__((pure)) static std::pair<R, unsigned int>
-  cond_pair(const bool &b, R r);
-  __attribute__((pure)) static unsigned int
-  nested_match(const std::optional<R> &o1, const std::optional<R> &o2);
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  both_proj(const R &r);
-  __attribute__((pure)) static unsigned int compose_proj(const R &r);
-  __attribute__((pure)) static std::optional<unsigned int>
-  proj_through_option(const R &r);
+  static unsigned int match_bind_and_use(const R &r);
+  static unsigned int let_with_type(const R &r);
+  static unsigned int proj_of_last_use(const R &r1);
+  static unsigned int multi_let_same(const R &r);
+  static unsigned int option_unwrap_proj(const std::optional<R> &o);
+  static std::pair<R, unsigned int> fun_result_and_proj(unsigned int n);
+  static std::optional<unsigned int> match_multi_use(const std::optional<R> &o);
+  static std::pair<std::pair<R, unsigned int>, unsigned int> tuple_proj(R r);
+  static std::pair<R, unsigned int> chain_to_pair(R r1);
+  static List<std::pair<R, unsigned int>> repeat_pair(const unsigned int &n,
+                                                      R r);
+  static std::pair<R, unsigned int> cond_pair(const bool &b, R r);
+  static unsigned int nested_match(const std::optional<R> &o1,
+                                   const std::optional<R> &o2);
+  static std::pair<unsigned int, unsigned int> both_proj(const R &r);
+  static unsigned int compose_proj(const R &r);
+  static std::optional<unsigned int> proj_through_option(const R &r);
 
   struct NC {
     unsigned int nc_a;
@@ -514,132 +485,115 @@ struct ComprehensivePatterns {
     unsigned int nc_c;
 
     // ACCESSORS
-    __attribute__((pure)) NC clone() const {
+    NC clone() const {
       return NC{(*(this)).nc_a, (*(this)).nc_b, (*(this)).nc_c};
     }
   };
 
-  __attribute__((pure)) static unsigned int use_proj(unsigned int n);
-  __attribute__((pure)) static unsigned int proj_as_arg(const NC &r);
-  __attribute__((pure)) static unsigned int use_two(const unsigned int &_x0,
-                                                    const unsigned int &_x1);
-  __attribute__((pure)) static unsigned int multi_proj_args(const NC &r);
-  __attribute__((pure)) static unsigned int let_proj_then_base(const NC &r);
-  __attribute__((pure)) static unsigned int base_then_multi_proj(const NC &r);
-  __attribute__((pure)) static unsigned int proj_in_condition(const NC &r);
-  __attribute__((pure)) static unsigned int proj_in_scrutinee(const NC &r);
-  __attribute__((pure)) static unsigned int return_proj_nc(const NC &r);
-  __attribute__((pure)) static unsigned int call_return_proj(const NC &r);
-  __attribute__((pure)) static unsigned int inc(const unsigned int &n);
-  __attribute__((pure)) static unsigned int nested_proj_calls(const NC &r);
-  __attribute__((pure)) static unsigned int count_down(const unsigned int &n,
-                                                       const NC &r);
-  __attribute__((pure)) static unsigned int f1(const NC &r);
-  __attribute__((pure)) static unsigned int f2(const NC &r);
-  __attribute__((pure)) static unsigned int multi_function_calls(const NC &r);
-  __attribute__((pure)) static unsigned int proj_then_match(const NC &r);
-  __attribute__((pure)) static unsigned int let_used_twice(const NC &r);
-  __attribute__((pure)) static bool base_in_call_and_proj(const NC &r);
-  __attribute__((pure)) static unsigned int chained_lets_same_base(const NC &r);
+  static unsigned int use_proj(unsigned int n);
+  static unsigned int proj_as_arg(const NC &r);
+  static unsigned int use_two(const unsigned int &_x0, const unsigned int &_x1);
+  static unsigned int multi_proj_args(const NC &r);
+  static unsigned int let_proj_then_base(const NC &r);
+  static unsigned int base_then_multi_proj(const NC &r);
+  static unsigned int proj_in_condition(const NC &r);
+  static unsigned int proj_in_scrutinee(const NC &r);
+  static unsigned int return_proj_nc(const NC &r);
+  static unsigned int call_return_proj(const NC &r);
+  static unsigned int inc(const unsigned int &n);
+  static unsigned int nested_proj_calls(const NC &r);
+  static unsigned int count_down(const unsigned int &n, const NC &r);
+  static unsigned int f1(const NC &r);
+  static unsigned int f2(const NC &r);
+  static unsigned int multi_function_calls(const NC &r);
+  static unsigned int proj_then_match(const NC &r);
+  static unsigned int let_used_twice(const NC &r);
+  static bool base_in_call_and_proj(const NC &r);
+  static unsigned int chained_lets_same_base(const NC &r);
 
   struct OuterNC {
     NC outer_nc;
 
     // ACCESSORS
-    __attribute__((pure)) OuterNC clone() const {
-      return OuterNC{(*(this)).outer_nc.clone()};
-    }
+    OuterNC clone() const { return OuterNC{(*(this)).outer_nc.clone()}; }
   };
 
-  __attribute__((pure)) static unsigned int double_proj_nc(const OuterNC &o);
-  __attribute__((pure)) static unsigned int multi_positions(const NC &r);
-  __attribute__((pure)) static unsigned int sum_proj(const unsigned int &n,
-                                                     const NC &r);
+  static unsigned int double_proj_nc(const OuterNC &o);
+  static unsigned int multi_positions(const NC &r);
+  static unsigned int sum_proj(const unsigned int &n, const NC &r);
 
   template <MapsTo<unsigned int, NC> F0>
-  __attribute__((pure)) static unsigned int apply(F0 &&f, NC _x0) {
+  static unsigned int apply(F0 &&f, NC _x0) {
     return f(std::move(_x0));
   }
 
-  __attribute__((pure)) static unsigned int hof_test(const NC &r);
+  static unsigned int hof_test(const NC &r);
 
   struct State {
     unsigned int state_value;
     unsigned int state_data;
 
     // ACCESSORS
-    __attribute__((pure)) State clone() const {
+    State clone() const {
       return State{(*(this)).state_value, (*(this)).state_data};
     }
   };
 
-  __attribute__((pure)) static unsigned int use_two_fc(const unsigned int &_x0,
-                                                       const unsigned int &_x1);
-  __attribute__((pure)) static unsigned int bug_two_args(const State &s);
-  __attribute__((pure)) static unsigned int use_three(const unsigned int &x,
-                                                      const unsigned int &y,
-                                                      const unsigned int &z);
-  __attribute__((pure)) static unsigned int bug_three_args(const State &s);
-  __attribute__((pure)) static unsigned int take_state_and_val(const State &_x,
-                                                               unsigned int n);
-  __attribute__((pure)) static unsigned int bug_state_and_proj(const State &s);
-  __attribute__((pure)) static unsigned int inner_func(const unsigned int &n);
-  __attribute__((pure)) static unsigned int bug_nested_calls(const State &s);
-  __attribute__((pure)) static unsigned int bug_in_condition(const State &s);
-  __attribute__((pure)) static unsigned int f1_fc(unsigned int n);
-  __attribute__((pure)) static unsigned int f2_fc(const unsigned int &n);
-  __attribute__((pure)) static unsigned int bug_multi_calls(const State &s);
-  __attribute__((pure)) static std::pair<State, unsigned int>
-  bug_base_and_proj(const State &s);
-  __attribute__((pure)) static unsigned int sequential_lets(const State &s);
-  __attribute__((pure)) static std::pair<State, unsigned int>
-  let_then_use_base(State s);
-  __attribute__((pure)) static unsigned int two_proj_sequence(const State &s);
-  __attribute__((pure)) static unsigned int let_multi_proj(const State &s);
-  __attribute__((pure)) static unsigned int
-  nested_lets_same_base(const State &s);
-  __attribute__((pure)) static unsigned int if_with_proj(const State &s);
-  __attribute__((pure)) static unsigned int
-  match_scrutinee_proj(const State &s);
-  __attribute__((pure)) static std::pair<State, unsigned int>
-  bind_proj_use_base(State s);
+  static unsigned int use_two_fc(const unsigned int &_x0,
+                                 const unsigned int &_x1);
+  static unsigned int bug_two_args(const State &s);
+  static unsigned int use_three(const unsigned int &x, const unsigned int &y,
+                                const unsigned int &z);
+  static unsigned int bug_three_args(const State &s);
+  static unsigned int take_state_and_val(const State &_x, unsigned int n);
+  static unsigned int bug_state_and_proj(const State &s);
+  static unsigned int inner_func(const unsigned int &n);
+  static unsigned int bug_nested_calls(const State &s);
+  static unsigned int bug_in_condition(const State &s);
+  static unsigned int f1_fc(unsigned int n);
+  static unsigned int f2_fc(const unsigned int &n);
+  static unsigned int bug_multi_calls(const State &s);
+  static std::pair<State, unsigned int> bug_base_and_proj(const State &s);
+  static unsigned int sequential_lets(const State &s);
+  static std::pair<State, unsigned int> let_then_use_base(State s);
+  static unsigned int two_proj_sequence(const State &s);
+  static unsigned int let_multi_proj(const State &s);
+  static unsigned int nested_lets_same_base(const State &s);
+  static unsigned int if_with_proj(const State &s);
+  static unsigned int match_scrutinee_proj(const State &s);
+  static std::pair<State, unsigned int> bind_proj_use_base(State s);
 
   struct RSeq {
     unsigned int seq_val;
 
     // ACCESSORS
-    __attribute__((pure)) RSeq clone() const { return RSeq{(*(this)).seq_val}; }
+    RSeq clone() const { return RSeq{(*(this)).seq_val}; }
   };
 
-  __attribute__((pure)) static RSeq side_effect(RSeq r);
-  __attribute__((pure)) static unsigned int after_side_effect(const RSeq &r);
-  __attribute__((pure)) static unsigned int two_side_effects(const RSeq &r);
-  __attribute__((pure)) static unsigned int
-  side_effect_in_branch(const bool &b, const RSeq &r);
+  static RSeq side_effect(RSeq r);
+  static unsigned int after_side_effect(const RSeq &r);
+  static unsigned int two_side_effects(const RSeq &r);
+  static unsigned int side_effect_in_branch(const bool &b, const RSeq &r);
 
   struct StateStmt {
     unsigned int stmt_value;
     unsigned int stmt_data;
 
     // ACCESSORS
-    __attribute__((pure)) StateStmt clone() const {
+    StateStmt clone() const {
       return StateStmt{(*(this)).stmt_value, (*(this)).stmt_data};
     }
   };
 
-  __attribute__((pure)) static unsigned int
-  return_proj_stmt(const StateStmt &s);
-  __attribute__((pure)) static unsigned int return_complex(const StateStmt &s);
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  return_pair(const StateStmt &s);
+  static unsigned int return_proj_stmt(const StateStmt &s);
+  static unsigned int return_complex(const StateStmt &s);
+  static std::pair<unsigned int, unsigned int> return_pair(const StateStmt &s);
 
   struct InnerStmt {
     unsigned int inner_stmt_val;
 
     // ACCESSORS
-    __attribute__((pure)) InnerStmt clone() const {
-      return InnerStmt{(*(this)).inner_stmt_val};
-    }
+    InnerStmt clone() const { return InnerStmt{(*(this)).inner_stmt_val}; }
   };
 
   struct OuterStmt {
@@ -647,64 +601,56 @@ struct ComprehensivePatterns {
     unsigned int outer_stmt_data;
 
     // ACCESSORS
-    __attribute__((pure)) OuterStmt clone() const {
+    OuterStmt clone() const {
       return OuterStmt{(*(this)).outer_stmt_inner.clone(),
                        (*(this)).outer_stmt_data};
     }
   };
 
-  __attribute__((pure)) static unsigned int chained_proj(const OuterStmt &o);
+  static unsigned int chained_proj(const OuterStmt &o);
 
   struct Level3Stmt {
     OuterStmt l3_outer_stmt;
 
     // ACCESSORS
-    __attribute__((pure)) Level3Stmt clone() const {
+    Level3Stmt clone() const {
       return Level3Stmt{(*(this)).l3_outer_stmt.clone()};
     }
   };
 
-  __attribute__((pure)) static unsigned int triple_chain(const Level3Stmt &l3);
-  __attribute__((pure)) static unsigned int proj_in_arith(const StateStmt &s);
-  __attribute__((pure)) static unsigned int multi_proj_expr(const StateStmt &s);
-  __attribute__((pure)) static List<unsigned int>
-  proj_in_list(const StateStmt &s);
-  __attribute__((pure)) static bool compare_projs(const StateStmt &s);
-  __attribute__((pure)) static bool bool_with_proj(const StateStmt &s);
+  static unsigned int triple_chain(const Level3Stmt &l3);
+  static unsigned int proj_in_arith(const StateStmt &s);
+  static unsigned int multi_proj_expr(const StateStmt &s);
+  static List<unsigned int> proj_in_list(const StateStmt &s);
+  static bool compare_projs(const StateStmt &s);
+  static bool bool_with_proj(const StateStmt &s);
 
   template <typename T1> static T1 _bug_base_and_proj_consume(const T1 x) {
     return x;
   }
 
-  __attribute__((pure)) static unsigned int sum_values(const unsigned int &n,
-                                                       const StateStmt &s);
+  static unsigned int sum_values(const unsigned int &n, const StateStmt &s);
 
   struct RCF {
     unsigned int cf_val;
 
     // ACCESSORS
-    __attribute__((pure)) RCF clone() const { return RCF{(*(this)).cf_val}; }
+    RCF clone() const { return RCF{(*(this)).cf_val}; }
   };
 
-  __attribute__((pure)) static unsigned int branch_use(const bool &b,
-                                                       const RCF &r);
-  __attribute__((pure)) static std::pair<RCF, unsigned int>
-  branch_different(const bool &b, RCF r);
-  __attribute__((pure)) static unsigned int
-  match_with_wild(const std::optional<RCF> &o);
-  __attribute__((pure)) static unsigned int
-  sum_with_state(const unsigned int &n, const RCF &r);
-  __attribute__((pure)) static unsigned int even_count(const unsigned int &n,
-                                                       const RCF &r);
-  __attribute__((pure)) static unsigned int odd_count(const unsigned int &n,
-                                                      const RCF &r);
+  static unsigned int branch_use(const bool &b, const RCF &r);
+  static std::pair<RCF, unsigned int> branch_different(const bool &b, RCF r);
+  static unsigned int match_with_wild(const std::optional<RCF> &o);
+  static unsigned int sum_with_state(const unsigned int &n, const RCF &r);
+  static unsigned int even_count(const unsigned int &n, const RCF &r);
+  static unsigned int odd_count(const unsigned int &n, const RCF &r);
 
   struct StateLB {
     unsigned int lb_value;
     unsigned int lb_data;
 
     // ACCESSORS
-    __attribute__((pure)) StateLB clone() const {
+    StateLB clone() const {
       return StateLB{(*(this)).lb_value, (*(this)).lb_data};
     }
   };
@@ -750,28 +696,43 @@ struct ComprehensivePatterns {
     }
 
     // ACCESSORS
-    __attribute__((pure)) Tree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<Leaf>(_sv.v());
-        return Tree(Leaf{d_a0});
-      } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
-        return Tree(Node{
-            d_a0 ? std::make_unique<ComprehensivePatterns::Tree>(d_a0->clone())
-                 : nullptr,
-            d_a1,
-            d_a2 ? std::make_unique<ComprehensivePatterns::Tree>(d_a2->clone())
-                 : nullptr});
+    Tree clone() const {
+      Tree _out{};
+
+      struct _CloneFrame {
+        const Tree *_src;
+        Tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const Tree *_src = _frame._src;
+        Tree *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          const auto &_alt = std::get<Leaf>(_src->v());
+          _dst->d_v_ = Leaf{_alt.d_a0};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ =
+              Node{_alt.d_a0 ? std::make_unique<Tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<Tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static Tree leaf(unsigned int a0) {
-      return Tree(Leaf{std::move(a0)});
-    }
+    static Tree leaf(unsigned int a0) { return Tree(Leaf{std::move(a0)}); }
 
-    __attribute__((pure)) static Tree node(Tree a0, unsigned int a1, Tree a2) {
+    static Tree node(Tree a0, unsigned int a1, Tree a2) {
       return Tree(Node{std::make_unique<Tree>(std::move(a0)), std::move(a1),
                        std::make_unique<Tree>(std::move(a2))});
     }
@@ -800,14 +761,14 @@ struct ComprehensivePatterns {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) Tree nested_reuse() const {
+    Tree nested_reuse() const {
       Tree t2 = (*(this)).transform_tree();
       return std::move(t2).transform_tree();
     }
 
-    __attribute__((pure)) Tree flip_tree() const {
+    Tree flip_tree() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
         auto &[d_a0] = std::get<typename Tree::Leaf>(_sv.v());
@@ -818,7 +779,7 @@ struct ComprehensivePatterns {
       }
     }
 
-    __attribute__((pure)) Tree transform_tree() const {
+    Tree transform_tree() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<typename Tree::Leaf>(_sv.v());
@@ -829,8 +790,7 @@ struct ComprehensivePatterns {
       }
     }
 
-    __attribute__((pure)) unsigned int
-    consume_tree_with_state(const StateLB &s) const {
+    unsigned int consume_tree_with_state(const StateLB &s) const {
       const Tree *_self = this;
 
       struct _Enter {
@@ -882,7 +842,7 @@ struct ComprehensivePatterns {
       return _result;
     }
 
-    __attribute__((pure)) unsigned int tree_sum() const {
+    unsigned int tree_sum() const {
       const Tree *_self = this;
 
       struct _Enter {
@@ -1047,15 +1007,14 @@ struct ComprehensivePatterns {
     }
   };
 
-  __attribute__((pure)) static unsigned int
-  accum_with_state(const unsigned int &n, const StateLB &s);
+  static unsigned int accum_with_state(const unsigned int &n, const StateLB &s);
 
   struct StateRO {
     unsigned int ro_value;
     unsigned int ro_data;
 
     // ACCESSORS
-    __attribute__((pure)) StateRO clone() const {
+    StateRO clone() const {
       return StateRO{(*(this)).ro_value, (*(this)).ro_data};
     }
   };
@@ -1097,7 +1056,7 @@ struct ComprehensivePatterns {
     }
 
     // ACCESSORS
-    __attribute__((pure)) Container clone() const {
+    Container clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Empty>(_sv.v())) {
         return Container(Empty{});
@@ -1108,21 +1067,17 @@ struct ComprehensivePatterns {
     }
 
     // CREATORS
-    __attribute__((pure)) static Container empty() {
-      return Container(Empty{});
-    }
+    static Container empty() { return Container(Empty{}); }
 
-    __attribute__((pure)) static Container full(StateRO a0) {
-      return Container(Full{std::move(a0)});
-    }
+    static Container full(StateRO a0) { return Container(Full{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int extract_from_container() const {
+    unsigned int extract_from_container() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Container::Empty>(_sv.v())) {
         return 0u;
@@ -1160,20 +1115,17 @@ struct ComprehensivePatterns {
     unsigned int op_data;
 
     // ACCESSORS
-    __attribute__((pure)) StateOP clone() const {
+    StateOP clone() const {
       return StateOP{(*(this)).op_value, (*(this)).op_data};
     }
   };
 
-  __attribute__((pure)) static StateOP identity(StateOP s);
-  __attribute__((pure)) static unsigned int extract_via_match(const StateOP &s);
-  __attribute__((pure)) static StateOP consume_state(StateOP s);
-  __attribute__((pure)) static unsigned int match_consumed(const StateOP &s);
-  __attribute__((pure)) static std::pair<StateOP, unsigned int>
-  force_owned(StateOP s);
-
-  __attribute__((
-      pure)) static std::pair<std::pair<StateOP, StateOP>, unsigned int>
+  static StateOP identity(StateOP s);
+  static unsigned int extract_via_match(const StateOP &s);
+  static StateOP consume_state(StateOP s);
+  static unsigned int match_consumed(const StateOP &s);
+  static std::pair<StateOP, unsigned int> force_owned(StateOP s);
+  static std::pair<std::pair<StateOP, StateOP>, unsigned int>
   pair_then_match(StateOP s);
 };
 

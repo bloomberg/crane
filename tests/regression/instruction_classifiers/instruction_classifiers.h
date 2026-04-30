@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,7 +119,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct InstructionClassifiers {
@@ -251,7 +270,7 @@ struct InstructionClassifiers {
     }
 
     // ACCESSORS
-    __attribute__((pure)) instr_acc clone() const {
+    instr_acc clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<LDM>(_sv.v())) {
         const auto &[d_a0] = std::get<LDM>(_sv.v());
@@ -316,81 +335,79 @@ struct InstructionClassifiers {
     }
 
     // CREATORS
-    __attribute__((pure)) static instr_acc ldm(unsigned int a0) {
+    static instr_acc ldm(unsigned int a0) {
       return instr_acc(LDM{std::move(a0)});
     }
 
-    __attribute__((pure)) static instr_acc ld(unsigned int a0) {
+    static instr_acc ld(unsigned int a0) {
       return instr_acc(LD{std::move(a0)});
     }
 
-    __attribute__((pure)) static instr_acc add(unsigned int a0) {
+    static instr_acc add(unsigned int a0) {
       return instr_acc(ADD{std::move(a0)});
     }
 
-    __attribute__((pure)) static instr_acc sub(unsigned int a0) {
+    static instr_acc sub(unsigned int a0) {
       return instr_acc(SUB{std::move(a0)});
     }
 
-    __attribute__((pure)) static instr_acc inc(unsigned int a0) {
+    static instr_acc inc(unsigned int a0) {
       return instr_acc(INC{std::move(a0)});
     }
 
-    __attribute__((pure)) static instr_acc xch(unsigned int a0) {
+    static instr_acc xch(unsigned int a0) {
       return instr_acc(XCH{std::move(a0)});
     }
 
-    __attribute__((pure)) static instr_acc bbl(unsigned int a0) {
+    static instr_acc bbl(unsigned int a0) {
       return instr_acc(BBL{std::move(a0)});
     }
 
-    __attribute__((pure)) static instr_acc sbm() { return instr_acc(SBM{}); }
+    static instr_acc sbm() { return instr_acc(SBM{}); }
 
-    __attribute__((pure)) static instr_acc rdm() { return instr_acc(RDM{}); }
+    static instr_acc rdm() { return instr_acc(RDM{}); }
 
-    __attribute__((pure)) static instr_acc rdr() { return instr_acc(RDR{}); }
+    static instr_acc rdr() { return instr_acc(RDR{}); }
 
-    __attribute__((pure)) static instr_acc adm() { return instr_acc(ADM{}); }
+    static instr_acc adm() { return instr_acc(ADM{}); }
 
-    __attribute__((pure)) static instr_acc rd0() { return instr_acc(RD0{}); }
+    static instr_acc rd0() { return instr_acc(RD0{}); }
 
-    __attribute__((pure)) static instr_acc rd1() { return instr_acc(RD1{}); }
+    static instr_acc rd1() { return instr_acc(RD1{}); }
 
-    __attribute__((pure)) static instr_acc rd2() { return instr_acc(RD2{}); }
+    static instr_acc rd2() { return instr_acc(RD2{}); }
 
-    __attribute__((pure)) static instr_acc rd3() { return instr_acc(RD3{}); }
+    static instr_acc rd3() { return instr_acc(RD3{}); }
 
-    __attribute__((pure)) static instr_acc clb() { return instr_acc(CLB{}); }
+    static instr_acc clb() { return instr_acc(CLB{}); }
 
-    __attribute__((pure)) static instr_acc cma() { return instr_acc(CMA{}); }
+    static instr_acc cma() { return instr_acc(CMA{}); }
 
-    __attribute__((pure)) static instr_acc iac() { return instr_acc(IAC{}); }
+    static instr_acc iac() { return instr_acc(IAC{}); }
 
-    __attribute__((pure)) static instr_acc dac() { return instr_acc(DAC{}); }
+    static instr_acc dac() { return instr_acc(DAC{}); }
 
-    __attribute__((pure)) static instr_acc ral() { return instr_acc(RAL{}); }
+    static instr_acc ral() { return instr_acc(RAL{}); }
 
-    __attribute__((pure)) static instr_acc rar() { return instr_acc(RAR{}); }
+    static instr_acc rar() { return instr_acc(RAR{}); }
 
-    __attribute__((pure)) static instr_acc tcc() { return instr_acc(TCC{}); }
+    static instr_acc tcc() { return instr_acc(TCC{}); }
 
-    __attribute__((pure)) static instr_acc tcs() { return instr_acc(TCS{}); }
+    static instr_acc tcs() { return instr_acc(TCS{}); }
 
-    __attribute__((pure)) static instr_acc daa() { return instr_acc(DAA{}); }
+    static instr_acc daa() { return instr_acc(DAA{}); }
 
-    __attribute__((pure)) static instr_acc kbp() { return instr_acc(KBP{}); }
+    static instr_acc kbp() { return instr_acc(KBP{}); }
 
-    __attribute__((pure)) static instr_acc nop_acc() {
-      return instr_acc(NOP_acc{});
-    }
+    static instr_acc nop_acc() { return instr_acc(NOP_acc{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) bool writes_acc() const {
+    bool writes_acc() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_acc::NOP_acc>(_sv.v())) {
         return false;
@@ -548,8 +565,7 @@ struct InstructionClassifiers {
     }
   };
 
-  __attribute__((pure)) static unsigned int
-  count_writes_acc(const List<instr_acc> &prog);
+  static unsigned int count_writes_acc(const List<instr_acc> &prog);
   static inline const unsigned int test_writes_acc =
       count_writes_acc(List<instr_acc>::cons(
           instr_acc::nop_acc(),
@@ -626,7 +642,7 @@ struct InstructionClassifiers {
     }
 
     // ACCESSORS
-    __attribute__((pure)) instr_ram clone() const {
+    instr_ram clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<WRM>(_sv.v())) {
         return instr_ram(WRM{});
@@ -649,23 +665,21 @@ struct InstructionClassifiers {
     }
 
     // CREATORS
-    __attribute__((pure)) static instr_ram wrm() { return instr_ram(WRM{}); }
+    static instr_ram wrm() { return instr_ram(WRM{}); }
 
-    __attribute__((pure)) static instr_ram wmp() { return instr_ram(WMP{}); }
+    static instr_ram wmp() { return instr_ram(WMP{}); }
 
-    __attribute__((pure)) static instr_ram wr0() { return instr_ram(WR0{}); }
+    static instr_ram wr0() { return instr_ram(WR0{}); }
 
-    __attribute__((pure)) static instr_ram wr1() { return instr_ram(WR1{}); }
+    static instr_ram wr1() { return instr_ram(WR1{}); }
 
-    __attribute__((pure)) static instr_ram wr2() { return instr_ram(WR2{}); }
+    static instr_ram wr2() { return instr_ram(WR2{}); }
 
-    __attribute__((pure)) static instr_ram wr3() { return instr_ram(WR3{}); }
+    static instr_ram wr3() { return instr_ram(WR3{}); }
 
-    __attribute__((pure)) static instr_ram nop_ram() {
-      return instr_ram(NOP_ram{});
-    }
+    static instr_ram nop_ram() { return instr_ram(NOP_ram{}); }
 
-    __attribute__((pure)) static instr_ram add_ram(unsigned int a0) {
+    static instr_ram add_ram(unsigned int a0) {
       return instr_ram(ADD_ram{std::move(a0)});
     }
 
@@ -673,9 +687,9 @@ struct InstructionClassifiers {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) bool writes_ram() const {
+    bool writes_ram() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_ram::NOP_ram>(_sv.v())) {
         return false;
@@ -735,8 +749,7 @@ struct InstructionClassifiers {
     }
   };
 
-  __attribute__((pure)) static unsigned int
-  count_writes_ram(const List<instr_ram> &prog);
+  static unsigned int count_writes_ram(const List<instr_ram> &prog);
   static inline const unsigned int test_writes_ram =
       count_writes_ram(List<instr_ram>::cons(
           instr_ram::nop_ram(),
@@ -822,7 +835,7 @@ struct InstructionClassifiers {
     }
 
     // ACCESSORS
-    __attribute__((pure)) instr_regs clone() const {
+    instr_regs clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<XCH_regs>(_sv.v())) {
         const auto &[d_a0] = std::get<XCH_regs>(_sv.v());
@@ -848,33 +861,29 @@ struct InstructionClassifiers {
     }
 
     // CREATORS
-    __attribute__((pure)) static instr_regs xch_regs(unsigned int a0) {
+    static instr_regs xch_regs(unsigned int a0) {
       return instr_regs(XCH_regs{std::move(a0)});
     }
 
-    __attribute__((pure)) static instr_regs inc_regs(unsigned int a0) {
+    static instr_regs inc_regs(unsigned int a0) {
       return instr_regs(INC_regs{std::move(a0)});
     }
 
-    __attribute__((pure)) static instr_regs fim(unsigned int a0,
-                                                unsigned int a1) {
+    static instr_regs fim(unsigned int a0, unsigned int a1) {
       return instr_regs(FIM{std::move(a0), std::move(a1)});
     }
 
-    __attribute__((pure)) static instr_regs fin(unsigned int a0) {
+    static instr_regs fin(unsigned int a0) {
       return instr_regs(FIN{std::move(a0)});
     }
 
-    __attribute__((pure)) static instr_regs isz(unsigned int a0,
-                                                unsigned int a1) {
+    static instr_regs isz(unsigned int a0, unsigned int a1) {
       return instr_regs(ISZ{std::move(a0), std::move(a1)});
     }
 
-    __attribute__((pure)) static instr_regs nop_regs() {
-      return instr_regs(NOP_regs{});
-    }
+    static instr_regs nop_regs() { return instr_regs(NOP_regs{}); }
 
-    __attribute__((pure)) static instr_regs add_regs(unsigned int a0) {
+    static instr_regs add_regs(unsigned int a0) {
       return instr_regs(ADD_regs{std::move(a0)});
     }
 
@@ -882,9 +891,9 @@ struct InstructionClassifiers {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) bool writes_regs() const {
+    bool writes_regs() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_regs::NOP_regs>(_sv.v())) {
         return false;
@@ -961,8 +970,7 @@ struct InstructionClassifiers {
     }
   };
 
-  __attribute__((pure)) static unsigned int
-  count_writes_regs(const List<instr_regs> &prog);
+  static unsigned int count_writes_regs(const List<instr_regs> &prog);
   static inline const unsigned int test_writes_regs =
       count_writes_regs(List<instr_regs>::cons(
           instr_regs::nop_regs(),
@@ -1052,7 +1060,7 @@ struct InstructionClassifiers {
     }
 
     // ACCESSORS
-    __attribute__((pure)) instr_jump clone() const {
+    instr_jump clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<JCN>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<JCN>(_sv.v());
@@ -1081,47 +1089,43 @@ struct InstructionClassifiers {
     }
 
     // CREATORS
-    __attribute__((pure)) static instr_jump jcn(unsigned int a0,
-                                                unsigned int a1) {
+    static instr_jump jcn(unsigned int a0, unsigned int a1) {
       return instr_jump(JCN{std::move(a0), std::move(a1)});
     }
 
-    __attribute__((pure)) static instr_jump jun(unsigned int a0) {
+    static instr_jump jun(unsigned int a0) {
       return instr_jump(JUN{std::move(a0)});
     }
 
-    __attribute__((pure)) static instr_jump jms(unsigned int a0) {
+    static instr_jump jms(unsigned int a0) {
       return instr_jump(JMS{std::move(a0)});
     }
 
-    __attribute__((pure)) static instr_jump jin(unsigned int a0) {
+    static instr_jump jin(unsigned int a0) {
       return instr_jump(JIN{std::move(a0)});
     }
 
-    __attribute__((pure)) static instr_jump bbl_jump(unsigned int a0) {
+    static instr_jump bbl_jump(unsigned int a0) {
       return instr_jump(BBL_jump{std::move(a0)});
     }
 
-    __attribute__((pure)) static instr_jump isz_jump(unsigned int a0,
-                                                     unsigned int a1) {
+    static instr_jump isz_jump(unsigned int a0, unsigned int a1) {
       return instr_jump(ISZ_jump{std::move(a0), std::move(a1)});
     }
 
-    __attribute__((pure)) static instr_jump add_jump(unsigned int a0) {
+    static instr_jump add_jump(unsigned int a0) {
       return instr_jump(ADD_jump{std::move(a0)});
     }
 
-    __attribute__((pure)) static instr_jump nop_jump() {
-      return instr_jump(NOP_jump{});
-    }
+    static instr_jump nop_jump() { return instr_jump(NOP_jump{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) bool is_jump() const {
+    bool is_jump() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_jump::ADD_jump>(_sv.v())) {
         return false;
@@ -1210,8 +1214,7 @@ struct InstructionClassifiers {
     }
   };
 
-  __attribute__((pure)) static unsigned int
-  count_jumps(const List<instr_jump> &prog);
+  static unsigned int count_jumps(const List<instr_jump> &prog);
   static inline const unsigned int test_jump_classifier =
       count_jumps(List<instr_jump>::cons(
           instr_jump::add_jump(0u),

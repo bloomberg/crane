@@ -1,8 +1,8 @@
 #include <numeral_stress.h>
 
 /// 6. Numeral inside a fixpoint
-__attribute__((pure)) unsigned int
-NumeralStress::count_from(unsigned int n, const unsigned int &target) {
+unsigned int NumeralStress::count_from(unsigned int n,
+                                       const unsigned int &target) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -16,12 +16,11 @@ NumeralStress::count_from(unsigned int n, const unsigned int &target) {
 }
 
 /// 9. Numeral in boolean expression
-__attribute__((pure)) bool NumeralStress::check_range(const unsigned int &n) {
+bool NumeralStress::check_range(const unsigned int &n) {
   return (10u <= n && n <= 100u);
 }
 
 /// 10. Mixed nat and Z in one function
-__attribute__((pure)) int64_t
-NumeralStress::mixed_arith(const unsigned int &n) {
+int64_t NumeralStress::mixed_arith(const unsigned int &n) {
   return (static_cast<int64_t>(n) + INT64_C(100));
 }

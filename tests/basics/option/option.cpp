@@ -1,8 +1,7 @@
 #include <option.h>
 
-__attribute__((pure)) unsigned int
-Option::get_or_default(const std::optional<unsigned int> &o,
-                       unsigned int default0) {
+unsigned int Option::get_or_default(const std::optional<unsigned int> &o,
+                                    unsigned int default0) {
   if (o.has_value()) {
     const unsigned int &x = *o;
     return x;
@@ -11,8 +10,7 @@ Option::get_or_default(const std::optional<unsigned int> &o,
   }
 }
 
-__attribute__((pure)) std::optional<unsigned int>
-Option::safe_pred(const unsigned int &n) {
+std::optional<unsigned int> Option::safe_pred(const unsigned int &n) {
   if (n <= 0) {
     return std::optional<unsigned int>();
   } else {
@@ -21,7 +19,7 @@ Option::safe_pred(const unsigned int &n) {
   }
 }
 
-__attribute__((pure)) std::optional<unsigned int>
+std::optional<unsigned int>
 Option::chain_options(std::optional<unsigned int> o1,
                       std::optional<unsigned int> o2) {
   if (o1.has_value()) {

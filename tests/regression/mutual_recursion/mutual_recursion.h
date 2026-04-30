@@ -12,16 +12,12 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct MutualRecursion {
-  __attribute__((pure)) static bool even(const unsigned int &n);
-  __attribute__((pure)) static bool odd(const unsigned int &n);
-  __attribute__((pure)) static unsigned int
-  sum_even_indices(const unsigned int &n, unsigned int acc);
-  __attribute__((pure)) static unsigned int
-  sum_odd_indices(const unsigned int &n, unsigned int acc);
-  __attribute__((pure)) static unsigned int process_a(const unsigned int &n,
-                                                      unsigned int m);
-  __attribute__((pure)) static unsigned int process_b(const unsigned int &n,
-                                                      unsigned int m);
+  static bool even(const unsigned int &n);
+  static bool odd(const unsigned int &n);
+  static unsigned int sum_even_indices(const unsigned int &n, unsigned int acc);
+  static unsigned int sum_odd_indices(const unsigned int &n, unsigned int acc);
+  static unsigned int process_a(const unsigned int &n, unsigned int m);
+  static unsigned int process_b(const unsigned int &n, unsigned int m);
 
   struct expr {
     // TYPES
@@ -71,38 +67,55 @@ struct MutualRecursion {
     }
 
     // ACCESSORS
-    __attribute__((pure)) expr clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Val>(_sv.v())) {
-        const auto &[d_a0] = std::get<Val>(_sv.v());
-        return expr(Val{d_a0});
-      } else if (std::holds_alternative<BinOp>(_sv.v())) {
-        const auto &[d_a0, d_a1, d_a2] = std::get<BinOp>(_sv.v());
-        return expr(
-            BinOp{d_a0,
-                  d_a1 ? std::make_unique<MutualRecursion::expr>(d_a1->clone())
-                       : nullptr,
-                  d_a2 ? std::make_unique<MutualRecursion::expr>(d_a2->clone())
-                       : nullptr});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<UnOp>(_sv.v());
-        return expr(UnOp{
-            d_a0, d_a1 ? std::make_unique<MutualRecursion::expr>(d_a1->clone())
-                       : nullptr});
+    expr clone() const {
+      expr _out{};
+
+      struct _CloneFrame {
+        const expr *_src;
+        expr *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const expr *_src = _frame._src;
+        expr *_dst = _frame._dst;
+        if (std::holds_alternative<Val>(_src->v())) {
+          const auto &_alt = std::get<Val>(_src->v());
+          _dst->d_v_ = Val{_alt.d_a0};
+        } else if (std::holds_alternative<BinOp>(_src->v())) {
+          const auto &_alt = std::get<BinOp>(_src->v());
+          _dst->d_v_ =
+              BinOp{_alt.d_a0, _alt.d_a1 ? std::make_unique<expr>() : nullptr,
+                    _alt.d_a2 ? std::make_unique<expr>() : nullptr};
+          auto &_dst_alt = std::get<BinOp>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        } else {
+          const auto &_alt = std::get<UnOp>(_src->v());
+          _dst->d_v_ =
+              UnOp{_alt.d_a0, _alt.d_a1 ? std::make_unique<expr>() : nullptr};
+          auto &_dst_alt = std::get<UnOp>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static expr val(unsigned int a0) {
-      return expr(Val{std::move(a0)});
-    }
+    static expr val(unsigned int a0) { return expr(Val{std::move(a0)}); }
 
-    __attribute__((pure)) static expr binop(unsigned int a0, expr a1, expr a2) {
+    static expr binop(unsigned int a0, expr a1, expr a2) {
       return expr(BinOp{std::move(a0), std::make_unique<expr>(std::move(a1)),
                         std::make_unique<expr>(std::move(a2))});
     }
 
-    __attribute__((pure)) static expr unop(unsigned int a0, expr a1) {
+    static expr unop(unsigned int a0, expr a1) {
       return expr(UnOp{std::move(a0), std::make_unique<expr>(std::move(a1))});
     }
 
@@ -135,7 +148,7 @@ struct MutualRecursion {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -172,10 +185,10 @@ struct MutualRecursion {
     }
   }
 
-  __attribute__((pure)) static unsigned int eval_expr(const expr &e);
-  __attribute__((pure)) static unsigned int f1(const unsigned int &n);
-  __attribute__((pure)) static unsigned int f2(const unsigned int &n);
-  __attribute__((pure)) static unsigned int f3(const unsigned int &n);
+  static unsigned int eval_expr(const expr &e);
+  static unsigned int f1(const unsigned int &n);
+  static unsigned int f2(const unsigned int &n);
+  static unsigned int f3(const unsigned int &n);
   static inline const bool test_even = even(10u);
   static inline const unsigned int test_sum = sum_even_indices(5u, 0u);
   static inline const unsigned int test_eval =

@@ -1,7 +1,6 @@
 #include <reuse_self_cycle.h>
 
-__attribute__((pure)) unsigned int
-ReuseSelfCycle::length(const ReuseSelfCycle::mylist &l) {
+unsigned int ReuseSelfCycle::length(const ReuseSelfCycle::mylist &l) {
   if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(l.v())) {
     const auto &[d_a0, d_a1] =
         std::get<typename ReuseSelfCycle::mylist::Mycons>(l.v());
@@ -26,8 +25,8 @@ ReuseSelfCycle::length(const ReuseSelfCycle::mylist &l) {
 /// 2. mycons branch tail is mycons with arity 2 = 2
 /// 3. mycons is index 0 -> List.hd picks it
 /// 4. use_count() == 1 for fresh values
-__attribute__((pure)) ReuseSelfCycle::mylist
-ReuseSelfCycle::prepend_self(ReuseSelfCycle::mylist l, const bool &b) {
+ReuseSelfCycle::mylist ReuseSelfCycle::prepend_self(ReuseSelfCycle::mylist l,
+                                                    const bool &b) {
   if (b) {
     if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(
             l.v_mut())) {

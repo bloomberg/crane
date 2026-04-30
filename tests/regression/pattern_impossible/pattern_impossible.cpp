@@ -1,6 +1,6 @@
 #include <pattern_impossible.h>
 
-__attribute__((pure)) unsigned int
+unsigned int
 PatternImpossible::complex_match(const PatternImpossible::Three x) {
   switch (x) {
   case Three::e_ONE: {
@@ -17,7 +17,7 @@ PatternImpossible::complex_match(const PatternImpossible::Three x) {
   }
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 PatternImpossible::nested_match(const PatternImpossible::nested &n) {
   if (std::holds_alternative<typename PatternImpossible::nested::Leaf>(n.v())) {
     const auto &[d_a0] =
@@ -46,9 +46,8 @@ PatternImpossible::nested_match(const PatternImpossible::nested &n) {
   }
 }
 
-__attribute__((pure)) unsigned int
-PatternImpossible::double_match(const PatternImpossible::Three x,
-                                const PatternImpossible::Three y) {
+unsigned int PatternImpossible::double_match(const PatternImpossible::Three x,
+                                             const PatternImpossible::Three y) {
   switch (x) {
   case Three::e_ONE: {
     switch (y) {
@@ -76,7 +75,7 @@ PatternImpossible::double_match(const PatternImpossible::Three x,
   }
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 PatternImpossible::multi_arg_pattern(const PatternImpossible::nested &n) {
   if (std::holds_alternative<typename PatternImpossible::nested::Leaf>(n.v())) {
     return 0u;

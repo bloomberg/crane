@@ -50,16 +50,34 @@ struct LoopifyTail {
     }
 
     // ACCESSORS
-    __attribute__((pure)) list<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Nil>(_sv.v())) {
-        return list<t_A>(Nil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-        return list<t_A>(Cons{
-            d_a0, d_a1 ? std::make_unique<LoopifyTail::list<t_A>>(d_a1->clone())
-                       : nullptr});
+    list clone() const {
+      list _out{};
+
+      struct _CloneFrame {
+        const list *_src;
+        list *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const list *_src = _frame._src;
+        list *_dst = _frame._dst;
+        if (std::holds_alternative<Nil>(_src->v())) {
+          const auto &_alt = std::get<Nil>(_src->v());
+          _dst->d_v_ = Nil{};
+        } else {
+          const auto &_alt = std::get<Cons>(_src->v());
+          _dst->d_v_ =
+              Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<list>() : nullptr};
+          auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -74,9 +92,9 @@ struct LoopifyTail {
       }
     }
 
-    __attribute__((pure)) static list<t_A> nil() { return list(Nil{}); }
+    static list<t_A> nil() { return list(Nil{}); }
 
-    __attribute__((pure)) static list<t_A> cons(t_A a0, list<t_A> a1) {
+    static list<t_A> cons(t_A a0, list<t_A> a1) {
       return list(
           Cons{std::move(a0), std::make_unique<list<t_A>>(std::move(a1))});
     }
@@ -103,7 +121,7 @@ struct LoopifyTail {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
@@ -201,8 +219,7 @@ struct LoopifyTail {
   } /// Tail-recursive: length with accumulator
 
   template <typename T1>
-  __attribute__((pure)) static unsigned int length_acc(unsigned int acc,
-                                                       const list<T1> &l) {
+  static unsigned int length_acc(unsigned int acc, const list<T1> &l) {
     unsigned int _result;
     const list<T1> *_loop_l = &l;
     unsigned int _loop_acc = std::move(acc);
@@ -222,20 +239,16 @@ struct LoopifyTail {
     return _result;
   }
 
-  template <typename T1>
-  __attribute__((pure)) static unsigned int length(const list<T1> &l) {
+  template <typename T1> static unsigned int length(const list<T1> &l) {
     return length_acc<T1>(0u, l);
   }
 
   /// Tail-recursive: membership test
-  __attribute__((pure)) static bool member(const unsigned int &x,
-                                           const list<unsigned int> &l);
+  static bool member(const unsigned int &x, const list<unsigned int> &l);
   /// Tail-recursive: nth element
-  __attribute__((pure)) static unsigned int nth(const unsigned int &n,
-                                                const list<unsigned int> &l,
-                                                unsigned int default0);
+  static unsigned int nth(const unsigned int &n, const list<unsigned int> &l,
+                          unsigned int default0); /// Tail-recursive: fold_left
 
-  /// Tail-recursive: fold_left
   template <typename T1, typename T2, MapsTo<T2, T2, T1> F0>
   static T2 fold_left(F0 &&f, const T2 acc, const list<T1> &l) {
     T2 _result;
@@ -258,7 +271,7 @@ struct LoopifyTail {
   }
 
   /// Tail-recursive: lookup in association list
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   lookup(const unsigned int &key,
          const list<std::pair<unsigned int, unsigned int>> &l);
 };

@@ -1,7 +1,6 @@
 #include <loopify_advanced_patterns.h>
 
-__attribute__((pure)) unsigned int
-LoopifyAdvancedPatterns::len_impl(const List<unsigned int> &l) {
+unsigned int LoopifyAdvancedPatterns::len_impl(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -37,7 +36,7 @@ LoopifyAdvancedPatterns::len_impl(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyAdvancedPatterns::as_guard(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -69,8 +68,7 @@ LoopifyAdvancedPatterns::as_guard(const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) unsigned int
-LoopifyAdvancedPatterns::multi_guard(const List<unsigned int> &l) {
+unsigned int LoopifyAdvancedPatterns::multi_guard(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -122,8 +120,7 @@ LoopifyAdvancedPatterns::multi_guard(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyAdvancedPatterns::four_elem(const List<unsigned int> &l) {
+unsigned int LoopifyAdvancedPatterns::four_elem(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -186,7 +183,7 @@ LoopifyAdvancedPatterns::four_elem(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int LoopifyAdvancedPatterns::nested_pattern(
+unsigned int LoopifyAdvancedPatterns::nested_pattern(
     const List<std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>
         &l) {
   struct _Enter {
@@ -234,9 +231,8 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::nested_pattern(
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyAdvancedPatterns::guard_accum(unsigned int acc,
-                                     const List<unsigned int> &l) {
+unsigned int LoopifyAdvancedPatterns::guard_accum(unsigned int acc,
+                                                  const List<unsigned int> &l) {
   unsigned int _result;
   const List<unsigned int> *_loop_l = &l;
   unsigned int _loop_acc = std::move(acc);
@@ -275,7 +271,7 @@ LoopifyAdvancedPatterns::guard_accum(unsigned int acc,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyAdvancedPatterns::cons_computed(const unsigned int &n,
                                        const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
@@ -312,7 +308,7 @@ LoopifyAdvancedPatterns::cons_computed(const unsigned int &n,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) unsigned int LoopifyAdvancedPatterns::extract_value(
+unsigned int LoopifyAdvancedPatterns::extract_value(
     const LoopifyAdvancedPatterns::shape &s) {
   if (std::holds_alternative<typename LoopifyAdvancedPatterns::shape::Circle>(
           s.v())) {
@@ -331,7 +327,7 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::extract_value(
   }
 }
 
-__attribute__((pure)) unsigned int LoopifyAdvancedPatterns::sum_shapes(
+unsigned int LoopifyAdvancedPatterns::sum_shapes(
     const List<LoopifyAdvancedPatterns::shape> &l) {
   struct _Enter {
     const List<LoopifyAdvancedPatterns::shape> *l;
@@ -371,7 +367,6 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::sum_shapes(
   return _result;
 }
 
-__attribute__((pure))
 std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
 LoopifyAdvancedPatterns::count_by_shape(
     const List<LoopifyAdvancedPatterns::shape> &l) {
@@ -429,7 +424,7 @@ LoopifyAdvancedPatterns::count_by_shape(
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyAdvancedPatterns::replace_at(const unsigned int &idx, unsigned int value,
                                     const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};

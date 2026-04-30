@@ -17,23 +17,20 @@ struct JcnOps {
     unsigned int pc;
 
     // ACCESSORS
-    __attribute__((pure)) state clone() const {
+    state clone() const {
       return state{(*(this)).acc, (*(this)).carry, (*(this)).test_pin,
                    (*(this)).pc};
     }
   };
 
-  __attribute__((pure)) static bool jcn_condition(const state &s,
-                                                  const unsigned int &cond);
-  __attribute__((pure)) static unsigned int
-  addr12_of_nat(const unsigned int &n);
-  __attribute__((pure)) static unsigned int pc_inc2(const state &s);
-  __attribute__((pure)) static unsigned int page_of(const unsigned int &p);
-  __attribute__((pure)) static unsigned int page_base(const unsigned int &p);
-  __attribute__((pure)) static unsigned int base_for_next2(const state &s);
-  __attribute__((pure)) static unsigned int
-  branch_target(const state &s, const unsigned int &cond,
-                const unsigned int &off);
+  static bool jcn_condition(const state &s, const unsigned int &cond);
+  static unsigned int addr12_of_nat(const unsigned int &n);
+  static unsigned int pc_inc2(const state &s);
+  static unsigned int page_of(const unsigned int &p);
+  static unsigned int page_base(const unsigned int &p);
+  static unsigned int base_for_next2(const state &s);
+  static unsigned int branch_target(const state &s, const unsigned int &cond,
+                                    const unsigned int &off);
   static inline const unsigned int test_branch_target =
       branch_target(state{0u, true, false, 300u}, 2u, 17u);
   static inline const bool check_carry_clear_gate =

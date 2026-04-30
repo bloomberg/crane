@@ -1,8 +1,7 @@
 #include <loopify_multi_recursion.h>
 
-__attribute__((pure)) unsigned int
-LoopifyMultiRecursion::mixed_arith_fuel(const unsigned int &fuel,
-                                        const unsigned int &n) {
+unsigned int LoopifyMultiRecursion::mixed_arith_fuel(const unsigned int &fuel,
+                                                     const unsigned int &n) {
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
@@ -76,15 +75,13 @@ LoopifyMultiRecursion::mixed_arith_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyMultiRecursion::mixed_arith(const unsigned int &n) {
+unsigned int LoopifyMultiRecursion::mixed_arith(const unsigned int &n) {
   return mixed_arith_fuel((n * 3u), n);
 }
 
-__attribute__((pure)) bool
-LoopifyMultiRecursion::bool_or_chain_fuel(const unsigned int &fuel,
-                                          const unsigned int &n,
-                                          const unsigned int &target) {
+bool LoopifyMultiRecursion::bool_or_chain_fuel(const unsigned int &fuel,
+                                               const unsigned int &n,
+                                               const unsigned int &target) {
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
@@ -142,9 +139,8 @@ LoopifyMultiRecursion::bool_or_chain_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyMultiRecursion::bool_or_chain(const unsigned int &n,
-                                     const unsigned int &target) {
+unsigned int LoopifyMultiRecursion::bool_or_chain(const unsigned int &n,
+                                                  const unsigned int &target) {
   if (bool_or_chain_fuel((n * 2u), n, target)) {
     return 1u;
   } else {
@@ -152,9 +148,8 @@ LoopifyMultiRecursion::bool_or_chain(const unsigned int &n,
   }
 }
 
-__attribute__((pure)) bool
-LoopifyMultiRecursion::bool_and_chain_fuel(const unsigned int &fuel,
-                                           const unsigned int &n) {
+bool LoopifyMultiRecursion::bool_and_chain_fuel(const unsigned int &fuel,
+                                                const unsigned int &n) {
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
@@ -207,8 +202,7 @@ LoopifyMultiRecursion::bool_and_chain_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyMultiRecursion::bool_and_chain(const unsigned int &n) {
+unsigned int LoopifyMultiRecursion::bool_and_chain(const unsigned int &n) {
   if (bool_and_chain_fuel((n * 2u), n)) {
     return 1u;
   } else {
@@ -216,7 +210,7 @@ LoopifyMultiRecursion::bool_and_chain(const unsigned int &n) {
   }
 }
 
-__attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_count_leaves(
+unsigned int LoopifyMultiRecursion::quad_count_leaves(
     const LoopifyMultiRecursion::quadtree &t) {
   struct _Enter {
     const LoopifyMultiRecursion::quadtree *t;
@@ -286,7 +280,7 @@ __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_count_leaves(
   return _result;
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 LoopifyMultiRecursion::quad_depth(const LoopifyMultiRecursion::quadtree &t) {
   struct _Enter {
     const LoopifyMultiRecursion::quadtree *t;
@@ -361,9 +355,8 @@ LoopifyMultiRecursion::quad_depth(const LoopifyMultiRecursion::quadtree &t) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyMultiRecursion::hofstadter_q_fuel(const unsigned int &fuel,
-                                         const unsigned int &n) {
+unsigned int LoopifyMultiRecursion::hofstadter_q_fuel(const unsigned int &fuel,
+                                                      const unsigned int &n) {
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
@@ -453,7 +446,6 @@ LoopifyMultiRecursion::hofstadter_q_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyMultiRecursion::hofstadter_q(const unsigned int &n) {
+unsigned int LoopifyMultiRecursion::hofstadter_q(const unsigned int &n) {
   return hofstadter_q_fuel(((n * n) + 1u), n);
 }

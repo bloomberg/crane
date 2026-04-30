@@ -9,17 +9,13 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct Sections {
-  __attribute__((pure)) static unsigned int add_n(const unsigned int &_x0,
-                                                  const unsigned int &_x1);
-  __attribute__((pure)) static unsigned int mul_n(const unsigned int &_x0,
-                                                  const unsigned int &_x1);
-  __attribute__((pure)) static unsigned int add_five(const unsigned int &_x0);
-  __attribute__((pure)) static unsigned int mul_three(const unsigned int &_x0);
-  __attribute__((pure)) static unsigned int sum_ab(const unsigned int &_x0,
-                                                   const unsigned int &_x1);
-  __attribute__((pure)) static unsigned int prod_ab(const unsigned int &_x0,
-                                                    const unsigned int &_x1);
-  __attribute__((pure)) static unsigned int use_inner(const unsigned int &a);
+  static unsigned int add_n(const unsigned int &_x0, const unsigned int &_x1);
+  static unsigned int mul_n(const unsigned int &_x0, const unsigned int &_x1);
+  static unsigned int add_five(const unsigned int &_x0);
+  static unsigned int mul_three(const unsigned int &_x0);
+  static unsigned int sum_ab(const unsigned int &_x0, const unsigned int &_x1);
+  static unsigned int prod_ab(const unsigned int &_x0, const unsigned int &_x1);
+  static unsigned int use_inner(const unsigned int &a);
   static inline const unsigned int final_use = use_inner(5u);
 
   template <typename T1> static T1 identity(const T1 x) { return x; }

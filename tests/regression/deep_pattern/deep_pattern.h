@@ -52,26 +52,42 @@ struct DeepPattern {
     }
 
     // ACCESSORS
-    __attribute__((pure)) tree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<Leaf>(_sv.v());
-        return tree(Leaf{d_a0});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Node>(_sv.v());
-        return tree(Node{
-            d_a0 ? std::make_unique<DeepPattern::tree>(d_a0->clone()) : nullptr,
-            d_a1 ? std::make_unique<DeepPattern::tree>(d_a1->clone())
-                 : nullptr});
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          const auto &_alt = std::get<Leaf>(_src->v());
+          _dst->d_v_ = Leaf{_alt.d_a0};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ = Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static tree leaf(unsigned int a0) {
-      return tree(Leaf{std::move(a0)});
-    }
+    static tree leaf(unsigned int a0) { return tree(Leaf{std::move(a0)}); }
 
-    __attribute__((pure)) static tree node(tree a0, tree a1) {
+    static tree node(tree a0, tree a1) {
       return tree(Node{std::make_unique<tree>(std::move(a0)),
                        std::make_unique<tree>(std::move(a1))});
     }
@@ -100,9 +116,9 @@ struct DeepPattern {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int nested_let_match() const {
+    unsigned int nested_let_match() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<typename tree::Leaf>(_sv.v());
@@ -133,8 +149,7 @@ struct DeepPattern {
       }
     }
 
-    __attribute__((pure)) unsigned int
-    conditional_match(const unsigned int &target) const {
+    unsigned int conditional_match(const unsigned int &target) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<typename tree::Leaf>(_sv.v());
@@ -159,7 +174,7 @@ struct DeepPattern {
       }
     }
 
-    __attribute__((pure)) bool has_value(const unsigned int &target) const {
+    bool has_value(const unsigned int &target) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<typename tree::Leaf>(_sv.v());
@@ -170,11 +185,9 @@ struct DeepPattern {
       }
     }
 
-    __attribute__((pure)) tree as_pattern_test() const {
-      return std::move(*(this));
-    }
+    tree as_pattern_test() const { return std::move(*(this)); }
 
-    __attribute__((pure)) unsigned int wildcard_with_bindings() const {
+    unsigned int wildcard_with_bindings() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<typename tree::Leaf>(_sv.v());
@@ -203,7 +216,7 @@ struct DeepPattern {
       }
     }
 
-    __attribute__((pure)) unsigned int multi_constructor(const tree &t2) const {
+    unsigned int multi_constructor(const tree &t2) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<typename tree::Leaf>(_sv.v());
@@ -262,7 +275,7 @@ struct DeepPattern {
       }
     }
 
-    __attribute__((pure)) unsigned int deep_match() const {
+    unsigned int deep_match() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<typename tree::Leaf>(_sv.v());
@@ -427,16 +440,34 @@ struct DeepPattern {
     }
 
     // ACCESSORS
-    __attribute__((pure)) list<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Nil>(_sv.v())) {
-        return list<t_A>(Nil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-        return list<t_A>(Cons{
-            d_a0, d_a1 ? std::make_unique<DeepPattern::list<t_A>>(d_a1->clone())
-                       : nullptr});
+    list clone() const {
+      list _out{};
+
+      struct _CloneFrame {
+        const list *_src;
+        list *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const list *_src = _frame._src;
+        list *_dst = _frame._dst;
+        if (std::holds_alternative<Nil>(_src->v())) {
+          const auto &_alt = std::get<Nil>(_src->v());
+          _dst->d_v_ = Nil{};
+        } else {
+          const auto &_alt = std::get<Cons>(_src->v());
+          _dst->d_v_ =
+              Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<list>() : nullptr};
+          auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -451,9 +482,9 @@ struct DeepPattern {
       }
     }
 
-    __attribute__((pure)) static list<t_A> nil() { return list(Nil{}); }
+    static list<t_A> nil() { return list(Nil{}); }
 
-    __attribute__((pure)) static list<t_A> cons(t_A a0, list<t_A> a1) {
+    static list<t_A> cons(t_A a0, list<t_A> a1) {
       return list(
           Cons{std::move(a0), std::make_unique<list<t_A>>(std::move(a1))});
     }
@@ -480,7 +511,7 @@ struct DeepPattern {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, t_A, list<t_A>, T1> F1>
     T1 list_rec(const T1 f, F1 &&f0) const {
@@ -505,8 +536,7 @@ struct DeepPattern {
     }
   };
 
-  __attribute__((pure)) static unsigned int
-  list_deep_match(const list<tree> &l);
+  static unsigned int list_deep_match(const list<tree> &l);
   static inline const unsigned int test1 =
       tree::node(tree::leaf(1u), tree::leaf(2u)).deep_match();
   static inline const unsigned int test2 =

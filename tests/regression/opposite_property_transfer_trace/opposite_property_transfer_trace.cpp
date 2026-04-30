@@ -1,13 +1,13 @@
 #include <opposite_property_transfer_trace.h>
 
-__attribute__((pure)) OppositePropertyTransferTraceCase::PreStableCategory
+OppositePropertyTransferTraceCase::PreStableCategory
 OppositePropertyTransferTraceCase::opposite_prestable_category(
     const OppositePropertyTransferTraceCase::PreStableCategory &pS) {
   return PreStableCategory{pS.ps_tag,  pS.ps_shift,   pS.ps_Loop,
                            pS.ps_Susp, pS.ps_epsilon, pS.ps_eta};
 }
 
-__attribute__((pure)) OppositePropertyTransferTraceCase::is_left_semi_stable
+OppositePropertyTransferTraceCase::is_left_semi_stable
 OppositePropertyTransferTraceCase::right_stable_gives_opposite_left(
     const OppositePropertyTransferTraceCase::PreStableCategory &,
     const OppositePropertyTransferTraceCase::RightStableWitness &h) {
@@ -16,7 +16,7 @@ OppositePropertyTransferTraceCase::right_stable_gives_opposite_left(
   return LeftStableWitness{rsw_seed0, rsw_value0};
 }
 
-__attribute__((pure)) OppositePropertyTransferTraceCase::EquivT<
+OppositePropertyTransferTraceCase::EquivT<
     OppositePropertyTransferTraceCase::satisfies_triangle_1,
     OppositePropertyTransferTraceCase::satisfies_triangle_2>
 OppositePropertyTransferTraceCase::triangle_identity_duality(
@@ -34,7 +34,7 @@ OppositePropertyTransferTraceCase::triangle_identity_duality(
       });
 }
 
-__attribute__((pure)) OppositePropertyTransferTraceCase::LeftProperty
+OppositePropertyTransferTraceCase::LeftProperty
 OppositePropertyTransferTraceCase::sample_left_property(
     const OppositePropertyTransferTraceCase::PreStableCategory &pS,
     const OppositePropertyTransferTraceCase::LeftStableWitness &h_left,
@@ -45,7 +45,7 @@ OppositePropertyTransferTraceCase::sample_left_property(
                       pS.ps_tag};
 }
 
-__attribute__((pure)) OppositePropertyTransferTraceCase::EquivT<
+OppositePropertyTransferTraceCase::EquivT<
     OppositePropertyTransferTraceCase::LeftProperty,
     OppositePropertyTransferTraceCase::RightProperty>
 OppositePropertyTransferTraceCase::dual_property_equiv(

@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,7 +119,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
   template <typename T1, MapsTo<T1, T1, t_A> F0>
   T1 fold_left(F0 &&f, const T1 a0) const {
@@ -226,7 +245,7 @@ struct RecordErasedProofFieldsCase {
     }
 
     // ACCESSORS
-    __attribute__((pure)) StoredTag clone() const {
+    StoredTag clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<TagPrimary>(_sv.v())) {
         const auto &[d_a0] = std::get<TagPrimary>(_sv.v());
@@ -238,11 +257,11 @@ struct RecordErasedProofFieldsCase {
     }
 
     // CREATORS
-    __attribute__((pure)) static StoredTag tagprimary(ItemKind a0) {
+    static StoredTag tagprimary(ItemKind a0) {
       return StoredTag(TagPrimary{std::move(a0)});
     }
 
-    __attribute__((pure)) static StoredTag tagsecondary(ItemKind a0) {
+    static StoredTag tagsecondary(ItemKind a0) {
       return StoredTag(TagSecondary{std::move(a0)});
     }
 
@@ -250,7 +269,7 @@ struct RecordErasedProofFieldsCase {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, ItemKind> F0, MapsTo<T1, ItemKind> F1>
@@ -318,7 +337,7 @@ struct RecordErasedProofFieldsCase {
     StoredTag primary_tag;
 
     // ACCESSORS
-    __attribute__((pure)) PrimaryRecord clone() const {
+    PrimaryRecord clone() const {
       return PrimaryRecord{(*(this)).primary_left_kind,
                            (*(this)).primary_right_kind,
                            (*(this)).primary_tag.clone()};
@@ -329,32 +348,28 @@ struct RecordErasedProofFieldsCase {
     TraceBucket erased_bucket;
 
     // ACCESSORS
-    __attribute__((pure)) ErasedProofRecord clone() const {
+    ErasedProofRecord clone() const {
       return ErasedProofRecord{(*(this)).erased_bucket};
     }
   };
 
-  __attribute__((pure)) static unsigned int kind_code(const ItemKind k);
-  __attribute__((pure)) static unsigned int tag_code(const StoredTag &t);
-  __attribute__((pure)) static unsigned int bucket_code(const TraceBucket b);
-  __attribute__((pure)) static StoredTag bucket_to_tag(const TraceBucket b);
+  static unsigned int kind_code(const ItemKind k);
+  static unsigned int tag_code(const StoredTag &t);
+  static unsigned int bucket_code(const TraceBucket b);
+  static StoredTag bucket_to_tag(const TraceBucket b);
   static inline const PrimaryRecord sample_primary_record =
       PrimaryRecord{ItemKind::e_KINDC, ItemKind::e_KINDE,
                     StoredTag::tagprimary(ItemKind::e_KINDC)};
   static inline const ErasedProofRecord sample_erased_proof_record =
       ErasedProofRecord{TraceBucket::e_BUCKETC};
-  __attribute__((pure)) static unsigned int
-  left_kind_code_of(const PrimaryRecord &r);
-  __attribute__((pure)) static unsigned int
-  right_kind_code_of(const PrimaryRecord &r);
-  __attribute__((pure)) static unsigned int tag_code_of(const PrimaryRecord &r);
-  __attribute__((pure)) static unsigned int
-  bucket_code_of(const ErasedProofRecord &r);
-  __attribute__((pure)) static List<unsigned int>
-  trace_codes_of(const PrimaryRecord &primary, const ErasedProofRecord &erased);
-  __attribute__((pure)) static unsigned int
-  trace_checksum_of(const PrimaryRecord &primary,
-                    const ErasedProofRecord &erased);
+  static unsigned int left_kind_code_of(const PrimaryRecord &r);
+  static unsigned int right_kind_code_of(const PrimaryRecord &r);
+  static unsigned int tag_code_of(const PrimaryRecord &r);
+  static unsigned int bucket_code_of(const ErasedProofRecord &r);
+  static List<unsigned int> trace_codes_of(const PrimaryRecord &primary,
+                                           const ErasedProofRecord &erased);
+  static unsigned int trace_checksum_of(const PrimaryRecord &primary,
+                                        const ErasedProofRecord &erased);
   static inline const unsigned int sample_left_kind_code =
       left_kind_code_of(sample_primary_record);
   static inline const unsigned int sample_right_kind_code =

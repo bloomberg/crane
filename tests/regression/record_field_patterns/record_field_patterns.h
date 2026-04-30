@@ -51,15 +51,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -73,9 +92,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -102,7 +121,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
   template <typename T1, MapsTo<T1, T1, t_A> F0>
   T1 fold_left(F0 &&f, const T1 a0) const {
@@ -115,8 +134,7 @@ public:
     }
   }
 
-  template <typename T1, MapsTo<T1, t_A> F0>
-  __attribute__((pure)) List<T1> map(F0 &&f) const {
+  template <typename T1, MapsTo<T1, t_A> F0> List<T1> map(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return List<T1>::nil();
@@ -143,19 +161,17 @@ struct RecordFieldPatterns {
     unsigned int py;
 
     // ACCESSORS
-    __attribute__((pure)) Point clone() const {
-      return Point{(*(this)).px, (*(this)).py};
-    }
+    Point clone() const { return Point{(*(this)).px, (*(this)).py}; }
   };
 
-  __attribute__((pure)) static unsigned int classify_point(const Point &p);
-  __attribute__((pure)) static unsigned int zero_x(const Point &p);
+  static unsigned int classify_point(const Point &p);
+  static unsigned int zero_x(const Point &p);
 
   template <typename T1> static T1 identity(const T1 x) { return x; }
 
   /// Apply a polymorphic function to a record — the record type flows
   /// through a type variable.
-  __attribute__((pure)) static Point id_point(const Point &_x0);
+  static Point id_point(const Point &_x0);
 
   /// Polymorphic projection: the match happens inside a polymorphic context
   /// where the scrutinee's type might not be Tglob.
@@ -164,24 +180,22 @@ struct RecordFieldPatterns {
     return _x0.first;
   }
 
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  point_pair(const Point &p);
-  __attribute__((pure)) static unsigned int first_coord(
-      const Point
-          &p); /// Record whose field default depends on the section variable.
+  static std::pair<unsigned int, unsigned int> point_pair(const Point &p);
+  static unsigned int first_coord(const Point &p);
 
+  /// Record whose field default depends on the section variable.
   struct ScaledPoint {
     unsigned int sp_x;
     unsigned int sp_y;
 
     // ACCESSORS
-    __attribute__((pure)) ScaledPoint clone() const {
+    ScaledPoint clone() const {
       return ScaledPoint{(*(this)).sp_x, (*(this)).sp_y};
     }
   };
 
-  __attribute__((pure)) static unsigned int
-  scaled_sum(const unsigned int &scale, const ScaledPoint &sp);
+  static unsigned int scaled_sum(const unsigned int &scale,
+                                 const ScaledPoint &sp);
   /// After section closing, scaled_sum is parameterized by scale : nat.
   /// The record type itself is NOT parameterized (scale is only used in
   /// the function body), but the function signature changes.
@@ -190,14 +204,13 @@ struct RecordFieldPatterns {
 
   struct PointImpl {
     using R = Point;
-    __attribute__((pure)) static Point mk(unsigned int x, unsigned int x0);
-    __attribute__((pure)) static unsigned int get_x(const Point &p);
-    __attribute__((pure)) static unsigned int get_y(const Point &p);
+    static Point mk(unsigned int x, unsigned int x0);
+    static unsigned int get_x(const Point &p);
+    static unsigned int get_y(const Point &p);
   };
 
   template <HasRecord M> struct UseRecord {
-    __attribute__((pure)) static unsigned int
-    sum_fields(const typename M::R r) {
+    static unsigned int sum_fields(const typename M::R r) {
       return (M::get_x(r) + M::get_y(r));
     }
   };
@@ -211,12 +224,12 @@ struct RecordFieldPatterns {
     Point seg_end;
 
     // ACCESSORS
-    __attribute__((pure)) Segment clone() const {
+    Segment clone() const {
       return Segment{(*(this)).seg_start.clone(), (*(this)).seg_end.clone()};
     }
   };
 
-  __attribute__((pure)) static unsigned int segment_length_sq(const Segment &s);
+  static unsigned int segment_length_sq(const Segment &s);
 
   struct Bounded {
     unsigned int lo;
@@ -224,30 +237,29 @@ struct RecordFieldPatterns {
     unsigned int mid;
 
     // ACCESSORS
-    __attribute__((pure)) Bounded clone() const {
+    Bounded clone() const {
       return Bounded{(*(this)).lo, (*(this)).hi, (*(this)).mid};
     }
   };
 
-  __attribute__((pure)) static unsigned int bounded_range(const Bounded &b);
-  __attribute__((pure)) static unsigned int sum_px(const List<Point> &points);
-  __attribute__((pure)) static List<unsigned int>
-  map_py(const List<Point> &points);
-  __attribute__((pure)) static Point swap(const Point &p);
-  __attribute__((pure)) static Point double_swap(const Point &p);
+  static unsigned int bounded_range(const Bounded &b);
+  static unsigned int sum_px(const List<Point> &points);
+  static List<unsigned int> map_py(const List<Point> &points);
+  static Point swap(const Point &p);
+  static Point double_swap(const Point &p);
 
   struct Container {
     std::any elem;
     unsigned int count;
 
     // ACCESSORS
-    __attribute__((pure)) Container clone() const {
+    Container clone() const {
       return Container{(*(this)).elem, (*(this)).count};
     }
   };
 
   using elem_type = std::any;
-  __attribute__((pure)) static unsigned int get_count(const Container &c);
+  static unsigned int get_count(const Container &c);
   static inline const unsigned int test_container =
       get_count(Container{42u, 5u});
   static inline const unsigned int test_origin = classify_point(Point{0u, 0u});

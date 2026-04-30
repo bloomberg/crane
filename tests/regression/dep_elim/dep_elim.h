@@ -50,15 +50,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -72,9 +91,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -101,7 +120,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct DepElim {
@@ -145,24 +164,40 @@ struct DepElim {
     }
 
     // ACCESSORS
-    __attribute__((pure)) fin clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<FZ>(_sv.v())) {
-        const auto &[d_n] = std::get<FZ>(_sv.v());
-        return fin(FZ{d_n});
-      } else {
-        const auto &[d_n, d_a1] = std::get<FS>(_sv.v());
-        return fin(FS{d_n, d_a1 ? std::make_unique<DepElim::fin>(d_a1->clone())
-                                : nullptr});
+    fin clone() const {
+      fin _out{};
+
+      struct _CloneFrame {
+        const fin *_src;
+        fin *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const fin *_src = _frame._src;
+        fin *_dst = _frame._dst;
+        if (std::holds_alternative<FZ>(_src->v())) {
+          const auto &_alt = std::get<FZ>(_src->v());
+          _dst->d_v_ = FZ{_alt.d_n};
+        } else {
+          const auto &_alt = std::get<FS>(_src->v());
+          _dst->d_v_ =
+              FS{_alt.d_n, _alt.d_a1 ? std::make_unique<fin>() : nullptr};
+          auto &_dst_alt = std::get<FS>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static fin fz(unsigned int n) {
-      return fin(FZ{std::move(n)});
-    }
+    static fin fz(unsigned int n) { return fin(FZ{std::move(n)}); }
 
-    __attribute__((pure)) static fin fs(unsigned int n, fin a1) {
+    static fin fs(unsigned int n, fin a1) {
       return fin(FS{std::move(n), std::make_unique<fin>(std::move(a1))});
     }
 
@@ -188,9 +223,9 @@ struct DepElim {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int fin_to_nat(const unsigned int &) const {
+    unsigned int fin_to_nat(const unsigned int &) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename fin::FZ>(_sv.v())) {
         return 0u;
@@ -266,17 +301,34 @@ struct DepElim {
     }
 
     // ACCESSORS
-    __attribute__((pure)) vec<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Vnil>(_sv.v())) {
-        return vec<t_A>(Vnil{});
-      } else {
-        const auto &[d_n, d_a1, d_a2] = std::get<Vcons>(_sv.v());
-        return vec<t_A>(
-            Vcons{d_n, d_a1,
-                  d_a2 ? std::make_unique<DepElim::vec<t_A>>(d_a2->clone())
-                       : nullptr});
+    vec clone() const {
+      vec _out{};
+
+      struct _CloneFrame {
+        const vec *_src;
+        vec *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const vec *_src = _frame._src;
+        vec *_dst = _frame._dst;
+        if (std::holds_alternative<Vnil>(_src->v())) {
+          const auto &_alt = std::get<Vnil>(_src->v());
+          _dst->d_v_ = Vnil{};
+        } else {
+          const auto &_alt = std::get<Vcons>(_src->v());
+          _dst->d_v_ = Vcons{_alt.d_n, _alt.d_a1,
+                             _alt.d_a2 ? std::make_unique<vec>() : nullptr};
+          auto &_dst_alt = std::get<Vcons>(_dst->d_v_);
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -291,10 +343,9 @@ struct DepElim {
       }
     }
 
-    __attribute__((pure)) static vec<t_A> vnil() { return vec(Vnil{}); }
+    static vec<t_A> vnil() { return vec(Vnil{}); }
 
-    __attribute__((pure)) static vec<t_A> vcons(unsigned int n, t_A a1,
-                                                vec<t_A> a2) {
+    static vec<t_A> vcons(unsigned int n, t_A a1, vec<t_A> a2) {
       return vec(Vcons{std::move(n), std::move(a1),
                        std::make_unique<vec<t_A>>(std::move(a2))});
     }
@@ -321,9 +372,9 @@ struct DepElim {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) vec<t_A> vec_tail(const unsigned int &) const {
+    vec<t_A> vec_tail(const unsigned int &) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
         throw std::logic_error("unreachable");
@@ -346,7 +397,7 @@ struct DepElim {
     }
 
     template <typename T1, MapsTo<T1, t_A> F1>
-    __attribute__((pure)) vec<T1> vec_map(const unsigned int &, F1 &&f) const {
+    vec<T1> vec_map(const unsigned int &, F1 &&f) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
         return vec<T1>::vnil();
@@ -358,7 +409,7 @@ struct DepElim {
       }
     }
 
-    __attribute__((pure)) List<t_A> vec_to_list(const unsigned int &) const {
+    List<t_A> vec_to_list(const unsigned int &) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
         return List<t_A>::nil();
@@ -433,7 +484,7 @@ struct DepElim {
     }
 
     // ACCESSORS
-    __attribute__((pure)) avail clone() const {
+    avail clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Present>(_sv.v())) {
         const auto &[d_a0] = std::get<Present>(_sv.v());
@@ -444,19 +495,19 @@ struct DepElim {
     }
 
     // CREATORS
-    __attribute__((pure)) static avail present(unsigned int a0) {
+    static avail present(unsigned int a0) {
       return avail(Present{std::move(a0)});
     }
 
-    __attribute__((pure)) static avail absent() { return avail(Absent{}); }
+    static avail absent() { return avail(Absent{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int get_present() const {
+    unsigned int get_present() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename avail::Present>(_sv.v())) {
         const auto &[d_a0] = std::get<typename avail::Present>(_sv.v());

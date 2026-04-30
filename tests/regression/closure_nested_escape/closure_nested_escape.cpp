@@ -10,8 +10,8 @@
 /// Difference from fix_escape_capture: returns TWO fixpoints that both
 /// capture the SAME variable. This tests whether both closures
 /// independently read garbage from the same dangling reference.
-__attribute__((pure)) std::pair<std::function<unsigned int(unsigned int)>,
-                                std::function<unsigned int(unsigned int)>>
+std::pair<std::function<unsigned int(unsigned int)>,
+          std::function<unsigned int(unsigned int)>>
 ClosureNestedEscape::make_pair_fix(unsigned int n) {
   auto add_impl = [=](auto &_self_add, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {

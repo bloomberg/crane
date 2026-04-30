@@ -1,6 +1,6 @@
 #include <loopify_option_maybe.h>
 
-__attribute__((pure)) std::optional<unsigned int>
+std::optional<unsigned int>
 LoopifyOptionMaybe::find_even(const List<unsigned int> &l) {
   std::optional<unsigned int> _result;
   const List<unsigned int> *_loop_l = &l;
@@ -23,7 +23,7 @@ LoopifyOptionMaybe::find_even(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) std::optional<unsigned int>
+std::optional<unsigned int>
 LoopifyOptionMaybe::find_greater(const unsigned int &threshold,
                                  const List<unsigned int> &l) {
   std::optional<unsigned int> _result;
@@ -47,7 +47,7 @@ LoopifyOptionMaybe::find_greater(const unsigned int &threshold,
   return _result;
 }
 
-__attribute__((pure)) std::optional<unsigned int> LoopifyOptionMaybe::lookup(
+std::optional<unsigned int> LoopifyOptionMaybe::lookup(
     const unsigned int &key,
     const List<std::pair<unsigned int, unsigned int>> &l) {
   std::optional<unsigned int> _result;
@@ -75,7 +75,7 @@ __attribute__((pure)) std::optional<unsigned int> LoopifyOptionMaybe::lookup(
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int> LoopifyOptionMaybe::lookup_all(
+List<unsigned int> LoopifyOptionMaybe::lookup_all(
     const unsigned int &key,
     const List<std::pair<unsigned int, unsigned int>> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
@@ -112,7 +112,7 @@ __attribute__((pure)) List<unsigned int> LoopifyOptionMaybe::lookup_all(
   return std::move(*(_head));
 }
 
-__attribute__((pure)) std::optional<unsigned int>
+std::optional<unsigned int>
 LoopifyOptionMaybe::safe_head(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return std::optional<unsigned int>();
@@ -123,7 +123,7 @@ LoopifyOptionMaybe::safe_head(const List<unsigned int> &l) {
   }
 }
 
-__attribute__((pure)) std::optional<List<unsigned int>>
+std::optional<List<unsigned int>>
 LoopifyOptionMaybe::safe_tail(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return std::optional<List<unsigned int>>();
@@ -134,7 +134,7 @@ LoopifyOptionMaybe::safe_tail(const List<unsigned int> &l) {
   }
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyOptionMaybe::catMaybes(const List<std::optional<unsigned int>> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -168,7 +168,7 @@ LoopifyOptionMaybe::catMaybes(const List<std::optional<unsigned int>> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) std::optional<unsigned int>
+std::optional<unsigned int>
 LoopifyOptionMaybe::find_index_even_aux(const List<unsigned int> &l,
                                         unsigned int idx) {
   std::optional<unsigned int> _result;
@@ -196,7 +196,7 @@ LoopifyOptionMaybe::find_index_even_aux(const List<unsigned int> &l,
   return _result;
 }
 
-__attribute__((pure)) std::optional<unsigned int>
+std::optional<unsigned int>
 LoopifyOptionMaybe::find_index_even(const List<unsigned int> &l) {
   return find_index_even_aux(l, 0u);
 }

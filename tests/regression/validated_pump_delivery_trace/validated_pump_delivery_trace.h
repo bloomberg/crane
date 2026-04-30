@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,10 +119,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  template <MapsTo<bool, t_A> F0>
-  __attribute__((pure)) bool forallb(F0 &&f) const {
+  template <MapsTo<bool, t_A> F0> bool forallb(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return true;
@@ -124,7 +142,7 @@ public:
     }
   }
 
-  __attribute__((pure)) unsigned int length() const {
+  unsigned int length() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
@@ -226,83 +244,129 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Uint clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return Uint(Nil{});
-    } else if (std::holds_alternative<D0>(_sv.v())) {
-      const auto &[d_a0] = std::get<D0>(_sv.v());
-      return Uint(D0{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D1>(_sv.v())) {
-      const auto &[d_a0] = std::get<D1>(_sv.v());
-      return Uint(D1{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D2>(_sv.v())) {
-      const auto &[d_a0] = std::get<D2>(_sv.v());
-      return Uint(D2{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D3>(_sv.v())) {
-      const auto &[d_a0] = std::get<D3>(_sv.v());
-      return Uint(D3{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D4>(_sv.v())) {
-      const auto &[d_a0] = std::get<D4>(_sv.v());
-      return Uint(D4{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D5>(_sv.v())) {
-      const auto &[d_a0] = std::get<D5>(_sv.v());
-      return Uint(D5{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D6>(_sv.v())) {
-      const auto &[d_a0] = std::get<D6>(_sv.v());
-      return Uint(D6{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D7>(_sv.v())) {
-      const auto &[d_a0] = std::get<D7>(_sv.v());
-      return Uint(D7{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D8>(_sv.v())) {
-      const auto &[d_a0] = std::get<D8>(_sv.v());
-      return Uint(D8{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
-    } else {
-      const auto &[d_a0] = std::get<D9>(_sv.v());
-      return Uint(D9{d_a0 ? std::make_unique<Uint>(d_a0->clone()) : nullptr});
+  Uint clone() const {
+    Uint _out{};
+
+    struct _CloneFrame {
+      const Uint *_src;
+      Uint *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Uint *_src = _frame._src;
+      Uint *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else if (std::holds_alternative<D0>(_src->v())) {
+        const auto &_alt = std::get<D0>(_src->v());
+        _dst->d_v_ = D0{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D0>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D1>(_src->v())) {
+        const auto &_alt = std::get<D1>(_src->v());
+        _dst->d_v_ = D1{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D1>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D2>(_src->v())) {
+        const auto &_alt = std::get<D2>(_src->v());
+        _dst->d_v_ = D2{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D2>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D3>(_src->v())) {
+        const auto &_alt = std::get<D3>(_src->v());
+        _dst->d_v_ = D3{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D3>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D4>(_src->v())) {
+        const auto &_alt = std::get<D4>(_src->v());
+        _dst->d_v_ = D4{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D4>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D5>(_src->v())) {
+        const auto &_alt = std::get<D5>(_src->v());
+        _dst->d_v_ = D5{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D5>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D6>(_src->v())) {
+        const auto &_alt = std::get<D6>(_src->v());
+        _dst->d_v_ = D6{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D6>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D7>(_src->v())) {
+        const auto &_alt = std::get<D7>(_src->v());
+        _dst->d_v_ = D7{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D7>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D8>(_src->v())) {
+        const auto &_alt = std::get<D8>(_src->v());
+        _dst->d_v_ = D8{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D8>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else {
+        const auto &_alt = std::get<D9>(_src->v());
+        _dst->d_v_ = D9{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D9>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Uint nil() { return Uint(Nil{}); }
+  static Uint nil() { return Uint(Nil{}); }
 
-  __attribute__((pure)) static Uint d0(Uint a0) {
+  static Uint d0(Uint a0) {
     return Uint(D0{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d1(Uint a0) {
+  static Uint d1(Uint a0) {
     return Uint(D1{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d2(Uint a0) {
+  static Uint d2(Uint a0) {
     return Uint(D2{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d3(Uint a0) {
+  static Uint d3(Uint a0) {
     return Uint(D3{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d4(Uint a0) {
+  static Uint d4(Uint a0) {
     return Uint(D4{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d5(Uint a0) {
+  static Uint d5(Uint a0) {
     return Uint(D5{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d6(Uint a0) {
+  static Uint d6(Uint a0) {
     return Uint(D6{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d7(Uint a0) {
+  static Uint d7(Uint a0) {
     return Uint(D7{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d8(Uint a0) {
+  static Uint d8(Uint a0) {
     return Uint(D8{std::make_unique<Uint>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint d9(Uint a0) {
+  static Uint d9(Uint a0) {
     return Uint(D9{std::make_unique<Uint>(std::move(a0))});
   }
 
@@ -373,7 +437,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Uint0 {
@@ -504,135 +568,189 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Uint0 clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil0>(_sv.v())) {
-      return Uint0(Nil0{});
-    } else if (std::holds_alternative<D10>(_sv.v())) {
-      const auto &[d_a0] = std::get<D10>(_sv.v());
-      return Uint0(
-          D10{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D11>(_sv.v())) {
-      const auto &[d_a0] = std::get<D11>(_sv.v());
-      return Uint0(
-          D11{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D12>(_sv.v())) {
-      const auto &[d_a0] = std::get<D12>(_sv.v());
-      return Uint0(
-          D12{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D13>(_sv.v())) {
-      const auto &[d_a0] = std::get<D13>(_sv.v());
-      return Uint0(
-          D13{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D14>(_sv.v())) {
-      const auto &[d_a0] = std::get<D14>(_sv.v());
-      return Uint0(
-          D14{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D15>(_sv.v())) {
-      const auto &[d_a0] = std::get<D15>(_sv.v());
-      return Uint0(
-          D15{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D16>(_sv.v())) {
-      const auto &[d_a0] = std::get<D16>(_sv.v());
-      return Uint0(
-          D16{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D17>(_sv.v())) {
-      const auto &[d_a0] = std::get<D17>(_sv.v());
-      return Uint0(
-          D17{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D18>(_sv.v())) {
-      const auto &[d_a0] = std::get<D18>(_sv.v());
-      return Uint0(
-          D18{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<D19>(_sv.v())) {
-      const auto &[d_a0] = std::get<D19>(_sv.v());
-      return Uint0(
-          D19{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<Da>(_sv.v())) {
-      const auto &[d_a0] = std::get<Da>(_sv.v());
-      return Uint0(Da{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<Db>(_sv.v())) {
-      const auto &[d_a0] = std::get<Db>(_sv.v());
-      return Uint0(Db{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<Dc>(_sv.v())) {
-      const auto &[d_a0] = std::get<Dc>(_sv.v());
-      return Uint0(Dc{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<Dd>(_sv.v())) {
-      const auto &[d_a0] = std::get<Dd>(_sv.v());
-      return Uint0(Dd{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<De>(_sv.v())) {
-      const auto &[d_a0] = std::get<De>(_sv.v());
-      return Uint0(De{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
-    } else {
-      const auto &[d_a0] = std::get<Df>(_sv.v());
-      return Uint0(Df{d_a0 ? std::make_unique<Uint0>(d_a0->clone()) : nullptr});
+  Uint0 clone() const {
+    Uint0 _out{};
+
+    struct _CloneFrame {
+      const Uint0 *_src;
+      Uint0 *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Uint0 *_src = _frame._src;
+      Uint0 *_dst = _frame._dst;
+      if (std::holds_alternative<Nil0>(_src->v())) {
+        const auto &_alt = std::get<Nil0>(_src->v());
+        _dst->d_v_ = Nil0{};
+      } else if (std::holds_alternative<D10>(_src->v())) {
+        const auto &_alt = std::get<D10>(_src->v());
+        _dst->d_v_ = D10{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D10>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D11>(_src->v())) {
+        const auto &_alt = std::get<D11>(_src->v());
+        _dst->d_v_ = D11{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D11>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D12>(_src->v())) {
+        const auto &_alt = std::get<D12>(_src->v());
+        _dst->d_v_ = D12{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D12>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D13>(_src->v())) {
+        const auto &_alt = std::get<D13>(_src->v());
+        _dst->d_v_ = D13{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D13>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D14>(_src->v())) {
+        const auto &_alt = std::get<D14>(_src->v());
+        _dst->d_v_ = D14{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D14>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D15>(_src->v())) {
+        const auto &_alt = std::get<D15>(_src->v());
+        _dst->d_v_ = D15{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D15>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D16>(_src->v())) {
+        const auto &_alt = std::get<D16>(_src->v());
+        _dst->d_v_ = D16{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D16>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D17>(_src->v())) {
+        const auto &_alt = std::get<D17>(_src->v());
+        _dst->d_v_ = D17{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D17>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D18>(_src->v())) {
+        const auto &_alt = std::get<D18>(_src->v());
+        _dst->d_v_ = D18{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D18>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<D19>(_src->v())) {
+        const auto &_alt = std::get<D19>(_src->v());
+        _dst->d_v_ = D19{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D19>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<Da>(_src->v())) {
+        const auto &_alt = std::get<Da>(_src->v());
+        _dst->d_v_ = Da{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Da>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<Db>(_src->v())) {
+        const auto &_alt = std::get<Db>(_src->v());
+        _dst->d_v_ = Db{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Db>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<Dc>(_src->v())) {
+        const auto &_alt = std::get<Dc>(_src->v());
+        _dst->d_v_ = Dc{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Dc>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<Dd>(_src->v())) {
+        const auto &_alt = std::get<Dd>(_src->v());
+        _dst->d_v_ = Dd{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Dd>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<De>(_src->v())) {
+        const auto &_alt = std::get<De>(_src->v());
+        _dst->d_v_ = De{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<De>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else {
+        const auto &_alt = std::get<Df>(_src->v());
+        _dst->d_v_ = Df{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Df>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Uint0 nil0() { return Uint0(Nil0{}); }
+  static Uint0 nil0() { return Uint0(Nil0{}); }
 
-  __attribute__((pure)) static Uint0 d10(Uint0 a0) {
+  static Uint0 d10(Uint0 a0) {
     return Uint0(D10{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d11(Uint0 a0) {
+  static Uint0 d11(Uint0 a0) {
     return Uint0(D11{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d12(Uint0 a0) {
+  static Uint0 d12(Uint0 a0) {
     return Uint0(D12{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d13(Uint0 a0) {
+  static Uint0 d13(Uint0 a0) {
     return Uint0(D13{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d14(Uint0 a0) {
+  static Uint0 d14(Uint0 a0) {
     return Uint0(D14{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d15(Uint0 a0) {
+  static Uint0 d15(Uint0 a0) {
     return Uint0(D15{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d16(Uint0 a0) {
+  static Uint0 d16(Uint0 a0) {
     return Uint0(D16{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d17(Uint0 a0) {
+  static Uint0 d17(Uint0 a0) {
     return Uint0(D17{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d18(Uint0 a0) {
+  static Uint0 d18(Uint0 a0) {
     return Uint0(D18{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 d19(Uint0 a0) {
+  static Uint0 d19(Uint0 a0) {
     return Uint0(D19{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 da(Uint0 a0) {
+  static Uint0 da(Uint0 a0) {
     return Uint0(Da{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 db(Uint0 a0) {
+  static Uint0 db(Uint0 a0) {
     return Uint0(Db{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 dc(Uint0 a0) {
+  static Uint0 dc(Uint0 a0) {
     return Uint0(Dc{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 dd(Uint0 a0) {
+  static Uint0 dd(Uint0 a0) {
     return Uint0(Dd{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 de(Uint0 a0) {
+  static Uint0 de(Uint0 a0) {
     return Uint0(De{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Uint0 df(Uint0 a0) {
+  static Uint0 df(Uint0 a0) {
     return Uint0(Df{std::make_unique<Uint0>(std::move(a0))});
   }
 
@@ -733,7 +851,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Uint1 {
@@ -775,7 +893,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Uint1 clone() const {
+  Uint1 clone() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<UIntDecimal>(_sv.v())) {
       const auto &[d_u] = std::get<UIntDecimal>(_sv.v());
@@ -787,11 +905,9 @@ public:
   }
 
   // CREATORS
-  __attribute__((pure)) static Uint1 uintdecimal(Uint u) {
-    return Uint1(UIntDecimal{std::move(u)});
-  }
+  static Uint1 uintdecimal(Uint u) { return Uint1(UIntDecimal{std::move(u)}); }
 
-  __attribute__((pure)) static Uint1 uinthexadecimal(Uint0 u) {
+  static Uint1 uinthexadecimal(Uint0 u) {
     return Uint1(UIntHexadecimal{std::move(u)});
   }
 
@@ -799,23 +915,19 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Nat {
-  __attribute__((pure)) static unsigned int tail_add(const unsigned int &n,
-                                                     unsigned int m);
-  __attribute__((pure)) static unsigned int
-  tail_addmul(unsigned int r, const unsigned int &n, const unsigned int &m);
-  __attribute__((pure)) static unsigned int tail_mul(const unsigned int &n,
-                                                     const unsigned int &m);
-  __attribute__((pure)) static unsigned int of_uint_acc(const Uint &d,
-                                                        unsigned int acc);
-  __attribute__((pure)) static unsigned int of_uint(const Uint &d);
-  __attribute__((pure)) static unsigned int of_hex_uint_acc(const Uint0 &d,
-                                                            unsigned int acc);
-  __attribute__((pure)) static unsigned int of_hex_uint(const Uint0 &d);
-  __attribute__((pure)) static unsigned int of_num_uint(const Uint1 &d);
+  static unsigned int tail_add(const unsigned int &n, unsigned int m);
+  static unsigned int tail_addmul(unsigned int r, const unsigned int &n,
+                                  const unsigned int &m);
+  static unsigned int tail_mul(const unsigned int &n, const unsigned int &m);
+  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
+  static unsigned int of_uint(const Uint &d);
+  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
+  static unsigned int of_hex_uint(const Uint0 &d);
+  static unsigned int of_num_uint(const Uint1 &d);
 };
 
 struct ValidatedPumpDeliveryTraceCase {
@@ -823,18 +935,14 @@ struct ValidatedPumpDeliveryTraceCase {
     unsigned int mg_dL_val;
 
     // ACCESSORS
-    __attribute__((pure)) Mg_dL clone() const {
-      return Mg_dL{(*(this)).mg_dL_val};
-    }
+    Mg_dL clone() const { return Mg_dL{(*(this)).mg_dL_val}; }
   };
 
   struct Grams {
     unsigned int grams_val;
 
     // ACCESSORS
-    __attribute__((pure)) Grams clone() const {
-      return Grams{(*(this)).grams_val};
-    }
+    Grams clone() const { return Grams{(*(this)).grams_val}; }
   };
 
   using Carbs_g = Grams;
@@ -848,8 +956,8 @@ struct ValidatedPumpDeliveryTraceCase {
   static inline const unsigned int BG_METER_MIN = 20u;
   static inline const unsigned int BG_METER_MAX = 600u;
   static inline const unsigned int CARBS_SANITY_MAX = 200u;
-  __attribute__((pure)) static bool bg_in_meter_range(const Mg_dL &bg);
-  __attribute__((pure)) static bool carbs_reasonable(const Grams &carbs);
+  static bool bg_in_meter_range(const Mg_dL &bg);
+  static bool carbs_reasonable(const Grams &carbs);
 
   struct Config {
     unsigned int cfg_bg_rise_per_gram;
@@ -859,7 +967,7 @@ struct ValidatedPumpDeliveryTraceCase {
     unsigned int cfg_iob_high_threshold_twentieths;
 
     // ACCESSORS
-    __attribute__((pure)) Config clone() const {
+    Config clone() const {
       return Config{(*(this)).cfg_bg_rise_per_gram,
                     (*(this)).cfg_conservative_cob_absorption_percent,
                     (*(this)).cfg_suspend_threshold_mg_dl,
@@ -933,10 +1041,8 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  isf_activity_modifier(const ActivityState state);
-  __attribute__((pure)) static unsigned int
-  icr_activity_modifier(const ActivityState state);
+  static unsigned int isf_activity_modifier(const ActivityState state);
+  static unsigned int icr_activity_modifier(const ActivityState state);
 
   struct FaultStatus {
     // TYPES
@@ -990,7 +1096,7 @@ struct ValidatedPumpDeliveryTraceCase {
     }
 
     // ACCESSORS
-    __attribute__((pure)) FaultStatus clone() const {
+    FaultStatus clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Fault_None>(_sv.v())) {
         return FaultStatus(Fault_None{});
@@ -1007,34 +1113,29 @@ struct ValidatedPumpDeliveryTraceCase {
     }
 
     // CREATORS
-    __attribute__((pure)) static FaultStatus fault_none() {
-      return FaultStatus(Fault_None{});
-    }
+    static FaultStatus fault_none() { return FaultStatus(Fault_None{}); }
 
-    __attribute__((pure)) static FaultStatus fault_occlusion() {
+    static FaultStatus fault_occlusion() {
       return FaultStatus(Fault_Occlusion{});
     }
 
-    __attribute__((pure)) static FaultStatus
-    fault_lowreservoir(unsigned int a0) {
+    static FaultStatus fault_lowreservoir(unsigned int a0) {
       return FaultStatus(Fault_LowReservoir{std::move(a0)});
     }
 
-    __attribute__((pure)) static FaultStatus fault_batterylow() {
+    static FaultStatus fault_batterylow() {
       return FaultStatus(Fault_BatteryLow{});
     }
 
-    __attribute__((pure)) static FaultStatus fault_unknown() {
-      return FaultStatus(Fault_Unknown{});
-    }
+    static FaultStatus fault_unknown() { return FaultStatus(Fault_Unknown{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) bool fault_blocks_bolus() const {
+    bool fault_blocks_bolus() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename FaultStatus::Fault_None>(_sv.v())) {
         return false;
@@ -1137,54 +1238,50 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  __attribute__((pure)) static Minutes peak_time(const InsulinType itype,
-                                                 const unsigned int &_x);
+  static Minutes peak_time(const InsulinType itype, const unsigned int &_x);
 
   struct BolusEvent {
     unsigned int be_dose_twentieths;
     Minutes be_time_minutes;
 
     // ACCESSORS
-    __attribute__((pure)) BolusEvent clone() const {
+    BolusEvent clone() const {
       return BolusEvent{(*(this)).be_dose_twentieths,
                         (*(this)).be_time_minutes};
     }
   };
 
-  __attribute__((pure)) static unsigned int div_ceil(const unsigned int &a,
-                                                     const unsigned int &b);
-  __attribute__((pure)) static bool event_time_valid(const unsigned int &now,
-                                                     const BolusEvent &event);
-  __attribute__((pure)) static bool
-  history_times_valid(const unsigned int &now, const List<BolusEvent> &events);
-  __attribute__((pure)) static bool
-  history_sorted_from(const unsigned int &prev, const List<BolusEvent> &events);
-  __attribute__((pure)) static bool
-  history_sorted_desc(const List<BolusEvent> &events);
-  __attribute__((pure)) static bool
-  history_valid(const unsigned int &now, const List<BolusEvent> &events);
-  __attribute__((pure)) static unsigned int
-  bilinear_iob_fraction(const unsigned int &elapsed, const unsigned int &dia,
-                        const InsulinType itype);
-  __attribute__((pure)) static Insulin_twentieth
-  bilinear_iob_from_bolus(const unsigned int &now, const BolusEvent &event,
-                          const unsigned int &dia, const InsulinType itype);
-  __attribute__((pure)) static Insulin_twentieth
-  total_bilinear_iob(const unsigned int &now, const List<BolusEvent> &events,
-                     const unsigned int &dia, const InsulinType itype);
-  __attribute__((pure)) static Mg_dL apply_sensor_margin(Mg_dL bg,
-                                                         const Mg_dL &target);
-  __attribute__((pure)) static unsigned int
-  adjusted_isf_tenths(const Mg_dL &bg, unsigned int base_isf_tenths);
-  __attribute__((pure)) static Insulin_twentieth
+  static unsigned int div_ceil(const unsigned int &a, const unsigned int &b);
+  static bool event_time_valid(const unsigned int &now,
+                               const BolusEvent &event);
+  static bool history_times_valid(const unsigned int &now,
+                                  const List<BolusEvent> &events);
+  static bool history_sorted_from(const unsigned int &prev,
+                                  const List<BolusEvent> &events);
+  static bool history_sorted_desc(const List<BolusEvent> &events);
+  static bool history_valid(const unsigned int &now,
+                            const List<BolusEvent> &events);
+  static unsigned int bilinear_iob_fraction(const unsigned int &elapsed,
+                                            const unsigned int &dia,
+                                            const InsulinType itype);
+  static Insulin_twentieth bilinear_iob_from_bolus(const unsigned int &now,
+                                                   const BolusEvent &event,
+                                                   const unsigned int &dia,
+                                                   const InsulinType itype);
+  static Insulin_twentieth total_bilinear_iob(const unsigned int &now,
+                                              const List<BolusEvent> &events,
+                                              const unsigned int &dia,
+                                              const InsulinType itype);
+  static Mg_dL apply_sensor_margin(Mg_dL bg, const Mg_dL &target);
+  static unsigned int adjusted_isf_tenths(const Mg_dL &bg,
+                                          unsigned int base_isf_tenths);
+  static Insulin_twentieth
   correction_twentieths_full(const unsigned int &_x, const Mg_dL &current_bg,
                              const Mg_dL &target_bg,
                              const unsigned int &base_isf_tenths);
-  __attribute__((pure)) static Insulin_twentieth
-  apply_reverse_correction_twentieths(unsigned int carb,
-                                      const Mg_dL &current_bg,
-                                      const Mg_dL &target_bg,
-                                      const unsigned int &isf_tenths);
+  static Insulin_twentieth apply_reverse_correction_twentieths(
+      unsigned int carb, const Mg_dL &current_bg, const Mg_dL &target_bg,
+      const unsigned int &isf_tenths);
 
   struct SuspendDecision {
     // TYPES
@@ -1229,7 +1326,7 @@ struct ValidatedPumpDeliveryTraceCase {
     }
 
     // ACCESSORS
-    __attribute__((pure)) SuspendDecision clone() const {
+    SuspendDecision clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Suspend_None>(_sv.v())) {
         return SuspendDecision(Suspend_None{});
@@ -1242,16 +1339,15 @@ struct ValidatedPumpDeliveryTraceCase {
     }
 
     // CREATORS
-    __attribute__((pure)) static SuspendDecision suspend_none() {
+    static SuspendDecision suspend_none() {
       return SuspendDecision(Suspend_None{});
     }
 
-    __attribute__((pure)) static SuspendDecision
-    suspend_reduce(Insulin_twentieth a0) {
+    static SuspendDecision suspend_reduce(Insulin_twentieth a0) {
       return SuspendDecision(Suspend_Reduce{std::move(a0)});
     }
 
-    __attribute__((pure)) static SuspendDecision suspend_withhold() {
+    static SuspendDecision suspend_withhold() {
       return SuspendDecision(Suspend_Withhold{});
     }
 
@@ -1259,7 +1355,7 @@ struct ValidatedPumpDeliveryTraceCase {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
@@ -1292,26 +1388,25 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  predict_bg_drop_tenths(const unsigned int &iob_twentieths,
-                         const unsigned int &isf_tenths);
-  __attribute__((pure)) static unsigned int
-  conservative_cob_rise(const Config &cfg, const unsigned int &cob_grams);
-  __attribute__((pure)) static unsigned int
+  static unsigned int predict_bg_drop_tenths(const unsigned int &iob_twentieths,
+                                             const unsigned int &isf_tenths);
+  static unsigned int conservative_cob_rise(const Config &cfg,
+                                            const unsigned int &cob_grams);
+  static unsigned int
   predicted_eventual_bg_tenths(const Config &cfg, const Mg_dL &current_bg,
                                const unsigned int &iob_twentieths,
                                const unsigned int &cob_grams,
                                const unsigned int &isf_tenths);
-  __attribute__((pure)) static SuspendDecision suspend_check_tenths_with_cob(
+  static SuspendDecision suspend_check_tenths_with_cob(
       const Config &cfg, const Mg_dL &current_bg,
       const unsigned int &iob_twentieths, const unsigned int &cob_grams,
       const unsigned int &isf_tenths, const unsigned int &proposed);
-  __attribute__((pure)) static Insulin_twentieth
-  apply_suspend(unsigned int proposed, const SuspendDecision &decision);
-  __attribute__((pure)) static Insulin_twentieth
+  static Insulin_twentieth apply_suspend(unsigned int proposed,
+                                         const SuspendDecision &decision);
+  static Insulin_twentieth
   pediatric_max_twentieths(const unsigned int &weight_kg);
-  __attribute__((pure)) static Insulin_twentieth
-  cap_pediatric(unsigned int bolus, const unsigned int &weight_kg);
+  static Insulin_twentieth cap_pediatric(unsigned int bolus,
+                                         const unsigned int &weight_kg);
 
   struct PrecisionParams {
     unsigned int prec_icr_tenths;
@@ -1321,7 +1416,7 @@ struct ValidatedPumpDeliveryTraceCase {
     InsulinType prec_insulin_type;
 
     // ACCESSORS
-    __attribute__((pure)) PrecisionParams clone() const {
+    PrecisionParams clone() const {
       return PrecisionParams{(*(this)).prec_icr_tenths,
                              (*(this)).prec_isf_tenths,
                              (*(this)).prec_target_bg.clone(),
@@ -1329,7 +1424,7 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   };
 
-  __attribute__((pure)) static bool prec_params_valid(const PrecisionParams &p);
+  static bool prec_params_valid(const PrecisionParams &p);
 
   struct PrecisionInput {
     Carbs_g pi_carbs_g;
@@ -1342,7 +1437,7 @@ struct ValidatedPumpDeliveryTraceCase {
     std::optional<unsigned int> pi_weight_kg;
 
     // ACCESSORS
-    __attribute__((pure)) PrecisionInput clone() const {
+    PrecisionInput clone() const {
       return PrecisionInput{
           (*(this)).pi_carbs_g,       (*(this)).pi_current_bg.clone(),
           (*(this)).pi_now,           (*(this)).pi_bolus_history.clone(),
@@ -1351,19 +1446,16 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   };
 
-  __attribute__((pure)) static Insulin_twentieth
+  static Insulin_twentieth
   carb_bolus_twentieths(const unsigned int &carbs_g,
                         const unsigned int &icr_tenths);
-  __attribute__((pure)) static Insulin_twentieth
+  static Insulin_twentieth
   calculate_precision_bolus(const PrecisionInput &input,
                             const PrecisionParams &params);
-  __attribute__((pure)) static bool time_reasonable(const unsigned int &now);
-  __attribute__((pure)) static bool
-  history_extraction_safe(const List<BolusEvent> &events);
-  __attribute__((pure)) static unsigned int
-  iob_high_threshold(const Config &cfg);
-  __attribute__((pure)) static bool
-  iob_dangerously_high(const unsigned int &iob);
+  static bool time_reasonable(const unsigned int &now);
+  static bool history_extraction_safe(const List<BolusEvent> &events);
+  static unsigned int iob_high_threshold(const Config &cfg);
+  static bool iob_dangerously_high(const unsigned int &iob);
 
   struct PrecisionResult {
     // TYPES
@@ -1406,7 +1498,7 @@ struct ValidatedPumpDeliveryTraceCase {
     }
 
     // ACCESSORS
-    __attribute__((pure)) PrecisionResult clone() const {
+    PrecisionResult clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<PrecOK>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<PrecOK>(_sv.v());
@@ -1418,12 +1510,11 @@ struct ValidatedPumpDeliveryTraceCase {
     }
 
     // CREATORS
-    __attribute__((pure)) static PrecisionResult precok(Insulin_twentieth a0,
-                                                        bool a1) {
+    static PrecisionResult precok(Insulin_twentieth a0, bool a1) {
       return PrecisionResult(PrecOK{std::move(a0), std::move(a1)});
     }
 
-    __attribute__((pure)) static PrecisionResult precerror(unsigned int a0) {
+    static PrecisionResult precerror(unsigned int a0) {
       return PrecisionResult(PrecError{std::move(a0)});
     }
 
@@ -1431,9 +1522,9 @@ struct ValidatedPumpDeliveryTraceCase {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) bool result_modified() const {
+    bool result_modified() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename PrecisionResult::PrecOK>(_sv.v())) {
         const auto &[d_a0, d_a1] =
@@ -1444,7 +1535,7 @@ struct ValidatedPumpDeliveryTraceCase {
       }
     }
 
-    __attribute__((pure)) unsigned int precision_result_code() const {
+    unsigned int precision_result_code() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename PrecisionResult::PrecOK>(_sv.v())) {
         return 0u;
@@ -1492,13 +1583,13 @@ struct ValidatedPumpDeliveryTraceCase {
   static inline const unsigned int prec_error_tdd_exceeded = 8u;
   static inline const unsigned int prec_error_iob_high = 9u;
   static inline const unsigned int prec_error_extraction_unsafe = 10u;
-  __attribute__((pure)) static bool
-  bolus_too_soon(const unsigned int &now, const List<BolusEvent> &history);
-  __attribute__((pure)) static Insulin_twentieth cap_twentieths(unsigned int t);
-  __attribute__((pure)) static PrecisionResult
+  static bool bolus_too_soon(const unsigned int &now,
+                             const List<BolusEvent> &history);
+  static Insulin_twentieth cap_twentieths(unsigned int t);
+  static PrecisionResult
   validated_precision_bolus(PrecisionInput input,
                             const PrecisionParams &params);
-  __attribute__((pure)) static std::optional<Insulin_twentieth>
+  static std::optional<Insulin_twentieth>
   prec_result_twentieths(const PrecisionResult &r);
 
   struct MmolPrecisionInput {
@@ -1512,7 +1603,7 @@ struct ValidatedPumpDeliveryTraceCase {
     std::optional<unsigned int> mpi_weight_kg;
 
     // ACCESSORS
-    __attribute__((pure)) MmolPrecisionInput clone() const {
+    MmolPrecisionInput clone() const {
       return MmolPrecisionInput{
           (*(this)).mpi_carbs_g,       (*(this)).mpi_current_bg_mmol_tenths,
           (*(this)).mpi_now,           (*(this)).mpi_bolus_history.clone(),
@@ -1521,13 +1612,10 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   };
 
-  __attribute__((pure)) static unsigned int
-  mmol_tenths_to_mg_dL(const unsigned int &mmol_tenths);
-  __attribute__((pure)) static PrecisionInput
-  convert_mmol_input(const MmolPrecisionInput &input);
-  __attribute__((pure)) static PrecisionResult
-  validated_mmol_bolus(const MmolPrecisionInput &input,
-                       const PrecisionParams &params);
+  static unsigned int mmol_tenths_to_mg_dL(const unsigned int &mmol_tenths);
+  static PrecisionInput convert_mmol_input(const MmolPrecisionInput &input);
+  static PrecisionResult validated_mmol_bolus(const MmolPrecisionInput &input,
+                                              const PrecisionParams &params);
   enum class RoundingMode {
     e_ROUNDTWENTIETH,
     e_ROUNDTENTH,
@@ -1577,11 +1665,11 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  round_down_to_increment(unsigned int t, const unsigned int &increment);
-  __attribute__((pure)) static Insulin_twentieth
-  apply_rounding(const RoundingMode mode, unsigned int t);
-  __attribute__((pure)) static std::optional<Insulin_twentieth>
+  static unsigned int round_down_to_increment(unsigned int t,
+                                              const unsigned int &increment);
+  static Insulin_twentieth apply_rounding(const RoundingMode mode,
+                                          unsigned int t);
+  static std::optional<Insulin_twentieth>
   final_delivery(const RoundingMode mode, const PrecisionResult &result);
 
   struct PumpState {
@@ -1592,7 +1680,7 @@ struct ValidatedPumpDeliveryTraceCase {
     unsigned int ps_battery_percent;
 
     // ACCESSORS
-    __attribute__((pure)) PumpState clone() const {
+    PumpState clone() const {
       return PumpState{
           (*(this)).ps_reservoir_twentieths, (*(this)).ps_basal_rate_hundredths,
           (*(this)).ps_last_bolus_time, (*(this)).ps_occlusion_detected,
@@ -1600,18 +1688,18 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   };
 
-  __attribute__((pure)) static bool pump_can_deliver(const PumpState &state,
-                                                     const unsigned int &dose);
-  __attribute__((pure)) static unsigned int
-  reservoir_after_bolus(const PumpState &state, const unsigned int &dose);
-  __attribute__((pure)) static unsigned int
-  option_nat_default(const std::optional<unsigned int> &x, unsigned int d);
-  __attribute__((pure)) static bool
-  pump_accepts_result(const PumpState &pump, const RoundingMode mode,
-                      const PrecisionResult &r);
-  __attribute__((pure)) static unsigned int
-  pump_reservoir_after_result(const PumpState &pump, const RoundingMode mode,
-                              const PrecisionResult &r);
+  static bool pump_can_deliver(const PumpState &state,
+                               const unsigned int &dose);
+  static unsigned int reservoir_after_bolus(const PumpState &state,
+                                            const unsigned int &dose);
+  static unsigned int option_nat_default(const std::optional<unsigned int> &x,
+                                         unsigned int d);
+  static bool pump_accepts_result(const PumpState &pump,
+                                  const RoundingMode mode,
+                                  const PrecisionResult &r);
+  static unsigned int pump_reservoir_after_result(const PumpState &pump,
+                                                  const RoundingMode mode,
+                                                  const PrecisionResult &r);
   static inline const PrecisionParams witness_prec_params = PrecisionParams{
       100u, 500u, Mg_dL{100u}, 240u, InsulinType::e_INSULIN_HUMALOG};
   static inline const PrecisionInput standard_input =

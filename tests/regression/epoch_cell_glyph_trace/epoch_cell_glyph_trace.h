@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,7 +119,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 enum class Comparison { e_EQ, e_LT, e_GT };
 
@@ -147,31 +166,51 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Positive clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<XI>(_sv.v())) {
-      const auto &[d_a0] = std::get<XI>(_sv.v());
-      return Positive(
-          XI{d_a0 ? std::make_unique<Positive>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<XO>(_sv.v())) {
-      const auto &[d_a0] = std::get<XO>(_sv.v());
-      return Positive(
-          XO{d_a0 ? std::make_unique<Positive>(d_a0->clone()) : nullptr});
-    } else {
-      return Positive(XH{});
+  Positive clone() const {
+    Positive _out{};
+
+    struct _CloneFrame {
+      const Positive *_src;
+      Positive *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Positive *_src = _frame._src;
+      Positive *_dst = _frame._dst;
+      if (std::holds_alternative<XI>(_src->v())) {
+        const auto &_alt = std::get<XI>(_src->v());
+        _dst->d_v_ = XI{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
+        auto &_dst_alt = std::get<XI>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<XO>(_src->v())) {
+        const auto &_alt = std::get<XO>(_src->v());
+        _dst->d_v_ = XO{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
+        auto &_dst_alt = std::get<XO>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else {
+        const auto &_alt = std::get<XH>(_src->v());
+        _dst->d_v_ = XH{};
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Positive xi(Positive a0) {
+  static Positive xi(Positive a0) {
     return Positive(XI{std::make_unique<Positive>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Positive xo(Positive a0) {
+  static Positive xo(Positive a0) {
     return Positive(XO{std::make_unique<Positive>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Positive xh() { return Positive(XH{}); }
+  static Positive xh() { return Positive(XH{}); }
 
   // MANIPULATORS
   ~Positive() {
@@ -200,7 +239,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Z {
@@ -246,7 +285,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Z clone() const {
+  Z clone() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<Z0>(_sv.v())) {
       return Z(Z0{});
@@ -260,36 +299,29 @@ public:
   }
 
   // CREATORS
-  __attribute__((pure)) static Z z0() { return Z(Z0{}); }
+  static Z z0() { return Z(Z0{}); }
 
-  __attribute__((pure)) static Z zpos(Positive a0) {
-    return Z(Zpos{std::move(a0)});
-  }
+  static Z zpos(Positive a0) { return Z(Zpos{std::move(a0)}); }
 
-  __attribute__((pure)) static Z zneg(Positive a0) {
-    return Z(Zneg{std::move(a0)});
-  }
+  static Z zneg(Positive a0) { return Z(Zneg{std::move(a0)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Pos {
-  __attribute__((pure)) static Positive succ(const Positive &x);
-  __attribute__((pure)) static Positive add(const Positive &x,
-                                            const Positive &y);
-  __attribute__((pure)) static Positive add_carry(const Positive &x,
-                                                  const Positive &y);
-  __attribute__((pure)) static Positive pred_double(const Positive &x);
-  __attribute__((pure)) static Positive mul(const Positive &x, Positive y);
-  __attribute__((pure)) static Comparison
-  compare_cont(const Comparison r, const Positive &x, const Positive &y);
-  __attribute__((pure)) static Comparison compare(const Positive &_x0,
-                                                  const Positive &_x1);
-  __attribute__((pure)) static bool eqb(const Positive &p, const Positive &q);
+  static Positive succ(const Positive &x);
+  static Positive add(const Positive &x, const Positive &y);
+  static Positive add_carry(const Positive &x, const Positive &y);
+  static Positive pred_double(const Positive &x);
+  static Positive mul(const Positive &x, Positive y);
+  static Comparison compare_cont(const Comparison r, const Positive &x,
+                                 const Positive &y);
+  static Comparison compare(const Positive &_x0, const Positive &_x1);
+  static bool eqb(const Positive &p, const Positive &q);
 
   template <typename T1, MapsTo<T1, T1, T1> F0>
   static T1 iter_op(F0 &&op, const Positive &p, const T1 a) {
@@ -304,29 +336,28 @@ struct Pos {
     }
   }
 
-  __attribute__((pure)) static unsigned int to_nat(const Positive &x);
+  static unsigned int to_nat(const Positive &x);
 };
 
 struct BinInt {
-  __attribute__((pure)) static Z double_(const Z &x);
-  __attribute__((pure)) static Z succ_double(const Z &x);
-  __attribute__((pure)) static Z pred_double(const Z &x);
-  __attribute__((pure)) static Z pos_sub(const Positive &x, const Positive &y);
-  __attribute__((pure)) static Z add(Z x, Z y);
-  __attribute__((pure)) static Z opp(const Z &x);
-  __attribute__((pure)) static Z sub(const Z &m, const Z &n);
-  __attribute__((pure)) static Z mul(const Z &x, const Z &y);
-  __attribute__((pure)) static Comparison compare(const Z &x, const Z &y);
-  __attribute__((pure)) static bool leb(const Z &x, const Z &y);
-  __attribute__((pure)) static bool ltb(const Z &x, const Z &y);
-  __attribute__((pure)) static bool eqb(const Z &x, const Z &y);
-  __attribute__((pure)) static unsigned int to_nat(const Z &z);
-  __attribute__((pure)) static std::pair<Z, Z> pos_div_eucl(const Positive &a,
-                                                            const Z &b);
-  __attribute__((pure)) static std::pair<Z, Z> div_eucl(Z a, const Z &b);
-  __attribute__((pure)) static Z div(const Z &a, const Z &b);
-  __attribute__((pure)) static Z modulo(const Z &a, const Z &b);
-  __attribute__((pure)) static Z abs(const Z &z);
+  static Z double_(const Z &x);
+  static Z succ_double(const Z &x);
+  static Z pred_double(const Z &x);
+  static Z pos_sub(const Positive &x, const Positive &y);
+  static Z add(Z x, Z y);
+  static Z opp(const Z &x);
+  static Z sub(const Z &m, const Z &n);
+  static Z mul(const Z &x, const Z &y);
+  static Comparison compare(const Z &x, const Z &y);
+  static bool leb(const Z &x, const Z &y);
+  static bool ltb(const Z &x, const Z &y);
+  static bool eqb(const Z &x, const Z &y);
+  static unsigned int to_nat(const Z &z);
+  static std::pair<Z, Z> pos_div_eucl(const Positive &a, const Z &b);
+  static std::pair<Z, Z> div_eucl(Z a, const Z &b);
+  static Z div(const Z &a, const Z &b);
+  static Z modulo(const Z &a, const Z &b);
+  static Z abs(const Z &z);
 };
 
 struct Q {
@@ -334,17 +365,15 @@ struct Q {
   Positive Qden;
 
   // ACCESSORS
-  __attribute__((pure)) Q clone() const {
-    return Q{(*(this)).Qnum.clone(), (*(this)).Qden.clone()};
-  }
+  Q clone() const { return Q{(*(this)).Qnum.clone(), (*(this)).Qden.clone()}; }
 };
 
 struct QArith_base {
-  __attribute__((pure)) static bool Qle_bool(const Q &x, const Q &y);
+  static bool Qle_bool(const Q &x, const Q &y);
 };
 
 struct Datatypes {
-  __attribute__((pure)) static Comparison CompOpp(const Comparison r);
+  static Comparison CompOpp(const Comparison r);
 };
 
 struct EpochCellGlyphTraceCase {
@@ -397,8 +426,8 @@ struct EpochCellGlyphTraceCase {
     }
   }
 
-  __attribute__((pure)) static unsigned int phase_code(const LunarPhase p);
-  __attribute__((pure)) static LunarPhase phase_from_angle(const Z &angle_deg);
+  static unsigned int phase_code(const LunarPhase p);
+  static LunarPhase phase_from_angle(const Z &angle_deg);
   enum class ZodiacSign {
     e_ARIES,
     e_TAURUS,
@@ -508,8 +537,8 @@ struct EpochCellGlyphTraceCase {
     }
   }
 
-  __attribute__((pure)) static unsigned int zodiac_code(const ZodiacSign z);
-  __attribute__((pure)) static bool eclipse_possible_at_dial(const Z &dial_pos);
+  static unsigned int zodiac_code(const ZodiacSign z);
+  static bool eclipse_possible_at_dial(const Z &dial_pos);
 
   struct MechanismState {
     Z crank_position;
@@ -521,7 +550,7 @@ struct EpochCellGlyphTraceCase {
     Z zodiac_position;
 
     // ACCESSORS
-    __attribute__((pure)) MechanismState clone() const {
+    MechanismState clone() const {
       return MechanismState{
           (*(this)).crank_position.clone(), (*(this)).metonic_dial.clone(),
           (*(this)).saros_dial.clone(),     (*(this)).callippic_dial.clone(),
@@ -547,17 +576,13 @@ struct EpochCellGlyphTraceCase {
   static inline const Z zodiac_modulus =
       Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(Positive::xo(
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))));
-  __attribute__((pure)) static MechanismState step(const MechanismState &s);
-  __attribute__((pure)) static MechanismState
-  step_reverse(const MechanismState &s);
-  __attribute__((pure)) static MechanismState step_n(const unsigned int &n,
-                                                     MechanismState s);
-  __attribute__((pure)) static MechanismState state_at_cell(Z cell);
-  __attribute__((pure)) static LunarPhase
-  predict_moon_phase_from_state(const MechanismState &s);
-  __attribute__((pure)) static Z predict_olympiad_year(const MechanismState &s);
-  __attribute__((pure)) static ZodiacSign
-  predict_zodiac_sign(const MechanismState &s);
+  static MechanismState step(const MechanismState &s);
+  static MechanismState step_reverse(const MechanismState &s);
+  static MechanismState step_n(const unsigned int &n, MechanismState s);
+  static MechanismState state_at_cell(Z cell);
+  static LunarPhase predict_moon_phase_from_state(const MechanismState &s);
+  static Z predict_olympiad_year(const MechanismState &s);
+  static ZodiacSign predict_zodiac_sign(const MechanismState &s);
   enum class EclipseCategory {
     e_EC_TOTALLUNAR,
     e_EC_PARTIALLUNAR,
@@ -616,8 +641,7 @@ struct EpochCellGlyphTraceCase {
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  eclipse_category_code(const EclipseCategory c);
+  static unsigned int eclipse_category_code(const EclipseCategory c);
 
   struct HistoricalEclipse {
     Z he_year;
@@ -630,7 +654,7 @@ struct EpochCellGlyphTraceCase {
     bool he_visible_mediterranean;
 
     // ACCESSORS
-    __attribute__((pure)) HistoricalEclipse clone() const {
+    HistoricalEclipse clone() const {
       return HistoricalEclipse{(*(this)).he_year.clone(),
                                (*(this)).he_month.clone(),
                                (*(this)).he_day.clone(),
@@ -697,10 +721,10 @@ struct EpochCellGlyphTraceCase {
     }
   }
 
-  __attribute__((pure)) static unsigned int glyph_code(const DialGlyph g);
-  __attribute__((pure)) static bool
-  category_matches_glyph(const EclipseCategory cat, const DialGlyph g);
-  __attribute__((pure)) static DialGlyph glyph_at_cell(const Z &cell);
+  static unsigned int glyph_code(const DialGlyph g);
+  static bool category_matches_glyph(const EclipseCategory cat,
+                                     const DialGlyph g);
+  static DialGlyph glyph_at_cell(const Z &cell);
   static inline const HistoricalEclipse eclipse_may_205_bc = HistoricalEclipse{
       Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
           Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
@@ -808,21 +832,16 @@ struct EpochCellGlyphTraceCase {
                           List<HistoricalEclipse>::cons(
                               eclipse_jun_178_bc,
                               List<HistoricalEclipse>::nil()))))));
-  __attribute__((pure)) static unsigned int
-  count_total_lunar(const List<HistoricalEclipse> &es);
-  __attribute__((pure)) static unsigned int
+  static unsigned int count_total_lunar(const List<HistoricalEclipse> &es);
+  static unsigned int
   count_visible_total_lunar(const List<HistoricalEclipse> &es);
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   visible_series_checksum(const List<HistoricalEclipse> &es);
-  __attribute__((pure)) static Z months_from_epoch(const Z &epoch_year,
-                                                   const Z &eclipse_year,
-                                                   const Z &epoch_month,
-                                                   const Z &eclipse_month);
-  __attribute__((pure)) static Z saros_cell(const Z &epoch_year,
-                                            const Z &epoch_month,
-                                            const HistoricalEclipse &e);
-  __attribute__((pure)) static Z saros_dial_at_month(const Z &start_cell,
-                                                     const Z &months);
+  static Z months_from_epoch(const Z &epoch_year, const Z &eclipse_year,
+                             const Z &epoch_month, const Z &eclipse_month);
+  static Z saros_cell(const Z &epoch_year, const Z &epoch_month,
+                      const HistoricalEclipse &e);
+  static Z saros_dial_at_month(const Z &start_cell, const Z &months);
 
   struct EpochReading {
     MechanismState reading_state;
@@ -831,22 +850,19 @@ struct EpochCellGlyphTraceCase {
     DialGlyph reading_glyph;
 
     // ACCESSORS
-    __attribute__((pure)) EpochReading clone() const {
+    EpochReading clone() const {
       return EpochReading{
           (*(this)).reading_state.clone(), (*(this)).reading_eclipse.clone(),
           (*(this)).reading_cell.clone(), (*(this)).reading_glyph};
     }
   };
 
-  __attribute__((pure)) static EpochReading
-  build_epoch_reading(const Z &epoch_year, const Z &epoch_month,
-                      HistoricalEclipse e);
-  __attribute__((pure)) static bool
-  reading_matches(const EpochReading &reading);
-  __attribute__((pure)) static unsigned int
-  reading_phase_code(const EpochReading &reading);
-  __attribute__((pure)) static unsigned int
-  reading_zodiac_code(const EpochReading &reading);
+  static EpochReading build_epoch_reading(const Z &epoch_year,
+                                          const Z &epoch_month,
+                                          HistoricalEclipse e);
+  static bool reading_matches(const EpochReading &reading);
+  static unsigned int reading_phase_code(const EpochReading &reading);
+  static unsigned int reading_zodiac_code(const EpochReading &reading);
 
   struct ValidEpoch {
     Z ve_year;
@@ -854,7 +870,7 @@ struct EpochCellGlyphTraceCase {
     HistoricalEclipse ve_eclipse;
 
     // ACCESSORS
-    __attribute__((pure)) ValidEpoch clone() const {
+    ValidEpoch clone() const {
       return ValidEpoch{(*(this)).ve_year.clone(), (*(this)).ve_month.clone(),
                         (*(this)).ve_eclipse.clone()};
     }
@@ -867,10 +883,8 @@ struct EpochCellGlyphTraceCase {
   static inline const EpochReading sample_epoch_reading = build_epoch_reading(
       epoch_205_bc_valid.ve_year, epoch_205_bc_valid.ve_month,
       epoch_205_bc_valid.ve_eclipse);
-  __attribute__((pure)) static unsigned int
-  phase_code_after_steps(const unsigned int &n);
-  __attribute__((pure)) static unsigned int
-  zodiac_code_after_steps(const unsigned int &n);
+  static unsigned int phase_code_after_steps(const unsigned int &n);
+  static unsigned int zodiac_code_after_steps(const unsigned int &n);
   static inline const unsigned int sample_total_lunar_count =
       count_total_lunar(eclipse_database);
   static inline const unsigned int sample_total_lunar_visible_count =

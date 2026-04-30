@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,7 +119,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct UnitVoidEdge {
@@ -121,8 +140,7 @@ struct UnitVoidEdge {
   }
 
   template <MapsTo<void, unsigned int> F0>
-  __attribute__((pure)) static unsigned int map_to_unit(F0 &&,
-                                                        const unsigned int &) {
+  static unsigned int map_to_unit(F0 &&, const unsigned int &) {
     return 42u;
   }
 
@@ -138,23 +156,17 @@ struct UnitVoidEdge {
       std::make_optional<std::monostate>(std::monostate{});
   static inline const std::optional<std::monostate> unit_none =
       std::optional<std::monostate>();
-  __attribute__((pure)) static unsigned int
-  match_option_unit(const std::optional<std::monostate> &o);
-  __attribute__((pure)) static std::optional<std::monostate>
-  return_some_tt(const unsigned int &n);
+  static unsigned int match_option_unit(const std::optional<std::monostate> &o);
+  static std::optional<std::monostate> return_some_tt(const unsigned int &n);
   static void unit_chain(std::monostate u);
   static void helper_void(const unsigned int &_x);
-  __attribute__((pure)) static unsigned int use_helper(unsigned int n);
-  __attribute__((pure)) static unsigned int
-  match_unit_nontail(const std::monostate &u);
+  static unsigned int use_helper(unsigned int n);
+  static unsigned int match_unit_nontail(const std::monostate &u);
   static void unit_to_unit_with_work(const std::monostate &u);
   static void seq_voids(const unsigned int &_x);
   static void conditional_unit(const bool &b);
 
-  template <typename T1>
-  __attribute__((pure)) static unsigned int poly_take(const T1) {
-    return 42u;
-  }
+  template <typename T1> static unsigned int poly_take(const T1) { return 42u; }
 
   static inline const unsigned int take_tt =
       poly_take<std::monostate>(std::monostate{});
@@ -162,8 +174,8 @@ struct UnitVoidEdge {
       List<std::monostate>::cons(
           std::monostate{}, List<std::monostate>::cons(
                                 std::monostate{}, List<std::monostate>::nil()));
-  __attribute__((pure)) static unsigned int
-  double_match_unit(const std::monostate &u1, const std::monostate &u2);
+  static unsigned int double_match_unit(const std::monostate &u1,
+                                        const std::monostate &u2);
 
   template <MapsTo<void, unsigned int> F0>
   static void apply_and_discard(F0 &&f, unsigned int _x0) {
@@ -181,13 +193,13 @@ struct UnitVoidEdge {
     std::monostate tn_tag;
 
     // ACCESSORS
-    __attribute__((pure)) tagged_nat clone() const {
+    tagged_nat clone() const {
       return tagged_nat{(*(this)).tn_value, (*(this)).tn_tag};
     }
   };
 
-  __attribute__((pure)) static tagged_nat make_tagged(unsigned int n);
-  __attribute__((pure)) static unsigned int get_value(const tagged_nat &t);
+  static tagged_nat make_tagged(unsigned int n);
+  static unsigned int get_value(const tagged_nat &t);
   static inline const unsigned int test_record_unit = []() {
     tagged_nat t = make_tagged(99u);
     return get_value(std::move(t));

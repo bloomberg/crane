@@ -1,6 +1,6 @@
 #include <record_field_patterns.h>
 
-__attribute__((pure)) unsigned int
+unsigned int
 RecordFieldPatterns::classify_point(const RecordFieldPatterns::Point &p) {
   unsigned int x = p.px;
   unsigned int y = p.py;
@@ -22,8 +22,7 @@ RecordFieldPatterns::classify_point(const RecordFieldPatterns::Point &p) {
   }
 }
 
-__attribute__((pure)) unsigned int
-RecordFieldPatterns::zero_x(const RecordFieldPatterns::Point &p) {
+unsigned int RecordFieldPatterns::zero_x(const RecordFieldPatterns::Point &p) {
   unsigned int px0 = p.px;
   unsigned int n = p.py;
   if (px0 <= 0) {
@@ -36,22 +35,22 @@ RecordFieldPatterns::zero_x(const RecordFieldPatterns::Point &p) {
 
 /// Apply a polymorphic function to a record — the record type flows
 /// through a type variable.
-__attribute__((pure)) RecordFieldPatterns::Point
+RecordFieldPatterns::Point
 RecordFieldPatterns::id_point(const RecordFieldPatterns::Point &_x0) {
   return identity<RecordFieldPatterns::Point>(_x0);
 }
 
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
+std::pair<unsigned int, unsigned int>
 RecordFieldPatterns::point_pair(const RecordFieldPatterns::Point &p) {
   return std::make_pair(p.px, p.py);
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 RecordFieldPatterns::first_coord(const RecordFieldPatterns::Point &p) {
   return generic_first<unsigned int, unsigned int>(point_pair(p));
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 RecordFieldPatterns::scaled_sum(const unsigned int &scale,
                                 const RecordFieldPatterns::ScaledPoint &sp) {
   unsigned int x = sp.sp_x;
@@ -59,22 +58,22 @@ RecordFieldPatterns::scaled_sum(const unsigned int &scale,
   return (scale * (x + y));
 }
 
-__attribute__((pure)) RecordFieldPatterns::Point
-RecordFieldPatterns::PointImpl::mk(unsigned int x, unsigned int x0) {
+RecordFieldPatterns::Point RecordFieldPatterns::PointImpl::mk(unsigned int x,
+                                                              unsigned int x0) {
   return Point{x, x0};
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 RecordFieldPatterns::PointImpl::get_x(const RecordFieldPatterns::Point &p) {
   return p.px;
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 RecordFieldPatterns::PointImpl::get_y(const RecordFieldPatterns::Point &p) {
   return p.py;
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 RecordFieldPatterns::segment_length_sq(const RecordFieldPatterns::Segment &s) {
   RecordFieldPatterns::Point seg_start0 = s.seg_start;
   RecordFieldPatterns::Point seg_end0 = s.seg_end;
@@ -87,7 +86,7 @@ RecordFieldPatterns::segment_length_sq(const RecordFieldPatterns::Segment &s) {
   return ((dx * dx) + (dy * dy));
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 RecordFieldPatterns::bounded_range(const RecordFieldPatterns::Bounded &b) {
   unsigned int l = b.lo;
   unsigned int h = b.hi;
@@ -95,7 +94,7 @@ RecordFieldPatterns::bounded_range(const RecordFieldPatterns::Bounded &b) {
   return ((((h - l) > h ? 0 : (h - l))) + m);
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 RecordFieldPatterns::sum_px(const List<RecordFieldPatterns::Point> &points) {
   return points.template fold_left<unsigned int>(
       [](const unsigned int &acc, const RecordFieldPatterns::Point &p) {
@@ -104,25 +103,25 @@ RecordFieldPatterns::sum_px(const List<RecordFieldPatterns::Point> &points) {
       0u);
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 RecordFieldPatterns::map_py(const List<RecordFieldPatterns::Point> &points) {
   return points.template map<unsigned int>(
       [](const RecordFieldPatterns::Point &p) { return p.py; });
 }
 
-__attribute__((pure)) RecordFieldPatterns::Point
+RecordFieldPatterns::Point
 RecordFieldPatterns::swap(const RecordFieldPatterns::Point &p) {
   unsigned int x = p.px;
   unsigned int y = p.py;
   return Point{y, x};
 }
 
-__attribute__((pure)) RecordFieldPatterns::Point
+RecordFieldPatterns::Point
 RecordFieldPatterns::double_swap(const RecordFieldPatterns::Point &p) {
   return swap(swap(p));
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 RecordFieldPatterns::get_count(const RecordFieldPatterns::Container &c) {
   return c.count;
 }

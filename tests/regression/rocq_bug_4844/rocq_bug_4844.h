@@ -50,7 +50,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Sum<t_A, t_B> clone() const {
+  Sum<t_A, t_B> clone() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<Inl>(_sv.v())) {
       const auto &[d_a0] = std::get<Inl>(_sv.v());
@@ -73,19 +73,15 @@ public:
     }
   }
 
-  __attribute__((pure)) static Sum<t_A, t_B> inl(t_A a0) {
-    return Sum(Inl{std::move(a0)});
-  }
+  static Sum<t_A, t_B> inl(t_A a0) { return Sum(Inl{std::move(a0)}); }
 
-  __attribute__((pure)) static Sum<t_A, t_B> inr(t_B a0) {
-    return Sum(Inr{std::move(a0)});
-  }
+  static Sum<t_A, t_B> inr(t_B a0) { return Sum(Inr{std::move(a0)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct RocqBug4844 {
@@ -130,22 +126,20 @@ struct RocqBug4844 {
     }
 
     // ACCESSORS
-    __attribute__((pure)) box clone() const {
+    box clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<Box0>(_sv.v());
       return box(Box0{d_a0.clone()});
     }
 
     // CREATORS
-    __attribute__((pure)) static box box0(Sum<ST, ST> a0) {
-      return box(Box0{std::move(a0)});
-    }
+    static box box0(Sum<ST, ST> a0) { return box(Box0{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, Sum<ST, ST>> F1>

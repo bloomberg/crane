@@ -20,15 +20,11 @@ struct PrimitiveRecTypeclass {
     unsigned int py;
 
     // ACCESSORS
-    __attribute__((pure)) point clone() const {
-      return point{(*(this)).px, (*(this)).py};
-    }
+    point clone() const { return point{(*(this)).px, (*(this)).py}; }
   };
 
   struct pointNorm {
-    __attribute__((pure)) static unsigned int norm(point p) {
-      return (p.px + p.py);
-    }
+    static unsigned int norm(point p) { return (p.px + p.py); }
   };
 
   static_assert(HasNorm<pointNorm, point>);
@@ -39,21 +35,19 @@ struct PrimitiveRecTypeclass {
     unsigned int vz;
 
     // ACCESSORS
-    __attribute__((pure)) vec3 clone() const {
+    vec3 clone() const {
       return vec3{(*(this)).vx, (*(this)).vy, (*(this)).vz};
     }
   };
 
   struct vec3Norm {
-    __attribute__((pure)) static unsigned int norm(vec3 v) {
-      return ((v.vx + v.vy) + v.vz);
-    }
+    static unsigned int norm(vec3 v) { return ((v.vx + v.vy) + v.vz); }
   };
 
   static_assert(HasNorm<vec3Norm, vec3>);
 
   template <typename _tcI0, typename T1>
-  __attribute__((pure)) static unsigned int double_norm(const T1 x) {
+  static unsigned int double_norm(const T1 x) {
     return (_tcI0::norm(x) + _tcI0::norm(x));
   }
 
@@ -62,14 +56,14 @@ struct PrimitiveRecTypeclass {
     point bot_right;
 
     // ACCESSORS
-    __attribute__((pure)) rect clone() const {
+    rect clone() const {
       return rect{(*(this)).top_left.clone(), (*(this)).bot_right.clone()};
     }
   };
 
-  __attribute__((pure)) static unsigned int rect_width(const rect &r);
-  __attribute__((pure)) static unsigned int rect_height(const rect &r);
-  __attribute__((pure)) static unsigned int rect_perimeter(const rect &r);
+  static unsigned int rect_width(const rect &r);
+  static unsigned int rect_height(const rect &r);
+  static unsigned int rect_perimeter(const rect &r);
   static inline const point p1 = point{3u, 4u};
   static inline const point p2 = point{10u, 20u};
   static inline const unsigned int test_px = p1.px;

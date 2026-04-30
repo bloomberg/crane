@@ -1,8 +1,7 @@
 #include <loopify_list_relations.h>
 
-__attribute__((pure)) bool
-LoopifyListRelations::is_prefix_of(const List<unsigned int> &l1,
-                                   const List<unsigned int> &l2) {
+bool LoopifyListRelations::is_prefix_of(const List<unsigned int> &l1,
+                                        const List<unsigned int> &l2) {
   struct _Enter {
     const List<unsigned int> *l2;
     const List<unsigned int> *l1;
@@ -47,9 +46,8 @@ LoopifyListRelations::is_prefix_of(const List<unsigned int> &l1,
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifyListRelations::is_suffix_of(const List<unsigned int> &l1,
-                                   const List<unsigned int> &l2) {
+bool LoopifyListRelations::is_suffix_of(const List<unsigned int> &l1,
+                                        const List<unsigned int> &l2) {
   unsigned int len1 = l1.length();
   unsigned int len2 = l2.length();
   if (len2 < len1) {
@@ -129,9 +127,8 @@ LoopifyListRelations::is_suffix_of(const List<unsigned int> &l1,
   }
 }
 
-__attribute__((pure)) bool
-LoopifyListRelations::is_infix_of_aux(const List<unsigned int> &needle,
-                                      const List<unsigned int> &haystack) {
+bool LoopifyListRelations::is_infix_of_aux(const List<unsigned int> &needle,
+                                           const List<unsigned int> &haystack) {
   bool _result;
   const List<unsigned int> *_loop_haystack = &haystack;
   while (true) {
@@ -159,13 +156,12 @@ LoopifyListRelations::is_infix_of_aux(const List<unsigned int> &needle,
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifyListRelations::is_infix_of(const List<unsigned int> &_x0,
-                                  const List<unsigned int> &_x1) {
+bool LoopifyListRelations::is_infix_of(const List<unsigned int> &_x0,
+                                       const List<unsigned int> &_x1) {
   return is_infix_of_aux(_x0, _x1);
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListRelations::find_sublists_aux(const List<unsigned int> &needle,
                                         const List<unsigned int> &haystack,
                                         unsigned int idx) {
@@ -206,15 +202,14 @@ LoopifyListRelations::find_sublists_aux(const List<unsigned int> &needle,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListRelations::find_sublists(const List<unsigned int> &needle,
                                     const List<unsigned int> &haystack) {
   return find_sublists_aux(needle, haystack, 0u);
 }
 
-__attribute__((pure)) bool
-LoopifyListRelations::list_eq(const List<unsigned int> &l1,
-                              const List<unsigned int> &l2) {
+bool LoopifyListRelations::list_eq(const List<unsigned int> &l1,
+                                   const List<unsigned int> &l2) {
   struct _Enter {
     const List<unsigned int> *l2;
     const List<unsigned int> *l1;
@@ -263,9 +258,8 @@ LoopifyListRelations::list_eq(const List<unsigned int> &l1,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyListRelations::list_compare(const List<unsigned int> &l1,
-                                   const List<unsigned int> &l2) {
+unsigned int LoopifyListRelations::list_compare(const List<unsigned int> &l1,
+                                                const List<unsigned int> &l2) {
   unsigned int _result;
   const List<unsigned int> *_loop_l2 = &l2;
   const List<unsigned int> *_loop_l1 = &l1;
@@ -310,7 +304,7 @@ LoopifyListRelations::list_compare(const List<unsigned int> &l1,
   return _result;
 }
 
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyListRelations::zip(const List<unsigned int> &l1,
                           const List<unsigned int> &l2) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
@@ -356,7 +350,6 @@ LoopifyListRelations::zip(const List<unsigned int> &l1,
   return std::move(*(_head));
 }
 
-__attribute__((pure))
 List<std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>
 LoopifyListRelations::zip3(const List<unsigned int> &l1,
                            const List<unsigned int> &l2,
@@ -426,8 +419,8 @@ LoopifyListRelations::zip3(const List<unsigned int> &l1,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListRelations::interleave(List<unsigned int> l1, List<unsigned int> l2) {
+List<unsigned int> LoopifyListRelations::interleave(List<unsigned int> l1,
+                                                    List<unsigned int> l2) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l2 = std::move(l2);
@@ -470,9 +463,9 @@ LoopifyListRelations::interleave(List<unsigned int> l1, List<unsigned int> l2) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListRelations::merge_fuel(const unsigned int &fuel,
-                                 List<unsigned int> l1, List<unsigned int> l2) {
+List<unsigned int> LoopifyListRelations::merge_fuel(const unsigned int &fuel,
+                                                    List<unsigned int> l1,
+                                                    List<unsigned int> l2) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l2 = std::move(l2);
@@ -531,17 +524,15 @@ LoopifyListRelations::merge_fuel(const unsigned int &fuel,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListRelations::merge(const List<unsigned int> &l1,
-                            const List<unsigned int> &l2) {
+List<unsigned int> LoopifyListRelations::merge(const List<unsigned int> &l1,
+                                               const List<unsigned int> &l2) {
   unsigned int len1 = l1.length();
   unsigned int len2 = l2.length();
   return merge_fuel((len1 + len2), l1, l2);
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListRelations::union_(const List<unsigned int> &l1,
-                             List<unsigned int> l2) {
+List<unsigned int> LoopifyListRelations::union_(const List<unsigned int> &l1,
+                                                List<unsigned int> l2) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l2 = std::move(l2);
@@ -617,7 +608,7 @@ LoopifyListRelations::union_(const List<unsigned int> &l1,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListRelations::intersection(const List<unsigned int> &l1,
                                    const List<unsigned int> &l2) {
   std::unique_ptr<List<unsigned int>> _head{};

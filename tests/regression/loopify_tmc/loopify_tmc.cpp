@@ -4,8 +4,8 @@
 /// Functions where the recursive call is wrapped in a single constructor
 /// should be optimized to use O(1) extra space via destination-passing style.
 /// range lo hi creates lo, lo+1, ..., hi-1.
-__attribute__((pure)) LoopifyTmc::list<unsigned int>
-LoopifyTmc::range(const unsigned int &lo, const unsigned int &hi) {
+LoopifyTmc::list<unsigned int> LoopifyTmc::range(const unsigned int &lo,
+                                                 const unsigned int &hi) {
   std::unique_ptr<LoopifyTmc::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyTmc::list<unsigned int>> *_write = &_head;
   unsigned int _loop_hi = hi;
@@ -36,7 +36,7 @@ LoopifyTmc::range(const unsigned int &lo, const unsigned int &hi) {
 }
 
 /// prefix_sums acc l computes running prefix sums.
-__attribute__((pure)) LoopifyTmc::list<unsigned int>
+LoopifyTmc::list<unsigned int>
 LoopifyTmc::prefix_sums(const unsigned int &acc,
                         const LoopifyTmc::list<unsigned int> &l) {
   std::unique_ptr<LoopifyTmc::list<unsigned int>> _head{};

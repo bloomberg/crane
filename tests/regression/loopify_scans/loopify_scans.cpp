@@ -1,7 +1,7 @@
 #include <loopify_scans.h>
 
-__attribute__((pure)) List<unsigned int>
-LoopifyScans::scanl(unsigned int acc, const List<unsigned int> &l) {
+List<unsigned int> LoopifyScans::scanl(unsigned int acc,
+                                       const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -30,8 +30,8 @@ LoopifyScans::scanl(unsigned int acc, const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyScans::scanl_mult(unsigned int acc, const List<unsigned int> &l) {
+List<unsigned int> LoopifyScans::scanl_mult(unsigned int acc,
+                                            const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -60,8 +60,8 @@ LoopifyScans::scanl_mult(unsigned int acc, const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyScans::running_max(unsigned int current, const List<unsigned int> &l) {
+List<unsigned int> LoopifyScans::running_max(unsigned int current,
+                                             const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -96,8 +96,8 @@ LoopifyScans::running_max(unsigned int current, const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyScans::running_min(unsigned int current, const List<unsigned int> &l) {
+List<unsigned int> LoopifyScans::running_min(unsigned int current,
+                                             const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -132,9 +132,8 @@ LoopifyScans::running_min(unsigned int current, const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyScans::pairwise_diff(const unsigned int &prev,
-                            const List<unsigned int> &l) {
+List<unsigned int> LoopifyScans::pairwise_diff(const unsigned int &prev,
+                                               const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -181,7 +180,7 @@ LoopifyScans::pairwise_diff(const unsigned int &prev,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyScans::accumulate_if_even(unsigned int acc,
                                  const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};

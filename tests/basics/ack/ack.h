@@ -14,8 +14,7 @@ struct Nat {
 };
 
 struct Ack {
-  __attribute__((pure)) static unsigned int ack(unsigned int m,
-                                                const unsigned int &n);
+  static unsigned int ack(unsigned int m, const unsigned int &n);
 };
 
 #endif // INCLUDED_ACK

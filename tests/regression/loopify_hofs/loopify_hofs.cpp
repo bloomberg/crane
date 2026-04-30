@@ -1,9 +1,8 @@
 #include <loopify_hofs.h>
 
 /// is_prefix_of l1 l2 checks if l1 is a prefix of l2.
-__attribute__((pure)) bool
-LoopifyHofs::is_prefix_of(const List<unsigned int> &l1,
-                          const List<unsigned int> &l2) {
+bool LoopifyHofs::is_prefix_of(const List<unsigned int> &l1,
+                               const List<unsigned int> &l2) {
   bool _result;
   const List<unsigned int> *_loop_l2 = &l2;
   const List<unsigned int> *_loop_l1 = &l1;
@@ -38,7 +37,7 @@ LoopifyHofs::is_prefix_of(const List<unsigned int> &l1,
 }
 
 /// lookup_all key l finds all values associated with key in association list.
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyHofs::lookup_all(const unsigned int &key,
                         const List<std::pair<unsigned int, unsigned int>> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
@@ -76,8 +75,8 @@ LoopifyHofs::lookup_all(const unsigned int &key,
 }
 
 /// Helper: get head of list with default.
-__attribute__((pure)) unsigned int
-LoopifyHofs::head_default(unsigned int default0, const List<unsigned int> &l) {
+unsigned int LoopifyHofs::head_default(unsigned int default0,
+                                       const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return default0;
   } else {
@@ -88,7 +87,7 @@ LoopifyHofs::head_default(unsigned int default0, const List<unsigned int> &l) {
 }
 
 /// subsequences l generates all subsequences of l: 1,2 -> [],[1],[2],[1,2].
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyHofs::subsequences(const List<unsigned int> &l) {
   struct _Enter {
     List<unsigned int> l;
@@ -169,7 +168,7 @@ LoopifyHofs::subsequences(const List<unsigned int> &l) {
 }
 
 /// Helper: pair element with all elements in list.
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyHofs::pair_with_all(unsigned int x, const List<unsigned int> &l) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;
@@ -200,7 +199,7 @@ LoopifyHofs::pair_with_all(unsigned int x, const List<unsigned int> &l) {
 }
 
 /// cartesian l1 l2 computes cartesian product of two lists.
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyHofs::cartesian(const List<unsigned int> &l1,
                        const List<unsigned int> &l2) {
   struct _Enter {
@@ -241,8 +240,8 @@ LoopifyHofs::cartesian(const List<unsigned int> &l1,
 
 /// longest_run l finds the longest consecutive run of equal elements.
 /// Matches on recursive result to decide behavior.
-__attribute__((pure)) List<unsigned int>
-LoopifyHofs::longest_run_fuel(const unsigned int &fuel, List<unsigned int> l) {
+List<unsigned int> LoopifyHofs::longest_run_fuel(const unsigned int &fuel,
+                                                 List<unsigned int> l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l = std::move(l);
@@ -311,14 +310,12 @@ LoopifyHofs::longest_run_fuel(const unsigned int &fuel, List<unsigned int> l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyHofs::longest_run(const List<unsigned int> &l) {
+List<unsigned int> LoopifyHofs::longest_run(const List<unsigned int> &l) {
   return longest_run_fuel(l.length(), l);
 }
 
 /// power_set l generates all subsets.
-__attribute__((pure)) List<List<unsigned int>>
-LoopifyHofs::power_set(const List<unsigned int> &l) {
+List<List<unsigned int>> LoopifyHofs::power_set(const List<unsigned int> &l) {
   struct _Enter {
     List<unsigned int> l;
   };

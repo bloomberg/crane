@@ -1,6 +1,6 @@
 #include <instruction_cycles.h>
 
-__attribute__((pure)) unsigned int
+unsigned int
 InstructionCycles::cycles_jms(const InstructionCycles::state2 &,
                               const InstructionCycles::instruction2 &i) {
   if (std::holds_alternative<typename InstructionCycles::instruction2::JMS2>(
@@ -11,8 +11,7 @@ InstructionCycles::cycles_jms(const InstructionCycles::state2 &,
   }
 }
 
-__attribute__((pure)) unsigned int
-InstructionCycles::cycles_min(const InstructionCycles::Instr3 i) {
+unsigned int InstructionCycles::cycles_min(const InstructionCycles::Instr3 i) {
   switch (i) {
   case Instr3::e_FIM3: {
     return 16u;
@@ -32,8 +31,7 @@ InstructionCycles::cycles_min(const InstructionCycles::Instr3 i) {
   }
 }
 
-__attribute__((pure)) unsigned int
-InstructionCycles::cycles_max(const InstructionCycles::Instr4 i) {
+unsigned int InstructionCycles::cycles_max(const InstructionCycles::Instr4 i) {
   switch (i) {
   case Instr4::e_FIM4: {
     return 16u;
@@ -53,7 +51,7 @@ InstructionCycles::cycles_max(const InstructionCycles::Instr4 i) {
   }
 }
 
-__attribute__((pure)) unsigned int InstructionCycles::program_cycles5(
+unsigned int InstructionCycles::program_cycles5(
     const InstructionCycles::state5 &s,
     const List<InstructionCycles::instruction5> &prog) {
   if (std::holds_alternative<
@@ -67,13 +65,12 @@ __attribute__((pure)) unsigned int InstructionCycles::program_cycles5(
   }
 }
 
-__attribute__((pure)) unsigned int
-InstructionCycles::cycles6(const InstructionCycles::state6 &,
-                           const InstructionCycles::Instruction6) {
+unsigned int InstructionCycles::cycles6(const InstructionCycles::state6 &,
+                                        const InstructionCycles::Instruction6) {
   return 8u;
 }
 
-__attribute__((pure)) unsigned int InstructionCycles::program_cycles6(
+unsigned int InstructionCycles::program_cycles6(
     const InstructionCycles::state6 &s,
     const List<InstructionCycles::Instruction6> &prog) {
   if (std::holds_alternative<
@@ -87,13 +84,12 @@ __attribute__((pure)) unsigned int InstructionCycles::program_cycles6(
   }
 }
 
-__attribute__((pure)) unsigned int
-InstructionCycles::cycles7(const InstructionCycles::state7 &,
-                           const InstructionCycles::Instruction7) {
+unsigned int InstructionCycles::cycles7(const InstructionCycles::state7 &,
+                                        const InstructionCycles::Instruction7) {
   return 8u;
 }
 
-__attribute__((pure)) unsigned int InstructionCycles::program_cycles7(
+unsigned int InstructionCycles::program_cycles7(
     const InstructionCycles::state7 &s,
     const List<InstructionCycles::Instruction7> &prog) {
   if (std::holds_alternative<

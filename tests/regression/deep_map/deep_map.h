@@ -51,19 +51,37 @@ struct DeepMap {
     }
 
     // ACCESSORS
-    __attribute__((pure)) tree<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
-        return tree<t_A>(Leaf{});
-      } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
-        return tree<t_A>(
-            Node{d_a0 ? std::make_unique<DeepMap::tree<t_A>>(d_a0->clone())
-                      : nullptr,
-                 d_a1,
-                 d_a2 ? std::make_unique<DeepMap::tree<t_A>>(d_a2->clone())
-                      : nullptr});
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          const auto &_alt = std::get<Leaf>(_src->v());
+          _dst->d_v_ = Leaf{};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ =
+              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -79,10 +97,9 @@ struct DeepMap {
       }
     }
 
-    __attribute__((pure)) static tree<t_A> leaf() { return tree(Leaf{}); }
+    static tree<t_A> leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree<t_A> node(tree<t_A> a0, t_A a1,
-                                                tree<t_A> a2) {
+    static tree<t_A> node(tree<t_A> a0, t_A a1, tree<t_A> a2) {
       return tree(Node{std::make_unique<tree<t_A>>(std::move(a0)),
                        std::move(a1),
                        std::make_unique<tree<t_A>>(std::move(a2))});
@@ -112,7 +129,7 @@ struct DeepMap {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2,
@@ -141,12 +158,11 @@ struct DeepMap {
 
   /// Build a maximally-unbalanced tree (right spine = linked list).
   /// Tail-recursive via accumulator, should be loopified.
-  __attribute__((pure)) static tree<unsigned int>
-  build_right(unsigned int n, tree<unsigned int> acc);
+  static tree<unsigned int> build_right(unsigned int n, tree<unsigned int> acc);
 
   /// Recursive tree map — visits every node.
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  __attribute__((pure)) static tree<T2> tmap(F0 &&f, const tree<T1> &t) {
+  static tree<T2> tmap(F0 &&f, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return tree<T2>::leaf();
     } else {
@@ -156,12 +172,9 @@ struct DeepMap {
     }
   }
 
-  __attribute__((pure)) static tree<unsigned int>
-  map_inc(const tree<unsigned int> &t);
-
+  static tree<unsigned int> map_inc(const tree<unsigned int> &t);
   /// Get root value.
-  __attribute__((pure)) static unsigned int
-  root_or_zero(const tree<unsigned int> &t);
+  static unsigned int root_or_zero(const tree<unsigned int> &t);
 };
 
 #endif // INCLUDED_DEEP_MAP

@@ -17,9 +17,8 @@ struct LoopifyItreeReified {
   /// Consumer fixpoint: traverses an ITree with fuel. This is a regular
   /// fixpoint with recursion on fuel that processes reified ITrees. Should
   /// be loopified normally (nontail with _Enter/_Call frames).
-  __attribute__((pure)) static unsigned int
-  count_taus(const unsigned int &fuel,
-             const std::shared_ptr<ITree<unsigned int>> &t);
+  static unsigned int count_taus(const unsigned int &fuel,
+                                 const std::shared_ptr<ITree<unsigned int>> &t);
 
   /// HOF-pattern cofixpoint body: identity traversal on ITrees. Takes the
   /// recursive function as a parameter rec instead of calling itself

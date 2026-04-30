@@ -49,7 +49,7 @@ struct InductiveInModule {
     }
 
     static inline const Color default_color = Color::e_RED;
-    __attribute__((pure)) static unsigned int color_to_nat(const Color c);
+    static unsigned int color_to_nat(const Color c);
   };
 
   static inline const unsigned int test_color =
@@ -95,7 +95,7 @@ struct InductiveInModule {
         }
 
         // ACCESSORS
-        __attribute__((pure)) option<t_A> clone() const {
+        option<t_A> clone() const {
           auto &&_sv = *(this);
           if (std::holds_alternative<None>(_sv.v())) {
             return option<t_A>(None{});
@@ -116,19 +116,15 @@ struct InductiveInModule {
           }
         }
 
-        __attribute__((pure)) static option<t_A> none() {
-          return option(None{});
-        }
+        static option<t_A> none() { return option(None{}); }
 
-        __attribute__((pure)) static option<t_A> some(t_A a0) {
-          return option(Some{std::move(a0)});
-        }
+        static option<t_A> some(t_A a0) { return option(Some{std::move(a0)}); }
 
         // MANIPULATORS
         inline variant_t &v_mut() { return d_v_; }
 
         // ACCESSORS
-        __attribute__((pure)) const variant_t &v() const { return d_v_; }
+        const variant_t &v() const { return d_v_; }
       };
 
       template <typename T1, typename T2, MapsTo<T2, T1> F1>

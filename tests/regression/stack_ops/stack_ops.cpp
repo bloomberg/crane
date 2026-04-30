@@ -1,6 +1,5 @@
 #include <stack_ops.h>
 
-__attribute__((pure))
 std::pair<std::optional<unsigned int>, StackOps::state_basic>
 StackOps::pop_stack(StackOps::state_basic s) {
   auto &&_sv = s.stack_basic;
@@ -14,8 +13,7 @@ StackOps::pop_stack(StackOps::state_basic s) {
   }
 }
 
-__attribute__((pure)) bool
-StackOps::is_none(const std::optional<unsigned int> &o) {
+bool StackOps::is_none(const std::optional<unsigned int> &o) {
   if (o.has_value()) {
     const unsigned int &_x = *o;
     return false;
@@ -24,8 +22,7 @@ StackOps::is_none(const std::optional<unsigned int> &o) {
   }
 }
 
-__attribute__((pure)) unsigned int
-StackOps::option_or_zero(const std::optional<unsigned int> &o) {
+unsigned int StackOps::option_or_zero(const std::optional<unsigned int> &o) {
   if (o.has_value()) {
     const unsigned int &n = *o;
     return n;
@@ -34,7 +31,6 @@ StackOps::option_or_zero(const std::optional<unsigned int> &o) {
   }
 }
 
-__attribute__((pure))
 std::pair<std::optional<unsigned int>, StackOps::state_with_acc>
 StackOps::pop_stack_acc(StackOps::state_with_acc s) {
   auto &&_sv = s.stack_with_acc;
@@ -48,8 +44,8 @@ StackOps::pop_stack_acc(StackOps::state_with_acc s) {
   }
 }
 
-__attribute__((pure)) StackOps::state_basic
-StackOps::push_stack(const StackOps::state_basic &s, unsigned int addr) {
+StackOps::state_basic StackOps::push_stack(const StackOps::state_basic &s,
+                                           unsigned int addr) {
   auto &&_sv = s.stack_basic;
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
     return state_basic{
@@ -72,8 +68,7 @@ StackOps::push_stack(const StackOps::state_basic &s, unsigned int addr) {
   }
 }
 
-__attribute__((pure)) unsigned int
-StackOps::top_or_zero(const StackOps::state_basic &s) {
+unsigned int StackOps::top_or_zero(const StackOps::state_basic &s) {
   auto &&_sv = s.stack_basic;
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
     return 0u;
@@ -84,8 +79,8 @@ StackOps::top_or_zero(const StackOps::state_basic &s) {
   }
 }
 
-__attribute__((pure)) StackOps::state_basic
-StackOps::push_stack_cap(const StackOps::state_basic &s, unsigned int addr) {
+StackOps::state_basic StackOps::push_stack_cap(const StackOps::state_basic &s,
+                                               unsigned int addr) {
   List<unsigned int> new_stack = [&]() {
     auto &&_sv = s.stack_basic;
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {

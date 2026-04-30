@@ -1,7 +1,6 @@
 #include <nested_match_closure.h>
 
-__attribute__((pure)) unsigned int
-NestedMatchClosure::tree_sum(const NestedMatchClosure::tree &t) {
+unsigned int NestedMatchClosure::tree_sum(const NestedMatchClosure::tree &t) {
   if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(t.v())) {
     return 0u;
   } else {
@@ -14,7 +13,7 @@ NestedMatchClosure::tree_sum(const NestedMatchClosure::tree &t) {
 /// Pattern 1: Nested match creating a closure that captures from both levels.
 /// The fixpoint go captures outer_val from outer match and
 /// inner_val from inner match. Both are structured binding refs.
-__attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<unsigned int(unsigned int)>>
 NestedMatchClosure::make_combiner(const NestedMatchClosure::tree &t) {
   if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(t.v())) {
     return std::optional<std::function<unsigned int(unsigned int)>>();
@@ -48,7 +47,7 @@ NestedMatchClosure::make_combiner(const NestedMatchClosure::tree &t) {
 }
 
 /// Pattern 2: Triple nesting
-__attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<unsigned int(unsigned int)>>
 NestedMatchClosure::make_deep_combiner(const NestedMatchClosure::tree &t) {
   if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(t.v())) {
     return std::optional<std::function<unsigned int(unsigned int)>>();
@@ -93,7 +92,7 @@ NestedMatchClosure::make_deep_combiner(const NestedMatchClosure::tree &t) {
 /// The fixpoint captures BOTH pattern variables AND the function parameter.
 /// After the function returns, BOTH the pattern variables AND the
 /// function parameter are dead.
-__attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<unsigned int(unsigned int)>>
 NestedMatchClosure::make_param_combiner(const NestedMatchClosure::tree &t,
                                         unsigned int base) {
   if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(t.v())) {

@@ -12103,6 +12103,22 @@ let gen_ind_header_v2
           let clone_id = Id.of_string "clone" in
           let d_v_id = Id.of_string "d_v_" in
           let other_id = Id.of_string "_other" in
+          let rec is_direct_self_ref = function
+            | Miniml.Tglob (r, args, _) ->
+              Environ.QGlobRef.equal Environ.empty_env r name
+              && List.length args = List.length vars
+              && List.for_all
+                   (fun (j, arg) ->
+                     match arg with
+                     | Miniml.Tvar k | Miniml.Tvar' k -> k = j + 1
+                     | Miniml.Tmeta {contents = Some (Miniml.Tvar k)}
+                     | Miniml.Tmeta {contents = Some (Miniml.Tvar' k)} ->
+                       k = j + 1
+                     | _ -> false)
+                   (List.mapi (fun j a -> (j, a)) args)
+            | Miniml.Tmeta {contents = Some t} -> is_direct_self_ref t
+            | _ -> false
+          in
           let mk_clone_branches target_tvar_ids target_cpp_tys =
             Array.to_list
               (Array.mapi
@@ -12207,23 +12223,163 @@ let gen_ind_header_v2
                    })
                  tys)
           in
-          let clone_method =
-            ( Fmethod
-                {
-                  mf_name = clone_id;
-                  mf_tparams = [];
-                  mf_ret_type = self_ty;
-                  mf_params = [];
-                  mf_body = [Smatch (mk_clone_branches vars ty_vars, None)];
-                  mf_is_const = true;
-                  mf_is_static = false;
-                  mf_is_inline = false;
-                  mf_this_pos = 0;
-                  mf_no_pure = false;
-                },
-              VPublic,
-              SAccessors )
+          let has_direct_self_ref =
+            Array.exists (List.exists is_direct_self_ref) tys
           in
+          let clone_method =
+            if has_direct_self_ref then
+              let clone_field_expr source_field_ty target_field_ty field_s =
+                match
+                  render_cpp_expr_simple
+                    (gen_clone_field_expr
+                       ~src_ty:source_field_ty
+                       ~dst_ty:target_field_ty
+                       (CPPraw ("_alt." ^ field_s)))
+                with
+                | Some s -> s
+                | None -> "_alt." ^ field_s
+              in
+              let branch_lines =
+                Array.to_list
+                  (Array.mapi
+                     (fun i tys_list ->
+                       let c = cnames.(i) in
+                       let cname_id = ctor_struct_id_of_ref ~fallback_idx:i c in
+                       let ctor_struct_name =
+                         ctor_struct_name_of_ref ~fallback_idx:i c
+                       in
+                       let ctor_s = Id.to_string cname_id in
+                       let fields =
+                         List.mapi
+                           (fun j ty ->
+                             let field_id =
+                               lookup_ctor_field_name ctor_struct_name j
+                             in
+                             let source_ty =
+                               convert_ml_type_to_cpp_type
+                                 (empty_env ())
+                                 (Refset'.add name Refset'.empty)
+                                 vars
+                                 ty
+                             in
+                             let source_ty =
+                               if ml_type_has_nested_self_ref ~ind_ref:name ty
+                               then
+                                 if is_direct_self_ref ty then
+                                   Tunique_ptr source_ty
+                                 else if is_coinductive then Tshared_ptr source_ty
+                                 else if
+                                   ml_self_ref_is_uniform ~ind_ref:name ~cname:c ty
+                                 then Tunique_ptr source_ty
+                                 else Tshared_ptr source_ty
+                               else source_ty
+                             in
+                             let source_ty =
+                               if vars = [] then tvar_erase_type source_ty else source_ty
+                             in
+                             let target_ty = source_ty in
+                             (field_id, ty, source_ty, target_ty))
+                           tys_list
+                       in
+                       let ctor_args =
+                         List.map
+                           (fun (field_id, ml_ty, source_ty, target_ty) ->
+                             let field_s = Id.to_string field_id in
+                             if is_direct_self_ref ml_ty then
+                               "_alt." ^ field_s
+                               ^ " ? std::make_unique<%SELF%>() : nullptr"
+                             else
+                               clone_field_expr source_ty target_ty field_s)
+                           fields
+                       in
+                       let assign =
+                         "      _dst->d_v_ = " ^ ctor_s ^ "{"
+                         ^ String.concat ", " ctor_args ^ "};"
+                       in
+                       let recursive_fields =
+                         List.filter_map
+                           (fun (field_id, ml_ty, _, _) ->
+                             if is_direct_self_ref ml_ty then
+                               Some (Id.to_string field_id)
+                             else None)
+                           fields
+                       in
+                       let body =
+                         match recursive_fields with
+                         | [] -> [assign]
+                         | rec_fields ->
+                           assign
+                           :: ("      auto &_dst_alt = std::get<" ^ ctor_s
+                               ^ ">(_dst->d_v_);")
+                           :: List.map
+                                (fun field ->
+                                  "      if (_alt." ^ field
+                                  ^ ") _stack.push_back({_alt." ^ field
+                                  ^ ".get(), _dst_alt." ^ field ^ ".get()});")
+                                rec_fields
+                       in
+                       (ctor_s, body))
+                     tys)
+              in
+              let branch_pp =
+                List.mapi
+                  (fun idx (ctor_s, body) ->
+                    let prefix =
+                      if idx = 0 then
+                        "    if (std::holds_alternative<" ^ ctor_s
+                        ^ ">(_src->v())) {"
+                      else if idx = List.length branch_lines - 1 then
+                        "    } else {"
+                      else
+                        "    } else if (std::holds_alternative<" ^ ctor_s
+                        ^ ">(_src->v())) {"
+                    in
+                    let bind =
+                      "      const auto &_alt = std::get<" ^ ctor_s
+                      ^ ">(_src->v());"
+                    in
+                    String.concat "\n" (prefix :: bind :: body))
+                  branch_lines
+              in
+              let body =
+                String.concat "\n"
+                  (["%SELF% clone() const {";
+                    "  %SELF% _out{};";
+                    "  struct _CloneFrame {";
+                    "    const %SELF% *_src;";
+                    "    %SELF% *_dst;";
+                    "  };";
+                    "  std::vector<_CloneFrame> _stack;";
+                    "  _stack.push_back({this, &_out});";
+                    "  while (!_stack.empty()) {";
+                    "    auto _frame = _stack.back();";
+                    "    _stack.pop_back();";
+                    "    const %SELF% *_src = _frame._src;";
+                    "    %SELF% *_dst = _frame._dst;"]
+                   @ branch_pp
+                   @ ["    }";
+                      "  }";
+                      "  return _out;";
+                      "}"])
+              in
+              (Fraw body, VPublic, SAccessors)
+            else
+              ( Fmethod
+                  {
+                    mf_name = clone_id;
+                    mf_tparams = [];
+                    mf_ret_type = self_ty;
+                    mf_params = [];
+                    mf_body = [Smatch (mk_clone_branches vars ty_vars, None)];
+                    mf_is_const = true;
+                    mf_is_static = false;
+                    mf_is_inline = false;
+                    mf_this_pos = 0;
+                    mf_no_pure = true;
+                  },
+                VPublic,
+                SAccessors )
+	          in
           let copy_ctor =
             let cloned_v =
               CPPmember

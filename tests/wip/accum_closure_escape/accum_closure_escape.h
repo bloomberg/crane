@@ -59,17 +59,34 @@ struct AccumClosureEscape {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mylist<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Mynil>(_sv.v())) {
-        return mylist<t_A>(Mynil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
-        return mylist<t_A>(Mycons{
-            d_a0, d_a1 ? std::make_unique<AccumClosureEscape::mylist<t_A>>(
-                             d_a1->clone())
-                       : nullptr});
+    mylist clone() const {
+      mylist _out{};
+
+      struct _CloneFrame {
+        const mylist *_src;
+        mylist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist *_src = _frame._src;
+        mylist *_dst = _frame._dst;
+        if (std::holds_alternative<Mynil>(_src->v())) {
+          const auto &_alt = std::get<Mynil>(_src->v());
+          _dst->d_v_ = Mynil{};
+        } else {
+          const auto &_alt = std::get<Mycons>(_src->v());
+          _dst->d_v_ = Mycons{_alt.d_a0,
+                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -84,9 +101,9 @@ struct AccumClosureEscape {
       }
     }
 
-    __attribute__((pure)) static mylist<t_A> mynil() { return mylist(Mynil{}); }
+    static mylist<t_A> mynil() { return mylist(Mynil{}); }
 
-    __attribute__((pure)) static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+    static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
       return mylist(
           Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
@@ -113,9 +130,9 @@ struct AccumClosureEscape {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) mylist<t_A> mylist_append(mylist<t_A> l2) const {
+    mylist<t_A> mylist_append(mylist<t_A> l2) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
         return l2;
@@ -192,25 +209,43 @@ struct AccumClosureEscape {
     }
 
     // ACCESSORS
-    __attribute__((pure)) tree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<TLeaf>(_sv.v())) {
-        return tree(TLeaf{});
-      } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<TNode>(_sv.v());
-        return tree(TNode{
-            d_a0 ? std::make_unique<AccumClosureEscape::tree>(d_a0->clone())
-                 : nullptr,
-            d_a1,
-            d_a2 ? std::make_unique<AccumClosureEscape::tree>(d_a2->clone())
-                 : nullptr});
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<TLeaf>(_src->v())) {
+          const auto &_alt = std::get<TLeaf>(_src->v());
+          _dst->d_v_ = TLeaf{};
+        } else {
+          const auto &_alt = std::get<TNode>(_src->v());
+          _dst->d_v_ =
+              TNode{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                    _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<TNode>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static tree tleaf() { return tree(TLeaf{}); }
+    static tree tleaf() { return tree(TLeaf{}); }
 
-    __attribute__((pure)) static tree tnode(tree a0, unsigned int a1, tree a2) {
+    static tree tnode(tree a0, unsigned int a1, tree a2) {
       return tree(TNode{std::make_unique<tree>(std::move(a0)), std::move(a1),
                         std::make_unique<tree>(std::move(a2))});
     }
@@ -239,12 +274,11 @@ struct AccumClosureEscape {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// Build closures from TREE traversal: tree nodes become closures.
     /// Each closure captures pattern variables from tree match.
-    __attribute__((pure)) mylist<std::function<unsigned int(unsigned int)>>
-    tree_to_adders() const {
+    mylist<std::function<unsigned int(unsigned int)>> tree_to_adders() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::TLeaf>(_sv.v())) {
         return mylist<std::function<unsigned int(unsigned int)>>::mynil();
@@ -260,7 +294,7 @@ struct AccumClosureEscape {
       }
     }
 
-    __attribute__((pure)) mylist<unsigned int> tree_to_list() const {
+    mylist<unsigned int> tree_to_list() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::TLeaf>(_sv.v())) {
         return mylist<unsigned int>::mynil();
@@ -305,15 +339,15 @@ struct AccumClosureEscape {
   /// SIMPLE LAMBDA VERSION: Each closure fun x => h + x captures
   /// h from the pattern match. These are simple lambdas, so they
   /// should capture by =.
-  __attribute__((pure)) static mylist<std::function<unsigned int(unsigned int)>>
+  static mylist<std::function<unsigned int(unsigned int)>>
   build_adders(const mylist<unsigned int> &l,
                mylist<std::function<unsigned int(unsigned int)>> acc);
   /// Apply first closure from the list.
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   apply_first(const mylist<std::function<unsigned int(unsigned int)>> &fns,
               const unsigned int &x);
   /// Apply all closures and sum.
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   apply_all_sum(const mylist<std::function<unsigned int(unsigned int)>> &fns,
                 const unsigned int &x);
   /// test1: build_adders 10, 20, 30  = 30+_, 20+_, 10+_ (reversed)
@@ -340,7 +374,7 @@ struct AccumClosureEscape {
 
   /// COMPOSE CLOSURES: Each step builds a composed function.
   /// This creates closures that capture OTHER closures.
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   compose_from_list(const mylist<unsigned int> &l,
                     const std::function<unsigned int(unsigned int)> acc,
                     unsigned int _x0) {

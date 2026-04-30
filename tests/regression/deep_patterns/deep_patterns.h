@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,9 +119,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) unsigned int length() const {
+  unsigned int length() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
@@ -114,13 +133,12 @@ public:
 };
 
 struct DeepPatterns {
-  __attribute__((pure)) static unsigned int deep_option(
+  static unsigned int deep_option(
       const std::optional<std::optional<std::optional<unsigned int>>> &x);
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   deep_pair(const std::pair<std::pair<unsigned int, unsigned int>,
                             std::pair<unsigned int, unsigned int>> &p);
-  __attribute__((pure)) static unsigned int
-  list_shape(const List<unsigned int> &l);
+  static unsigned int list_shape(const List<unsigned int> &l);
   struct outer;
   struct inner;
 
@@ -163,7 +181,7 @@ struct DeepPatterns {
     }
 
     // ACCESSORS
-    __attribute__((pure)) outer clone() const {
+    outer clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<OLeft>(_sv.v())) {
         const auto &[d_a0] = std::get<OLeft>(_sv.v());
@@ -177,11 +195,11 @@ struct DeepPatterns {
     }
 
     // CREATORS
-    __attribute__((pure)) static outer oleft(inner a0) {
+    static outer oleft(inner a0) {
       return outer(OLeft{std::make_unique<inner>(std::move(a0))});
     }
 
-    __attribute__((pure)) static outer oright(unsigned int a0) {
+    static outer oright(unsigned int a0) {
       return outer(ORight{std::move(a0)});
     }
 
@@ -189,7 +207,7 @@ struct DeepPatterns {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   struct inner {
@@ -231,7 +249,7 @@ struct DeepPatterns {
     }
 
     // ACCESSORS
-    __attribute__((pure)) inner clone() const {
+    inner clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<ILeft>(_sv.v())) {
         const auto &[d_a0] = std::get<ILeft>(_sv.v());
@@ -243,19 +261,15 @@ struct DeepPatterns {
     }
 
     // CREATORS
-    __attribute__((pure)) static inner ileft(unsigned int a0) {
-      return inner(ILeft{std::move(a0)});
-    }
+    static inner ileft(unsigned int a0) { return inner(ILeft{std::move(a0)}); }
 
-    __attribute__((pure)) static inner iright(bool a0) {
-      return inner(IRight{std::move(a0)});
-    }
+    static inner iright(bool a0) { return inner(IRight{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, inner> F0, MapsTo<T1, unsigned int> F1>
@@ -302,10 +316,10 @@ struct DeepPatterns {
     }
   }
 
-  __attribute__((pure)) static unsigned int deep_sum(const outer &o);
-  __attribute__((pure)) static unsigned int complex_match(
+  static unsigned int deep_sum(const outer &o);
+  static unsigned int complex_match(
       const std::optional<std::pair<unsigned int, List<unsigned int>>> &x);
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   guarded_match(const std::pair<unsigned int, unsigned int> &p);
 
   template <typename t_A, typename t_B> struct pair {
@@ -342,7 +356,7 @@ struct DeepPatterns {
     }
 
     // ACCESSORS
-    __attribute__((pure)) pair<t_A, t_B> clone() const {
+    pair<t_A, t_B> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Pair0>(_sv.v());
       return pair<t_A, t_B>(Pair0{d_a0, d_a1});
@@ -356,7 +370,7 @@ struct DeepPatterns {
       d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
     }
 
-    __attribute__((pure)) static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
+    static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
       return pair(Pair0{std::move(a0), std::move(a1)});
     }
 
@@ -364,7 +378,7 @@ struct DeepPatterns {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, t_A, t_B> F0> T1 pair_rec(F0 &&f) const {
       auto &&_sv = *(this);
@@ -419,17 +433,34 @@ struct DeepPatterns {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mylist<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Nil>(_sv.v())) {
-        return mylist<t_A>(Nil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-        return mylist<t_A>(Cons{
-            d_a0,
-            d_a1 ? std::make_unique<DeepPatterns::mylist<t_A>>(d_a1->clone())
-                 : nullptr});
+    mylist clone() const {
+      mylist _out{};
+
+      struct _CloneFrame {
+        const mylist *_src;
+        mylist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist *_src = _frame._src;
+        mylist *_dst = _frame._dst;
+        if (std::holds_alternative<Nil>(_src->v())) {
+          const auto &_alt = std::get<Nil>(_src->v());
+          _dst->d_v_ = Nil{};
+        } else {
+          const auto &_alt = std::get<Cons>(_src->v());
+          _dst->d_v_ =
+              Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -444,9 +475,9 @@ struct DeepPatterns {
       }
     }
 
-    __attribute__((pure)) static mylist<t_A> nil() { return mylist(Nil{}); }
+    static mylist<t_A> nil() { return mylist(Nil{}); }
 
-    __attribute__((pure)) static mylist<t_A> cons(t_A a0, mylist<t_A> a1) {
+    static mylist<t_A> cons(t_A a0, mylist<t_A> a1) {
       return mylist(
           Cons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
@@ -473,7 +504,7 @@ struct DeepPatterns {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, t_A, mylist<t_A>, T1> F1>
     T1 mylist_rec(const T1 f, F1 &&f0) const {
@@ -500,13 +531,12 @@ struct DeepPatterns {
     }
   };
 
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   match_pair_list(const mylist<pair<unsigned int, unsigned int>> &l);
-  __attribute__((pure)) static unsigned int
-  match_two(const mylist<unsigned int> &l);
-  __attribute__((pure)) static unsigned int
+  static unsigned int match_two(const mylist<unsigned int> &l);
+  static unsigned int
   match_triple(const mylist<mylist<mylist<unsigned int>>> &l);
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   deep_wildcard(const pair<pair<unsigned int, unsigned int>,
                            pair<unsigned int, unsigned int>> &p);
   static inline const unsigned int test_deep_some = deep_option(

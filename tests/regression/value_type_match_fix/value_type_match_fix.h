@@ -48,15 +48,14 @@ struct ValueTypeMatchFix {
     }
 
     // ACCESSORS
-    __attribute__((pure)) triple clone() const {
+    triple clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] = std::get<MkTriple>(_sv.v());
       return triple(MkTriple{d_a0, d_a1, d_a2});
     }
 
     // CREATORS
-    __attribute__((pure)) static triple
-    mktriple(unsigned int a0, unsigned int a1, unsigned int a2) {
+    static triple mktriple(unsigned int a0, unsigned int a1, unsigned int a2) {
       return triple(MkTriple{std::move(a0), std::move(a1), std::move(a2)});
     }
 
@@ -64,7 +63,7 @@ struct ValueTypeMatchFix {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1,
@@ -91,8 +90,7 @@ struct ValueTypeMatchFix {
   ///
   /// This is different from pointer-based (shared_ptr) types where the
   /// field data lives on the heap and persists as long as the shared_ptr.
-  __attribute__((
-      pure)) static std::optional<std::function<unsigned int(unsigned int)>>
+  static std::optional<std::function<unsigned int(unsigned int)>>
   make_adder_from_triple(const triple &t);
   /// test1: MkTriple 10 20 30 -> base=60, go(5) = 60+5 = 65.
   static inline const unsigned int test1 = []() -> unsigned int {
@@ -117,8 +115,7 @@ struct ValueTypeMatchFix {
     }
   }();
   /// Direct capture of pattern fields (no intermediate let binding).
-  __attribute__((
-      pure)) static std::optional<std::function<unsigned int(unsigned int)>>
+  static std::optional<std::function<unsigned int(unsigned int)>>
   make_field_adder(const triple &t);
   /// test3: MkTriple 42 0 0 -> a=42, go(3) = 42+3 = 45.
   static inline const unsigned int test3 = []() -> unsigned int {

@@ -1,7 +1,6 @@
 #include <mutual_mod.h>
 
-__attribute__((pure)) unsigned int
-EvenOdd::even_length(const EvenOdd::even_list &e) {
+unsigned int EvenOdd::even_length(const EvenOdd::even_list &e) {
   if (std::holds_alternative<typename EvenOdd::even_list::ENil>(e.v())) {
     return 0u;
   } else {
@@ -11,8 +10,7 @@ EvenOdd::even_length(const EvenOdd::even_list &e) {
   }
 }
 
-__attribute__((pure)) unsigned int
-EvenOdd::odd_length(const EvenOdd::odd_list &o) {
+unsigned int EvenOdd::odd_length(const EvenOdd::odd_list &o) {
   const auto &[d_a0, d_a1] = std::get<typename EvenOdd::odd_list::OCons>(o.v());
   return (even_length(*(d_a1)) + 1);
 }

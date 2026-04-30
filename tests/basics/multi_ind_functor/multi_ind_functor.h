@@ -62,7 +62,7 @@ template <Elem E> struct Container {
     }
 
     // ACCESSORS
-    __attribute__((pure)) maybe clone() const {
+    maybe clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Nothing>(_sv.v())) {
         return maybe(Nothing{});
@@ -73,17 +73,15 @@ template <Elem E> struct Container {
     }
 
     // CREATORS
-    __attribute__((pure)) static maybe nothing() { return maybe(Nothing{}); }
+    static maybe nothing() { return maybe(Nothing{}); }
 
-    __attribute__((pure)) static maybe just(unsigned int a0) {
-      return maybe(Just{std::move(a0)});
-    }
+    static maybe just(unsigned int a0) { return maybe(Just{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
@@ -144,23 +142,40 @@ template <Elem E> struct Container {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mlist clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<MNil>(_sv.v())) {
-        return mlist(MNil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<MCons>(_sv.v());
-        return mlist(
-            MCons{d_a0.clone(),
-                  d_a1 ? std::make_unique<Container::mlist>(d_a1->clone())
-                       : nullptr});
+    mlist clone() const {
+      mlist _out{};
+
+      struct _CloneFrame {
+        const mlist *_src;
+        mlist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mlist *_src = _frame._src;
+        mlist *_dst = _frame._dst;
+        if (std::holds_alternative<MNil>(_src->v())) {
+          const auto &_alt = std::get<MNil>(_src->v());
+          _dst->d_v_ = MNil{};
+        } else {
+          const auto &_alt = std::get<MCons>(_src->v());
+          _dst->d_v_ =
+              MCons{_alt.d_a0, _alt.d_a1 ? std::make_unique<mlist>() : nullptr};
+          auto &_dst_alt = std::get<MCons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static mlist mnil() { return mlist(MNil{}); }
+    static mlist mnil() { return mlist(MNil{}); }
 
-    __attribute__((pure)) static mlist mcons(maybe a0, mlist a1) {
+    static mlist mcons(maybe a0, mlist a1) {
       return mlist(
           MCons{std::move(a0), std::make_unique<mlist>(std::move(a1))});
     }
@@ -187,7 +202,7 @@ template <Elem E> struct Container {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, maybe, mlist, T1> F1>
@@ -249,7 +264,7 @@ template <Elem E> struct Container {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mtree clone() const {
+    mtree clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<Leaf>(_sv.v());
@@ -261,19 +276,15 @@ template <Elem E> struct Container {
     }
 
     // CREATORS
-    __attribute__((pure)) static mtree leaf(maybe a0) {
-      return mtree(Leaf{std::move(a0)});
-    }
+    static mtree leaf(maybe a0) { return mtree(Leaf{std::move(a0)}); }
 
-    __attribute__((pure)) static mtree node(mlist a0) {
-      return mtree(Node{std::move(a0)});
-    }
+    static mtree node(mlist a0) { return mtree(Node{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, maybe> F0, MapsTo<T1, mlist> F1>
@@ -298,7 +309,7 @@ template <Elem E> struct Container {
     }
   }
 
-  __attribute__((pure)) static bool is_nothing(const maybe &m) {
+  static bool is_nothing(const maybe &m) {
     if (std::holds_alternative<typename maybe::Nothing>(m.v())) {
       return true;
     } else {
@@ -306,7 +317,7 @@ template <Elem E> struct Container {
     }
   }
 
-  __attribute__((pure)) static unsigned int mlist_length(const mlist &l) {
+  static unsigned int mlist_length(const mlist &l) {
     if (std::holds_alternative<typename mlist::MNil>(l.v())) {
       return 0u;
     } else {
@@ -315,7 +326,7 @@ template <Elem E> struct Container {
     }
   }
 
-  __attribute__((pure)) static unsigned int tree_size(const mtree &t0) {
+  static unsigned int tree_size(const mtree &t0) {
     if (std::holds_alternative<typename mtree::Leaf>(t0.v())) {
       const auto &[d_a0] = std::get<typename mtree::Leaf>(t0.v());
       if (is_nothing(d_a0)) {

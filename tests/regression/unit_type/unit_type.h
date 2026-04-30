@@ -13,8 +13,8 @@ concept MapsTo = std::is_invocable_v<F &, Args &...>;
 struct UnitType {
   static inline const std::monostate unit_val = std::monostate{};
   static void return_unit(const unsigned int &_x);
-  __attribute__((pure)) static unsigned int take_unit(const std::monostate &_x);
-  __attribute__((pure)) static unsigned int match_unit(const std::monostate &u);
+  static unsigned int take_unit(const std::monostate &_x);
+  static unsigned int match_unit(const std::monostate &u);
 
   template <typename t_A, typename t_B> struct pair {
     // TYPES
@@ -50,7 +50,7 @@ struct UnitType {
     }
 
     // ACCESSORS
-    __attribute__((pure)) pair<t_A, t_B> clone() const {
+    pair<t_A, t_B> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Pair0>(_sv.v());
       return pair<t_A, t_B>(Pair0{d_a0, d_a1});
@@ -64,7 +64,7 @@ struct UnitType {
       d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
     }
 
-    __attribute__((pure)) static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
+    static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
       return pair(Pair0{std::move(a0), std::move(a1)});
     }
 
@@ -72,7 +72,7 @@ struct UnitType {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>

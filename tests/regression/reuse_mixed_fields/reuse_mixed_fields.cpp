@@ -3,7 +3,7 @@
 /// Forces d to be owned through the else branch.
 /// The match branch has reuse candidates: both AsNat and AsPair
 /// have arity 2.
-__attribute__((pure)) ReuseMixedFields::payload
+ReuseMixedFields::payload
 ReuseMixedFields::swap_tag_or_id(ReuseMixedFields::payload p,
                                  const bool &do_swap) {
   if (do_swap) {

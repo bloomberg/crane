@@ -15,12 +15,12 @@ struct RecordMatch {
     unsigned int f3;
 
     // ACCESSORS
-    __attribute__((pure)) MyRec clone() const {
+    MyRec clone() const {
       return MyRec{(*(this)).f1, (*(this)).f2, (*(this)).f3};
     }
   };
 
-  __attribute__((pure)) static unsigned int sum(const MyRec &r);
+  static unsigned int sum(const MyRec &r);
 };
 
 #endif // INCLUDED_RECORD_MATCH

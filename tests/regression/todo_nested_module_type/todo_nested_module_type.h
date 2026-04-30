@@ -43,7 +43,7 @@ struct TodoNestedModuleType {
 
   struct NatOuter {
     using Inner = NatInner;
-    __attribute__((pure)) static Inner::t step(unsigned int n);
+    static Inner::t step(unsigned int n);
   };
 
   using UseNat = Make<NatOuter>;

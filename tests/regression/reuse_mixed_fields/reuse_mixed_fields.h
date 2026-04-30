@@ -53,7 +53,7 @@ struct ReuseMixedFields {
     }
 
     // ACCESSORS
-    __attribute__((pure)) payload clone() const {
+    payload clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<AsNat>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<AsNat>(_sv.v());
@@ -65,13 +65,11 @@ struct ReuseMixedFields {
     }
 
     // CREATORS
-    __attribute__((pure)) static payload asnat(unsigned int a0,
-                                               unsigned int a1) {
+    static payload asnat(unsigned int a0, unsigned int a1) {
       return payload(AsNat{std::move(a0), std::move(a1)});
     }
 
-    __attribute__((pure)) static payload aspair(unsigned int a0,
-                                                unsigned int a1) {
+    static payload aspair(unsigned int a0, unsigned int a1) {
       return payload(AsPair{std::move(a0), std::move(a1)});
     }
 
@@ -79,7 +77,7 @@ struct ReuseMixedFields {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
@@ -109,8 +107,7 @@ struct ReuseMixedFields {
   /// Forces d to be owned through the else branch.
   /// The match branch has reuse candidates: both AsNat and AsPair
   /// have arity 2.
-  __attribute__((pure)) static payload swap_tag_or_id(payload p,
-                                                      const bool &do_swap);
+  static payload swap_tag_or_id(payload p, const bool &do_swap);
   /// test1: swap AsNat 10 20 -> should be AsPair 20 10.
   /// With reuse bug: variant stays AsNat, fields are 20, 10.
   /// Match sees AsNat -> returns first field + 1000 = 1020.

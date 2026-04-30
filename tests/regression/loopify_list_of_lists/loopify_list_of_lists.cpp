@@ -1,6 +1,6 @@
 #include <loopify_list_of_lists.h>
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListOfLists::intercalate(const List<unsigned int> &sep,
                                 const List<List<unsigned int>> &ll) {
   struct _Enter {
@@ -46,7 +46,7 @@ LoopifyListOfLists::intercalate(const List<unsigned int> &sep,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListOfLists::map_hd(const List<List<unsigned int>> &ll) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -80,7 +80,7 @@ LoopifyListOfLists::map_hd(const List<List<unsigned int>> &ll) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyListOfLists::map_tl(const List<List<unsigned int>> &ll) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
@@ -114,8 +114,7 @@ LoopifyListOfLists::map_tl(const List<List<unsigned int>> &ll) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) bool
-LoopifyListOfLists::all_empty(const List<List<unsigned int>> &ll) {
+bool LoopifyListOfLists::all_empty(const List<List<unsigned int>> &ll) {
   bool _result;
   const List<List<unsigned int>> *_loop_ll = &ll;
   while (true) {
@@ -137,7 +136,7 @@ LoopifyListOfLists::all_empty(const List<List<unsigned int>> &ll) {
   return _result;
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyListOfLists::transpose_fuel(const unsigned int &fuel,
                                    const List<List<unsigned int>> &ll) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
@@ -192,8 +191,7 @@ LoopifyListOfLists::transpose_fuel(const unsigned int &fuel,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) unsigned int
-LoopifyListOfLists::list_len(const List<unsigned int> &l) {
+unsigned int LoopifyListOfLists::list_len(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -229,7 +227,7 @@ LoopifyListOfLists::list_len(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 LoopifyListOfLists::total_length(const List<List<unsigned int>> &ll) {
   struct _Enter {
     const List<List<unsigned int>> *ll;
@@ -267,12 +265,12 @@ LoopifyListOfLists::total_length(const List<List<unsigned int>> &ll) {
   return _result;
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyListOfLists::transpose(const List<List<unsigned int>> &ll) {
   return transpose_fuel(total_length(ll), ll);
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListOfLists::flatten(const List<List<unsigned int>> &ll) {
   struct _Enter {
     const List<List<unsigned int>> *ll;
@@ -310,7 +308,7 @@ LoopifyListOfLists::flatten(const List<List<unsigned int>> &ll) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 LoopifyListOfLists::count_total(const List<List<unsigned int>> &ll) {
   struct _Enter {
     const List<List<unsigned int>> *ll;
@@ -348,7 +346,7 @@ LoopifyListOfLists::count_total(const List<List<unsigned int>> &ll) {
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListOfLists::firsts(const List<List<unsigned int>> &ll) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -382,8 +380,7 @@ LoopifyListOfLists::firsts(const List<List<unsigned int>> &ll) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) bool
-LoopifyListOfLists::all_nil(const List<List<unsigned int>> &ll) {
+bool LoopifyListOfLists::all_nil(const List<List<unsigned int>> &ll) {
   bool _result;
   const List<List<unsigned int>> *_loop_ll = &ll;
   while (true) {
@@ -405,7 +402,7 @@ LoopifyListOfLists::all_nil(const List<List<unsigned int>> &ll) {
   return _result;
 }
 
-__attribute__((pure)) List<std::pair<List<unsigned int>, List<unsigned int>>>
+List<std::pair<List<unsigned int>, List<unsigned int>>>
 LoopifyListOfLists::zip_lists(const List<List<unsigned int>> &ll1,
                               const List<List<unsigned int>> &ll2) {
   std::unique_ptr<List<std::pair<List<unsigned int>, List<unsigned int>>>>
@@ -453,7 +450,7 @@ LoopifyListOfLists::zip_lists(const List<List<unsigned int>> &ll1,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 LoopifyListOfLists::max_length(const List<List<unsigned int>> &ll) {
   struct _Enter {
     const List<List<unsigned int>> *ll;

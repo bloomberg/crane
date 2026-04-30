@@ -17,9 +17,7 @@ struct CraneMoveHunt {
     bool enabled;
 
     // ACCESSORS
-    __attribute__((pure)) box clone() const {
-      return box{(*(this)).payload, (*(this)).enabled};
-    }
+    box clone() const { return box{(*(this)).payload, (*(this)).enabled}; }
   };
 
   struct state {
@@ -28,21 +26,19 @@ struct CraneMoveHunt {
     bool visible;
 
     // ACCESSORS
-    __attribute__((pure)) state clone() const {
+    state clone() const {
       return state{(*(this)).core.clone(), (*(this)).cursor.clone(),
                    (*(this)).visible};
     }
   };
 
-  __attribute__((pure)) static box clone_box(const box &b);
-  __attribute__((pure)) static box keep_box(box b);
-  __attribute__((pure)) static unsigned int use_state(const state &s);
-  __attribute__((pure)) static state render_state(const state &s);
-  __attribute__((pure)) static unsigned int sound_state(const state &before,
-                                                        const state &after);
-  __attribute__((pure)) static state resolve_state(const state &s);
-  __attribute__((pure)) static std::pair<bool, state>
-  handle_state(const state &s);
+  static box clone_box(const box &b);
+  static box keep_box(box b);
+  static unsigned int use_state(const state &s);
+  static state render_state(const state &s);
+  static unsigned int sound_state(const state &before, const state &after);
+  static state resolve_state(const state &s);
+  static std::pair<bool, state> handle_state(const state &s);
   static inline const box initial_box = box{41u, true};
   static inline const box other_box = box{1u, false};
   static inline const state initial_state = state{initial_box, other_box, true};
@@ -60,21 +56,20 @@ struct CraneMoveHunt {
       return b1;
     }
   }();
-  __attribute__((pure)) static box record_function(const box &b0);
+  static box record_function(const box &b0);
   static inline const state state_constant = []() {
     state s1 = render_state(initial_state);
     state s2 = resolve_state(std::move(s1));
     return render_state(std::move(s2));
   }();
-  __attribute__((pure)) static state state_function(const state &s0);
-  __attribute__((pure)) static state match_reuse(const state &s0);
+  static state state_function(const state &s0);
+  static state match_reuse(const state &s0);
 };
 
 void tick(CraneMoveHunt::state s);
 CraneMoveHunt::state effect_frame(const CraneMoveHunt::state &s0);
 CraneMoveHunt::state effect_pair_frame(const CraneMoveHunt::state &s0);
-__attribute__((pure)) CraneMoveHunt::state
-pure_pair_frame(const CraneMoveHunt::state &s0);
+CraneMoveHunt::state pure_pair_frame(const CraneMoveHunt::state &s0);
 const CraneMoveHunt::box exported_record_constant =
     CraneMoveHunt::record_constant;
 const CraneMoveHunt::box exported_record_function =
@@ -89,12 +84,10 @@ CraneMoveHunt::state exported_effect_frame();
 CraneMoveHunt::state exported_effect_pair_frame();
 const CraneMoveHunt::state exported_pure_pair_frame =
     pure_pair_frame(CraneMoveHunt::initial_state);
-__attribute__((pure)) CraneMoveHunt::state
-axiom_pair_frame(const CraneMoveHunt::state &s0);
+CraneMoveHunt::state axiom_pair_frame(const CraneMoveHunt::state &s0);
 const CraneMoveHunt::state exported_axiom_pair_frame =
     axiom_pair_frame(CraneMoveHunt::initial_state);
-__attribute__((pure)) CraneMoveHunt::state
-axiom_nat_pair_frame(const CraneMoveHunt::state &s0);
+CraneMoveHunt::state axiom_nat_pair_frame(const CraneMoveHunt::state &s0);
 const CraneMoveHunt::state exported_axiom_nat_pair_frame =
     axiom_nat_pair_frame(CraneMoveHunt::initial_state);
 

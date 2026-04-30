@@ -49,7 +49,7 @@ struct ClosureInCtor {
     }
 
     // ACCESSORS
-    __attribute__((pure)) box clone() const {
+    box clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Box0>(_sv.v())) {
         const auto &[d_a0] = std::get<Box0>(_sv.v());
@@ -60,18 +60,17 @@ struct ClosureInCtor {
     }
 
     // CREATORS
-    __attribute__((pure)) static box
-    box0(std::function<unsigned int(unsigned int)> a0) {
+    static box box0(std::function<unsigned int(unsigned int)> a0) {
       return box(Box0{std::move(a0)});
     }
 
-    __attribute__((pure)) static box empty() { return box(Empty{}); }
+    static box empty() { return box(Empty{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1,
@@ -107,7 +106,7 @@ struct ClosureInCtor {
   ///
   /// Difference from fix_escape_capture: escapes through a CUSTOM
   /// INDUCTIVE constructor, not a pair.
-  __attribute__((pure)) static box make_box_fix(unsigned int n);
+  static box make_box_fix(unsigned int n);
   /// test1: make_box_fix(5) returns Box(add) where add(x) = x + 5.
   /// Expected: add(3) = 5 + 3 = 8.
   /// Bug: & captures dangling reference to n.

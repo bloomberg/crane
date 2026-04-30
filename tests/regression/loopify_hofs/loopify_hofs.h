@@ -50,15 +50,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -72,9 +91,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -101,9 +120,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) unsigned int length() const {
+  unsigned int length() const {
     const List *_self = this;
 
     struct _Enter {
@@ -140,7 +159,7 @@ public:
     return _result;
   }
 
-  __attribute__((pure)) List<t_A> app(List<t_A> m) const {
+  List<t_A> app(List<t_A> m) const {
     std::unique_ptr<List<t_A>> _head{};
     std::unique_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
@@ -203,7 +222,7 @@ struct LoopifyHofs {
 
   /// forall_ p l checks if all elements satisfy predicate p.
   template <typename T1, MapsTo<bool, T1> F0>
-  __attribute__((pure)) static bool forall_(F0 &&p, const List<T1> &l) {
+  static bool forall_(F0 &&p, const List<T1> &l) {
     bool _result;
     const List<T1> *_loop_l = &l;
     while (true) {
@@ -226,7 +245,7 @@ struct LoopifyHofs {
 
   /// exists_fn p l checks if any element satisfies predicate p.
   template <typename T1, MapsTo<bool, T1> F0>
-  __attribute__((pure)) static bool exists_fn(F0 &&p, const List<T1> &l) {
+  static bool exists_fn(F0 &&p, const List<T1> &l) {
     bool _result;
     const List<T1> *_loop_l = &l;
     while (true) {
@@ -249,7 +268,7 @@ struct LoopifyHofs {
 
   /// drop_while p l drops elements while predicate holds.
   template <typename T1, MapsTo<bool, T1> F0>
-  __attribute__((pure)) static List<T1> drop_while(F0 &&p, const List<T1> &l) {
+  static List<T1> drop_while(F0 &&p, const List<T1> &l) {
     List<T1> _result;
     const List<T1> *_loop_l = &l;
     while (true) {
@@ -272,7 +291,7 @@ struct LoopifyHofs {
 
   /// take_while p l takes elements while predicate holds.
   template <typename T1, MapsTo<bool, T1> F0>
-  __attribute__((pure)) static List<T1> take_while(F0 &&p, const List<T1> &l) {
+  static List<T1> take_while(F0 &&p, const List<T1> &l) {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
     const List<T1> *_loop_l = &l;
@@ -301,7 +320,7 @@ struct LoopifyHofs {
 
   /// flat_map f l maps f and flattens results.
   template <typename T1, typename T2, MapsTo<List<T2>, T1> F0>
-  __attribute__((pure)) static List<T2> flat_map(F0 &&f, const List<T1> &l) {
+  static List<T2> flat_map(F0 &&f, const List<T1> &l) {
     struct _Enter {
       const List<T1> *l;
     };
@@ -338,8 +357,8 @@ struct LoopifyHofs {
 
   /// all_pairs l1 l2 returns all pairs from two lists.
   template <typename T1, typename T2>
-  __attribute__((pure)) static List<std::pair<T1, T2>>
-  all_pairs(const List<T1> &l1, const List<T2> &l2) {
+  static List<std::pair<T1, T2>> all_pairs(const List<T1> &l1,
+                                           const List<T2> &l2) {
     struct _Enter {
       const List<T1> *l1;
     };
@@ -412,7 +431,7 @@ struct LoopifyHofs {
 
   /// find_indices p l finds all indices where p is true.
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
+  static List<unsigned int>
   find_indices_aux(F0 &&p, const List<unsigned int> &l, unsigned int i) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
@@ -429,15 +448,14 @@ struct LoopifyHofs {
   }
 
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  find_indices(F0 &&p, const List<unsigned int> &l) {
+  static List<unsigned int> find_indices(F0 &&p, const List<unsigned int> &l) {
     return find_indices_aux(p, l, 0u);
   }
 
   /// delete_by eq x l deletes first element equal to x.
   template <MapsTo<bool, unsigned int, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  delete_by(F0 &&eq, const unsigned int &x, const List<unsigned int> &l) {
+  static List<unsigned int> delete_by(F0 &&eq, const unsigned int &x,
+                                      const List<unsigned int> &l) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
     const List<unsigned int> *_loop_l = &l;
@@ -469,17 +487,17 @@ struct LoopifyHofs {
   }
 
   /// is_prefix_of l1 l2 checks if l1 is a prefix of l2.
-  __attribute__((pure)) static bool is_prefix_of(const List<unsigned int> &l1,
-                                                 const List<unsigned int> &l2);
+  static bool is_prefix_of(const List<unsigned int> &l1,
+                           const List<unsigned int> &l2);
   /// lookup_all key l finds all values associated with key in association list.
-  __attribute__((pure)) static List<unsigned int>
+  static List<unsigned int>
   lookup_all(const unsigned int &key,
              const List<std::pair<unsigned int, unsigned int>> &l);
 
   /// scanl f acc l scan from left with accumulator.
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  scanl(F0 &&f, unsigned int acc, const List<unsigned int> &l) {
+  static List<unsigned int> scanl(F0 &&f, unsigned int acc,
+                                  const List<unsigned int> &l) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
     const List<unsigned int> *_loop_l = &l;
@@ -511,8 +529,8 @@ struct LoopifyHofs {
 
   /// scanl1 f l like scanl but no initial value, uses first element.
   template <MapsTo<unsigned int, unsigned int, unsigned int> F1>
-  __attribute__((pure)) static List<unsigned int>
-  scanl1_fuel(const unsigned int &fuel, F1 &&f, List<unsigned int> l) {
+  static List<unsigned int> scanl1_fuel(const unsigned int &fuel, F1 &&f,
+                                        List<unsigned int> l) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
     List<unsigned int> _loop_l = std::move(l);
@@ -560,15 +578,13 @@ struct LoopifyHofs {
   }
 
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  scanl1(F0 &&f, const List<unsigned int> &l) {
+  static List<unsigned int> scanl1(F0 &&f, const List<unsigned int> &l) {
     return scanl1_fuel(l.length(), f, l);
   }
 
   /// foldr1 f l fold right with no initial value.
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
-  __attribute__((pure)) static unsigned int
-  foldr1(F0 &&f, const List<unsigned int> &l) {
+  static unsigned int foldr1(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
     };
@@ -611,13 +627,13 @@ struct LoopifyHofs {
   }
 
   /// Helper: get head of list with default.
-  __attribute__((pure)) static unsigned int
-  head_default(unsigned int default0, const List<unsigned int> &l);
+  static unsigned int head_default(unsigned int default0,
+                                   const List<unsigned int> &l);
 
   /// scanr f acc l scan from right.
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  scanr(F0 &&f, unsigned int acc, const List<unsigned int> &l) {
+  static List<unsigned int> scanr(F0 &&f, unsigned int acc,
+                                  const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
     };
@@ -662,8 +678,7 @@ struct LoopifyHofs {
 
   /// scanr1 f l scanr with no initial value.
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  scanr1(F0 &&f, const List<unsigned int> &l) {
+  static List<unsigned int> scanr1(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
     };
@@ -712,8 +727,7 @@ struct LoopifyHofs {
 
   /// mapcat f l maps f and concatenates results (concat_map).
   template <typename T1, MapsTo<List<T1>, unsigned int> F0>
-  __attribute__((pure)) static List<T1> mapcat(F0 &&f,
-                                               const List<unsigned int> &l) {
+  static List<T1> mapcat(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
     };
@@ -751,8 +765,7 @@ struct LoopifyHofs {
 
   /// map_maybe f l maps f and filters out None results.
   template <MapsTo<std::optional<unsigned int>, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  map_maybe(F0 &&f, const List<unsigned int> &l) {
+  static List<unsigned int> map_maybe(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
     };
@@ -800,8 +813,7 @@ struct LoopifyHofs {
 
   /// bool_all p l checks if all elements satisfy p (same as forall_).
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static bool bool_all(F0 &&p,
-                                             const List<unsigned int> &l) {
+  static bool bool_all(F0 &&p, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
     };
@@ -839,9 +851,9 @@ struct LoopifyHofs {
 
   /// merge_by cmp l1 l2 merges two lists using comparison function.
   template <MapsTo<unsigned int, unsigned int, unsigned int> F1>
-  __attribute__((pure)) static List<unsigned int>
-  merge_by_fuel(const unsigned int &fuel, F1 &&cmp, List<unsigned int> l1,
-                List<unsigned int> l2) {
+  static List<unsigned int> merge_by_fuel(const unsigned int &fuel, F1 &&cmp,
+                                          List<unsigned int> l1,
+                                          List<unsigned int> l2) {
     if (fuel <= 0) {
       return l1;
     } else {
@@ -871,16 +883,14 @@ struct LoopifyHofs {
   }
 
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  merge_by(F0 &&cmp, const List<unsigned int> &l1,
-           const List<unsigned int> &l2) {
+  static List<unsigned int> merge_by(F0 &&cmp, const List<unsigned int> &l1,
+                                     const List<unsigned int> &l2) {
     return merge_by_fuel((l1.length() + l2.length()), cmp, l1, l2);
   }
 
   /// max_by f l finds element with maximum f value.
   template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((pure)) static unsigned int
-  max_by(F0 &&f, const List<unsigned int> &l) {
+  static unsigned int max_by(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
     };
@@ -933,8 +943,8 @@ struct LoopifyHofs {
 
   /// iterate f n x generates x, f(x), f(f(x)), ... of length n.
   template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  iterate(F0 &&f, const unsigned int &n, unsigned int x) {
+  static List<unsigned int> iterate(F0 &&f, const unsigned int &n,
+                                    unsigned int x) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
     unsigned int _loop_x = std::move(x);
@@ -964,8 +974,7 @@ struct LoopifyHofs {
 
   /// maximum_by cmp l finds maximum element by comparison function.
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
-  __attribute__((pure)) static unsigned int
-  maximum_by(F0 &&cmp, const List<unsigned int> &l) {
+  static unsigned int maximum_by(F0 &&cmp, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
     };
@@ -1017,8 +1026,8 @@ struct LoopifyHofs {
 
   /// fold_right f l acc folds from the right.
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
-  __attribute__((pure)) static unsigned int
-  fold_right(F0 &&f, const List<unsigned int> &l, unsigned int acc) {
+  static unsigned int fold_right(F0 &&f, const List<unsigned int> &l,
+                                 unsigned int acc) {
     struct _Enter {
       const List<unsigned int> *l;
     };
@@ -1056,7 +1065,7 @@ struct LoopifyHofs {
 
   /// partition p l partitions list into (satisfies p, doesn't satisfy p).
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static std::pair<List<unsigned int>, List<unsigned int>>
+  static std::pair<List<unsigned int>, List<unsigned int>>
   partition(F0 &&p, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -1104,25 +1113,23 @@ struct LoopifyHofs {
   }
 
   /// subsequences l generates all subsequences of l: 1,2 -> [],[1],[2],[1,2].
-  __attribute__((pure)) static List<List<unsigned int>>
-  subsequences(const List<unsigned int> &l);
+  static List<List<unsigned int>> subsequences(const List<unsigned int> &l);
   /// Helper: pair element with all elements in list.
-  __attribute__((pure)) static List<std::pair<unsigned int, unsigned int>>
+  static List<std::pair<unsigned int, unsigned int>>
   pair_with_all(unsigned int x, const List<unsigned int> &l);
   /// cartesian l1 l2 computes cartesian product of two lists.
-  __attribute__((pure)) static List<std::pair<unsigned int, unsigned int>>
+  static List<std::pair<unsigned int, unsigned int>>
   cartesian(const List<unsigned int> &l1, const List<unsigned int> &l2);
   /// longest_run l finds the longest consecutive run of equal elements.
   /// Matches on recursive result to decide behavior.
-  __attribute__((pure)) static List<unsigned int>
-  longest_run_fuel(const unsigned int &fuel, List<unsigned int> l);
-  __attribute__((pure)) static List<unsigned int>
-  longest_run(const List<unsigned int> &l);
+  static List<unsigned int> longest_run_fuel(const unsigned int &fuel,
+                                             List<unsigned int> l);
+  static List<unsigned int> longest_run(const List<unsigned int> &l);
 
   /// any p l checks if any element satisfies predicate (same as exists_fn but
   /// different name).
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static bool any(F0 &&p, const List<unsigned int> &l) {
+  static bool any(F0 &&p, const List<unsigned int> &l) {
     bool _result;
     const List<unsigned int> *_loop_l = &l;
     while (true) {
@@ -1147,7 +1154,7 @@ struct LoopifyHofs {
   /// all p l checks if all elements satisfy predicate (same as forall_ but
   /// different name).
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static bool all(F0 &&p, const List<unsigned int> &l) {
+  static bool all(F0 &&p, const List<unsigned int> &l) {
     bool _result;
     const List<unsigned int> *_loop_l = &l;
     while (true) {
@@ -1171,8 +1178,7 @@ struct LoopifyHofs {
 
   /// filter_not p l filters elements that don't satisfy predicate.
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  filter_not(F0 &&p, const List<unsigned int> &l) {
+  static List<unsigned int> filter_not(F0 &&p, const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
     } else {
@@ -1188,7 +1194,7 @@ struct LoopifyHofs {
 
   /// span_split p l splits at first element that doesn't satisfy p.
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static std::pair<List<unsigned int>, List<unsigned int>>
+  static std::pair<List<unsigned int>, List<unsigned int>>
   span_split(F0 &&p, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -1236,7 +1242,7 @@ struct LoopifyHofs {
 
   /// group_by_eq eq l groups consecutive elements by equality function.
   template <MapsTo<bool, unsigned int, unsigned int> F1>
-  __attribute__((pure)) static List<List<unsigned int>>
+  static List<List<unsigned int>>
   group_by_eq_fuel(const unsigned int &fuel, F1 &&eq,
                    const List<unsigned int> &l) {
     if (fuel <= 0) {
@@ -1281,20 +1287,19 @@ struct LoopifyHofs {
   }
 
   template <MapsTo<bool, unsigned int, unsigned int> F0>
-  __attribute__((pure)) static List<List<unsigned int>>
-  group_by_eq(F0 &&eq, const List<unsigned int> &l) {
+  static List<List<unsigned int>> group_by_eq(F0 &&eq,
+                                              const List<unsigned int> &l) {
     return group_by_eq_fuel(l.length(), eq, l);
   }
 
   /// power_set l generates all subsets.
-  __attribute__((pure)) static List<List<unsigned int>>
-  power_set(const List<unsigned int> &l);
+  static List<List<unsigned int>> power_set(const List<unsigned int> &l);
 
   /// map_accum_l f acc l maps with accumulator threading.
   template <
       MapsTo<std::pair<unsigned int, unsigned int>, unsigned int, unsigned int>
           F0>
-  __attribute__((pure)) static std::pair<unsigned int, List<unsigned int>>
+  static std::pair<unsigned int, List<unsigned int>>
   map_accum_l(F0 &&f, unsigned int acc, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;

@@ -61,7 +61,7 @@ struct IndParam {
       }
 
       // ACCESSORS
-      __attribute__((pure)) result clone() const {
+      result clone() const {
         auto &&_sv = *(this);
         if (std::holds_alternative<Ok>(_sv.v())) {
           const auto &[d_a0] = std::get<Ok>(_sv.v());
@@ -73,19 +73,15 @@ struct IndParam {
       }
 
       // CREATORS
-      __attribute__((pure)) static result ok(typename C::t a0) {
-        return result(Ok{std::move(a0)});
-      }
+      static result ok(typename C::t a0) { return result(Ok{std::move(a0)}); }
 
-      __attribute__((pure)) static result err(unsigned int a0) {
-        return result(Err{std::move(a0)});
-      }
+      static result err(unsigned int a0) { return result(Err{std::move(a0)}); }
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }
 
       // ACCESSORS
-      __attribute__((pure)) const variant_t &v() const { return d_v_; }
+      const variant_t &v() const { return d_v_; }
     };
 
     template <typename T1, MapsTo<T1, typename C::t> F0,
@@ -112,16 +108,16 @@ struct IndParam {
       }
     }
 
-    __attribute__((pure)) static result make_single(const typename C::elem e) {
+    static result make_single(const typename C::elem e) {
       return result::ok(C::t::single(e));
     }
 
-    __attribute__((pure)) static result make_pair(const typename C::elem e1,
-                                                  const typename C::elem e2) {
+    static result make_pair(const typename C::elem e1,
+                            const typename C::elem e2) {
       return result::ok(C::t::pair(e1, e2));
     }
 
-    __attribute__((pure)) static unsigned int get_size(const result &r) {
+    static unsigned int get_size(const result &r) {
       if (std::holds_alternative<typename result::Ok>(r.v())) {
         const auto &[d_a0] = std::get<typename result::Ok>(r.v());
         return C::size(d_a0);
@@ -188,7 +184,7 @@ struct IndParam {
       }
 
       // ACCESSORS
-      __attribute__((pure)) t clone() const {
+      t clone() const {
         auto &&_sv = *(this);
         if (std::holds_alternative<Empty>(_sv.v())) {
           return t(Empty{});
@@ -202,13 +198,11 @@ struct IndParam {
       }
 
       // CREATORS
-      __attribute__((pure)) static t empty() { return t(Empty{}); }
+      static t empty() { return t(Empty{}); }
 
-      __attribute__((pure)) static t single(elem a0) {
-        return t(Single{std::move(a0)});
-      }
+      static t single(elem a0) { return t(Single{std::move(a0)}); }
 
-      __attribute__((pure)) static t pair(elem a0, elem a1) {
+      static t pair(elem a0, elem a1) {
         return t(Pair{std::move(a0), std::move(a1)});
       }
 
@@ -216,7 +210,7 @@ struct IndParam {
       inline variant_t &v_mut() { return d_v_; }
 
       // ACCESSORS
-      __attribute__((pure)) const variant_t &v() const { return d_v_; }
+      const variant_t &v() const { return d_v_; }
     };
 
     template <typename T1, MapsTo<T1, unsigned int> F1,
@@ -247,7 +241,7 @@ struct IndParam {
       }
     }
 
-    __attribute__((pure)) static unsigned int size(const t &c);
+    static unsigned int size(const t &c);
   };
 
   using NatWrapper = Wrapper<NatContainer>;

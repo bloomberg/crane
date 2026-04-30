@@ -1,6 +1,6 @@
 #include <coalition_bid_honor_trace.h>
 
-__attribute__((pure)) Positive Pos::succ(const Positive &x) {
+Positive Pos::succ(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     return Positive::xo(succ(*(d_a0)));
@@ -12,7 +12,7 @@ __attribute__((pure)) Positive Pos::succ(const Positive &x) {
   }
 }
 
-__attribute__((pure)) Positive Pos::add(const Positive &x, const Positive &y) {
+Positive Pos::add(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -48,8 +48,7 @@ __attribute__((pure)) Positive Pos::add(const Positive &x, const Positive &y) {
   }
 }
 
-__attribute__((pure)) Positive Pos::add_carry(const Positive &x,
-                                              const Positive &y) {
+Positive Pos::add_carry(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -85,7 +84,7 @@ __attribute__((pure)) Positive Pos::add_carry(const Positive &x,
   }
 }
 
-__attribute__((pure)) Positive Pos::pred_double(const Positive &x) {
+Positive Pos::pred_double(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     return Positive::xi(Positive::xo(*(d_a0)));
@@ -97,7 +96,7 @@ __attribute__((pure)) Positive Pos::pred_double(const Positive &x) {
   }
 }
 
-__attribute__((pure)) bool Pos::eqb(const Positive &p, const Positive &q) {
+bool Pos::eqb(const Positive &p, const Positive &q) {
   if (std::holds_alternative<typename Positive::XI>(p.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(p.v());
     if (std::holds_alternative<typename Positive::XI>(q.v())) {
@@ -123,7 +122,7 @@ __attribute__((pure)) bool Pos::eqb(const Positive &p, const Positive &q) {
   }
 }
 
-__attribute__((pure)) Z BinInt::double_(const Z &x) {
+Z BinInt::double_(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
@@ -135,7 +134,7 @@ __attribute__((pure)) Z BinInt::double_(const Z &x) {
   }
 }
 
-__attribute__((pure)) Z BinInt::succ_double(const Z &x) {
+Z BinInt::succ_double(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::zpos(Positive::xh());
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
@@ -147,7 +146,7 @@ __attribute__((pure)) Z BinInt::succ_double(const Z &x) {
   }
 }
 
-__attribute__((pure)) Z BinInt::pred_double(const Z &x) {
+Z BinInt::pred_double(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::zneg(Positive::xh());
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
@@ -159,7 +158,7 @@ __attribute__((pure)) Z BinInt::pred_double(const Z &x) {
   }
 }
 
-__attribute__((pure)) Z BinInt::pos_sub(const Positive &x, const Positive &y) {
+Z BinInt::pos_sub(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -195,7 +194,7 @@ __attribute__((pure)) Z BinInt::pos_sub(const Positive &x, const Positive &y) {
   }
 }
 
-__attribute__((pure)) Z BinInt::add(Z x, Z y) {
+Z BinInt::add(Z x, Z y) {
   if (std::holds_alternative<typename Z::Z0>(x.v_mut())) {
     return y;
   } else if (std::holds_alternative<typename Z::Zpos>(x.v_mut())) {
@@ -223,7 +222,7 @@ __attribute__((pure)) Z BinInt::add(Z x, Z y) {
   }
 }
 
-__attribute__((pure)) bool BinInt::eqb(const Z &x, const Z &y) {
+bool BinInt::eqb(const Z &x, const Z &y) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return true;
@@ -249,7 +248,7 @@ __attribute__((pure)) bool BinInt::eqb(const Z &x, const Z &y) {
   }
 }
 
-__attribute__((pure)) bool CoalitionBidHonorTraceCase::clan_eq_dec(
+bool CoalitionBidHonorTraceCase::clan_eq_dec(
     const CoalitionBidHonorTraceCase::Clan c1,
     const CoalitionBidHonorTraceCase::Clan c2) {
   switch (c1) {
@@ -288,7 +287,7 @@ __attribute__((pure)) bool CoalitionBidHonorTraceCase::clan_eq_dec(
   }
 }
 
-__attribute__((pure)) bool CoalitionBidHonorTraceCase::clan_eqb(
+bool CoalitionBidHonorTraceCase::clan_eqb(
     const CoalitionBidHonorTraceCase::Clan c1,
     const CoalitionBidHonorTraceCase::Clan c2) {
   if (clan_eq_dec(c1, c2)) {
@@ -298,7 +297,7 @@ __attribute__((pure)) bool CoalitionBidHonorTraceCase::clan_eqb(
   }
 }
 
-__attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::rank_to_nat(
+unsigned int CoalitionBidHonorTraceCase::rank_to_nat(
     const CoalitionBidHonorTraceCase::Rank r) {
   switch (r) {
   case Rank::e_WARRIOR: {
@@ -315,19 +314,18 @@ __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::rank_to_nat(
   }
 }
 
-__attribute__((pure)) bool
-CoalitionBidHonorTraceCase::rank_le(const CoalitionBidHonorTraceCase::Rank r1,
-                                    const CoalitionBidHonorTraceCase::Rank r2) {
+bool CoalitionBidHonorTraceCase::rank_le(
+    const CoalitionBidHonorTraceCase::Rank r1,
+    const CoalitionBidHonorTraceCase::Rank r2) {
   return rank_to_nat(r1) <= rank_to_nat(r2);
 }
 
-__attribute__((pure)) bool CoalitionBidHonorTraceCase::may_issue_batchall(
+bool CoalitionBidHonorTraceCase::may_issue_batchall(
     const CoalitionBidHonorTraceCase::Commander &c) {
   return rank_le(Rank::e_STARCAPTAIN, c.cmd_rank);
 }
 
-__attribute__((pure)) unsigned int
-CoalitionBidHonorTraceCase::weight_class_value(
+unsigned int CoalitionBidHonorTraceCase::weight_class_value(
     const CoalitionBidHonorTraceCase::WeightClass w) {
   switch (w) {
   case WeightClass::e_LIGHT: {
@@ -344,7 +342,7 @@ CoalitionBidHonorTraceCase::weight_class_value(
   }
 }
 
-__attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_class_bonus(
+unsigned int CoalitionBidHonorTraceCase::unit_class_bonus(
     const CoalitionBidHonorTraceCase::UnitClass c) {
   switch (c) {
   case UnitClass::e_OMNIMECH: {
@@ -361,12 +359,12 @@ __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_class_bonus(
   }
 }
 
-__attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_skill(
+unsigned int CoalitionBidHonorTraceCase::unit_skill(
     const CoalitionBidHonorTraceCase::Unit &u) {
   return (u.unit_gunnery + u.unit_piloting);
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 CoalitionBidHonorTraceCase::skill_bv_multiplier_num(const unsigned int &skill) {
   if (skill <= 4u) {
     return 6u;
@@ -383,12 +381,12 @@ CoalitionBidHonorTraceCase::skill_bv_multiplier_num(const unsigned int &skill) {
   }
 }
 
-__attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_base_bv(
+unsigned int CoalitionBidHonorTraceCase::unit_base_bv(
     const CoalitionBidHonorTraceCase::Unit &u) {
   return (u.unit_tonnage * weight_class_value(u.unit_weight));
 }
 
-__attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_tech_bv(
+unsigned int CoalitionBidHonorTraceCase::unit_tech_bv(
     const CoalitionBidHonorTraceCase::Unit &u) {
   unsigned int base = unit_base_bv(u);
   if (u.unit_is_clan) {
@@ -398,20 +396,18 @@ __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_tech_bv(
   }
 }
 
-__attribute__((pure)) unsigned int
-CoalitionBidHonorTraceCase::unit_battle_value(
+unsigned int CoalitionBidHonorTraceCase::unit_battle_value(
     const CoalitionBidHonorTraceCase::Unit &u) {
   unsigned int tech_bv = unit_tech_bv(u);
   return (4u ? (tech_bv * skill_bv_multiplier_num(unit_skill(u))) / 4u : 0);
 }
 
-__attribute__((pure)) unsigned int
-CoalitionBidHonorTraceCase::unit_effective_combat_rating(
+unsigned int CoalitionBidHonorTraceCase::unit_effective_combat_rating(
     const CoalitionBidHonorTraceCase::Unit &u) {
   return (unit_battle_value(u) + unit_class_bonus(u.unit_class));
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::ForceMetrics
+CoalitionBidHonorTraceCase::ForceMetrics
 CoalitionBidHonorTraceCase::unit_to_metrics(
     const CoalitionBidHonorTraceCase::Unit &u) {
   return ForceMetrics{1u,
@@ -422,7 +418,7 @@ CoalitionBidHonorTraceCase::unit_to_metrics(
                       unit_effective_combat_rating(u)};
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::ForceMetrics
+CoalitionBidHonorTraceCase::ForceMetrics
 CoalitionBidHonorTraceCase::metrics_add(
     const CoalitionBidHonorTraceCase::ForceMetrics &m1,
     const CoalitionBidHonorTraceCase::ForceMetrics &m2) {
@@ -434,7 +430,7 @@ CoalitionBidHonorTraceCase::metrics_add(
                       (m1.fm_total_ecr + m2.fm_total_ecr)};
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::ForceMetrics
+CoalitionBidHonorTraceCase::ForceMetrics
 CoalitionBidHonorTraceCase::force_metrics(
     const List<CoalitionBidHonorTraceCase::Unit> &f) {
   return f.template fold_right<CoalitionBidHonorTraceCase::ForceMetrics>(
@@ -445,14 +441,13 @@ CoalitionBidHonorTraceCase::force_metrics(
       empty_metrics);
 }
 
-__attribute__((pure)) bool CoalitionBidHonorTraceCase::metrics_total_lt(
+bool CoalitionBidHonorTraceCase::metrics_total_lt(
     const CoalitionBidHonorTraceCase::ForceMetrics &m1,
     const CoalitionBidHonorTraceCase::ForceMetrics &m2) {
   return m1.fm_total_ecr < m2.fm_total_ecr;
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::Force
-CoalitionBidHonorTraceCase::coalition_force(
+CoalitionBidHonorTraceCase::Force CoalitionBidHonorTraceCase::coalition_force(
     const List<CoalitionBidHonorTraceCase::CoalitionMember> &c) {
   return c.template flat_map<CoalitionBidHonorTraceCase::Unit>(
       [](const CoalitionBidHonorTraceCase::CoalitionMember &c0) {
@@ -460,13 +455,13 @@ CoalitionBidHonorTraceCase::coalition_force(
       });
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::ForceMetrics
+CoalitionBidHonorTraceCase::ForceMetrics
 CoalitionBidHonorTraceCase::coalition_metrics(
     const List<CoalitionBidHonorTraceCase::CoalitionMember> &c) {
   return force_metrics(coalition_force(c));
 }
 
-__attribute__((pure)) bool CoalitionBidHonorTraceCase::coalition_contains_clan(
+bool CoalitionBidHonorTraceCase::coalition_contains_clan(
     const List<CoalitionBidHonorTraceCase::CoalitionMember> &c,
     const CoalitionBidHonorTraceCase::Clan clan) {
   return c.existsb(
@@ -475,13 +470,12 @@ __attribute__((pure)) bool CoalitionBidHonorTraceCase::coalition_contains_clan(
       });
 }
 
-__attribute__((pure)) unsigned int
-CoalitionBidHonorTraceCase::coalition_tonnage(
+unsigned int CoalitionBidHonorTraceCase::coalition_tonnage(
     const List<CoalitionBidHonorTraceCase::CoalitionMember> &c) {
   return coalition_metrics(c).fm_tonnage;
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::Coalition
+CoalitionBidHonorTraceCase::Coalition
 CoalitionBidHonorTraceCase::update_coalition_force(
     const List<CoalitionBidHonorTraceCase::CoalitionMember> &c,
     const unsigned int &idx, List<CoalitionBidHonorTraceCase::Unit> new_force) {
@@ -504,13 +498,13 @@ CoalitionBidHonorTraceCase::update_coalition_force(
   }
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::ForceMetrics
+CoalitionBidHonorTraceCase::ForceMetrics
 CoalitionBidHonorTraceCase::bid_metrics(
     const CoalitionBidHonorTraceCase::ForceBid &b) {
   return force_metrics(b.bid_force);
 }
 
-__attribute__((pure)) std::optional<CoalitionBidHonorTraceCase::Commander>
+std::optional<CoalitionBidHonorTraceCase::Commander>
 CoalitionBidHonorTraceCase::coalition_lead_commander(
     const List<CoalitionBidHonorTraceCase::CoalitionMember> &c) {
   if (std::holds_alternative<
@@ -526,7 +520,7 @@ CoalitionBidHonorTraceCase::coalition_lead_commander(
   }
 }
 
-__attribute__((pure)) std::optional<CoalitionBidHonorTraceCase::ForceBid>
+std::optional<CoalitionBidHonorTraceCase::ForceBid>
 CoalitionBidHonorTraceCase::coalition_to_bid(
     const List<CoalitionBidHonorTraceCase::CoalitionMember> &c,
     const CoalitionBidHonorTraceCase::Side side) {
@@ -540,15 +534,14 @@ CoalitionBidHonorTraceCase::coalition_to_bid(
   }
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::Coalition
+CoalitionBidHonorTraceCase::Coalition
 CoalitionBidHonorTraceCase::apply_coalition_member_bid(
     const List<CoalitionBidHonorTraceCase::CoalitionMember> &c,
     const CoalitionBidHonorTraceCase::CoalitionMemberBid &cbid) {
   return update_coalition_force(c, cbid.cmb_member_index, cbid.cmb_new_force);
 }
 
-__attribute__((pure)) bool
-CoalitionBidHonorTraceCase::valid_coalition_member_bid_b(
+bool CoalitionBidHonorTraceCase::valid_coalition_member_bid_b(
     const List<CoalitionBidHonorTraceCase::CoalitionMember> &c,
     const CoalitionBidHonorTraceCase::CoalitionMemberBid &cbid) {
   return (cbid.cmb_member_index < c.length() &&
@@ -563,7 +556,7 @@ CoalitionBidHonorTraceCase::valid_coalition_member_bid_b(
                       List<CoalitionBidHonorTraceCase::Unit>::nil()))));
 }
 
-__attribute__((pure)) bool CoalitionBidHonorTraceCase::is_ready(
+bool CoalitionBidHonorTraceCase::is_ready(
     const CoalitionBidHonorTraceCase::ReadyStatus rs,
     const CoalitionBidHonorTraceCase::Side side) {
   switch (rs) {
@@ -602,8 +595,7 @@ __attribute__((pure)) bool CoalitionBidHonorTraceCase::is_ready(
   }
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::ReadyStatus
-CoalitionBidHonorTraceCase::set_ready(
+CoalitionBidHonorTraceCase::ReadyStatus CoalitionBidHonorTraceCase::set_ready(
     const CoalitionBidHonorTraceCase::ReadyStatus rs,
     const CoalitionBidHonorTraceCase::Side side) {
   switch (rs) {
@@ -651,8 +643,7 @@ CoalitionBidHonorTraceCase::set_ready(
   }
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::ReadyStatus
-CoalitionBidHonorTraceCase::clear_ready(
+CoalitionBidHonorTraceCase::ReadyStatus CoalitionBidHonorTraceCase::clear_ready(
     const CoalitionBidHonorTraceCase::ReadyStatus rs,
     const CoalitionBidHonorTraceCase::Side side) {
   switch (rs) {
@@ -700,7 +691,7 @@ CoalitionBidHonorTraceCase::clear_ready(
   }
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::Force
+CoalitionBidHonorTraceCase::Force
 CoalitionBidHonorTraceCase::coalition_state_force(
     const std::optional<List<CoalitionBidHonorTraceCase::CoalitionMember>> &cs,
     List<CoalitionBidHonorTraceCase::Unit> fallback) {
@@ -712,8 +703,7 @@ CoalitionBidHonorTraceCase::coalition_state_force(
   }
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::Honor
-CoalitionBidHonorTraceCase::ledger_lookup(
+CoalitionBidHonorTraceCase::Honor CoalitionBidHonorTraceCase::ledger_lookup(
     const List<std::pair<unsigned int, Z>> &ledger,
     const unsigned int &warrior_id) {
   if (std::holds_alternative<typename List<std::pair<unsigned int, Z>>::Nil>(
@@ -732,7 +722,7 @@ CoalitionBidHonorTraceCase::ledger_lookup(
   }
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::HonorLedger
+CoalitionBidHonorTraceCase::HonorLedger
 CoalitionBidHonorTraceCase::ledger_update_by_id(
     const List<std::pair<unsigned int, Z>> &ledger, unsigned int warrior_id,
     Z new_honor) {
@@ -757,7 +747,7 @@ CoalitionBidHonorTraceCase::ledger_update_by_id(
   }
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::HonorLedger
+CoalitionBidHonorTraceCase::HonorLedger
 CoalitionBidHonorTraceCase::update_honor(
     const List<std::pair<unsigned int, Z>> &ledger,
     const CoalitionBidHonorTraceCase::Commander &actor, const Z &delta) {
@@ -766,7 +756,7 @@ CoalitionBidHonorTraceCase::update_honor(
                              BinInt::add(std::move(current), delta));
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::Honor
+CoalitionBidHonorTraceCase::Honor
 CoalitionBidHonorTraceCase::refusal_honor_delta(
     const CoalitionBidHonorTraceCase::RefusalReason &r) {
   if (std::holds_alternative<typename CoalitionBidHonorTraceCase::
@@ -778,7 +768,7 @@ CoalitionBidHonorTraceCase::refusal_honor_delta(
   }
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::Honor
+CoalitionBidHonorTraceCase::Honor
 CoalitionBidHonorTraceCase::protocol_honor_delta(
     const CoalitionBidHonorTraceCase::ProtocolAction &action) {
   if (std::holds_alternative<
@@ -813,7 +803,7 @@ CoalitionBidHonorTraceCase::protocol_honor_delta(
   }
 }
 
-__attribute__((pure)) CoalitionBidHonorTraceCase::HonorLedger
+CoalitionBidHonorTraceCase::HonorLedger
 CoalitionBidHonorTraceCase::apply_action_honor(
     const CoalitionBidHonorTraceCase::BatchallState &state,
     const CoalitionBidHonorTraceCase::ProtocolAction &action) {

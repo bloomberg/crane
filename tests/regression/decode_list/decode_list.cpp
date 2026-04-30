@@ -1,7 +1,7 @@
 #include <decode_list.h>
 
-__attribute__((pure)) DecodeList::instruction
-DecodeList::decode(const unsigned int &b1, const unsigned int &b2) {
+DecodeList::instruction DecodeList::decode(const unsigned int &b1,
+                                           const unsigned int &b2) {
   if (b1 == 0u) {
     return instruction::nop();
   } else {
@@ -9,7 +9,7 @@ DecodeList::decode(const unsigned int &b1, const unsigned int &b2) {
   }
 }
 
-__attribute__((pure)) List<DecodeList::instruction>
+List<DecodeList::instruction>
 DecodeList::decode_list(const List<unsigned int> &bytes) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(bytes.v())) {
     return List<DecodeList::instruction>::nil();

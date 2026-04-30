@@ -5,8 +5,8 @@
 /// BUG: Both f and g use & capture. They capture a, b,
 /// and each other's std::function variables. All captured references
 /// dangle after make_ops returns.
-__attribute__((pure)) std::pair<std::function<unsigned int(unsigned int)>,
-                                std::function<unsigned int(unsigned int)>>
+std::pair<std::function<unsigned int(unsigned int)>,
+          std::function<unsigned int(unsigned int)>>
 FixPairTwoClosures::make_ops(unsigned int a, unsigned int b) {
   auto f_impl = [=](auto &_self_f, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {

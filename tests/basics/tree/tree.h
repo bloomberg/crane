@@ -50,22 +50,39 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Nat clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<O>(_sv.v())) {
-      return Nat(O{});
-    } else {
-      const auto &[d_a0] = std::get<S>(_sv.v());
-      return Nat(S{d_a0 ? std::make_unique<Nat>(d_a0->clone()) : nullptr});
+  Nat clone() const {
+    Nat _out{};
+
+    struct _CloneFrame {
+      const Nat *_src;
+      Nat *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Nat *_src = _frame._src;
+      Nat *_dst = _frame._dst;
+      if (std::holds_alternative<O>(_src->v())) {
+        const auto &_alt = std::get<O>(_src->v());
+        _dst->d_v_ = O{};
+      } else {
+        const auto &_alt = std::get<S>(_src->v());
+        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
+        auto &_dst_alt = std::get<S>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Nat o() { return Nat(O{}); }
+  static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(Nat a0) {
-    return Nat(S{std::make_unique<Nat>(std::move(a0))});
-  }
+  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -89,9 +106,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) Nat max(Nat m) const {
+  Nat max(Nat m) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Nat::O>(_sv.v())) {
       return m;
@@ -106,7 +123,7 @@ public:
     }
   }
 
-  __attribute__((pure)) Nat add(Nat m) const {
+  Nat add(Nat m) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Nat::O>(_sv.v())) {
       return m;
@@ -155,15 +172,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -177,9 +213,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -206,9 +242,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) List<t_A> app(List<t_A> m) const {
+  List<t_A> app(List<t_A> m) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return m;
@@ -260,16 +296,37 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Tree<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Leaf>(_sv.v())) {
-      return Tree<t_A>(Leaf{});
-    } else {
-      const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
-      return Tree<t_A>(Node{
-          d_a0 ? std::make_unique<Tree<t_A>>(d_a0->clone()) : nullptr, d_a1,
-          d_a2 ? std::make_unique<Tree<t_A>>(d_a2->clone()) : nullptr});
+  Tree clone() const {
+    Tree _out{};
+
+    struct _CloneFrame {
+      const Tree *_src;
+      Tree *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Tree *_src = _frame._src;
+      Tree *_dst = _frame._dst;
+      if (std::holds_alternative<Leaf>(_src->v())) {
+        const auto &_alt = std::get<Leaf>(_src->v());
+        _dst->d_v_ = Leaf{};
+      } else {
+        const auto &_alt = std::get<Node>(_src->v());
+        _dst->d_v_ =
+            Node{_alt.d_a0 ? std::make_unique<Tree>() : nullptr, _alt.d_a1,
+                 _alt.d_a2 ? std::make_unique<Tree>() : nullptr};
+        auto &_dst_alt = std::get<Node>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        if (_alt.d_a2)
+          _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -285,10 +342,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static Tree<t_A> leaf() { return Tree(Leaf{}); }
+  static Tree<t_A> leaf() { return Tree(Leaf{}); }
 
-  __attribute__((pure)) static Tree<t_A> node(Tree<t_A> a0, t_A a1,
-                                              Tree<t_A> a2) {
+  static Tree<t_A> node(Tree<t_A> a0, t_A a1, Tree<t_A> a2) {
     return Tree(Node{std::make_unique<Tree<t_A>>(std::move(a0)), std::move(a1),
                      std::make_unique<Tree<t_A>>(std::move(a2))});
   }
@@ -317,7 +373,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
   template <typename T1, MapsTo<T1, Tree<t_A>, T1, t_A, Tree<t_A>, T1> F1>
   T1 tree_rect(const T1 f, F1 &&f0) const {
@@ -346,7 +402,7 @@ public:
   }
 
   /// Returns true if t is a leaf, false otherwise.
-  __attribute__((pure)) Bool0 is_leaf() const {
+  Bool0 is_leaf() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
       return Bool0::e_TRUE0;
@@ -356,7 +412,7 @@ public:
   }
 
   /// Number of nodes in tree t. A leaf counts as 1.
-  __attribute__((pure)) Nat size() const {
+  Nat size() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
       return Nat::s(Nat::o());
@@ -368,7 +424,7 @@ public:
   }
 
   /// Height of tree t. A leaf has height 1.
-  __attribute__((pure)) Nat height() const {
+  Nat height() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
       return Nat::s(Nat::o());
@@ -380,7 +436,7 @@ public:
   }
 
   /// Collect all values in t into a list via in-order traversal.
-  __attribute__((pure)) List<t_A> flatten() const {
+  List<t_A> flatten() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
       return List<t_A>::nil();
@@ -395,8 +451,7 @@ public:
   /// Merge two trees t1 and t2 element-wise using combine.
   /// Subtrees beyond the shape of the other tree are truncated.
   template <MapsTo<t_A, t_A, t_A> F0>
-  __attribute__((pure)) Tree<t_A> merge(F0 &&combine,
-                                        const Tree<t_A> &t2) const {
+  Tree<t_A> merge(F0 &&combine, const Tree<t_A> &t2) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
       if (std::holds_alternative<typename Tree<t_A>::Leaf>(t2.v())) {

@@ -2,7 +2,6 @@
 
 /// Consolidated UNIQUE pair/tuple operations.
 /// unzip l splits list of nat pairs into pair of lists.
-__attribute__((pure))
 std::pair<LoopifyPairs::list<unsigned int>, LoopifyPairs::list<unsigned int>>
 LoopifyPairs::unzip(
     const LoopifyPairs::list<std::pair<unsigned int, unsigned int>> &l) {
@@ -54,9 +53,9 @@ LoopifyPairs::unzip(
 }
 
 /// partition3 pivot l three-way partition around pivot.
-__attribute__((pure)) std::pair<LoopifyPairs::list<unsigned int>,
-                                std::pair<LoopifyPairs::list<unsigned int>,
-                                          LoopifyPairs::list<unsigned int>>>
+std::pair<LoopifyPairs::list<unsigned int>,
+          std::pair<LoopifyPairs::list<unsigned int>,
+                    LoopifyPairs::list<unsigned int>>>
 LoopifyPairs::partition3(const unsigned int &pivot,
                          const LoopifyPairs::list<unsigned int> &l) {
   struct _Enter {
@@ -120,7 +119,7 @@ LoopifyPairs::partition3(const unsigned int &pivot,
 }
 
 /// min_max l finds both min and max in one pass.
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
+std::pair<unsigned int, unsigned int>
 LoopifyPairs::min_max(const LoopifyPairs::list<unsigned int> &l) {
   struct _Enter {
     const LoopifyPairs::list<unsigned int> *l;
@@ -169,7 +168,7 @@ LoopifyPairs::min_max(const LoopifyPairs::list<unsigned int> &l) {
 }
 
 /// sum_and_count computes both in one pass.
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
+std::pair<unsigned int, unsigned int>
 LoopifyPairs::sum_and_count(const LoopifyPairs::list<unsigned int> &l) {
   struct _Enter {
     const LoopifyPairs::list<unsigned int> *l;
@@ -211,7 +210,6 @@ LoopifyPairs::sum_and_count(const LoopifyPairs::list<unsigned int> &l) {
 }
 
 /// sum_prod_count triple accumulator.
-__attribute__((pure))
 std::pair<unsigned int, std::pair<unsigned int, unsigned int>>
 LoopifyPairs::sum_prod_count(const LoopifyPairs::list<unsigned int> &l) {
   struct _Enter {
@@ -256,7 +254,7 @@ LoopifyPairs::sum_prod_count(const LoopifyPairs::list<unsigned int> &l) {
 }
 
 /// lookup_all key l finds all values associated with key.
-__attribute__((pure)) LoopifyPairs::list<unsigned int> LoopifyPairs::lookup_all(
+LoopifyPairs::list<unsigned int> LoopifyPairs::lookup_all(
     const unsigned int &key,
     const LoopifyPairs::list<std::pair<unsigned int, unsigned int>> &l) {
   std::unique_ptr<LoopifyPairs::list<unsigned int>> _head{};
@@ -292,7 +290,7 @@ __attribute__((pure)) LoopifyPairs::list<unsigned int> LoopifyPairs::lookup_all(
 }
 
 /// swap_pairs l swaps elements in each pair.
-__attribute__((pure)) LoopifyPairs::list<std::pair<unsigned int, unsigned int>>
+LoopifyPairs::list<std::pair<unsigned int, unsigned int>>
 LoopifyPairs::swap_pairs(
     const LoopifyPairs::list<std::pair<unsigned int, unsigned int>> &l) {
   std::unique_ptr<LoopifyPairs::list<std::pair<unsigned int, unsigned int>>>

@@ -53,17 +53,34 @@ struct MatchRefAfterMove {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mylist<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Mynil>(_sv.v())) {
-        return mylist<t_A>(Mynil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
-        return mylist<t_A>(Mycons{
-            d_a0, d_a1 ? std::make_unique<MatchRefAfterMove::mylist<t_A>>(
-                             d_a1->clone())
-                       : nullptr});
+    mylist clone() const {
+      mylist _out{};
+
+      struct _CloneFrame {
+        const mylist *_src;
+        mylist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist *_src = _frame._src;
+        mylist *_dst = _frame._dst;
+        if (std::holds_alternative<Mynil>(_src->v())) {
+          const auto &_alt = std::get<Mynil>(_src->v());
+          _dst->d_v_ = Mynil{};
+        } else {
+          const auto &_alt = std::get<Mycons>(_src->v());
+          _dst->d_v_ = Mycons{_alt.d_a0,
+                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -78,9 +95,9 @@ struct MatchRefAfterMove {
       }
     }
 
-    __attribute__((pure)) static mylist<t_A> mynil() { return mylist(Mynil{}); }
+    static mylist<t_A> mynil() { return mylist(Mynil{}); }
 
-    __attribute__((pure)) static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+    static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
       return mylist(
           Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
@@ -107,12 +124,12 @@ struct MatchRefAfterMove {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// Pattern 1: Match on a list, return head AND apply a function
     /// to the tail that also takes the head as argument.
     /// The generated code must ensure h survives until both uses.
-    __attribute__((pure)) unsigned int mylist_length() const {
+    unsigned int mylist_length() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
         return 0u;
@@ -183,7 +200,7 @@ struct MatchRefAfterMove {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mypair<t_A, t_B> clone() const {
+    mypair<t_A, t_B> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Mkpair>(_sv.v());
       return mypair<t_A, t_B>(Mkpair{d_a0, d_a1});
@@ -197,7 +214,7 @@ struct MatchRefAfterMove {
       d_v_ = Mkpair{t_A(d_a0), t_B(d_a1)};
     }
 
-    __attribute__((pure)) static mypair<t_A, t_B> mkpair(t_A a0, t_B a1) {
+    static mypair<t_A, t_B> mkpair(t_A a0, t_B a1) {
       return mypair(Mkpair{std::move(a0), std::move(a1)});
     }
 
@@ -205,7 +222,7 @@ struct MatchRefAfterMove {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, t_A, t_B> F0>
     T1 mypair_rec(F0 &&f) const {
@@ -224,7 +241,7 @@ struct MatchRefAfterMove {
     }
   };
 
-  __attribute__((pure)) static mypair<unsigned int, unsigned int>
+  static mypair<unsigned int, unsigned int>
   head_and_tail_length(const mylist<unsigned int> &l);
   /// Pattern 2: Nested match where inner match is on a field of outer.
   /// After inner match, outer pattern variables are still used.
@@ -234,20 +251,18 @@ struct MatchRefAfterMove {
   /// If the outer head h is a reference into the outer value, and
   /// the outer value is freed because the inner match consumes the
   /// tail (sole remaining reference), h dangles.
-  __attribute__((pure)) static unsigned int
-  nested_match_probe(const mylist<unsigned int> &l);
+  static unsigned int nested_match_probe(const mylist<unsigned int> &l);
   /// Pattern 3: Build a pair where one element is from a match
   /// and the other is a function of the matched value.
   /// Tests evaluation order in pair construction.
-  __attribute__((pure)) static mypair<unsigned int, mylist<unsigned int>>
+  static mypair<unsigned int, mylist<unsigned int>>
   match_into_pair(const mylist<unsigned int> &l);
   /// Pattern 4: Double match on same value.
   /// First match extracts head, second match extracts tail.
   /// Between matches, the value might be moved.
-  __attribute__((pure)) static mypair<unsigned int, mylist<unsigned int>>
+  static mypair<unsigned int, mylist<unsigned int>>
   double_match(const mylist<unsigned int> &l);
-  __attribute__((pure)) static unsigned int
-  mylist_sum(const mylist<unsigned int> &l);
+  static unsigned int mylist_sum(const mylist<unsigned int> &l);
   /// test1: head_and_tail_length 10,20,30 = (10, 2)
   static inline const unsigned int test1 = []() {
     auto &&_sv0 = head_and_tail_length(mylist<unsigned int>::mycons(
@@ -288,8 +303,7 @@ struct MatchRefAfterMove {
   /// Pattern 5: CPS with explicit continuation that captures from match.
   /// The continuation is a SIMPLE lambda, not a fixpoint.
   template <MapsTo<unsigned int, unsigned int, unsigned int> F1>
-  __attribute__((pure)) static unsigned int
-  match_with_cont(const mylist<unsigned int> &l, F1 &&k) {
+  static unsigned int match_with_cont(const mylist<unsigned int> &l, F1 &&k) {
     if (std::holds_alternative<typename mylist<unsigned int>::Mynil>(l.v())) {
       return k(0u, 0u);
     } else {
@@ -350,7 +364,7 @@ struct MatchRefAfterMove {
     }
 
     // ACCESSORS
-    __attribute__((pure)) either<t_A, t_B> clone() const {
+    either<t_A, t_B> clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Left>(_sv.v())) {
         const auto &[d_a0] = std::get<Left>(_sv.v());
@@ -375,11 +389,9 @@ struct MatchRefAfterMove {
       }
     }
 
-    __attribute__((pure)) static either<t_A, t_B> left(t_A a0) {
-      return either(Left{std::move(a0)});
-    }
+    static either<t_A, t_B> left(t_A a0) { return either(Left{std::move(a0)}); }
 
-    __attribute__((pure)) static either<t_A, t_B> right(t_B a0) {
+    static either<t_A, t_B> right(t_B a0) {
       return either(Right{std::move(a0)});
     }
 
@@ -387,7 +399,7 @@ struct MatchRefAfterMove {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1>
     T1 either_rec(F0 &&f, F1 &&f0) const {
@@ -416,7 +428,7 @@ struct MatchRefAfterMove {
     }
   };
 
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   complex_match(const either<mylist<unsigned int>, mylist<unsigned int>> &e);
   /// test6: complex_match (Right 50, 60) = 50 + 1 = 51
   static inline const unsigned int test6 =

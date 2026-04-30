@@ -2,8 +2,8 @@
 
 /// Consolidated list generator functions.
 /// cycle n l repeats the list n times: cycle 2 1,2 -> 1,2,1,2.
-__attribute__((pure)) List<unsigned int>
-LoopifyGenerators::cycle(const unsigned int &n, const List<unsigned int> &l) {
+List<unsigned int> LoopifyGenerators::cycle(const unsigned int &n,
+                                            const List<unsigned int> &l) {
   struct _Enter {
     unsigned int n;
   };
@@ -39,11 +39,9 @@ LoopifyGenerators::cycle(const unsigned int &n, const List<unsigned int> &l) {
 }
 
 /// zip_longest l1 l2 default zips, using default for missing elements.
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
-LoopifyGenerators::zip_longest_aux(const List<unsigned int> &l1,
-                                   const List<unsigned int> &l2,
-                                   unsigned int default0,
-                                   const unsigned int &fuel) {
+List<std::pair<unsigned int, unsigned int>> LoopifyGenerators::zip_longest_aux(
+    const List<unsigned int> &l1, const List<unsigned int> &l2,
+    unsigned int default0, const unsigned int &fuel) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;
   unsigned int _loop_fuel = fuel;
@@ -134,8 +132,7 @@ LoopifyGenerators::zip_longest_aux(const List<unsigned int> &l1,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) unsigned int
-LoopifyGenerators::len_impl(const List<unsigned int> &l) {
+unsigned int LoopifyGenerators::len_impl(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -169,7 +166,7 @@ LoopifyGenerators::len_impl(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyGenerators::zip_longest(const List<unsigned int> &l1,
                                const List<unsigned int> &l2,
                                const unsigned int &default0) {
@@ -177,9 +174,8 @@ LoopifyGenerators::zip_longest(const List<unsigned int> &l1,
 }
 
 /// build_list n builds tree-like list structure: build_list(4) -> 2,4,2.
-__attribute__((pure)) List<unsigned int>
-LoopifyGenerators::build_list_fuel(const unsigned int &fuel,
-                                   const unsigned int &n) {
+List<unsigned int> LoopifyGenerators::build_list_fuel(const unsigned int &fuel,
+                                                      const unsigned int &n) {
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
@@ -229,14 +225,13 @@ LoopifyGenerators::build_list_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyGenerators::build_list(const unsigned int &n) {
+List<unsigned int> LoopifyGenerators::build_list(const unsigned int &n) {
   return build_list_fuel(100u, n);
 }
 
 /// take n l returns first n elements.
-__attribute__((pure)) List<unsigned int>
-LoopifyGenerators::take(const unsigned int &n, const List<unsigned int> &l) {
+List<unsigned int> LoopifyGenerators::take(const unsigned int &n,
+                                           const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -274,8 +269,8 @@ LoopifyGenerators::take(const unsigned int &n, const List<unsigned int> &l) {
 }
 
 /// repeat x n creates list with n copies of x.
-__attribute__((pure)) List<unsigned int>
-LoopifyGenerators::repeat(unsigned int x, const unsigned int &n) {
+List<unsigned int> LoopifyGenerators::repeat(unsigned int x,
+                                             const unsigned int &n) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_n = n;
@@ -299,8 +294,8 @@ LoopifyGenerators::repeat(unsigned int x, const unsigned int &n) {
 }
 
 /// Helper: replicate single element n times.
-__attribute__((pure)) List<unsigned int>
-LoopifyGenerators::replicate_single(unsigned int x, const unsigned int &n) {
+List<unsigned int> LoopifyGenerators::replicate_single(unsigned int x,
+                                                       const unsigned int &n) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_n = n;
@@ -325,7 +320,7 @@ LoopifyGenerators::replicate_single(unsigned int x, const unsigned int &n) {
 
 /// replicate_each n l replicates each element n times: replicate_each 2 1,2 ->
 /// 1,1,2,2.
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyGenerators::replicate_each(const unsigned int &n,
                                   const List<unsigned int> &l) {
   struct _Enter {

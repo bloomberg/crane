@@ -1,8 +1,7 @@
 #include <record_closure_escape.h>
 
-__attribute__((pure)) unsigned int
-RecordClosureEscape::sum_values(const RecordClosureEscape::tree &t,
-                                unsigned int x) {
+unsigned int RecordClosureEscape::sum_values(const RecordClosureEscape::tree &t,
+                                             unsigned int x) {
   if (std::holds_alternative<typename RecordClosureEscape::tree::Leaf>(t.v())) {
     return x;
   } else {
@@ -32,7 +31,7 @@ RecordClosureEscape::sum_values(const RecordClosureEscape::tree &t,
 /// The record constructor mk_fn_record stores the & lambda.
 /// return_captures_by_value doesn't handle lambdas inside
 /// record constructor arguments.
-__attribute__((pure)) RecordClosureEscape::fn_record
+RecordClosureEscape::fn_record
 RecordClosureEscape::record_escape(RecordClosureEscape::tree t) {
   return fn_record{[=](unsigned int _x0) mutable -> unsigned int {
                      return sum_values(t, _x0);
@@ -40,7 +39,7 @@ RecordClosureEscape::record_escape(RecordClosureEscape::tree t) {
                    42u};
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 RecordClosureEscape::use_record(const RecordClosureEscape::fn_record &r) {
   return r.fn_field(r.val_field);
 }

@@ -47,22 +47,20 @@ struct ModuleTypeNameClashProbe {
       }
 
       // ACCESSORS
-      __attribute__((pure)) t clone() const {
+      t clone() const {
         auto &&_sv = *(this);
         const auto &[d_a0] = std::get<T0>(_sv.v());
         return t(T0{d_a0});
       }
 
       // CREATORS
-      __attribute__((pure)) static t t0(Bool0 a0) {
-        return t(T0{std::move(a0)});
-      }
+      static t t0(Bool0 a0) { return t(T0{std::move(a0)}); }
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }
 
       // ACCESSORS
-      __attribute__((pure)) const variant_t &v() const { return d_v_; }
+      const variant_t &v() const { return d_v_; }
     };
 
     template <typename T1, MapsTo<T1, Bool0> F0>
@@ -111,22 +109,20 @@ struct ModuleTypeNameClashProbe {
     }
 
     // ACCESSORS
-    __attribute__((pure)) M clone() const {
+    M clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<MkM>(_sv.v());
       return M(MkM{d_a0});
     }
 
     // CREATORS
-    __attribute__((pure)) static M mkm(Bool0 a0) {
-      return M(MkM{std::move(a0)});
-    }
+    static M mkm(Bool0 a0) { return M(MkM{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, Bool0> F0>

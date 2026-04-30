@@ -1,6 +1,6 @@
 #include <closure_capture_match.h>
 
-__attribute__((pure)) ClosureCaptureMatch::fn_box
+ClosureCaptureMatch::fn_box
 ClosureCaptureMatch::box_from_match(const ClosureCaptureMatch::tree &t) {
   if (std::holds_alternative<typename ClosureCaptureMatch::tree::Leaf>(t.v())) {
     return fn_box::box([](unsigned int x) { return x; });

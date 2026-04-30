@@ -1,7 +1,6 @@
 #include <levenshtein.h>
 
-__attribute__((pure)) Levenshtein::chain
-Levenshtein::same_chain(const String &s) {
+Levenshtein::chain Levenshtein::same_chain(const String &s) {
   if (std::holds_alternative<typename String::EmptyString>(s.v())) {
     return chain::empty();
   } else {
@@ -10,8 +9,8 @@ Levenshtein::same_chain(const String &s) {
   }
 }
 
-__attribute__((pure)) Levenshtein::chain
-Levenshtein::inserts_chain(const String &s1, const String &s2) {
+Levenshtein::chain Levenshtein::inserts_chain(const String &s1,
+                                              const String &s2) {
   if (std::holds_alternative<typename String::EmptyString>(s1.v())) {
     return _inserts_chain_F<Levenshtein::chain>(s2);
   } else {
@@ -21,8 +20,7 @@ Levenshtein::inserts_chain(const String &s1, const String &s2) {
   }
 }
 
-__attribute__((pure)) Levenshtein::chain
-Levenshtein::inserts_chain_empty(const String &s) {
+Levenshtein::chain Levenshtein::inserts_chain_empty(const String &s) {
   if (std::holds_alternative<typename String::EmptyString>(s.v())) {
     return chain::empty();
   } else {
@@ -32,8 +30,8 @@ Levenshtein::inserts_chain_empty(const String &s) {
   }
 }
 
-__attribute__((pure)) Levenshtein::chain
-Levenshtein::deletes_chain(const String &s1, const String &s2) {
+Levenshtein::chain Levenshtein::deletes_chain(const String &s1,
+                                              const String &s2) {
   if (std::holds_alternative<typename String::EmptyString>(s1.v())) {
     return same_chain(s2);
   } else {
@@ -43,8 +41,7 @@ Levenshtein::deletes_chain(const String &s1, const String &s2) {
   }
 }
 
-__attribute__((pure)) Levenshtein::chain
-Levenshtein::deletes_chain_empty(const String &s) {
+Levenshtein::chain Levenshtein::deletes_chain_empty(const String &s) {
   if (std::holds_alternative<typename String::EmptyString>(s.v())) {
     return chain::empty();
   } else {
@@ -54,13 +51,12 @@ Levenshtein::deletes_chain_empty(const String &s) {
   }
 }
 
-__attribute__((pure)) Levenshtein::chain
-Levenshtein::aux_both_empty(const String &, const String &) {
+Levenshtein::chain Levenshtein::aux_both_empty(const String &, const String &) {
   return chain::empty();
 }
 
-__attribute__((pure)) SigT<Nat, Levenshtein::chain>
-Levenshtein::levenshtein_chain(const String &s, String _x0) {
+SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
+                                                             String _x0) {
   std::function<SigT<Nat, Levenshtein::chain>(String)> levenshtein_chain1;
   levenshtein_chain1 = [&](String t) -> SigT<Nat, Levenshtein::chain> {
     if (std::holds_alternative<typename String::EmptyString>(s.v())) {
@@ -126,17 +122,15 @@ Levenshtein::levenshtein_chain(const String &s, String _x0) {
   return levenshtein_chain1(_x0);
 }
 
-__attribute__((pure)) Nat Levenshtein::levenshtein_computed(const String &s,
-                                                            const String &t) {
+Nat Levenshtein::levenshtein_computed(const String &s, const String &t) {
   return levenshtein_chain(s, t).projT1();
 }
 
-__attribute__((pure)) Nat Levenshtein::levenshtein(const String &_x0,
-                                                   const String &_x1) {
+Nat Levenshtein::levenshtein(const String &_x0, const String &_x1) {
   return levenshtein_computed(_x0, _x1);
 }
 
-__attribute__((pure)) Sumbool Bool::bool_dec(const Bool0 b1, const Bool0 b2) {
+Sumbool Bool::bool_dec(const Bool0 b1, const Bool0 b2) {
   switch (b1) {
   case Bool0::e_TRUE0: {
     switch (b2) {

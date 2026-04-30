@@ -1,6 +1,6 @@
 #include <match_ref_after_move.h>
 
-__attribute__((pure)) MatchRefAfterMove::mypair<unsigned int, unsigned int>
+MatchRefAfterMove::mypair<unsigned int, unsigned int>
 MatchRefAfterMove::head_and_tail_length(
     const MatchRefAfterMove::mylist<unsigned int> &l) {
   if (std::holds_alternative<
@@ -23,7 +23,7 @@ MatchRefAfterMove::head_and_tail_length(
 /// If the outer head h is a reference into the outer value, and
 /// the outer value is freed because the inner match consumes the
 /// tail (sole remaining reference), h dangles.
-__attribute__((pure)) unsigned int MatchRefAfterMove::nested_match_probe(
+unsigned int MatchRefAfterMove::nested_match_probe(
     const MatchRefAfterMove::mylist<unsigned int> &l) {
   if (std::holds_alternative<
           typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(l.v())) {
@@ -49,7 +49,6 @@ __attribute__((pure)) unsigned int MatchRefAfterMove::nested_match_probe(
 /// Pattern 3: Build a pair where one element is from a match
 /// and the other is a function of the matched value.
 /// Tests evaluation order in pair construction.
-__attribute__((pure))
 MatchRefAfterMove::mypair<unsigned int, MatchRefAfterMove::mylist<unsigned int>>
 MatchRefAfterMove::match_into_pair(
     const MatchRefAfterMove::mylist<unsigned int> &l) {
@@ -69,7 +68,6 @@ MatchRefAfterMove::match_into_pair(
 /// Pattern 4: Double match on same value.
 /// First match extracts head, second match extracts tail.
 /// Between matches, the value might be moved.
-__attribute__((pure))
 MatchRefAfterMove::mypair<unsigned int, MatchRefAfterMove::mylist<unsigned int>>
 MatchRefAfterMove::double_match(
     const MatchRefAfterMove::mylist<unsigned int> &l) {
@@ -99,7 +97,7 @@ MatchRefAfterMove::double_match(
       h, std::move(t));
 }
 
-__attribute__((pure)) unsigned int MatchRefAfterMove::mylist_sum(
+unsigned int MatchRefAfterMove::mylist_sum(
     const MatchRefAfterMove::mylist<unsigned int> &l) {
   if (std::holds_alternative<
           typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(l.v())) {
@@ -112,7 +110,7 @@ __attribute__((pure)) unsigned int MatchRefAfterMove::mylist_sum(
   }
 }
 
-__attribute__((pure)) unsigned int MatchRefAfterMove::complex_match(
+unsigned int MatchRefAfterMove::complex_match(
     const MatchRefAfterMove::either<MatchRefAfterMove::mylist<unsigned int>,
                                     MatchRefAfterMove::mylist<unsigned int>>
         &e) {

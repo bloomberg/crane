@@ -1,6 +1,6 @@
 #include <deep_pattern.h>
 
-__attribute__((pure)) unsigned int
+unsigned int
 DeepPattern::list_deep_match(const DeepPattern::list<DeepPattern::tree> &l) {
   if (std::holds_alternative<
           typename DeepPattern::list<DeepPattern::tree>::Nil>(l.v())) {

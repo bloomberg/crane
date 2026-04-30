@@ -50,15 +50,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -72,9 +91,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -101,7 +120,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct BinomialHeap {
@@ -146,28 +165,46 @@ struct BinomialHeap {
     }
 
     // ACCESSORS
-    __attribute__((pure)) tree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Node>(_sv.v())) {
-        const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
-        return tree(
-            Node{d_a0,
-                 d_a1 ? std::make_unique<BinomialHeap::tree>(d_a1->clone())
-                      : nullptr,
-                 d_a2 ? std::make_unique<BinomialHeap::tree>(d_a2->clone())
-                      : nullptr});
-      } else {
-        return tree(Leaf{});
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Node>(_src->v())) {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ =
+              Node{_alt.d_a0, _alt.d_a1 ? std::make_unique<tree>() : nullptr,
+                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        } else {
+          const auto &_alt = std::get<Leaf>(_src->v());
+          _dst->d_v_ = Leaf{};
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static tree node(key a0, tree a1, tree a2) {
+    static tree node(key a0, tree a1, tree a2) {
       return tree(Node{std::move(a0), std::make_unique<tree>(std::move(a1)),
                        std::make_unique<tree>(std::move(a2))});
     }
 
-    __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
+    static tree leaf() { return tree(Leaf{}); }
 
     // MANIPULATORS
     ~tree() {
@@ -193,7 +230,7 @@ struct BinomialHeap {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, tree, T1, tree, T1> F0>
@@ -220,15 +257,13 @@ struct BinomialHeap {
 
   using priqueue = List<tree>;
   static inline const priqueue empty = List<tree>::nil();
-  __attribute__((pure)) static tree smash(const tree &t, const tree &u);
-  __attribute__((pure)) static List<tree> carry(const List<tree> &q, tree t);
-  __attribute__((pure)) static priqueue insert(unsigned int x,
-                                               const List<tree> &q);
-  __attribute__((pure)) static priqueue join(const List<tree> &p,
-                                             const List<tree> &q, tree c);
+  static tree smash(const tree &t, const tree &u);
+  static List<tree> carry(const List<tree> &q, tree t);
+  static priqueue insert(unsigned int x, const List<tree> &q);
+  static priqueue join(const List<tree> &p, const List<tree> &q, tree c);
 
-  __attribute__((pure)) static priqueue
-  unzip(const tree &t, const std::function<List<tree>(List<tree>)> cont) {
+  static priqueue unzip(const tree &t,
+                        const std::function<List<tree>(List<tree>)> cont) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
       tree d_a1_value = *(d_a1);
@@ -244,21 +279,18 @@ struct BinomialHeap {
     }
   }
 
-  __attribute__((pure)) static priqueue heap_delete_max(const tree &t);
-  __attribute__((pure)) static key find_max_helper(unsigned int current,
-                                                   const List<tree> &q);
-  __attribute__((pure)) static std::optional<key> find_max(const List<tree> &q);
-  __attribute__((pure)) static std::pair<priqueue, priqueue>
-  delete_max_aux(const unsigned int &m, const List<tree> &p);
-  __attribute__((pure)) static std::optional<std::pair<key, priqueue>>
+  static priqueue heap_delete_max(const tree &t);
+  static key find_max_helper(unsigned int current, const List<tree> &q);
+  static std::optional<key> find_max(const List<tree> &q);
+  static std::pair<priqueue, priqueue> delete_max_aux(const unsigned int &m,
+                                                      const List<tree> &p);
+  static std::optional<std::pair<key, priqueue>>
   delete_max(const List<tree> &q);
-  __attribute__((pure)) static priqueue merge(const List<tree> &p,
-                                              const List<tree> &q);
-  __attribute__((pure)) static priqueue insert_list(const List<unsigned int> &l,
-                                                    List<tree> q);
-  __attribute__((pure)) static List<unsigned int>
-  make_list(const unsigned int &n, List<unsigned int> l);
-  __attribute__((pure)) static key help(const List<tree> &c);
+  static priqueue merge(const List<tree> &p, const List<tree> &q);
+  static priqueue insert_list(const List<unsigned int> &l, List<tree> q);
+  static List<unsigned int> make_list(const unsigned int &n,
+                                      List<unsigned int> l);
+  static key help(const List<tree> &c);
   static inline const key example1 =
       help(merge(insert(5u, insert(3u, insert(7u, List<tree>::nil()))),
                  insert(3u, insert(6u, insert(9u, List<tree>::nil())))));

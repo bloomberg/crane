@@ -52,25 +52,43 @@ struct LetClosureEscape {
     }
 
     // ACCESSORS
-    __attribute__((pure)) tree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
-        return tree(Leaf{});
-      } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
-        return tree(
-            Node{d_a0 ? std::make_unique<LetClosureEscape::tree>(d_a0->clone())
-                      : nullptr,
-                 d_a1,
-                 d_a2 ? std::make_unique<LetClosureEscape::tree>(d_a2->clone())
-                      : nullptr});
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          const auto &_alt = std::get<Leaf>(_src->v());
+          _dst->d_v_ = Leaf{};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ =
+              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
+    static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, unsigned int a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -99,9 +117,9 @@ struct LetClosureEscape {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int sum_values(unsigned int x) const {
+    unsigned int sum_values(unsigned int x) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return x;
@@ -183,15 +201,14 @@ struct LetClosureEscape {
     }
 
     // ACCESSORS
-    __attribute__((pure)) fn_box clone() const {
+    fn_box clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<Box>(_sv.v());
       return fn_box(Box{d_a0});
     }
 
     // CREATORS
-    __attribute__((pure)) static fn_box
-    box(std::function<unsigned int(unsigned int)> a0) {
+    static fn_box box(std::function<unsigned int(unsigned int)> a0) {
       return fn_box(Box{std::move(a0)});
     }
 
@@ -199,9 +216,9 @@ struct LetClosureEscape {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int apply_box(const unsigned int &x) const {
+    unsigned int apply_box(const unsigned int &x) const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<typename fn_box::Box>(_sv.v());
       return d_a0(x);
@@ -228,7 +245,7 @@ struct LetClosureEscape {
   /// f := sum_values t creates a & lambda bound to a variable.
   /// Box f stores the variable (not a direct lambda) in a constructor.
   /// When let_escape returns, t is destroyed → dangling reference in Box.
-  __attribute__((pure)) static fn_box let_escape(tree t);
+  static fn_box let_escape(tree t);
   /// Clobber stack after let_escape returns, then use the closure.
   static inline const unsigned int bug_let_clobber = []() {
     tree t1 = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,

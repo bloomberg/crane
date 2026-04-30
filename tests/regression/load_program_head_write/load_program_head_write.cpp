@@ -1,8 +1,8 @@
 #include <load_program_head_write.h>
 
-__attribute__((pure)) List<unsigned int>
-LoadProgramHeadWrite::update_nth(const unsigned int &n, unsigned int x,
-                                 List<unsigned int> l) {
+List<unsigned int> LoadProgramHeadWrite::update_nth(const unsigned int &n,
+                                                    unsigned int x,
+                                                    List<unsigned int> l) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v_mut())) {
       return l;
@@ -23,14 +23,14 @@ LoadProgramHeadWrite::update_nth(const unsigned int &n, unsigned int x,
   }
 }
 
-__attribute__((pure)) LoadProgramHeadWrite::state
+LoadProgramHeadWrite::state
 LoadProgramHeadWrite::set_prom_params(const LoadProgramHeadWrite::state &s,
                                       unsigned int addr, unsigned int data,
                                       bool enable) {
   return state{s.rom, addr, data, enable};
 }
 
-__attribute__((pure)) LoadProgramHeadWrite::state
+LoadProgramHeadWrite::state
 LoadProgramHeadWrite::execute_wpm(const LoadProgramHeadWrite::state &s) {
   List<unsigned int> new_rom;
   if (s.prom_enable) {
@@ -41,7 +41,7 @@ LoadProgramHeadWrite::execute_wpm(const LoadProgramHeadWrite::state &s) {
   return state{new_rom, s.prom_addr, s.prom_data, s.prom_enable};
 }
 
-__attribute__((pure)) LoadProgramHeadWrite::state
+LoadProgramHeadWrite::state
 LoadProgramHeadWrite::load_program(LoadProgramHeadWrite::state s,
                                    const unsigned int &base,
                                    const List<unsigned int> &bytes) {

@@ -51,15 +51,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -73,9 +92,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -102,9 +121,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) List<t_A> app(List<t_A> m) const {
+  List<t_A> app(List<t_A> m) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return m;
@@ -155,17 +174,34 @@ struct NestedInd {
     }
 
     // ACCESSORS
-    __attribute__((pure)) custom_list<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Cnil>(_sv.v())) {
-        return custom_list<t_A>(Cnil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Ccons>(_sv.v());
-        return custom_list<t_A>(Ccons{
-            d_a0,
-            d_a1 ? std::make_unique<NestedInd::custom_list<t_A>>(d_a1->clone())
-                 : nullptr});
+    custom_list clone() const {
+      custom_list _out{};
+
+      struct _CloneFrame {
+        const custom_list *_src;
+        custom_list *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const custom_list *_src = _frame._src;
+        custom_list *_dst = _frame._dst;
+        if (std::holds_alternative<Cnil>(_src->v())) {
+          const auto &_alt = std::get<Cnil>(_src->v());
+          _dst->d_v_ = Cnil{};
+        } else {
+          const auto &_alt = std::get<Ccons>(_src->v());
+          _dst->d_v_ = Ccons{
+              _alt.d_a0, _alt.d_a1 ? std::make_unique<custom_list>() : nullptr};
+          auto &_dst_alt = std::get<Ccons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -180,12 +216,9 @@ struct NestedInd {
       }
     }
 
-    __attribute__((pure)) static custom_list<t_A> cnil() {
-      return custom_list(Cnil{});
-    }
+    static custom_list<t_A> cnil() { return custom_list(Cnil{}); }
 
-    __attribute__((pure)) static custom_list<t_A> ccons(t_A a0,
-                                                        custom_list<t_A> a1) {
+    static custom_list<t_A> ccons(t_A a0, custom_list<t_A> a1) {
       return custom_list(Ccons{
           std::move(a0), std::make_unique<custom_list<t_A>>(std::move(a1))});
     }
@@ -212,9 +245,9 @@ struct NestedInd {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int custom_list_length() const {
+    unsigned int custom_list_length() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename custom_list<t_A>::Cnil>(_sv.v())) {
         return 0u;
@@ -285,7 +318,7 @@ struct NestedInd {
     }
 
     // ACCESSORS
-    __attribute__((pure)) rose<t_A> clone() const {
+    rose<t_A> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Node>(_sv.v());
       return rose<t_A>(Node{
@@ -304,8 +337,7 @@ struct NestedInd {
                     : nullptr};
     }
 
-    __attribute__((pure)) static rose<t_A> node(t_A a0,
-                                                custom_list<rose<t_A>> a1) {
+    static rose<t_A> node(t_A a0, custom_list<rose<t_A>> a1) {
       return rose(Node{std::move(a0), std::make_unique<custom_list<rose<t_A>>>(
                                           std::move(a1))});
     }
@@ -314,9 +346,9 @@ struct NestedInd {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int children_count() const {
+    unsigned int children_count() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose<t_A>::Node>(_sv.v());
       return (*(d_a1)).custom_list_length();
@@ -343,7 +375,7 @@ struct NestedInd {
     }
   };
 
-  __attribute__((pure)) static rose<unsigned int> leaf(unsigned int n);
+  static rose<unsigned int> leaf(unsigned int n);
   static inline const rose<unsigned int> small_tree = rose<unsigned int>::node(
       1u,
       custom_list<rose<unsigned int>>::ccons(
@@ -408,7 +440,7 @@ struct NestedInd {
     }
 
     // ACCESSORS
-    __attribute__((pure)) expr clone() const {
+    expr clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Lit>(_sv.v())) {
         const auto &[d_a0] = std::get<Lit>(_sv.v());
@@ -427,15 +459,13 @@ struct NestedInd {
     }
 
     // CREATORS
-    __attribute__((pure)) static expr lit(unsigned int a0) {
-      return expr(Lit{std::move(a0)});
-    }
+    static expr lit(unsigned int a0) { return expr(Lit{std::move(a0)}); }
 
-    __attribute__((pure)) static expr add(List<expr> a0) {
+    static expr add(List<expr> a0) {
       return expr(Add{std::make_unique<List<expr>>(std::move(a0))});
     }
 
-    __attribute__((pure)) static expr mul(List<expr> a0) {
+    static expr mul(List<expr> a0) {
       return expr(Mul{std::make_unique<List<expr>>(std::move(a0))});
     }
 
@@ -443,10 +473,10 @@ struct NestedInd {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     template <MapsTo<unsigned int, unsigned int> F0>
-    __attribute__((pure)) expr lit_map(F0 &&f) const {
+    expr lit_map(F0 &&f) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Lit>(_sv.v());
@@ -486,7 +516,7 @@ struct NestedInd {
       }
     }
 
-    __attribute__((pure)) List<unsigned int> literals() const {
+    List<unsigned int> literals() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Lit>(_sv.v());
@@ -522,7 +552,7 @@ struct NestedInd {
       }
     }
 
-    __attribute__((pure)) unsigned int expr_depth() const {
+    unsigned int expr_depth() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
         return 0u;
@@ -561,7 +591,7 @@ struct NestedInd {
       }
     }
 
-    __attribute__((pure)) unsigned int expr_size() const {
+    unsigned int expr_size() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
         return 1u;
@@ -600,7 +630,7 @@ struct NestedInd {
       }
     }
 
-    __attribute__((pure)) unsigned int eval() const {
+    unsigned int eval() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Lit>(_sv.v());

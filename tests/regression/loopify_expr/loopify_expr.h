@@ -50,15 +50,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -72,9 +91,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -101,7 +120,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct LoopifyExpr {
@@ -167,58 +186,83 @@ struct LoopifyExpr {
     }
 
     // ACCESSORS
-    __attribute__((pure)) expr clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Val>(_sv.v())) {
-        const auto &[d_a0] = std::get<Val>(_sv.v());
-        return expr(Val{d_a0});
-      } else if (std::holds_alternative<Succ>(_sv.v())) {
-        const auto &[d_a0] = std::get<Succ>(_sv.v());
-        return expr(
-            Succ{d_a0 ? std::make_unique<LoopifyExpr::expr>(d_a0->clone())
-                      : nullptr});
-      } else if (std::holds_alternative<Add>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<Add>(_sv.v());
-        return expr(Add{
-            d_a0 ? std::make_unique<LoopifyExpr::expr>(d_a0->clone()) : nullptr,
-            d_a1 ? std::make_unique<LoopifyExpr::expr>(d_a1->clone())
-                 : nullptr});
-      } else if (std::holds_alternative<Mul>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<Mul>(_sv.v());
-        return expr(Mul{
-            d_a0 ? std::make_unique<LoopifyExpr::expr>(d_a0->clone()) : nullptr,
-            d_a1 ? std::make_unique<LoopifyExpr::expr>(d_a1->clone())
-                 : nullptr});
-      } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<Cond>(_sv.v());
-        return expr(Cond{
-            d_a0 ? std::make_unique<LoopifyExpr::expr>(d_a0->clone()) : nullptr,
-            d_a1 ? std::make_unique<LoopifyExpr::expr>(d_a1->clone()) : nullptr,
-            d_a2 ? std::make_unique<LoopifyExpr::expr>(d_a2->clone())
-                 : nullptr});
+    expr clone() const {
+      expr _out{};
+
+      struct _CloneFrame {
+        const expr *_src;
+        expr *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const expr *_src = _frame._src;
+        expr *_dst = _frame._dst;
+        if (std::holds_alternative<Val>(_src->v())) {
+          const auto &_alt = std::get<Val>(_src->v());
+          _dst->d_v_ = Val{_alt.d_a0};
+        } else if (std::holds_alternative<Succ>(_src->v())) {
+          const auto &_alt = std::get<Succ>(_src->v());
+          _dst->d_v_ = Succ{_alt.d_a0 ? std::make_unique<expr>() : nullptr};
+          auto &_dst_alt = std::get<Succ>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        } else if (std::holds_alternative<Add>(_src->v())) {
+          const auto &_alt = std::get<Add>(_src->v());
+          _dst->d_v_ = Add{_alt.d_a0 ? std::make_unique<expr>() : nullptr,
+                           _alt.d_a1 ? std::make_unique<expr>() : nullptr};
+          auto &_dst_alt = std::get<Add>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        } else if (std::holds_alternative<Mul>(_src->v())) {
+          const auto &_alt = std::get<Mul>(_src->v());
+          _dst->d_v_ = Mul{_alt.d_a0 ? std::make_unique<expr>() : nullptr,
+                           _alt.d_a1 ? std::make_unique<expr>() : nullptr};
+          auto &_dst_alt = std::get<Mul>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        } else {
+          const auto &_alt = std::get<Cond>(_src->v());
+          _dst->d_v_ = Cond{_alt.d_a0 ? std::make_unique<expr>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<expr>() : nullptr,
+                            _alt.d_a2 ? std::make_unique<expr>() : nullptr};
+          auto &_dst_alt = std::get<Cond>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static expr val(unsigned int a0) {
-      return expr(Val{std::move(a0)});
-    }
+    static expr val(unsigned int a0) { return expr(Val{std::move(a0)}); }
 
-    __attribute__((pure)) static expr succ(expr a0) {
+    static expr succ(expr a0) {
       return expr(Succ{std::make_unique<expr>(std::move(a0))});
     }
 
-    __attribute__((pure)) static expr add(expr a0, expr a1) {
+    static expr add(expr a0, expr a1) {
       return expr(Add{std::make_unique<expr>(std::move(a0)),
                       std::make_unique<expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static expr mul(expr a0, expr a1) {
+    static expr mul(expr a0, expr a1) {
       return expr(Mul{std::make_unique<expr>(std::move(a0)),
                       std::make_unique<expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static expr cond(expr a0, expr a1, expr a2) {
+    static expr cond(expr a0, expr a1, expr a2) {
       return expr(Cond{std::make_unique<expr>(std::move(a0)),
                        std::make_unique<expr>(std::move(a1)),
                        std::make_unique<expr>(std::move(a2))});
@@ -269,13 +313,13 @@ struct LoopifyExpr {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// simplify e performs algebraic simplification:
     /// Add(x, Val 0) = x, Add(Val 0, x) = x,
     /// Mul(x, Val 1) = x, Mul(Val 1, x) = x,
     /// Mul(_, Val 0) = Val 0, Mul(Val 0, _) = Val 0.
-    __attribute__((pure)) expr simplify() const {
+    expr simplify() const {
       const expr *_self = this;
       auto &&_sv = *(_self);
       if (std::holds_alternative<typename expr::Val>(_sv.v())) {
@@ -625,7 +669,7 @@ struct LoopifyExpr {
     }
 
     /// size e counts total number of nodes.
-    __attribute__((pure)) unsigned int size() const {
+    unsigned int size() const {
       const expr *_self = this;
 
       struct _Enter {
@@ -732,7 +776,7 @@ struct LoopifyExpr {
     }
 
     /// count_vals e counts the number of Val nodes.
-    __attribute__((pure)) unsigned int count_vals() const {
+    unsigned int count_vals() const {
       const expr *_self = this;
 
       struct _Enter {
@@ -833,7 +877,7 @@ struct LoopifyExpr {
     }
 
     /// depth e computes expression depth.
-    __attribute__((pure)) unsigned int depth() const {
+    unsigned int depth() const {
       const expr *_self = this;
 
       struct _Enter {
@@ -940,7 +984,7 @@ struct LoopifyExpr {
     }
 
     /// eval e evaluates an expression. Multi-constructor recursion.
-    __attribute__((pure)) unsigned int eval() const {
+    unsigned int eval() const {
       const expr *_self = this;
       auto &&_sv = *(_self);
       if (std::holds_alternative<typename expr::Val>(_sv.v())) {
@@ -1286,43 +1330,63 @@ struct LoopifyExpr {
     }
 
     // ACCESSORS
-    __attribute__((pure)) simple_expr clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Lit>(_sv.v())) {
-        const auto &[d_a0] = std::get<Lit>(_sv.v());
-        return simple_expr(Lit{d_a0});
-      } else if (std::holds_alternative<Plus>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<Plus>(_sv.v());
-        return simple_expr(Plus{
-            d_a0 ? std::make_unique<LoopifyExpr::simple_expr>(d_a0->clone())
-                 : nullptr,
-            d_a1 ? std::make_unique<LoopifyExpr::simple_expr>(d_a1->clone())
-                 : nullptr});
-      } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<IfPos>(_sv.v());
-        return simple_expr(IfPos{
-            d_a0 ? std::make_unique<LoopifyExpr::simple_expr>(d_a0->clone())
-                 : nullptr,
-            d_a1 ? std::make_unique<LoopifyExpr::simple_expr>(d_a1->clone())
-                 : nullptr,
-            d_a2 ? std::make_unique<LoopifyExpr::simple_expr>(d_a2->clone())
-                 : nullptr});
+    simple_expr clone() const {
+      simple_expr _out{};
+
+      struct _CloneFrame {
+        const simple_expr *_src;
+        simple_expr *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const simple_expr *_src = _frame._src;
+        simple_expr *_dst = _frame._dst;
+        if (std::holds_alternative<Lit>(_src->v())) {
+          const auto &_alt = std::get<Lit>(_src->v());
+          _dst->d_v_ = Lit{_alt.d_a0};
+        } else if (std::holds_alternative<Plus>(_src->v())) {
+          const auto &_alt = std::get<Plus>(_src->v());
+          _dst->d_v_ =
+              Plus{_alt.d_a0 ? std::make_unique<simple_expr>() : nullptr,
+                   _alt.d_a1 ? std::make_unique<simple_expr>() : nullptr};
+          auto &_dst_alt = std::get<Plus>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        } else {
+          const auto &_alt = std::get<IfPos>(_src->v());
+          _dst->d_v_ =
+              IfPos{_alt.d_a0 ? std::make_unique<simple_expr>() : nullptr,
+                    _alt.d_a1 ? std::make_unique<simple_expr>() : nullptr,
+                    _alt.d_a2 ? std::make_unique<simple_expr>() : nullptr};
+          auto &_dst_alt = std::get<IfPos>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static simple_expr lit(unsigned int a0) {
+    static simple_expr lit(unsigned int a0) {
       return simple_expr(Lit{std::move(a0)});
     }
 
-    __attribute__((pure)) static simple_expr plus(simple_expr a0,
-                                                  simple_expr a1) {
+    static simple_expr plus(simple_expr a0, simple_expr a1) {
       return simple_expr(Plus{std::make_unique<simple_expr>(std::move(a0)),
                               std::make_unique<simple_expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static simple_expr
-    ifpos(simple_expr a0, simple_expr a1, simple_expr a2) {
+    static simple_expr ifpos(simple_expr a0, simple_expr a1, simple_expr a2) {
       return simple_expr(IfPos{std::make_unique<simple_expr>(std::move(a0)),
                                std::make_unique<simple_expr>(std::move(a1)),
                                std::make_unique<simple_expr>(std::move(a2))});
@@ -1361,10 +1425,10 @@ struct LoopifyExpr {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// depth_simple e computes depth of simple expression tree.
-    __attribute__((pure)) unsigned int depth_simple() const {
+    unsigned int depth_simple() const {
       const simple_expr *_self = this;
 
       struct _Enter {
@@ -1445,7 +1509,7 @@ struct LoopifyExpr {
     }
 
     /// eval_simple e evaluates simple expression with positive test.
-    __attribute__((pure)) unsigned int eval_simple() const {
+    unsigned int eval_simple() const {
       const simple_expr *_self = this;
       auto &&_sv = *(_self);
       if (std::holds_alternative<typename simple_expr::Lit>(_sv.v())) {
@@ -1715,7 +1779,7 @@ struct LoopifyExpr {
     }
 
     // ACCESSORS
-    __attribute__((pure)) shape clone() const {
+    shape clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Circle>(_sv.v())) {
         const auto &[d_a0] = std::get<Circle>(_sv.v());
@@ -1730,15 +1794,15 @@ struct LoopifyExpr {
     }
 
     // CREATORS
-    __attribute__((pure)) static shape circle(unsigned int a0) {
+    static shape circle(unsigned int a0) {
       return shape(Circle{std::move(a0)});
     }
 
-    __attribute__((pure)) static shape square(unsigned int a0) {
+    static shape square(unsigned int a0) {
       return shape(Square{std::move(a0)});
     }
 
-    __attribute__((pure)) static shape triangle(unsigned int a0) {
+    static shape triangle(unsigned int a0) {
       return shape(Triangle{std::move(a0)});
     }
 
@@ -1746,7 +1810,7 @@ struct LoopifyExpr {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2>
@@ -1783,10 +1847,9 @@ struct LoopifyExpr {
 
   /// sum_shapes l sums values from shapes using unified pattern.
   /// Tests or-pattern style matching in Coq.
-  __attribute__((pure)) static unsigned int sum_shapes(const List<shape> &l);
+  static unsigned int sum_shapes(const List<shape> &l);
   /// count_by_shape l counts shapes: (circles, squares, triangles).
-  __attribute__((pure)) static std::pair<std::pair<unsigned int, unsigned int>,
-                                         unsigned int>
+  static std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
   count_by_shape(const List<shape> &l);
 
   /// Alternative expression type with conditionals for testing different
@@ -1839,42 +1902,63 @@ struct LoopifyExpr {
     }
 
     // ACCESSORS
-    __attribute__((pure)) cond_expr clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<CLit>(_sv.v())) {
-        const auto &[d_a0] = std::get<CLit>(_sv.v());
-        return cond_expr(CLit{d_a0});
-      } else if (std::holds_alternative<CPlus>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<CPlus>(_sv.v());
-        return cond_expr(
-            CPlus{d_a0 ? std::make_unique<LoopifyExpr::cond_expr>(d_a0->clone())
-                       : nullptr,
-                  d_a1 ? std::make_unique<LoopifyExpr::cond_expr>(d_a1->clone())
-                       : nullptr});
-      } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<CCond>(_sv.v());
-        return cond_expr(
-            CCond{d_a0 ? std::make_unique<LoopifyExpr::cond_expr>(d_a0->clone())
-                       : nullptr,
-                  d_a1 ? std::make_unique<LoopifyExpr::cond_expr>(d_a1->clone())
-                       : nullptr,
-                  d_a2 ? std::make_unique<LoopifyExpr::cond_expr>(d_a2->clone())
-                       : nullptr});
+    cond_expr clone() const {
+      cond_expr _out{};
+
+      struct _CloneFrame {
+        const cond_expr *_src;
+        cond_expr *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const cond_expr *_src = _frame._src;
+        cond_expr *_dst = _frame._dst;
+        if (std::holds_alternative<CLit>(_src->v())) {
+          const auto &_alt = std::get<CLit>(_src->v());
+          _dst->d_v_ = CLit{_alt.d_a0};
+        } else if (std::holds_alternative<CPlus>(_src->v())) {
+          const auto &_alt = std::get<CPlus>(_src->v());
+          _dst->d_v_ =
+              CPlus{_alt.d_a0 ? std::make_unique<cond_expr>() : nullptr,
+                    _alt.d_a1 ? std::make_unique<cond_expr>() : nullptr};
+          auto &_dst_alt = std::get<CPlus>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        } else {
+          const auto &_alt = std::get<CCond>(_src->v());
+          _dst->d_v_ =
+              CCond{_alt.d_a0 ? std::make_unique<cond_expr>() : nullptr,
+                    _alt.d_a1 ? std::make_unique<cond_expr>() : nullptr,
+                    _alt.d_a2 ? std::make_unique<cond_expr>() : nullptr};
+          auto &_dst_alt = std::get<CCond>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static cond_expr clit(unsigned int a0) {
+    static cond_expr clit(unsigned int a0) {
       return cond_expr(CLit{std::move(a0)});
     }
 
-    __attribute__((pure)) static cond_expr cplus(cond_expr a0, cond_expr a1) {
+    static cond_expr cplus(cond_expr a0, cond_expr a1) {
       return cond_expr(CPlus{std::make_unique<cond_expr>(std::move(a0)),
                              std::make_unique<cond_expr>(std::move(a1))});
     }
 
-    __attribute__((pure)) static cond_expr ccond(cond_expr a0, cond_expr a1,
-                                                 cond_expr a2) {
+    static cond_expr ccond(cond_expr a0, cond_expr a1, cond_expr a2) {
       return cond_expr(CCond{std::make_unique<cond_expr>(std::move(a0)),
                              std::make_unique<cond_expr>(std::move(a1)),
                              std::make_unique<cond_expr>(std::move(a2))});
@@ -1913,10 +1997,10 @@ struct LoopifyExpr {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// depth_cond e computes depth of conditional expression tree.
-    __attribute__((pure)) unsigned int depth_cond() const {
+    unsigned int depth_cond() const {
       const cond_expr *_self = this;
 
       struct _Enter {
@@ -1997,7 +2081,7 @@ struct LoopifyExpr {
     }
 
     /// eval_cond e evaluates conditional expression.
-    __attribute__((pure)) unsigned int eval_cond() const {
+    unsigned int eval_cond() const {
       const cond_expr *_self = this;
       auto &&_sv = *(_self);
       if (std::holds_alternative<typename cond_expr::CLit>(_sv.v())) {

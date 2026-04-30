@@ -51,16 +51,34 @@ struct HigherOrder {
     }
 
     // ACCESSORS
-    __attribute__((pure)) list<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Nil>(_sv.v())) {
-        return list<t_A>(Nil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-        return list<t_A>(Cons{
-            d_a0, d_a1 ? std::make_unique<HigherOrder::list<t_A>>(d_a1->clone())
-                       : nullptr});
+    list clone() const {
+      list _out{};
+
+      struct _CloneFrame {
+        const list *_src;
+        list *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const list *_src = _frame._src;
+        list *_dst = _frame._dst;
+        if (std::holds_alternative<Nil>(_src->v())) {
+          const auto &_alt = std::get<Nil>(_src->v());
+          _dst->d_v_ = Nil{};
+        } else {
+          const auto &_alt = std::get<Cons>(_src->v());
+          _dst->d_v_ =
+              Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<list>() : nullptr};
+          auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -75,9 +93,9 @@ struct HigherOrder {
       }
     }
 
-    __attribute__((pure)) static list<t_A> nil() { return list(Nil{}); }
+    static list<t_A> nil() { return list(Nil{}); }
 
-    __attribute__((pure)) static list<t_A> cons(t_A a0, list<t_A> a1) {
+    static list<t_A> cons(t_A a0, list<t_A> a1) {
       return list(
           Cons{std::move(a0), std::make_unique<list<t_A>>(std::move(a1))});
     }
@@ -104,7 +122,7 @@ struct HigherOrder {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
@@ -129,7 +147,7 @@ struct HigherOrder {
 
   /// map f l applies f to each element of l, producing a new list.
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  __attribute__((pure)) static list<T2> map(F0 &&f, const list<T1> &l) {
+  static list<T2> map(F0 &&f, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return list<T2>::nil();
     } else {
@@ -180,8 +198,7 @@ struct HigherOrder {
   }
 
   /// adder n returns a function that adds n to its argument.
-  __attribute__((pure)) static unsigned int adder(const unsigned int &_x0,
-                                                  const unsigned int &_x1);
+  static unsigned int adder(const unsigned int &_x0, const unsigned int &_x1);
 
   /// twice f returns a function that applies f two times.
   template <typename T1, MapsTo<T1, T1> F0>

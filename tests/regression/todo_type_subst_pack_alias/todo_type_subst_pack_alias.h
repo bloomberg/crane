@@ -27,13 +27,11 @@ struct TodoTypeSubstPackAlias {
   using carrier = std::any;
 
   template <Pack _tcI0>
-  __attribute__((pure)) static typename _tcI0::carrier
-  step_of(const typename _tcI0::carrier _x0) {
+  static typename _tcI0::carrier step_of(const typename _tcI0::carrier _x0) {
     return _tcI0::step(_x0);
   }
 
-  template <Pack _tcI0>
-  __attribute__((pure)) static typename _tcI0::carrier run_twice() {
+  template <Pack _tcI0> static typename _tcI0::carrier run_twice() {
     std::function<typename _tcI0::carrier(typename _tcI0::carrier)> alias =
         [](typename _tcI0::carrier _x0) ->
         typename _tcI0::carrier { return step_of<_tcI0>(_x0); };
@@ -43,11 +41,9 @@ struct TodoTypeSubstPackAlias {
   struct nat_pack {
     using carrier = unsigned int;
 
-    __attribute__((pure)) static unsigned int seed() { return 3u; }
+    static unsigned int seed() { return 3u; }
 
-    __attribute__((pure)) static unsigned int step(unsigned int x) {
-      return (std::move(x) + 1);
-    }
+    static unsigned int step(unsigned int x) { return (std::move(x) + 1); }
   };
 
   static_assert(Pack<nat_pack>);

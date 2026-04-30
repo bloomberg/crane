@@ -1,7 +1,6 @@
 #include <loopify_search_opt.h>
 
-__attribute__((pure)) List<unsigned int>
-LoopifySearchOpt::lis(const List<unsigned int> &l) {
+List<unsigned int> LoopifySearchOpt::lis(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -41,7 +40,7 @@ LoopifySearchOpt::lis(const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int> LoopifySearchOpt::longest_run_fuel(
+List<unsigned int> LoopifySearchOpt::longest_run_fuel(
     const unsigned int &fuel, List<unsigned int> current,
     List<unsigned int> best, const List<unsigned int> &l) {
   List<unsigned int> _result;
@@ -119,13 +118,12 @@ __attribute__((pure)) List<unsigned int> LoopifySearchOpt::longest_run_fuel(
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifySearchOpt::longest_run(const List<unsigned int> &l) {
+List<unsigned int> LoopifySearchOpt::longest_run(const List<unsigned int> &l) {
   return longest_run_fuel(l.length(), List<unsigned int>::nil(),
                           List<unsigned int>::nil(), l);
 }
 
-__attribute__((pure)) unsigned int LoopifySearchOpt::knapsack_fuel(
+unsigned int LoopifySearchOpt::knapsack_fuel(
     const unsigned int &fuel, const unsigned int &capacity,
     const List<std::pair<unsigned int, unsigned int>> &items) {
   struct _Enter {
@@ -196,16 +194,15 @@ __attribute__((pure)) unsigned int LoopifySearchOpt::knapsack_fuel(
   return _result;
 }
 
-__attribute__((pure)) unsigned int LoopifySearchOpt::knapsack(
+unsigned int LoopifySearchOpt::knapsack(
     const unsigned int &capacity,
     const List<std::pair<unsigned int, unsigned int>> &items) {
   return knapsack_fuel((items.length() * capacity), capacity, items);
 }
 
-__attribute__((pure)) bool
-LoopifySearchOpt::subset_sum_fuel(const unsigned int &fuel,
-                                  const unsigned int &target,
-                                  const List<unsigned int> &l) {
+bool LoopifySearchOpt::subset_sum_fuel(const unsigned int &fuel,
+                                       const unsigned int &target,
+                                       const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
     unsigned int target;
@@ -266,13 +263,12 @@ LoopifySearchOpt::subset_sum_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifySearchOpt::subset_sum(const unsigned int &target,
-                             const List<unsigned int> &l) {
+bool LoopifySearchOpt::subset_sum(const unsigned int &target,
+                                  const List<unsigned int> &l) {
   return subset_sum_fuel((l.length() * target), target, l);
 }
 
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
+std::pair<unsigned int, unsigned int>
 LoopifySearchOpt::majority(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
@@ -321,10 +317,9 @@ LoopifySearchOpt::majority(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifySearchOpt::binary_search_fuel(const unsigned int &fuel,
-                                     const unsigned int &target,
-                                     const List<unsigned int> &l) {
+bool LoopifySearchOpt::binary_search_fuel(const unsigned int &fuel,
+                                          const unsigned int &target,
+                                          const List<unsigned int> &l) {
   bool _result;
   List<unsigned int> _loop_l = l;
   unsigned int _loop_fuel = fuel;
@@ -498,8 +493,7 @@ LoopifySearchOpt::binary_search_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifySearchOpt::binary_search(const unsigned int &target,
-                                const List<unsigned int> &l) {
+bool LoopifySearchOpt::binary_search(const unsigned int &target,
+                                     const List<unsigned int> &l) {
   return binary_search_fuel(l.length(), target, l);
 }

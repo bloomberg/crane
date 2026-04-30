@@ -3,8 +3,8 @@
 /// Variant: TWO arguments depend on pattern-matched fields.
 /// l := t, acc1 := mycons h acc1, acc2 := mycons (h+1) acc2
 /// Both acc1 and acc2 need h from the OLD l.
-__attribute__((pure)) std::pair<TailrecReorderProbe::mylist<unsigned int>,
-                                TailrecReorderProbe::mylist<unsigned int>>
+std::pair<TailrecReorderProbe::mylist<unsigned int>,
+          TailrecReorderProbe::mylist<unsigned int>>
 TailrecReorderProbe::dual_accum(
     const TailrecReorderProbe::mylist<unsigned int> &l,
     TailrecReorderProbe::mylist<unsigned int> acc1,
@@ -40,7 +40,7 @@ TailrecReorderProbe::dual_accum(
 
 /// Tail-recursive function where the recursive argument is a COMPLEX
 /// expression involving multiple pattern variables.
-__attribute__((pure)) TailrecReorderProbe::mylist<unsigned int>
+TailrecReorderProbe::mylist<unsigned int>
 TailrecReorderProbe::weave(const TailrecReorderProbe::mylist<unsigned int> &l1,
                            const TailrecReorderProbe::mylist<unsigned int> &l2,
                            TailrecReorderProbe::mylist<unsigned int> acc) {

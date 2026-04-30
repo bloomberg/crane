@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,7 +119,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct SuperfluousMoves {
@@ -109,9 +128,7 @@ struct SuperfluousMoves {
     unsigned int px;
 
     // ACCESSORS
-    __attribute__((pure)) position clone() const {
-      return position{(*(this)).px};
-    }
+    position clone() const { return position{(*(this)).px}; }
   };
   /// Small mode enum to force a switch in the extracted C++.
   enum class Mode { e_CHASE, e_FRIGHTENED };
@@ -151,7 +168,7 @@ struct SuperfluousMoves {
     unsigned int lives;
 
     // ACCESSORS
-    __attribute__((pure)) game_state clone() const {
+    game_state clone() const {
       return game_state{(*(this)).pacpos.clone(), (*(this)).ghosts.clone(),
                         (*(this)).lives};
     }
@@ -164,7 +181,7 @@ struct SuperfluousMoves {
     List<position> ls_prev_ghosts;
 
     // ACCESSORS
-    __attribute__((pure)) loop_state clone() const {
+    loop_state clone() const {
       return loop_state{(*(this)).ls_game.clone(),
                         (*(this)).ls_prev_pac.clone(),
                         (*(this)).ls_prev_ghosts.clone()};
@@ -173,9 +190,9 @@ struct SuperfluousMoves {
 
   /// Identity tick so the reproducer stays minimal while keeping the same
   /// shape.
-  __attribute__((pure)) static game_state tick(game_state gs);
+  static game_state tick(game_state gs);
   /// Life loss used to create the branch-local gs3 value.
-  __attribute__((pure)) static game_state lose_one_life(const game_state &gs);
+  static game_state lose_one_life(const game_state &gs);
   /// Forces the same control-flow path as the original bug.
   static inline const Mode forced_mode = Mode::e_CHASE;
   /// Concrete state that makes the game-over branch fire after lose_one_life.
@@ -189,8 +206,7 @@ struct SuperfluousMoves {
   static inline const loop_state sample_loop =
       loop_state{sample_state, sample_state.pacpos, sample_state.ghosts};
   /// Reduced branch reproducer without the outer option * nat wrapper.
-  __attribute__((pure)) static std::pair<bool, loop_state>
-  bad_branch(loop_state ls);
+  static std::pair<bool, loop_state> bad_branch(loop_state ls);
 };
 
 #endif // INCLUDED_SUPERFLUOUS_MOVES

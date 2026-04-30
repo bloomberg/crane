@@ -5,7 +5,7 @@
 /// shared_ptr's data. The fixpoint captures it by &, then escapes
 /// through an option constructor. After the match IIFE returns,
 /// h is destroyed — invoking the closure is use-after-free.
-__attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<unsigned int(unsigned int)>>
 FixEscapeMatch::make_fn_from_head(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return std::optional<std::function<unsigned int(unsigned int)>>();
@@ -29,7 +29,7 @@ FixEscapeMatch::make_fn_from_head(const List<unsigned int> &l) {
 }
 
 /// Variant: fixpoint captures TWO pattern variables from the match.
-__attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<unsigned int(unsigned int)>>
 FixEscapeMatch::make_fn_from_pair(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return std::optional<std::function<unsigned int(unsigned int)>>();

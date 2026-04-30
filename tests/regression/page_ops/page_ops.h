@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,12 +119,11 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Nat {
-  __attribute__((pure)) static unsigned int pow(const unsigned int &n,
-                                                const unsigned int &m);
+  static unsigned int pow(const unsigned int &n, const unsigned int &m);
 };
 
 struct PageOps {
@@ -113,19 +131,18 @@ struct PageOps {
     unsigned int pc;
 
     // ACCESSORS
-    __attribute__((pure)) state clone() const { return state{(*(this)).pc}; }
+    state clone() const { return state{(*(this)).pc}; }
   };
 
-  __attribute__((pure)) static unsigned int
-  addr12_of_nat(const unsigned int &n);
-  __attribute__((pure)) static unsigned int page_of(const unsigned int &p);
-  __attribute__((pure)) static unsigned int page_base(const unsigned int &p);
-  __attribute__((pure)) static unsigned int page_offset(const unsigned int &p);
-  __attribute__((pure)) static unsigned int pc_inc1(const state &s);
-  __attribute__((pure)) static unsigned int pc_inc2(const state &s);
-  __attribute__((pure)) static unsigned int base_for_next1(const state &s);
-  __attribute__((pure)) static unsigned int base_for_next2(const state &s);
-  __attribute__((pure)) static unsigned int recompose(const unsigned int &p);
+  static unsigned int addr12_of_nat(const unsigned int &n);
+  static unsigned int page_of(const unsigned int &p);
+  static unsigned int page_base(const unsigned int &p);
+  static unsigned int page_offset(const unsigned int &p);
+  static unsigned int pc_inc1(const state &s);
+  static unsigned int pc_inc2(const state &s);
+  static unsigned int base_for_next1(const state &s);
+  static unsigned int base_for_next2(const state &s);
+  static unsigned int recompose(const unsigned int &p);
   static inline const unsigned int max_addr = ((
       (Nat::pow(2u, 12u) - 1u) > Nat::pow(2u, 12u) ? 0
                                                    : (Nat::pow(2u, 12u) - 1u)));
@@ -168,7 +185,7 @@ struct PageOps {
     }
 
     // ACCESSORS
-    __attribute__((pure)) instruction clone() const {
+    instruction clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<NOP>(_sv.v())) {
         return instruction(NOP{});
@@ -179,11 +196,9 @@ struct PageOps {
     }
 
     // CREATORS
-    __attribute__((pure)) static instruction nop() {
-      return instruction(NOP{});
-    }
+    static instruction nop() { return instruction(NOP{}); }
 
-    __attribute__((pure)) static instruction ldm(unsigned int a0) {
+    static instruction ldm(unsigned int a0) {
       return instruction(LDM{std::move(a0)});
     }
 
@@ -191,7 +206,7 @@ struct PageOps {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
@@ -214,12 +229,10 @@ struct PageOps {
     }
   }
 
-  __attribute__((pure)) static instruction decode(const unsigned int &b1,
-                                                  const unsigned int &b2);
+  static instruction decode(const unsigned int &b1, const unsigned int &b2);
 
   template <typename T1>
-  __attribute__((pure)) static List<T1> drop(const unsigned int &n,
-                                             List<T1> l) {
+  static List<T1> drop(const unsigned int &n, List<T1> l) {
     if (n <= 0) {
       return l;
     } else {
@@ -233,8 +246,7 @@ struct PageOps {
     }
   }
 
-  __attribute__((
-      pure)) static std::optional<std::pair<instruction, unsigned int>>
+  static std::optional<std::pair<instruction, unsigned int>>
   disassemble(const List<unsigned int> &rom, const unsigned int &addr);
   static inline const unsigned int test_page_base_alignment =
       (256u ? page_base(777u) % 256u : page_base(777u));

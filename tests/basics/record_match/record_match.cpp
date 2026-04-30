@@ -1,7 +1,6 @@
 #include <record_match.h>
 
-__attribute__((pure)) unsigned int
-RecordMatch::sum(const RecordMatch::MyRec &r) {
+unsigned int RecordMatch::sum(const RecordMatch::MyRec &r) {
   unsigned int n1 = r.f1;
   unsigned int n2 = r.f2;
   unsigned int n3 = r.f3;

@@ -1,6 +1,6 @@
 #include <nested_record_update_qual.h>
 
-__attribute__((pure)) NestedRecordUpdateQual::Shadow
+NestedRecordUpdateQual::Shadow
 NestedRecordUpdateQual::bump(const NestedRecordUpdateQual::Shadow &x) {
   unsigned int n = x.Shadow::value;
   return Shadow{(n + 1)};

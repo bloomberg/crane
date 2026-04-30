@@ -1,6 +1,6 @@
 #include <deep_patterns.h>
 
-__attribute__((pure)) unsigned int DeepPatterns::deep_option(
+unsigned int DeepPatterns::deep_option(
     const std::optional<std::optional<std::optional<unsigned int>>> &x) {
   if (x.has_value()) {
     const std::optional<std::optional<unsigned int>> &o = *x;
@@ -20,7 +20,7 @@ __attribute__((pure)) unsigned int DeepPatterns::deep_option(
   }
 }
 
-__attribute__((pure)) unsigned int DeepPatterns::deep_pair(
+unsigned int DeepPatterns::deep_pair(
     const std::pair<std::pair<unsigned int, unsigned int>,
                     std::pair<unsigned int, unsigned int>> &p) {
   const std::pair<unsigned int, unsigned int> &p0 = p.first;
@@ -32,8 +32,7 @@ __attribute__((pure)) unsigned int DeepPatterns::deep_pair(
   return (((a + b) + c) + d);
 }
 
-__attribute__((pure)) unsigned int
-DeepPatterns::list_shape(const List<unsigned int> &l) {
+unsigned int DeepPatterns::list_shape(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return 0u;
   } else {
@@ -65,8 +64,7 @@ DeepPatterns::list_shape(const List<unsigned int> &l) {
   }
 }
 
-__attribute__((pure)) unsigned int
-DeepPatterns::deep_sum(const DeepPatterns::outer &o) {
+unsigned int DeepPatterns::deep_sum(const DeepPatterns::outer &o) {
   if (std::holds_alternative<typename DeepPatterns::outer::OLeft>(o.v())) {
     const auto &[d_a0] = std::get<typename DeepPatterns::outer::OLeft>(o.v());
     auto &&_sv0 = *(d_a0);
@@ -89,7 +87,7 @@ DeepPatterns::deep_sum(const DeepPatterns::outer &o) {
   }
 }
 
-__attribute__((pure)) unsigned int DeepPatterns::complex_match(
+unsigned int DeepPatterns::complex_match(
     const std::optional<std::pair<unsigned int, List<unsigned int>>> &x) {
   if (x.has_value()) {
     const std::pair<unsigned int, List<unsigned int>> &p = *x;
@@ -114,7 +112,7 @@ __attribute__((pure)) unsigned int DeepPatterns::complex_match(
   }
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 DeepPatterns::guarded_match(const std::pair<unsigned int, unsigned int> &p) {
   const unsigned int &a = p.first;
   const unsigned int &b = p.second;
@@ -125,7 +123,7 @@ DeepPatterns::guarded_match(const std::pair<unsigned int, unsigned int> &p) {
   }
 }
 
-__attribute__((pure)) unsigned int DeepPatterns::match_pair_list(
+unsigned int DeepPatterns::match_pair_list(
     const DeepPatterns::mylist<DeepPatterns::pair<unsigned int, unsigned int>>
         &l) {
   if (std::holds_alternative<typename DeepPatterns::mylist<
@@ -141,7 +139,7 @@ __attribute__((pure)) unsigned int DeepPatterns::match_pair_list(
   }
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 DeepPatterns::match_two(const DeepPatterns::mylist<unsigned int> &l) {
   if (std::holds_alternative<typename DeepPatterns::mylist<unsigned int>::Nil>(
           l.v())) {
@@ -153,7 +151,7 @@ DeepPatterns::match_two(const DeepPatterns::mylist<unsigned int> &l) {
   }
 }
 
-__attribute__((pure)) unsigned int DeepPatterns::match_triple(
+unsigned int DeepPatterns::match_triple(
     const DeepPatterns::mylist<
         DeepPatterns::mylist<DeepPatterns::mylist<unsigned int>>> &l) {
   if (std::holds_alternative<typename DeepPatterns::mylist<
@@ -182,7 +180,7 @@ __attribute__((pure)) unsigned int DeepPatterns::match_triple(
   }
 }
 
-__attribute__((pure)) unsigned int DeepPatterns::deep_wildcard(
+unsigned int DeepPatterns::deep_wildcard(
     const DeepPatterns::pair<DeepPatterns::pair<unsigned int, unsigned int>,
                              DeepPatterns::pair<unsigned int, unsigned int>>
         &p) {

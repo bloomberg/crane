@@ -20,14 +20,14 @@ struct OppositePropertyTransferTraceCase {
     std::function<unsigned int(unsigned int)> ps_epsilon;
 
     // ACCESSORS
-    __attribute__((pure)) PreStableCategory clone() const {
+    PreStableCategory clone() const {
       return PreStableCategory{(*(this)).ps_tag,  (*(this)).ps_shift,
                                (*(this)).ps_Susp, (*(this)).ps_Loop,
                                (*(this)).ps_eta,  (*(this)).ps_epsilon};
     }
   };
 
-  __attribute__((pure)) static PreStableCategory
+  static PreStableCategory
   opposite_prestable_category(const PreStableCategory &pS);
 
   struct LeftStableWitness {
@@ -35,7 +35,7 @@ struct OppositePropertyTransferTraceCase {
     unsigned int lsw_value;
 
     // ACCESSORS
-    __attribute__((pure)) LeftStableWitness clone() const {
+    LeftStableWitness clone() const {
       return LeftStableWitness{(*(this)).lsw_seed, (*(this)).lsw_value};
     }
   };
@@ -45,7 +45,7 @@ struct OppositePropertyTransferTraceCase {
     unsigned int rsw_value;
 
     // ACCESSORS
-    __attribute__((pure)) RightStableWitness clone() const {
+    RightStableWitness clone() const {
       return RightStableWitness{(*(this)).rsw_seed, (*(this)).rsw_value};
     }
   };
@@ -55,7 +55,7 @@ struct OppositePropertyTransferTraceCase {
     unsigned int t1_value;
 
     // ACCESSORS
-    __attribute__((pure)) Triangle1Witness clone() const {
+    Triangle1Witness clone() const {
       return Triangle1Witness{(*(this)).t1_seed, (*(this)).t1_value};
     }
   };
@@ -65,7 +65,7 @@ struct OppositePropertyTransferTraceCase {
     unsigned int t2_value;
 
     // ACCESSORS
-    __attribute__((pure)) Triangle2Witness clone() const {
+    Triangle2Witness clone() const {
       return Triangle2Witness{(*(this)).t2_seed, (*(this)).t2_value};
     }
   };
@@ -83,7 +83,7 @@ struct OppositePropertyTransferTraceCase {
     unsigned int lp_tag;
 
     // ACCESSORS
-    __attribute__((pure)) LeftProperty clone() const {
+    LeftProperty clone() const {
       return LeftProperty{(*(this)).lp_seed, (*(this)).lp_value,
                           (*(this)).lp_tag};
     }
@@ -95,23 +95,21 @@ struct OppositePropertyTransferTraceCase {
     unsigned int rp_tag;
 
     // ACCESSORS
-    __attribute__((pure)) RightProperty clone() const {
+    RightProperty clone() const {
       return RightProperty{(*(this)).rp_seed, (*(this)).rp_value,
                            (*(this)).rp_tag};
     }
   };
 
-  __attribute__((pure)) static is_left_semi_stable
+  static is_left_semi_stable
   right_stable_gives_opposite_left(const PreStableCategory &_x,
                                    const RightStableWitness &h);
-  __attribute__((
-      pure)) static EquivT<satisfies_triangle_1, satisfies_triangle_2>
+  static EquivT<satisfies_triangle_1, satisfies_triangle_2>
   triangle_identity_duality(const PreStableCategory &_x);
-  __attribute__((pure)) static LeftProperty
-  sample_left_property(const PreStableCategory &pS,
-                       const LeftStableWitness &h_left,
-                       const Triangle1Witness &_x);
-  __attribute__((pure)) static EquivT<LeftProperty, RightProperty>
+  static LeftProperty sample_left_property(const PreStableCategory &pS,
+                                           const LeftStableWitness &h_left,
+                                           const Triangle1Witness &_x);
+  static EquivT<LeftProperty, RightProperty>
   dual_property_equiv(const PreStableCategory &_x);
 
   template <typename T1 = void, typename T2, typename F0, typename F1>

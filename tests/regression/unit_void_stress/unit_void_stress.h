@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,16 +119,15 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct UnitVoidStress {
   static void consume(const unsigned int &n);
   static void discard(const unsigned int &_x);
-  __attribute__((pure)) static std::pair<unsigned int, std::monostate>
+  static std::pair<unsigned int, std::monostate>
   pair_with_void_call(const unsigned int &n);
-  __attribute__((pure)) static std::optional<std::monostate>
-  some_void_call(const unsigned int &n);
+  static std::optional<std::monostate> some_void_call(const unsigned int &n);
   static inline const List<std::monostate> list_void_calls =
       List<std::monostate>::cons(
           []() {
@@ -123,29 +141,24 @@ struct UnitVoidStress {
               }(),
               List<std::monostate>::nil()));
   static void id_void_call(const unsigned int &_x0);
-  __attribute__((pure)) static std::pair<unsigned int, std::monostate>
+  static std::pair<unsigned int, std::monostate>
   pair_with_discard(unsigned int n);
   static void store_and_call(const unsigned int &_x0);
-  __attribute__((pure)) static std::pair<unsigned int, std::monostate>
+  static std::pair<unsigned int, std::monostate>
   pair_via_let(const unsigned int &n);
   static void cond_void(const bool &b, const unsigned int &n);
   static void match_nat_void(const unsigned int &n);
-  __attribute__((pure)) static std::pair<
-      std::pair<unsigned int, std::monostate>, unsigned int>
+  static std::pair<std::pair<unsigned int, std::monostate>, unsigned int>
   nested_pair_void(unsigned int n);
-  __attribute__((
-      pure)) static std::optional<std::pair<unsigned int, std::monostate>>
+  static std::optional<std::pair<unsigned int, std::monostate>>
   option_pair_void(unsigned int n);
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  static std::pair<unsigned int, unsigned int>
   let_void_then_pair(unsigned int n);
-  __attribute__((pure)) static unsigned int
-  seq_voids_value(const unsigned int &_x);
-  __attribute__((pure)) static unsigned int void_in_one_branch(const bool &b,
-                                                               unsigned int n);
+  static unsigned int seq_voids_value(const unsigned int &_x);
+  static unsigned int void_in_one_branch(const bool &b, unsigned int n);
 
   template <typename T1, MapsTo<void, T1> F0>
-  __attribute__((pure)) static List<std::monostate>
-  map_void(F0 &&f, const List<T1> &l) {
+  static List<std::monostate> map_void(F0 &&f, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return List<std::monostate>::nil();
     } else {
@@ -166,7 +179,7 @@ struct UnitVoidStress {
               1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())));
 
   template <MapsTo<void, unsigned int> F0>
-  __attribute__((pure)) static std::optional<std::monostate>
+  static std::optional<std::monostate>
   apply_void_to_option(F0 &&f, const unsigned int &n) {
     return std::make_optional<std::monostate>([=]() mutable {
       f(n);
@@ -201,8 +214,7 @@ struct UnitVoidStress {
   }();
 
   template <typename T1, MapsTo<T1, unsigned int> F0>
-  __attribute__((pure)) static std::pair<unsigned int, T1>
-  apply_in_pair(F0 &&f, unsigned int n) {
+  static std::pair<unsigned int, T1> apply_in_pair(F0 &&f, unsigned int n) {
     return std::make_pair(n, f(n));
   }
 

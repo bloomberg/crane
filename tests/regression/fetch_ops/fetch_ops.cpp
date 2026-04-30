@@ -1,17 +1,16 @@
 #include <fetch_ops.h>
 
-__attribute__((pure)) unsigned int
-FetchOps::fetch_byte(const FetchOps::state &s, const unsigned int &addr) {
+unsigned int FetchOps::fetch_byte(const FetchOps::state &s,
+                                  const unsigned int &addr) {
   return ListDef::template nth<unsigned int>(addr, s.rom, 0u);
 }
 
-__attribute__((pure)) unsigned int
-FetchOps::fetch_byte_direct(const List<unsigned int> &rom_data,
-                            const unsigned int &addr) {
+unsigned int FetchOps::fetch_byte_direct(const List<unsigned int> &rom_data,
+                                         const unsigned int &addr) {
   return ListDef::template nth<unsigned int>(addr, rom_data, 0u);
 }
 
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
+std::pair<unsigned int, unsigned int>
 FetchOps::fetch_pair(const List<unsigned int> &rom_data,
                      const unsigned int &addr) {
   auto &&_sv = drop<unsigned int>(addr, rom_data);
@@ -31,7 +30,7 @@ FetchOps::fetch_pair(const List<unsigned int> &rom_data,
   }
 }
 
-__attribute__((pure)) std::optional<std::pair<unsigned int, unsigned int>>
+std::optional<std::pair<unsigned int, unsigned int>>
 FetchOps::fetch_window(const List<unsigned int> &rom_data,
                        const unsigned int &addr) {
   auto &&_sv = drop<unsigned int>(addr, rom_data);

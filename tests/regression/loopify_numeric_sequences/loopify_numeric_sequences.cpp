@@ -1,6 +1,6 @@
 #include <loopify_numeric_sequences.h>
 
-__attribute__((pure)) unsigned int
+unsigned int
 LoopifyNumericSequences::collatz_length_fuel(const unsigned int &fuel,
                                              const unsigned int &n) {
   struct _Enter {
@@ -55,12 +55,11 @@ LoopifyNumericSequences::collatz_length_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericSequences::collatz_length(const unsigned int &n) {
+unsigned int LoopifyNumericSequences::collatz_length(const unsigned int &n) {
   return collatz_length_fuel((n * 100u), n);
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int &fuel,
                                                unsigned int n) {
   std::unique_ptr<List<unsigned int>> _head{};
@@ -110,14 +109,13 @@ LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int &fuel,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyNumericSequences::collatz_sequence(const unsigned int &n) {
   return collatz_sequence_fuel((n * 100u), n);
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericSequences::tribonacci_fuel(const unsigned int &fuel,
-                                         const unsigned int &n) {
+unsigned int LoopifyNumericSequences::tribonacci_fuel(const unsigned int &fuel,
+                                                      const unsigned int &n) {
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
@@ -191,14 +189,12 @@ LoopifyNumericSequences::tribonacci_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericSequences::tribonacci(const unsigned int &n) {
+unsigned int LoopifyNumericSequences::tribonacci(const unsigned int &n) {
   return tribonacci_fuel((n * 3u), n);
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericSequences::staircase_fuel(const unsigned int &fuel,
-                                        const unsigned int &n) {
+unsigned int LoopifyNumericSequences::staircase_fuel(const unsigned int &fuel,
+                                                     const unsigned int &n) {
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
@@ -266,14 +262,12 @@ LoopifyNumericSequences::staircase_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericSequences::staircase(const unsigned int &n) {
+unsigned int LoopifyNumericSequences::staircase(const unsigned int &n) {
   return staircase_fuel((n * 3u), n);
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericSequences::digitsum_fuel(const unsigned int &fuel,
-                                       const unsigned int &n) {
+unsigned int LoopifyNumericSequences::digitsum_fuel(const unsigned int &fuel,
+                                                    const unsigned int &n) {
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
@@ -315,14 +309,12 @@ LoopifyNumericSequences::digitsum_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericSequences::digitsum(const unsigned int &n) {
+unsigned int LoopifyNumericSequences::digitsum(const unsigned int &n) {
   return digitsum_fuel((n + 1u), n);
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericSequences::dec_to_bin_fuel(const unsigned int &fuel,
-                                         const unsigned int &n) {
+unsigned int LoopifyNumericSequences::dec_to_bin_fuel(const unsigned int &fuel,
+                                                      const unsigned int &n) {
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
@@ -365,12 +357,11 @@ LoopifyNumericSequences::dec_to_bin_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericSequences::dec_to_bin(const unsigned int &n) {
+unsigned int LoopifyNumericSequences::dec_to_bin(const unsigned int &n) {
   return dec_to_bin_fuel((n + 1u), n);
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 LoopifyNumericSequences::alternate_sum(const bool &sign, unsigned int acc,
                                        const List<unsigned int> &l) {
   unsigned int _result;
@@ -415,9 +406,8 @@ LoopifyNumericSequences::alternate_sum(const bool &sign, unsigned int acc,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericSequences::sum_divisors_aux(const unsigned int &n,
-                                          const unsigned int &d) {
+unsigned int LoopifyNumericSequences::sum_divisors_aux(const unsigned int &n,
+                                                       const unsigned int &d) {
   struct _Enter {
     unsigned int d;
   };
@@ -456,8 +446,7 @@ LoopifyNumericSequences::sum_divisors_aux(const unsigned int &n,
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyNumericSequences::sum_divisors(const unsigned int &n) {
+unsigned int LoopifyNumericSequences::sum_divisors(const unsigned int &n) {
   if (n <= 1u) {
     return 0u;
   } else {

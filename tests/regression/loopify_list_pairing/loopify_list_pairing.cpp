@@ -1,7 +1,6 @@
 #include <loopify_list_pairing.h>
 
-__attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
-LoopifyListPairing::unzip(
+std::pair<List<unsigned int>, List<unsigned int>> LoopifyListPairing::unzip(
     const List<std::pair<unsigned int, unsigned int>> &l) {
   struct _Enter {
     const List<std::pair<unsigned int, unsigned int>> *l;
@@ -49,7 +48,7 @@ LoopifyListPairing::unzip(
   return _result;
 }
 
-__attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
+std::pair<List<unsigned int>, List<unsigned int>>
 LoopifyListPairing::swizzle(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
@@ -90,7 +89,7 @@ LoopifyListPairing::swizzle(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
+std::pair<List<unsigned int>, List<unsigned int>>
 LoopifyListPairing::partition(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
@@ -135,7 +134,7 @@ LoopifyListPairing::partition(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyListPairing::zip_longest_fuel(const unsigned int &fuel,
                                      const List<unsigned int> &l1,
                                      const List<unsigned int> &l2,
@@ -230,7 +229,7 @@ LoopifyListPairing::zip_longest_fuel(const unsigned int &fuel,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyListPairing::zip_longest(const List<unsigned int> &l1,
                                 const List<unsigned int> &l2,
                                 const unsigned int &default0) {
@@ -245,9 +244,8 @@ LoopifyListPairing::zip_longest(const List<unsigned int> &l1,
   return zip_longest_fuel(maxlen, l1, l2, default0);
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListPairing::zipWith(const List<unsigned int> &l1,
-                            const List<unsigned int> &l2) {
+List<unsigned int> LoopifyListPairing::zipWith(const List<unsigned int> &l1,
+                                               const List<unsigned int> &l2) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l2 = &l2;
@@ -286,7 +284,7 @@ LoopifyListPairing::zipWith(const List<unsigned int> &l1,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
+std::pair<List<unsigned int>, List<unsigned int>>
 LoopifyListPairing::split_even_odd(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;

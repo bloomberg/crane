@@ -1,7 +1,6 @@
 #include <fix_move_capture.h>
 
-__attribute__((pure)) unsigned int
-FixMoveCapture::length(const FixMoveCapture::mylist &l) {
+unsigned int FixMoveCapture::length(const FixMoveCapture::mylist &l) {
   if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(l.v())) {
     return 0u;
   } else {
@@ -11,8 +10,7 @@ FixMoveCapture::length(const FixMoveCapture::mylist &l) {
   }
 }
 
-__attribute__((pure)) unsigned int
-FixMoveCapture::sum(const FixMoveCapture::mylist &l) {
+unsigned int FixMoveCapture::sum(const FixMoveCapture::mylist &l) {
   if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(l.v())) {
     return 0u;
   } else {
@@ -24,8 +22,7 @@ FixMoveCapture::sum(const FixMoveCapture::mylist &l) {
 
 /// dup_head stores l in the constructor → l escapes → owned.
 /// This means the caller passes l by value (move semantics).
-__attribute__((pure)) FixMoveCapture::mylist
-FixMoveCapture::dup_head(FixMoveCapture::mylist l) {
+FixMoveCapture::mylist FixMoveCapture::dup_head(FixMoveCapture::mylist l) {
   if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(
           l.v_mut())) {
     return mylist::mynil();
@@ -43,7 +40,7 @@ FixMoveCapture::dup_head(FixMoveCapture::mylist l) {
 /// - Generates dup_head(std::move(l))
 /// - l is now null in caller scope
 /// - g(3) calls fixpoint, which accesses l via & → null → CRASH
-__attribute__((pure)) unsigned int FixMoveCapture::f(FixMoveCapture::mylist l) {
+unsigned int FixMoveCapture::f(FixMoveCapture::mylist l) {
   std::function<unsigned int(unsigned int)> go;
   go = [&](unsigned int n) -> unsigned int {
     if (n <= 0) {
@@ -60,8 +57,7 @@ __attribute__((pure)) unsigned int FixMoveCapture::f(FixMoveCapture::mylist l) {
 /// Even simpler: use the fixpoint, then pass l to a consuming
 /// function. The addition's evaluation order is unspecified in C++,
 /// so we use a let-binding to force the order.
-__attribute__((pure)) unsigned int
-FixMoveCapture::f2(FixMoveCapture::mylist l) {
+unsigned int FixMoveCapture::f2(FixMoveCapture::mylist l) {
   std::function<unsigned int(unsigned int)> go;
   go = [&](unsigned int n) -> unsigned int {
     if (n <= 0) {

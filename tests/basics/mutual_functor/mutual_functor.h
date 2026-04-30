@@ -68,7 +68,7 @@ template <Elem E> struct MutualTree {
     }
 
     // ACCESSORS
-    __attribute__((pure)) tree clone() const {
+    tree clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<Leaf>(_sv.v());
@@ -82,11 +82,9 @@ template <Elem E> struct MutualTree {
     }
 
     // CREATORS
-    __attribute__((pure)) static tree leaf(unsigned int a0) {
-      return tree(Leaf{std::move(a0)});
-    }
+    static tree leaf(unsigned int a0) { return tree(Leaf{std::move(a0)}); }
 
-    __attribute__((pure)) static tree node(unsigned int a0, forest a1) {
+    static tree node(unsigned int a0, forest a1) {
       return tree(Node{std::move(a0), std::make_unique<forest>(std::move(a1))});
     }
 
@@ -94,7 +92,7 @@ template <Elem E> struct MutualTree {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   struct forest {
@@ -135,23 +133,42 @@ template <Elem E> struct MutualTree {
     }
 
     // ACCESSORS
-    __attribute__((pure)) forest clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<FNil>(_sv.v())) {
-        return forest(FNil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<FCons>(_sv.v());
-        return forest(FCons{
-            d_a0 ? std::make_unique<MutualTree::tree>(d_a0->clone()) : nullptr,
-            d_a1 ? std::make_unique<MutualTree::forest>(d_a1->clone())
-                 : nullptr});
+    forest clone() const {
+      forest _out{};
+
+      struct _CloneFrame {
+        const forest *_src;
+        forest *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const forest *_src = _frame._src;
+        forest *_dst = _frame._dst;
+        if (std::holds_alternative<FNil>(_src->v())) {
+          const auto &_alt = std::get<FNil>(_src->v());
+          _dst->d_v_ = FNil{};
+        } else {
+          const auto &_alt = std::get<FCons>(_src->v());
+          _dst->d_v_ = FCons{
+              _alt.d_a0 ? std::make_unique<MutualTree::tree>(_alt.d_a0->clone())
+                        : nullptr,
+              _alt.d_a1 ? std::make_unique<forest>() : nullptr};
+          auto &_dst_alt = std::get<FCons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static forest fnil() { return forest(FNil{}); }
+    static forest fnil() { return forest(FNil{}); }
 
-    __attribute__((pure)) static forest fcons(tree a0, forest a1) {
+    static forest fcons(tree a0, forest a1) {
       return forest(FCons{std::make_unique<tree>(std::move(a0)),
                           std::make_unique<forest>(std::move(a1))});
     }
@@ -178,7 +195,7 @@ template <Elem E> struct MutualTree {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -225,7 +242,7 @@ template <Elem E> struct MutualTree {
     }
   }
 
-  __attribute__((pure)) static unsigned int tree_size(const tree &t0) {
+  static unsigned int tree_size(const tree &t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
       return 1u;
     } else {
@@ -234,7 +251,7 @@ template <Elem E> struct MutualTree {
     }
   }
 
-  __attribute__((pure)) static unsigned int forest_size(const forest &f) {
+  static unsigned int forest_size(const forest &f) {
     if (std::holds_alternative<typename forest::FNil>(f.v())) {
       return 0u;
     } else {
@@ -243,7 +260,7 @@ template <Elem E> struct MutualTree {
     }
   }
 
-  __attribute__((pure)) static unsigned int tree_sum(const tree &t0) {
+  static unsigned int tree_sum(const tree &t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
       const auto &[d_a0] = std::get<typename tree::Leaf>(t0.v());
       return d_a0;
@@ -253,7 +270,7 @@ template <Elem E> struct MutualTree {
     }
   }
 
-  __attribute__((pure)) static unsigned int forest_sum(const forest &f) {
+  static unsigned int forest_sum(const forest &f) {
     if (std::holds_alternative<typename forest::FNil>(f.v())) {
       return 0u;
     } else {

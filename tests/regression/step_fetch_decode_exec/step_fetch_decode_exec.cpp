@@ -1,12 +1,12 @@
 #include <step_fetch_decode_exec.h>
 
-__attribute__((pure)) unsigned int
+unsigned int
 StepFetchDecodeExec::fetch_byte(const StepFetchDecodeExec::state &s,
                                 const unsigned int &addr) {
   return ListDef::template nth<unsigned int>(addr, s.rom, 0u);
 }
 
-__attribute__((pure)) StepFetchDecodeExec::instruction
+StepFetchDecodeExec::instruction
 StepFetchDecodeExec::decode(const unsigned int &b1, const unsigned int &b2) {
   if ((2u ? b1 % 2u : b1) == 0u) {
     return instruction::nop();
@@ -15,7 +15,7 @@ StepFetchDecodeExec::decode(const unsigned int &b1, const unsigned int &b2) {
   }
 }
 
-__attribute__((pure)) StepFetchDecodeExec::state
+StepFetchDecodeExec::state
 StepFetchDecodeExec::execute(const StepFetchDecodeExec::state &s,
                              const StepFetchDecodeExec::instruction &i) {
   if (std::holds_alternative<typename StepFetchDecodeExec::instruction::NOP>(
@@ -29,7 +29,7 @@ StepFetchDecodeExec::execute(const StepFetchDecodeExec::state &s,
   }
 }
 
-__attribute__((pure)) StepFetchDecodeExec::state
+StepFetchDecodeExec::state
 StepFetchDecodeExec::step(const StepFetchDecodeExec::state &s) {
   unsigned int b1 = fetch_byte(s, s.pc);
   unsigned int b2 = fetch_byte(s, (s.pc + 1u));

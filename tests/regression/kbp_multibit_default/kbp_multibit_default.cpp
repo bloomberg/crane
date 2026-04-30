@@ -1,6 +1,6 @@
 #include <kbp_multibit_default.h>
 
-__attribute__((pure)) KbpMultibitDefault::state
+KbpMultibitDefault::state
 KbpMultibitDefault::execute_kbp(const KbpMultibitDefault::state &s) {
   unsigned int result;
   if (s.acc <= 0) {

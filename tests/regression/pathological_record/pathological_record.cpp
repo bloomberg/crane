@@ -1,22 +1,20 @@
 #include <pathological_record.h>
 
-__attribute__((pure)) unsigned int
-PathologicalRecord::hof_access(const PathologicalRecord::Rec &r) {
+unsigned int PathologicalRecord::hof_access(const PathologicalRecord::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;
   return ((a + b) + c);
 }
 
-__attribute__((pure)) unsigned int
-PathologicalRecord::nested_lets(const PathologicalRecord::Rec &r) {
+unsigned int PathologicalRecord::nested_lets(const PathologicalRecord::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;
   return ((a + b) + c);
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 PathologicalRecord::conditional_access(const PathologicalRecord::Rec &r,
                                        const bool &flag) {
   unsigned int a = r.f1;
@@ -29,9 +27,8 @@ PathologicalRecord::conditional_access(const PathologicalRecord::Rec &r,
   }
 }
 
-__attribute__((pure)) unsigned int
-PathologicalRecord::countdown(const unsigned int &n,
-                              const PathologicalRecord::Rec &r) {
+unsigned int PathologicalRecord::countdown(const unsigned int &n,
+                                           const PathologicalRecord::Rec &r) {
   if (n <= 0) {
     return r.f1;
   } else {
@@ -43,7 +40,7 @@ PathologicalRecord::countdown(const unsigned int &n,
   }
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 PathologicalRecord::double_match(const PathologicalRecord::Rec &r1,
                                  const PathologicalRecord::Rec &r2) {
   unsigned int a1 = r1.f1;
@@ -58,7 +55,7 @@ PathologicalRecord::double_match(const PathologicalRecord::Rec &r1,
   return ((x + y) * z);
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 PathologicalRecord::closure_over_fields(const PathologicalRecord::Rec &r,
                                         const unsigned int &x) {
   unsigned int a = r.f1;
@@ -67,7 +64,7 @@ PathologicalRecord::closure_over_fields(const PathologicalRecord::Rec &r,
   return (((x + a) + b) + c);
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 PathologicalRecord::guarded_pattern(const PathologicalRecord::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
@@ -83,7 +80,7 @@ PathologicalRecord::guarded_pattern(const PathologicalRecord::Rec &r) {
   }
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 PathologicalRecord::scrambled_access(const PathologicalRecord::BigRec &r) {
   unsigned int a = r.bf1;
   unsigned int b = r.bf2;
@@ -93,7 +90,7 @@ PathologicalRecord::scrambled_access(const PathologicalRecord::BigRec &r) {
   return ((((e + d) + c) + b) + a);
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 PathologicalRecord::repeated_access(const PathologicalRecord::BigRec &r) {
   unsigned int a = r.bf1;
   unsigned int b = r.bf2;

@@ -1,7 +1,6 @@
 #include <loopify_comparators.h>
 
-__attribute__((pure)) unsigned int
-LoopifyComparators::maximum_by(const List<unsigned int> &l) {
+unsigned int LoopifyComparators::maximum_by(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -48,8 +47,7 @@ LoopifyComparators::maximum_by(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyComparators::minimum_by(const List<unsigned int> &l) {
+unsigned int LoopifyComparators::minimum_by(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -96,8 +94,9 @@ LoopifyComparators::minimum_by(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int> LoopifyComparators::merge_by_fuel(
-    const unsigned int &fuel, List<unsigned int> l1, List<unsigned int> l2) {
+List<unsigned int> LoopifyComparators::merge_by_fuel(const unsigned int &fuel,
+                                                     List<unsigned int> l1,
+                                                     List<unsigned int> l2) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l2 = std::move(l2);
@@ -156,16 +155,15 @@ __attribute__((pure)) List<unsigned int> LoopifyComparators::merge_by_fuel(
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyComparators::merge_by(const List<unsigned int> &l1,
-                             const List<unsigned int> &l2) {
+List<unsigned int> LoopifyComparators::merge_by(const List<unsigned int> &l1,
+                                                const List<unsigned int> &l2) {
   unsigned int len1 = l1.length();
   unsigned int len2 = l2.length();
   return merge_by_fuel((len1 + len2), l1, l2);
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyComparators::insert_sorted(unsigned int x, List<unsigned int> l) {
+List<unsigned int> LoopifyComparators::insert_sorted(unsigned int x,
+                                                     List<unsigned int> l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l = std::move(l);
@@ -197,7 +195,7 @@ LoopifyComparators::insert_sorted(unsigned int x, List<unsigned int> l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyComparators::insertion_sort(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
@@ -234,9 +232,8 @@ LoopifyComparators::insertion_sort(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifyComparators::is_sorted_fuel(const unsigned int &fuel,
-                                   const List<unsigned int> &l) {
+bool LoopifyComparators::is_sorted_fuel(const unsigned int &fuel,
+                                        const List<unsigned int> &l) {
   bool _result;
   List<unsigned int> _loop_l = l;
   unsigned int _loop_fuel = fuel;
@@ -278,8 +275,7 @@ LoopifyComparators::is_sorted_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) bool
-LoopifyComparators::is_sorted(const List<unsigned int> &l) {
+bool LoopifyComparators::is_sorted(const List<unsigned int> &l) {
   unsigned int len = l.length();
   return is_sorted_fuel(len, l);
 }

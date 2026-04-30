@@ -7,7 +7,7 @@
 /// return_captures_by_value does NOT handle lambdas inside constructor args.
 /// When the visit lambda returns, _args goes out of scope, and the Box
 /// holds a dangling reference to a destroyed shared_ptr.
-__attribute__((pure)) MatchClosureEscape::fn_box
+MatchClosureEscape::fn_box
 MatchClosureEscape::match_arm_box(const MatchClosureEscape::tree &t) {
   if (std::holds_alternative<typename MatchClosureEscape::tree::Leaf>(t.v())) {
     return fn_box::box([](unsigned int x) { return x; });

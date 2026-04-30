@@ -67,17 +67,34 @@ struct ImplicitArgs {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mylist<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Mynil>(_sv.v())) {
-        return mylist<t_A>(Mynil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
-        return mylist<t_A>(Mycons{
-            d_a0,
-            d_a1 ? std::make_unique<ImplicitArgs::mylist<t_A>>(d_a1->clone())
-                 : nullptr});
+    mylist clone() const {
+      mylist _out{};
+
+      struct _CloneFrame {
+        const mylist *_src;
+        mylist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist *_src = _frame._src;
+        mylist *_dst = _frame._dst;
+        if (std::holds_alternative<Mynil>(_src->v())) {
+          const auto &_alt = std::get<Mynil>(_src->v());
+          _dst->d_v_ = Mynil{};
+        } else {
+          const auto &_alt = std::get<Mycons>(_src->v());
+          _dst->d_v_ = Mycons{_alt.d_a0,
+                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -92,9 +109,9 @@ struct ImplicitArgs {
       }
     }
 
-    __attribute__((pure)) static mylist<t_A> mynil() { return mylist(Mynil{}); }
+    static mylist<t_A> mynil() { return mylist(Mynil{}); }
 
-    __attribute__((pure)) static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+    static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
       return mylist(
           Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
@@ -121,7 +138,7 @@ struct ImplicitArgs {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1, mylist<T1>, T2> F1>
@@ -144,8 +161,7 @@ struct ImplicitArgs {
     }
   }
 
-  template <typename T1>
-  __attribute__((pure)) static unsigned int length(const mylist<T1> &l) {
+  template <typename T1> static unsigned int length(const mylist<T1> &l) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
       return 0u;
     } else {
@@ -157,30 +173,28 @@ struct ImplicitArgs {
   static inline const unsigned int explicit_id = id<unsigned int>(5u);
   static inline const unsigned int explicit_fst =
       fst_of<unsigned int, bool>(3u, true);
-  __attribute__((pure)) static unsigned int add_one(const unsigned int &_x0);
-  __attribute__((pure)) static unsigned int double_nat(const unsigned int &n);
-  __attribute__((pure)) static unsigned int
-  add_implicit(const unsigned int &_x0, const unsigned int &_x1);
+  static unsigned int add_one(const unsigned int &_x0);
+  static unsigned int double_nat(const unsigned int &n);
+  static unsigned int add_implicit(const unsigned int &_x0,
+                                   const unsigned int &_x1);
   static inline const unsigned int use_add_implicit = add_implicit(5u, 3u);
-  __attribute__((pure)) static unsigned int scale(const unsigned int &_x0,
-                                                  const unsigned int &_x1);
+  static unsigned int scale(const unsigned int &_x0, const unsigned int &_x1);
   static inline const unsigned int use_scale = scale(3u, 7u);
-  __attribute__((pure)) static unsigned int
-  combine(const unsigned int &a, const unsigned int &b, const unsigned int &x);
+  static unsigned int combine(const unsigned int &a, const unsigned int &b,
+                              const unsigned int &x);
   static inline const unsigned int use_combine = combine(2u, 3u, 4u);
 
   template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((pure)) static unsigned int apply_implicit(F0 &&f,
-                                                           unsigned int _x0) {
+  static unsigned int apply_implicit(F0 &&f, unsigned int _x0) {
     return f(_x0);
   }
 
   static inline const unsigned int use_apply_implicit = apply_implicit(
       [](unsigned int _x0) -> unsigned int { return (1u + _x0); }, 5u);
-  __attribute__((pure)) static unsigned int with_base(const unsigned int &_x0,
-                                                      const unsigned int &_x1);
-  __attribute__((pure)) static unsigned int from_zero(const unsigned int &_x0);
-  __attribute__((pure)) static unsigned int from_ten(const unsigned int &_x0);
+  static unsigned int with_base(const unsigned int &_x0,
+                                const unsigned int &_x1);
+  static unsigned int from_zero(const unsigned int &_x0);
+  static unsigned int from_ten(const unsigned int &_x0);
   static inline const unsigned int use_from_zero = from_zero(5u);
   static inline const unsigned int use_from_ten = from_ten(5u);
 
@@ -198,18 +212,18 @@ struct ImplicitArgs {
       head_or<unsigned int>(0u, mylist<unsigned int>::mynil());
   static inline const unsigned int use_head_nonempty = head_or<unsigned int>(
       0u, mylist<unsigned int>::mycons(7u, mylist<unsigned int>::mynil()));
-  __attribute__((pure)) static unsigned int
-  sum_with_init(unsigned int init, const mylist<unsigned int> &l);
+  static unsigned int sum_with_init(unsigned int init,
+                                    const mylist<unsigned int> &l);
   static inline const unsigned int use_sum_init = sum_with_init(
       5u,
       mylist<unsigned int>::mycons(
           1u, mylist<unsigned int>::mycons(2u, mylist<unsigned int>::mynil())));
-  __attribute__((pure)) static unsigned int
-  nested_implicits(const unsigned int &a, const unsigned int &b,
-                   const unsigned int &c);
+  static unsigned int nested_implicits(const unsigned int &a,
+                                       const unsigned int &b,
+                                       const unsigned int &c);
   static inline const unsigned int use_nested = nested_implicits(1u, 2u, 3u);
-  __attribute__((pure)) static unsigned int
-  choose_branch(const bool &flag, unsigned int t, unsigned int f);
+  static unsigned int choose_branch(const bool &flag, unsigned int t,
+                                    unsigned int f);
   static inline const unsigned int use_choose_true =
       choose_branch(true, 7u, 3u);
   static inline const unsigned int use_choose_false =

@@ -1,8 +1,7 @@
 #include <pair_closure_escape.h>
 
-__attribute__((pure)) unsigned int
-PairClosureEscape::sum_values(const PairClosureEscape::tree &t,
-                              unsigned int x) {
+unsigned int PairClosureEscape::sum_values(const PairClosureEscape::tree &t,
+                                           unsigned int x) {
   if (std::holds_alternative<typename PairClosureEscape::tree::Leaf>(t.v())) {
     return x;
   } else {
@@ -30,7 +29,6 @@ PairClosureEscape::sum_values(const PairClosureEscape::tree &t,
 
 /// BUG: Partial application stored in fst of a pair (std::make_pair).
 /// return_captures_by_value doesn't handle lambdas inside std::make_pair.
-__attribute__((pure))
 std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
 PairClosureEscape::pair_escape(PairClosureEscape::tree t) {
   return std::make_pair(
@@ -40,7 +38,7 @@ PairClosureEscape::pair_escape(PairClosureEscape::tree t) {
       0u);
 }
 
-__attribute__((pure)) unsigned int PairClosureEscape::use_pair(
+unsigned int PairClosureEscape::use_pair(
     const std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
         &p) {
   return p.first(p.second);

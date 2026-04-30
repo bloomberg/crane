@@ -50,15 +50,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -72,9 +91,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -101,9 +120,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) List<t_A> app(List<t_A> m) const {
+  List<t_A> app(List<t_A> m) const {
     std::unique_ptr<List<t_A>> _head{};
     std::unique_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
@@ -133,13 +152,13 @@ public:
 /// Consolidated list generator functions.
 struct LoopifyGenerators {
   /// cycle n l repeats the list n times: cycle 2 1,2 -> 1,2,1,2.
-  __attribute__((pure)) static List<unsigned int>
-  cycle(const unsigned int &n, const List<unsigned int> &l);
+  static List<unsigned int> cycle(const unsigned int &n,
+                                  const List<unsigned int> &l);
 
   /// iterate f n x applies f repeatedly n times: iterate (+1) 3 5 -> 5,6,7.
   template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  iterate(F0 &&f, const unsigned int &n, unsigned int x) {
+  static List<unsigned int> iterate(F0 &&f, const unsigned int &n,
+                                    unsigned int x) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
     unsigned int _loop_x = std::move(x);
@@ -169,8 +188,8 @@ struct LoopifyGenerators {
 
   /// zip_with f l1 l2 zips with a combining function.
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  zip_with(F0 &&f, const List<unsigned int> &l1, const List<unsigned int> &l2) {
+  static List<unsigned int> zip_with(F0 &&f, const List<unsigned int> &l1,
+                                     const List<unsigned int> &l2) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
     const List<unsigned int> *_loop_l2 = &l2;
@@ -210,32 +229,28 @@ struct LoopifyGenerators {
   }
 
   /// zip_longest l1 l2 default zips, using default for missing elements.
-  __attribute__((pure)) static List<std::pair<unsigned int, unsigned int>>
+  static List<std::pair<unsigned int, unsigned int>>
   zip_longest_aux(const List<unsigned int> &l1, const List<unsigned int> &l2,
                   unsigned int default0, const unsigned int &fuel);
-  __attribute__((pure)) static unsigned int
-  len_impl(const List<unsigned int> &l);
-  __attribute__((pure)) static List<std::pair<unsigned int, unsigned int>>
-  zip_longest(
-      const List<unsigned int> &l1, const List<unsigned int> &l2,
-      const unsigned int &default0); /// build_list n builds tree-like list
-                                     /// structure: build_list(4) -> 2,4,2.
-  __attribute__((pure)) static List<unsigned int>
-  build_list_fuel(const unsigned int &fuel, const unsigned int &n);
-  __attribute__((pure)) static List<unsigned int>
-  build_list(const unsigned int &n);
+  static unsigned int len_impl(const List<unsigned int> &l);
+  static List<std::pair<unsigned int, unsigned int>>
+  zip_longest(const List<unsigned int> &l1, const List<unsigned int> &l2,
+              const unsigned int &default0);
+  /// build_list n builds tree-like list structure: build_list(4) -> 2,4,2.
+  static List<unsigned int> build_list_fuel(const unsigned int &fuel,
+                                            const unsigned int &n);
+  static List<unsigned int> build_list(const unsigned int &n);
   /// take n l returns first n elements.
-  __attribute__((pure)) static List<unsigned int>
-  take(const unsigned int &n, const List<unsigned int> &l);
+  static List<unsigned int> take(const unsigned int &n,
+                                 const List<unsigned int> &l);
   /// repeat x n creates list with n copies of x.
-  __attribute__((pure)) static List<unsigned int> repeat(unsigned int x,
-                                                         const unsigned int &n);
+  static List<unsigned int> repeat(unsigned int x, const unsigned int &n);
 
   /// unfold f n init unfolds a list from seed value.
   template <MapsTo<std::pair<unsigned int, unsigned int>, unsigned int> F1>
-  __attribute__((pure)) static List<unsigned int>
-  unfold_fuel(const unsigned int &fuel, F1 &&f, const unsigned int &n,
-              const unsigned int &seed) {
+  static List<unsigned int> unfold_fuel(const unsigned int &fuel, F1 &&f,
+                                        const unsigned int &n,
+                                        const unsigned int &seed) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
     unsigned int _loop_seed = seed;
@@ -277,16 +292,15 @@ struct LoopifyGenerators {
   }
 
   template <MapsTo<std::pair<unsigned int, unsigned int>, unsigned int> F0>
-  __attribute__((pure)) static List<unsigned int>
-  unfold(F0 &&f, const unsigned int &n, const unsigned int &seed) {
+  static List<unsigned int> unfold(F0 &&f, const unsigned int &n,
+                                   const unsigned int &seed) {
     return unfold_fuel(100u, f, n, seed);
   }
 
   /// tabulate n f generates f 0, f 1, ..., f (n-1) (same as init_list but
   /// different naming).
   template <MapsTo<unsigned int, unsigned int> F1>
-  __attribute__((pure)) static List<unsigned int> tabulate(unsigned int n,
-                                                           F1 &&f) {
+  static List<unsigned int> tabulate(unsigned int n, F1 &&f) {
     std::function<List<unsigned int>(unsigned int)> go;
     go = [&](unsigned int i) -> List<unsigned int> {
       struct _Enter {
@@ -326,12 +340,12 @@ struct LoopifyGenerators {
   }
 
   /// Helper: replicate single element n times.
-  __attribute__((pure)) static List<unsigned int>
-  replicate_single(unsigned int x, const unsigned int &n);
+  static List<unsigned int> replicate_single(unsigned int x,
+                                             const unsigned int &n);
   /// replicate_each n l replicates each element n times: replicate_each 2 1,2
   /// -> 1,1,2,2.
-  __attribute__((pure)) static List<unsigned int>
-  replicate_each(const unsigned int &n, const List<unsigned int> &l);
+  static List<unsigned int> replicate_each(const unsigned int &n,
+                                           const List<unsigned int> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_GENERATORS

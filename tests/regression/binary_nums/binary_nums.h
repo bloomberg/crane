@@ -56,31 +56,51 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Positive clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<XI>(_sv.v())) {
-      const auto &[d_a0] = std::get<XI>(_sv.v());
-      return Positive(
-          XI{d_a0 ? std::make_unique<Positive>(d_a0->clone()) : nullptr});
-    } else if (std::holds_alternative<XO>(_sv.v())) {
-      const auto &[d_a0] = std::get<XO>(_sv.v());
-      return Positive(
-          XO{d_a0 ? std::make_unique<Positive>(d_a0->clone()) : nullptr});
-    } else {
-      return Positive(XH{});
+  Positive clone() const {
+    Positive _out{};
+
+    struct _CloneFrame {
+      const Positive *_src;
+      Positive *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Positive *_src = _frame._src;
+      Positive *_dst = _frame._dst;
+      if (std::holds_alternative<XI>(_src->v())) {
+        const auto &_alt = std::get<XI>(_src->v());
+        _dst->d_v_ = XI{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
+        auto &_dst_alt = std::get<XI>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else if (std::holds_alternative<XO>(_src->v())) {
+        const auto &_alt = std::get<XO>(_src->v());
+        _dst->d_v_ = XO{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
+        auto &_dst_alt = std::get<XO>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      } else {
+        const auto &_alt = std::get<XH>(_src->v());
+        _dst->d_v_ = XH{};
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Positive xi(Positive a0) {
+  static Positive xi(Positive a0) {
     return Positive(XI{std::make_unique<Positive>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Positive xo(Positive a0) {
+  static Positive xo(Positive a0) {
     return Positive(XO{std::make_unique<Positive>(std::move(a0))});
   }
 
-  __attribute__((pure)) static Positive xh() { return Positive(XH{}); }
+  static Positive xh() { return Positive(XH{}); }
 
   // MANIPULATORS
   ~Positive() {
@@ -109,7 +129,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct N {
@@ -149,7 +169,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) N clone() const {
+  N clone() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<N0>(_sv.v())) {
       return N(N0{});
@@ -160,17 +180,15 @@ public:
   }
 
   // CREATORS
-  __attribute__((pure)) static N n0() { return N(N0{}); }
+  static N n0() { return N(N0{}); }
 
-  __attribute__((pure)) static N npos(Positive a0) {
-    return N(Npos{std::move(a0)});
-  }
+  static N npos(Positive a0) { return N(Npos{std::move(a0)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Z {
@@ -216,7 +234,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Z clone() const {
+  Z clone() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<Z0>(_sv.v())) {
       return Z(Z0{});
@@ -230,31 +248,25 @@ public:
   }
 
   // CREATORS
-  __attribute__((pure)) static Z z0() { return Z(Z0{}); }
+  static Z z0() { return Z(Z0{}); }
 
-  __attribute__((pure)) static Z zpos(Positive a0) {
-    return Z(Zpos{std::move(a0)});
-  }
+  static Z zpos(Positive a0) { return Z(Zpos{std::move(a0)}); }
 
-  __attribute__((pure)) static Z zneg(Positive a0) {
-    return Z(Zneg{std::move(a0)});
-  }
+  static Z zneg(Positive a0) { return Z(Zneg{std::move(a0)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Pos {
-  __attribute__((pure)) static Positive succ(const Positive &x);
-  __attribute__((pure)) static Positive add(const Positive &x,
-                                            const Positive &y);
-  __attribute__((pure)) static Positive add_carry(const Positive &x,
-                                                  const Positive &y);
-  __attribute__((pure)) static Positive pred_double(const Positive &x);
-  __attribute__((pure)) static N pred_N(const Positive &x);
+  static Positive succ(const Positive &x);
+  static Positive add(const Positive &x, const Positive &y);
+  static Positive add_carry(const Positive &x, const Positive &y);
+  static Positive pred_double(const Positive &x);
+  static N pred_N(const Positive &x);
 
   struct mask {
     // TYPES
@@ -297,7 +309,7 @@ struct Pos {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mask clone() const {
+    mask clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<IsNul>(_sv.v())) {
         return mask(IsNul{});
@@ -310,33 +322,28 @@ struct Pos {
     }
 
     // CREATORS
-    __attribute__((pure)) static mask isnul() { return mask(IsNul{}); }
+    static mask isnul() { return mask(IsNul{}); }
 
-    __attribute__((pure)) static mask ispos(Positive a0) {
-      return mask(IsPos{std::move(a0)});
-    }
+    static mask ispos(Positive a0) { return mask(IsPos{std::move(a0)}); }
 
-    __attribute__((pure)) static mask isneg() { return mask(IsNeg{}); }
+    static mask isneg() { return mask(IsNeg{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  __attribute__((pure)) static mask succ_double_mask(const mask &x);
-  __attribute__((pure)) static mask double_mask(const mask &x);
-  __attribute__((pure)) static mask double_pred_mask(const Positive &x);
-  __attribute__((pure)) static mask sub_mask(const Positive &x,
-                                             const Positive &y);
-  __attribute__((pure)) static mask sub_mask_carry(const Positive &x,
-                                                   const Positive &y);
-  __attribute__((pure)) static Positive mul(const Positive &x, Positive y);
-  __attribute__((pure)) static Comparison
-  compare_cont(const Comparison r, const Positive &x, const Positive &y);
-  __attribute__((pure)) static Comparison compare(const Positive &_x0,
-                                                  const Positive &_x1);
+  static mask succ_double_mask(const mask &x);
+  static mask double_mask(const mask &x);
+  static mask double_pred_mask(const Positive &x);
+  static mask sub_mask(const Positive &x, const Positive &y);
+  static mask sub_mask_carry(const Positive &x, const Positive &y);
+  static Positive mul(const Positive &x, Positive y);
+  static Comparison compare_cont(const Comparison r, const Positive &x,
+                                 const Positive &y);
+  static Comparison compare(const Positive &_x0, const Positive &_x1);
 
   template <typename T1, MapsTo<T1, T1, T1> F0>
   static T1 iter_op(F0 &&op, const Positive &p, const T1 a) {
@@ -351,16 +358,14 @@ struct Pos {
     }
   }
 
-  __attribute__((pure)) static unsigned int to_nat(const Positive &x);
+  static unsigned int to_nat(const Positive &x);
 };
 
 struct Coq_Pos {
-  __attribute__((pure)) static Positive succ(const Positive &x);
-  __attribute__((pure)) static Positive add(const Positive &x,
-                                            const Positive &y);
-  __attribute__((pure)) static Positive add_carry(const Positive &x,
-                                                  const Positive &y);
-  __attribute__((pure)) static Positive mul(const Positive &x, Positive y);
+  static Positive succ(const Positive &x);
+  static Positive add(const Positive &x, const Positive &y);
+  static Positive add_carry(const Positive &x, const Positive &y);
+  static Positive mul(const Positive &x, Positive y);
 
   template <typename T1, MapsTo<T1, T1, T1> F0>
   static T1 iter_op(F0 &&op, const Positive &p, const T1 a) {
@@ -375,34 +380,34 @@ struct Coq_Pos {
     }
   }
 
-  __attribute__((pure)) static unsigned int to_nat(const Positive &x);
+  static unsigned int to_nat(const Positive &x);
 };
 
 struct BinNat {
-  __attribute__((pure)) static N sub(N n, const N &m);
-  __attribute__((pure)) static Comparison compare(const N &n, const N &m);
-  __attribute__((pure)) static N pred(const N &n);
-  __attribute__((pure)) static N add(N n, N m);
-  __attribute__((pure)) static N mul(const N &n, const N &m);
-  __attribute__((pure)) static unsigned int to_nat(const N &a);
+  static N sub(N n, const N &m);
+  static Comparison compare(const N &n, const N &m);
+  static N pred(const N &n);
+  static N add(N n, N m);
+  static N mul(const N &n, const N &m);
+  static unsigned int to_nat(const N &a);
 };
 
 struct BinInt {
-  __attribute__((pure)) static Z double_(const Z &x);
-  __attribute__((pure)) static Z succ_double(const Z &x);
-  __attribute__((pure)) static Z pred_double(const Z &x);
-  __attribute__((pure)) static Z pos_sub(const Positive &x, const Positive &y);
-  __attribute__((pure)) static Z add(Z x, Z y);
-  __attribute__((pure)) static Z opp(const Z &x);
-  __attribute__((pure)) static Z sub(const Z &m, const Z &n);
-  __attribute__((pure)) static Z mul(const Z &x, const Z &y);
-  __attribute__((pure)) static Comparison compare(const Z &x, const Z &y);
-  __attribute__((pure)) static unsigned int to_nat(const Z &z);
-  __attribute__((pure)) static Z abs(const Z &z);
+  static Z double_(const Z &x);
+  static Z succ_double(const Z &x);
+  static Z pred_double(const Z &x);
+  static Z pos_sub(const Positive &x, const Positive &y);
+  static Z add(Z x, Z y);
+  static Z opp(const Z &x);
+  static Z sub(const Z &m, const Z &n);
+  static Z mul(const Z &x, const Z &y);
+  static Comparison compare(const Z &x, const Z &y);
+  static unsigned int to_nat(const Z &z);
+  static Z abs(const Z &z);
 };
 
 struct Datatypes {
-  __attribute__((pure)) static Comparison CompOpp(const Comparison r);
+  static Comparison CompOpp(const Comparison r);
 };
 
 struct BinaryNums {
@@ -459,8 +464,8 @@ struct BinaryNums {
       N::npos(Positive::xi(Positive::xi(Positive::xi(Positive::xh())))));
   static inline const unsigned int z_to_nat = BinInt::to_nat(
       Z::zpos(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))));
-  __attribute__((pure)) static N n_max(N a, N b);
-  __attribute__((pure)) static Z z_sign(const Z &z);
+  static N n_max(N a, N b);
+  static Z z_sign(const Z &z);
   static inline const N test_n_max =
       n_max(N::npos(Positive::xi(Positive::xh())),
             N::npos(Positive::xi(Positive::xi(Positive::xh()))));

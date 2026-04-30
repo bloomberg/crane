@@ -51,15 +51,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -73,9 +92,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -102,9 +121,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) unsigned int length() const {
+  unsigned int length() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
@@ -124,9 +143,7 @@ struct FoldSequenceStateTraceCase {
     Real C;
 
     // ACCESSORS
-    __attribute__((pure)) Line clone() const {
-      return Line{(*(this)).A, (*(this)).B, (*(this)).C};
-    }
+    Line clone() const { return Line{(*(this)).A, (*(this)).B, (*(this)).C}; }
   };
 
   struct Fold {
@@ -162,14 +179,14 @@ struct FoldSequenceStateTraceCase {
     }
 
     // ACCESSORS
-    __attribute__((pure)) Fold clone() const {
+    Fold clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<Fold_line_ctor>(_sv.v());
       return Fold(Fold_line_ctor{d_a0.clone()});
     }
 
     // CREATORS
-    __attribute__((pure)) static Fold fold_line_ctor(Line a0) {
+    static Fold fold_line_ctor(Line a0) {
       return Fold(Fold_line_ctor{std::move(a0)});
     }
 
@@ -177,9 +194,9 @@ struct FoldSequenceStateTraceCase {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) Line fold_line() const {
+    Line fold_line() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(_sv.v());
       return d_a0;
@@ -210,20 +227,16 @@ struct FoldSequenceStateTraceCase {
       std::make_pair(Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)));
   static inline const Point point_diag =
       std::make_pair(Real::from_z(INT64_C(1)), Real::from_z(INT64_C(1)));
-  __attribute__((pure)) static Line
-  line_through(const std::pair<Real, Real> &p1,
-               const std::pair<Real, Real> &p2);
-  __attribute__((pure)) static Line
-  perp_bisector(const std::pair<Real, Real> &p1,
-                const std::pair<Real, Real> &p2);
-  __attribute__((pure)) static Line perp_through(const std::pair<Real, Real> &p,
-                                                 const Line &l);
-  __attribute__((pure)) static Fold fold_O1(const std::pair<Real, Real> &p1,
-                                            const std::pair<Real, Real> &p2);
-  __attribute__((pure)) static Fold fold_O2(const std::pair<Real, Real> &p1,
-                                            const std::pair<Real, Real> &p2);
-  __attribute__((pure)) static Fold fold_O4(const std::pair<Real, Real> &p,
-                                            const Line &l);
+  static Line line_through(const std::pair<Real, Real> &p1,
+                           const std::pair<Real, Real> &p2);
+  static Line perp_bisector(const std::pair<Real, Real> &p1,
+                            const std::pair<Real, Real> &p2);
+  static Line perp_through(const std::pair<Real, Real> &p, const Line &l);
+  static Fold fold_O1(const std::pair<Real, Real> &p1,
+                      const std::pair<Real, Real> &p2);
+  static Fold fold_O2(const std::pair<Real, Real> &p1,
+                      const std::pair<Real, Real> &p2);
+  static Fold fold_O4(const std::pair<Real, Real> &p, const Line &l);
 
   struct FoldStep {
     // TYPES
@@ -273,7 +286,7 @@ struct FoldSequenceStateTraceCase {
     }
 
     // ACCESSORS
-    __attribute__((pure)) FoldStep clone() const {
+    FoldStep clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<FS_O1>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<FS_O1>(_sv.v());
@@ -288,15 +301,15 @@ struct FoldSequenceStateTraceCase {
     }
 
     // CREATORS
-    __attribute__((pure)) static FoldStep fs_o1(Point a0, Point a1) {
+    static FoldStep fs_o1(Point a0, Point a1) {
       return FoldStep(FS_O1{std::move(a0), std::move(a1)});
     }
 
-    __attribute__((pure)) static FoldStep fs_o2(Point a0, Point a1) {
+    static FoldStep fs_o2(Point a0, Point a1) {
       return FoldStep(FS_O2{std::move(a0), std::move(a1)});
     }
 
-    __attribute__((pure)) static FoldStep fs_o4(Point a0, Line a1) {
+    static FoldStep fs_o4(Point a0, Line a1) {
       return FoldStep(FS_O4{std::move(a0), std::move(a1)});
     }
 
@@ -304,9 +317,9 @@ struct FoldSequenceStateTraceCase {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) Line execute_fold_step() const {
+    Line execute_fold_step() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename FoldStep::FS_O1>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O1>(_sv.v());
@@ -362,7 +375,7 @@ struct FoldSequenceStateTraceCase {
     List<Line> state_lines;
 
     // ACCESSORS
-    __attribute__((pure)) ConstructionState clone() const {
+    ConstructionState clone() const {
       return ConstructionState{(*(this)).state_points.clone(),
                                (*(this)).state_lines.clone()};
     }
@@ -374,10 +387,10 @@ struct FoldSequenceStateTraceCase {
                        point_X, List<std::pair<Real, Real>>::nil())),
       List<Line>::cons(line_xaxis,
                        List<Line>::cons(line_yaxis, List<Line>::nil()))};
-  __attribute__((pure)) static ConstructionState
-  add_fold_to_state(const ConstructionState &st, const FoldStep &step);
-  __attribute__((pure)) static ConstructionState
-  execute_sequence(ConstructionState st, const List<FoldStep> &seq);
+  static ConstructionState add_fold_to_state(const ConstructionState &st,
+                                             const FoldStep &step);
+  static ConstructionState execute_sequence(ConstructionState st,
+                                            const List<FoldStep> &seq);
   static inline const FoldSequence sample_sequence = List<FoldStep>::cons(
       FoldStep::fs_o1(point_O, point_diag),
       List<FoldStep>::cons(
@@ -386,7 +399,7 @@ struct FoldSequenceStateTraceCase {
                                List<FoldStep>::nil())));
   static inline const ConstructionState sample_final_state =
       execute_sequence(initial_state, sample_sequence);
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   line_count_after_sample_sequence(const ConstructionState &st);
   static inline const unsigned int sample_sequence_length =
       sample_sequence.length();

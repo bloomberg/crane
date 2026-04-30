@@ -1,6 +1,6 @@
 #include <name_clash_match_match.h>
 
-__attribute__((pure)) NameClashMatchMatch::tree
+NameClashMatchMatch::tree
 NameClashMatchMatch::choose_subtree(const NameClashMatchMatch::Dir d,
                                     const NameClashMatchMatch::tree &t) {
   if (std::holds_alternative<typename NameClashMatchMatch::tree::Leaf>(t.v())) {
@@ -22,7 +22,7 @@ NameClashMatchMatch::choose_subtree(const NameClashMatchMatch::Dir d,
 }
 
 /// Match on the result of choose_subtree (which itself contains a match).
-__attribute__((pure)) unsigned int
+unsigned int
 NameClashMatchMatch::subtree_value(const NameClashMatchMatch::Dir d,
                                    const NameClashMatchMatch::tree &t) {
   auto &&_sv = choose_subtree(d, t);
@@ -37,7 +37,7 @@ NameClashMatchMatch::subtree_value(const NameClashMatchMatch::Dir d,
 }
 
 /// Inline match-on-match: both matches are expressions.
-__attribute__((pure)) unsigned int
+unsigned int
 NameClashMatchMatch::inline_match_match(const NameClashMatchMatch::Dir d,
                                         const NameClashMatchMatch::tree &t) {
   auto &&_sv = [&]() {
@@ -63,7 +63,7 @@ NameClashMatchMatch::inline_match_match(const NameClashMatchMatch::Dir d,
 }
 
 /// Two matches on the same scrutinee.
-__attribute__((pure)) unsigned int
+unsigned int
 NameClashMatchMatch::double_match(const NameClashMatchMatch::tree &t) {
   unsigned int a = [&]() {
     if (std::holds_alternative<typename NameClashMatchMatch::tree::Leaf>(
@@ -98,8 +98,7 @@ NameClashMatchMatch::double_match(const NameClashMatchMatch::tree &t) {
 
 /// Match where the scrutinee is a function call that returns an inductive,
 /// and the result is used in another match.
-__attribute__((pure)) unsigned int
-NameClashMatchMatch::chained(const NameClashMatchMatch::tree &t) {
+unsigned int NameClashMatchMatch::chained(const NameClashMatchMatch::tree &t) {
   if (std::holds_alternative<typename NameClashMatchMatch::tree::Leaf>(t.v())) {
     return 42u;
   } else {

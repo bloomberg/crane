@@ -48,7 +48,7 @@ struct IifeNameClash {
     }
 
     // ACCESSORS
-    __attribute__((pure)) wrapper clone() const {
+    wrapper clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Wrap>(_sv.v())) {
         const auto &[d_n] = std::get<Wrap>(_sv.v());
@@ -59,17 +59,15 @@ struct IifeNameClash {
     }
 
     // CREATORS
-    __attribute__((pure)) static wrapper wrap(unsigned int n) {
-      return wrapper(Wrap{std::move(n)});
-    }
+    static wrapper wrap(unsigned int n) { return wrapper(Wrap{std::move(n)}); }
 
-    __attribute__((pure)) static wrapper empty() { return wrapper(Empty{}); }
+    static wrapper empty() { return wrapper(Empty{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0>
@@ -92,8 +90,7 @@ struct IifeNameClash {
     }
   }
 
-  __attribute__((pure)) static unsigned int double_get(const wrapper &w1,
-                                                       const wrapper &w2);
+  static unsigned int double_get(const wrapper &w1, const wrapper &w2);
 };
 
 #endif // INCLUDED_IIFE_NAME_CLASH

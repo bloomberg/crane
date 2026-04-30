@@ -1,7 +1,7 @@
 #include <hof_closure_escape.h>
 
-__attribute__((pure)) unsigned int
-HofClosureEscape::sum_values(const HofClosureEscape::tree &t, unsigned int x) {
+unsigned int HofClosureEscape::sum_values(const HofClosureEscape::tree &t,
+                                          unsigned int x) {
   if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(t.v())) {
     return x;
   } else {
@@ -31,14 +31,14 @@ HofClosureEscape::sum_values(const HofClosureEscape::tree &t, unsigned int x) {
 /// Even though wrap_some just passes f through to Some,
 /// the & lambda was created in hof_escape's stack frame.
 /// When hof_escape returns, captured t is destroyed.
-__attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<unsigned int(unsigned int)>>
 HofClosureEscape::hof_escape(HofClosureEscape::tree t) {
   return wrap_some([=](unsigned int _x0) mutable -> unsigned int {
     return sum_values(t, _x0);
   });
 }
 
-__attribute__((pure)) unsigned int HofClosureEscape::apply_option(
+unsigned int HofClosureEscape::apply_option(
     const std::optional<std::function<unsigned int(unsigned int)>> &o,
     unsigned int x) {
   if (o.has_value()) {

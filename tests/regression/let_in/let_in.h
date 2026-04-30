@@ -19,7 +19,7 @@ struct LetIn {
     return (x + y);
   }();
   static inline const unsigned int shadowed_let = 3u;
-  __attribute__((pure)) static unsigned int let_in_fun(const unsigned int &n);
+  static unsigned int let_in_fun(const unsigned int &n);
   static inline const unsigned int let_fun = []() {
     unsigned int x = 5u;
     return (x + 1u);
@@ -59,7 +59,7 @@ struct LetIn {
     }
 
     // ACCESSORS
-    __attribute__((pure)) pair<t_A, t_B> clone() const {
+    pair<t_A, t_B> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Pair0>(_sv.v());
       return pair<t_A, t_B>(Pair0{d_a0, d_a1});
@@ -73,7 +73,7 @@ struct LetIn {
       d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
     }
 
-    __attribute__((pure)) static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
+    static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
       return pair(Pair0{std::move(a0), std::move(a1)});
     }
 
@@ -81,7 +81,7 @@ struct LetIn {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>

@@ -51,15 +51,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -73,9 +92,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -102,7 +121,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 template <typename I, typename t_A>
@@ -120,15 +139,13 @@ concept Ord = requires(t_A a0, t_A a1) {
 
 struct Typeclasses {
   struct numNat {
-    __attribute__((pure)) static unsigned int to_nat(unsigned int n) {
-      return n;
-    }
+    static unsigned int to_nat(unsigned int n) { return n; }
   };
 
   static_assert(Numeric<numNat, unsigned int>);
 
   struct numBool {
-    __attribute__((pure)) static unsigned int to_nat(bool b) {
+    static unsigned int to_nat(bool b) {
       if (b) {
         return 1u;
       } else {
@@ -140,7 +157,7 @@ struct Typeclasses {
   static_assert(Numeric<numBool, bool>);
 
   template <typename _tcI0, typename T1> struct numOption {
-    __attribute__((pure)) static unsigned int to_nat(std::optional<T1> o) {
+    static unsigned int to_nat(std::optional<T1> o) {
       if (o.has_value()) {
         const T1 &x = *o;
         return (_tcI0::to_nat(x) + 1);
@@ -151,7 +168,7 @@ struct Typeclasses {
   };
 
   template <typename _tcI0, typename T1> struct numList {
-    __attribute__((pure)) static unsigned int to_nat(List<T1> a0) {
+    static unsigned int to_nat(List<T1> a0) {
       std::function<unsigned int(List<T1>)> sum;
       sum = [&](List<T1> l) -> unsigned int {
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -166,34 +183,29 @@ struct Typeclasses {
   };
 
   template <typename _tcI0, typename T1>
-  __attribute__((pure)) static unsigned int numeric_sum(const List<T1> &l) {
+  static unsigned int numeric_sum(const List<T1> &l) {
     return numList<_tcI0, T1>::to_nat(l);
   }
 
   template <typename _tcI0, typename T1>
-  __attribute__((pure)) static unsigned int numeric_double(const T1 x) {
+  static unsigned int numeric_double(const T1 x) {
     return (_tcI0::to_nat(x) + _tcI0::to_nat(x));
   }
 
   struct eqNat {
-    __attribute__((pure)) static bool eqb(unsigned int a0, unsigned int a1) {
-      return a0 == a1;
-    }
+    static bool eqb(unsigned int a0, unsigned int a1) { return a0 == a1; }
   };
 
   static_assert(Eq<eqNat, unsigned int>);
 
   struct ordNat {
-    __attribute__((pure)) static bool leb(unsigned int a0, unsigned int a1) {
-      return a0 <= a1;
-    }
+    static bool leb(unsigned int a0, unsigned int a1) { return a0 <= a1; }
   };
 
   static_assert(Ord<ordNat, unsigned int>);
 
   template <typename _tcI0, typename _tcI1, typename T1>
-  __attribute__((pure)) static std::pair<T1, T1> sort_pair(const T1 x,
-                                                           const T1 y) {
+  static std::pair<T1, T1> sort_pair(const T1 x, const T1 y) {
     if (_tcI0::leb(x, y)) {
       return std::make_pair(x, y);
     } else {
@@ -220,7 +232,7 @@ struct Typeclasses {
   }
 
   template <typename _tcI0, typename _tcI1, typename T1>
-  __attribute__((pure)) static unsigned int describe(const T1 x, const T1 y) {
+  static unsigned int describe(const T1 x, const T1 y) {
     if (_tcI0::eqb(x, y)) {
       return _tcI1::to_nat(x);
     } else {

@@ -1,7 +1,6 @@
 #include <large_enum.h>
 
-__attribute__((pure)) unsigned int
-LargeEnum::color_to_nat(const LargeEnum::Color c) {
+unsigned int LargeEnum::color_to_nat(const LargeEnum::Color c) {
   switch (c) {
   case Color::e_RED: {
     return 0u;
@@ -44,7 +43,7 @@ LargeEnum::color_to_nat(const LargeEnum::Color c) {
   }
 }
 
-__attribute__((pure)) bool LargeEnum::is_warm(const LargeEnum::Color c) {
+bool LargeEnum::is_warm(const LargeEnum::Color c) {
   switch (c) {
   case Color::e_RED: {
     return true;
@@ -67,7 +66,7 @@ __attribute__((pure)) bool LargeEnum::is_warm(const LargeEnum::Color c) {
   }
 }
 
-__attribute__((pure)) bool LargeEnum::is_neutral(const LargeEnum::Color c) {
+bool LargeEnum::is_neutral(const LargeEnum::Color c) {
   switch (c) {
   case Color::e_BLACK: {
     return true;
@@ -84,8 +83,7 @@ __attribute__((pure)) bool LargeEnum::is_neutral(const LargeEnum::Color c) {
   }
 }
 
-__attribute__((pure)) unsigned int
-LargeEnum::tok_to_nat(const LargeEnum::tok &t) {
+unsigned int LargeEnum::tok_to_nat(const LargeEnum::tok &t) {
   if (std::holds_alternative<typename LargeEnum::tok::TNum>(t.v())) {
     const auto &[d_a0] = std::get<typename LargeEnum::tok::TNum>(t.v());
     return d_a0;
@@ -116,7 +114,7 @@ LargeEnum::tok_to_nat(const LargeEnum::tok &t) {
   }
 }
 
-__attribute__((pure)) bool LargeEnum::is_operator(const LargeEnum::tok &t) {
+bool LargeEnum::is_operator(const LargeEnum::tok &t) {
   if (std::holds_alternative<typename LargeEnum::tok::TPlus>(t.v())) {
     return true;
   } else if (std::holds_alternative<typename LargeEnum::tok::TMinus>(t.v())) {

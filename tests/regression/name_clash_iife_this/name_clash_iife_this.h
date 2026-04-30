@@ -87,7 +87,7 @@ struct NameClashIifeThis {
     }
 
     // ACCESSORS
-    __attribute__((pure)) shape clone() const {
+    shape clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Circle>(_sv.v())) {
         const auto &[d_a0] = std::get<Circle>(_sv.v());
@@ -99,12 +99,11 @@ struct NameClashIifeThis {
     }
 
     // CREATORS
-    __attribute__((pure)) static shape circle(unsigned int a0) {
+    static shape circle(unsigned int a0) {
       return shape(Circle{std::move(a0)});
     }
 
-    __attribute__((pure)) static shape square(unsigned int a0,
-                                              unsigned int a1) {
+    static shape square(unsigned int a0, unsigned int a1) {
       return shape(Square{std::move(a0), std::move(a1)});
     }
 
@@ -112,9 +111,9 @@ struct NameClashIifeThis {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int nested_match(const Color c) const {
+    unsigned int nested_match(const Color c) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename shape::Circle>(_sv.v())) {
         const auto &[d_a0] = std::get<typename shape::Circle>(_sv.v());
@@ -149,7 +148,7 @@ struct NameClashIifeThis {
       }
     }
 
-    __attribute__((pure)) unsigned int describe(const Color c) const {
+    unsigned int describe(const Color c) const {
       unsigned int color_val = [&]() {
         switch (c) {
         case Color::e_RED: {
@@ -205,8 +204,7 @@ struct NameClashIifeThis {
     }
   };
 
-  __attribute__((pure)) static unsigned int match_of_match(const Color c,
-                                                           const shape &s);
+  static unsigned int match_of_match(const Color c, const shape &s);
 
   struct wrapper {
     // TYPES
@@ -246,7 +244,7 @@ struct NameClashIifeThis {
     }
 
     // ACCESSORS
-    __attribute__((pure)) wrapper clone() const {
+    wrapper clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Wrap>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<Wrap>(_sv.v());
@@ -257,19 +255,19 @@ struct NameClashIifeThis {
     }
 
     // CREATORS
-    __attribute__((pure)) static wrapper wrap(Color a0, shape a1) {
+    static wrapper wrap(Color a0, shape a1) {
       return wrapper(Wrap{std::move(a0), std::move(a1)});
     }
 
-    __attribute__((pure)) static wrapper empty() { return wrapper(Empty{}); }
+    static wrapper empty() { return wrapper(Empty{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int triple_nest() const {
+    unsigned int triple_nest() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename wrapper::Wrap>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<typename wrapper::Wrap>(_sv.v());

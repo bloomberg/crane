@@ -14,12 +14,10 @@ struct SetTestPinUpdate {
     bool test_pin;
 
     // ACCESSORS
-    __attribute__((pure)) state clone() const {
-      return state{(*(this)).acc, (*(this)).test_pin};
-    }
+    state clone() const { return state{(*(this)).acc, (*(this)).test_pin}; }
   };
 
-  __attribute__((pure)) static state set_test_pin(const state &s, bool v);
+  static state set_test_pin(const state &s, bool v);
   static inline const unsigned int t = []() {
     return []() {
       state s_ = set_test_pin(state{6u, false}, true);

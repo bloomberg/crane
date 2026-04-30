@@ -50,15 +50,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -72,9 +91,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -101,7 +120,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
   template <typename T1, MapsTo<T1, T1, t_A> F0>
   T1 fold_left(F0 &&f, const T1 a0) const {
@@ -116,14 +135,12 @@ public:
 };
 
 struct Monadic {
-  template <typename T1>
-  __attribute__((pure)) static std::optional<T1> option_return(const T1 x) {
+  template <typename T1> static std::optional<T1> option_return(const T1 x) {
     return std::make_optional<T1>(x);
   }
 
   template <typename T1, typename T2, MapsTo<std::optional<T2>, T1> F1>
-  __attribute__((pure)) static std::optional<T2>
-  option_bind(const std::optional<T1> &ma, F1 &&f) {
+  static std::optional<T2> option_bind(const std::optional<T1> &ma, F1 &&f) {
     if (ma.has_value()) {
       const T1 &a = *ma;
       return f(a);
@@ -132,23 +149,22 @@ struct Monadic {
     }
   }
 
-  __attribute__((pure)) static std::optional<unsigned int>
-  safe_div(const unsigned int &n, const unsigned int &m);
-  __attribute__((pure)) static std::optional<unsigned int>
-  safe_sub(const unsigned int &n, const unsigned int &m);
-  __attribute__((pure)) static std::optional<unsigned int>
+  static std::optional<unsigned int> safe_div(const unsigned int &n,
+                                              const unsigned int &m);
+  static std::optional<unsigned int> safe_sub(const unsigned int &n,
+                                              const unsigned int &m);
+  static std::optional<unsigned int>
   div_then_sub(const unsigned int &a, const unsigned int &b, unsigned int c);
   template <typename s, typename a>
   using State = std::function<std::pair<a, s>(s)>;
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static State<T1, T2> state_return(const T2 x) {
+  static State<T1, T2> state_return(const T2 x) {
     return [=](const T1 s) mutable { return std::make_pair(x, s); };
   }
 
   template <typename T1, typename T2, typename T3, MapsTo<State<T1, T3>, T2> F1>
-  __attribute__((pure)) static State<T1, T3> state_bind(const State<T1, T2> ma,
-                                                        F1 &&f) {
+  static State<T1, T3> state_bind(const State<T1, T2> ma, F1 &&f) {
     return [=](const T1 s) mutable {
       auto _cs = ma(s);
       const T2 &a = _cs.first;
@@ -165,14 +181,13 @@ struct Monadic {
   }
 
   template <typename T1>
-  __attribute__((pure)) static State<T1, std::monostate> state_put(const T1 s) {
+  static State<T1, std::monostate> state_put(const T1 s) {
     return
         [=](const T1) mutable { return std::make_pair(std::monostate{}, s); };
   }
 
   template <typename T1>
-  __attribute__((pure)) static State<unsigned int, unsigned int>
-  count_elements(const List<T1> &l) {
+  static State<unsigned int, unsigned int> count_elements(const List<T1> &l) {
     return l.template fold_left<State<unsigned int, unsigned int>>(
         [](const std::function<std::pair<unsigned int, unsigned int>(
                unsigned int)>

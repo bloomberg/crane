@@ -1,8 +1,8 @@
 #include <fix_partial_app.h>
 
 /// count_nodes: counts nodes in a tree. Will be partially applied.
-__attribute__((pure)) unsigned int
-FixPartialApp::count_nodes(const FixPartialApp::tree &t, unsigned int base) {
+unsigned int FixPartialApp::count_nodes(const FixPartialApp::tree &t,
+                                        unsigned int base) {
   if (std::holds_alternative<typename FixPartialApp::tree::Leaf>(t.v())) {
     return base;
   } else {
@@ -12,8 +12,7 @@ FixPartialApp::count_nodes(const FixPartialApp::tree &t, unsigned int base) {
   }
 }
 
-__attribute__((pure)) unsigned int
-FixPartialApp::tree_sum(const FixPartialApp::tree &t) {
+unsigned int FixPartialApp::tree_sum(const FixPartialApp::tree &t) {
   if (std::holds_alternative<typename FixPartialApp::tree::Leaf>(t.v())) {
     return 0u;
   } else {

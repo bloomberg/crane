@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,21 +119,20 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct ListDef {
   template <typename T1>
-  __attribute__((pure)) static List<T1> repeat(const T1 x,
-                                               const unsigned int &n);
+  static List<T1> repeat(const T1 x, const unsigned int &n);
   template <typename T1>
   static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
 };
 
 struct RamAccessor {
   template <typename T1>
-  __attribute__((pure)) static List<T1>
-  update_nth(const unsigned int &n, const T1 x, const List<T1> &l) {
+  static List<T1> update_nth(const unsigned int &n, const T1 x,
+                             const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
@@ -138,7 +156,7 @@ struct RamAccessor {
     List<unsigned int> reg_status;
 
     // ACCESSORS
-    __attribute__((pure)) ram_reg clone() const {
+    ram_reg clone() const {
       return ram_reg{(*(this)).reg_main.clone(), (*(this)).reg_status.clone()};
     }
   };
@@ -148,7 +166,7 @@ struct RamAccessor {
     unsigned int chip_port;
 
     // ACCESSORS
-    __attribute__((pure)) ram_chip clone() const {
+    ram_chip clone() const {
       return ram_chip{(*(this)).chip_regs.clone(), (*(this)).chip_port};
     }
   };
@@ -157,9 +175,7 @@ struct RamAccessor {
     List<ram_chip> bank_chips;
 
     // ACCESSORS
-    __attribute__((pure)) ram_bank clone() const {
-      return ram_bank{(*(this)).bank_chips.clone()};
-    }
+    ram_bank clone() const { return ram_bank{(*(this)).bank_chips.clone()}; }
   };
 
   struct ram_sel {
@@ -169,7 +185,7 @@ struct RamAccessor {
     unsigned int sel_char;
 
     // ACCESSORS
-    __attribute__((pure)) ram_sel clone() const {
+    ram_sel clone() const {
       return ram_sel{(*(this)).sel_bank, (*(this)).sel_chip, (*(this)).sel_reg,
                      (*(this)).sel_char};
     }
@@ -186,7 +202,7 @@ struct RamAccessor {
     List<unsigned int> state_rom;
 
     // ACCESSORS
-    __attribute__((pure)) state clone() const {
+    state clone() const {
       return state{(*(this)).state_regs.clone(),  (*(this)).state_acc,
                    (*(this)).state_carry,         (*(this)).state_pc,
                    (*(this)).state_stack.clone(), (*(this)).state_ram.clone(),
@@ -213,46 +229,37 @@ struct RamAccessor {
             empty_ram,
             default_sel,
             ListDef::template repeat<unsigned int>(0u, 8u)};
-  __attribute__((pure)) static unsigned int get_main(const ram_reg &rg,
-                                                     const unsigned int &i);
-  __attribute__((pure)) static unsigned int get_stat(const ram_reg &rg,
-                                                     const unsigned int &i);
-  __attribute__((pure)) static ram_reg upd_main_in_reg(const ram_reg &rg,
-                                                       const unsigned int &i,
-                                                       const unsigned int &v);
-  __attribute__((pure)) static ram_reg upd_stat_in_reg(const ram_reg &rg,
-                                                       const unsigned int &i,
-                                                       const unsigned int &v);
-  __attribute__((pure)) static ram_reg get_regRAM(const ram_chip &ch,
-                                                  const unsigned int &r);
-  __attribute__((pure)) static ram_chip
-  upd_reg_in_chip(const ram_chip &ch, const unsigned int &r, const ram_reg &rg);
-  __attribute__((pure)) static ram_chip upd_port_in_chip(const ram_chip &ch,
-                                                         const unsigned int &v);
-  __attribute__((pure)) static ram_chip get_chip(const ram_bank &bk,
-                                                 const unsigned int &c);
-  __attribute__((pure)) static ram_bank upd_chip_in_bank(const ram_bank &bk,
-                                                         const unsigned int &c,
-                                                         const ram_chip &ch);
-  __attribute__((pure)) static ram_bank
-  get_bank_from_sys(const List<ram_bank> &sys, const unsigned int &b);
-  __attribute__((pure)) static List<ram_bank>
-  upd_bank_in_sys(const state &s, const unsigned int &b, const ram_bank &bk);
-  __attribute__((pure)) static ram_bank current_bank(const state &s);
-  __attribute__((pure)) static ram_chip current_chip(const state &s);
-  __attribute__((pure)) static ram_reg current_reg(const state &s);
-  __attribute__((pure)) static unsigned int ram_read_main(const state &s);
-  __attribute__((pure)) static List<ram_bank>
-  ram_write_main_sys(const state &s, const unsigned int &v);
-  __attribute__((pure)) static List<ram_bank>
-  ram_write_status_sys(const state &s, const unsigned int &idx,
-                       const unsigned int &v);
+  static unsigned int get_main(const ram_reg &rg, const unsigned int &i);
+  static unsigned int get_stat(const ram_reg &rg, const unsigned int &i);
+  static ram_reg upd_main_in_reg(const ram_reg &rg, const unsigned int &i,
+                                 const unsigned int &v);
+  static ram_reg upd_stat_in_reg(const ram_reg &rg, const unsigned int &i,
+                                 const unsigned int &v);
+  static ram_reg get_regRAM(const ram_chip &ch, const unsigned int &r);
+  static ram_chip upd_reg_in_chip(const ram_chip &ch, const unsigned int &r,
+                                  const ram_reg &rg);
+  static ram_chip upd_port_in_chip(const ram_chip &ch, const unsigned int &v);
+  static ram_chip get_chip(const ram_bank &bk, const unsigned int &c);
+  static ram_bank upd_chip_in_bank(const ram_bank &bk, const unsigned int &c,
+                                   const ram_chip &ch);
+  static ram_bank get_bank_from_sys(const List<ram_bank> &sys,
+                                    const unsigned int &b);
+  static List<ram_bank> upd_bank_in_sys(const state &s, const unsigned int &b,
+                                        const ram_bank &bk);
+  static ram_bank current_bank(const state &s);
+  static ram_chip current_chip(const state &s);
+  static ram_reg current_reg(const state &s);
+  static unsigned int ram_read_main(const state &s);
+  static List<ram_bank> ram_write_main_sys(const state &s,
+                                           const unsigned int &v);
+  static List<ram_bank> ram_write_status_sys(const state &s,
+                                             const unsigned int &idx,
+                                             const unsigned int &v);
   static inline const unsigned int init_read = ram_read_main(init_state);
 };
 
 template <typename T1>
-__attribute__((pure)) List<T1> ListDef::repeat(const T1 x,
-                                               const unsigned int &n) {
+List<T1> ListDef::repeat(const T1 x, const unsigned int &n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {

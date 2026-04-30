@@ -14,13 +14,12 @@ struct RegionMembershipBounds {
     unsigned int code_size;
 
     // ACCESSORS
-    __attribute__((pure)) layout clone() const {
+    layout clone() const {
       return layout{(*(this)).base_addr, (*(this)).code_size};
     }
   };
 
-  __attribute__((pure)) static bool addr_in_regionb(const unsigned int &addr,
-                                                    const layout &l);
+  static bool addr_in_regionb(const unsigned int &addr, const layout &l);
   static inline const unsigned int t = []() {
     return []() {
       layout l = layout{100u, 20u};

@@ -1,7 +1,6 @@
 #include <validated_virtual_crossmatch_trace.h>
 
-__attribute__((pure)) bool PeanoNat::eq_dec(const unsigned int &n,
-                                            const unsigned int &m) {
+bool PeanoNat::eq_dec(const unsigned int &n, const unsigned int &m) {
   if (n <= 0) {
     if (m <= 0) {
       return true;
@@ -25,8 +24,7 @@ __attribute__((pure)) bool PeanoNat::eq_dec(const unsigned int &n,
   }
 }
 
-__attribute__((pure)) bool
-ValidatedVirtualCrossmatchTraceCase::hla_locus_eq_dec(
+bool ValidatedVirtualCrossmatchTraceCase::hla_locus_eq_dec(
     const ValidatedVirtualCrossmatchTraceCase::HLALocus x,
     const ValidatedVirtualCrossmatchTraceCase::HLALocus y) {
   switch (x) {
@@ -65,8 +63,7 @@ ValidatedVirtualCrossmatchTraceCase::hla_locus_eq_dec(
   }
 }
 
-__attribute__((pure)) bool
-ValidatedVirtualCrossmatchTraceCase::hla_allele_eq_dec(
+bool ValidatedVirtualCrossmatchTraceCase::hla_allele_eq_dec(
     const ValidatedVirtualCrossmatchTraceCase::HLAAllele &x,
     const ValidatedVirtualCrossmatchTraceCase::HLAAllele &y) {
   ValidatedVirtualCrossmatchTraceCase::HLALocus hla_locus0 = x.hla_locus;
@@ -84,7 +81,7 @@ ValidatedVirtualCrossmatchTraceCase::hla_allele_eq_dec(
   }
 }
 
-__attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::hla_allele_eqb(
+bool ValidatedVirtualCrossmatchTraceCase::hla_allele_eqb(
     const ValidatedVirtualCrossmatchTraceCase::HLAAllele &x,
     const ValidatedVirtualCrossmatchTraceCase::HLAAllele &y) {
   if (hla_allele_eq_dec(x, y)) {
@@ -94,7 +91,7 @@ __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::hla_allele_eqb(
   }
 }
 
-__attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::epitope_eq_dec(
+bool ValidatedVirtualCrossmatchTraceCase::epitope_eq_dec(
     const ValidatedVirtualCrossmatchTraceCase::HLAEpitope &x,
     const ValidatedVirtualCrossmatchTraceCase::HLAEpitope &y) {
   unsigned int epitope_id0 = x.epitope_id;
@@ -120,7 +117,7 @@ __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::epitope_eq_dec(
   }
 }
 
-__attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::epitope_eqb(
+bool ValidatedVirtualCrossmatchTraceCase::epitope_eqb(
     const ValidatedVirtualCrossmatchTraceCase::HLAEpitope &x,
     const ValidatedVirtualCrossmatchTraceCase::HLAEpitope &y) {
   if (epitope_eq_dec(x, y)) {
@@ -130,7 +127,7 @@ __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::epitope_eqb(
   }
 }
 
-__attribute__((pure)) List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>
+List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>
 ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
     const ValidatedVirtualCrossmatchTraceCase::HLAAllele &a) {
   switch (a.hla_locus) {
@@ -252,7 +249,7 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
   }
 }
 
-__attribute__((pure)) List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>
+List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>
 ValidatedVirtualCrossmatchTraceCase::typing_epitopes(
     const ValidatedVirtualCrossmatchTraceCase::HLATyping &t) {
   return t.hla_typed_alleles
@@ -260,7 +257,7 @@ ValidatedVirtualCrossmatchTraceCase::typing_epitopes(
           allele_epitopes);
 }
 
-__attribute__((pure)) List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>
+List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>
 ValidatedVirtualCrossmatchTraceCase::epitope_dedup(
     const List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> &l) {
   if (std::holds_alternative<
@@ -284,15 +281,14 @@ ValidatedVirtualCrossmatchTraceCase::epitope_dedup(
   }
 }
 
-__attribute__((pure)) bool
-ValidatedVirtualCrossmatchTraceCase::mfi_config_valid(
+bool ValidatedVirtualCrossmatchTraceCase::mfi_config_valid(
     const ValidatedVirtualCrossmatchTraceCase::MFIThresholdConfig &cfg) {
   return ((cfg.mfi_cfg_negative < cfg.mfi_cfg_weak_positive &&
            cfg.mfi_cfg_weak_positive < cfg.mfi_cfg_moderate) &&
           cfg.mfi_cfg_moderate < cfg.mfi_cfg_strong);
 }
 
-__attribute__((pure)) ValidatedVirtualCrossmatchTraceCase::MFIStrength
+ValidatedVirtualCrossmatchTraceCase::MFIStrength
 ValidatedVirtualCrossmatchTraceCase::classify_mfi_with_config(
     const ValidatedVirtualCrossmatchTraceCase::MFIThresholdConfig &cfg,
     const unsigned int &mfi) {
@@ -315,15 +311,14 @@ ValidatedVirtualCrossmatchTraceCase::classify_mfi_with_config(
   }
 }
 
-__attribute__((pure)) ValidatedVirtualCrossmatchTraceCase::MFIStrength
+ValidatedVirtualCrossmatchTraceCase::MFIStrength
 ValidatedVirtualCrossmatchTraceCase::classify_mfi_safe(
     const ValidatedVirtualCrossmatchTraceCase::ValidatedMFIConfig &vcfg,
     const unsigned int &mfi) {
   return classify_mfi_with_config(vcfg.vmc_config, mfi);
 }
 
-__attribute__((pure)) unsigned int
-ValidatedVirtualCrossmatchTraceCase::max_dsa_mfi(
+unsigned int ValidatedVirtualCrossmatchTraceCase::max_dsa_mfi(
     const ValidatedVirtualCrossmatchTraceCase::VirtualXMProfile &recipient,
     const ValidatedVirtualCrossmatchTraceCase::HLATyping &donor) {
   List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> donor_epitopes =
@@ -342,8 +337,7 @@ ValidatedVirtualCrossmatchTraceCase::max_dsa_mfi(
       0u);
 }
 
-__attribute__((pure)) bool
-ValidatedVirtualCrossmatchTraceCase::has_complement_fixing_dsa(
+bool ValidatedVirtualCrossmatchTraceCase::has_complement_fixing_dsa(
     const ValidatedVirtualCrossmatchTraceCase::VirtualXMProfile &recipient,
     const ValidatedVirtualCrossmatchTraceCase::HLATyping &donor) {
   List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> donor_epitopes =
@@ -358,7 +352,7 @@ ValidatedVirtualCrossmatchTraceCase::has_complement_fixing_dsa(
       });
 }
 
-__attribute__((pure)) ValidatedVirtualCrossmatchTraceCase::VirtualXMResult
+ValidatedVirtualCrossmatchTraceCase::VirtualXMResult
 ValidatedVirtualCrossmatchTraceCase::virtual_crossmatch_safe(
     const ValidatedVirtualCrossmatchTraceCase::ValidatedMFIConfig &vcfg,
     const ValidatedVirtualCrossmatchTraceCase::VirtualXMProfile &recipient,
@@ -380,7 +374,6 @@ ValidatedVirtualCrossmatchTraceCase::virtual_crossmatch_safe(
   }
 }
 
-__attribute__((pure))
 ValidatedVirtualCrossmatchTraceCase::TransplantAcceptability
 ValidatedVirtualCrossmatchTraceCase::transplant_acceptability(
     const ValidatedVirtualCrossmatchTraceCase::VirtualXMResult vxm,
@@ -407,7 +400,6 @@ ValidatedVirtualCrossmatchTraceCase::transplant_acceptability(
   }
 }
 
-__attribute__((pure))
 ValidatedVirtualCrossmatchTraceCase::TransplantAcceptability
 ValidatedVirtualCrossmatchTraceCase::full_virtual_crossmatch_safe(
     const ValidatedVirtualCrossmatchTraceCase::ValidatedMFIConfig &vcfg,
@@ -419,7 +411,7 @@ ValidatedVirtualCrossmatchTraceCase::full_virtual_crossmatch_safe(
   return transplant_acceptability(vxm, cf);
 }
 
-__attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::safe_to_release(
+bool ValidatedVirtualCrossmatchTraceCase::safe_to_release(
     const ValidatedVirtualCrossmatchTraceCase::CrossmatchWithUncertainty &xm) {
   switch (xm.xmu_result) {
   case CrossmatchResult::e_XM_COMPATIBLE: {
@@ -438,16 +430,14 @@ __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::safe_to_release(
   }
 }
 
-__attribute__((pure)) bool
-ValidatedVirtualCrossmatchTraceCase::order_sample_valid(
+bool ValidatedVirtualCrossmatchTraceCase::order_sample_valid(
     const unsigned int &collection_time, const unsigned int &current_time) {
   return (((current_time - collection_time) > current_time
                ? 0
                : (current_time - collection_time))) <= (72u * 3600u);
 }
 
-__attribute__((pure)) bool
-ValidatedVirtualCrossmatchTraceCase::transfusion_order_authorized(
+bool ValidatedVirtualCrossmatchTraceCase::transfusion_order_authorized(
     const ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder &order,
     const unsigned int &current_time) {
   bool compat_ok = order.sto_compatibility_check;
@@ -458,7 +448,6 @@ ValidatedVirtualCrossmatchTraceCase::transfusion_order_authorized(
   return (((compat_ok && xm_ok) && sample_ok) || emergency);
 }
 
-__attribute__((pure))
 std::optional<ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder>
 ValidatedVirtualCrossmatchTraceCase::create_safe_transfusion_order(
     unsigned int recipient_id, unsigned int product_id, bool compat_result,
@@ -478,7 +467,7 @@ ValidatedVirtualCrossmatchTraceCase::create_safe_transfusion_order(
   }
 }
 
-__attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::risk_acceptable(
+bool ValidatedVirtualCrossmatchTraceCase::risk_acceptable(
     const ValidatedVirtualCrossmatchTraceCase::TransplantAcceptability a) {
   switch (a) {
   case TransplantAcceptability::e_ACCEPTABLE: {
@@ -493,7 +482,7 @@ __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::risk_acceptable(
   }
 }
 
-__attribute__((pure)) bool Bool::bool_dec(const bool &b1, const bool &b2) {
+bool Bool::bool_dec(const bool &b1, const bool &b2) {
   if (b1) {
     if (b2) {
       return true;
@@ -509,8 +498,7 @@ __attribute__((pure)) bool Bool::bool_dec(const bool &b1, const bool &b2) {
   }
 }
 
-__attribute__((pure)) unsigned int Nat::tail_add(const unsigned int &n,
-                                                 unsigned int m) {
+unsigned int Nat::tail_add(const unsigned int &n, unsigned int m) {
   if (n <= 0) {
     return m;
   } else {
@@ -519,8 +507,8 @@ __attribute__((pure)) unsigned int Nat::tail_add(const unsigned int &n,
   }
 }
 
-__attribute__((pure)) unsigned int
-Nat::tail_addmul(unsigned int r, const unsigned int &n, const unsigned int &m) {
+unsigned int Nat::tail_addmul(unsigned int r, const unsigned int &n,
+                              const unsigned int &m) {
   if (n <= 0) {
     return r;
   } else {
@@ -529,13 +517,11 @@ Nat::tail_addmul(unsigned int r, const unsigned int &n, const unsigned int &m) {
   }
 }
 
-__attribute__((pure)) unsigned int Nat::tail_mul(const unsigned int &n,
-                                                 const unsigned int &m) {
+unsigned int Nat::tail_mul(const unsigned int &n, const unsigned int &m) {
   return Nat::tail_addmul(0u, n, m);
 }
 
-__attribute__((pure)) unsigned int Nat::of_uint_acc(const Uint &d,
-                                                    unsigned int acc) {
+unsigned int Nat::of_uint_acc(const Uint &d, unsigned int acc) {
   if (std::holds_alternative<typename Uint::Nil>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint::D0>(d.v())) {
@@ -583,12 +569,9 @@ __attribute__((pure)) unsigned int Nat::of_uint_acc(const Uint &d,
   }
 }
 
-__attribute__((pure)) unsigned int Nat::of_uint(const Uint &d) {
-  return Nat::of_uint_acc(d, 0u);
-}
+unsigned int Nat::of_uint(const Uint &d) { return Nat::of_uint_acc(d, 0u); }
 
-__attribute__((pure)) unsigned int Nat::of_hex_uint_acc(const Uint0 &d,
-                                                        unsigned int acc) {
+unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
   if (std::holds_alternative<typename Uint0::Nil0>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint0::D10>(d.v())) {
@@ -703,11 +686,11 @@ __attribute__((pure)) unsigned int Nat::of_hex_uint_acc(const Uint0 &d,
   }
 }
 
-__attribute__((pure)) unsigned int Nat::of_hex_uint(const Uint0 &d) {
+unsigned int Nat::of_hex_uint(const Uint0 &d) {
   return Nat::of_hex_uint_acc(d, 0u);
 }
 
-__attribute__((pure)) unsigned int Nat::of_num_uint(const Uint1 &d) {
+unsigned int Nat::of_num_uint(const Uint1 &d) {
   if (std::holds_alternative<typename Uint1::UIntDecimal>(d.v())) {
     const auto &[d_u] = std::get<typename Uint1::UIntDecimal>(d.v());
     return Nat::of_uint(d_u);

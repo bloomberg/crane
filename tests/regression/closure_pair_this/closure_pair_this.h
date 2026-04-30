@@ -52,25 +52,43 @@ struct ClosurePairThis {
     }
 
     // ACCESSORS
-    __attribute__((pure)) tree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
-        return tree(Leaf{});
-      } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
-        return tree(
-            Node{d_a0 ? std::make_unique<ClosurePairThis::tree>(d_a0->clone())
-                      : nullptr,
-                 d_a1,
-                 d_a2 ? std::make_unique<ClosurePairThis::tree>(d_a2->clone())
-                      : nullptr});
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          const auto &_alt = std::get<Leaf>(_src->v());
+          _dst->d_v_ = Leaf{};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ =
+              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static tree leaf() { return tree(Leaf{}); }
+    static tree leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, unsigned int a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -99,7 +117,7 @@ struct ClosurePairThis {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// BUG HYPOTHESIS: get_fn_pair returns two closures in a pair.
     /// When methodified, both closures capture the raw this pointer.
@@ -107,8 +125,8 @@ struct ClosurePairThis {
     /// are evaluated and stored while this is still valid.
     /// But after get_fn_pair returns, the temporary tree may be
     /// destroyed — calling either closure is then use-after-free.
-    __attribute__((pure)) std::pair<std::function<unsigned int(unsigned int)>,
-                                    std::function<unsigned int(unsigned int)>>
+    std::pair<std::function<unsigned int(unsigned int)>,
+              std::function<unsigned int(unsigned int)>>
     get_fn_pair(const unsigned int &flag) const {
       tree _self = *(this);
       if (flag <= 0) {
@@ -129,7 +147,7 @@ struct ClosurePairThis {
       }
     }
 
-    __attribute__((pure)) unsigned int tree_sum() const {
+    unsigned int tree_sum() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return 0u;
@@ -197,22 +215,20 @@ struct ClosurePairThis {
     }
 
     // ACCESSORS
-    __attribute__((pure)) wrapper clone() const {
+    wrapper clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<Wrap>(_sv.v());
       return wrapper(Wrap{d_a0.clone()});
     }
 
     // CREATORS
-    __attribute__((pure)) static wrapper wrap(tree a0) {
-      return wrapper(Wrap{std::move(a0)});
-    }
+    static wrapper wrap(tree a0) { return wrapper(Wrap{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, tree> F0>

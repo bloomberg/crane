@@ -66,7 +66,7 @@ struct FreeMonad {
     }
 
     // ACCESSORS
-    __attribute__((pure)) IO clone() const {
+    IO clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Pure>(_sv.v())) {
         const auto &[d_a] = std::get<Pure>(_sv.v());
@@ -85,28 +85,24 @@ struct FreeMonad {
     }
 
     // CREATORS
-    __attribute__((pure)) static IO pure(std::any a) {
-      return IO(Pure{std::move(a)});
-    }
+    static IO pure(std::any a) { return IO(Pure{std::move(a)}); }
 
-    __attribute__((pure)) static IO bind(IO a, std::function<IO(std::any)> b) {
+    static IO bind(IO a, std::function<IO(std::any)> b) {
       return IO(
           Bind{std::make_unique<IO>(std::move(a)), [=](std::any x0) mutable {
                  return std::make_unique<IO>(b(x0));
                }});
     }
 
-    __attribute__((pure)) static IO get_line() { return IO(Get_line{}); }
+    static IO get_line() { return IO(Get_line{}); }
 
-    __attribute__((pure)) static IO print(std::string a0) {
-      return IO(Print{std::move(a0)});
-    }
+    static IO print(std::string a0) { return IO(Print{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename F0, typename F1, MapsTo<T1, std::string> F3>

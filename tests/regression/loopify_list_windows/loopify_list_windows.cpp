@@ -1,7 +1,6 @@
 #include <loopify_list_windows.h>
 
-__attribute__((pure)) unsigned int
-LoopifyListWindows::len(const List<unsigned int> &l) {
+unsigned int LoopifyListWindows::len(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -37,7 +36,7 @@ LoopifyListWindows::len(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyListWindows::map_cons_helper(unsigned int x,
                                     const List<List<unsigned int>> &ll) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
@@ -66,8 +65,8 @@ LoopifyListWindows::map_cons_helper(unsigned int x,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListWindows::drop(const unsigned int &m, List<unsigned int> xs) {
+List<unsigned int> LoopifyListWindows::drop(const unsigned int &m,
+                                            List<unsigned int> xs) {
   List<unsigned int> _result;
   List<unsigned int> _loop_xs = std::move(xs);
   unsigned int _loop_m = m;
@@ -94,7 +93,7 @@ LoopifyListWindows::drop(const unsigned int &m, List<unsigned int> xs) {
   return _result;
 }
 
-__attribute__((pure)) std::pair<List<unsigned int>, List<unsigned int>>
+std::pair<List<unsigned int>, List<unsigned int>>
 LoopifyListWindows::span_eq(const unsigned int &first, List<unsigned int> lst) {
   struct _Enter {
     List<unsigned int> lst;
@@ -140,7 +139,7 @@ LoopifyListWindows::span_eq(const unsigned int &first, List<unsigned int> lst) {
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyListWindows::differences(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -185,7 +184,7 @@ LoopifyListWindows::differences(const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyListWindows::sliding_pairs(const List<unsigned int> &l) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;
@@ -235,7 +234,7 @@ LoopifyListWindows::sliding_pairs(const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyListWindows::inits(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
@@ -275,8 +274,7 @@ LoopifyListWindows::inits(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) List<List<unsigned int>>
-LoopifyListWindows::tails(List<unsigned int> l) {
+List<List<unsigned int>> LoopifyListWindows::tails(List<unsigned int> l) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
   List<unsigned int> _loop_l = std::move(l);
@@ -303,8 +301,8 @@ LoopifyListWindows::tails(List<unsigned int> l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListWindows::take(const unsigned int &n, const List<unsigned int> &l) {
+List<unsigned int> LoopifyListWindows::take(const unsigned int &n,
+                                            const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -341,7 +339,7 @@ LoopifyListWindows::take(const unsigned int &n, const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyListWindows::windows_fuel(const unsigned int &fuel,
                                  const unsigned int &n,
                                  const List<unsigned int> &l) {
@@ -388,13 +386,13 @@ LoopifyListWindows::windows_fuel(const unsigned int &fuel,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyListWindows::windows(const unsigned int &n,
                             const List<unsigned int> &l) {
   return windows_fuel(len(l), n, l);
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyListWindows::chunks_fuel(const unsigned int &fuel, const unsigned int &n,
                                 const List<unsigned int> &l) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
@@ -433,12 +431,12 @@ LoopifyListWindows::chunks_fuel(const unsigned int &fuel, const unsigned int &n,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyListWindows::chunks(const unsigned int &n, const List<unsigned int> &l) {
   return chunks_fuel(len(l), n, l);
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyListWindows::group_fuel(const unsigned int &fuel,
                                const List<unsigned int> &l) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
@@ -481,7 +479,7 @@ LoopifyListWindows::group_fuel(const unsigned int &fuel,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyListWindows::group(const List<unsigned int> &l) {
   return group_fuel(len(l), l);
 }

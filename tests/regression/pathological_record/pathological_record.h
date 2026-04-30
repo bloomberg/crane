@@ -16,24 +16,18 @@ struct PathologicalRecord {
     unsigned int f3;
 
     // ACCESSORS
-    __attribute__((pure)) Rec clone() const {
-      return Rec{(*(this)).f1, (*(this)).f2, (*(this)).f3};
-    }
+    Rec clone() const { return Rec{(*(this)).f1, (*(this)).f2, (*(this)).f3}; }
   };
 
-  __attribute__((pure)) static unsigned int hof_access(const Rec &r);
-  __attribute__((pure)) static unsigned int nested_lets(const Rec &r);
-  __attribute__((pure)) static unsigned int
-  conditional_access(const Rec &r, const bool &flag);
-  __attribute__((pure)) static unsigned int countdown(const unsigned int &n,
-                                                      const Rec &r);
-  __attribute__((pure)) static unsigned int double_match(const Rec &r1,
-                                                         const Rec &r2);
-  __attribute__((pure)) static unsigned int
-  closure_over_fields(const Rec &r, const unsigned int &x);
+  static unsigned int hof_access(const Rec &r);
+  static unsigned int nested_lets(const Rec &r);
+  static unsigned int conditional_access(const Rec &r, const bool &flag);
+  static unsigned int countdown(const unsigned int &n, const Rec &r);
+  static unsigned int double_match(const Rec &r1, const Rec &r2);
+  static unsigned int closure_over_fields(const Rec &r, const unsigned int &x);
   static inline const unsigned int use_closure =
       closure_over_fields(Rec{1u, 2u, 3u}, 10u);
-  __attribute__((pure)) static unsigned int guarded_pattern(const Rec &r);
+  static unsigned int guarded_pattern(const Rec &r);
 
   struct BigRec {
     unsigned int bf1;
@@ -43,14 +37,14 @@ struct PathologicalRecord {
     unsigned int bf5;
 
     // ACCESSORS
-    __attribute__((pure)) BigRec clone() const {
+    BigRec clone() const {
       return BigRec{(*(this)).bf1, (*(this)).bf2, (*(this)).bf3, (*(this)).bf4,
                     (*(this)).bf5};
     }
   };
 
-  __attribute__((pure)) static unsigned int scrambled_access(const BigRec &r);
-  __attribute__((pure)) static unsigned int repeated_access(const BigRec &r);
+  static unsigned int scrambled_access(const BigRec &r);
+  static unsigned int repeated_access(const BigRec &r);
   static inline const unsigned int test1 = hof_access(Rec{1u, 2u, 3u});
   static inline const unsigned int test2 = nested_lets(Rec{4u, 5u, 6u});
   static inline const unsigned int test3 =

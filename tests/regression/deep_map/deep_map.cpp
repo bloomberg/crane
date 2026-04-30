@@ -2,7 +2,7 @@
 
 /// Build a maximally-unbalanced tree (right spine = linked list).
 /// Tail-recursive via accumulator, should be loopified.
-__attribute__((pure)) DeepMap::tree<unsigned int>
+DeepMap::tree<unsigned int>
 DeepMap::build_right(unsigned int n, DeepMap::tree<unsigned int> acc) {
   DeepMap::tree<unsigned int> _result;
   DeepMap::tree<unsigned int> _loop_acc = std::move(acc);
@@ -23,15 +23,14 @@ DeepMap::build_right(unsigned int n, DeepMap::tree<unsigned int> acc) {
   return _result;
 }
 
-__attribute__((pure)) DeepMap::tree<unsigned int>
+DeepMap::tree<unsigned int>
 DeepMap::map_inc(const DeepMap::tree<unsigned int> &t) {
   return tmap<unsigned int, unsigned int>(
       [](const unsigned int &x) { return (x + 1u); }, t);
 }
 
 /// Get root value.
-__attribute__((pure)) unsigned int
-DeepMap::root_or_zero(const DeepMap::tree<unsigned int> &t) {
+unsigned int DeepMap::root_or_zero(const DeepMap::tree<unsigned int> &t) {
   if (std::holds_alternative<typename DeepMap::tree<unsigned int>::Leaf>(
           t.v())) {
     return 0u;

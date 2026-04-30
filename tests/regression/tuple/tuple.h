@@ -48,22 +48,39 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Nat clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<O>(_sv.v())) {
-      return Nat(O{});
-    } else {
-      const auto &[d_a0] = std::get<S>(_sv.v());
-      return Nat(S{d_a0 ? std::make_unique<Nat>(d_a0->clone()) : nullptr});
+  Nat clone() const {
+    Nat _out{};
+
+    struct _CloneFrame {
+      const Nat *_src;
+      Nat *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Nat *_src = _frame._src;
+      Nat *_dst = _frame._dst;
+      if (std::holds_alternative<O>(_src->v())) {
+        const auto &_alt = std::get<O>(_src->v());
+        _dst->d_v_ = O{};
+      } else {
+        const auto &_alt = std::get<S>(_src->v());
+        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
+        auto &_dst_alt = std::get<S>(_dst->d_v_);
+        if (_alt.d_a0)
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
-  __attribute__((pure)) static Nat o() { return Nat(O{}); }
+  static Nat o() { return Nat(O{}); }
 
-  __attribute__((pure)) static Nat s(Nat a0) {
-    return Nat(S{std::make_unique<Nat>(std::move(a0))});
-  }
+  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -87,7 +104,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 template <typename t_A, typename t_B> struct Prod {
@@ -124,7 +141,7 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) Prod<t_A, t_B> clone() const {
+  Prod<t_A, t_B> clone() const {
     auto &&_sv = *(this);
     const auto &[d_a0, d_a1] = std::get<Pair>(_sv.v());
     return Prod<t_A, t_B>(Pair{d_a0, d_a1});
@@ -138,7 +155,7 @@ public:
     d_v_ = Pair{t_A(d_a0), t_B(d_a1)};
   }
 
-  __attribute__((pure)) static Prod<t_A, t_B> pair(t_A a0, t_B a1) {
+  static Prod<t_A, t_B> pair(t_A a0, t_B a1) {
     return Prod(Pair{std::move(a0), std::move(a1)});
   }
 
@@ -146,14 +163,14 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Tuple {
   template <typename a, typename b> using pair = Prod<a, b>;
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static Prod<T1, T2> make_pair(const T1 a, const T2 b) {
+  static Prod<T1, T2> make_pair(const T1 a, const T2 b) {
     return Prod<T1, T2>::pair(a, b);
   }
 
@@ -168,7 +185,7 @@ struct Tuple {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static Prod<T2, T1> swap(const Prod<T1, T2> &p) {
+  static Prod<T2, T1> swap(const Prod<T1, T2> &p) {
     const auto &[d_a0, d_a1] = std::get<typename Prod<T1, T2>::Pair>(p.v());
     return Prod<T2, T1>::pair(d_a1, d_a0);
   }

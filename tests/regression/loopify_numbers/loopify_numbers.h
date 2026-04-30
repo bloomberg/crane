@@ -49,15 +49,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -71,9 +90,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -100,9 +119,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) unsigned int length() const {
+  unsigned int length() const {
     const List *_self = this;
 
     struct _Enter {
@@ -143,48 +162,40 @@ public:
 /// Consolidated UNIQUE numeric algorithms - no basic arithmetic.
 /// Tests loopification on number theory and recursive sequences.
 struct LoopifyNumbers {
-  __attribute__((pure)) static unsigned int factorial(const unsigned int &n);
-  __attribute__((pure)) static unsigned int fib(const unsigned int &n);
-  __attribute__((pure)) static unsigned int
-  tribonacci_fuel(const unsigned int &fuel, const unsigned int &n);
-  __attribute__((pure)) static unsigned int tribonacci(const unsigned int &n);
-  __attribute__((pure)) static unsigned int
-  gcd_fuel(const unsigned int &fuel, unsigned int a, const unsigned int &b);
-  __attribute__((pure)) static unsigned int gcd(const unsigned int &a,
-                                                const unsigned int &b);
-  __attribute__((pure)) static unsigned int binomial(const unsigned int &n,
-                                                     const unsigned int &k);
-  __attribute__((pure)) static unsigned int pascal(const unsigned int &row,
-                                                   const unsigned int &col);
-  __attribute__((pure)) static unsigned int
-  ackermann_fuel(const unsigned int &fuel, const unsigned int &m,
-                 unsigned int n);
-  __attribute__((pure)) static unsigned int ack(const unsigned int &m,
-                                                const unsigned int &n);
-  __attribute__((pure)) static unsigned int
-  collatz_length_fuel(const unsigned int &fuel, const unsigned int &n);
-  __attribute__((pure)) static unsigned int
-  collatz_length(const unsigned int &n);
-  __attribute__((pure)) static unsigned int
-  digitsum_fuel(const unsigned int &fuel, const unsigned int &n);
-  __attribute__((pure)) static unsigned int digitsum(const unsigned int &n);
-  __attribute__((pure)) static unsigned int
-  dec_to_bin_fuel(const unsigned int &fuel, const unsigned int &n);
-  __attribute__((pure)) static unsigned int dec_to_bin(const unsigned int &n);
-  __attribute__((pure)) static unsigned int sum_to(const unsigned int &n);
-  __attribute__((pure)) static unsigned int sum_squares(const unsigned int &n);
-  __attribute__((pure)) static unsigned int
-  alternating_sum(const bool &sign, unsigned int acc, const unsigned int &n);
-  __attribute__((pure)) static unsigned int
-  staircase_fuel(const unsigned int &fuel, const unsigned int &n);
-  __attribute__((pure)) static unsigned int
-  staircase(const unsigned int
-                &n); /// church n f x applies function f to x exactly n times.
+  static unsigned int factorial(const unsigned int &n);
+  static unsigned int fib(const unsigned int &n);
+  static unsigned int tribonacci_fuel(const unsigned int &fuel,
+                                      const unsigned int &n);
+  static unsigned int tribonacci(const unsigned int &n);
+  static unsigned int gcd_fuel(const unsigned int &fuel, unsigned int a,
+                               const unsigned int &b);
+  static unsigned int gcd(const unsigned int &a, const unsigned int &b);
+  static unsigned int binomial(const unsigned int &n, const unsigned int &k);
+  static unsigned int pascal(const unsigned int &row, const unsigned int &col);
+  static unsigned int ackermann_fuel(const unsigned int &fuel,
+                                     const unsigned int &m, unsigned int n);
+  static unsigned int ack(const unsigned int &m, const unsigned int &n);
+  static unsigned int collatz_length_fuel(const unsigned int &fuel,
+                                          const unsigned int &n);
+  static unsigned int collatz_length(const unsigned int &n);
+  static unsigned int digitsum_fuel(const unsigned int &fuel,
+                                    const unsigned int &n);
+  static unsigned int digitsum(const unsigned int &n);
+  static unsigned int dec_to_bin_fuel(const unsigned int &fuel,
+                                      const unsigned int &n);
+  static unsigned int dec_to_bin(const unsigned int &n);
+  static unsigned int sum_to(const unsigned int &n);
+  static unsigned int sum_squares(const unsigned int &n);
+  static unsigned int alternating_sum(const bool &sign, unsigned int acc,
+                                      const unsigned int &n);
+  static unsigned int staircase_fuel(const unsigned int &fuel,
+                                     const unsigned int &n);
+  static unsigned int staircase(const unsigned int &n);
 
+  /// church n f x applies function f to x exactly n times.
   /// Tests recursive higher-order function application.
   template <MapsTo<unsigned int, unsigned int> F1>
-  __attribute__((pure)) static unsigned int church(const unsigned int &n,
-                                                   F1 &&f, unsigned int x) {
+  static unsigned int church(const unsigned int &n, F1 &&f, unsigned int x) {
     unsigned int _result;
     unsigned int _loop_x = std::move(x);
     unsigned int _loop_n = n;
@@ -205,13 +216,13 @@ struct LoopifyNumbers {
 
   /// iterate_pred n applies predecessor n times, starting from n.
   /// Tests church-style iteration with concrete function.
-  __attribute__((pure)) static unsigned int iterate_pred(const unsigned int &n);
+  static unsigned int iterate_pred(const unsigned int &n);
 
   /// nest_apply n f x nests function application: f(f(...f(x))).
   /// Similar to church but emphasizes nested call structure.
   template <MapsTo<unsigned int, unsigned int> F1>
-  __attribute__((pure)) static unsigned int nest_apply(const unsigned int &n,
-                                                       F1 &&f, unsigned int x) {
+  static unsigned int nest_apply(const unsigned int &n, F1 &&f,
+                                 unsigned int x) {
     struct _Enter {
       unsigned int n;
     };
@@ -251,60 +262,53 @@ struct LoopifyNumbers {
 
   /// sum_while_positive n sums numbers from n down to 0, but only positive
   /// ones. Tests conditional accumulation in recursion.
-  __attribute__((pure)) static unsigned int
-  sum_while_positive(const unsigned int &n);
+  static unsigned int sum_while_positive(const unsigned int &n);
   /// count_down_by k n counts down from n by steps of k.
   /// Tests recursion with non-standard step size.
-  __attribute__((pure)) static unsigned int
-  count_down_by_fuel(const unsigned int &fuel, const unsigned int &k,
-                     const unsigned int &n);
-  __attribute__((pure)) static unsigned int
-  count_down_by(const unsigned int &k, const unsigned int &n);
+  static unsigned int count_down_by_fuel(const unsigned int &fuel,
+                                         const unsigned int &k,
+                                         const unsigned int &n);
+  static unsigned int count_down_by(const unsigned int &k,
+                                    const unsigned int &n);
   /// mixed_arith n combines multiplication and addition in recursion.
-  __attribute__((pure)) static unsigned int
-  mixed_arith_fuel(const unsigned int &fuel, const unsigned int &n);
-  __attribute__((pure)) static unsigned int mixed_arith(const unsigned int &n);
+  static unsigned int mixed_arith_fuel(const unsigned int &fuel,
+                                       const unsigned int &n);
+  static unsigned int mixed_arith(const unsigned int &n);
   /// is_even n checks if n is even (mutually recursive with is_odd).
-  __attribute__((pure)) static bool is_even_fuel(const unsigned int &fuel,
-                                                 const unsigned int &n);
-  __attribute__((pure)) static bool is_odd_fuel(const unsigned int &fuel,
-                                                const unsigned int &n);
-  __attribute__((pure)) static bool is_even(const unsigned int &n);
-  __attribute__((pure)) static bool is_odd(const unsigned int &n);
+  static bool is_even_fuel(const unsigned int &fuel, const unsigned int &n);
+  static bool is_odd_fuel(const unsigned int &fuel, const unsigned int &n);
+  static bool is_even(const unsigned int &n);
+  static bool is_odd(const unsigned int &n);
   /// power b e computes b^e.
-  __attribute__((pure)) static unsigned int power(const unsigned int &b,
-                                                  const unsigned int &e);
+  static unsigned int power(const unsigned int &b, const unsigned int &e);
   /// power_mod b e m computes (b^e) mod m efficiently.
-  __attribute__((pure)) static unsigned int
-  power_mod_fuel(const unsigned int &fuel, const unsigned int &b,
-                 const unsigned int &e, const unsigned int &m);
-  __attribute__((pure)) static unsigned int power_mod(const unsigned int &b,
-                                                      const unsigned int &e,
-                                                      const unsigned int &m);
+  static unsigned int power_mod_fuel(const unsigned int &fuel,
+                                     const unsigned int &b,
+                                     const unsigned int &e,
+                                     const unsigned int &m);
+  static unsigned int power_mod(const unsigned int &b, const unsigned int &e,
+                                const unsigned int &m);
   /// sum_divisors n sums all divisors of n (excluding n itself).
-  __attribute__((pure)) static unsigned int
-  sum_divisors_aux(const unsigned int &n, const unsigned int &k);
-  __attribute__((pure)) static unsigned int sum_divisors(const unsigned int &n);
+  static unsigned int sum_divisors_aux(const unsigned int &n,
+                                       const unsigned int &k);
+  static unsigned int sum_divisors(const unsigned int &n);
   /// sum_odd_indices l and sum_even_indices l are mutually recursive.
   /// sum_odd_indices adds elements at odd positions (0, 2, 4...).
   /// sum_even_indices processes even positions (1, 3, 5...) by calling
   /// sum_odd_indices.
-  __attribute__((pure)) static unsigned int
-  sum_odd_indices_fuel(const unsigned int &fuel, const List<unsigned int> &l);
-  __attribute__((pure)) static unsigned int
-  sum_even_indices_fuel(const unsigned int &fuel, const List<unsigned int> &l);
-  __attribute__((pure)) static unsigned int
-  sum_odd_indices(const List<unsigned int> &l);
-  __attribute__((pure)) static unsigned int sum_even_indices(
-      const List<unsigned int>
-          &l); /// collatz_list n generates collatz sequence as a list.
-  __attribute__((pure)) static List<unsigned int>
-  collatz_list_fuel(const unsigned int &fuel, unsigned int n);
-  __attribute__((pure)) static List<unsigned int>
-  collatz_list(const unsigned int &n);
+  static unsigned int sum_odd_indices_fuel(const unsigned int &fuel,
+                                           const List<unsigned int> &l);
+  static unsigned int sum_even_indices_fuel(const unsigned int &fuel,
+                                            const List<unsigned int> &l);
+  static unsigned int sum_odd_indices(const List<unsigned int> &l);
+  static unsigned int sum_even_indices(const List<unsigned int> &l);
+  /// collatz_list n generates collatz sequence as a list.
+  static List<unsigned int> collatz_list_fuel(const unsigned int &fuel,
+                                              unsigned int n);
+  static List<unsigned int> collatz_list(const unsigned int &n);
   /// sum_divisible_by k n sums all numbers from 1 to n divisible by k.
-  __attribute__((pure)) static unsigned int
-  sum_divisible_by(const unsigned int &k, const unsigned int &n);
+  static unsigned int sum_divisible_by(const unsigned int &k,
+                                       const unsigned int &n);
 };
 
 #endif // INCLUDED_LOOPIFY_NUMBERS

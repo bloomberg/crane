@@ -11,12 +11,11 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct Currying {
-  __attribute__((pure)) static unsigned int
-  add3(const unsigned int &a, const unsigned int &b, const unsigned int &c);
-  __attribute__((pure)) static unsigned int
-  add3_partial1(const unsigned int &_x0, const unsigned int &_x1);
-  __attribute__((pure)) static unsigned int
-  add3_partial2(const unsigned int &_x0);
+  static unsigned int add3(const unsigned int &a, const unsigned int &b,
+                           const unsigned int &c);
+  static unsigned int add3_partial1(const unsigned int &_x0,
+                                    const unsigned int &_x1);
+  static unsigned int add3_partial2(const unsigned int &_x0);
 
   template <typename t_A, typename t_B> struct pair {
     // TYPES
@@ -52,7 +51,7 @@ struct Currying {
     }
 
     // ACCESSORS
-    __attribute__((pure)) pair<t_A, t_B> clone() const {
+    pair<t_A, t_B> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Pair0>(_sv.v());
       return pair<t_A, t_B>(Pair0{d_a0, d_a1});
@@ -66,7 +65,7 @@ struct Currying {
       d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
     }
 
-    __attribute__((pure)) static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
+    static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
       return pair(Pair0{std::move(a0), std::move(a1)});
     }
 
@@ -74,7 +73,7 @@ struct Currying {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
@@ -100,11 +99,10 @@ struct Currying {
     return f(d_a0, d_a1);
   }
 
-  __attribute__((pure)) static unsigned int
-  pair_add(const pair<unsigned int, unsigned int> &p);
-  __attribute__((pure)) static unsigned int
-  curried_add(const unsigned int &_x0, const unsigned int &_x1);
-  __attribute__((pure)) static unsigned int
+  static unsigned int pair_add(const pair<unsigned int, unsigned int> &p);
+  static unsigned int curried_add(const unsigned int &_x0,
+                                  const unsigned int &_x1);
+  static unsigned int
   uncurried_add3(const pair<unsigned int, pair<unsigned int, unsigned int>> &p);
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
@@ -112,13 +110,12 @@ struct Currying {
     return f(a, b);
   }
 
-  __attribute__((pure)) static unsigned int sub(const unsigned int &_x0,
-                                                const unsigned int &_x1);
-  __attribute__((pure)) static unsigned int
-  flipped_sub(const unsigned int &_x0, const unsigned int &_x1);
-  __attribute__((pure)) static unsigned int add_base(const unsigned int &_x0,
-                                                     const unsigned int &_x1);
-  __attribute__((pure)) static unsigned int add_ten(const unsigned int &_x0);
+  static unsigned int sub(const unsigned int &_x0, const unsigned int &_x1);
+  static unsigned int flipped_sub(const unsigned int &_x0,
+                                  const unsigned int &_x1);
+  static unsigned int add_base(const unsigned int &_x0,
+                               const unsigned int &_x1);
+  static unsigned int add_ten(const unsigned int &_x0);
   static inline const unsigned int test_add3 = add3(1u, 2u, 3u);
   static inline const unsigned int test_partial1 = add3_partial1(2u, 3u);
   static inline const unsigned int test_partial2 = add3_partial2(3u);

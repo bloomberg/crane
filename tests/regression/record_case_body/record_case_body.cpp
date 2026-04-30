@@ -1,7 +1,6 @@
 #include <record_case_body.h>
 
-__attribute__((pure)) unsigned int
-RecordCaseBody::case_in_body(const RecordCaseBody::Rec &r) {
+unsigned int RecordCaseBody::case_in_body(const RecordCaseBody::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;
@@ -13,8 +12,7 @@ RecordCaseBody::case_in_body(const RecordCaseBody::Rec &r) {
   }
 }
 
-__attribute__((pure)) unsigned int
-RecordCaseBody::helper(const unsigned int &n) {
+unsigned int RecordCaseBody::helper(const unsigned int &n) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -23,16 +21,14 @@ RecordCaseBody::helper(const unsigned int &n) {
   }
 }
 
-__attribute__((pure)) unsigned int
-RecordCaseBody::fix_in_body(const RecordCaseBody::Rec &r) {
+unsigned int RecordCaseBody::fix_in_body(const RecordCaseBody::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;
   return helper(((a + b) + c));
 }
 
-__attribute__((pure)) unsigned int
-RecordCaseBody::let_in_body(const RecordCaseBody::Rec &r) {
+unsigned int RecordCaseBody::let_in_body(const RecordCaseBody::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;
@@ -47,17 +43,15 @@ RecordCaseBody::let_in_body(const RecordCaseBody::Rec &r) {
   }
 }
 
-__attribute__((pure)) unsigned int
-RecordCaseBody::apply_nonfld(const RecordCaseBody::Rec &r) {
+unsigned int RecordCaseBody::apply_nonfld(const RecordCaseBody::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;
   return ((((a + b) + c) + 1) + 1);
 }
 
-__attribute__((pure)) unsigned int
-RecordCaseBody::conditional_body(const RecordCaseBody::Rec &r,
-                                 const bool &flag) {
+unsigned int RecordCaseBody::conditional_body(const RecordCaseBody::Rec &r,
+                                              const bool &flag) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;
@@ -73,24 +67,23 @@ RecordCaseBody::conditional_body(const RecordCaseBody::Rec &r,
   }
 }
 
-__attribute__((pure)) unsigned int
-RecordCaseBody::outer_ref(const unsigned int &x, const RecordCaseBody::Rec &r) {
+unsigned int RecordCaseBody::outer_ref(const unsigned int &x,
+                                       const RecordCaseBody::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;
   return (((x + a) + b) + c);
 }
 
-__attribute__((pure)) unsigned int
-RecordCaseBody::lambda_body(const RecordCaseBody::Rec &r,
-                            const unsigned int &n) {
+unsigned int RecordCaseBody::lambda_body(const RecordCaseBody::Rec &r,
+                                         const unsigned int &n) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;
   return (((n + a) + b) + c);
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 RecordCaseBody::nested_record_match(const RecordCaseBody::RecRec &rr) {
   RecordCaseBody::Rec r = rr.inner;
   unsigned int n = rr.outer_field;
@@ -100,16 +93,14 @@ RecordCaseBody::nested_record_match(const RecordCaseBody::RecRec &rr) {
   return (((a + b) + c) + n);
 }
 
-__attribute__((pure)) unsigned int
-RecordCaseBody::global_in_body(const RecordCaseBody::Rec &r) {
+unsigned int RecordCaseBody::global_in_body(const RecordCaseBody::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;
   return (((global_const + a) + b) + c);
 }
 
-__attribute__((pure)) unsigned int
-RecordCaseBody::guarded_body(const RecordCaseBody::Rec &r) {
+unsigned int RecordCaseBody::guarded_body(const RecordCaseBody::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;
@@ -124,7 +115,7 @@ RecordCaseBody::guarded_body(const RecordCaseBody::Rec &r) {
   }
 }
 
-__attribute__((pure)) RecordCaseBody::Rec
+RecordCaseBody::Rec
 RecordCaseBody::constructor_body(const RecordCaseBody::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
@@ -132,7 +123,7 @@ RecordCaseBody::constructor_body(const RecordCaseBody::Rec &r) {
   return Rec{(a + 1u), (b + 1u), (c + 1u)};
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 RecordCaseBody::sum_list(const RecordCaseBody::list<unsigned int> &l) {
   if (std::holds_alternative<typename RecordCaseBody::list<unsigned int>::Nil>(
           l.v())) {
@@ -144,8 +135,7 @@ RecordCaseBody::sum_list(const RecordCaseBody::list<unsigned int> &l) {
   }
 }
 
-__attribute__((pure)) unsigned int
-RecordCaseBody::list_in_body(const RecordCaseBody::Rec &r) {
+unsigned int RecordCaseBody::list_in_body(const RecordCaseBody::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;

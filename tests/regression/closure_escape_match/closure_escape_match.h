@@ -51,17 +51,34 @@ struct ClosureEscapeMatch {
     }
 
     // ACCESSORS
-    __attribute__((pure)) mylist<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Mynil>(_sv.v())) {
-        return mylist<t_A>(Mynil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<Mycons>(_sv.v());
-        return mylist<t_A>(Mycons{
-            d_a0, d_a1 ? std::make_unique<ClosureEscapeMatch::mylist<t_A>>(
-                             d_a1->clone())
-                       : nullptr});
+    mylist clone() const {
+      mylist _out{};
+
+      struct _CloneFrame {
+        const mylist *_src;
+        mylist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist *_src = _frame._src;
+        mylist *_dst = _frame._dst;
+        if (std::holds_alternative<Mynil>(_src->v())) {
+          const auto &_alt = std::get<Mynil>(_src->v());
+          _dst->d_v_ = Mynil{};
+        } else {
+          const auto &_alt = std::get<Mycons>(_src->v());
+          _dst->d_v_ = Mycons{_alt.d_a0,
+                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -76,9 +93,9 @@ struct ClosureEscapeMatch {
       }
     }
 
-    __attribute__((pure)) static mylist<t_A> mynil() { return mylist(Mynil{}); }
+    static mylist<t_A> mynil() { return mylist(Mynil{}); }
 
-    __attribute__((pure)) static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+    static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
       return mylist(
           Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
@@ -105,7 +122,7 @@ struct ClosureEscapeMatch {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1, mylist<T1>, T2> F1>
@@ -128,8 +145,7 @@ struct ClosureEscapeMatch {
     }
   }
 
-  template <typename T1>
-  __attribute__((pure)) static unsigned int length(const mylist<T1> &l) {
+  template <typename T1> static unsigned int length(const mylist<T1> &l) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
       return 0u;
     } else {
@@ -139,8 +155,7 @@ struct ClosureEscapeMatch {
   }
 
   template <typename T1>
-  __attribute__((pure)) static mylist<T1> app(const mylist<T1> &l1,
-                                              mylist<T1> l2) {
+  static mylist<T1> app(const mylist<T1> &l1, mylist<T1> l2) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(l1.v())) {
       return l2;
     } else {
@@ -152,22 +167,21 @@ struct ClosureEscapeMatch {
   /// Return a closure wrapped in option — prevents uncurrying.
   /// The closure captures a pattern variable hd (a shared_ptr),
   /// which is an inlined _args.d_a0 inside the std::visit callback.
-  __attribute__((pure)) static std::optional<
+  static std::optional<
       std::function<mylist<unsigned int>(mylist<unsigned int>)>>
   make_prepender_opt(const mylist<mylist<unsigned int>> &l);
   /// Return a closure in a pair — prevents uncurrying.
   /// Captures pattern variables x and xs.
-  __attribute__((pure)) static std::optional<
+  static std::optional<
       std::function<std::pair<unsigned int, unsigned int>(std::monostate)>>
   make_pair_fn_opt(const mylist<unsigned int> &l);
   /// Nested matches with closures returned in option.
-  __attribute__((
-      pure)) static std::optional<std::function<unsigned int(unsigned int)>>
+  static std::optional<std::function<unsigned int(unsigned int)>>
   nested_closure_opt(const mylist<unsigned int> &a,
                      const mylist<unsigned int> &b);
   /// Closure stored in a product, capturing shared_ptr pattern variable.
-  __attribute__((pure)) static std::pair<
-      unsigned int, std::function<mylist<unsigned int>(mylist<unsigned int>)>>
+  static std::pair<unsigned int,
+                   std::function<mylist<unsigned int>(mylist<unsigned int>)>>
   closure_in_pair(const mylist<mylist<unsigned int>> &l);
 };
 

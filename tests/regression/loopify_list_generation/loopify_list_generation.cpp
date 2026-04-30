@@ -1,7 +1,7 @@
 #include <loopify_list_generation.h>
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListGeneration::replicate(const unsigned int &n, unsigned int x) {
+List<unsigned int> LoopifyListGeneration::replicate(const unsigned int &n,
+                                                    unsigned int x) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_n = n;
@@ -24,8 +24,7 @@ LoopifyListGeneration::replicate(const unsigned int &n, unsigned int x) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListGeneration::stutter(const List<unsigned int> &l) {
+List<unsigned int> LoopifyListGeneration::stutter(const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -57,9 +56,8 @@ LoopifyListGeneration::stutter(const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListGeneration::cycle(const unsigned int &n,
-                             const List<unsigned int> &l) {
+List<unsigned int> LoopifyListGeneration::cycle(const unsigned int &n,
+                                                const List<unsigned int> &l) {
   struct _Enter {
     unsigned int n;
   };
@@ -94,8 +92,8 @@ LoopifyListGeneration::cycle(const unsigned int &n,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListGeneration::iterate(const unsigned int &n, unsigned int x) {
+List<unsigned int> LoopifyListGeneration::iterate(const unsigned int &n,
+                                                  unsigned int x) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_x = std::move(x);
@@ -122,7 +120,7 @@ LoopifyListGeneration::iterate(const unsigned int &n, unsigned int x) {
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int> LoopifyListGeneration::replicate_list(
+List<unsigned int> LoopifyListGeneration::replicate_list(
     const List<std::pair<unsigned int, unsigned int>> &l) {
   struct _Enter {
     const List<std::pair<unsigned int, unsigned int>> *l;
@@ -164,9 +162,9 @@ __attribute__((pure)) List<unsigned int> LoopifyListGeneration::replicate_list(
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListGeneration::repeat_with_sep(unsigned int sep, const unsigned int &n,
-                                       unsigned int x) {
+List<unsigned int> LoopifyListGeneration::repeat_with_sep(unsigned int sep,
+                                                          const unsigned int &n,
+                                                          unsigned int x) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_n = n;
@@ -203,8 +201,8 @@ LoopifyListGeneration::repeat_with_sep(unsigned int sep, const unsigned int &n,
   return std::move(*(_head));
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyListGeneration::range(unsigned int start, const unsigned int &len) {
+List<unsigned int> LoopifyListGeneration::range(unsigned int start,
+                                                const unsigned int &len) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_len = len;

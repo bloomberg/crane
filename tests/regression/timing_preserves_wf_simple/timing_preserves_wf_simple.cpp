@@ -1,12 +1,11 @@
 #include <timing_preserves_wf_simple.h>
 
-__attribute__((pure)) bool
-TimingPreservesWfSimple::wf(const TimingPreservesWfSimple::state &s) {
+bool TimingPreservesWfSimple::wf(const TimingPreservesWfSimple::state &s) {
   return (s.regs_len == 4u &&
           (s.rom_len == 4u && (s.pc < 4096u && s.stack_len <= 3u)));
 }
 
-__attribute__((pure)) unsigned int
+unsigned int
 TimingPreservesWfSimple::cycles(const TimingPreservesWfSimple::Instr i) {
   switch (i) {
   case Instr::e_FIM: {
@@ -21,7 +20,7 @@ TimingPreservesWfSimple::cycles(const TimingPreservesWfSimple::Instr i) {
   }
 }
 
-__attribute__((pure)) TimingPreservesWfSimple::state
+TimingPreservesWfSimple::state
 TimingPreservesWfSimple::execute(const TimingPreservesWfSimple::state &s,
                                  const TimingPreservesWfSimple::Instr i) {
   switch (i) {

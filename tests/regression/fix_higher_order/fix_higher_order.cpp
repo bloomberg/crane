@@ -8,7 +8,7 @@
 /// wrap_fn, the translation may use & capture. wrap_fn stores
 /// it in Some and returns. After make_wrapped returns, the
 /// captured base is destroyed.
-__attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<unsigned int(unsigned int)>>
 FixHigherOrder::make_wrapped(unsigned int base) {
   auto go_impl = [=](auto &_self_go, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
@@ -24,7 +24,6 @@ FixHigherOrder::make_wrapped(unsigned int base) {
   return wrap_fn(go);
 }
 
-__attribute__((pure))
 std::optional<std::optional<std::function<unsigned int(unsigned int)>>>
 FixHigherOrder::make_double_wrapped(unsigned int base) {
   auto go_impl = [=](auto &_self_go, unsigned int x) mutable -> unsigned int {

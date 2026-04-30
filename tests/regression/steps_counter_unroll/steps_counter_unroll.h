@@ -14,11 +14,11 @@ struct StepsCounterUnroll {
     unsigned int pc;
 
     // ACCESSORS
-    __attribute__((pure)) state clone() const { return state{(*(this)).pc}; }
+    state clone() const { return state{(*(this)).pc}; }
   };
 
-  __attribute__((pure)) static state step(const state &s);
-  __attribute__((pure)) static state steps(const unsigned int &n, state s);
+  static state step(const state &s);
+  static state steps(const unsigned int &n, state s);
   static inline const unsigned int t = steps(5u, state{4094u}).pc;
 };
 

@@ -2,9 +2,8 @@
 
 /// Consolidated combinatorial algorithms.
 /// remove x l removes first occurrence of x from list.
-__attribute__((pure)) List<unsigned int>
-LoopifyCombinatorics::remove(const unsigned int &x,
-                             const List<unsigned int> &l) {
+List<unsigned int> LoopifyCombinatorics::remove(const unsigned int &x,
+                                                const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -36,7 +35,7 @@ LoopifyCombinatorics::remove(const unsigned int &x,
 }
 
 /// Helper: prepend x to each list in lsts.
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyCombinatorics::map_cons(unsigned int x,
                                const List<List<unsigned int>> &lsts) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
@@ -70,7 +69,7 @@ LoopifyCombinatorics::map_cons(unsigned int x,
 /// iteration and the recursive subproblem, enabling full loopification.
 /// The match on remaining is hoisted out of the let-binding so that all
 /// recursive calls appear at the top level of each branch.
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyCombinatorics::perms_choices_fuel(const unsigned int &fuel,
                                          const List<unsigned int> &choices,
                                          const List<unsigned int> &orig) {
@@ -152,7 +151,7 @@ LoopifyCombinatorics::perms_choices_fuel(const unsigned int &fuel,
 }
 
 /// permutations_fuel fuel l generates all permutations of a list.
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyCombinatorics::permutations_fuel(const unsigned int &fuel,
                                         const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
@@ -163,8 +162,7 @@ LoopifyCombinatorics::permutations_fuel(const unsigned int &fuel,
   }
 }
 
-__attribute__((pure)) unsigned int
-LoopifyCombinatorics::len_list(const List<unsigned int> &l) {
+unsigned int LoopifyCombinatorics::len_list(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -198,8 +196,7 @@ LoopifyCombinatorics::len_list(const List<unsigned int> &l) {
   return _result;
 }
 
-__attribute__((pure)) unsigned int
-LoopifyCombinatorics::factorial_impl(const unsigned int &n) {
+unsigned int LoopifyCombinatorics::factorial_impl(const unsigned int &n) {
   struct _Enter {
     unsigned int n;
   };
@@ -234,13 +231,13 @@ LoopifyCombinatorics::factorial_impl(const unsigned int &n) {
   return _result;
 }
 
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyCombinatorics::permutations(const List<unsigned int> &l) {
   return permutations_fuel(factorial_impl(len_list(l)), l);
 }
 
 /// subsequences l generates all subsequences (subsets preserving order).
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyCombinatorics::subsequences(const List<unsigned int> &l) {
   struct _Enter {
     List<unsigned int> l;
@@ -321,7 +318,7 @@ LoopifyCombinatorics::subsequences(const List<unsigned int> &l) {
 }
 
 /// Helper for cartesian product.
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyCombinatorics::map_pairs(unsigned int y, const List<unsigned int> &l) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;
@@ -352,7 +349,7 @@ LoopifyCombinatorics::map_pairs(unsigned int y, const List<unsigned int> &l) {
 }
 
 /// cartesian l1 l2 Cartesian product of two lists.
-__attribute__((pure)) List<std::pair<unsigned int, unsigned int>>
+List<std::pair<unsigned int, unsigned int>>
 LoopifyCombinatorics::cartesian(const List<unsigned int> &l1,
                                 const List<unsigned int> &l2) {
   struct _Enter {
@@ -392,7 +389,7 @@ LoopifyCombinatorics::cartesian(const List<unsigned int> &l1,
 }
 
 /// power_set l generates the power set (all subsets).
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyCombinatorics::power_set(const List<unsigned int> &l) {
   struct _Enter {
     List<unsigned int> l;
@@ -473,7 +470,7 @@ LoopifyCombinatorics::power_set(const List<unsigned int> &l) {
 }
 
 /// insert_everywhere x l inserts x at every position in l.
-__attribute__((pure)) List<List<unsigned int>>
+List<List<unsigned int>>
 LoopifyCombinatorics::insert_everywhere(unsigned int x, List<unsigned int> l) {
   struct _Enter {
     List<unsigned int> l;
@@ -560,8 +557,8 @@ LoopifyCombinatorics::insert_everywhere(unsigned int x, List<unsigned int> l) {
 }
 
 /// Helper: check if element is in list.
-__attribute__((pure)) bool
-LoopifyCombinatorics::elem(const unsigned int &x, const List<unsigned int> &l) {
+bool LoopifyCombinatorics::elem(const unsigned int &x,
+                                const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -599,8 +596,7 @@ LoopifyCombinatorics::elem(const unsigned int &x, const List<unsigned int> &l) {
 }
 
 /// Helper: list length.
-__attribute__((pure)) unsigned int
-LoopifyCombinatorics::len_impl(const List<unsigned int> &l) {
+unsigned int LoopifyCombinatorics::len_impl(const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
   };
@@ -635,7 +631,7 @@ LoopifyCombinatorics::len_impl(const List<unsigned int> &l) {
 }
 
 /// dedup l removes all duplicates (keeps first occurrence).
-__attribute__((pure)) List<unsigned int>
+List<unsigned int>
 LoopifyCombinatorics::dedup_fuel(const unsigned int &fuel,
                                  const List<unsigned int> &l) {
   struct _Enter {
@@ -686,7 +682,6 @@ LoopifyCombinatorics::dedup_fuel(const unsigned int &fuel,
   return _result;
 }
 
-__attribute__((pure)) List<unsigned int>
-LoopifyCombinatorics::dedup(const List<unsigned int> &l) {
+List<unsigned int> LoopifyCombinatorics::dedup(const List<unsigned int> &l) {
   return dedup_fuel(len_impl(l), l);
 }

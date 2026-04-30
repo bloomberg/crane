@@ -1,7 +1,6 @@
 #include <rec_record.h>
 
-__attribute__((pure)) unsigned int
-RecRecord::rlist_sum(const RecRecord::rlist<unsigned int> &l) {
+unsigned int RecRecord::rlist_sum(const RecRecord::rlist<unsigned int> &l) {
   if (std::holds_alternative<typename RecRecord::rlist<unsigned int>::Rnil>(
           l.v())) {
     return 0u;
@@ -12,8 +11,7 @@ RecRecord::rlist_sum(const RecRecord::rlist<unsigned int> &l) {
   }
 }
 
-__attribute__((pure)) unsigned int
-RecRecord::rnode_depth(const RecRecord::RNode &r) {
+unsigned int RecRecord::rnode_depth(const RecRecord::RNode &r) {
   auto _cs = r.rn_next.has_value()
                  ? std::make_optional<RNode>((*r.rn_next)->clone())
                  : std::nullopt;

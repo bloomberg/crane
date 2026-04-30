@@ -50,15 +50,34 @@ public:
   }
 
   // ACCESSORS
-  __attribute__((pure)) List<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
-      return List<t_A>(Nil{});
-    } else {
-      const auto &[d_a0, d_a1] = std::get<Cons>(_sv.v());
-      return List<t_A>(Cons{
-          d_a0, d_a1 ? std::make_unique<List<t_A>>(d_a1->clone()) : nullptr});
+  List clone() const {
+    List _out{};
+
+    struct _CloneFrame {
+      const List *_src;
+      List *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack;
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List *_src = _frame._src;
+      List *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        const auto &_alt = std::get<Nil>(_src->v());
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ =
+            Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<List>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1)
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+      }
     }
+    return _out;
   }
 
   // CREATORS
@@ -72,9 +91,9 @@ public:
     }
   }
 
-  __attribute__((pure)) static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil{}); }
 
-  __attribute__((pure)) static List<t_A> cons(t_A a0, List<t_A> a1) {
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
         Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
@@ -101,9 +120,9 @@ public:
   inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) List<t_A> app(List<t_A> m) const {
+  List<t_A> app(List<t_A> m) const {
     std::unique_ptr<List<t_A>> _head{};
     std::unique_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
@@ -171,19 +190,37 @@ struct LoopifyTrees {
     }
 
     // ACCESSORS
-    __attribute__((pure)) tree<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
-        return tree<t_A>(Leaf{});
-      } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<Node>(_sv.v());
-        return tree<t_A>(
-            Node{d_a0 ? std::make_unique<LoopifyTrees::tree<t_A>>(d_a0->clone())
-                      : nullptr,
-                 d_a1,
-                 d_a2 ? std::make_unique<LoopifyTrees::tree<t_A>>(d_a2->clone())
-                      : nullptr});
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          const auto &_alt = std::get<Leaf>(_src->v());
+          _dst->d_v_ = Leaf{};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ =
+              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -199,10 +236,9 @@ struct LoopifyTrees {
       }
     }
 
-    __attribute__((pure)) static tree<t_A> leaf() { return tree(Leaf{}); }
+    static tree<t_A> leaf() { return tree(Leaf{}); }
 
-    __attribute__((pure)) static tree<t_A> node(tree<t_A> a0, t_A a1,
-                                                tree<t_A> a2) {
+    static tree<t_A> node(tree<t_A> a0, t_A a1, tree<t_A> a2) {
       return tree(Node{std::make_unique<tree<t_A>>(std::move(a0)),
                        std::move(a1),
                        std::make_unique<tree<t_A>>(std::move(a2))});
@@ -232,11 +268,10 @@ struct LoopifyTrees {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// tree_map f t applies f to all values in tree.
-    template <typename T1, MapsTo<T1, t_A> F0>
-    __attribute__((pure)) tree<T1> tree_map(F0 &&f) const {
+    template <typename T1, MapsTo<T1, t_A> F0> tree<T1> tree_map(F0 &&f) const {
       const tree *_self = this;
 
       struct _Enter {
@@ -286,7 +321,7 @@ struct LoopifyTrees {
     }
 
     /// mirror_equal t1 t2 checks if t1 and t2 are mirror images.
-    __attribute__((pure)) bool mirror_equal(const tree<t_A> &t2) const {
+    bool mirror_equal(const tree<t_A> &t2) const {
       const tree *_self = this;
 
       struct _Enter {
@@ -349,7 +384,7 @@ struct LoopifyTrees {
     }
 
     /// tree_to_list inorder traversal.
-    __attribute__((pure)) List<t_A> tree_to_list() const {
+    List<t_A> tree_to_list() const {
       const tree *_self = this;
 
       struct _Enter {
@@ -399,7 +434,7 @@ struct LoopifyTrees {
     }
 
     /// count_leaves counts leaf nodes.
-    __attribute__((pure)) unsigned int count_leaves() const {
+    unsigned int count_leaves() const {
       const tree *_self = this;
 
       struct _Enter {
@@ -494,8 +529,7 @@ struct LoopifyTrees {
     }
 
     /// same_shape tests structural equality.
-    template <typename T1>
-    __attribute__((pure)) bool same_shape(const tree<T1> &t2) const {
+    template <typename T1> bool same_shape(const tree<T1> &t2) const {
       const tree *_self = this;
       auto &&_sv = *(_self);
       if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
@@ -521,7 +555,7 @@ struct LoopifyTrees {
       }
     }
 
-    __attribute__((pure)) tree<t_A> mirror() const {
+    tree<t_A> mirror() const {
       const tree *_self = this;
 
       struct _Enter {
@@ -570,7 +604,7 @@ struct LoopifyTrees {
       return _result;
     }
 
-    __attribute__((pure)) unsigned int tree_size() const {
+    unsigned int tree_size() const {
       const tree *_self = this;
 
       struct _Enter {
@@ -617,7 +651,7 @@ struct LoopifyTrees {
       return _result;
     }
 
-    __attribute__((pure)) unsigned int tree_height() const {
+    unsigned int tree_height() const {
       const tree *_self = this;
       auto &&_sv = *(_self);
       if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
@@ -742,20 +776,17 @@ struct LoopifyTrees {
     }
   };
 
-  __attribute__((pure)) static unsigned int
-  tree_sum(const tree<unsigned int> &t);
+  static unsigned int tree_sum(const tree<unsigned int> &t);
   /// leaf_sum sums only leaf values.
-  __attribute__((pure)) static unsigned int
-  leaf_sum(const tree<unsigned int> &t);
+  static unsigned int leaf_sum(const tree<unsigned int> &t);
   /// insert_bst BST insertion.
-  __attribute__((pure)) static tree<unsigned int>
-  insert_bst(unsigned int x, const tree<unsigned int> &t);
+  static tree<unsigned int> insert_bst(unsigned int x,
+                                       const tree<unsigned int> &t);
   /// count_paths t n counts root-to-leaf paths that sum to n.
-  __attribute__((pure)) static unsigned int
-  count_paths(const tree<unsigned int> &t, const unsigned int &n);
+  static unsigned int count_paths(const tree<unsigned int> &t,
+                                  const unsigned int &n);
   /// sum_of_max_branches sums maximum values along each path.
-  __attribute__((pure)) static unsigned int
-  sum_of_max_branches(const tree<unsigned int> &t);
+  static unsigned int sum_of_max_branches(const tree<unsigned int> &t);
 
   struct ternary {
     // TYPES
@@ -797,28 +828,46 @@ struct LoopifyTrees {
     }
 
     // ACCESSORS
-    __attribute__((pure)) ternary clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<TLeaf>(_sv.v())) {
-        return ternary(TLeaf{});
-      } else {
-        const auto &[d_a0, d_a1, d_a2, d_a3] = std::get<TNode>(_sv.v());
-        return ternary(
-            TNode{d_a0 ? std::make_unique<LoopifyTrees::ternary>(d_a0->clone())
-                       : nullptr,
-                  d_a1 ? std::make_unique<LoopifyTrees::ternary>(d_a1->clone())
-                       : nullptr,
-                  d_a2 ? std::make_unique<LoopifyTrees::ternary>(d_a2->clone())
-                       : nullptr,
-                  d_a3});
+    ternary clone() const {
+      ternary _out{};
+
+      struct _CloneFrame {
+        const ternary *_src;
+        ternary *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const ternary *_src = _frame._src;
+        ternary *_dst = _frame._dst;
+        if (std::holds_alternative<TLeaf>(_src->v())) {
+          const auto &_alt = std::get<TLeaf>(_src->v());
+          _dst->d_v_ = TLeaf{};
+        } else {
+          const auto &_alt = std::get<TNode>(_src->v());
+          _dst->d_v_ = TNode{_alt.d_a0 ? std::make_unique<ternary>() : nullptr,
+                             _alt.d_a1 ? std::make_unique<ternary>() : nullptr,
+                             _alt.d_a2 ? std::make_unique<ternary>() : nullptr,
+                             _alt.d_a3};
+          auto &_dst_alt = std::get<TNode>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static ternary tleaf() { return ternary(TLeaf{}); }
+    static ternary tleaf() { return ternary(TLeaf{}); }
 
-    __attribute__((pure)) static ternary tnode(ternary a0, ternary a1,
-                                               ternary a2, unsigned int a3) {
+    static ternary tnode(ternary a0, ternary a1, ternary a2, unsigned int a3) {
       return ternary(TNode{std::make_unique<ternary>(std::move(a0)),
                            std::make_unique<ternary>(std::move(a1)),
                            std::make_unique<ternary>(std::move(a2)),
@@ -851,9 +900,9 @@ struct LoopifyTrees {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int ternary_depth() const {
+    unsigned int ternary_depth() const {
       const ternary *_self = this;
       auto &&_sv = *(_self);
       if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
@@ -878,7 +927,7 @@ struct LoopifyTrees {
       }
     }
 
-    __attribute__((pure)) unsigned int ternary_sum() const {
+    unsigned int ternary_sum() const {
       const ternary *_self = this;
 
       struct _Enter {
@@ -1127,7 +1176,7 @@ struct LoopifyTrees {
     }
 
     // ACCESSORS
-    __attribute__((pure)) rose clone() const {
+    rose clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<RNode>(_sv.v());
       return rose(RNode{
@@ -1136,7 +1185,7 @@ struct LoopifyTrees {
     }
 
     // CREATORS
-    __attribute__((pure)) static rose rnode(unsigned int a0, List<rose> a1) {
+    static rose rnode(unsigned int a0, List<rose> a1) {
       return rose(
           RNode{std::move(a0), std::make_unique<List<rose>>(std::move(a1))});
     }
@@ -1145,17 +1194,17 @@ struct LoopifyTrees {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// rose_depth t computes the depth of a rose tree.
-    __attribute__((pure)) unsigned int rose_depth() const {
+    unsigned int rose_depth() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
       return (depth_rose_list_fuel(1000u, *(d_a1)) + 1);
     }
 
     /// rose_flatten t flattens a rose tree to a list (pre-order).
-    __attribute__((pure)) List<unsigned int> rose_flatten() const {
+    List<unsigned int> rose_flatten() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
       return List<unsigned int>::cons(d_a0,
@@ -1164,14 +1213,14 @@ struct LoopifyTrees {
 
     /// rose_map f t applies f to all values in a rose tree.
     template <MapsTo<unsigned int, unsigned int> F0>
-    __attribute__((pure)) rose rose_map(F0 &&f) const {
+    rose rose_map(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
       return rose::rnode(f(d_a0), map_rose_list_fuel(1000u, f, *(d_a1)));
     }
 
     /// rose_sum t sums all values in a rose tree.
-    __attribute__((pure)) unsigned int rose_sum() const {
+    unsigned int rose_sum() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
       return (d_a0 + sum_rose_list_fuel(1000u, *(d_a1)));
@@ -1194,13 +1243,13 @@ struct LoopifyTrees {
 
   /// Helper: sum all values in a list of rose trees (processes both tree and
   /// list levels in one recursive function to enable full loopification).
-  __attribute__((pure)) static unsigned int
-  sum_rose_list_fuel(const unsigned int &fuel, const List<rose> &cs);
+  static unsigned int sum_rose_list_fuel(const unsigned int &fuel,
+                                         const List<rose> &cs);
 
   /// Helper: map function over all values in a list of rose trees.
   template <MapsTo<unsigned int, unsigned int> F1>
-  __attribute__((pure)) static List<rose>
-  map_rose_list_fuel(const unsigned int &fuel, F1 &&f, const List<rose> &cs) {
+  static List<rose> map_rose_list_fuel(const unsigned int &fuel, F1 &&f,
+                                       const List<rose> &cs) {
     if (fuel <= 0) {
       return List<rose>::nil();
     } else {
@@ -1218,54 +1267,48 @@ struct LoopifyTrees {
   }
 
   /// Helper: flatten a list of rose trees to a flat list of nats.
-  __attribute__((pure)) static List<unsigned int>
-  flatten_rose_list_fuel(const unsigned int &fuel, const List<rose> &cs);
+  static List<unsigned int> flatten_rose_list_fuel(const unsigned int &fuel,
+                                                   const List<rose> &cs);
   /// Helper: compute maximum depth among a list of rose trees.
-  __attribute__((pure)) static unsigned int
-  depth_rose_list_fuel(const unsigned int &fuel, const List<rose> &cs);
+  static unsigned int depth_rose_list_fuel(const unsigned int &fuel,
+                                           const List<rose> &cs);
   /// tree_max t1 t2 element-wise maximum of two trees.
-  __attribute__((pure)) static tree<unsigned int>
-  tree_max(tree<unsigned int> t1, tree<unsigned int> t2);
+  static tree<unsigned int> tree_max(tree<unsigned int> t1,
+                                     tree<unsigned int> t2);
   /// Helper: extract values from trees.
-  __attribute__((pure)) static List<unsigned int>
+  static List<unsigned int>
   extract_tree_values(const List<tree<unsigned int>> &ts);
   /// Helper: extract children from trees.
-  __attribute__((pure)) static List<tree<unsigned int>>
+  static List<tree<unsigned int>>
   extract_tree_children(const List<tree<unsigned int>> &ts);
   /// tree_levels t returns list of lists, one per level (breadth-first).
-  __attribute__((pure)) static List<List<unsigned int>>
+  static List<List<unsigned int>>
   tree_levels_fuel(const unsigned int &fuel,
                    const List<tree<unsigned int>> &trees);
-  __attribute__((pure)) static List<List<unsigned int>>
-  tree_levels(tree<unsigned int> t);
+  static List<List<unsigned int>> tree_levels(tree<unsigned int> t);
   /// count_nodes t returns tuple (node_count, sum_of_values).
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  static std::pair<unsigned int, unsigned int>
   count_nodes(const tree<unsigned int> &t);
   /// Helper: append two lists of lists.
-  __attribute__((pure)) static List<List<unsigned int>>
+  static List<List<unsigned int>>
   append_list_lists(const List<List<unsigned int>> &l1,
                     List<List<unsigned int>> l2);
   /// Helper: prepend value to all lists in a list of lists.
-  __attribute__((pure)) static List<List<unsigned int>>
+  static List<List<unsigned int>>
   map_cons_to_all(unsigned int x, const List<List<unsigned int>> &lsts);
   /// paths t returns all root-to-leaf paths in tree.
-  __attribute__((pure)) static List<List<unsigned int>>
-  paths(const tree<unsigned int> &t);
+  static List<List<unsigned int>> paths(const tree<unsigned int> &t);
   /// collect_sorted t collects and sorts all tree values.
-  __attribute__((pure)) static List<unsigned int>
-  collect_unsorted(const tree<unsigned int> &t);
+  static List<unsigned int> collect_unsorted(const tree<unsigned int> &t);
   /// Simple insertion sort for collect_sorted.
-  __attribute__((pure)) static List<unsigned int>
-  insert_sorted(unsigned int x, const List<unsigned int> &l);
-  __attribute__((pure)) static List<unsigned int>
-  sort_list(const List<unsigned int> &l);
-  __attribute__((pure)) static List<unsigned int> collect_sorted(
-      const tree<unsigned int>
-          &t); /// or_search p t searches tree for element satisfying predicate.
+  static List<unsigned int> insert_sorted(unsigned int x,
+                                          const List<unsigned int> &l);
+  static List<unsigned int> sort_list(const List<unsigned int> &l);
+  static List<unsigned int> collect_sorted(const tree<unsigned int> &t);
 
+  /// or_search p t searches tree for element satisfying predicate.
   template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static bool or_search(F0 &&p,
-                                              const tree<unsigned int> &t) {
+  static bool or_search(F0 &&p, const tree<unsigned int> &t) {
     if (std::holds_alternative<typename tree<unsigned int>::Leaf>(t.v())) {
       return false;
     } else {
@@ -1321,32 +1364,50 @@ struct LoopifyTrees {
     }
 
     // ACCESSORS
-    __attribute__((pure)) quadtree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<QLeaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<QLeaf>(_sv.v());
-        return quadtree(QLeaf{d_a0});
-      } else {
-        const auto &[d_a0, d_a1, d_a2, d_a3] = std::get<Quad>(_sv.v());
-        return quadtree(
-            Quad{d_a0 ? std::make_unique<LoopifyTrees::quadtree>(d_a0->clone())
-                      : nullptr,
-                 d_a1 ? std::make_unique<LoopifyTrees::quadtree>(d_a1->clone())
-                      : nullptr,
-                 d_a2 ? std::make_unique<LoopifyTrees::quadtree>(d_a2->clone())
-                      : nullptr,
-                 d_a3 ? std::make_unique<LoopifyTrees::quadtree>(d_a3->clone())
-                      : nullptr});
+    quadtree clone() const {
+      quadtree _out{};
+
+      struct _CloneFrame {
+        const quadtree *_src;
+        quadtree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const quadtree *_src = _frame._src;
+        quadtree *_dst = _frame._dst;
+        if (std::holds_alternative<QLeaf>(_src->v())) {
+          const auto &_alt = std::get<QLeaf>(_src->v());
+          _dst->d_v_ = QLeaf{_alt.d_a0};
+        } else {
+          const auto &_alt = std::get<Quad>(_src->v());
+          _dst->d_v_ = Quad{_alt.d_a0 ? std::make_unique<quadtree>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<quadtree>() : nullptr,
+                            _alt.d_a2 ? std::make_unique<quadtree>() : nullptr,
+                            _alt.d_a3 ? std::make_unique<quadtree>() : nullptr};
+          auto &_dst_alt = std::get<Quad>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.d_a2)
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.d_a3)
+            _stack.push_back({_alt.d_a3.get(), _dst_alt.d_a3.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static quadtree qleaf(unsigned int a0) {
+    static quadtree qleaf(unsigned int a0) {
       return quadtree(QLeaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static quadtree quad(quadtree a0, quadtree a1,
-                                               quadtree a2, quadtree a3) {
+    static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
       return quadtree(Quad{std::make_unique<quadtree>(std::move(a0)),
                            std::make_unique<quadtree>(std::move(a1)),
                            std::make_unique<quadtree>(std::move(a2)),
@@ -1381,10 +1442,10 @@ struct LoopifyTrees {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// quad_depth t computes depth of quadtree.
-    __attribute__((pure)) unsigned int quad_depth() const {
+    unsigned int quad_depth() const {
       const quadtree *_self = this;
 
       struct _Enter {
@@ -1456,7 +1517,7 @@ struct LoopifyTrees {
     }
 
     /// quad_sum t sums all values in a quadtree.
-    __attribute__((pure)) unsigned int quad_sum() const {
+    unsigned int quad_sum() const {
       const quadtree *_self = this;
 
       struct _Enter {
@@ -1728,8 +1789,8 @@ struct LoopifyTrees {
   };
 
   /// Helper: max of 4 values using nested max.
-  __attribute__((pure)) static unsigned int
-  max4_impl(unsigned int a, unsigned int b, unsigned int c, unsigned int d);
+  static unsigned int max4_impl(unsigned int a, unsigned int b, unsigned int c,
+                                unsigned int d);
 
   /// Simple binary tree with values only at leaves.
   struct simple_tree {
@@ -1773,28 +1834,45 @@ struct LoopifyTrees {
     }
 
     // ACCESSORS
-    __attribute__((pure)) simple_tree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<SLeaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<SLeaf>(_sv.v());
-        return simple_tree(SLeaf{d_a0});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<SNode>(_sv.v());
-        return simple_tree(SNode{
-            d_a0 ? std::make_unique<LoopifyTrees::simple_tree>(d_a0->clone())
-                 : nullptr,
-            d_a1 ? std::make_unique<LoopifyTrees::simple_tree>(d_a1->clone())
-                 : nullptr});
+    simple_tree clone() const {
+      simple_tree _out{};
+
+      struct _CloneFrame {
+        const simple_tree *_src;
+        simple_tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack;
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const simple_tree *_src = _frame._src;
+        simple_tree *_dst = _frame._dst;
+        if (std::holds_alternative<SLeaf>(_src->v())) {
+          const auto &_alt = std::get<SLeaf>(_src->v());
+          _dst->d_v_ = SLeaf{_alt.d_a0};
+        } else {
+          const auto &_alt = std::get<SNode>(_src->v());
+          _dst->d_v_ =
+              SNode{_alt.d_a0 ? std::make_unique<simple_tree>() : nullptr,
+                    _alt.d_a1 ? std::make_unique<simple_tree>() : nullptr};
+          auto &_dst_alt = std::get<SNode>(_dst->d_v_);
+          if (_alt.d_a0)
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          if (_alt.d_a1)
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
       }
+      return _out;
     }
 
     // CREATORS
-    __attribute__((pure)) static simple_tree sleaf(unsigned int a0) {
+    static simple_tree sleaf(unsigned int a0) {
       return simple_tree(SLeaf{std::move(a0)});
     }
 
-    __attribute__((pure)) static simple_tree snode(simple_tree a0,
-                                                   simple_tree a1) {
+    static simple_tree snode(simple_tree a0, simple_tree a1) {
       return simple_tree(SNode{std::make_unique<simple_tree>(std::move(a0)),
                                std::make_unique<simple_tree>(std::move(a1))});
     }
@@ -1823,11 +1901,10 @@ struct LoopifyTrees {
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// count_paths_simple t n counts paths with sum n (simpler variant).
-    __attribute__((pure)) unsigned int
-    count_paths_simple(const unsigned int &n) const {
+    unsigned int count_paths_simple(const unsigned int &n) const {
       const simple_tree *_self = this;
 
       struct _Enter {
@@ -1892,7 +1969,7 @@ struct LoopifyTrees {
     }
 
     /// simple_tree_sum t sums all leaf values.
-    __attribute__((pure)) unsigned int simple_tree_sum() const {
+    unsigned int simple_tree_sum() const {
       const simple_tree *_self = this;
 
       struct _Enter {
@@ -2052,20 +2129,16 @@ struct LoopifyTrees {
   };
 
   /// Helper: compute minimum of three values.
-  __attribute__((pure)) static unsigned int min3(unsigned int a, unsigned int b,
-                                                 unsigned int c);
+  static unsigned int min3(unsigned int a, unsigned int b, unsigned int c);
   /// Helper: compute maximum of three values.
-  __attribute__((pure)) static unsigned int max3(unsigned int a, unsigned int b,
-                                                 unsigned int c);
+  static unsigned int max3(unsigned int a, unsigned int b, unsigned int c);
   /// tree_min_max t finds minimum and maximum values in tree.
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  static std::pair<unsigned int, unsigned int>
   tree_min_max(const tree<unsigned int> &t);
   /// all_paths_sum t sums all root-to-leaf path sums.
-  __attribute__((pure)) static unsigned int
-  all_paths_sum(const tree<unsigned int> &t);
+  static unsigned int all_paths_sum(const tree<unsigned int> &t);
   /// tree_contains x t checks if value exists in tree.
-  __attribute__((pure)) static bool tree_contains(const unsigned int &x,
-                                                  const tree<unsigned int> &t);
+  static bool tree_contains(const unsigned int &x, const tree<unsigned int> &t);
 };
 
 #endif // INCLUDED_LOOPIFY_TREES
