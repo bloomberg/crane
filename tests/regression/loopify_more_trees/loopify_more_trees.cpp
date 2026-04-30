@@ -38,7 +38,7 @@ LoopifyMoreTrees::mirror(const LoopifyMoreTrees::tree &t) {
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       auto _f = std::move(std::get<_Call1>(_frame));
-      _stack.emplace_back(_Call2{_result, _f._s1});
+      _stack.emplace_back(_Call2{std::move(_result), _f._s1});
       _stack.emplace_back(_Enter{_f._s0});
     } else {
       auto _f = std::move(std::get<_Call2>(_frame));
@@ -152,7 +152,7 @@ LoopifyMoreTrees::tree_to_list(const LoopifyMoreTrees::tree &t) {
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       auto _f = std::move(std::get<_Call1>(_frame));
-      _stack.emplace_back(_Call2{_result, _f._s1});
+      _stack.emplace_back(_Call2{std::move(_result), _f._s1});
       _stack.emplace_back(_Enter{_f._s0});
     } else {
       auto _f = std::move(std::get<_Call2>(_frame));
@@ -266,8 +266,8 @@ LoopifyMoreTrees::tree_max(LoopifyMoreTrees::tree t1,
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       auto _f = std::move(std::get<_Call1>(_frame));
-      _stack.emplace_back(_Call2{_result, _f._s2});
-      _stack.emplace_back(_Enter{_f._s0, _f._s1});
+      _stack.emplace_back(_Call2{std::move(_result), _f._s2});
+      _stack.emplace_back(_Enter{std::move(_f._s0), std::move(_f._s1)});
     } else {
       auto _f = std::move(std::get<_Call2>(_frame));
       _result = tree::node(_result, _f._s1, _f._s0);

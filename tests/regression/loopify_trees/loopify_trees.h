@@ -275,7 +275,7 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(_Call2{_result, _f._s1});
+          _stack.emplace_back(_Call2{std::move(_result), _f._s1});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Call2>(_frame));
@@ -388,7 +388,7 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(_Call2{_result, _f._s1});
+          _stack.emplace_back(_Call2{std::move(_result), _f._s1});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Call2>(_frame));
@@ -560,7 +560,7 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(_Call2{_result, _f._s1});
+          _stack.emplace_back(_Call2{std::move(_result), _f._s1});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Call2>(_frame));
@@ -675,7 +675,8 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+          _stack.emplace_back(
+              _Call2{_result, std::move(_f._s1), _f._s2, std::move(_f._s3)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Call2>(_frame));
@@ -729,7 +730,8 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+          _stack.emplace_back(
+              _Call2{_result, std::move(_f._s1), _f._s2, std::move(_f._s3)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Call2>(_frame));
@@ -997,13 +999,13 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(
-              _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5});
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, std::move(_f._s3),
+                                     std::move(_f._s4), std::move(_f._s5)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_Call2>(_frame)) {
           auto _f = std::move(std::get<_Call2>(_frame));
-          _stack.emplace_back(
-              _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5});
+          _stack.emplace_back(_Call3{_f._s0, _result, _f._s2, std::move(_f._s3),
+                                     std::move(_f._s4), std::move(_f._s5)});
           _stack.emplace_back(_Enter{_f._s1});
         } else {
           auto _f = std::move(std::get<_Call3>(_frame));
@@ -1073,13 +1075,13 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(
-              _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5});
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, std::move(_f._s3),
+                                     std::move(_f._s4), std::move(_f._s5)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_Call2>(_frame)) {
           auto _f = std::move(std::get<_Call2>(_frame));
-          _stack.emplace_back(
-              _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5});
+          _stack.emplace_back(_Call3{_f._s0, _result, _f._s2, std::move(_f._s3),
+                                     std::move(_f._s4), std::move(_f._s5)});
           _stack.emplace_back(_Enter{_f._s1});
         } else {
           auto _f = std::move(std::get<_Call3>(_frame));
@@ -1600,18 +1602,21 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(
-              _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, std::move(_f._s3),
+                                     std::move(_f._s4), std::move(_f._s5),
+                                     std::move(_f._s6)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_Call2>(_frame)) {
           auto _f = std::move(std::get<_Call2>(_frame));
-          _stack.emplace_back(
-              _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Call3{_f._s0, _result, _f._s2, std::move(_f._s3),
+                                     std::move(_f._s4), std::move(_f._s5),
+                                     std::move(_f._s6)});
           _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_Call3>(_frame)) {
           auto _f = std::move(std::get<_Call3>(_frame));
-          _stack.emplace_back(
-              _Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Call4{_f._s0, _f._s1, _result, std::move(_f._s3),
+                                     std::move(_f._s4), std::move(_f._s5),
+                                     std::move(_f._s6)});
           _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Call4>(_frame));
@@ -1696,18 +1701,21 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(
-              _Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, std::move(_f._s3),
+                                     std::move(_f._s4), std::move(_f._s5),
+                                     std::move(_f._s6)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_Call2>(_frame)) {
           auto _f = std::move(std::get<_Call2>(_frame));
-          _stack.emplace_back(
-              _Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Call3{_f._s0, _result, _f._s2, std::move(_f._s3),
+                                     std::move(_f._s4), std::move(_f._s5),
+                                     std::move(_f._s6)});
           _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_Call3>(_frame)) {
           auto _f = std::move(std::get<_Call3>(_frame));
-          _stack.emplace_back(
-              _Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4, _f._s5, _f._s6});
+          _stack.emplace_back(_Call4{_f._s0, _f._s1, _result, std::move(_f._s3),
+                                     std::move(_f._s4), std::move(_f._s5),
+                                     std::move(_f._s6)});
           _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Call4>(_frame));
@@ -1976,7 +1984,8 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+          _stack.emplace_back(
+              _Call2{_result, std::move(_f._s1), std::move(_f._s2)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Call2>(_frame));
@@ -2030,7 +2039,8 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_Call1>(_frame)) {
           auto _f = std::move(std::get<_Call1>(_frame));
-          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+          _stack.emplace_back(
+              _Call2{_result, std::move(_f._s1), std::move(_f._s2)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Call2>(_frame));

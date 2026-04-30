@@ -738,8 +738,8 @@ LoopifySearch::quicksort_fuel(const unsigned int &fuel, List<unsigned int> l) {
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       auto _f = std::move(std::get<_Call1>(_frame));
-      _stack.emplace_back(_Call2{_result, _f._s2});
-      _stack.emplace_back(_Enter{_f._s0, _f._s1});
+      _stack.emplace_back(_Call2{std::move(_result), _f._s2});
+      _stack.emplace_back(_Enter{std::move(_f._s0), _f._s1});
     } else {
       auto _f = std::move(std::get<_Call2>(_frame));
       _result = _result.app(List<unsigned int>::cons(_f._s1, _f._s0));
@@ -931,8 +931,8 @@ LoopifySearch::merge_sort_fuel(const unsigned int &fuel, List<unsigned int> l) {
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       auto _f = std::move(std::get<_Call1>(_frame));
-      _stack.emplace_back(_Call2{_result});
-      _stack.emplace_back(_Enter{_f._s0, _f._s1});
+      _stack.emplace_back(_Call2{std::move(_result)});
+      _stack.emplace_back(_Enter{std::move(_f._s0), _f._s1});
     } else {
       auto _f = std::move(std::get<_Call2>(_frame));
       _result = merge_sorted(_result, _f._s0);
@@ -1083,8 +1083,8 @@ LoopifySearch::perms_choices_fuel(const unsigned int &fuel,
       _result = _f._s0.app(_result);
     } else if (std::holds_alternative<_Call2>(_frame)) {
       auto _f = std::move(std::get<_Call2>(_frame));
-      _stack.emplace_back(_Call3{_result, _f._s3});
-      _stack.emplace_back(_Enter{_f._s0, _f._s1, _f._s2});
+      _stack.emplace_back(_Call3{std::move(_result), _f._s3});
+      _stack.emplace_back(_Enter{std::move(_f._s0), std::move(_f._s1), _f._s2});
     } else {
       auto _f = std::move(std::get<_Call3>(_frame));
       _result = map_cons(_f._s1, _result).app(_f._s0);

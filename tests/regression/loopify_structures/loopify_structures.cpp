@@ -173,7 +173,7 @@ LoopifyStructures::flatten_nested_list_fuel(
       _result = List<unsigned int>::cons(_f._s0, _result);
     } else if (std::holds_alternative<_Call2>(_frame)) {
       auto _f = std::move(std::get<_Call2>(_frame));
-      _stack.emplace_back(_Call3{_result});
+      _stack.emplace_back(_Call3{std::move(_result)});
       _stack.emplace_back(_Enter{_f._s0, _f._s1});
     } else {
       auto _f = std::move(std::get<_Call3>(_frame));

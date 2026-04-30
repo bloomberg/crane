@@ -221,7 +221,7 @@ LoopifySpecialRecursion::collect_sorted(
       }
     } else if (std::holds_alternative<_Call1>(_frame)) {
       auto _f = std::move(std::get<_Call1>(_frame));
-      _stack.emplace_back(_Call2{_result, _f._s1});
+      _stack.emplace_back(_Call2{std::move(_result), _f._s1});
       _stack.emplace_back(_Enter{_f._s0});
     } else {
       auto _f = std::move(std::get<_Call2>(_frame));

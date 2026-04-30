@@ -167,7 +167,8 @@ let rec is_value_type_ret = function
 let rec is_trivially_copyable_type = function
   | Tvoid | Tauto | Tunknown | Ttodo | Tany -> true
   | Tptr _ | Tref _ -> true
-  | Tmod (_, t) | Tnamespace (_, t) -> is_trivially_copyable_type t
+  | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) ->
+    is_trivially_copyable_type t
   | Tdecltype _ -> true
   | Tvar _ -> true
   | Tid (id, []) | Tid_external (id, []) ->
@@ -5228,6 +5229,67 @@ let adjust_frame_push_args frame_pointer_safe stmts =
     in
     List.map on_stmt stmts
 
+(** Move non-trivial values into explicit continuation frames when ownership is
+    already local to the loop dispatcher.
+
+    Frame handlers bind [_f] by moving the active variant alternative out of
+    [_frame].  Any non-trivial [_f.field] subsequently saved into another frame
+    can therefore be moved instead of cloned.  Likewise, [_result] is used as a
+    scratch accumulator and is overwritten by the recursive call whose [_Enter]
+    frame is pushed immediately after the continuation frame, so saving it by
+    move avoids a deep copy.
+
+    This is deliberately conservative: it does not move arbitrary local
+    variables or dereferenced child pointers, because those need full liveness
+    and ownership proofs. *)
+let optimize_frame_push_args frame_field_types stmts =
+  if frame_field_types = [] then stmts
+  else
+    let lookup name_s = List.assoc_opt name_s frame_field_types in
+    let rec worthwhile_move_type = function
+      | Tglob (r, _, _) -> not (Table.is_enum_inductive r)
+                           && not (Table.is_coinductive r)
+                           && not (Table.is_custom r)
+      | Tunique_ptr _ | Tfun _ -> true
+      | Tshared_ptr _ -> true
+      | Tvariant ts -> List.exists worthwhile_move_type ts
+      | Tid (_, ts) | Tid_external (_, ts) ->
+        List.exists worthwhile_move_type ts
+      | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) | Tref t ->
+        worthwhile_move_type t
+      | Tptr _ | Tvoid | Tauto | Tunknown | Ttodo | Tany | Tdecltype _
+       |Tvar _ -> false
+    in
+    let should_move ty arg =
+      let stripped = strip_ref_and_const_type ty in
+      worthwhile_move_type stripped
+      &&
+      match arg with
+      | CPPmove _ -> false
+      | CPPmember (CPPvar id, _) when Id.to_string id = "_f" -> true
+      | CPPvar id when Id.to_string id = "_result" -> true
+      | _ -> false
+    in
+    let adjust_args types args =
+      if List.length types = List.length args then
+        List.map2
+          (fun ty arg -> if should_move ty arg then CPPmove arg else arg)
+          types args
+      else
+        args
+    in
+    let rec on_stmt = function
+      | Sexpr (CPPfun_call (callee, [CPPstruct_id (name, targs, args)])) as s -> (
+        match lookup (Id.to_string name) with
+        | Some types ->
+          Sexpr
+            (CPPfun_call
+               (callee, [CPPstruct_id (name, targs, adjust_args types args)]))
+        | None -> map_stmt Fun.id on_stmt Fun.id s )
+      | s -> map_stmt Fun.id on_stmt Fun.id s
+    in
+    List.map on_stmt stmts
+
 (** Build one branch of the frame-dispatch [Smatch].
 
     The loop variable [_frame] is the scrutinee; the frame struct type is
@@ -5339,11 +5401,17 @@ let transform_multi check _pp_type params ret_ty body =
               Tvariant [enter_ty; after_ty; combine_ty]);
     ]
   in
+  let frame_field_types =
+    ("_Enter", List.map snd enter_fields)
+    :: ("_After", List.map snd after_fields)
+    :: [("_Combine", [ret_ty])]
+  in
   let init_push = make_stack_init varying_params in
   (* Enter handler: copy frame fields to locals, then rewritten body *)
   let enter_body =
-    make_param_copies varying_params
-    @ List.concat_map (rewrite_multi_enter check varying) body
+    (make_param_copies varying_params
+     @ List.concat_map (rewrite_multi_enter check varying) body)
+    |> optimize_frame_push_args frame_field_types
   in
   let enter_branch = make_frame_branch "_Enter" enter_body in
   (* After handler: push Combine{_result}, then Enter{_f._a0, ...} *)
@@ -5360,6 +5428,7 @@ let transform_multi check _pp_type params ret_ty body =
       make_stack_push
         (CPPstruct_id (Id.of_string "_Enter", [], after_enter_args));
     ]
+    |> optimize_frame_push_args frame_field_types
   in
   let after_branch = make_frame_branch "_After" after_body in
   (* Combine handler: _result = combine(_f._left, _result). Uses CPPbinop("=",
@@ -5570,6 +5639,31 @@ let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
     @ call_structs
     @ [Susing (Id.of_string "_Frame", Tvariant variant_tys)]
   in
+  let frame_field_types =
+    ("_Enter", List.map snd enter_fields)
+    :: List.map
+         (fun cf ->
+           let cf_ps =
+             match List.assoc_opt cf.cf_name frame_ps_map with
+             | Some flags -> flags
+             | None -> List.map (fun _ -> false) cf.cf_saved_types
+           in
+           let fields =
+             List.mapi
+               (fun j ty ->
+                 if List.nth cf_ps j then
+                   Tptr (Tmod (TMconst, strip_ref_and_const_type ty))
+                 else
+                   match ty with
+                   | Tunknown ->
+                     let expr = List.nth cf.cf_saved_exprs j in
+                     make_decltype_ty pp_type cf.cf_env expr
+                   | _ -> strip_ref_and_const_type ty)
+               cf.cf_saved_types
+           in
+           (cf.cf_name, fields))
+         frames
+  in
   let init_push =
     make_stack_init ~pointer_safe:pointer_safe_varying varying_params
   in
@@ -5578,11 +5672,16 @@ let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
   let enter_body =
     make_param_copies ~pointer_safe:pointer_safe_varying varying_params
     @ adjust_frame_push_args all_frame_ps rewritten_body
+    |> optimize_frame_push_args frame_field_types
   in
   let enter_branch = make_frame_branch "_Enter" enter_body in
   (* Call handlers *)
   let call_branches =
-    List.map (fun cf -> make_frame_branch cf.cf_name cf.cf_handler) frames
+    List.map
+      (fun cf ->
+        make_frame_branch cf.cf_name
+          (optimize_frame_push_args frame_field_types cf.cf_handler))
+      frames
   in
   make_loop_and_return struct_defs ret_ty init_push (enter_branch :: call_branches)
   )
