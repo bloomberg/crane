@@ -125,7 +125,7 @@ public:
 };
 
 struct UnitVoidEdge {
-  static void return_unit(const unsigned int &_x);
+  static void return_unit(const unsigned int _x);
   static inline const unsigned int let_bind_void_call = []() {
     return_unit(5u);
     std::monostate x = std::monostate{};
@@ -133,16 +133,16 @@ struct UnitVoidEdge {
       return 42u;
     }
   }();
-  static void count_down(const unsigned int &n);
+  static void count_down(const unsigned int n);
 
   template <MapsTo<void, unsigned int> F0>
-  static void apply_unit_fn(F0 &&f, unsigned int _x0) {
+  static void apply_unit_fn(F0 &&f, const unsigned int _x0) {
     f(_x0);
     return;
   }
 
   template <MapsTo<void, unsigned int> F0>
-  static unsigned int map_to_unit(F0 &&, const unsigned int &) {
+  static unsigned int map_to_unit(F0 &&, const unsigned int) {
     return 42u;
   }
 
@@ -152,21 +152,21 @@ struct UnitVoidEdge {
     id<std::monostate>(std::monostate{});
     return std::monostate{};
   }();
-  static void id_unit_fn(const unsigned int &_x);
+  static void id_unit_fn(const unsigned int _x);
   static inline const unsigned int nested_lets = 42u;
   static inline const std::optional<std::monostate> unit_some =
       std::make_optional<std::monostate>(std::monostate{});
   static inline const std::optional<std::monostate> unit_none =
       std::optional<std::monostate>();
   static unsigned int match_option_unit(const std::optional<std::monostate> &o);
-  static std::optional<std::monostate> return_some_tt(const unsigned int &n);
+  static std::optional<std::monostate> return_some_tt(const unsigned int n);
   static void unit_chain(std::monostate u);
-  static void helper_void(const unsigned int &_x);
-  static unsigned int use_helper(unsigned int n);
+  static void helper_void(const unsigned int _x);
+  static unsigned int use_helper(const unsigned int n);
   static unsigned int match_unit_nontail(const std::monostate &u);
   static void unit_to_unit_with_work(const std::monostate &u);
-  static void seq_voids(const unsigned int &_x);
-  static void conditional_unit(const bool &b);
+  static void seq_voids(const unsigned int _x);
+  static void conditional_unit(const bool b);
 
   template <typename T1> static unsigned int poly_take(const T1) { return 42u; }
 
@@ -180,7 +180,7 @@ struct UnitVoidEdge {
                                         const std::monostate &u2);
 
   template <MapsTo<void, unsigned int> F0>
-  static void apply_and_discard(F0 &&f, unsigned int _x0) {
+  static void apply_and_discard(F0 &&f, const unsigned int _x0) {
     f(_x0);
     return;
   }
@@ -200,25 +200,25 @@ struct UnitVoidEdge {
     }
   };
 
-  static tagged_nat make_tagged(unsigned int n);
+  static tagged_nat make_tagged(const unsigned int n);
   static unsigned int get_value(const tagged_nat &t);
   static inline const unsigned int test_record_unit = []() {
     tagged_nat t = make_tagged(99u);
     return get_value(std::move(t));
   }();
-  static void make_callback(const unsigned int &n, const std::monostate &_x);
+  static void make_callback(const unsigned int n, const std::monostate &_x);
   static inline const std::monostate test_make_callback = []() {
     make_callback(5u, std::monostate{});
     return std::monostate{};
   }();
 
   template <MapsTo<void, unsigned int> F0, MapsTo<void, bool> F1>
-  static void multi_void_callbacks(F0 &&, F1 &&, const unsigned int &,
-                                   const bool &) {
+  static void multi_void_callbacks(F0 &&, F1 &&, const unsigned int,
+                                   const bool) {
     return;
   }
 
-  static void dummy_bool_void(const bool &_x);
+  static void dummy_bool_void(const bool _x);
   static inline const std::monostate test_multi_cb = []() {
     multi_void_callbacks(return_unit, dummy_bool_void, 7u, true);
     return std::monostate{};

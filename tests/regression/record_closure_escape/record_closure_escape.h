@@ -146,7 +146,7 @@ struct RecordClosureEscape {
     }
   }
 
-  static unsigned int sum_values(const tree &t, unsigned int x);
+  static unsigned int sum_values(const tree &t, const unsigned int x);
 
   /// A record holding a closure and a value. Records are single-constructor
   /// inductives and get special treatment in Crane's translation.

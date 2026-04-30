@@ -179,10 +179,7 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        const List *_next_self = d_a1.get();
-        List<t_A> _next_m = std::move(_loop_m);
-        _loop_self = _next_self;
-        _loop_m = std::move(_next_m);
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -191,18 +188,18 @@ public:
 };
 
 struct LoopifyListGenerators {
-  static List<unsigned int> cycle_fuel(const unsigned int &fuel,
-                                       const unsigned int &n,
+  static List<unsigned int> cycle_fuel(const unsigned int fuel,
+                                       const unsigned int n,
                                        const List<unsigned int> &l);
-  static List<unsigned int> cycle(const unsigned int &n,
+  static List<unsigned int> cycle(const unsigned int n,
                                   const List<unsigned int> &l);
 
   template <MapsTo<unsigned int, unsigned int> F0>
-  static List<unsigned int> iterate(F0 &&f, const unsigned int &n,
-                                    unsigned int x) {
+  static List<unsigned int> iterate(F0 &&f, const unsigned int n,
+                                    const unsigned int x) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
-    unsigned int _loop_x = std::move(x);
+    unsigned int _loop_x = x;
     unsigned int _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
@@ -217,10 +214,8 @@ struct LoopifyListGenerators {
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        unsigned int _next_x = f(_loop_x);
-        unsigned int _next_n = n_;
-        _loop_x = std::move(_next_x);
-        _loop_n = std::move(_next_n);
+        _loop_x = f(_loop_x);
+        _loop_n = n_;
         continue;
       }
     }
@@ -228,8 +223,8 @@ struct LoopifyListGenerators {
   }
 
   template <MapsTo<unsigned int, unsigned int> F2>
-  static List<unsigned int> build_list_aux(const unsigned int &n,
-                                           const unsigned int &idx, F2 &&f) {
+  static List<unsigned int> build_list_aux(const unsigned int n,
+                                           const unsigned int idx, F2 &&f) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
     unsigned int _loop_idx = idx;
@@ -247,10 +242,8 @@ struct LoopifyListGenerators {
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        unsigned int _next_idx = (_loop_idx + 1u);
-        unsigned int _next_n = n_;
-        _loop_idx = std::move(_next_idx);
-        _loop_n = std::move(_next_n);
+        _loop_idx = (_loop_idx + 1u);
+        _loop_n = n_;
         continue;
       }
     }
@@ -258,12 +251,12 @@ struct LoopifyListGenerators {
   }
 
   template <MapsTo<unsigned int, unsigned int> F1>
-  static List<unsigned int> build_list(const unsigned int &n, F1 &&f) {
+  static List<unsigned int> build_list(const unsigned int n, F1 &&f) {
     return build_list_aux(n, 0u, f);
   }
 
   template <MapsTo<unsigned int, unsigned int> F1>
-  static List<unsigned int> init_list(unsigned int n, F1 &&f) {
+  static List<unsigned int> init_list(const unsigned int n, F1 &&f) {
     if (n <= 0) {
       return List<unsigned int>::nil();
     } else {
@@ -291,7 +284,7 @@ struct LoopifyListGenerators {
             _stack.pop_back();
             if (std::holds_alternative<_Enter>(_frame)) {
               auto _f = std::move(std::get<_Enter>(_frame));
-              unsigned int i = std::move(_f.i);
+              unsigned int i = _f.i;
               if (i <= 0) {
                 _result = List<unsigned int>::nil();
               } else {
@@ -311,15 +304,15 @@ struct LoopifyListGenerators {
     }
   }
 
-  static List<unsigned int> range(unsigned int start,
-                                  const unsigned int &count);
-  static List<unsigned int> replicate_elem(const unsigned int &n,
-                                           unsigned int x);
-  static List<unsigned int> replicate_each(const unsigned int &n,
+  static List<unsigned int> range(const unsigned int start,
+                                  const unsigned int count);
+  static List<unsigned int> replicate_elem(const unsigned int n,
+                                           const unsigned int x);
+  static List<unsigned int> replicate_each(const unsigned int n,
                                            const List<unsigned int> &l);
 
   template <MapsTo<unsigned int, unsigned int> F1>
-  static List<unsigned int> tabulate(const unsigned int &n, F1 &&f) {
+  static List<unsigned int> tabulate(const unsigned int n, F1 &&f) {
     if (n <= 0) {
       return List<unsigned int>::nil();
     } else {
@@ -345,7 +338,7 @@ struct LoopifyListGenerators {
           _stack.pop_back();
           if (std::holds_alternative<_Enter>(_frame)) {
             auto _f = std::move(std::get<_Enter>(_frame));
-            unsigned int idx = std::move(_f.idx);
+            unsigned int idx = _f.idx;
             if (idx <= 0) {
               _result =
                   List<unsigned int>::cons(f(0u), List<unsigned int>::nil());
@@ -396,10 +389,8 @@ struct LoopifyListGenerators {
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          const List<unsigned int> *_next_l2 = d_a10.get();
-          const List<unsigned int> *_next_l1 = d_a1.get();
-          _loop_l2 = _next_l2;
-          _loop_l1 = _next_l1;
+          _loop_l2 = d_a10.get();
+          _loop_l1 = d_a1.get();
           continue;
         }
       }
@@ -408,7 +399,7 @@ struct LoopifyListGenerators {
   }
 
   static List<std::pair<unsigned int, unsigned int>>
-  enumerate_aux(unsigned int idx, const List<unsigned int> &l);
+  enumerate_aux(const unsigned int idx, const List<unsigned int> &l);
   static List<std::pair<unsigned int, unsigned int>>
   enumerate(const List<unsigned int> &l);
 };

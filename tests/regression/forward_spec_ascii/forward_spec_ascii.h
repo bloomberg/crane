@@ -97,7 +97,7 @@ struct ForwardSpecAscii {
     }
   }
 
-  static unsigned int helper_nat(unsigned int n);
+  static unsigned int helper_nat(const unsigned int n);
   static unsigned int bump_node(const node &x);
   static inline const unsigned int t = bump_node(node::anode(2u));
 };

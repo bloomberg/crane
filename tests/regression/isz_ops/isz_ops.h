@@ -126,11 +126,11 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
 };
 
 struct IszOps {
-  static unsigned int nibble_of_nat(const unsigned int &n);
+  static unsigned int nibble_of_nat(const unsigned int n);
 
   struct state {
     List<unsigned int> regs;
@@ -139,15 +139,15 @@ struct IszOps {
     state clone() const { return state{(*(this)).regs.clone()}; }
   };
 
-  static unsigned int get_reg(const state &s, const unsigned int &r);
-  static unsigned int cycles_isz(const state &s, const unsigned int &r);
+  static unsigned int get_reg(const state &s, const unsigned int r);
+  static unsigned int cycles_isz(const state &s, const unsigned int r);
   static inline const unsigned int test_cycle_branch = cycles_isz(
       state{List<unsigned int>::cons(15u, List<unsigned int>::nil())}, 0u);
-  static unsigned int isz_iterations(const unsigned int &v);
+  static unsigned int isz_iterations(const unsigned int v);
   static inline const unsigned int test_iterations_remaining =
       (isz_iterations(0u) + isz_iterations(12u));
-  static bool isz_loops(const state &s, const unsigned int &r);
-  static bool isz_terminates(const state &s, const unsigned int &r);
+  static bool isz_loops(const state &s, const unsigned int r);
+  static bool isz_terminates(const state &s, const unsigned int r);
   static inline const unsigned int test_loop_flags = []() {
     return []() {
       state s = state{List<unsigned int>::cons(
@@ -163,7 +163,7 @@ struct IszOps {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int &n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

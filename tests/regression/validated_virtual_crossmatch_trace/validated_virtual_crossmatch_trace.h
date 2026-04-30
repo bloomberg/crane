@@ -931,11 +931,11 @@ public:
 };
 
 struct PeanoNat {
-  static bool eq_dec(const unsigned int &n, const unsigned int &m);
+  static bool eq_dec(const unsigned int n, const unsigned int m);
 };
 
 struct Bool {
-  static bool bool_dec(const bool &b1, const bool &b2);
+  static bool bool_dec(const bool b1, const bool b2);
 };
 
 struct Uint1 {
@@ -1003,13 +1003,13 @@ public:
 };
 
 struct Nat {
-  static unsigned int tail_add(const unsigned int &n, unsigned int m);
-  static unsigned int tail_addmul(unsigned int r, const unsigned int &n,
-                                  const unsigned int &m);
-  static unsigned int tail_mul(const unsigned int &n, const unsigned int &m);
-  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
+  static unsigned int tail_add(const unsigned int n, const unsigned int m);
+  static unsigned int tail_addmul(const unsigned int r, const unsigned int n,
+                                  const unsigned int m);
+  static unsigned int tail_mul(const unsigned int n, const unsigned int m);
+  static unsigned int of_uint_acc(const Uint &d, const unsigned int acc);
   static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
+  static unsigned int of_hex_uint_acc(const Uint0 &d, const unsigned int acc);
   static unsigned int of_hex_uint(const Uint0 &d);
   static unsigned int of_num_uint(const Uint1 &d);
 };
@@ -1218,9 +1218,9 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   static MFIStrength classify_mfi_with_config(const MFIThresholdConfig &cfg,
-                                              const unsigned int &mfi);
+                                              const unsigned int mfi);
   static MFIStrength classify_mfi_safe(const ValidatedMFIConfig &vcfg,
-                                       const unsigned int &mfi);
+                                       const unsigned int mfi);
   static inline const unsigned int mfi_negative_threshold = 1000u;
   static unsigned int max_dsa_mfi(const VirtualXMProfile &recipient,
                                   const HLATyping &donor);
@@ -1332,7 +1332,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   static TransplantAcceptability
   transplant_acceptability(const VirtualXMResult vxm,
-                           const bool &complement_fixing_dsa);
+                           const bool complement_fixing_dsa);
   static TransplantAcceptability
   full_virtual_crossmatch_safe(const ValidatedMFIConfig &vcfg,
                                const VirtualXMProfile &recipient,
@@ -1462,15 +1462,15 @@ struct ValidatedVirtualCrossmatchTraceCase {
     }
   };
 
-  static bool order_sample_valid(const unsigned int &collection_time,
-                                 const unsigned int &current_time);
+  static bool order_sample_valid(const unsigned int collection_time,
+                                 const unsigned int current_time);
   static bool transfusion_order_authorized(const SafeTransfusionOrder &order,
-                                           const unsigned int &current_time);
+                                           const unsigned int current_time);
   static std::optional<SafeTransfusionOrder> create_safe_transfusion_order(
-      unsigned int recipient_id, unsigned int product_id, bool compat_result,
-      CrossmatchWithUncertainty xm, unsigned int sample_time,
-      const unsigned int &current_time, unsigned int authorizer,
-      bool is_emergency);
+      const unsigned int recipient_id, const unsigned int product_id,
+      const bool compat_result, CrossmatchWithUncertainty xm,
+      const unsigned int sample_time, const unsigned int current_time,
+      const unsigned int authorizer, const bool is_emergency);
   static inline const HLATyping donor_hla = HLATyping{List<HLAAllele>::cons(
       HLAAllele{HLALocus::e_LOCUS_A, 2u},
       List<HLAAllele>::cons(

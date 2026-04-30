@@ -224,10 +224,10 @@ struct PartialApply {
     return f(d_a0, d_a1);
   }
 
-  static List<tagged<bool>> tag_with(unsigned int n, const List<bool> &l);
+  static List<tagged<bool>> tag_with(const unsigned int n, const List<bool> &l);
   static List<std::pair<unsigned int, std::pair<unsigned int, unsigned int>>>
   double_tag(const List<unsigned int> &l);
-  static unsigned int sum_with_init(const unsigned int &init,
+  static unsigned int sum_with_init(const unsigned int init,
                                     const List<unsigned int> &l);
   static inline const List<unsigned int> test_inc =
       inc_all(List<unsigned int>::cons(

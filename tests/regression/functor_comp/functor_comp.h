@@ -190,7 +190,7 @@ struct FunctorComp {
   struct Stack {
     using t = List<unsigned int>;
     static inline const t empty = List<unsigned int>::nil();
-    static t push(unsigned int x, List<unsigned int> s);
+    static t push(const unsigned int x, List<unsigned int> s);
     static std::optional<std::pair<unsigned int, t>>
     pop(const List<unsigned int> &s);
     static unsigned int size(const t _x0);
@@ -200,7 +200,7 @@ struct FunctorComp {
     using t = std::pair<List<unsigned int>, List<unsigned int>>;
     static inline const t empty =
         std::make_pair(List<unsigned int>::nil(), List<unsigned int>::nil());
-    static t push(unsigned int x,
+    static t push(const unsigned int x,
                   const std::pair<List<unsigned int>, List<unsigned int>> &q);
     static std::optional<std::pair<unsigned int, t>>
     pop(const std::pair<List<unsigned int>, List<unsigned int>> &q);
@@ -212,7 +212,7 @@ struct FunctorComp {
     static typename C::t push_list(const List<unsigned int> &l,
                                    const typename C::t c) {
       return l.template fold_left<typename C::t>(
-          [](const typename C::t acc, const unsigned int &x) {
+          [](const typename C::t acc, const unsigned int x) {
             return C::push(x, acc);
           },
           c);

@@ -294,7 +294,7 @@ struct AccumClosureEscape {
         tree d_a0_value = *(d_a0);
         tree d_a2_value = *(d_a2);
         return mylist<std::function<unsigned int(unsigned int)>>::mycons(
-            [=](const unsigned int &x) mutable { return (d_a1 + x); },
+            [=](const unsigned int x) mutable { return (d_a1 + x); },
             d_a0_value.tree_to_adders().mylist_append(
                 d_a2_value.tree_to_adders()));
       }
@@ -351,11 +351,11 @@ struct AccumClosureEscape {
   /// Apply first closure from the list.
   static unsigned int
   apply_first(const mylist<std::function<unsigned int(unsigned int)>> &fns,
-              const unsigned int &x);
+              const unsigned int x);
   /// Apply all closures and sum.
   static unsigned int
   apply_all_sum(const mylist<std::function<unsigned int(unsigned int)>> &fns,
-                const unsigned int &x);
+                const unsigned int x);
   /// test1: build_adders 10, 20, 30  = 30+_, 20+_, 10+_ (reversed)
   /// apply_first result 5 = 30 + 5 = 35
   static inline const unsigned int test1 = []() {
@@ -383,7 +383,7 @@ struct AccumClosureEscape {
   static unsigned int
   compose_from_list(const mylist<unsigned int> &l,
                     const std::function<unsigned int(unsigned int)> acc,
-                    unsigned int _x0) {
+                    const unsigned int _x0) {
     return [=]() mutable -> std::function<unsigned int(unsigned int)> {
       if (std::holds_alternative<typename mylist<unsigned int>::Mynil>(l.v())) {
         return acc;
@@ -394,7 +394,7 @@ struct AccumClosureEscape {
         return [=](unsigned int _x0) mutable -> unsigned int {
           return compose_from_list(
               d_a1_value,
-              [=](const unsigned int &x) mutable { return acc((d_a0 + x)); },
+              [=](const unsigned int x) mutable { return acc((d_a0 + x)); },
               _x0);
         };
       }
@@ -410,7 +410,7 @@ struct AccumClosureEscape {
           10u, mylist<unsigned int>::mycons(
                    20u, mylist<unsigned int>::mycons(
                             30u, mylist<unsigned int>::mynil()))),
-      [](unsigned int x) { return x; }, 7u);
+      [](const unsigned int x) { return x; }, 7u);
   /// test4: Tree (Node (Node Leaf 10 Leaf) 20 (Node Leaf 30 Leaf))
   /// Closures: 20+_, 10+_, 30+_
   /// apply_all_sum with 5: (20+5) + (10+5) + (30+5) = 25+15+35 = 75

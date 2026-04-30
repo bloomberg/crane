@@ -691,7 +691,7 @@ EpochCellGlyphTraceCase::MechanismState EpochCellGlyphTraceCase::step_reverse(
 }
 
 EpochCellGlyphTraceCase::MechanismState
-EpochCellGlyphTraceCase::step_n(const unsigned int &n,
+EpochCellGlyphTraceCase::step_n(const unsigned int n,
                                 EpochCellGlyphTraceCase::MechanismState s) {
   if (n <= 0) {
     return s;
@@ -1061,12 +1061,12 @@ unsigned int EpochCellGlyphTraceCase::reading_zodiac_code(
 }
 
 unsigned int
-EpochCellGlyphTraceCase::phase_code_after_steps(const unsigned int &n) {
+EpochCellGlyphTraceCase::phase_code_after_steps(const unsigned int n) {
   return phase_code(predict_moon_phase_from_state(step_n(n, initial_state)));
 }
 
 unsigned int
-EpochCellGlyphTraceCase::zodiac_code_after_steps(const unsigned int &n) {
+EpochCellGlyphTraceCase::zodiac_code_after_steps(const unsigned int n) {
   return zodiac_code(predict_zodiac_sign(step_n(n, initial_state)));
 }
 

@@ -59,7 +59,7 @@ List<BinomialHeap::tree> BinomialHeap::carry(const List<BinomialHeap::tree> &q,
   }
 }
 
-BinomialHeap::priqueue BinomialHeap::insert(unsigned int x,
+BinomialHeap::priqueue BinomialHeap::insert(const unsigned int x,
                                             const List<BinomialHeap::tree> &q) {
   return carry(q, tree::node(x, tree::leaf(), tree::leaf()));
 }
@@ -139,7 +139,7 @@ BinomialHeap::heap_delete_max(const BinomialHeap::tree &t) {
 }
 
 BinomialHeap::key
-BinomialHeap::find_max_helper(unsigned int current,
+BinomialHeap::find_max_helper(const unsigned int current,
                               const List<BinomialHeap::tree> &q) {
   if (std::holds_alternative<typename List<BinomialHeap::tree>::Nil>(q.v())) {
     return current;
@@ -174,7 +174,7 @@ BinomialHeap::find_max(const List<BinomialHeap::tree> &q) {
 }
 
 std::pair<BinomialHeap::priqueue, BinomialHeap::priqueue>
-BinomialHeap::delete_max_aux(const unsigned int &m,
+BinomialHeap::delete_max_aux(const unsigned int m,
                              const List<BinomialHeap::tree> &p) {
   if (std::holds_alternative<typename List<BinomialHeap::tree>::Nil>(p.v())) {
     return std::make_pair(List<BinomialHeap::tree>::nil(),
@@ -245,7 +245,7 @@ BinomialHeap::priqueue BinomialHeap::insert_list(const List<unsigned int> &l,
   }
 }
 
-List<unsigned int> BinomialHeap::make_list(const unsigned int &n,
+List<unsigned int> BinomialHeap::make_list(const unsigned int n,
                                            List<unsigned int> l) {
   if (n <= 0) {
     return List<unsigned int>::cons(0u, std::move(l));

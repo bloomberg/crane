@@ -4,7 +4,7 @@
 /// Partial application of this to a tree creates a
 /// closure nat -> nat in C++ via & lambda.
 unsigned int PartialAppMove::sum_values(const PartialAppMove::tree &t,
-                                        unsigned int x) {
+                                        const unsigned int x) {
   if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(t.v())) {
     return x;
   } else {

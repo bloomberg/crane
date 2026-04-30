@@ -144,7 +144,7 @@ struct ThisCaptureDangling {
       } else {
         unsigned int _x = _cs - 1;
         return std::make_optional<std::function<unsigned int(unsigned int)>>(
-            [=](const unsigned int &x) mutable {
+            [=](const unsigned int x) mutable {
               return (x + _self.tree_sum());
             });
       }

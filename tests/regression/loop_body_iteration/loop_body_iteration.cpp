@@ -11,7 +11,7 @@ LoopBodyIteration::count_loop_body(const LoopBodyIteration::state &s) {
 }
 
 LoopBodyIteration::state
-LoopBodyIteration::iterate_body(const unsigned int &n,
+LoopBodyIteration::iterate_body(const unsigned int n,
                                 LoopBodyIteration::state s) {
   if (n <= 0) {
     return s;

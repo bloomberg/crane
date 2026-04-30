@@ -215,20 +215,18 @@ struct LoopifyTail {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l->v());
-        const list<T1> *_next_l = d_a1.get();
-        T1 _next_x = d_a0;
-        _loop_l = _next_l;
-        _loop_x = _next_x;
+        _loop_l = d_a1.get();
+        _loop_x = d_a0;
       }
     }
     return _result;
   } /// Tail-recursive: length with accumulator
 
   template <typename T1>
-  static unsigned int length_acc(unsigned int acc, const list<T1> &l) {
+  static unsigned int length_acc(const unsigned int acc, const list<T1> &l) {
     unsigned int _result;
     const list<T1> *_loop_l = &l;
-    unsigned int _loop_acc = std::move(acc);
+    unsigned int _loop_acc = acc;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = _loop_acc;
@@ -236,10 +234,8 @@ struct LoopifyTail {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l->v());
-        const list<T1> *_next_l = d_a1.get();
-        unsigned int _next_acc = (_loop_acc + 1);
-        _loop_l = _next_l;
-        _loop_acc = std::move(_next_acc);
+        _loop_l = d_a1.get();
+        _loop_acc = (_loop_acc + 1);
       }
     }
     return _result;
@@ -250,10 +246,11 @@ struct LoopifyTail {
   }
 
   /// Tail-recursive: membership test
-  static bool member(const unsigned int &x, const list<unsigned int> &l);
+  static bool member(const unsigned int x, const list<unsigned int> &l);
   /// Tail-recursive: nth element
-  static unsigned int nth(const unsigned int &n, const list<unsigned int> &l,
-                          unsigned int default0); /// Tail-recursive: fold_left
+  static unsigned int
+  nth(const unsigned int n, const list<unsigned int> &l,
+      const unsigned int default0); /// Tail-recursive: fold_left
 
   template <typename T1, typename T2, MapsTo<T2, T2, T1> F0>
   static T2 fold_left(F0 &&f, const T2 acc, const list<T1> &l) {
@@ -267,10 +264,8 @@ struct LoopifyTail {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l->v());
-        const list<T1> *_next_l = d_a1.get();
-        T2 _next_acc = f(_loop_acc, d_a0);
-        _loop_l = _next_l;
-        _loop_acc = _next_acc;
+        _loop_l = d_a1.get();
+        _loop_acc = f(_loop_acc, d_a0);
       }
     }
     return _result;
@@ -278,7 +273,7 @@ struct LoopifyTail {
 
   /// Tail-recursive: lookup in association list
   static unsigned int
-  lookup(const unsigned int &key,
+  lookup(const unsigned int key,
          const list<std::pair<unsigned int, unsigned int>> &l);
 };
 

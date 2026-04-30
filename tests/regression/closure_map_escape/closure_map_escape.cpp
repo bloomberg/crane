@@ -44,7 +44,7 @@ ClosureMapEscape::map_to_adders(
 unsigned int ClosureMapEscape::apply_first(
     const ClosureMapEscape::mylist<std::function<unsigned int(unsigned int)>>
         &fns,
-    const unsigned int &arg) {
+    const unsigned int arg) {
   if (std::holds_alternative<typename ClosureMapEscape::mylist<
           std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
     return 0u;
@@ -58,7 +58,7 @@ unsigned int ClosureMapEscape::apply_first(
 unsigned int ClosureMapEscape::sum_apply(
     const ClosureMapEscape::mylist<std::function<unsigned int(unsigned int)>>
         &fns,
-    const unsigned int &arg) {
+    const unsigned int arg) {
   if (std::holds_alternative<typename ClosureMapEscape::mylist<
           std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
     return 0u;

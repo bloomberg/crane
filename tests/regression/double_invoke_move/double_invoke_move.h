@@ -148,7 +148,7 @@ struct DoubleInvokeMove {
 
   /// wrap_with takes TWO args. Partial application creates a closure.
   /// Since t is stored in a constructor, wrap_with takes t as owned (by value).
-  static tree wrap_with(tree t, unsigned int v);
+  static tree wrap_with(tree t, const unsigned int v);
   static unsigned int left_value(const tree &t);
   /// BUG HYPOTHESIS: partial application wrap_with t creates a & lambda.
   /// If t is marked dead-after (not used in continuation), std::move(t)

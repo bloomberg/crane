@@ -83,9 +83,9 @@ struct ExistentialClosureProbe {
   }
 
   /// Pack a closure into a type-erased wrapper.
-  static wrap pack_fn(unsigned int base);
+  static wrap pack_fn(const unsigned int base);
   /// Unpack and apply.
-  static unsigned int apply_packed(const wrap &_x0, const unsigned int &_x1);
+  static unsigned int apply_packed(const wrap &_x0, const unsigned int _x1);
   /// test1: pack base=10, apply to 5. Expected: 15.
   static inline const unsigned int test1 = apply_packed(pack_fn(10u), 5u);
   /// test2: Pack and unpack through a let binding.
@@ -95,7 +95,7 @@ struct ExistentialClosureProbe {
     return apply_packed(std::move(p), 0u);
   }();
   /// Store a closure that captures another closure.
-  static wrap pack_composed(unsigned int a, unsigned int b);
+  static wrap pack_composed(const unsigned int a, const unsigned int b);
   /// test3: a=3, b=2, g(5) = (5+3)*2 = 16.
   static inline const unsigned int test3 =
       apply_packed(pack_composed(3u, 2u), 5u);

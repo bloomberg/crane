@@ -1,7 +1,7 @@
 #include <decode_list.h>
 
-DecodeList::instruction DecodeList::decode(const unsigned int &b1,
-                                           const unsigned int &b2) {
+DecodeList::instruction DecodeList::decode(const unsigned int b1,
+                                           const unsigned int b2) {
   if (b1 == 0u) {
     return instruction::nop();
   } else {

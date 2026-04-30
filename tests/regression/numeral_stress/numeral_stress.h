@@ -143,7 +143,8 @@ struct NumeralStress {
   /// 5. Numeral in match scrutinee
   static inline const unsigned int match_numeral = 1u;
   /// 6. Numeral inside a fixpoint
-  static unsigned int count_from(unsigned int n, const unsigned int &target);
+  static unsigned int count_from(const unsigned int n,
+                                 const unsigned int target);
   static inline const unsigned int test_count = count_from(100u, 50u);
   /// 7. Z arithmetic with literals
   static inline const int64_t z_complex =
@@ -161,10 +162,10 @@ struct NumeralStress {
   static inline const point origin = point{0u, 0u};
   static inline const point far_point = point{999u, 888u};
   /// 9. Numeral in boolean expression
-  static bool check_range(const unsigned int &n);
+  static bool check_range(const unsigned int n);
   static inline const bool test_range = check_range(50u);
   /// 10. Mixed nat and Z in one function
-  static int64_t mixed_arith(const unsigned int &n);
+  static int64_t mixed_arith(const unsigned int n);
   static inline const int64_t test_mixed = mixed_arith(42u);
 };
 

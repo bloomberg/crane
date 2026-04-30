@@ -18,7 +18,7 @@ struct StepsCounterUnroll {
   };
 
   static state step(const state &s);
-  static state steps(const unsigned int &n, state s);
+  static state steps(const unsigned int n, state s);
   static inline const unsigned int t = steps(5u, state{4094u}).pc;
 };
 

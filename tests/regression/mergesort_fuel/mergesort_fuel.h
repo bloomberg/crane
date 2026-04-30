@@ -136,7 +136,7 @@ public:
 };
 
 struct Compare_dec {
-  static bool le_lt_dec(const unsigned int &n, const unsigned int &m);
+  static bool le_lt_dec(const unsigned int n, const unsigned int m);
 };
 
 struct MergesortFuel {
@@ -147,7 +147,7 @@ struct MergesortFuel {
   static List<unsigned int> merge(List<unsigned int> l1,
                                   const List<unsigned int> &l2);
   /// * Fuel-based merge sort
-  static List<unsigned int> msort_go(const unsigned int &fuel,
+  static List<unsigned int> msort_go(const unsigned int fuel,
                                      List<unsigned int> l);
   /// * Top-level sort and correctness
   static List<unsigned int> msort(const List<unsigned int> &l);

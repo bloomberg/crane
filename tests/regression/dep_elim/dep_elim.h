@@ -230,7 +230,7 @@ struct DepElim {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    unsigned int fin_to_nat(const unsigned int &) const {
+    unsigned int fin_to_nat(const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename fin::FZ>(_sv.v())) {
         return 0u;
@@ -242,7 +242,7 @@ struct DepElim {
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int, fin, T1> F1>
-    T1 fin_rec(F0 &&f, F1 &&f0, const unsigned int &) const {
+    T1 fin_rec(F0 &&f, F1 &&f0, const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename fin::FZ>(_sv.v())) {
         const auto &[d_n] = std::get<typename fin::FZ>(_sv.v());
@@ -255,7 +255,7 @@ struct DepElim {
 
     template <typename T1, MapsTo<T1, unsigned int> F0,
               MapsTo<T1, unsigned int, fin, T1> F1>
-    T1 fin_rect(F0 &&f, F1 &&f0, const unsigned int &) const {
+    T1 fin_rect(F0 &&f, F1 &&f0, const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename fin::FZ>(_sv.v())) {
         const auto &[d_n] = std::get<typename fin::FZ>(_sv.v());
@@ -382,7 +382,7 @@ struct DepElim {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    vec<t_A> vec_tail(const unsigned int &) const {
+    vec<t_A> vec_tail(const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
         throw std::logic_error("unreachable");
@@ -393,7 +393,7 @@ struct DepElim {
       }
     }
 
-    t_A vec_head(const unsigned int &) const {
+    t_A vec_head(const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
         throw std::logic_error("unreachable");
@@ -405,7 +405,7 @@ struct DepElim {
     }
 
     template <typename T1, MapsTo<T1, t_A> F1>
-    vec<T1> vec_map(const unsigned int &, F1 &&f) const {
+    vec<T1> vec_map(const unsigned int, F1 &&f) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
         return vec<T1>::vnil();
@@ -417,7 +417,7 @@ struct DepElim {
       }
     }
 
-    List<t_A> vec_to_list(const unsigned int &) const {
+    List<t_A> vec_to_list(const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
         return List<t_A>::nil();
@@ -429,7 +429,7 @@ struct DepElim {
     }
 
     template <typename T1, MapsTo<T1, unsigned int, t_A, vec<t_A>, T1> F1>
-    T1 vec_rec(const T1 f, F1 &&f0, const unsigned int &) const {
+    T1 vec_rec(const T1 f, F1 &&f0, const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
         return f;
@@ -442,7 +442,7 @@ struct DepElim {
     }
 
     template <typename T1, MapsTo<T1, unsigned int, t_A, vec<t_A>, T1> F1>
-    T1 vec_rect(const T1 f, F1 &&f0, const unsigned int &) const {
+    T1 vec_rect(const T1 f, F1 &&f0, const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
         return f;
@@ -526,7 +526,7 @@ struct DepElim {
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0>
-    T1 avail_rec(F0 &&f, const T1 f0, const bool &) const {
+    T1 avail_rec(F0 &&f, const T1 f0, const bool) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename avail::Present>(_sv.v())) {
         const auto &[d_a0] = std::get<typename avail::Present>(_sv.v());
@@ -537,7 +537,7 @@ struct DepElim {
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0>
-    T1 avail_rect(F0 &&f, const T1 f0, const bool &) const {
+    T1 avail_rect(F0 &&f, const T1 f0, const bool) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename avail::Present>(_sv.v())) {
         const auto &[d_a0] = std::get<typename avail::Present>(_sv.v());
@@ -563,7 +563,7 @@ struct DepElim {
   static inline const List<unsigned int> test_vec_map =
       my_vec
           .template vec_map<unsigned int>(
-              3u, [](const unsigned int &n) { return (n + 1u); })
+              3u, [](const unsigned int n) { return (n + 1u); })
           .vec_to_list(3u);
   static inline const unsigned int test_present =
       avail::present(42u).get_present();

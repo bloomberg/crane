@@ -140,7 +140,7 @@ struct ClosureCaptureMatch {
 
     /// Nested match returning a closure.
     /// The closure captures fields from BOTH match levels.
-    unsigned int deep_capture(unsigned int x) const {
+    unsigned int deep_capture(const unsigned int x) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return x;
@@ -168,7 +168,7 @@ struct ClosureCaptureMatch {
     /// The closure captures shared_ptr fields (left, right subtrees).
     /// If capture is by-reference instead of by-value, the closure
     /// would have dangling references after the match lambda returns.
-    tree make_inserter(unsigned int v) const {
+    tree make_inserter(const unsigned int v) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return tree::node(tree::leaf(), v, tree::leaf());
@@ -348,7 +348,7 @@ struct ClosureCaptureMatch {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    unsigned int unbox(const unsigned int &x) const {
+    unsigned int unbox(const unsigned int x) const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<typename fn_box::Box>(_sv.v());
       return d_a0(x);

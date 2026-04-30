@@ -1,7 +1,7 @@
 #include <hof_closure_escape.h>
 
 unsigned int HofClosureEscape::sum_values(const HofClosureEscape::tree &t,
-                                          unsigned int x) {
+                                          const unsigned int x) {
   if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(t.v())) {
     return x;
   } else {
@@ -40,7 +40,7 @@ HofClosureEscape::hof_escape(HofClosureEscape::tree t) {
 
 unsigned int HofClosureEscape::apply_option(
     const std::optional<std::function<unsigned int(unsigned int)>> &o,
-    unsigned int x) {
+    const unsigned int x) {
   if (o.has_value()) {
     const std::function<unsigned int(unsigned int)> &f = *o;
     return f(x);

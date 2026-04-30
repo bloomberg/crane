@@ -1,7 +1,7 @@
 #include <pair_closure_escape.h>
 
 unsigned int PairClosureEscape::sum_values(const PairClosureEscape::tree &t,
-                                           unsigned int x) {
+                                           const unsigned int x) {
   if (std::holds_alternative<typename PairClosureEscape::tree::Leaf>(t.v())) {
     return x;
   } else {

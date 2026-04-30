@@ -108,7 +108,7 @@ struct NameClashReturnThis {
   /// Inner match returns shape in all branches, one branch returns the
   /// argument itself. The function takes shape as input, so it gets
   /// methodified. In the Blue branch, `s` becomes `this`.
-  static shape maybe_transform(const bool &flag, shape s);
+  static shape maybe_transform(const bool flag, shape s);
   /// Match on shape where one branch returns the same shape unchanged.
   static shape identity_or_double(const shape &s);
   /// Two shapes, return one of them based on a match on the other.

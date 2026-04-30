@@ -13,7 +13,8 @@
 #include <bsl_variant.h>
 
 namespace BloombergLP {}
-List<unsigned int> ListDef::seq(unsigned int start, const unsigned int &len) {
+List<unsigned int> ListDef::seq(const unsigned int start,
+                                const unsigned int len) {
   if (len <= 0) {
     return List<unsigned int>::nil();
   } else {

@@ -463,7 +463,7 @@ struct PolyInductive {
   static inline const unsigned int test_pmap =
       pmaybe<unsigned int>::pjust(5u)
           .template pmaybe_map<unsigned int>(
-              [](unsigned int x) { return (x + 1); })
+              [](const unsigned int x) { return (x + 1); })
           .pmaybe_default(0u);
   static inline const unsigned int test_ptree =
       ptree<unsigned int>::pnode(

@@ -1,18 +1,18 @@
 #include <page_ops.h>
 
-unsigned int PageOps::addr12_of_nat(const unsigned int &n) {
+unsigned int PageOps::addr12_of_nat(const unsigned int n) {
   return (4096u ? n % 4096u : n);
 }
 
-unsigned int PageOps::page_of(const unsigned int &p) {
+unsigned int PageOps::page_of(const unsigned int p) {
   return (256u ? p / 256u : 0);
 }
 
-unsigned int PageOps::page_base(const unsigned int &p) {
+unsigned int PageOps::page_base(const unsigned int p) {
   return (page_of(p) * 256u);
 }
 
-unsigned int PageOps::page_offset(const unsigned int &p) {
+unsigned int PageOps::page_offset(const unsigned int p) {
   return (256u ? p % 256u : p);
 }
 
@@ -32,12 +32,12 @@ unsigned int PageOps::base_for_next2(const PageOps::state &s) {
   return page_base(pc_inc2(s));
 }
 
-unsigned int PageOps::recompose(const unsigned int &p) {
+unsigned int PageOps::recompose(const unsigned int p) {
   return (page_base(p) + page_offset(p));
 }
 
-PageOps::instruction PageOps::decode(const unsigned int &b1,
-                                     const unsigned int &b2) {
+PageOps::instruction PageOps::decode(const unsigned int b1,
+                                     const unsigned int b2) {
   if (b1 == 0u) {
     return instruction::nop();
   } else {
@@ -46,7 +46,7 @@ PageOps::instruction PageOps::decode(const unsigned int &b1,
 }
 
 std::optional<std::pair<PageOps::instruction, unsigned int>>
-PageOps::disassemble(const List<unsigned int> &rom, const unsigned int &addr) {
+PageOps::disassemble(const List<unsigned int> &rom, const unsigned int addr) {
   auto &&_sv = drop<unsigned int>(addr, rom);
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
     return std::optional<std::pair<PageOps::instruction, unsigned int>>();
@@ -65,7 +65,7 @@ PageOps::disassemble(const List<unsigned int> &rom, const unsigned int &addr) {
   }
 }
 
-unsigned int Nat::pow(const unsigned int &n, const unsigned int &m) {
+unsigned int Nat::pow(const unsigned int n, const unsigned int m) {
   if (m <= 0) {
     return 1u;
   } else {

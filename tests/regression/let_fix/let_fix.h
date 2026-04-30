@@ -142,7 +142,7 @@ struct LetFix {
   }
 
   static List<unsigned int> local_flatten(const List<List<unsigned int>> &xss);
-  static bool local_mem(const unsigned int &n, const List<unsigned int> &l);
+  static bool local_mem(const unsigned int n, const List<unsigned int> &l);
 
   template <typename T1> static unsigned int local_length(const List<T1> &xs) {
     if (std::holds_alternative<typename List<T1>::Nil>(xs.v())) {

@@ -123,7 +123,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
 
-  List<t_A> skipn(const unsigned int &n) const {
+  List<t_A> skipn(const unsigned int n) const {
     if (n <= 0) {
       return std::move(*(this));
     } else {
@@ -138,7 +138,7 @@ public:
     }
   }
 
-  List<t_A> firstn(const unsigned int &n) const {
+  List<t_A> firstn(const unsigned int n) const {
     if (n <= 0) {
       return List<t_A>::nil();
     } else {
@@ -176,7 +176,7 @@ public:
 
 struct UpdateNthBounds {
   template <typename T1>
-  static List<T1> update_nth(unsigned int n, const T1 x, List<T1> l) {
+  static List<T1> update_nth(const unsigned int n, const T1 x, List<T1> l) {
     if (n < l.length()) {
       return l.firstn(n).app(List<T1>::cons(x, l.skipn((n + 1))));
     } else {

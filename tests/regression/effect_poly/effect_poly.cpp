@@ -2,7 +2,7 @@
 
 unsigned int EffectPoly::test_map_result() {
   return map_result<unsigned int, unsigned int>(
-      [](unsigned int x) { return (x + 1); }, 41u);
+      [](const unsigned int x) { return (x + 1); }, 41u);
 }
 
 unsigned int EffectPoly::test_lift_nat() {
@@ -17,7 +17,7 @@ bool EffectPoly::test_lift_bool() {
   return lift_pure<bool>(true);
 } /// 3. Monadic when / guard
 
-void EffectPoly::when_(const bool &b, std::monostate) {
+void EffectPoly::when_(const bool b, std::monostate) {
   if (b) {
     return;
   } else {
@@ -33,7 +33,7 @@ void EffectPoly::test_when() {
   return;
 } /// 4. Monadic unless
 
-void EffectPoly::unless(const bool &b, std::monostate) {
+void EffectPoly::unless(const bool b, std::monostate) {
   if (b) {
     return;
   } else {
@@ -77,7 +77,8 @@ void EffectPoly::test_sequence_void() {
   return;
 }
 
-unsigned int EffectPoly::sum_with_logging(unsigned int acc, unsigned int n) {
+unsigned int EffectPoly::sum_with_logging(const unsigned int acc,
+                                          const unsigned int n) {
   std::cout << "adding"s << '\n';
   return (acc + n);
 }

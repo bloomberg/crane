@@ -47,7 +47,7 @@ struct DependentTemplateStress {
     }
 
     static typename C::template t<unsigned int>
-    complex_use(const unsigned int &_x0) {
+    complex_use(const unsigned int _x0) {
       return C::template singleton<unsigned int>(_x0);
     }
   };

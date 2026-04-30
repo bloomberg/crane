@@ -1,6 +1,6 @@
 #include <unit_void_stress.h>
 
-void UnitVoidStress::consume(const unsigned int &n) {
+void UnitVoidStress::consume(const unsigned int n) {
   if (n <= 0) {
     return;
   } else {
@@ -10,10 +10,10 @@ void UnitVoidStress::consume(const unsigned int &n) {
   }
 }
 
-void UnitVoidStress::discard(const unsigned int &) { return; }
+void UnitVoidStress::discard(const unsigned int) { return; }
 
 std::pair<unsigned int, std::monostate>
-UnitVoidStress::pair_with_void_call(const unsigned int &n) {
+UnitVoidStress::pair_with_void_call(const unsigned int n) {
   return std::make_pair(42u, [=]() mutable {
     consume(n);
     return std::monostate{};
@@ -21,39 +21,39 @@ UnitVoidStress::pair_with_void_call(const unsigned int &n) {
 }
 
 std::optional<std::monostate>
-UnitVoidStress::some_void_call(const unsigned int &n) {
+UnitVoidStress::some_void_call(const unsigned int n) {
   return std::make_optional<std::monostate>([=]() mutable {
     consume(n);
     return std::monostate{};
   }());
 }
 
-void UnitVoidStress::id_void_call(const unsigned int &_x0) {
+void UnitVoidStress::id_void_call(const unsigned int _x0) {
   consume(_x0);
   return;
 }
 
 std::pair<unsigned int, std::monostate>
-UnitVoidStress::pair_with_discard(unsigned int n) {
+UnitVoidStress::pair_with_discard(const unsigned int n) {
   return std::make_pair(n, [=]() mutable {
     discard(n);
     return std::monostate{};
   }());
 }
 
-void UnitVoidStress::store_and_call(const unsigned int &_x0) {
+void UnitVoidStress::store_and_call(const unsigned int _x0) {
   consume(_x0);
   return;
 }
 
 std::pair<unsigned int, std::monostate>
-UnitVoidStress::pair_via_let(const unsigned int &n) {
+UnitVoidStress::pair_via_let(const unsigned int n) {
   consume(n);
   std::monostate u = std::monostate{};
   return std::make_pair(42u, u);
 }
 
-void UnitVoidStress::cond_void(const bool &b, const unsigned int &n) {
+void UnitVoidStress::cond_void(const bool b, const unsigned int n) {
   if (b) {
     consume(n);
     return;
@@ -63,7 +63,7 @@ void UnitVoidStress::cond_void(const bool &b, const unsigned int &n) {
   }
 }
 
-void UnitVoidStress::match_nat_void(const unsigned int &n) {
+void UnitVoidStress::match_nat_void(const unsigned int n) {
   if (n <= 0) {
     return;
   } else {
@@ -74,7 +74,7 @@ void UnitVoidStress::match_nat_void(const unsigned int &n) {
 }
 
 std::pair<std::pair<unsigned int, std::monostate>, unsigned int>
-UnitVoidStress::nested_pair_void(unsigned int n) {
+UnitVoidStress::nested_pair_void(const unsigned int n) {
   return std::make_pair(std::make_pair(n,
                                        [=]() mutable {
                                          consume(n);
@@ -84,7 +84,7 @@ UnitVoidStress::nested_pair_void(unsigned int n) {
 }
 
 std::optional<std::pair<unsigned int, std::monostate>>
-UnitVoidStress::option_pair_void(unsigned int n) {
+UnitVoidStress::option_pair_void(const unsigned int n) {
   return std::make_optional<std::pair<unsigned int, std::monostate>>(
       std::make_pair(n, [=]() mutable {
         consume(n);
@@ -93,15 +93,14 @@ UnitVoidStress::option_pair_void(unsigned int n) {
 }
 
 std::pair<unsigned int, unsigned int>
-UnitVoidStress::let_void_then_pair(unsigned int n) {
+UnitVoidStress::let_void_then_pair(const unsigned int n) {
   return std::make_pair(n, 42u);
 }
 
-unsigned int UnitVoidStress::seq_voids_value(const unsigned int &) {
-  return 42u;
-}
+unsigned int UnitVoidStress::seq_voids_value(const unsigned int) { return 42u; }
 
-unsigned int UnitVoidStress::void_in_one_branch(const bool &b, unsigned int n) {
+unsigned int UnitVoidStress::void_in_one_branch(const bool b,
+                                                const unsigned int n) {
   if (b) {
     return 42u;
   } else {
@@ -109,7 +108,7 @@ unsigned int UnitVoidStress::void_in_one_branch(const bool &b, unsigned int n) {
   }
 }
 
-void UnitVoidStress::even_void(const unsigned int &n) {
+void UnitVoidStress::even_void(const unsigned int n) {
   if (n <= 0) {
     return;
   } else {
@@ -119,7 +118,7 @@ void UnitVoidStress::even_void(const unsigned int &n) {
   }
 }
 
-void UnitVoidStress::odd_void(const unsigned int &n) {
+void UnitVoidStress::odd_void(const unsigned int n) {
   if (n <= 0) {
     return;
   } else {

@@ -6,7 +6,7 @@ StepsCounterUnroll::step(const StepsCounterUnroll::state &s) {
 }
 
 StepsCounterUnroll::state
-StepsCounterUnroll::steps(const unsigned int &n, StepsCounterUnroll::state s) {
+StepsCounterUnroll::steps(const unsigned int n, StepsCounterUnroll::state s) {
   if (n <= 0) {
     return s;
   } else {

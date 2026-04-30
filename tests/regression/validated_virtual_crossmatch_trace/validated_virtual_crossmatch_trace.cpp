@@ -1,6 +1,6 @@
 #include <validated_virtual_crossmatch_trace.h>
 
-bool PeanoNat::eq_dec(const unsigned int &n, const unsigned int &m) {
+bool PeanoNat::eq_dec(const unsigned int n, const unsigned int m) {
   if (n <= 0) {
     if (m <= 0) {
       return true;
@@ -291,7 +291,7 @@ bool ValidatedVirtualCrossmatchTraceCase::mfi_config_valid(
 ValidatedVirtualCrossmatchTraceCase::MFIStrength
 ValidatedVirtualCrossmatchTraceCase::classify_mfi_with_config(
     const ValidatedVirtualCrossmatchTraceCase::MFIThresholdConfig &cfg,
-    const unsigned int &mfi) {
+    const unsigned int mfi) {
   if (mfi <= cfg.mfi_cfg_negative) {
     return MFIStrength::e_MFI_NEGATIVE;
   } else {
@@ -314,7 +314,7 @@ ValidatedVirtualCrossmatchTraceCase::classify_mfi_with_config(
 ValidatedVirtualCrossmatchTraceCase::MFIStrength
 ValidatedVirtualCrossmatchTraceCase::classify_mfi_safe(
     const ValidatedVirtualCrossmatchTraceCase::ValidatedMFIConfig &vcfg,
-    const unsigned int &mfi) {
+    const unsigned int mfi) {
   return classify_mfi_with_config(vcfg.vmc_config, mfi);
 }
 
@@ -324,7 +324,7 @@ unsigned int ValidatedVirtualCrossmatchTraceCase::max_dsa_mfi(
   List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> donor_epitopes =
       epitope_dedup(typing_epitopes(donor));
   return recipient.vxm_epitope_abs.template fold_left<unsigned int>(
-      [=](unsigned int acc,
+      [=](const unsigned int acc,
           ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody ab) mutable {
         if (donor_epitopes.existsb(
                 [=](ValidatedVirtualCrossmatchTraceCase::HLAEpitope _x0) mutable
@@ -377,7 +377,7 @@ ValidatedVirtualCrossmatchTraceCase::virtual_crossmatch_safe(
 ValidatedVirtualCrossmatchTraceCase::TransplantAcceptability
 ValidatedVirtualCrossmatchTraceCase::transplant_acceptability(
     const ValidatedVirtualCrossmatchTraceCase::VirtualXMResult vxm,
-    const bool &complement_fixing_dsa) {
+    const bool complement_fixing_dsa) {
   switch (vxm) {
   case VirtualXMResult::e_VXM_NEGATIVE: {
     return TransplantAcceptability::e_ACCEPTABLE;
@@ -431,7 +431,7 @@ bool ValidatedVirtualCrossmatchTraceCase::safe_to_release(
 }
 
 bool ValidatedVirtualCrossmatchTraceCase::order_sample_valid(
-    const unsigned int &collection_time, const unsigned int &current_time) {
+    const unsigned int collection_time, const unsigned int current_time) {
   return (((current_time - collection_time) > current_time
                ? 0
                : (current_time - collection_time))) <= (72u * 3600u);
@@ -439,7 +439,7 @@ bool ValidatedVirtualCrossmatchTraceCase::order_sample_valid(
 
 bool ValidatedVirtualCrossmatchTraceCase::transfusion_order_authorized(
     const ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder &order,
-    const unsigned int &current_time) {
+    const unsigned int current_time) {
   bool compat_ok = order.sto_compatibility_check;
   bool xm_ok = safe_to_release(order.sto_crossmatch);
   bool sample_ok =
@@ -450,10 +450,11 @@ bool ValidatedVirtualCrossmatchTraceCase::transfusion_order_authorized(
 
 std::optional<ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder>
 ValidatedVirtualCrossmatchTraceCase::create_safe_transfusion_order(
-    unsigned int recipient_id, unsigned int product_id, bool compat_result,
+    const unsigned int recipient_id, const unsigned int product_id,
+    const bool compat_result,
     ValidatedVirtualCrossmatchTraceCase::CrossmatchWithUncertainty xm,
-    unsigned int sample_time, const unsigned int &current_time,
-    unsigned int authorizer, bool is_emergency) {
+    const unsigned int sample_time, const unsigned int current_time,
+    const unsigned int authorizer, const bool is_emergency) {
   ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder order =
       SafeTransfusionOrder{recipient_id, product_id, compat_result, xm,
                            sample_time,  authorizer, is_emergency};
@@ -482,7 +483,7 @@ bool ValidatedVirtualCrossmatchTraceCase::risk_acceptable(
   }
 }
 
-bool Bool::bool_dec(const bool &b1, const bool &b2) {
+bool Bool::bool_dec(const bool b1, const bool b2) {
   if (b1) {
     if (b2) {
       return true;
@@ -498,7 +499,7 @@ bool Bool::bool_dec(const bool &b1, const bool &b2) {
   }
 }
 
-unsigned int Nat::tail_add(const unsigned int &n, unsigned int m) {
+unsigned int Nat::tail_add(const unsigned int n, const unsigned int m) {
   if (n <= 0) {
     return m;
   } else {
@@ -507,8 +508,8 @@ unsigned int Nat::tail_add(const unsigned int &n, unsigned int m) {
   }
 }
 
-unsigned int Nat::tail_addmul(unsigned int r, const unsigned int &n,
-                              const unsigned int &m) {
+unsigned int Nat::tail_addmul(const unsigned int r, const unsigned int n,
+                              const unsigned int m) {
   if (n <= 0) {
     return r;
   } else {
@@ -517,11 +518,11 @@ unsigned int Nat::tail_addmul(unsigned int r, const unsigned int &n,
   }
 }
 
-unsigned int Nat::tail_mul(const unsigned int &n, const unsigned int &m) {
+unsigned int Nat::tail_mul(const unsigned int n, const unsigned int m) {
   return Nat::tail_addmul(0u, n, m);
 }
 
-unsigned int Nat::of_uint_acc(const Uint &d, unsigned int acc) {
+unsigned int Nat::of_uint_acc(const Uint &d, const unsigned int acc) {
   if (std::holds_alternative<typename Uint::Nil>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint::D0>(d.v())) {
@@ -571,7 +572,7 @@ unsigned int Nat::of_uint_acc(const Uint &d, unsigned int acc) {
 
 unsigned int Nat::of_uint(const Uint &d) { return Nat::of_uint_acc(d, 0u); }
 
-unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
+unsigned int Nat::of_hex_uint_acc(const Uint0 &d, const unsigned int acc) {
   if (std::holds_alternative<typename Uint0::Nil0>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint0::D10>(d.v())) {

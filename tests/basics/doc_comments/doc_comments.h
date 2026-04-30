@@ -14,7 +14,7 @@ concept MapsTo = std::is_invocable_v<F &, Args &...>;
 struct DocComments {
   /// add computes the sum of two natural numbers n and m.
   /// It works by structural recursion on n.
-  static unsigned int add(const unsigned int &n, unsigned int m);
+  static unsigned int add(const unsigned int n, const unsigned int m);
 
   /// A simple pair holding two values of possibly different types.
   template <typename t_A, typename t_B> struct pair {
@@ -165,13 +165,13 @@ struct DocComments {
     }
   }
 
-  static unsigned int no_doc_comment(unsigned int x);
+  static unsigned int no_doc_comment(const unsigned int x);
 
   /// The identity function: returns its argument unchanged.
   template <typename T1> static T1 identity(const T1 x) { return x; }
 
   /// double n returns 2 * n.
-  static unsigned int double_(const unsigned int &n);
+  static unsigned int double_(const unsigned int n);
   /// A simple color enumeration.
   enum class Color {
     /// Red color.

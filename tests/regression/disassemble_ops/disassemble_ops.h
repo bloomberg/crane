@@ -136,7 +136,7 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static List<T1> repeat(const T1 x, const unsigned int &n);
+  static List<T1> repeat(const T1 x, const unsigned int n);
 };
 
 struct DisassembleOps {
@@ -257,10 +257,10 @@ struct DisassembleOps {
     }
   }
 
-  static instruction decode1(const unsigned int &b1, const unsigned int &b2);
-  static List<unsigned int> drop_(const unsigned int &n, List<unsigned int> l);
+  static instruction decode1(const unsigned int b1, const unsigned int b2);
+  static List<unsigned int> drop_(const unsigned int n, List<unsigned int> l);
   static std::optional<std::pair<instruction, unsigned int>>
-  disassemble1(const List<unsigned int> &rom0, const unsigned int &addr);
+  disassemble1(const List<unsigned int> &rom0, const unsigned int addr);
   static inline const unsigned int test_disassemble_drop_window =
       []() -> unsigned int {
     auto _cs = disassemble1(
@@ -280,10 +280,10 @@ struct DisassembleOps {
       return 0u;
     }
   }();
-  static instruction decode2(const unsigned int &b1, const unsigned int &b2);
+  static instruction decode2(const unsigned int b1, const unsigned int b2);
 
   template <typename T1>
-  static List<T1> drop(const unsigned int &n, List<T1> l) {
+  static List<T1> drop(const unsigned int n, List<T1> l) {
     if (n <= 0) {
       return l;
     } else {
@@ -298,7 +298,7 @@ struct DisassembleOps {
   }
 
   static std::optional<std::pair<instruction, unsigned int>>
-  disassemble2(const List<unsigned int> &rom0, const unsigned int &addr);
+  disassemble2(const List<unsigned int> &rom0, const unsigned int addr);
   static inline const unsigned int test_disassemble_next_address =
       []() -> unsigned int {
     auto _cs = disassemble2(
@@ -317,9 +317,9 @@ struct DisassembleOps {
       return 0u;
     }
   }();
-  static instruction decode3(const unsigned int &b1, const unsigned int &b2);
+  static instruction decode3(const unsigned int b1, const unsigned int b2);
   static std::optional<std::pair<instruction, unsigned int>>
-  disassemble3(const List<unsigned int> &rom0, const unsigned int &addr);
+  disassemble3(const List<unsigned int> &rom0, const unsigned int addr);
 
   template <typename T1> static bool is_none(const std::optional<T1> &o) {
     if (o.has_value()) {
@@ -333,9 +333,9 @@ struct DisassembleOps {
   static inline const bool test_disassemble_short_rom_none =
       is_none<std::pair<instruction, unsigned int>>(disassemble3(
           List<unsigned int>::cons(9u, List<unsigned int>::nil()), 0u));
-  static instruction decode4(const unsigned int &b1, const unsigned int &b2);
+  static instruction decode4(const unsigned int b1, const unsigned int b2);
   static std::optional<std::pair<instruction, unsigned int>>
-  disassemble4(const List<unsigned int> &rom0, const unsigned int &addr);
+  disassemble4(const List<unsigned int> &rom0, const unsigned int addr);
 
   struct state {
     List<unsigned int> regs;
@@ -413,7 +413,7 @@ struct DisassembleOps {
 };
 
 template <typename T1>
-List<T1> ListDef::repeat(const T1 x, const unsigned int &n) {
+List<T1> ListDef::repeat(const T1 x, const unsigned int n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {

@@ -49,7 +49,7 @@ struct SingletonRecord {
 
   static inline const fn_wrapper my_fn_wrapper =
       fn_wrapper{[](unsigned int _x0) -> unsigned int { return (1u + _x0); }};
-  static unsigned int apply_wrapped(const fn_wrapper &w, const unsigned int &n);
+  static unsigned int apply_wrapped(const fn_wrapper &w, const unsigned int n);
   static inline const unsigned int test_get = get_value(wrapped_five);
   static inline const unsigned int test_get2 = get_value2(wrapped_five);
   static inline const unsigned int test_unwrap = unwrap(wrapped_five);

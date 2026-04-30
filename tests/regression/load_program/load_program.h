@@ -136,12 +136,12 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
 };
 
 struct LoadProgram {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int &n, const T1 x,
+  static List<T1> update_nth(const unsigned int n, const T1 x,
                              const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -205,16 +205,17 @@ struct LoadProgram {
     }
   };
 
-  static state set_prom_params(const state &s, unsigned int addr,
-                               unsigned int data, bool enable);
+  static state set_prom_params(const state &s, const unsigned int addr,
+                               const unsigned int data, const bool enable);
   static state execute_wpm(const state &s);
-  static state load_program(state s, const unsigned int &base,
+  static state load_program(state s, const unsigned int base,
                             const List<unsigned int> &bytes);
   static state_extended set_prom_params_ext(const state_extended &s,
-                                            unsigned int addr,
-                                            unsigned int data, bool enable);
+                                            const unsigned int addr,
+                                            const unsigned int data,
+                                            const bool enable);
   static state_extended execute_wpm_ext(const state_extended &s);
-  static state_simple write_byte(const state_simple &s, const unsigned int &b);
+  static state_simple write_byte(const state_simple &s, const unsigned int b);
   static state_simple load_program_simple(state_simple s,
                                           const List<unsigned int> &bytes);
   static inline const bool test_load_program_nil = []() {
@@ -349,7 +350,7 @@ struct LoadProgram {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int &n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

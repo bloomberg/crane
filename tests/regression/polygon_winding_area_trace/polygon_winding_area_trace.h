@@ -138,7 +138,7 @@ public:
 
 struct Pos {
   template <typename T1, MapsTo<T1, T1> F0>
-  static T1 iter(F0 &&f, const T1 x, const unsigned int &n) {
+  static T1 iter(F0 &&f, const T1 x, const unsigned int n) {
     if (n == 1u) {
       return f(x);
     } else if (n % 2u != 0u) {
@@ -152,12 +152,12 @@ struct Pos {
 };
 
 struct BinInt {
-  static int64_t pow_pos(const int64_t &z, unsigned int _x0);
+  static int64_t pow_pos(const int64_t z, const unsigned int _x0);
 };
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
 };
 
 struct Q {
@@ -194,7 +194,7 @@ struct PolygonWindingAreaTraceCase {
 
   template <typename T1>
   static T1 nth_cyclic(const T1 default0, const List<T1> &l,
-                       const unsigned int &i) {
+                       const unsigned int i) {
     return ListDef::template nth<T1>((l.length() ? i % l.length() : i), l,
                                      default0);
   }
@@ -202,7 +202,7 @@ struct PolygonWindingAreaTraceCase {
   static Real lon_diff(const Real lon1, const Real lon2);
   static Real spherical_shoelace_aux(const List<Point> &pts,
                                      const List<Point> &all_pts,
-                                     const unsigned int &idx);
+                                     const unsigned int idx);
   static Real spherical_shoelace(const List<Point> &pts);
   static Real spherical_polygon_area(const List<Point> &poly);
   static Real distance_to_central_angle(const Real d);
@@ -256,7 +256,7 @@ struct PolygonWindingAreaTraceCase {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int &n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

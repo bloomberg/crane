@@ -169,9 +169,9 @@ struct CpsClosureChain {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
       tree d_a0_value = *(d_a0);
       tree d_a2_value = *(d_a2);
-      return tree_sum_cps(d_a0_value, [=](unsigned int left_sum) mutable {
+      return tree_sum_cps(d_a0_value, [=](const unsigned int left_sum) mutable {
         return tree_sum_cps(d_a2_value,
-                            [=](const unsigned int &right_sum) mutable {
+                            [=](const unsigned int right_sum) mutable {
                               return k(((left_sum + d_a1) + right_sum));
                             });
       });
@@ -180,9 +180,9 @@ struct CpsClosureChain {
 
   static unsigned int tree_sum(const tree &t);
   /// Build a deep tree to stress the closure chain.
-  static tree build_left(unsigned int n);
-  static tree build_right(unsigned int n);
-  static tree build_balanced(unsigned int n);
+  static tree build_left(const unsigned int n);
+  static tree build_right(const unsigned int n);
+  static tree build_balanced(const unsigned int n);
   /// Test: left-spine tree with 5 nodes: sum = 1+2+3+4+5 = 15
   static inline const unsigned int test_left = tree_sum(build_left(5u));
   /// Test: right-spine tree with 5 nodes: sum = 1+2+3+4+5 = 15
@@ -199,7 +199,7 @@ struct CpsClosureChain {
   /// AND the accumulator function.
   template <MapsTo<unsigned int, unsigned int, unsigned int, unsigned int> F2>
   static unsigned int
-  tree_fold_cps(const tree &t, unsigned int base, F2 &&combine,
+  tree_fold_cps(const tree &t, const unsigned int base, F2 &&combine,
                 const std::function<unsigned int(unsigned int)> k) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return k(base);
@@ -208,10 +208,11 @@ struct CpsClosureChain {
       tree d_a0_value = *(d_a0);
       tree d_a2_value = *(d_a2);
       return tree_fold_cps(
-          d_a0_value, base, combine, [=](unsigned int left_result) mutable {
+          d_a0_value, base, combine,
+          [=](const unsigned int left_result) mutable {
             return tree_fold_cps(
                 d_a2_value, base, combine,
-                [=](const unsigned int &right_result) mutable {
+                [=](const unsigned int right_result) mutable {
                   return k(combine(left_result, d_a1, right_result));
                 });
           });
@@ -223,10 +224,10 @@ struct CpsClosureChain {
       tree::node(tree::node(tree::leaf(), 2u, tree::leaf()), 3u,
                  tree::node(tree::leaf(), 4u, tree::leaf())),
       1u,
-      [](const unsigned int &l, const unsigned int &n, const unsigned int &r) {
+      [](const unsigned int l, const unsigned int n, const unsigned int r) {
         return ((l + n) + r);
       },
-      [](unsigned int x) { return x; });
+      [](const unsigned int x) { return x; });
   /// Store CPS result in a pair with another computation to test
   /// that the continuation chain doesn't interfere with other data.
   static inline const std::pair<unsigned int, unsigned int> test_pair = []() {
@@ -234,9 +235,10 @@ struct CpsClosureChain {
     unsigned int s = tree_sum(t);
     unsigned int f = tree_fold_cps(
         std::move(t), 0u,
-        [](const unsigned int &l, const unsigned int &n,
-           const unsigned int &r) { return ((l + n) + r); },
-        [](unsigned int x) { return x; });
+        [](const unsigned int l, const unsigned int n, const unsigned int r) {
+          return ((l + n) + r);
+        },
+        [](const unsigned int x) { return x; });
     return std::make_pair(s, f);
   }();
 };

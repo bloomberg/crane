@@ -147,7 +147,7 @@ struct FixPartialApp {
   }
 
   /// count_nodes: counts nodes in a tree. Will be partially applied.
-  static unsigned int count_nodes(const tree &t, unsigned int base);
+  static unsigned int count_nodes(const tree &t, const unsigned int base);
   /// BUG HYPOTHESIS: Partially applying a fixpoint.
   /// f := count_nodes big_tree creates a closure (nat -> nat).
   /// The closure captures the fixpoint AND the tree.
@@ -222,7 +222,7 @@ struct FixPartialApp {
   /// If the closure for g captures the function arg by &, it could dangle.
   static inline const unsigned int map_partial_bug = []() {
     std::function<tree(tree)> g = [](tree _x0) -> tree {
-      return tree_map([](const unsigned int &x) { return (x + 1u); }, _x0);
+      return tree_map([](const unsigned int x) { return (x + 1u); }, _x0);
     };
     tree t1 = tree::node(tree::leaf(), 10u, tree::leaf());
     tree t2 = tree::node(tree::leaf(), 20u, tree::leaf());

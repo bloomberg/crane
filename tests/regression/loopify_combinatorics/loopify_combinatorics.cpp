@@ -2,7 +2,7 @@
 
 /// Consolidated combinatorial algorithms.
 /// remove x l removes first occurrence of x from list.
-List<unsigned int> LoopifyCombinatorics::remove(const unsigned int &x,
+List<unsigned int> LoopifyCombinatorics::remove(const unsigned int x,
                                                 const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -36,7 +36,7 @@ List<unsigned int> LoopifyCombinatorics::remove(const unsigned int &x,
 
 /// Helper: prepend x to each list in lsts.
 List<List<unsigned int>>
-LoopifyCombinatorics::map_cons(unsigned int x,
+LoopifyCombinatorics::map_cons(const unsigned int x,
                                const List<List<unsigned int>> &lsts) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
@@ -70,7 +70,7 @@ LoopifyCombinatorics::map_cons(unsigned int x,
 /// The match on remaining is hoisted out of the let-binding so that all
 /// recursive calls appear at the top level of each branch.
 List<List<unsigned int>>
-LoopifyCombinatorics::perms_choices_fuel(const unsigned int &fuel,
+LoopifyCombinatorics::perms_choices_fuel(const unsigned int fuel,
                                          const List<unsigned int> &choices,
                                          const List<unsigned int> &orig) {
   struct _Enter {
@@ -115,7 +115,7 @@ LoopifyCombinatorics::perms_choices_fuel(const unsigned int &fuel,
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<unsigned int> &orig = _f.orig;
       const List<unsigned int> &choices = _f.choices;
-      const unsigned int &fuel = _f.fuel;
+      const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<List<unsigned int>>::nil();
       } else {
@@ -158,7 +158,7 @@ LoopifyCombinatorics::perms_choices_fuel(const unsigned int &fuel,
 
 /// permutations_fuel fuel l generates all permutations of a list.
 List<List<unsigned int>>
-LoopifyCombinatorics::permutations_fuel(const unsigned int &fuel,
+LoopifyCombinatorics::permutations_fuel(const unsigned int fuel,
                                         const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return List<List<unsigned int>>::cons(List<unsigned int>::nil(),
@@ -204,7 +204,7 @@ unsigned int LoopifyCombinatorics::len_list(const List<unsigned int> &l) {
   return _result;
 }
 
-unsigned int LoopifyCombinatorics::factorial_impl(const unsigned int &n) {
+unsigned int LoopifyCombinatorics::factorial_impl(const unsigned int n) {
   struct _Enter {
     unsigned int n;
   };
@@ -225,7 +225,7 @@ unsigned int LoopifyCombinatorics::factorial_impl(const unsigned int &n) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int &n = _f.n;
+      const unsigned int n = _f.n;
       if (n <= 0) {
         _result = 1u;
       } else {
@@ -282,7 +282,7 @@ LoopifyCombinatorics::subsequences(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       List<List<unsigned int>> rest = _result;
       std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
           map_prepend;
@@ -333,7 +333,8 @@ LoopifyCombinatorics::subsequences(const List<unsigned int> &l) {
 
 /// Helper for cartesian product.
 List<std::pair<unsigned int, unsigned int>>
-LoopifyCombinatorics::map_pairs(unsigned int y, const List<unsigned int> &l) {
+LoopifyCombinatorics::map_pairs(const unsigned int y,
+                                const List<unsigned int> &l) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -440,7 +441,7 @@ LoopifyCombinatorics::power_set(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       List<List<unsigned int>> rest = _result;
       std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
           map_add_x;
@@ -491,7 +492,8 @@ LoopifyCombinatorics::power_set(const List<unsigned int> &l) {
 
 /// insert_everywhere x l inserts x at every position in l.
 List<List<unsigned int>>
-LoopifyCombinatorics::insert_everywhere(unsigned int x, List<unsigned int> l) {
+LoopifyCombinatorics::insert_everywhere(const unsigned int x,
+                                        List<unsigned int> l) {
   struct _Enter {
     List<unsigned int> l;
   };
@@ -529,9 +531,9 @@ LoopifyCombinatorics::insert_everywhere(unsigned int x, List<unsigned int> l) {
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       List<unsigned int> l = std::move(_f.l);
-      unsigned int x = std::move(_f.x);
+      const unsigned int x = _f.x;
       List<List<unsigned int>> rest = _result;
       std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
           prepend_y;
@@ -582,7 +584,7 @@ LoopifyCombinatorics::insert_everywhere(unsigned int x, List<unsigned int> l) {
 }
 
 /// Helper: check if element is in list.
-bool LoopifyCombinatorics::elem(const unsigned int &x,
+bool LoopifyCombinatorics::elem(const unsigned int x,
                                 const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
@@ -661,7 +663,7 @@ unsigned int LoopifyCombinatorics::len_impl(const List<unsigned int> &l) {
 
 /// dedup l removes all duplicates (keeps first occurrence).
 List<unsigned int>
-LoopifyCombinatorics::dedup_fuel(const unsigned int &fuel,
+LoopifyCombinatorics::dedup_fuel(const unsigned int fuel,
                                  const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
@@ -685,7 +687,7 @@ LoopifyCombinatorics::dedup_fuel(const unsigned int &fuel,
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<unsigned int> &l = *(_f.l);
-      const unsigned int &fuel = _f.fuel;
+      const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -701,7 +703,7 @@ LoopifyCombinatorics::dedup_fuel(const unsigned int &fuel,
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       List<unsigned int> rest = _result;
       if (elem(d_a0, rest)) {
         _result = std::move(rest);

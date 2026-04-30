@@ -1,7 +1,7 @@
 #include <load_program_head_write.h>
 
-List<unsigned int> LoadProgramHeadWrite::update_nth(const unsigned int &n,
-                                                    unsigned int x,
+List<unsigned int> LoadProgramHeadWrite::update_nth(const unsigned int n,
+                                                    const unsigned int x,
                                                     List<unsigned int> l) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v_mut())) {
@@ -23,10 +23,9 @@ List<unsigned int> LoadProgramHeadWrite::update_nth(const unsigned int &n,
   }
 }
 
-LoadProgramHeadWrite::state
-LoadProgramHeadWrite::set_prom_params(const LoadProgramHeadWrite::state &s,
-                                      unsigned int addr, unsigned int data,
-                                      bool enable) {
+LoadProgramHeadWrite::state LoadProgramHeadWrite::set_prom_params(
+    const LoadProgramHeadWrite::state &s, const unsigned int addr,
+    const unsigned int data, const bool enable) {
   return state{s.rom, addr, data, enable};
 }
 
@@ -43,7 +42,7 @@ LoadProgramHeadWrite::execute_wpm(const LoadProgramHeadWrite::state &s) {
 
 LoadProgramHeadWrite::state
 LoadProgramHeadWrite::load_program(LoadProgramHeadWrite::state s,
-                                   const unsigned int &base,
+                                   const unsigned int base,
                                    const List<unsigned int> &bytes) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(bytes.v())) {
     return s;

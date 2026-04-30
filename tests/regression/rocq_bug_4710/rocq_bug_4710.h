@@ -25,7 +25,7 @@ struct RocqBug4710 {
   };
 
   static unsigned int bla(const Foo2 &x);
-  static bool bla_(const unsigned int &_x, const Foo2 &x);
+  static bool bla_(const unsigned int _x, const Foo2 &x);
   static inline const Foo_ test_foo = Foo_{5u};
   static inline const Foo2 test_foo2 = Foo2{10u, true};
   static inline const unsigned int test_bla = bla(test_foo2);

@@ -179,10 +179,7 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        const List *_next_self = d_a1.get();
-        List<t_A> _next_m = std::move(_loop_m);
-        _loop_self = _next_self;
-        _loop_m = std::move(_next_m);
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -205,10 +202,8 @@ struct LoopifyHofs {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<T1>::Cons>(_loop_l->v());
-        const List<T1> *_next_l = d_a1.get();
-        T1 _next_acc = f(_loop_acc, d_a0);
-        _loop_l = _next_l;
-        _loop_acc = _next_acc;
+        _loop_l = d_a1.get();
+        _loop_acc = f(_loop_acc, d_a0);
       }
     }
     return _result;
@@ -442,7 +437,7 @@ struct LoopifyHofs {
   /// find_indices p l finds all indices where p is true.
   template <MapsTo<bool, unsigned int> F0>
   static List<unsigned int>
-  find_indices_aux(F0 &&p, const List<unsigned int> &l, unsigned int i) {
+  find_indices_aux(F0 &&p, const List<unsigned int> &l, const unsigned int i) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
     } else {
@@ -464,7 +459,7 @@ struct LoopifyHofs {
 
   /// delete_by eq x l deletes first element equal to x.
   template <MapsTo<bool, unsigned int, unsigned int> F0>
-  static List<unsigned int> delete_by(F0 &&eq, const unsigned int &x,
+  static List<unsigned int> delete_by(F0 &&eq, const unsigned int x,
                                       const List<unsigned int> &l) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -501,17 +496,17 @@ struct LoopifyHofs {
                            const List<unsigned int> &l2);
   /// lookup_all key l finds all values associated with key in association list.
   static List<unsigned int>
-  lookup_all(const unsigned int &key,
+  lookup_all(const unsigned int key,
              const List<std::pair<unsigned int, unsigned int>> &l);
 
   /// scanl f acc l scan from left with accumulator.
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
-  static List<unsigned int> scanl(F0 &&f, unsigned int acc,
+  static List<unsigned int> scanl(F0 &&f, const unsigned int acc,
                                   const List<unsigned int> &l) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
     const List<unsigned int> *_loop_l = &l;
-    unsigned int _loop_acc = std::move(acc);
+    unsigned int _loop_acc = acc;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
@@ -527,10 +522,8 @@ struct LoopifyHofs {
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        const List<unsigned int> *_next_l = d_a1.get();
-        unsigned int _next_acc = f(_loop_acc, d_a0);
-        _loop_l = _next_l;
-        _loop_acc = std::move(_next_acc);
+        _loop_l = d_a1.get();
+        _loop_acc = f(_loop_acc, d_a0);
         continue;
       }
     }
@@ -539,7 +532,7 @@ struct LoopifyHofs {
 
   /// scanl1 f l like scanl but no initial value, uses first element.
   template <MapsTo<unsigned int, unsigned int, unsigned int> F1>
-  static List<unsigned int> scanl1_fuel(const unsigned int &fuel, F1 &&f,
+  static List<unsigned int> scanl1_fuel(const unsigned int fuel, F1 &&f,
                                         List<unsigned int> l) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -574,11 +567,8 @@ struct LoopifyHofs {
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            List<unsigned int> _next_l =
-                List<unsigned int>::cons(f(d_a0, d_a00), *(d_a10));
-            unsigned int _next_fuel = g;
-            _loop_l = std::move(_next_l);
-            _loop_fuel = std::move(_next_fuel);
+            _loop_l = List<unsigned int>::cons(f(d_a0, d_a00), *(d_a10));
+            _loop_fuel = g;
             continue;
           }
         }
@@ -639,12 +629,12 @@ struct LoopifyHofs {
   }
 
   /// Helper: get head of list with default.
-  static unsigned int head_default(unsigned int default0,
+  static unsigned int head_default(const unsigned int default0,
                                    const List<unsigned int> &l);
 
   /// scanr f acc l scan from right.
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
-  static List<unsigned int> scanr(F0 &&f, unsigned int acc,
+  static List<unsigned int> scanr(F0 &&f, const unsigned int acc,
                                   const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -680,8 +670,8 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        unsigned int acc = std::move(_f.acc);
-        unsigned int d_a0 = std::move(_f.d_a0);
+        const unsigned int acc = _f.acc;
+        unsigned int d_a0 = _f.d_a0;
         F0 f = _f.f;
         List<unsigned int> rest = _result;
         unsigned int h = head_default(acc, rest);
@@ -733,7 +723,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        unsigned int d_a0 = std::move(_f.d_a0);
+        unsigned int d_a0 = _f.d_a0;
         F0 f = _f.f;
         List<unsigned int> rest = _result;
         unsigned int h = head_default(d_a0, rest);
@@ -819,7 +809,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        unsigned int d_a0 = std::move(_f.d_a0);
+        unsigned int d_a0 = _f.d_a0;
         F0 f = _f.f;
         List<unsigned int> rest = _result;
         auto _cs = f(d_a0);
@@ -876,7 +866,7 @@ struct LoopifyHofs {
 
   /// merge_by cmp l1 l2 merges two lists using comparison function.
   template <MapsTo<unsigned int, unsigned int, unsigned int> F1>
-  static List<unsigned int> merge_by_fuel(const unsigned int &fuel, F1 &&cmp,
+  static List<unsigned int> merge_by_fuel(const unsigned int fuel, F1 &&cmp,
                                           List<unsigned int> l1,
                                           List<unsigned int> l2) {
     if (fuel <= 0) {
@@ -955,7 +945,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        unsigned int d_a0 = std::move(_f.d_a0);
+        unsigned int d_a0 = _f.d_a0;
         F0 f = _f.f;
         unsigned int rest_max = _result;
         unsigned int fx = f(d_a0);
@@ -971,11 +961,11 @@ struct LoopifyHofs {
 
   /// iterate f n x generates x, f(x), f(f(x)), ... of length n.
   template <MapsTo<unsigned int, unsigned int> F0>
-  static List<unsigned int> iterate(F0 &&f, const unsigned int &n,
-                                    unsigned int x) {
+  static List<unsigned int> iterate(F0 &&f, const unsigned int n,
+                                    const unsigned int x) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
-    unsigned int _loop_x = std::move(x);
+    unsigned int _loop_x = x;
     unsigned int _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
@@ -990,10 +980,8 @@ struct LoopifyHofs {
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        unsigned int _next_x = f(_loop_x);
-        unsigned int _next_n = m;
-        _loop_x = std::move(_next_x);
-        _loop_n = std::move(_next_n);
+        _loop_x = f(_loop_x);
+        _loop_n = m;
         continue;
       }
     }
@@ -1043,7 +1031,7 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
         F0 cmp = _f.cmp;
-        unsigned int d_a0 = std::move(_f.d_a0);
+        unsigned int d_a0 = _f.d_a0;
         unsigned int m = _result;
         if (0u <= cmp(d_a0, m)) {
           _result = d_a0;
@@ -1058,7 +1046,7 @@ struct LoopifyHofs {
   /// fold_right f l acc folds from the right.
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
   static unsigned int fold_right(F0 &&f, const List<unsigned int> &l,
-                                 unsigned int acc) {
+                                 const unsigned int acc) {
     struct _Enter {
       const List<unsigned int> *l;
     };
@@ -1134,7 +1122,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        unsigned int d_a0 = std::move(_f.d_a0);
+        unsigned int d_a0 = _f.d_a0;
         F0 p = _f.p;
         const List<unsigned int> &yes = _result.first;
         const List<unsigned int> &no = _result.second;
@@ -1152,13 +1140,13 @@ struct LoopifyHofs {
   static List<List<unsigned int>> subsequences(const List<unsigned int> &l);
   /// Helper: pair element with all elements in list.
   static List<std::pair<unsigned int, unsigned int>>
-  pair_with_all(unsigned int x, const List<unsigned int> &l);
+  pair_with_all(const unsigned int x, const List<unsigned int> &l);
   /// cartesian l1 l2 computes cartesian product of two lists.
   static List<std::pair<unsigned int, unsigned int>>
   cartesian(const List<unsigned int> &l1, const List<unsigned int> &l2);
   /// longest_run l finds the longest consecutive run of equal elements.
   /// Matches on recursive result to decide behavior.
-  static List<unsigned int> longest_run_fuel(const unsigned int &fuel,
+  static List<unsigned int> longest_run_fuel(const unsigned int fuel,
                                              List<unsigned int> l);
   static List<unsigned int> longest_run(const List<unsigned int> &l);
 
@@ -1269,7 +1257,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        unsigned int d_a0 = std::move(_f.d_a0);
+        unsigned int d_a0 = _f.d_a0;
         const List<unsigned int> &taken = _result.first;
         const List<unsigned int> &rest = _result.second;
         _result = std::make_pair(List<unsigned int>::cons(d_a0, taken), rest);
@@ -1281,7 +1269,7 @@ struct LoopifyHofs {
   /// group_by_eq eq l groups consecutive elements by equality function.
   template <MapsTo<bool, unsigned int, unsigned int> F1>
   static List<List<unsigned int>>
-  group_by_eq_fuel(const unsigned int &fuel, F1 &&eq,
+  group_by_eq_fuel(const unsigned int fuel, F1 &&eq,
                    const List<unsigned int> &l) {
     if (fuel <= 0) {
       return List<List<unsigned int>>::nil();
@@ -1338,7 +1326,7 @@ struct LoopifyHofs {
       MapsTo<std::pair<unsigned int, unsigned int>, unsigned int, unsigned int>
           F0>
   static std::pair<unsigned int, List<unsigned int>>
-  map_accum_l(F0 &&f, unsigned int acc, const List<unsigned int> &l) {
+  map_accum_l(F0 &&f, const unsigned int acc, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
       unsigned int acc;
@@ -1361,7 +1349,7 @@ struct LoopifyHofs {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List<unsigned int> &l = *(_f.l);
-        unsigned int acc = std::move(_f.acc);
+        const unsigned int acc = _f.acc;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(acc, List<unsigned int>::nil());
         } else {
@@ -1375,7 +1363,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        unsigned int y = std::move(_f.y);
+        unsigned int y = _f.y;
         const unsigned int &acc__ = _result.first;
         const List<unsigned int> &ys = _result.second;
         _result = std::make_pair(acc__, List<unsigned int>::cons(y, ys));

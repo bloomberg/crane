@@ -52,7 +52,7 @@ List<unsigned int> MergesortFuel::merge(List<unsigned int> l1,
 }
 
 /// * Fuel-based merge sort
-List<unsigned int> MergesortFuel::msort_go(const unsigned int &fuel,
+List<unsigned int> MergesortFuel::msort_go(const unsigned int fuel,
                                            List<unsigned int> l) {
   if (fuel <= 0) {
     return l;
@@ -81,7 +81,7 @@ List<unsigned int> MergesortFuel::msort(const List<unsigned int> &l) {
   return msort_go(l.length(), l);
 }
 
-bool Compare_dec::le_lt_dec(const unsigned int &n, const unsigned int &m) {
+bool Compare_dec::le_lt_dec(const unsigned int n, const unsigned int m) {
   if (n <= 0) {
     return true;
   } else {

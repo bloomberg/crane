@@ -146,7 +146,7 @@ struct PairClosureEscape {
     }
   }
 
-  static unsigned int sum_values(const tree &t, unsigned int x);
+  static unsigned int sum_values(const tree &t, const unsigned int x);
   /// BUG: Partial application stored in fst of a pair (std::make_pair).
   /// return_captures_by_value doesn't handle lambdas inside std::make_pair.
   static std::pair<std::function<unsigned int(unsigned int)>, unsigned int>

@@ -119,7 +119,7 @@ struct AccumClosureCapture {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    unsigned int apply_all(unsigned int init) const {
+    unsigned int apply_all(const unsigned int init) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
         return init;
@@ -279,13 +279,13 @@ struct AccumClosureCapture {
       } else {
         auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
         return fn_list::fcons(
-            [=](const unsigned int &x) mutable {
+            [=](const unsigned int x) mutable {
               return (x + _self.tree_sum());
             },
             fn_list::fcons(
-                [=](const unsigned int &x) mutable { return (x + d_a1); },
+                [=](const unsigned int x) mutable { return (x + d_a1); },
                 fn_list::fcons(
-                    [=](const unsigned int &x) mutable {
+                    [=](const unsigned int x) mutable {
                       return (x + _self.tree_sum());
                     },
                     fn_list::fnil())));

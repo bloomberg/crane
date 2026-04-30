@@ -130,7 +130,7 @@ public:
 
 struct EffectRecursiveList {
   /// 1. Recursive function building a list from stdin lines
-  static List<std::string> read_n_lines(const unsigned int &n);
+  static List<std::string> read_n_lines(const unsigned int n);
 
   /// 2. Map a function over a list with effects
   template <MapsTo<void, std::string> F0>
@@ -151,7 +151,7 @@ struct EffectRecursiveList {
                                  const std::string acc);
   /// 4. Read lines and store each in env with index
   static unsigned int store_lines(const std::string prefix,
-                                  const unsigned int &n);
+                                  const unsigned int n);
   /// 5. Collect env values into a list
   static List<std::optional<std::string>>
   collect_envs(const List<std::string> &names);

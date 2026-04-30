@@ -162,7 +162,7 @@ struct ReuseLambdaCapture {
   /// // l is the same object as _rf
   /// // l.d_a1 is null -> crash
   /// return _rf;
-  static mylist add_length_to_each(mylist l, const bool &b);
+  static mylist add_length_to_each(mylist l, const bool b);
   static inline const unsigned int test1 = length(add_length_to_each(
       mylist::mycons(10u,
                      mylist::mycons(20u, mylist::mycons(30u, mylist::mynil()))),

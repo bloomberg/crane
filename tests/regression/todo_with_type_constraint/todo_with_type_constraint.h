@@ -28,7 +28,7 @@ struct TodoWithTypeConstraint {
   struct NatBase {
     using t = unsigned int;
     static inline const unsigned int zero = 0u;
-    static unsigned int bump(unsigned int n);
+    static unsigned int bump(const unsigned int n);
   };
 
   template <NAT_BASE X> struct UseNat {

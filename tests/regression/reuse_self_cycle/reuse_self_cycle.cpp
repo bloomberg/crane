@@ -26,7 +26,7 @@ unsigned int ReuseSelfCycle::length(const ReuseSelfCycle::mylist &l) {
 /// 3. mycons is index 0 -> List.hd picks it
 /// 4. use_count() == 1 for fresh values
 ReuseSelfCycle::mylist ReuseSelfCycle::prepend_self(ReuseSelfCycle::mylist l,
-                                                    const bool &b) {
+                                                    const bool b) {
   if (b) {
     if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(
             l.v_mut())) {

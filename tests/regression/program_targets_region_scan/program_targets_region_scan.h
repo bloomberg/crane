@@ -251,7 +251,7 @@ struct ProgramTargetsRegionScan {
   };
 
   static std::optional<unsigned int> jump_target(const instruction &i);
-  static bool addr_in_regionb(const unsigned int &addr, const layout &l);
+  static bool addr_in_regionb(const unsigned int addr, const layout &l);
   static bool target_in_layoutb(const layout &l, const instruction &i);
   static bool program_targets_okb(const List<instruction> &prog, layout l);
   static inline const unsigned int t = []() {

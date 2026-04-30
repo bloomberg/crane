@@ -195,7 +195,7 @@ public:
   }
 
   /// Take n elements
-  List<t_A> take(const unsigned int &n) const {
+  List<t_A> take(const unsigned int n) const {
     if (n <= 0) {
       return List<t_A>::nil();
     } else {
@@ -204,7 +204,7 @@ public:
     }
   }
 
-  static Sseq<unsigned int> nats_from(unsigned int n) {
+  static Sseq<unsigned int> nats_from(const unsigned int n) {
     return Sseq<unsigned int>::lazy_([=]() mutable -> Sseq<unsigned int> {
       return Sseq<unsigned int>::scons(n, nats_from((n + 1)));
     });
@@ -226,7 +226,7 @@ public:
   static const unsigned int &test1() {
     static const unsigned int v = []() {
       Sseq<unsigned int> s =
-          nats_from(0u).smap([](unsigned int x) { return (x + 1); });
+          nats_from(0u).smap([](const unsigned int x) { return (x + 1); });
       return sum(s.take(4u));
     }();
     return v;
@@ -236,8 +236,8 @@ public:
   /// take 4 -> 1, 2, 3, 4 -> sum = 10
   static const unsigned int &test2() {
     static const unsigned int v = []() {
-      Sseq<unsigned int> s =
-          nats_from(0u).smap_direct([](unsigned int x) { return (x + 1); });
+      Sseq<unsigned int> s = nats_from(0u).smap_direct(
+          [](const unsigned int x) { return (x + 1); });
       return sum(s.take(4u));
     }();
     return v;

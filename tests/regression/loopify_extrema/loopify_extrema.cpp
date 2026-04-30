@@ -37,7 +37,7 @@ unsigned int LoopifyExtrema::maximum(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       unsigned int max_rest = _result;
       if (max_rest < d_a0) {
         _result = d_a0;
@@ -86,7 +86,7 @@ unsigned int LoopifyExtrema::minimum(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       unsigned int min_rest = _result;
       if (d_a0 < min_rest) {
         _result = d_a0;
@@ -136,7 +136,7 @@ LoopifyExtrema::minmax(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       const unsigned int &lo = _result.first;
       const unsigned int &hi = _result.second;
       _result = std::make_pair(std::min(d_a0, lo), std::max(d_a0, hi));
@@ -179,10 +179,8 @@ unsigned int LoopifyExtrema::lex_compare(const List<unsigned int> &l1,
             _result = 2u;
             break;
           } else {
-            const List<unsigned int> *_next_l2 = d_a10.get();
-            const List<unsigned int> *_next_l1 = d_a1.get();
-            _loop_l2 = _next_l2;
-            _loop_l1 = _next_l1;
+            _loop_l2 = d_a10.get();
+            _loop_l1 = d_a1.get();
           }
         }
       }

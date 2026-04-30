@@ -126,12 +126,12 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
 };
 
 struct RegionPatchWrite {
   static List<unsigned int> update_region(const List<unsigned int> &rom,
-                                          const unsigned int &base,
+                                          const unsigned int base,
                                           const List<unsigned int> &bytes);
   static inline const unsigned int t = ListDef::template nth<unsigned int>(
       2u,
@@ -148,7 +148,7 @@ struct RegionPatchWrite {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int &n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

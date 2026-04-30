@@ -66,8 +66,8 @@ PulseParseCertificateCase::pulse_base_from_runs(const List<unsigned int> &rs) {
 }
 
 PulseParseCertificateCase::PulseClass
-PulseParseCertificateCase::classify_run_with_base(unsigned int base,
-                                                  const unsigned int &n) {
+PulseParseCertificateCase::classify_run_with_base(const unsigned int base,
+                                                  const unsigned int n) {
   if ((base + 1) <= n) {
     return PulseClass::e_MARKLONG;
   } else {
@@ -77,7 +77,7 @@ PulseParseCertificateCase::classify_run_with_base(unsigned int base,
 
 List<PulseParseCertificateCase::PulseClass>
 PulseParseCertificateCase::classify_runs_with_base(
-    unsigned int base, const List<unsigned int> &rs) {
+    const unsigned int base, const List<unsigned int> &rs) {
   return rs.template map<PulseParseCertificateCase::PulseClass>(
       [=](unsigned int _x0) mutable -> PulseParseCertificateCase::PulseClass {
         return classify_run_with_base(base, _x0);

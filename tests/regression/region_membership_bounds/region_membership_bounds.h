@@ -19,7 +19,7 @@ struct RegionMembershipBounds {
     }
   };
 
-  static bool addr_in_regionb(const unsigned int &addr, const layout &l);
+  static bool addr_in_regionb(const unsigned int addr, const layout &l);
   static inline const unsigned int t = []() {
     return []() {
       layout l = layout{100u, 20u};

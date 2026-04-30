@@ -17,7 +17,7 @@ struct SetTestPinUpdate {
     state clone() const { return state{(*(this)).acc, (*(this)).test_pin}; }
   };
 
-  static state set_test_pin(const state &s, bool v);
+  static state set_test_pin(const state &s, const bool v);
   static inline const unsigned int t = []() {
     return []() {
       state s_ = set_test_pin(state{6u, false}, true);

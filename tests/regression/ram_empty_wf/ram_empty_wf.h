@@ -126,7 +126,7 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static List<T1> repeat(const T1 x, const unsigned int &n);
+  static List<T1> repeat(const T1 x, const unsigned int n);
 };
 
 struct RamEmptyWf {
@@ -184,7 +184,7 @@ struct RamEmptyWf {
 };
 
 template <typename T1>
-List<T1> ListDef::repeat(const T1 x, const unsigned int &n) {
+List<T1> ListDef::repeat(const T1 x, const unsigned int n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {

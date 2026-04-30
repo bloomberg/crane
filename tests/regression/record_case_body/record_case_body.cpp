@@ -12,7 +12,7 @@ unsigned int RecordCaseBody::case_in_body(const RecordCaseBody::Rec &r) {
   }
 }
 
-unsigned int RecordCaseBody::helper(const unsigned int &n) {
+unsigned int RecordCaseBody::helper(const unsigned int n) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -51,7 +51,7 @@ unsigned int RecordCaseBody::apply_nonfld(const RecordCaseBody::Rec &r) {
 }
 
 unsigned int RecordCaseBody::conditional_body(const RecordCaseBody::Rec &r,
-                                              const bool &flag) {
+                                              const bool flag) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;
@@ -67,7 +67,7 @@ unsigned int RecordCaseBody::conditional_body(const RecordCaseBody::Rec &r,
   }
 }
 
-unsigned int RecordCaseBody::outer_ref(const unsigned int &x,
+unsigned int RecordCaseBody::outer_ref(const unsigned int x,
                                        const RecordCaseBody::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
@@ -76,7 +76,7 @@ unsigned int RecordCaseBody::outer_ref(const unsigned int &x,
 }
 
 unsigned int RecordCaseBody::lambda_body(const RecordCaseBody::Rec &r,
-                                         const unsigned int &n) {
+                                         const unsigned int n) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;

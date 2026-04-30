@@ -129,14 +129,14 @@ struct LoopifyItreeSeq {
   /// Tail-recursive countdown using erased ITree. In sequential mode, itree is
   /// erased so this becomes a plain tail-recursive C++ function. Loopify should
   /// convert it to a while loop.
-  static unsigned int count_down(const unsigned int &n);
+  static unsigned int count_down(const unsigned int n);
   /// Sum 1..n via tail recursion with accumulator.
-  static unsigned int sum_to(const unsigned int &n);
+  static unsigned int sum_to(const unsigned int n);
   /// Non-tail recursive: build a list counting down from n.
-  static List<unsigned int> countdown_list(unsigned int n);
-  static unsigned int delay_ret(const unsigned int &n, const unsigned int &v);
+  static List<unsigned int> countdown_list(const unsigned int n);
+  static unsigned int delay_ret(const unsigned int n, const unsigned int v);
   static void spin();
-  static void forever(unsigned int n);
+  static void forever(const unsigned int n);
   static unsigned int test_count_5();
   static unsigned int test_sum_10();
   static List<unsigned int> test_clist_4();

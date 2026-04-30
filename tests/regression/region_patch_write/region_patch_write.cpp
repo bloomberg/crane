@@ -2,7 +2,7 @@
 
 List<unsigned int>
 RegionPatchWrite::update_region(const List<unsigned int> &rom,
-                                const unsigned int &base,
+                                const unsigned int base,
                                 const List<unsigned int> &bytes) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(rom.v())) {
     return List<unsigned int>::nil();

@@ -136,11 +136,11 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
 };
 
 struct Bool {
-  static bool eqb(const bool &b1, const bool &b2);
+  static bool eqb(const bool b1, const bool b2);
 };
 
 struct PromOps {
@@ -148,7 +148,7 @@ struct PromOps {
                            const List<unsigned int> &ys);
 
   template <typename T1>
-  static List<T1> update_nth(const unsigned int &n, const T1 x,
+  static List<T1> update_nth(const unsigned int n, const T1 x,
                              const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -236,8 +236,8 @@ struct PromOps {
     }
   };
 
-  static state3 set_prom_params3(const state3 &s, unsigned int addr,
-                                 unsigned int data, bool enable);
+  static state3 set_prom_params3(const state3 &s, const unsigned int addr,
+                                 const unsigned int data, const bool enable);
   static inline const unsigned int test3 = []() {
     return []() {
       state3 s = state3{
@@ -307,8 +307,8 @@ struct PromOps {
     }
   };
 
-  static state5 set_prom_params5(const state5 &s, unsigned int addr,
-                                 unsigned int data, bool enable);
+  static state5 set_prom_params5(const state5 &s, const unsigned int addr,
+                                 const unsigned int data, const bool enable);
   static inline const unsigned int test5 = []() {
     return []() {
       state5 s = state5{
@@ -341,8 +341,8 @@ struct PromOps {
     }
   };
 
-  static state6 set_prom_params6(const state6 &s, unsigned int addr,
-                                 unsigned int data, bool enable);
+  static state6 set_prom_params6(const state6 &s, const unsigned int addr,
+                                 const unsigned int data, const bool enable);
   static inline const state6 sample6 =
       state6{List<unsigned int>::cons(
                  10u, List<unsigned int>::cons(
@@ -368,8 +368,8 @@ struct PromOps {
     }
   };
 
-  static state7 set_prom_params7(const state7 &s, unsigned int addr,
-                                 unsigned int data, bool enable);
+  static state7 set_prom_params7(const state7 &s, const unsigned int addr,
+                                 const unsigned int data, const bool enable);
   static inline const state7 sample7 = state7{
       List<unsigned int>::cons(
           1u, List<unsigned int>::cons(
@@ -396,8 +396,8 @@ struct PromOps {
     }
   };
 
-  static state8 set_prom_params8(const state8 &s, unsigned int addr,
-                                 unsigned int data, bool enable);
+  static state8 set_prom_params8(const state8 &s, const unsigned int addr,
+                                 const unsigned int data, const bool enable);
   static inline const state8 sample8 = state8{
       List<unsigned int>::cons(
           1u, List<unsigned int>::cons(
@@ -421,8 +421,8 @@ struct PromOps {
     }
   };
 
-  static state9 set_prom_params9(const state9 &s, unsigned int addr,
-                                 unsigned int data, bool enable);
+  static state9 set_prom_params9(const state9 &s, const unsigned int addr,
+                                 const unsigned int data, const bool enable);
   static inline const state9 sample9 =
       state9{List<unsigned int>::cons(
                  10u, List<unsigned int>::cons(
@@ -463,8 +463,8 @@ struct PromOps {
     }
   };
 
-  static state10 set_prom_params10(const state10 &s, unsigned int addr,
-                                   unsigned int data, bool enable);
+  static state10 set_prom_params10(const state10 &s, const unsigned int addr,
+                                   const unsigned int data, const bool enable);
   static state10 execute_wpm10(const state10 &s);
   static inline const state10 sample10 = state10{
       List<unsigned int>::cons(
@@ -612,7 +612,7 @@ struct PromOps {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int &n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

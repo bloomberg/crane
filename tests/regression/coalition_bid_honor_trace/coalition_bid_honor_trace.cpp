@@ -365,7 +365,7 @@ unsigned int CoalitionBidHonorTraceCase::unit_skill(
 }
 
 unsigned int
-CoalitionBidHonorTraceCase::skill_bv_multiplier_num(const unsigned int &skill) {
+CoalitionBidHonorTraceCase::skill_bv_multiplier_num(const unsigned int skill) {
   if (skill <= 4u) {
     return 6u;
   } else {
@@ -478,7 +478,7 @@ unsigned int CoalitionBidHonorTraceCase::coalition_tonnage(
 CoalitionBidHonorTraceCase::Coalition
 CoalitionBidHonorTraceCase::update_coalition_force(
     const List<CoalitionBidHonorTraceCase::CoalitionMember> &c,
-    const unsigned int &idx, List<CoalitionBidHonorTraceCase::Unit> new_force) {
+    const unsigned int idx, List<CoalitionBidHonorTraceCase::Unit> new_force) {
   if (std::holds_alternative<
           typename List<CoalitionBidHonorTraceCase::CoalitionMember>::Nil>(
           c.v())) {
@@ -705,7 +705,7 @@ CoalitionBidHonorTraceCase::coalition_state_force(
 
 CoalitionBidHonorTraceCase::Honor CoalitionBidHonorTraceCase::ledger_lookup(
     const List<std::pair<unsigned int, Z>> &ledger,
-    const unsigned int &warrior_id) {
+    const unsigned int warrior_id) {
   if (std::holds_alternative<typename List<std::pair<unsigned int, Z>>::Nil>(
           ledger.v())) {
     return Z::z0();
@@ -724,8 +724,8 @@ CoalitionBidHonorTraceCase::Honor CoalitionBidHonorTraceCase::ledger_lookup(
 
 CoalitionBidHonorTraceCase::HonorLedger
 CoalitionBidHonorTraceCase::ledger_update_by_id(
-    const List<std::pair<unsigned int, Z>> &ledger, unsigned int warrior_id,
-    Z new_honor) {
+    const List<std::pair<unsigned int, Z>> &ledger,
+    const unsigned int warrior_id, Z new_honor) {
   if (std::holds_alternative<typename List<std::pair<unsigned int, Z>>::Nil>(
           ledger.v())) {
     return List<std::pair<unsigned int, Z>>::cons(

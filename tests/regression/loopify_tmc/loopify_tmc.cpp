@@ -4,8 +4,8 @@
 /// Functions where the recursive call is wrapped in a single constructor
 /// should be optimized to use O(1) extra space via destination-passing style.
 /// range lo hi creates lo, lo+1, ..., hi-1.
-LoopifyTmc::list<unsigned int> LoopifyTmc::range(const unsigned int &lo,
-                                                 const unsigned int &hi) {
+LoopifyTmc::list<unsigned int> LoopifyTmc::range(const unsigned int lo,
+                                                 const unsigned int hi) {
   std::unique_ptr<LoopifyTmc::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyTmc::list<unsigned int>> *_write = &_head;
   unsigned int _loop_hi = hi;
@@ -37,7 +37,7 @@ LoopifyTmc::list<unsigned int> LoopifyTmc::range(const unsigned int &lo,
 
 /// prefix_sums acc l computes running prefix sums.
 LoopifyTmc::list<unsigned int>
-LoopifyTmc::prefix_sums(const unsigned int &acc,
+LoopifyTmc::prefix_sums(const unsigned int acc,
                         const LoopifyTmc::list<unsigned int> &l) {
   std::unique_ptr<LoopifyTmc::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyTmc::list<unsigned int>> *_write = &_head;
@@ -58,10 +58,8 @@ LoopifyTmc::prefix_sums(const unsigned int &acc,
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      const LoopifyTmc::list<unsigned int> *_next_l = d_a1.get();
-      unsigned int _next_acc = s;
-      _loop_l = _next_l;
-      _loop_acc = std::move(_next_acc);
+      _loop_l = d_a1.get();
+      _loop_acc = s;
       continue;
     }
   }

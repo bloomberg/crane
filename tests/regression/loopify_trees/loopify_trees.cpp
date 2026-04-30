@@ -132,7 +132,7 @@ unsigned int LoopifyTrees::leaf_sum(const LoopifyTrees::tree<unsigned int> &t) {
 
 /// insert_bst BST insertion.
 LoopifyTrees::tree<unsigned int>
-LoopifyTrees::insert_bst(unsigned int x,
+LoopifyTrees::insert_bst(const unsigned int x,
                          const LoopifyTrees::tree<unsigned int> &t) {
   struct _Enter {
     const LoopifyTrees::tree<unsigned int> *t;
@@ -191,7 +191,7 @@ LoopifyTrees::insert_bst(unsigned int x,
 /// count_paths t n counts root-to-leaf paths that sum to n.
 unsigned int
 LoopifyTrees::count_paths(const LoopifyTrees::tree<unsigned int> &t,
-                          const unsigned int &n) {
+                          const unsigned int n) {
   struct _Enter {
     unsigned int n;
     const LoopifyTrees::tree<unsigned int> *t;
@@ -230,7 +230,7 @@ LoopifyTrees::count_paths(const LoopifyTrees::tree<unsigned int> &t,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int &n = _f.n;
+      const unsigned int n = _f.n;
       const LoopifyTrees::tree<unsigned int> &t = *(_f.t);
       if (std::holds_alternative<
               typename LoopifyTrees::tree<unsigned int>::Leaf>(t.v())) {
@@ -292,7 +292,7 @@ LoopifyTrees::sum_of_max_branches(const LoopifyTrees::tree<unsigned int> &t) {
 /// Helper: sum all values in a list of rose trees (processes both tree and
 /// list levels in one recursive function to enable full loopification).
 unsigned int
-LoopifyTrees::sum_rose_list_fuel(const unsigned int &fuel,
+LoopifyTrees::sum_rose_list_fuel(const unsigned int fuel,
                                  const List<LoopifyTrees::rose> &cs) {
   struct _Enter {
     const List<LoopifyTrees::rose> *cs;
@@ -324,7 +324,7 @@ LoopifyTrees::sum_rose_list_fuel(const unsigned int &fuel,
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<LoopifyTrees::rose> &cs = *(_f.cs);
-      const unsigned int &fuel = _f.fuel;
+      const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
       } else {
@@ -355,7 +355,7 @@ LoopifyTrees::sum_rose_list_fuel(const unsigned int &fuel,
 
 /// Helper: flatten a list of rose trees to a flat list of nats.
 List<unsigned int>
-LoopifyTrees::flatten_rose_list_fuel(const unsigned int &fuel,
+LoopifyTrees::flatten_rose_list_fuel(const unsigned int fuel,
                                      const List<LoopifyTrees::rose> &cs) {
   struct _Enter {
     const List<LoopifyTrees::rose> *cs;
@@ -387,7 +387,7 @@ LoopifyTrees::flatten_rose_list_fuel(const unsigned int &fuel,
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<LoopifyTrees::rose> &cs = *(_f.cs);
-      const unsigned int &fuel = _f.fuel;
+      const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -418,7 +418,7 @@ LoopifyTrees::flatten_rose_list_fuel(const unsigned int &fuel,
 
 /// Helper: compute maximum depth among a list of rose trees.
 unsigned int
-LoopifyTrees::depth_rose_list_fuel(const unsigned int &fuel,
+LoopifyTrees::depth_rose_list_fuel(const unsigned int fuel,
                                    const List<LoopifyTrees::rose> &cs) {
   if (fuel <= 0) {
     return 0u;
@@ -608,7 +608,7 @@ List<LoopifyTrees::tree<unsigned int>> LoopifyTrees::extract_tree_children(
 
 /// tree_levels t returns list of lists, one per level (breadth-first).
 List<List<unsigned int>> LoopifyTrees::tree_levels_fuel(
-    const unsigned int &fuel,
+    const unsigned int fuel,
     const List<LoopifyTrees::tree<unsigned int>> &trees) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
@@ -636,11 +636,8 @@ List<List<unsigned int>> LoopifyTrees::tree_levels_fuel(
         _write = &std::get<typename List<List<unsigned int>>::Cons>(
                       (*_write)->v_mut())
                       .d_a1;
-        List<LoopifyTrees::tree<unsigned int>> _next_trees =
-            std::move(children);
-        unsigned int _next_fuel = f;
-        _loop_trees = std::move(_next_trees);
-        _loop_fuel = std::move(_next_fuel);
+        _loop_trees = std::move(children);
+        _loop_fuel = f;
         continue;
       }
     }
@@ -697,10 +694,7 @@ LoopifyTrees::append_list_lists(const List<List<unsigned int>> &l1,
       _write =
           &std::get<typename List<List<unsigned int>>::Cons>((*_write)->v_mut())
                .d_a1;
-      List<List<unsigned int>> _next_l2 = std::move(_loop_l2);
-      const List<List<unsigned int>> *_next_l1 = d_a1.get();
-      _loop_l2 = std::move(_next_l2);
-      _loop_l1 = _next_l1;
+      _loop_l1 = d_a1.get();
       continue;
     }
   }
@@ -709,7 +703,7 @@ LoopifyTrees::append_list_lists(const List<List<unsigned int>> &l1,
 
 /// Helper: prepend value to all lists in a list of lists.
 List<List<unsigned int>>
-LoopifyTrees::map_cons_to_all(unsigned int x,
+LoopifyTrees::map_cons_to_all(const unsigned int x,
                               const List<List<unsigned int>> &lsts) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
@@ -846,7 +840,7 @@ LoopifyTrees::collect_unsorted(const LoopifyTrees::tree<unsigned int> &t) {
 }
 
 /// Simple insertion sort for collect_sorted.
-List<unsigned int> LoopifyTrees::insert_sorted(unsigned int x,
+List<unsigned int> LoopifyTrees::insert_sorted(const unsigned int x,
                                                const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -924,8 +918,9 @@ LoopifyTrees::collect_sorted(const LoopifyTrees::tree<unsigned int> &t) {
 }
 
 /// Helper: max of 4 values using nested max.
-unsigned int LoopifyTrees::max4_impl(unsigned int a, unsigned int b,
-                                     unsigned int c, unsigned int d) {
+unsigned int LoopifyTrees::max4_impl(const unsigned int a, const unsigned int b,
+                                     const unsigned int c,
+                                     const unsigned int d) {
   if ((a <= b ? b : a) <= (c <= d ? d : c)) {
     if (c <= d) {
       return d;
@@ -942,8 +937,8 @@ unsigned int LoopifyTrees::max4_impl(unsigned int a, unsigned int b,
 }
 
 /// Helper: compute minimum of three values.
-unsigned int LoopifyTrees::min3(unsigned int a, unsigned int b,
-                                unsigned int c) {
+unsigned int LoopifyTrees::min3(const unsigned int a, const unsigned int b,
+                                const unsigned int c) {
   if (a <= b) {
     if (a <= c) {
       return a;
@@ -960,8 +955,8 @@ unsigned int LoopifyTrees::min3(unsigned int a, unsigned int b,
 }
 
 /// Helper: compute maximum of three values.
-unsigned int LoopifyTrees::max3(unsigned int a, unsigned int b,
-                                unsigned int c) {
+unsigned int LoopifyTrees::max3(const unsigned int a, const unsigned int b,
+                                const unsigned int c) {
   if (b <= a) {
     if (c <= a) {
       return a;
@@ -1030,7 +1025,7 @@ LoopifyTrees::all_paths_sum(const LoopifyTrees::tree<unsigned int> &t) {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         LoopifyTrees::tree<unsigned int> tree0 = std::move(_f.tree0);
-        unsigned int acc = std::move(_f.acc);
+        unsigned int acc = _f.acc;
         if (std::holds_alternative<
                 typename LoopifyTrees::tree<unsigned int>::Leaf>(tree0.v())) {
           _result = acc;
@@ -1057,7 +1052,7 @@ LoopifyTrees::all_paths_sum(const LoopifyTrees::tree<unsigned int> &t) {
 }
 
 /// tree_contains x t checks if value exists in tree.
-bool LoopifyTrees::tree_contains(const unsigned int &x,
+bool LoopifyTrees::tree_contains(const unsigned int x,
                                  const LoopifyTrees::tree<unsigned int> &t) {
   struct _Enter {
     const LoopifyTrees::tree<unsigned int> *t;

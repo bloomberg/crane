@@ -20,7 +20,7 @@ AccumClosureEscape::build_adders(
     return build_adders(
         d_a1_value,
         mylist<std::function<unsigned int(unsigned int)>>::mycons(
-            [=](const unsigned int &x) mutable { return (d_a0 + x); },
+            [=](const unsigned int x) mutable { return (d_a0 + x); },
             std::move(acc)));
   }
 }
@@ -29,7 +29,7 @@ AccumClosureEscape::build_adders(
 unsigned int AccumClosureEscape::apply_first(
     const AccumClosureEscape::mylist<std::function<unsigned int(unsigned int)>>
         &fns,
-    const unsigned int &x) {
+    const unsigned int x) {
   if (std::holds_alternative<typename AccumClosureEscape::mylist<
           std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
     return 0u;
@@ -44,7 +44,7 @@ unsigned int AccumClosureEscape::apply_first(
 unsigned int AccumClosureEscape::apply_all_sum(
     const AccumClosureEscape::mylist<std::function<unsigned int(unsigned int)>>
         &fns,
-    const unsigned int &x) {
+    const unsigned int x) {
   if (std::holds_alternative<typename AccumClosureEscape::mylist<
           std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
     return 0u;

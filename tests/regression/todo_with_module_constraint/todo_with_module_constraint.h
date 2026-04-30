@@ -38,7 +38,7 @@ struct TodoWithModuleConstraint {
 
   struct NatOuter {
     using Inner = NatInner;
-    static Inner::t step(unsigned int n);
+    static Inner::t step(const unsigned int n);
   };
 
   template <OUTER_NAT X> struct UseNat {

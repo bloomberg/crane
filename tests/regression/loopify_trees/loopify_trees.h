@@ -140,10 +140,7 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        const List *_next_self = d_a1.get();
-        List<t_A> _next_m = std::move(_loop_m);
-        _loop_self = _next_self;
-        _loop_m = std::move(_next_m);
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -812,11 +809,11 @@ struct LoopifyTrees {
   /// leaf_sum sums only leaf values.
   static unsigned int leaf_sum(const tree<unsigned int> &t);
   /// insert_bst BST insertion.
-  static tree<unsigned int> insert_bst(unsigned int x,
+  static tree<unsigned int> insert_bst(const unsigned int x,
                                        const tree<unsigned int> &t);
   /// count_paths t n counts root-to-leaf paths that sum to n.
   static unsigned int count_paths(const tree<unsigned int> &t,
-                                  const unsigned int &n);
+                                  const unsigned int n);
   /// sum_of_max_branches sums maximum values along each path.
   static unsigned int sum_of_max_branches(const tree<unsigned int> &t);
 
@@ -1304,12 +1301,12 @@ struct LoopifyTrees {
 
   /// Helper: sum all values in a list of rose trees (processes both tree and
   /// list levels in one recursive function to enable full loopification).
-  static unsigned int sum_rose_list_fuel(const unsigned int &fuel,
+  static unsigned int sum_rose_list_fuel(const unsigned int fuel,
                                          const List<rose> &cs);
 
   /// Helper: map function over all values in a list of rose trees.
   template <MapsTo<unsigned int, unsigned int> F1>
-  static List<rose> map_rose_list_fuel(const unsigned int &fuel, F1 &&f,
+  static List<rose> map_rose_list_fuel(const unsigned int fuel, F1 &&f,
                                        const List<rose> &cs) {
     if (fuel <= 0) {
       return List<rose>::nil();
@@ -1328,10 +1325,10 @@ struct LoopifyTrees {
   }
 
   /// Helper: flatten a list of rose trees to a flat list of nats.
-  static List<unsigned int> flatten_rose_list_fuel(const unsigned int &fuel,
+  static List<unsigned int> flatten_rose_list_fuel(const unsigned int fuel,
                                                    const List<rose> &cs);
   /// Helper: compute maximum depth among a list of rose trees.
-  static unsigned int depth_rose_list_fuel(const unsigned int &fuel,
+  static unsigned int depth_rose_list_fuel(const unsigned int fuel,
                                            const List<rose> &cs);
   /// tree_max t1 t2 element-wise maximum of two trees.
   static tree<unsigned int> tree_max(tree<unsigned int> t1,
@@ -1344,7 +1341,7 @@ struct LoopifyTrees {
   extract_tree_children(const List<tree<unsigned int>> &ts);
   /// tree_levels t returns list of lists, one per level (breadth-first).
   static List<List<unsigned int>>
-  tree_levels_fuel(const unsigned int &fuel,
+  tree_levels_fuel(const unsigned int fuel,
                    const List<tree<unsigned int>> &trees);
   static List<List<unsigned int>> tree_levels(tree<unsigned int> t);
   /// count_nodes t returns tuple (node_count, sum_of_values).
@@ -1356,13 +1353,13 @@ struct LoopifyTrees {
                     List<List<unsigned int>> l2);
   /// Helper: prepend value to all lists in a list of lists.
   static List<List<unsigned int>>
-  map_cons_to_all(unsigned int x, const List<List<unsigned int>> &lsts);
+  map_cons_to_all(const unsigned int x, const List<List<unsigned int>> &lsts);
   /// paths t returns all root-to-leaf paths in tree.
   static List<List<unsigned int>> paths(const tree<unsigned int> &t);
   /// collect_sorted t collects and sorts all tree values.
   static List<unsigned int> collect_unsorted(const tree<unsigned int> &t);
   /// Simple insertion sort for collect_sorted.
-  static List<unsigned int> insert_sorted(unsigned int x,
+  static List<unsigned int> insert_sorted(const unsigned int x,
                                           const List<unsigned int> &l);
   static List<unsigned int> sort_list(const List<unsigned int> &l);
   static List<unsigned int> collect_sorted(const tree<unsigned int> &t);
@@ -1891,8 +1888,8 @@ struct LoopifyTrees {
   };
 
   /// Helper: max of 4 values using nested max.
-  static unsigned int max4_impl(unsigned int a, unsigned int b, unsigned int c,
-                                unsigned int d);
+  static unsigned int max4_impl(const unsigned int a, const unsigned int b,
+                                const unsigned int c, const unsigned int d);
 
   /// Simple binary tree with values only at leaves.
   struct simple_tree {
@@ -2011,7 +2008,7 @@ struct LoopifyTrees {
     const variant_t &v() const { return d_v_; }
 
     /// count_paths_simple t n counts paths with sum n (simpler variant).
-    unsigned int count_paths_simple(const unsigned int &n) const {
+    unsigned int count_paths_simple(const unsigned int n) const {
       const simple_tree *_self = this;
 
       struct _Enter {
@@ -2045,7 +2042,7 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const simple_tree *_self = _f._self;
-          const unsigned int &n = _f.n;
+          const unsigned int n = _f.n;
           auto &&_sv = *(_self);
           if (std::holds_alternative<typename simple_tree::SLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename simple_tree::SLeaf>(_sv.v());
@@ -2248,16 +2245,18 @@ struct LoopifyTrees {
   };
 
   /// Helper: compute minimum of three values.
-  static unsigned int min3(unsigned int a, unsigned int b, unsigned int c);
+  static unsigned int min3(const unsigned int a, const unsigned int b,
+                           const unsigned int c);
   /// Helper: compute maximum of three values.
-  static unsigned int max3(unsigned int a, unsigned int b, unsigned int c);
+  static unsigned int max3(const unsigned int a, const unsigned int b,
+                           const unsigned int c);
   /// tree_min_max t finds minimum and maximum values in tree.
   static std::pair<unsigned int, unsigned int>
   tree_min_max(const tree<unsigned int> &t);
   /// all_paths_sum t sums all root-to-leaf path sums.
   static unsigned int all_paths_sum(const tree<unsigned int> &t);
   /// tree_contains x t checks if value exists in tree.
-  static bool tree_contains(const unsigned int &x, const tree<unsigned int> &t);
+  static bool tree_contains(const unsigned int x, const tree<unsigned int> &t);
 };
 
 #endif // INCLUDED_LOOPIFY_TREES

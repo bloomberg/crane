@@ -35,7 +35,7 @@ unsigned int ReuseMoveShadow::tree_sum(const ReuseMoveShadow::tree &t) {
 /// The returned tree has d_a2 = nullptr.  Traversing the right subtree
 /// crashes with a null-pointer dereference.
 ReuseMoveShadow::tree ReuseMoveShadow::dup_left(ReuseMoveShadow::tree t,
-                                                const bool &b) {
+                                                const bool b) {
   if (b) {
     if (std::holds_alternative<typename ReuseMoveShadow::tree::Node>(
             t.v_mut())) {

@@ -22,7 +22,7 @@ struct FixCurriedEscape {
   /// After make_fn returns, base is destroyed, and calling
   /// the extracted function accesses freed memory.
   static std::optional<std::function<unsigned int(unsigned int)>>
-  make_fn(unsigned int base);
+  make_fn(const unsigned int base);
   /// test1: unwrap and call — go captures base=42.
   /// go 3 = 42 + 3 = 45.
   static inline const unsigned int test1 = []() -> unsigned int {

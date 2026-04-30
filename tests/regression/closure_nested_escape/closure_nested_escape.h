@@ -23,7 +23,7 @@ struct ClosureNestedEscape {
   /// independently read garbage from the same dangling reference.
   static std::pair<std::function<unsigned int(unsigned int)>,
                    std::function<unsigned int(unsigned int)>>
-  make_pair_fix(unsigned int n);
+  make_pair_fix(const unsigned int n);
   /// test1: make_pair_fix(5) returns (add, mul).
   /// add(3) = 5 + 3 = 8, mul(3) = 5 * 3 = 15.
   /// Expected: 8 + 15 = 23.

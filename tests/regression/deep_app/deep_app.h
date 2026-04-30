@@ -207,7 +207,8 @@ struct DeepApp {
   }
 
   /// Tail-recursive builder — loopified.
-  static mylist<unsigned int> build(unsigned int n, mylist<unsigned int> acc);
+  static mylist<unsigned int> build(const unsigned int n,
+                                    mylist<unsigned int> acc);
 
   /// Recursive app — NOT tail-recursive, so loopification won't help
   /// unless TMC kicks in.  Even with TMC, the destructor chain for
@@ -230,10 +231,7 @@ struct DeepApp {
         *(_write) = std::move(_cell);
         _write =
             &std::get<typename mylist<T1>::Mycons>((*_write)->v_mut()).d_a1;
-        mylist<T1> _next_l2 = std::move(_loop_l2);
-        const mylist<T1> *_next_l1 = d_a1.get();
-        _loop_l2 = std::move(_next_l2);
-        _loop_l1 = _next_l1;
+        _loop_l1 = d_a1.get();
         continue;
       }
     }

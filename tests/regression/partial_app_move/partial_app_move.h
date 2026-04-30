@@ -149,7 +149,7 @@ struct PartialAppMove {
   /// A function taking two args: tree -> nat -> nat.
   /// Partial application of this to a tree creates a
   /// closure nat -> nat in C++ via & lambda.
-  static unsigned int sum_values(const tree &t, unsigned int x);
+  static unsigned int sum_values(const tree &t, const unsigned int x);
   /// Wrap a tree inside another Node.
   /// In C++, this calls tree::node() which has rvalue ref overloads.
   /// If escape analysis adds std::move(t) here, the move is REAL.

@@ -22,13 +22,13 @@ struct RecordCaseBody {
   };
 
   static unsigned int case_in_body(const Rec &r);
-  static unsigned int helper(const unsigned int &n);
+  static unsigned int helper(const unsigned int n);
   static unsigned int fix_in_body(const Rec &r);
   static unsigned int let_in_body(const Rec &r);
   static unsigned int apply_nonfld(const Rec &r);
-  static unsigned int conditional_body(const Rec &r, const bool &flag);
-  static unsigned int outer_ref(const unsigned int &x, const Rec &r);
-  static unsigned int lambda_body(const Rec &r, const unsigned int &n);
+  static unsigned int conditional_body(const Rec &r, const bool flag);
+  static unsigned int outer_ref(const unsigned int x, const Rec &r);
+  static unsigned int lambda_body(const Rec &r, const unsigned int n);
 
   struct RecRec {
     Rec inner;

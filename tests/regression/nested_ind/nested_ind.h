@@ -380,7 +380,7 @@ struct NestedInd {
     }
   };
 
-  static rose<unsigned int> leaf(unsigned int n);
+  static rose<unsigned int> leaf(const unsigned int n);
   static inline const rose<unsigned int> small_tree = rose<unsigned int>::node(
       1u,
       custom_list<rose<unsigned int>>::ccons(
@@ -726,8 +726,7 @@ struct NestedInd {
   static inline const unsigned int test_depth_nested = test_nested.expr_depth();
   static inline const List<unsigned int> test_literals = test_nested.literals();
   static inline const unsigned int test_doubled =
-      test_nested.lit_map([](const unsigned int &n) { return (n * 2u); })
-          .eval();
+      test_nested.lit_map([](const unsigned int n) { return (n * 2u); }).eval();
   static inline const std::pair<
       std::pair<
           std::pair<

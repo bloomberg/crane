@@ -1,9 +1,9 @@
 #include <load_program.h>
 
 LoadProgram::state LoadProgram::set_prom_params(const LoadProgram::state &s,
-                                                unsigned int addr,
-                                                unsigned int data,
-                                                bool enable) {
+                                                const unsigned int addr,
+                                                const unsigned int data,
+                                                const bool enable) {
   return state{s.rom, addr, data, enable};
 }
 
@@ -18,7 +18,7 @@ LoadProgram::state LoadProgram::execute_wpm(const LoadProgram::state &s) {
 }
 
 LoadProgram::state LoadProgram::load_program(LoadProgram::state s,
-                                             const unsigned int &base,
+                                             const unsigned int base,
                                              const List<unsigned int> &bytes) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(bytes.v())) {
     return s;
@@ -33,8 +33,8 @@ LoadProgram::state LoadProgram::load_program(LoadProgram::state s,
 
 LoadProgram::state_extended
 LoadProgram::set_prom_params_ext(const LoadProgram::state_extended &s,
-                                 unsigned int addr, unsigned int data,
-                                 bool enable) {
+                                 const unsigned int addr,
+                                 const unsigned int data, const bool enable) {
   return state_extended{s.regs_len, s.rom_ext, s.pc,  s.stack_len,
                         addr,       data,      enable};
 }
@@ -55,7 +55,7 @@ LoadProgram::execute_wpm_ext(const LoadProgram::state_extended &s) {
 
 LoadProgram::state_simple
 LoadProgram::write_byte(const LoadProgram::state_simple &s,
-                        const unsigned int &b) {
+                        const unsigned int b) {
   return state_simple{update_nth<unsigned int>(s.ptr_, b, s.rom_),
                       (s.ptr_ + 1)};
 }

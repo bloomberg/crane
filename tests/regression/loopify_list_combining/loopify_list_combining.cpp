@@ -19,10 +19,7 @@ List<unsigned int> LoopifyListCombining::append(const List<unsigned int> &a,
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      List<unsigned int> _next_b = std::move(_loop_b);
-      const List<unsigned int> *_next_a = d_a1.get();
-      _loop_b = std::move(_next_b);
-      _loop_a = _next_a;
+      _loop_a = d_a1.get();
       continue;
     }
   }
@@ -30,7 +27,7 @@ List<unsigned int> LoopifyListCombining::append(const List<unsigned int> &a,
 }
 
 List<unsigned int>
-LoopifyListCombining::intersperse(unsigned int sep,
+LoopifyListCombining::intersperse(const unsigned int sep,
                                   const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -233,10 +230,8 @@ List<unsigned int> LoopifyListCombining::interleave_two(List<unsigned int> l1,
                  std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1->v_mut())
                  .d_a1;
-        List<unsigned int> _next_l2 = std::move(*(d_a10));
-        List<unsigned int> _next_l1 = std::move(*(d_a1));
-        _loop_l2 = std::move(_next_l2);
-        _loop_l1 = std::move(_next_l1);
+        _loop_l2 = std::move(*(d_a10));
+        _loop_l1 = std::move(*(d_a1));
         continue;
       }
     }
@@ -245,7 +240,7 @@ List<unsigned int> LoopifyListCombining::interleave_two(List<unsigned int> l1,
 }
 
 List<unsigned int>
-LoopifyListCombining::concat_sep(unsigned int sep,
+LoopifyListCombining::concat_sep(const unsigned int sep,
                                  const List<List<unsigned int>> &ll) {
   struct _Enter {
     const List<List<unsigned int>> *ll;

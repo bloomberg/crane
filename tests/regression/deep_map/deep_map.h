@@ -162,7 +162,8 @@ struct DeepMap {
 
   /// Build a maximally-unbalanced tree (right spine = linked list).
   /// Tail-recursive via accumulator, should be loopified.
-  static tree<unsigned int> build_right(unsigned int n, tree<unsigned int> acc);
+  static tree<unsigned int> build_right(const unsigned int n,
+                                        tree<unsigned int> acc);
 
   /// Recursive tree map — visits every node.
   template <typename T1, typename T2, MapsTo<T2, T1> F0>

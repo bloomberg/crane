@@ -3,7 +3,7 @@
 /// wrap_with takes TWO args. Partial application creates a closure.
 /// Since t is stored in a constructor, wrap_with takes t as owned (by value).
 DoubleInvokeMove::tree DoubleInvokeMove::wrap_with(DoubleInvokeMove::tree t,
-                                                   unsigned int v) {
+                                                   const unsigned int v) {
   return tree::node(std::move(t), v, tree::leaf());
 }
 

@@ -1,7 +1,7 @@
 #include <computational_proof.h>
 
-bool ComputationalProof::nat_eq_dec(const unsigned int &n,
-                                    const unsigned int &x) {
+bool ComputationalProof::nat_eq_dec(const unsigned int n,
+                                    const unsigned int x) {
   if (n <= 0) {
     if (x <= 0) {
       return true;
@@ -24,8 +24,8 @@ bool ComputationalProof::nat_eq_dec(const unsigned int &n,
   }
 }
 
-bool ComputationalProof::nat_eqb_dec(const unsigned int &n,
-                                     const unsigned int &m) {
+bool ComputationalProof::nat_eqb_dec(const unsigned int n,
+                                     const unsigned int m) {
   if (nat_eq_dec(n, m)) {
     return true;
   } else {
@@ -33,7 +33,7 @@ bool ComputationalProof::nat_eqb_dec(const unsigned int &n,
   }
 }
 
-bool ComputationalProof::le_dec(const unsigned int &n, const unsigned int &m) {
+bool ComputationalProof::le_dec(const unsigned int n, const unsigned int m) {
   if (n <= 0) {
     return true;
   } else {
@@ -52,8 +52,8 @@ bool ComputationalProof::le_dec(const unsigned int &n, const unsigned int &m) {
   }
 }
 
-bool ComputationalProof::nat_leb_dec(const unsigned int &n,
-                                     const unsigned int &m) {
+bool ComputationalProof::nat_leb_dec(const unsigned int n,
+                                     const unsigned int m) {
   if (le_dec(n, m)) {
     return true;
   } else {
@@ -61,7 +61,8 @@ bool ComputationalProof::nat_leb_dec(const unsigned int &n,
   }
 }
 
-unsigned int ComputationalProof::min_dec(unsigned int n, unsigned int m) {
+unsigned int ComputationalProof::min_dec(const unsigned int n,
+                                         const unsigned int m) {
   if (le_dec(n, m)) {
     return n;
   } else {
@@ -69,7 +70,8 @@ unsigned int ComputationalProof::min_dec(unsigned int n, unsigned int m) {
   }
 }
 
-unsigned int ComputationalProof::max_dec(unsigned int n, unsigned int m) {
+unsigned int ComputationalProof::max_dec(const unsigned int n,
+                                         const unsigned int m) {
   if (le_dec(n, m)) {
     return m;
   } else {
@@ -77,7 +79,7 @@ unsigned int ComputationalProof::max_dec(unsigned int n, unsigned int m) {
   }
 }
 
-List<unsigned int> ComputationalProof::insert_dec(unsigned int x,
+List<unsigned int> ComputationalProof::insert_dec(const unsigned int x,
                                                   const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return List<unsigned int>::cons(x, List<unsigned int>::nil());

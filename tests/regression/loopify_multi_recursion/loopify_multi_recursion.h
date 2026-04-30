@@ -13,17 +13,16 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct LoopifyMultiRecursion {
-  static unsigned int mixed_arith_fuel(const unsigned int &fuel,
-                                       const unsigned int &n);
-  static unsigned int mixed_arith(const unsigned int &n);
-  static bool bool_or_chain_fuel(const unsigned int &fuel,
-                                 const unsigned int &n,
-                                 const unsigned int &target);
-  static unsigned int bool_or_chain(const unsigned int &n,
-                                    const unsigned int &target);
-  static bool bool_and_chain_fuel(const unsigned int &fuel,
-                                  const unsigned int &n);
-  static unsigned int bool_and_chain(const unsigned int &n);
+  static unsigned int mixed_arith_fuel(const unsigned int fuel,
+                                       const unsigned int n);
+  static unsigned int mixed_arith(const unsigned int n);
+  static bool bool_or_chain_fuel(const unsigned int fuel, const unsigned int n,
+                                 const unsigned int target);
+  static unsigned int bool_or_chain(const unsigned int n,
+                                    const unsigned int target);
+  static bool bool_and_chain_fuel(const unsigned int fuel,
+                                  const unsigned int n);
+  static unsigned int bool_and_chain(const unsigned int n);
 
   struct quadtree {
     // TYPES
@@ -194,9 +193,9 @@ struct LoopifyMultiRecursion {
 
   static unsigned int quad_count_leaves(const quadtree &t);
   static unsigned int quad_depth(const quadtree &t);
-  static unsigned int hofstadter_q_fuel(const unsigned int &fuel,
-                                        const unsigned int &n);
-  static unsigned int hofstadter_q(const unsigned int &n);
+  static unsigned int hofstadter_q_fuel(const unsigned int fuel,
+                                        const unsigned int n);
+  static unsigned int hofstadter_q(const unsigned int n);
 };
 
 #endif // INCLUDED_LOOPIFY_MULTI_RECURSION

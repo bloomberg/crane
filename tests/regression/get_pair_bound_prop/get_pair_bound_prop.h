@@ -123,7 +123,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
 
-  List<t_A> skipn(const unsigned int &n) const {
+  List<t_A> skipn(const unsigned int n) const {
     if (n <= 0) {
       return std::move(*(this));
     } else {
@@ -138,7 +138,7 @@ public:
     }
   }
 
-  List<t_A> firstn(const unsigned int &n) const {
+  List<t_A> firstn(const unsigned int n) const {
     if (n <= 0) {
       return List<t_A>::nil();
     } else {
@@ -156,12 +156,12 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
 };
 
 struct GetPairBoundProp {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int &n, const T1 x,
+  static List<T1> update_nth(const unsigned int n, const T1 x,
                              const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -199,15 +199,14 @@ struct GetPairBoundProp {
     }
   };
 
-  static unsigned int get_reg(const state &s, const unsigned int &r);
-  static List<unsigned int> set_reg(const state &s, const unsigned int &r,
-                                    const unsigned int &v);
-  static unsigned int pair_base(const unsigned int &r);
-  static unsigned int get_pair(const state &s, const unsigned int &r);
-  static List<unsigned int> set_pair(const state &s, const unsigned int &r,
-                                     const unsigned int &v);
-  static List<unsigned int> push_return(const state &s,
-                                        const unsigned int &ret);
+  static unsigned int get_reg(const state &s, const unsigned int r);
+  static List<unsigned int> set_reg(const state &s, const unsigned int r,
+                                    const unsigned int v);
+  static unsigned int pair_base(const unsigned int r);
+  static unsigned int get_pair(const state &s, const unsigned int r);
+  static List<unsigned int> set_pair(const state &s, const unsigned int r,
+                                     const unsigned int v);
+  static List<unsigned int> push_return(const state &s, const unsigned int ret);
 
   struct instr {
     // TYPES
@@ -772,7 +771,7 @@ struct GetPairBoundProp {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int &n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

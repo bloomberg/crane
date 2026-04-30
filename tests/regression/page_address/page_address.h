@@ -10,11 +10,11 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct PageAddress {
-  static unsigned int addr12_of_nat(const unsigned int &n);
-  static unsigned int page_of(const unsigned int &p);
-  static unsigned int page_base(const unsigned int &p);
-  static unsigned int branch_target(const unsigned int &pc,
-                                    const unsigned int &off);
+  static unsigned int addr12_of_nat(const unsigned int n);
+  static unsigned int page_of(const unsigned int p);
+  static unsigned int page_base(const unsigned int p);
+  static unsigned int branch_target(const unsigned int pc,
+                                    const unsigned int off);
   static inline const unsigned int p_small = 777u;
   static inline const unsigned int p_same = 600u;
   static inline const unsigned int p_cross_254 = 254u;

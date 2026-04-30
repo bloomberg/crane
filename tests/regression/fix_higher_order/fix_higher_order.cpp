@@ -9,7 +9,7 @@
 /// it in Some and returns. After make_wrapped returns, the
 /// captured base is destroyed.
 std::optional<std::function<unsigned int(unsigned int)>>
-FixHigherOrder::make_wrapped(unsigned int base) {
+FixHigherOrder::make_wrapped(const unsigned int base) {
   auto go_impl = [=](auto &_self_go, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return base;
@@ -25,7 +25,7 @@ FixHigherOrder::make_wrapped(unsigned int base) {
 }
 
 std::optional<std::optional<std::function<unsigned int(unsigned int)>>>
-FixHigherOrder::make_double_wrapped(unsigned int base) {
+FixHigherOrder::make_double_wrapped(const unsigned int base) {
   auto go_impl = [=](auto &_self_go, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return base;

@@ -2,12 +2,12 @@
 
 unsigned int
 StepFetchDecodeExec::fetch_byte(const StepFetchDecodeExec::state &s,
-                                const unsigned int &addr) {
+                                const unsigned int addr) {
   return ListDef::template nth<unsigned int>(addr, s.rom, 0u);
 }
 
 StepFetchDecodeExec::instruction
-StepFetchDecodeExec::decode(const unsigned int &b1, const unsigned int &b2) {
+StepFetchDecodeExec::decode(const unsigned int b1, const unsigned int b2) {
   if ((2u ? b1 % 2u : b1) == 0u) {
     return instruction::nop();
   } else {

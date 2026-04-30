@@ -584,7 +584,7 @@ struct EpochCellGlyphTraceCase {
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))));
   static MechanismState step(const MechanismState &s);
   static MechanismState step_reverse(const MechanismState &s);
-  static MechanismState step_n(const unsigned int &n, MechanismState s);
+  static MechanismState step_n(const unsigned int n, MechanismState s);
   static MechanismState state_at_cell(Z cell);
   static LunarPhase predict_moon_phase_from_state(const MechanismState &s);
   static Z predict_olympiad_year(const MechanismState &s);
@@ -889,8 +889,8 @@ struct EpochCellGlyphTraceCase {
   static inline const EpochReading sample_epoch_reading = build_epoch_reading(
       epoch_205_bc_valid.ve_year, epoch_205_bc_valid.ve_month,
       epoch_205_bc_valid.ve_eclipse);
-  static unsigned int phase_code_after_steps(const unsigned int &n);
-  static unsigned int zodiac_code_after_steps(const unsigned int &n);
+  static unsigned int phase_code_after_steps(const unsigned int n);
+  static unsigned int zodiac_code_after_steps(const unsigned int n);
   static inline const unsigned int sample_total_lunar_count =
       count_total_lunar(eclipse_database);
   static inline const unsigned int sample_total_lunar_visible_count =

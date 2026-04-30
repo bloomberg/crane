@@ -172,7 +172,7 @@ struct ReuseMoveShadow {
   ///
   /// The returned tree has d_a2 = nullptr.  Traversing the right subtree
   /// crashes with a null-pointer dereference.
-  static tree dup_left(tree t, const bool &b);
+  static tree dup_left(tree t, const bool b);
   /// test1: dup_left (node 10 (node 1 leaf leaf) (node 2 leaf leaf)) true
   /// Expected result: node 10 (node 1 leaf leaf) (node 1 leaf leaf)
   /// tree_sum = 10 + 1 + 0 + 0 + 1 + 0 + 0 = 12

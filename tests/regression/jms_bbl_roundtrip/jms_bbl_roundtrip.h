@@ -21,8 +21,8 @@ struct JmsBblRoundtrip {
     }
   };
 
-  static unsigned int addr12_of_nat(const unsigned int &n);
-  static state execute_jms(const state &s, const unsigned int &addr);
+  static unsigned int addr12_of_nat(const unsigned int n);
+  static state execute_jms(const state &s, const unsigned int addr);
   static state execute_bbl(state s);
   static inline const state sample = state{100u, 0u, false};
   static inline const bool t =

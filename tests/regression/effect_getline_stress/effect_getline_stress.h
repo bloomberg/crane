@@ -132,11 +132,11 @@ public:
 
 struct EffectGetlineStress {
   /// 1. get_line in both branches of if-then-else
-  static std::string get_or_default(const bool &ask);
+  static std::string get_or_default(const bool ask);
   /// 2. get_line in a match arm
-  static std::string get_nth_line(const unsigned int &n);
+  static std::string get_nth_line(const unsigned int n);
   /// 3. Recursive function that uses get_line in a loop
-  static List<std::string> read_lines(const unsigned int &n,
+  static List<std::string> read_lines(const unsigned int n,
                                       List<std::string> acc);
   /// 4. get_line result immediately used in another effect
   static void read_and_echo();
@@ -147,7 +147,7 @@ struct EffectGetlineStress {
   /// 7. get_line inside a monadic map
   static std::pair<std::string, int64_t> get_and_measure();
   /// 8. Conditional get_line with print
-  static std::string interactive_prompt(const bool &ask);
+  static std::string interactive_prompt(const bool ask);
 };
 
 #endif // INCLUDED_EFFECT_GETLINE_STRESS

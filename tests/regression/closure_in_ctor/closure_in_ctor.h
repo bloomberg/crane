@@ -106,7 +106,7 @@ struct ClosureInCtor {
   ///
   /// Difference from fix_escape_capture: escapes through a CUSTOM
   /// INDUCTIVE constructor, not a pair.
-  static box make_box_fix(unsigned int n);
+  static box make_box_fix(const unsigned int n);
   /// test1: make_box_fix(5) returns Box(add) where add(x) = x + 5.
   /// Expected: add(3) = 5 + 3 = 8.
   /// Bug: & captures dangling reference to n.

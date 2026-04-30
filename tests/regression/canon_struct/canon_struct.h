@@ -11,7 +11,7 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct Bool {
-  static bool eqb(const bool &b1, const bool &b2);
+  static bool eqb(const bool b1, const bool b2);
 };
 
 template <typename I>

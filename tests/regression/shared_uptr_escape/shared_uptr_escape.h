@@ -124,7 +124,7 @@ struct SharedUptrEscape {
 
     /// Pattern 2: Return tree from match, then use it twice.
     /// The match result is a temporary that might be unique_ptr.
-    tree extract_subtree(const unsigned int &which) const {
+    tree extract_subtree(const unsigned int which) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return tree::leaf();
@@ -189,7 +189,7 @@ struct SharedUptrEscape {
   /// (unique_ptr sufficient) or duplicate it (needs shared_ptr).
   /// If escape analysis optimistically picks unique_ptr based on
   /// one branch, the other branch's sharing crashes.
-  static unsigned int conditional_share(const unsigned int &flag);
+  static unsigned int conditional_share(const unsigned int flag);
   static inline const unsigned int use_extracted_twice = []() {
     tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                         tree::node(tree::leaf(), 30u, tree::leaf()));

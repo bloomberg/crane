@@ -139,7 +139,7 @@ bool LoopifyListOfLists::all_empty(const List<List<unsigned int>> &ll) {
 }
 
 List<List<unsigned int>>
-LoopifyListOfLists::transpose_fuel(const unsigned int &fuel,
+LoopifyListOfLists::transpose_fuel(const unsigned int fuel,
                                    const List<List<unsigned int>> &ll) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
@@ -180,10 +180,8 @@ LoopifyListOfLists::transpose_fuel(const unsigned int &fuel,
             _write = &std::get<typename List<List<unsigned int>>::Cons>(
                           (*_write)->v_mut())
                           .d_a1;
-            List<List<unsigned int>> _next_ll = std::move(tails);
-            unsigned int _next_fuel = fuel_;
-            _loop_ll = std::move(_next_ll);
-            _loop_fuel = std::move(_next_fuel);
+            _loop_ll = std::move(tails);
+            _loop_fuel = fuel_;
             continue;
           }
         }
@@ -449,10 +447,8 @@ LoopifyListOfLists::zip_lists(const List<List<unsigned int>> &ll1,
             std::pair<List<unsigned int>, List<unsigned int>>>::Cons>(
                       (*_write)->v_mut())
                       .d_a1;
-        const List<List<unsigned int>> *_next_ll2 = d_a10.get();
-        const List<List<unsigned int>> *_next_ll1 = d_a1.get();
-        _loop_ll2 = _next_ll2;
-        _loop_ll1 = _next_ll1;
+        _loop_ll2 = d_a10.get();
+        _loop_ll1 = d_a1.get();
         continue;
       }
     }

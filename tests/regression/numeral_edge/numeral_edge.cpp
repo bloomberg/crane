@@ -1,10 +1,10 @@
 #include <numeral_edge.h>
 
 /// 6. Numeral as function argument
-unsigned int NumeralEdge::take_nat(const unsigned int &n) { return (n + 1u); }
+unsigned int NumeralEdge::take_nat(const unsigned int n) { return (n + 1u); }
 
 /// 10. Numeral in match
-unsigned int NumeralEdge::classify(const unsigned int &n) {
+unsigned int NumeralEdge::classify(const unsigned int n) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -19,9 +19,9 @@ unsigned int NumeralEdge::classify(const unsigned int &n) {
 }
 
 /// 11. Comparison with numeral
-bool NumeralEdge::is_big(const unsigned int &n) { return 100u <= n; }
+bool NumeralEdge::is_big(const unsigned int n) { return 100u <= n; }
 
-unsigned int Nat::tail_add(const unsigned int &n, unsigned int m) {
+unsigned int Nat::tail_add(const unsigned int n, const unsigned int m) {
   if (n <= 0) {
     return m;
   } else {
@@ -30,8 +30,8 @@ unsigned int Nat::tail_add(const unsigned int &n, unsigned int m) {
   }
 }
 
-unsigned int Nat::tail_addmul(unsigned int r, const unsigned int &n,
-                              const unsigned int &m) {
+unsigned int Nat::tail_addmul(const unsigned int r, const unsigned int n,
+                              const unsigned int m) {
   if (n <= 0) {
     return r;
   } else {
@@ -40,11 +40,11 @@ unsigned int Nat::tail_addmul(unsigned int r, const unsigned int &n,
   }
 }
 
-unsigned int Nat::tail_mul(const unsigned int &n, const unsigned int &m) {
+unsigned int Nat::tail_mul(const unsigned int n, const unsigned int m) {
   return Nat::tail_addmul(0u, n, m);
 }
 
-unsigned int Nat::of_uint_acc(const Uint &d, unsigned int acc) {
+unsigned int Nat::of_uint_acc(const Uint &d, const unsigned int acc) {
   if (std::holds_alternative<typename Uint::Nil>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint::D0>(d.v())) {
@@ -94,7 +94,7 @@ unsigned int Nat::of_uint_acc(const Uint &d, unsigned int acc) {
 
 unsigned int Nat::of_uint(const Uint &d) { return Nat::of_uint_acc(d, 0u); }
 
-unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
+unsigned int Nat::of_hex_uint_acc(const Uint0 &d, const unsigned int acc) {
   if (std::holds_alternative<typename Uint0::Nil0>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint0::D10>(d.v())) {

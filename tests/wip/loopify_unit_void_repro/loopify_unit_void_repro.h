@@ -126,7 +126,8 @@ public:
 
 struct LoopifyUnitVoidRepro {
   static inline const unsigned int cell_size = 42u;
-  static void loop(unsigned int x, unsigned int y, const List<bool> &cells);
+  static void loop(const unsigned int x, const unsigned int y,
+                   const List<bool> &cells);
   static int run();
 };
 

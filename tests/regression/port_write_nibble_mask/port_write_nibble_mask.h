@@ -17,8 +17,8 @@ struct PortWriteNibbleMask {
     ram_chip clone() const { return ram_chip{(*(this)).chip_port}; }
   };
 
-  static unsigned int nibble_of_nat(const unsigned int &n);
-  static ram_chip upd_port_in_chip(const ram_chip &_x, const unsigned int &v);
+  static unsigned int nibble_of_nat(const unsigned int n);
+  static ram_chip upd_port_in_chip(const ram_chip &_x, const unsigned int v);
   static inline const unsigned int t =
       upd_port_in_chip(ram_chip{0u}, 31u).chip_port;
 };

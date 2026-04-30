@@ -244,7 +244,7 @@ struct ThisCaptureRecord {
   /// treat this as a multi-argument function (preventing eta-collapse).
   /// Returns a record whose fields are closures that capture this
   /// via =, this.
-  static callback_rec tree_callbacks(tree t, const unsigned int &flag);
+  static callback_rec tree_callbacks(tree t, const unsigned int flag);
   /// test1: flag=0, tree_sum=5.
   /// cr_add(10) = 10 + 5 = 15, cr_mul(3) = 3 * 5 = 15.
   /// Total = 30.
@@ -268,7 +268,7 @@ struct ThisCaptureRecord {
       tree_callbacks(tree::node(tree::leaf(), 100u, tree::leaf()), 1u)
           .cr_mul(7u);
   /// Dummy use of tag to keep it around for extraction.
-  static tag mk_tag(unsigned int n);
+  static tag mk_tag(const unsigned int n);
 };
 
 #endif // INCLUDED_THIS_CAPTURE_RECORD

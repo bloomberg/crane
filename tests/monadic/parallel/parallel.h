@@ -17,10 +17,10 @@ struct Nat {
 
 struct ParallelTest {
   static unsigned int ack(const std::pair<unsigned int, unsigned int> &p);
-  static std::pair<unsigned int, unsigned int> fast(unsigned int m,
-                                                    unsigned int n);
-  static std::pair<unsigned int, unsigned int> slow(unsigned int m,
-                                                    unsigned int n);
+  static std::pair<unsigned int, unsigned int> fast(const unsigned int m,
+                                                    const unsigned int n);
+  static std::pair<unsigned int, unsigned int> slow(const unsigned int m,
+                                                    const unsigned int n);
 };
 
 #endif // INCLUDED_PARALLEL

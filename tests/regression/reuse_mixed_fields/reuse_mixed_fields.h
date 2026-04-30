@@ -107,7 +107,7 @@ struct ReuseMixedFields {
   /// Forces d to be owned through the else branch.
   /// The match branch has reuse candidates: both AsNat and AsPair
   /// have arity 2.
-  static payload swap_tag_or_id(payload p, const bool &do_swap);
+  static payload swap_tag_or_id(payload p, const bool do_swap);
   /// test1: swap AsNat 10 20 -> should be AsPair 20 10.
   /// With reuse bug: variant stays AsNat, fields are 20, 10.
   /// Match sees AsNat -> returns first field + 1000 = 1020.

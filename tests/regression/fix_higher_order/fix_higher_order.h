@@ -26,7 +26,7 @@ struct FixHigherOrder {
   /// it in Some and returns. After make_wrapped returns, the
   /// captured base is destroyed.
   static std::optional<std::function<unsigned int(unsigned int)>>
-  make_wrapped(unsigned int base);
+  make_wrapped(const unsigned int base);
   /// test1: make_wrapped(5) -> Some(go), go(3) = 5+3 = 8.
   static inline const unsigned int test1 = []() -> unsigned int {
     auto _cs = make_wrapped(5u);
@@ -60,7 +60,7 @@ struct FixHigherOrder {
   }
 
   static std::optional<std::optional<std::function<unsigned int(unsigned int)>>>
-  make_double_wrapped(unsigned int base);
+  make_double_wrapped(const unsigned int base);
   /// test3: Doubly wrapped fixpoint. go(7) = 100+7 = 107.
   static inline const unsigned int test3 = []() -> unsigned int {
     auto _cs = make_double_wrapped(100u);

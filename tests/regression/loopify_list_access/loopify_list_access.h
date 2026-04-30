@@ -125,19 +125,19 @@ public:
 };
 
 struct LoopifyListAccess {
-  static unsigned int nth(const unsigned int &n, const List<unsigned int> &l);
+  static unsigned int nth(const unsigned int n, const List<unsigned int> &l);
   static unsigned int last(const List<unsigned int> &l);
-  static unsigned int index_of_aux(const unsigned int &x,
+  static unsigned int index_of_aux(const unsigned int x,
                                    const List<unsigned int> &l,
-                                   unsigned int idx);
-  static unsigned int index_of(const unsigned int &x,
+                                   const unsigned int idx);
+  static unsigned int index_of(const unsigned int x,
                                const List<unsigned int> &l);
-  static bool member(const unsigned int &x, const List<unsigned int> &l);
+  static bool member(const unsigned int x, const List<unsigned int> &l);
   static unsigned int
-  lookup(const unsigned int &key,
+  lookup(const unsigned int key,
          const List<std::pair<unsigned int, unsigned int>> &l);
   static List<unsigned int>
-  lookup_all(const unsigned int &key,
+  lookup_all(const unsigned int key,
              const List<std::pair<unsigned int, unsigned int>> &l);
 
   template <MapsTo<bool, unsigned int> F0>
@@ -163,7 +163,7 @@ struct LoopifyListAccess {
     return _result;
   }
 
-  static unsigned int count(const unsigned int &x, const List<unsigned int> &l);
+  static unsigned int count(const unsigned int x, const List<unsigned int> &l);
 
   template <MapsTo<bool, unsigned int> F0>
   static unsigned int count_matching(F0 &&p, const List<unsigned int> &l) {
@@ -180,9 +180,10 @@ struct LoopifyListAccess {
     }
   }
 
-  static bool elem_at_eq(const unsigned int &idx, const unsigned int &val,
+  static bool elem_at_eq(const unsigned int idx, const unsigned int val,
                          const List<unsigned int> &l);
-  static unsigned int nth_default(const unsigned int &n, unsigned int default0,
+  static unsigned int nth_default(const unsigned int n,
+                                  const unsigned int default0,
                                   const List<unsigned int> &l);
 };
 

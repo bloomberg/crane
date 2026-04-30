@@ -252,7 +252,7 @@ struct ComprehensivePatterns {
   nested_containers(S s);
   static std::pair<std::pair<S, unsigned int>, unsigned int>
   match_pair(const std::pair<S, unsigned int> &p);
-  static List<std::pair<S, unsigned int>> make_list(const unsigned int &n, S s);
+  static List<std::pair<S, unsigned int>> make_list(const unsigned int n, S s);
   static std::optional<std::pair<S, S>> multi_match(const std::optional<S> &o1,
                                                     const std::optional<S> &o2);
   enum class Three { e_A, e_B, e_C };
@@ -428,19 +428,19 @@ struct ComprehensivePatterns {
   static unsigned int extract_val(const R1 &r1);
   static std::pair<R2, unsigned int> nested_call(R2 r2);
   static std::pair<std::pair<R2, R1>, unsigned int>
-  multi_proj_let(unsigned int n);
+  multi_proj_let(const unsigned int n);
   static std::optional<std::pair<R2, R1>> match_proj(R2 r2);
   static std::pair<std::pair<R1, unsigned int>, unsigned int>
   proj_multi_use(const R2 &r2);
   static std::pair<std::pair<R3, R2>, std::pair<R1, unsigned int>>
   complex_nest(R3 r3);
-  static R2 make_r2(unsigned int n);
+  static R2 make_r2(const unsigned int n);
   static std::pair<std::pair<R2, R1>, unsigned int>
-  from_func(const unsigned int &n);
+  from_func(const unsigned int n);
   static std::pair<std::pair<R2, R1>, std::pair<R1, unsigned int>>
   pair_of_pairs(R2 r2);
-  static std::pair<R2, R1> cond_proj(const bool &b, R2 r2);
-  static List<std::pair<R2, R1>> repeat_r2(const unsigned int &n, R2 r2);
+  static std::pair<R2, R1> cond_proj(const bool b, R2 r2);
+  static List<std::pair<R2, R1>> repeat_r2(const unsigned int n, R2 r2);
   static std::pair<std::pair<R3, R2>, R1> nested_lets(R3 r3);
   static std::pair<R1, unsigned int> double_proj(const R3 &r3);
   static std::pair<std::pair<R3, R2>, R2> mixed_access(R3 r3);
@@ -468,13 +468,13 @@ struct ComprehensivePatterns {
   static unsigned int proj_of_last_use(const R &r1);
   static unsigned int multi_let_same(const R &r);
   static unsigned int option_unwrap_proj(const std::optional<R> &o);
-  static std::pair<R, unsigned int> fun_result_and_proj(unsigned int n);
+  static std::pair<R, unsigned int> fun_result_and_proj(const unsigned int n);
   static std::optional<unsigned int> match_multi_use(const std::optional<R> &o);
   static std::pair<std::pair<R, unsigned int>, unsigned int> tuple_proj(R r);
   static std::pair<R, unsigned int> chain_to_pair(R r1);
-  static List<std::pair<R, unsigned int>> repeat_pair(const unsigned int &n,
+  static List<std::pair<R, unsigned int>> repeat_pair(const unsigned int n,
                                                       R r);
-  static std::pair<R, unsigned int> cond_pair(const bool &b, R r);
+  static std::pair<R, unsigned int> cond_pair(const bool b, R r);
   static unsigned int nested_match(const std::optional<R> &o1,
                                    const std::optional<R> &o2);
   static std::pair<unsigned int, unsigned int> both_proj(const R &r);
@@ -492,9 +492,9 @@ struct ComprehensivePatterns {
     }
   };
 
-  static unsigned int use_proj(unsigned int n);
+  static unsigned int use_proj(const unsigned int n);
   static unsigned int proj_as_arg(const NC &r);
-  static unsigned int use_two(const unsigned int &_x0, const unsigned int &_x1);
+  static unsigned int use_two(const unsigned int _x0, const unsigned int _x1);
   static unsigned int multi_proj_args(const NC &r);
   static unsigned int let_proj_then_base(const NC &r);
   static unsigned int base_then_multi_proj(const NC &r);
@@ -502,9 +502,9 @@ struct ComprehensivePatterns {
   static unsigned int proj_in_scrutinee(const NC &r);
   static unsigned int return_proj_nc(const NC &r);
   static unsigned int call_return_proj(const NC &r);
-  static unsigned int inc(const unsigned int &n);
+  static unsigned int inc(const unsigned int n);
   static unsigned int nested_proj_calls(const NC &r);
-  static unsigned int count_down(const unsigned int &n, const NC &r);
+  static unsigned int count_down(const unsigned int n, const NC &r);
   static unsigned int f1(const NC &r);
   static unsigned int f2(const NC &r);
   static unsigned int multi_function_calls(const NC &r);
@@ -522,7 +522,7 @@ struct ComprehensivePatterns {
 
   static unsigned int double_proj_nc(const OuterNC &o);
   static unsigned int multi_positions(const NC &r);
-  static unsigned int sum_proj(const unsigned int &n, const NC &r);
+  static unsigned int sum_proj(const unsigned int n, const NC &r);
 
   template <MapsTo<unsigned int, NC> F0>
   static unsigned int apply(F0 &&f, NC _x0) {
@@ -541,19 +541,19 @@ struct ComprehensivePatterns {
     }
   };
 
-  static unsigned int use_two_fc(const unsigned int &_x0,
-                                 const unsigned int &_x1);
+  static unsigned int use_two_fc(const unsigned int _x0,
+                                 const unsigned int _x1);
   static unsigned int bug_two_args(const State &s);
-  static unsigned int use_three(const unsigned int &x, const unsigned int &y,
-                                const unsigned int &z);
+  static unsigned int use_three(const unsigned int x, const unsigned int y,
+                                const unsigned int z);
   static unsigned int bug_three_args(const State &s);
-  static unsigned int take_state_and_val(const State &_x, unsigned int n);
+  static unsigned int take_state_and_val(const State &_x, const unsigned int n);
   static unsigned int bug_state_and_proj(const State &s);
-  static unsigned int inner_func(const unsigned int &n);
+  static unsigned int inner_func(const unsigned int n);
   static unsigned int bug_nested_calls(const State &s);
   static unsigned int bug_in_condition(const State &s);
-  static unsigned int f1_fc(unsigned int n);
-  static unsigned int f2_fc(const unsigned int &n);
+  static unsigned int f1_fc(const unsigned int n);
+  static unsigned int f2_fc(const unsigned int n);
   static unsigned int bug_multi_calls(const State &s);
   static std::pair<State, unsigned int> bug_base_and_proj(const State &s);
   static unsigned int sequential_lets(const State &s);
@@ -575,7 +575,7 @@ struct ComprehensivePatterns {
   static RSeq side_effect(RSeq r);
   static unsigned int after_side_effect(const RSeq &r);
   static unsigned int two_side_effects(const RSeq &r);
-  static unsigned int side_effect_in_branch(const bool &b, const RSeq &r);
+  static unsigned int side_effect_in_branch(const bool b, const RSeq &r);
 
   struct StateStmt {
     unsigned int stmt_value;
@@ -631,7 +631,7 @@ struct ComprehensivePatterns {
     return x;
   }
 
-  static unsigned int sum_values(const unsigned int &n, const StateStmt &s);
+  static unsigned int sum_values(const unsigned int n, const StateStmt &s);
 
   struct RCF {
     unsigned int cf_val;
@@ -640,12 +640,12 @@ struct ComprehensivePatterns {
     RCF clone() const { return RCF{(*(this)).cf_val}; }
   };
 
-  static unsigned int branch_use(const bool &b, const RCF &r);
-  static std::pair<RCF, unsigned int> branch_different(const bool &b, RCF r);
+  static unsigned int branch_use(const bool b, const RCF &r);
+  static std::pair<RCF, unsigned int> branch_different(const bool b, RCF r);
   static unsigned int match_with_wild(const std::optional<RCF> &o);
-  static unsigned int sum_with_state(const unsigned int &n, const RCF &r);
-  static unsigned int even_count(const unsigned int &n, const RCF &r);
-  static unsigned int odd_count(const unsigned int &n, const RCF &r);
+  static unsigned int sum_with_state(const unsigned int n, const RCF &r);
+  static unsigned int even_count(const unsigned int n, const RCF &r);
+  static unsigned int odd_count(const unsigned int n, const RCF &r);
 
   struct StateLB {
     unsigned int lb_value;
@@ -1028,7 +1028,7 @@ struct ComprehensivePatterns {
     }
   };
 
-  static unsigned int accum_with_state(const unsigned int &n, const StateLB &s);
+  static unsigned int accum_with_state(const unsigned int n, const StateLB &s);
 
   struct StateRO {
     unsigned int ro_value;

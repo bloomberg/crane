@@ -19,7 +19,7 @@ struct FixDirectReturn {
   /// the COPY of add (a std::function) inside the outer lambda
   /// still holds & references to the destroyed stack variables.
   template <MapsTo<unsigned int, unsigned int> F1>
-  static unsigned int make_callback(const unsigned int &base, F1 &&_x0) {
+  static unsigned int make_callback(const unsigned int base, F1 &&_x0) {
     return [=]() mutable {
       auto add_impl = [=](auto &_self_add,
                           unsigned int x) mutable -> unsigned int {
@@ -41,10 +41,10 @@ struct FixDirectReturn {
 
   /// test1: make_callback(42)(fun x => x) = id(42) + 43 = 85.
   static inline const unsigned int test1 =
-      make_callback(42u, [](unsigned int x) { return x; });
+      make_callback(42u, [](const unsigned int x) { return x; });
   /// test2: make_callback(10)(fun x => x * 2) = 20 + 11 = 31.
   static inline const unsigned int test2 =
-      make_callback(10u, [](const unsigned int &x) { return (x * 2u); });
+      make_callback(10u, [](const unsigned int x) { return (x * 2u); });
   /// test3: Nested — use the closure from make_callback inside another
   /// make_callback.
   static inline const unsigned int test3 = []() {
@@ -55,8 +55,8 @@ struct FixDirectReturn {
       std::function<unsigned int(std::function<unsigned int(unsigned int)>)>
           cb2 = [](std::function<unsigned int(unsigned int)> _x0)
           -> unsigned int { return make_callback(100u, _x0); };
-      return cb1([=](const unsigned int &) mutable {
-        return cb2([](unsigned int x) { return x; });
+      return cb1([=](const unsigned int) mutable {
+        return cb2([](const unsigned int x) { return x; });
       });
     }();
   }();

@@ -18,7 +18,7 @@ std::optional<unsigned int> ProgramTargetsRegionScan::jump_target(
 }
 
 bool ProgramTargetsRegionScan::addr_in_regionb(
-    const unsigned int &addr, const ProgramTargetsRegionScan::layout &l) {
+    const unsigned int addr, const ProgramTargetsRegionScan::layout &l) {
   return (l.base_addr <= addr && addr < (l.base_addr + l.code_size));
 }
 

@@ -10,8 +10,8 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct Coercions {
-  static unsigned int bool_to_nat(const bool &b);
-  static unsigned int add_bool(const unsigned int &n, const bool &b);
+  static unsigned int bool_to_nat(const bool b);
+  static unsigned int add_bool(const unsigned int n, const bool b);
   static inline const unsigned int test_add_true = add_bool(5u, true);
   static inline const unsigned int test_add_false = add_bool(5u, false);
 
@@ -33,7 +33,7 @@ struct Coercions {
     BoolBox clone() const { return BoolBox{(*(this)).unbox}; }
   };
 
-  static unsigned int add_boolbox(const unsigned int &n, const BoolBox &bb);
+  static unsigned int add_boolbox(const unsigned int n, const BoolBox &bb);
   static inline const unsigned int test_add_boolbox =
       add_boolbox(10u, BoolBox{true});
 
@@ -45,7 +45,7 @@ struct Coercions {
   };
 
   static inline const Transform double_transform =
-      Transform{[](const unsigned int &n) { return (n + n); }};
+      Transform{[](const unsigned int n) { return (n + n); }};
   static inline const unsigned int test_fun_coercion =
       double_transform.apply_transform(5u);
 };

@@ -126,13 +126,13 @@ public:
 
 struct LoopifyOptionMaybe {
   static std::optional<unsigned int> find_even(const List<unsigned int> &l);
-  static std::optional<unsigned int> find_greater(const unsigned int &threshold,
+  static std::optional<unsigned int> find_greater(const unsigned int threshold,
                                                   const List<unsigned int> &l);
   static std::optional<unsigned int>
-  lookup(const unsigned int &key,
+  lookup(const unsigned int key,
          const List<std::pair<unsigned int, unsigned int>> &l);
   static List<unsigned int>
-  lookup_all(const unsigned int &key,
+  lookup_all(const unsigned int key,
              const List<std::pair<unsigned int, unsigned int>> &l);
   static std::optional<unsigned int> safe_head(const List<unsigned int> &l);
   static std::optional<List<unsigned int>>
@@ -140,7 +140,7 @@ struct LoopifyOptionMaybe {
   static List<unsigned int>
   catMaybes(const List<std::optional<unsigned int>> &l);
   static std::optional<unsigned int>
-  find_index_even_aux(const List<unsigned int> &l, unsigned int idx);
+  find_index_even_aux(const List<unsigned int> &l, const unsigned int idx);
   static std::optional<unsigned int>
   find_index_even(const List<unsigned int> &l);
 };

@@ -11,13 +11,13 @@ concept MapsTo = std::is_invocable_v<F &, Args &...>;
 struct WrapperDeclMerge {
   struct A {
     struct Nat {
-      static unsigned int fa(unsigned int n);
+      static unsigned int fa(const unsigned int n);
     };
   };
 
   struct B {
     struct Nat {
-      static unsigned int fb(unsigned int n);
+      static unsigned int fb(const unsigned int n);
     };
   };
 

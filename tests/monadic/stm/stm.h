@@ -156,17 +156,17 @@ struct stmtest {
 
   static unsigned int stm_basic_counter(const std::monostate &_x);
   static unsigned int io_basic_counter();
-  static unsigned int stm_inc(const unsigned int &x);
-  static unsigned int io_inc(const unsigned int &x);
-  static unsigned int stm_add_self(unsigned int x);
-  static unsigned int io_add_self(const unsigned int &x);
+  static unsigned int stm_inc(const unsigned int x);
+  static unsigned int io_inc(const unsigned int x);
+  static unsigned int stm_add_self(const unsigned int x);
+  static unsigned int io_add_self(const unsigned int x);
   static void stm_enqueue(const stm::TVar<List<unsigned int>> q,
-                          unsigned int x);
+                          const unsigned int x);
   static unsigned int stm_dequeue(const stm::TVar<List<unsigned int>> q);
   static unsigned int stm_tryDequeue(const stm::TVar<List<unsigned int>> q,
-                                     const unsigned int &dflt);
-  static unsigned int stm_queue_roundtrip(unsigned int x);
-  static unsigned int io_queue_roundtrip(const unsigned int &x);
+                                     const unsigned int dflt);
+  static unsigned int stm_queue_roundtrip(const unsigned int x);
+  static unsigned int io_queue_roundtrip(const unsigned int x);
   static unsigned int stm_orElse_retry_example(const std::monostate &_x);
   static unsigned int io_orElse_retry_example();
 };

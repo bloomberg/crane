@@ -41,12 +41,12 @@ LoopifyListTransforms::run_length_encode(const List<unsigned int> &l) {
 }
 
 List<unsigned int>
-LoopifyListTransforms::prefix_sums(unsigned int acc,
+LoopifyListTransforms::prefix_sums(const unsigned int acc,
                                    const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
-  unsigned int _loop_acc = std::move(acc);
+  unsigned int _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
@@ -61,10 +61,8 @@ LoopifyListTransforms::prefix_sums(unsigned int acc,
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      const List<unsigned int> *_next_l = d_a1.get();
-      unsigned int _next_acc = (_loop_acc + d_a0);
-      _loop_l = _next_l;
-      _loop_acc = std::move(_next_acc);
+      _loop_l = d_a1.get();
+      _loop_acc = (_loop_acc + d_a0);
       continue;
     }
   }
@@ -72,7 +70,7 @@ LoopifyListTransforms::prefix_sums(unsigned int acc,
 }
 
 List<std::pair<unsigned int, unsigned int>>
-LoopifyListTransforms::sliding_pairs_fuel(const unsigned int &fuel,
+LoopifyListTransforms::sliding_pairs_fuel(const unsigned int fuel,
                                           const List<unsigned int> &l) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;
@@ -114,10 +112,8 @@ LoopifyListTransforms::sliding_pairs_fuel(const unsigned int &fuel,
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
                    .d_a1;
-          const List<unsigned int> *_next_l = d_a1.get();
-          unsigned int _next_fuel = fuel_;
-          _loop_l = _next_l;
-          _loop_fuel = std::move(_next_fuel);
+          _loop_l = d_a1.get();
+          _loop_fuel = fuel_;
           continue;
         }
       }
@@ -132,8 +128,8 @@ LoopifyListTransforms::sliding_pairs(const List<unsigned int> &l) {
   return sliding_pairs_fuel(len, l);
 }
 
-unsigned int LoopifyListTransforms::abs_diff(const unsigned int &x,
-                                             const unsigned int &y) {
+unsigned int LoopifyListTransforms::abs_diff(const unsigned int x,
+                                             const unsigned int y) {
   if (y < x) {
     return (((x - y) > x ? 0 : (x - y)));
   } else {
@@ -142,7 +138,7 @@ unsigned int LoopifyListTransforms::abs_diff(const unsigned int &x,
 }
 
 List<unsigned int>
-LoopifyListTransforms::differences_fuel(const unsigned int &fuel,
+LoopifyListTransforms::differences_fuel(const unsigned int fuel,
                                         const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -179,10 +175,8 @@ LoopifyListTransforms::differences_fuel(const unsigned int &fuel,
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          const List<unsigned int> *_next_l = d_a1.get();
-          unsigned int _next_fuel = fuel_;
-          _loop_l = _next_l;
-          _loop_fuel = std::move(_next_fuel);
+          _loop_l = d_a1.get();
+          _loop_fuel = fuel_;
           continue;
         }
       }
@@ -197,7 +191,7 @@ LoopifyListTransforms::differences(const List<unsigned int> &l) {
   return differences_fuel(len, l);
 }
 
-List<unsigned int> LoopifyListTransforms::take(const unsigned int &n,
+List<unsigned int> LoopifyListTransforms::take(const unsigned int n,
                                                const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -224,10 +218,8 @@ List<unsigned int> LoopifyListTransforms::take(const unsigned int &n,
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        const List<unsigned int> *_next_l = d_a1.get();
-        unsigned int _next_n = n_;
-        _loop_l = _next_l;
-        _loop_n = std::move(_next_n);
+        _loop_l = d_a1.get();
+        _loop_n = n_;
         continue;
       }
     }
@@ -235,7 +227,7 @@ List<unsigned int> LoopifyListTransforms::take(const unsigned int &n,
   return std::move(*(_head));
 }
 
-List<unsigned int> LoopifyListTransforms::drop(const unsigned int &n,
+List<unsigned int> LoopifyListTransforms::drop(const unsigned int n,
                                                List<unsigned int> l) {
   List<unsigned int> _result;
   List<unsigned int> _loop_l = std::move(l);
@@ -253,10 +245,8 @@ List<unsigned int> LoopifyListTransforms::drop(const unsigned int &n,
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-        List<unsigned int> _next_l = std::move(*(d_a1));
-        unsigned int _next_n = n_;
-        _loop_l = std::move(_next_l);
-        _loop_n = std::move(_next_n);
+        _loop_l = std::move(*(d_a1));
+        _loop_n = n_;
       }
     }
   }
@@ -264,8 +254,8 @@ List<unsigned int> LoopifyListTransforms::drop(const unsigned int &n,
 }
 
 List<List<unsigned int>>
-LoopifyListTransforms::chunks_of_fuel(const unsigned int &fuel,
-                                      const unsigned int &n,
+LoopifyListTransforms::chunks_of_fuel(const unsigned int fuel,
+                                      const unsigned int n,
                                       const List<unsigned int> &l) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
@@ -296,10 +286,8 @@ LoopifyListTransforms::chunks_of_fuel(const unsigned int &fuel,
           _write = &std::get<typename List<List<unsigned int>>::Cons>(
                         (*_write)->v_mut())
                         .d_a1;
-          List<unsigned int> _next_l = drop(n, _loop_l);
-          unsigned int _next_fuel = fuel_;
-          _loop_l = std::move(_next_l);
-          _loop_fuel = std::move(_next_fuel);
+          _loop_l = drop(n, _loop_l);
+          _loop_fuel = fuel_;
           continue;
         }
       }
@@ -309,14 +297,14 @@ LoopifyListTransforms::chunks_of_fuel(const unsigned int &fuel,
 }
 
 List<List<unsigned int>>
-LoopifyListTransforms::chunks_of(const unsigned int &n,
+LoopifyListTransforms::chunks_of(const unsigned int n,
                                  const List<unsigned int> &l) {
   unsigned int len = l.length();
   return chunks_of_fuel(len, n, l);
 }
 
 List<unsigned int> LoopifyListTransforms::rotate_left_fuel(
-    const unsigned int &fuel, const unsigned int &n, List<unsigned int> l) {
+    const unsigned int fuel, const unsigned int n, List<unsigned int> l) {
   List<unsigned int> _result;
   List<unsigned int> _loop_l = std::move(l);
   unsigned int _loop_n = n;
@@ -340,13 +328,9 @@ List<unsigned int> LoopifyListTransforms::rotate_left_fuel(
               std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
           List<unsigned int> rotated = (*(d_a1)).app(
               List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
-          List<unsigned int> _next_l = std::move(rotated);
-          unsigned int _next_n =
-              (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-          unsigned int _next_fuel = fuel_;
-          _loop_l = std::move(_next_l);
-          _loop_n = std::move(_next_n);
-          _loop_fuel = std::move(_next_fuel);
+          _loop_l = std::move(rotated);
+          _loop_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
+          _loop_fuel = fuel_;
         }
       }
     }
@@ -355,13 +339,13 @@ List<unsigned int> LoopifyListTransforms::rotate_left_fuel(
 }
 
 List<unsigned int>
-LoopifyListTransforms::rotate_left(const unsigned int &n,
+LoopifyListTransforms::rotate_left(const unsigned int n,
                                    const List<unsigned int> &l) {
   return rotate_left_fuel((n + 1u), n, l);
 }
 
 List<unsigned int>
-LoopifyListTransforms::uniq_sorted_fuel(const unsigned int &fuel,
+LoopifyListTransforms::uniq_sorted_fuel(const unsigned int fuel,
                                         const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -392,10 +376,8 @@ LoopifyListTransforms::uniq_sorted_fuel(const unsigned int &fuel,
           const auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(_sv0.v());
           if (d_a0 == d_a00) {
-            const List<unsigned int> *_next_l = d_a1.get();
-            unsigned int _next_fuel = fuel_;
-            _loop_l = _next_l;
-            _loop_fuel = std::move(_next_fuel);
+            _loop_l = d_a1.get();
+            _loop_fuel = fuel_;
             continue;
           } else {
             auto _cell = std::make_unique<List<unsigned int>>(
@@ -404,10 +386,8 @@ LoopifyListTransforms::uniq_sorted_fuel(const unsigned int &fuel,
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            const List<unsigned int> *_next_l = d_a1.get();
-            unsigned int _next_fuel = fuel_;
-            _loop_l = _next_l;
-            _loop_fuel = std::move(_next_fuel);
+            _loop_l = d_a1.get();
+            _loop_fuel = fuel_;
             continue;
           }
         }

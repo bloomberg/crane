@@ -2,13 +2,13 @@
 
 unsigned int
 SrcWrrRomPortRoundtrip::get_reg(const SrcWrrRomPortRoundtrip::state &s,
-                                const unsigned int &r) {
+                                const unsigned int r) {
   return ListDef::template nth<unsigned int>(r, s.regs, 0u);
 }
 
 unsigned int
 SrcWrrRomPortRoundtrip::get_reg_pair(const SrcWrrRomPortRoundtrip::state &s,
-                                     const unsigned int &r) {
+                                     const unsigned int r) {
   unsigned int base =
       (((r - (2u ? r % 2u : r)) > r ? 0 : (r - (2u ? r % 2u : r))));
   return ((get_reg(s, base) * 16u) + get_reg(s, (base + 1u)));
@@ -16,7 +16,7 @@ SrcWrrRomPortRoundtrip::get_reg_pair(const SrcWrrRomPortRoundtrip::state &s,
 
 SrcWrrRomPortRoundtrip::state
 SrcWrrRomPortRoundtrip::execute_src(const SrcWrrRomPortRoundtrip::state &s,
-                                    const unsigned int &r) {
+                                    const unsigned int r) {
   return state{s.regs, s.acc, s.rom_ports,
                (16u ? get_reg_pair(s, r) / 16u : 0)};
 }

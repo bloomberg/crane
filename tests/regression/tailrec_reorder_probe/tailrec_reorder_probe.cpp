@@ -25,14 +25,10 @@ TailrecReorderProbe::dual_accum(
       const auto &[d_a0, d_a1] =
           std::get<typename TailrecReorderProbe::mylist<unsigned int>::Mycons>(
               _loop_l->v());
-      TailrecReorderProbe::mylist<unsigned int> _next_acc2 =
+      _loop_acc2 =
           mylist<unsigned int>::mycons((d_a0 + 1u), std::move(_loop_acc2));
-      TailrecReorderProbe::mylist<unsigned int> _next_acc1 =
-          mylist<unsigned int>::mycons(d_a0, std::move(_loop_acc1));
-      const TailrecReorderProbe::mylist<unsigned int> *_next_l = d_a1.get();
-      _loop_acc2 = std::move(_next_acc2);
-      _loop_acc1 = std::move(_next_acc1);
-      _loop_l = _next_l;
+      _loop_acc1 = mylist<unsigned int>::mycons(d_a0, std::move(_loop_acc1));
+      _loop_l = d_a1.get();
     }
   }
   return _result;
@@ -68,15 +64,10 @@ TailrecReorderProbe::weave(const TailrecReorderProbe::mylist<unsigned int> &l1,
         const auto &[d_a00, d_a10] = std::get<
             typename TailrecReorderProbe::mylist<unsigned int>::Mycons>(
             _loop_l2->v());
-        TailrecReorderProbe::mylist<unsigned int> _next_acc =
-            mylist<unsigned int>::mycons(
-                d_a00,
-                mylist<unsigned int>::mycons(d_a0, std::move(_loop_acc)));
-        const TailrecReorderProbe::mylist<unsigned int> *_next_l2 = d_a10.get();
-        const TailrecReorderProbe::mylist<unsigned int> *_next_l1 = d_a1.get();
-        _loop_acc = std::move(_next_acc);
-        _loop_l2 = _next_l2;
-        _loop_l1 = _next_l1;
+        _loop_acc = mylist<unsigned int>::mycons(
+            d_a00, mylist<unsigned int>::mycons(d_a0, std::move(_loop_acc)));
+        _loop_l2 = d_a10.get();
+        _loop_l1 = d_a1.get();
       }
     }
   }

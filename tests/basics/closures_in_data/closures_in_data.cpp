@@ -4,7 +4,7 @@
 /// returning the list of results.
 List<unsigned int> ClosuresInData::apply_all(
     const List<std::function<unsigned int(unsigned int)>> &fns,
-    unsigned int x) {
+    const unsigned int x) {
   return fns.template map<unsigned int>(
       [=](const std::function<unsigned int(unsigned int)> f) mutable {
         return f(x);
@@ -12,12 +12,12 @@ List<unsigned int> ClosuresInData::apply_all(
 }
 
 unsigned int ClosuresInData::apply_forward(const ClosuresInData::transform &t,
-                                           const unsigned int &x) {
+                                           const unsigned int x) {
   return t.forward(x);
 }
 
 unsigned int ClosuresInData::apply_backward(const ClosuresInData::transform &t,
-                                            const unsigned int &x) {
+                                            const unsigned int x) {
   return t.backward(x);
 }
 
@@ -25,9 +25,9 @@ unsigned int ClosuresInData::apply_backward(const ClosuresInData::transform &t,
 /// function in sequence.
 unsigned int ClosuresInData::compose_all(
     const List<std::function<unsigned int(unsigned int)>> &fns,
-    const unsigned int &x) {
+    const unsigned int x) {
   return fns.template fold_left<unsigned int>(
-      [](const unsigned int &acc,
+      [](const unsigned int acc,
          const std::function<unsigned int(unsigned int)> f) { return f(acc); },
       x);
 }
@@ -36,7 +36,7 @@ unsigned int ClosuresInData::compose_all(
 /// otherwise returns x unchanged.
 unsigned int ClosuresInData::maybe_apply(
     const std::optional<std::function<unsigned int(unsigned int)>> &mf,
-    unsigned int x) {
+    const unsigned int x) {
   if (mf.has_value()) {
     const std::function<unsigned int(unsigned int)> &f = *mf;
     return f(x);

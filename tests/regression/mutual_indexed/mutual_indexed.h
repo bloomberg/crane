@@ -139,7 +139,7 @@ struct MutualIndexed {
   };
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int, OddTree> F1>
-  static T1 EvenTree_rect(const T1 f, F1 &&f0, const unsigned int &,
+  static T1 EvenTree_rect(const T1 f, F1 &&f0, const unsigned int,
                           const EvenTree &e) {
     if (std::holds_alternative<typename EvenTree::ELeaf>(e.v())) {
       return f;
@@ -150,7 +150,7 @@ struct MutualIndexed {
   }
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int, OddTree> F1>
-  static T1 EvenTree_rec(const T1 f, F1 &&f0, const unsigned int &,
+  static T1 EvenTree_rec(const T1 f, F1 &&f0, const unsigned int,
                          const EvenTree &e) {
     if (std::holds_alternative<typename EvenTree::ELeaf>(e.v())) {
       return f;
@@ -161,19 +161,19 @@ struct MutualIndexed {
   }
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int, EvenTree> F0>
-  static T1 OddTree_rect(F0 &&f, const unsigned int &, const OddTree &o) {
+  static T1 OddTree_rect(F0 &&f, const unsigned int, const OddTree &o) {
     const auto &[d_n, d_a1, d_a2] = std::get<typename OddTree::ONode>(o.v());
     return f(d_n, d_a1, *(d_a2));
   }
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int, EvenTree> F0>
-  static T1 OddTree_rec(F0 &&f, const unsigned int &, const OddTree &o) {
+  static T1 OddTree_rec(F0 &&f, const unsigned int, const OddTree &o) {
     const auto &[d_n, d_a1, d_a2] = std::get<typename OddTree::ONode>(o.v());
     return f(d_n, d_a1, *(d_a2));
   }
 
-  static unsigned int even_val(const unsigned int &_x, const EvenTree &t);
-  static unsigned int odd_val(const unsigned int &_x, const OddTree &t);
+  static unsigned int even_val(const unsigned int _x, const EvenTree &t);
+  static unsigned int odd_val(const unsigned int _x, const OddTree &t);
   static inline const EvenTree leaf = EvenTree::eleaf();
   static inline const OddTree tree1 =
       OddTree::onode(0u, 10u, EvenTree::eleaf());

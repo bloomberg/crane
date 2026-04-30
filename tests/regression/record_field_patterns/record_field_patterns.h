@@ -196,7 +196,7 @@ struct RecordFieldPatterns {
     }
   };
 
-  static unsigned int scaled_sum(const unsigned int &scale,
+  static unsigned int scaled_sum(const unsigned int scale,
                                  const ScaledPoint &sp);
   /// After section closing, scaled_sum is parameterized by scale : nat.
   /// The record type itself is NOT parameterized (scale is only used in
@@ -206,7 +206,7 @@ struct RecordFieldPatterns {
 
   struct PointImpl {
     using R = Point;
-    static Point mk(unsigned int x, unsigned int x0);
+    static Point mk(const unsigned int x, const unsigned int x0);
     static unsigned int get_x(const Point &p);
     static unsigned int get_y(const Point &p);
   };

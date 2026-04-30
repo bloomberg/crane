@@ -24,7 +24,7 @@ NestedMatchClosure::make_combiner(const NestedMatchClosure::tree &t) {
     if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(
             d_a0_value.v())) {
       return std::make_optional<std::function<unsigned int(unsigned int)>>(
-          [=](const unsigned int &x) mutable { return (d_a1 + x); });
+          [=](const unsigned int x) mutable { return (d_a1 + x); });
     } else {
       const auto &[d_a00, d_a10, d_a20] =
           std::get<typename NestedMatchClosure::tree::Node>(d_a0_value.v());
@@ -94,7 +94,7 @@ NestedMatchClosure::make_deep_combiner(const NestedMatchClosure::tree &t) {
 /// function parameter are dead.
 std::optional<std::function<unsigned int(unsigned int)>>
 NestedMatchClosure::make_param_combiner(const NestedMatchClosure::tree &t,
-                                        unsigned int base) {
+                                        const unsigned int base) {
   if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(t.v())) {
     return std::optional<std::function<unsigned int(unsigned int)>>();
   } else {

@@ -194,7 +194,7 @@ struct LetPairShadow {
   /// sum(list) + acc = 40 + 60 = 100
   static inline const unsigned int test1 = []() -> unsigned int {
     auto _cs = map_accum<unsigned int, unsigned int, unsigned int>(
-        [](unsigned int s, const unsigned int &x) {
+        [](const unsigned int s, const unsigned int x) {
           return std::make_pair((s + x), s);
         },
         0u,
@@ -207,24 +207,24 @@ struct LetPairShadow {
     return (mylist_sum(l) + acc);
   }();
   /// Helper functions that return pairs (force temporary allocation).
-  static std::pair<unsigned int, unsigned int> add_pair(const unsigned int &a,
-                                                        const unsigned int &b);
-  static std::pair<unsigned int, unsigned int> sub_pair(const unsigned int &a,
-                                                        const unsigned int &b);
+  static std::pair<unsigned int, unsigned int> add_pair(const unsigned int a,
+                                                        const unsigned int b);
+  static std::pair<unsigned int, unsigned int> sub_pair(const unsigned int a,
+                                                        const unsigned int b);
   /// Pattern 2: Two destructs of function-call results in top-level body.
-  static unsigned int double_call_destruct(const unsigned int &a,
-                                           const unsigned int &b,
-                                           const unsigned int &c,
-                                           const unsigned int &d);
+  static unsigned int double_call_destruct(const unsigned int a,
+                                           const unsigned int b,
+                                           const unsigned int c,
+                                           const unsigned int d);
   /// test2: add_pair 3 4 = (7, 12), sub_pair 10 3 = (7, 13)
   /// 7 + 12 + 7 + 13 = 39
   static inline const unsigned int test2 =
       double_call_destruct(3u, 4u, 10u, 3u);
   /// Pattern 3: Three destructs of function-call results.
   static unsigned int
-  triple_call_destruct(const unsigned int &a, const unsigned int &b,
-                       const unsigned int &c, const unsigned int &d,
-                       const unsigned int &e, const unsigned int &f);
+  triple_call_destruct(const unsigned int a, const unsigned int b,
+                       const unsigned int c, const unsigned int d,
+                       const unsigned int e, const unsigned int f);
   /// test3: add_pair 1 2 = (3,2), add_pair 3 4 = (7,12),
   /// add_pair 5 6 = (11,30).  3+2+7+12+11+30 = 65
   static inline const unsigned int test3 =

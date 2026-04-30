@@ -224,11 +224,11 @@ struct MutualCoind {
     return streamA<T1>::lazy_([=]() mutable -> streamA<T1> { return *(d_a1); });
   }
 
-  static streamA<unsigned int> countA(unsigned int n);
-  static streamB<unsigned int> countB(unsigned int n);
+  static streamA<unsigned int> countA(const unsigned int n);
+  static streamB<unsigned int> countB(const unsigned int n);
 
   template <typename T1>
-  static List<T1> takeA(const unsigned int &fuel, const streamA<T1> s) {
+  static List<T1> takeA(const unsigned int fuel, const streamA<T1> s) {
     if (fuel <= 0) {
       return List<T1>::nil();
     } else {
@@ -239,7 +239,7 @@ struct MutualCoind {
   }
 
   template <typename T1>
-  static List<T1> takeB(const unsigned int &fuel, const streamB<T1> s) {
+  static List<T1> takeB(const unsigned int fuel, const streamB<T1> s) {
     if (fuel <= 0) {
       return List<T1>::nil();
     } else {

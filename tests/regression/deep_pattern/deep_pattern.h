@@ -154,7 +154,7 @@ struct DeepPattern {
       }
     }
 
-    unsigned int conditional_match(const unsigned int &target) const {
+    unsigned int conditional_match(const unsigned int target) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<typename tree::Leaf>(_sv.v());
@@ -179,7 +179,7 @@ struct DeepPattern {
       }
     }
 
-    bool has_value(const unsigned int &target) const {
+    bool has_value(const unsigned int target) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<typename tree::Leaf>(_sv.v());

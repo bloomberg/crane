@@ -217,7 +217,7 @@ struct DecodeList {
     }
   }
 
-  static instruction decode(const unsigned int &b1, const unsigned int &b2);
+  static instruction decode(const unsigned int b1, const unsigned int b2);
   static List<instruction> decode_list(const List<unsigned int> &bytes);
   static inline const unsigned int t_empty =
       decode_list(List<unsigned int>::nil()).length();

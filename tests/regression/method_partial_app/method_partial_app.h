@@ -125,7 +125,7 @@ struct MethodPartialApp {
 
     /// add_to_sum: methodified on first arg (tree).
     /// Takes a tree and a nat, returns the tree's sum plus the nat.
-    unsigned int add_to_sum(const unsigned int &x) const {
+    unsigned int add_to_sum(const unsigned int x) const {
       return ((*(this)).tree_sum() + x);
     }
 

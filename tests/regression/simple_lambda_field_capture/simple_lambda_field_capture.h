@@ -132,7 +132,7 @@ struct SimpleLambdaFieldCapture {
         const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
         mylist d_a1_value = *(d_a1);
         return std::make_optional<std::function<unsigned int(unsigned int)>>(
-            [=](const unsigned int &x) mutable {
+            [=](const unsigned int x) mutable {
               return ((x + d_a0) + d_a1_value.mylist_sum());
             });
       }
@@ -268,7 +268,7 @@ struct SimpleLambdaFieldCapture {
     }
   }();
   /// Dummy use of tag.
-  static tag mk_tag(unsigned int n);
+  static tag mk_tag(const unsigned int n);
 };
 
 #endif // INCLUDED_SIMPLE_LAMBDA_FIELD_CAPTURE

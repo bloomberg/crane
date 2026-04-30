@@ -133,7 +133,7 @@ struct MoveSafety {
       return tree::node(std::move(*(this)), 0u, tree::leaf());
     }
 
-    unsigned int sum_values(unsigned int x) const {
+    unsigned int sum_values(const unsigned int x) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return x;
@@ -327,7 +327,7 @@ struct MoveSafety {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    unsigned int apply_box(const unsigned int &x) const {
+    unsigned int apply_box(const unsigned int x) const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<typename fn_box::Box>(_sv.v());
       return d_a0(x);

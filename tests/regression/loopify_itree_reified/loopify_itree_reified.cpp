@@ -4,7 +4,7 @@
 /// fixpoint with recursion on fuel that processes reified ITrees. Should
 /// be loopified normally (nontail with _Enter/_Call frames).
 unsigned int
-LoopifyItreeReified::count_taus(const unsigned int &fuel,
+LoopifyItreeReified::count_taus(const unsigned int fuel,
                                 const std::shared_ptr<ITree<unsigned int>> &t) {
   struct _Enter {
     std::shared_ptr<ITree<unsigned int>> t;
@@ -26,7 +26,7 @@ LoopifyItreeReified::count_taus(const unsigned int &fuel,
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const std::shared_ptr<ITree<unsigned int>> &t = _f.t;
-      const unsigned int &fuel = _f.fuel;
+      const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
       } else {

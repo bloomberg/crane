@@ -178,10 +178,7 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        const List *_next_self = d_a1.get();
-        List<t_A> _next_m = std::move(_loop_m);
-        _loop_self = _next_self;
-        _loop_m = std::move(_next_m);
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -323,18 +320,18 @@ struct LoopifySpecialRecursion {
     }
   }
 
-  static List<unsigned int> process_twice_fuel(const unsigned int &fuel,
+  static List<unsigned int> process_twice_fuel(const unsigned int fuel,
                                                const List<unsigned int> &l);
   static List<unsigned int> process_twice(const List<unsigned int> &l);
   static List<unsigned int> double_append(const List<unsigned int> &l1,
                                           List<unsigned int> l2);
   static List<unsigned int> remove_if_sum_even(const List<unsigned int> &l);
-  static List<unsigned int> reverse_insert(unsigned int x,
+  static List<unsigned int> reverse_insert(const unsigned int x,
                                            List<unsigned int> l);
 
   template <MapsTo<unsigned int, unsigned int> F1>
-  static unsigned int nest_apply(const unsigned int &n, F1 &&f,
-                                 unsigned int x) {
+  static unsigned int nest_apply(const unsigned int n, F1 &&f,
+                                 const unsigned int x) {
     struct _Enter {
       unsigned int n;
     };
@@ -353,7 +350,7 @@ struct LoopifySpecialRecursion {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const unsigned int &n = _f.n;
+        const unsigned int n = _f.n;
         if (n <= 0) {
           _result = x;
         } else {
@@ -371,12 +368,12 @@ struct LoopifySpecialRecursion {
 
   static List<unsigned int> collect_sorted(const tree &t);
   static unsigned int sum_odd_indices_aux(const List<unsigned int> &l,
-                                          const unsigned int &idx);
+                                          const unsigned int idx);
   static unsigned int sum_odd_indices(const List<unsigned int> &l);
-  static unsigned int categorize_by(const unsigned int &k,
+  static unsigned int categorize_by(const unsigned int k,
                                     const List<unsigned int> &l);
-  static List<unsigned int> between(const unsigned int &lo,
-                                    const unsigned int &hi,
+  static List<unsigned int> between(const unsigned int lo,
+                                    const unsigned int hi,
                                     const List<unsigned int> &l);
   static List<unsigned int> merge_levels(const List<List<unsigned int>> &ll);
 };

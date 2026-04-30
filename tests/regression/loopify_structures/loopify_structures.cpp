@@ -4,7 +4,7 @@
 /// Helper: sum all elements in a list of nested structures.
 /// Handles both tree and list levels in one function for full loopification.
 unsigned int LoopifyStructures::sum_nested_list_fuel(
-    const unsigned int &fuel, const List<LoopifyStructures::nested> &l) {
+    const unsigned int fuel, const List<LoopifyStructures::nested> &l) {
   struct _Enter {
     const List<LoopifyStructures::nested> *l;
     unsigned int fuel;
@@ -38,7 +38,7 @@ unsigned int LoopifyStructures::sum_nested_list_fuel(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<LoopifyStructures::nested> &l = *(_f.l);
-      const unsigned int &fuel = _f.fuel;
+      const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
       } else {
@@ -80,7 +80,7 @@ unsigned int LoopifyStructures::sum_nested_list_fuel(
 
 /// Helper: compute max depth among a list of nested structures.
 unsigned int LoopifyStructures::depth_nested_list_fuel(
-    const unsigned int &fuel, const List<LoopifyStructures::nested> &l) {
+    const unsigned int fuel, const List<LoopifyStructures::nested> &l) {
   if (fuel <= 0) {
     return 0u;
   } else {
@@ -116,7 +116,7 @@ unsigned int LoopifyStructures::depth_nested_list_fuel(
 
 /// Helper: flatten a list of nested structures to a flat list of nats.
 List<unsigned int> LoopifyStructures::flatten_nested_list_fuel(
-    const unsigned int &fuel, const List<LoopifyStructures::nested> &l) {
+    const unsigned int fuel, const List<LoopifyStructures::nested> &l) {
   struct _Enter {
     const List<LoopifyStructures::nested> *l;
     unsigned int fuel;
@@ -150,7 +150,7 @@ List<unsigned int> LoopifyStructures::flatten_nested_list_fuel(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<LoopifyStructures::nested> &l = *(_f.l);
-      const unsigned int &fuel = _f.fuel;
+      const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<unsigned int>::nil();
       } else {

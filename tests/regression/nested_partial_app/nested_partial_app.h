@@ -148,7 +148,7 @@ struct NestedPartialApp {
 
   static unsigned int tree_sum(const tree &t);
   /// 3-argument function: builds Node(t1, n, t2).
-  static tree build_node(tree t1, unsigned int n, tree t2);
+  static tree build_node(tree t1, const unsigned int n, tree t2);
   /// BUG HYPOTHESIS: Partially apply build_node in stages.
   /// g = build_node t1  → closure captures t1
   /// h = g 42           → closure captures t1 and 42
@@ -197,8 +197,8 @@ struct NestedPartialApp {
     }();
   }();
   /// Variation: 4-argument function, triple nesting.
-  static unsigned int quad_fn(const tree &a, const unsigned int &b,
-                              const unsigned int &c, const tree &d);
+  static unsigned int quad_fn(const tree &a, const unsigned int b,
+                              const unsigned int c, const tree &d);
   static inline const unsigned int triple_partial = []() {
     return []() {
       tree t = tree::node(tree::leaf(), 10u, tree::leaf());

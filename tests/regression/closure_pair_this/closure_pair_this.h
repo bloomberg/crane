@@ -131,23 +131,23 @@ struct ClosurePairThis {
     /// destroyed — calling either closure is then use-after-free.
     std::pair<std::function<unsigned int(unsigned int)>,
               std::function<unsigned int(unsigned int)>>
-    get_fn_pair(const unsigned int &flag) const {
+    get_fn_pair(const unsigned int flag) const {
       tree _self = *(this);
       if (flag <= 0) {
         return std::make_pair(
-            [=](const unsigned int &x) mutable {
+            [=](const unsigned int x) mutable {
               return (x + _self.tree_sum());
             },
-            [=](const unsigned int &x) mutable {
+            [=](const unsigned int x) mutable {
               return (_self.tree_sum() * x);
             });
       } else {
         unsigned int _x = flag - 1;
         return std::make_pair(
-            [=](const unsigned int &x) mutable {
+            [=](const unsigned int x) mutable {
               return (_self.tree_sum() + x);
             },
-            [](unsigned int x) { return x; });
+            [](const unsigned int x) { return x; });
       }
     }
 

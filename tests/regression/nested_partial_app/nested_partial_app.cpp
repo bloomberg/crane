@@ -12,15 +12,15 @@ unsigned int NestedPartialApp::tree_sum(const NestedPartialApp::tree &t) {
 
 /// 3-argument function: builds Node(t1, n, t2).
 NestedPartialApp::tree NestedPartialApp::build_node(NestedPartialApp::tree t1,
-                                                    unsigned int n,
+                                                    const unsigned int n,
                                                     NestedPartialApp::tree t2) {
   return tree::node(std::move(t1), n, std::move(t2));
 }
 
 /// Variation: 4-argument function, triple nesting.
 unsigned int NestedPartialApp::quad_fn(const NestedPartialApp::tree &a,
-                                       const unsigned int &b,
-                                       const unsigned int &c,
+                                       const unsigned int b,
+                                       const unsigned int c,
                                        const NestedPartialApp::tree &d) {
   return (((tree_sum(a) + b) + c) + tree_sum(d));
 }

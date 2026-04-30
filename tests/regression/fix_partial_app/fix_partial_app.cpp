@@ -2,7 +2,7 @@
 
 /// count_nodes: counts nodes in a tree. Will be partially applied.
 unsigned int FixPartialApp::count_nodes(const FixPartialApp::tree &t,
-                                        unsigned int base) {
+                                        const unsigned int base) {
   if (std::holds_alternative<typename FixPartialApp::tree::Leaf>(t.v())) {
     return base;
   } else {

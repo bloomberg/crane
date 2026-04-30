@@ -35,7 +35,7 @@ List<unsigned int> LetFix::local_flatten(const List<List<unsigned int>> &xss) {
   }
 }
 
-bool LetFix::local_mem(const unsigned int &n, const List<unsigned int> &l) {
+bool LetFix::local_mem(const unsigned int n, const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return false;
   } else {

@@ -156,11 +156,11 @@ struct FixFoldEscape {
   collect_adders(const List<unsigned int> &l);
   static unsigned int
   apply_head(const List<std::function<unsigned int(unsigned int)>> &l,
-             const unsigned int &x);
+             const unsigned int x);
   static unsigned int
   sum_apply(const List<std::function<unsigned int(unsigned int)>> &l,
-            const unsigned int &x); /// test1: collect_adders 10; 20; 30 ->
-                                    /// adder_30; adder_20; adder_10
+            const unsigned int x); /// test1: collect_adders 10; 20; 30 ->
+                                   /// adder_30; adder_20; adder_10
   /// (reversed by fold_left). apply_head picks adder_30, apply to 5 -> 35.
   static inline const unsigned int test1 = apply_head(
       collect_adders(List<unsigned int>::cons(

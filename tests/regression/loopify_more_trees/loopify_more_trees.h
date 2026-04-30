@@ -140,10 +140,7 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        const List *_next_self = d_a1.get();
-        List<t_A> _next_m = std::move(_loop_m);
-        _loop_self = _next_self;
-        _loop_m = std::move(_next_m);
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -292,7 +289,7 @@ struct LoopifyMoreTrees {
   static unsigned int count_nodes(const tree &t);
   static tree tree_max(tree t1, tree t2);
   static unsigned int sum_of_max_branches(const tree &t);
-  static tree insert_bst(unsigned int x, const tree &t);
+  static tree insert_bst(const unsigned int x, const tree &t);
   static tree build_bst(const List<unsigned int> &l);
   static List<unsigned int> append_lists(const List<unsigned int> &l1,
                                          List<unsigned int> l2);
@@ -301,7 +298,7 @@ struct LoopifyMoreTrees {
   static List<tree> tree_children(const tree &t);
   static List<tree> append_trees(const List<tree> &l1, List<tree> l2);
   static List<tree> concat_map_children(const List<tree> &lt);
-  static List<List<unsigned int>> tree_levels_fuel(const unsigned int &fuel,
+  static List<List<unsigned int>> tree_levels_fuel(const unsigned int fuel,
                                                    const List<tree> &level);
   static List<List<unsigned int>> tree_levels(tree t);
 };

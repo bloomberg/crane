@@ -139,10 +139,7 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        const List *_next_self = d_a1.get();
-        List<t_A> _next_m = std::move(_loop_m);
-        _loop_self = _next_self;
-        _loop_m = std::move(_next_m);
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -191,10 +188,10 @@ struct LoopifySearch {
   /// knapsack capacity items solves 0/1 knapsack problem.
   /// Items are (weight, value) pairs.
   static unsigned int
-  knapsack_fuel(const unsigned int &fuel, const unsigned int &capacity,
+  knapsack_fuel(const unsigned int fuel, const unsigned int capacity,
                 const List<std::pair<unsigned int, unsigned int>> &items);
   static unsigned int
-  knapsack(const unsigned int &capacity,
+  knapsack(const unsigned int capacity,
            const List<std::pair<unsigned int, unsigned int>> &items);
   /// majority l finds majority element using Boyer-Moore algorithm.
   /// Returns (candidate, count).
@@ -249,7 +246,7 @@ struct LoopifySearch {
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
         F0 cmp = _f.cmp;
-        unsigned int d_a0 = std::move(_f.d_a0);
+        unsigned int d_a0 = _f.d_a0;
         unsigned int m = _result;
         if (cmp(d_a0, m) == 1u) {
           _result = d_a0;
@@ -262,20 +259,20 @@ struct LoopifySearch {
   }
 
   /// Helper for binary search: get nth element.
-  static unsigned int nth_impl(const unsigned int &n,
+  static unsigned int nth_impl(const unsigned int n,
                                const List<unsigned int> &l);
   /// Helper for binary search: take first k elements.
-  static List<unsigned int> take_impl(const unsigned int &k,
+  static List<unsigned int> take_impl(const unsigned int k,
                                       const List<unsigned int> &l);
   /// Helper for binary search: drop first k elements.
-  static List<unsigned int> drop_impl(const unsigned int &k,
+  static List<unsigned int> drop_impl(const unsigned int k,
                                       List<unsigned int> l);
   /// binary_search_fuel target sorted_list searches for target in sorted list.
   /// Returns true if found.
-  static bool binary_search_fuel(const unsigned int &fuel,
-                                 const unsigned int &target,
+  static bool binary_search_fuel(const unsigned int fuel,
+                                 const unsigned int target,
                                  const List<unsigned int> &l);
-  static bool binary_search(const unsigned int &target,
+  static bool binary_search(const unsigned int target,
                             const List<unsigned int> &l);
   /// longest_run l finds the longest run of consecutive equal elements.
   static List<unsigned int> longest_run_aux(List<unsigned int> current_run,
@@ -283,16 +280,16 @@ struct LoopifySearch {
                                             const List<unsigned int> &l);
   static List<unsigned int> longest_run(const List<unsigned int> &l);
   /// collatz n computes Collatz sequence length (not the list).
-  static unsigned int collatz_fuel(const unsigned int &fuel,
-                                   const unsigned int &n);
-  static unsigned int collatz(const unsigned int &n);
+  static unsigned int collatz_fuel(const unsigned int fuel,
+                                   const unsigned int n);
+  static unsigned int collatz(const unsigned int n);
   /// lis l simple longest increasing subsequence (greedy approach).
   static List<unsigned int> lis(const List<unsigned int> &l);
   /// subset_sum target l checks if any subset sums to target.
-  static bool subset_sum_fuel(const unsigned int &fuel,
-                              const unsigned int &target,
+  static bool subset_sum_fuel(const unsigned int fuel,
+                              const unsigned int target,
                               const List<unsigned int> &l);
-  static bool subset_sum(const unsigned int &target,
+  static bool subset_sum(const unsigned int target,
                          const List<unsigned int> &l);
 
   /// Helper: filter predicate.
@@ -312,38 +309,38 @@ struct LoopifySearch {
   }
 
   /// sieve l removes multiples (simplified sieve of Eratosthenes).
-  static List<unsigned int> sieve_fuel(const unsigned int &fuel,
+  static List<unsigned int> sieve_fuel(const unsigned int fuel,
                                        List<unsigned int> l);
   static List<unsigned int> sieve(const List<unsigned int> &l);
   /// Helper: check if element is in list.
-  static bool elem_impl(const unsigned int &x, const List<unsigned int> &l);
+  static bool elem_impl(const unsigned int x, const List<unsigned int> &l);
   /// nub l removes duplicates from list.
-  static List<unsigned int> nub_fuel(const unsigned int &fuel,
+  static List<unsigned int> nub_fuel(const unsigned int fuel,
                                      List<unsigned int> l);
   static List<unsigned int> nub(const List<unsigned int> &l);
   /// remove_duplicates l removes all duplicate elements.
-  static List<unsigned int> remove_duplicates_fuel(const unsigned int &fuel,
+  static List<unsigned int> remove_duplicates_fuel(const unsigned int fuel,
                                                    List<unsigned int> l);
   static List<unsigned int> remove_duplicates(const List<unsigned int> &l);
   /// quicksort l sorts list using quicksort with filter-based partitioning.
-  static List<unsigned int> quicksort_fuel(const unsigned int &fuel,
+  static List<unsigned int> quicksort_fuel(const unsigned int fuel,
                                            List<unsigned int> l);
   static List<unsigned int> quicksort(const List<unsigned int> &l);
   /// Helper: split list into two roughly equal parts.
   static std::pair<List<unsigned int>, List<unsigned int>>
   split_list(const List<unsigned int> &l);
   /// Helper: merge two sorted lists with fuel.
-  static List<unsigned int> merge_sorted_fuel(const unsigned int &fuel,
+  static List<unsigned int> merge_sorted_fuel(const unsigned int fuel,
                                               List<unsigned int> l1,
                                               List<unsigned int> l2);
   static List<unsigned int> merge_sorted(const List<unsigned int> &l1,
                                          const List<unsigned int> &l2);
   /// merge_sort l sorts list using merge sort.
-  static List<unsigned int> merge_sort_fuel(const unsigned int &fuel,
+  static List<unsigned int> merge_sort_fuel(const unsigned int fuel,
                                             List<unsigned int> l);
   static List<unsigned int> merge_sort(const List<unsigned int> &l);
   /// Helper: remove first occurrence of x from list.
-  static List<unsigned int> remove_first(const unsigned int &x,
+  static List<unsigned int> remove_first(const unsigned int x,
                                          const List<unsigned int> &l);
 
   /// Helper: map function over list and concatenate results.
@@ -389,29 +386,28 @@ struct LoopifySearch {
 
   /// Helper: map function that prepends element to each list.
   static List<List<unsigned int>>
-  map_cons(unsigned int x, const List<List<unsigned int>> &lsts);
+  map_cons(const unsigned int x, const List<List<unsigned int>> &lsts);
   /// perms_choices_fuel fuel choices orig generates permutations by iterating
   /// over choices.  Single self-recursive function for full loopification.
   /// Match on remaining is hoisted out of let-binding.
   static List<List<unsigned int>>
-  perms_choices_fuel(const unsigned int &fuel,
-                     const List<unsigned int> &choices,
+  perms_choices_fuel(const unsigned int fuel, const List<unsigned int> &choices,
                      const List<unsigned int> &orig);
   /// permutations_fuel fuel l generates all permutations of list.
   static List<List<unsigned int>>
-  permutations_fuel(const unsigned int &fuel, const List<unsigned int> &l);
+  permutations_fuel(const unsigned int fuel, const List<unsigned int> &l);
   static List<List<unsigned int>> permutations(const List<unsigned int> &l);
   /// linear_search x l finds index of first occurrence of x.
   static std::optional<unsigned int>
-  linear_search_aux(const unsigned int &x, const List<unsigned int> &l,
-                    unsigned int idx);
-  static std::optional<unsigned int> linear_search(const unsigned int &x,
+  linear_search_aux(const unsigned int x, const List<unsigned int> &l,
+                    const unsigned int idx);
+  static std::optional<unsigned int> linear_search(const unsigned int x,
                                                    const List<unsigned int> &l);
   /// all_indices x l finds all indices where x occurs.
-  static List<unsigned int> all_indices_aux(const unsigned int &x,
+  static List<unsigned int> all_indices_aux(const unsigned int x,
                                             const List<unsigned int> &l,
-                                            unsigned int idx);
-  static List<unsigned int> all_indices(const unsigned int &x,
+                                            const unsigned int idx);
+  static List<unsigned int> all_indices(const unsigned int x,
                                         const List<unsigned int> &l);
   /// min_element l finds minimum element in list.
   static unsigned int min_element(const List<unsigned int> &l);
@@ -569,8 +565,9 @@ struct LoopifySearch {
 
   /// find_indices p l finds all indices where predicate holds.
   template <MapsTo<bool, unsigned int> F0>
-  static List<unsigned int>
-  find_indices_aux(F0 &&p, const List<unsigned int> &l, unsigned int idx) {
+  static List<unsigned int> find_indices_aux(F0 &&p,
+                                             const List<unsigned int> &l,
+                                             const unsigned int idx) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
     } else {

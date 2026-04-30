@@ -181,7 +181,7 @@ struct StackOps {
       return s_.acc;
     }
   }();
-  static state_basic push_stack(const state_basic &s, unsigned int addr);
+  static state_basic push_stack(const state_basic &s, const unsigned int addr);
   static unsigned int top_or_zero(const state_basic &s);
   static inline const unsigned int empty_len =
       push_stack(state_basic{List<unsigned int>::nil()}, 12u)
@@ -199,7 +199,8 @@ struct StackOps {
                                      3u, List<unsigned int>::nil())))},
                  9u)
           .stack_basic.length();
-  static state_basic push_stack_cap(const state_basic &s, unsigned int addr);
+  static state_basic push_stack_cap(const state_basic &s,
+                                    const unsigned int addr);
   static inline const unsigned int push_cap_test =
       push_stack_cap(
           state_basic{List<unsigned int>::cons(

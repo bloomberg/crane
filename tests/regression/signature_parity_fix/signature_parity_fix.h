@@ -10,7 +10,7 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct SignatureParityFix {
-  static unsigned int f(unsigned int seed);
+  static unsigned int f(const unsigned int seed);
   static inline const unsigned int t = f(4u);
 };
 

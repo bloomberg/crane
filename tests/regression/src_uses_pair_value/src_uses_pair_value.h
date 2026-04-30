@@ -126,7 +126,7 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
 };
 
 struct SrcUsesPairValue {
@@ -144,9 +144,9 @@ struct SrcUsesPairValue {
     }
   };
 
-  static unsigned int get_reg(const state &s, const unsigned int &r);
-  static unsigned int get_reg_pair(const state &s, const unsigned int &r);
-  static state execute_src(const state &s, const unsigned int &r);
+  static unsigned int get_reg(const state &s, const unsigned int r);
+  static unsigned int get_reg_pair(const state &s, const unsigned int r);
+  static state execute_src(const state &s, const unsigned int r);
   static inline const state sample = state{
       List<unsigned int>::cons(
           0u,
@@ -165,7 +165,7 @@ struct SrcUsesPairValue {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int &n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

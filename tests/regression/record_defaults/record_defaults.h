@@ -23,8 +23,8 @@ struct RecordDefaults {
   };
 
   static inline const Config default_config = Config{80u, 24u, 1u, false};
-  static Config set_width(unsigned int w, const Config &c);
-  static Config set_debug(bool d, const Config &c);
+  static Config set_width(const unsigned int w, const Config &c);
+  static Config set_debug(const bool d, const Config &c);
 
   struct Point {
     unsigned int px;
@@ -45,8 +45,8 @@ struct RecordDefaults {
   };
 
   static unsigned int rect_area(const Rect &r);
-  static Rect make_rect(unsigned int x, unsigned int y, unsigned int w,
-                        unsigned int h);
+  static Rect make_rect(const unsigned int x, const unsigned int y,
+                        const unsigned int w, const unsigned int h);
   static unsigned int total_cells(const Config &c);
   static inline const unsigned int test_default_width =
       default_config.cfg_width;

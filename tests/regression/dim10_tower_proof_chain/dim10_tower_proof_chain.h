@@ -75,7 +75,7 @@ public:
 struct Dim10TowerProofChainCase {
   using nat_lt = std::any;
   using nat_le = std::any;
-  static nat_le nat_le_of_lt(const unsigned int &n, const unsigned int &m,
+  static nat_le nat_le_of_lt(const unsigned int n, const unsigned int m,
                              const std::any _H);
 
   struct QPos {
@@ -89,7 +89,7 @@ struct Dim10TowerProofChainCase {
   };
 
   static unsigned int qpos_denom(const QPos &q);
-  static QPos nat_to_qpos(unsigned int n);
+  static QPos nat_to_qpos(const unsigned int n);
   using EventuallyZero = SigT<unsigned int, std::any>;
   using IsIntegerValued = std::any;
 
@@ -101,19 +101,19 @@ struct Dim10TowerProofChainCase {
   };
 
   static inline const GradedObj go_zero = GradedObj{0u};
-  static unsigned int nat_sub(const unsigned int &n, const unsigned int &m);
-  static unsigned int poly_approx_dim(const unsigned int &_x0,
-                                      const unsigned int &_x1);
-  static unsigned int layer_dim(const unsigned int &base_dim, unsigned int n);
-  static GradedObj layer_obj(const unsigned int &base_dim,
-                             const unsigned int &n);
-  static QPos layer_measure(const unsigned int &base_dim,
-                            const unsigned int &n);
-  static EventuallyZero layer_measure_eventually_zero(unsigned int base_dim);
-  static GradedObj P_n_obj(const unsigned int &n, const GradedObj &x);
-  static GradedObj D_n_obj(const unsigned int &_x0, const unsigned int &_x1);
-  static QPos D_n_measure(const unsigned int &_x0, const unsigned int &_x1);
-  static EventuallyZero D_n_measure_eventually_zero(const unsigned int &_x0);
+  static unsigned int nat_sub(const unsigned int n, const unsigned int m);
+  static unsigned int poly_approx_dim(const unsigned int _x0,
+                                      const unsigned int _x1);
+  static unsigned int layer_dim(const unsigned int base_dim,
+                                const unsigned int n);
+  static GradedObj layer_obj(const unsigned int base_dim, const unsigned int n);
+  static QPos layer_measure(const unsigned int base_dim, const unsigned int n);
+  static EventuallyZero
+  layer_measure_eventually_zero(const unsigned int base_dim);
+  static GradedObj P_n_obj(const unsigned int n, const GradedObj &x);
+  static GradedObj D_n_obj(const unsigned int _x0, const unsigned int _x1);
+  static QPos D_n_measure(const unsigned int _x0, const unsigned int _x1);
+  static EventuallyZero D_n_measure_eventually_zero(const unsigned int _x0);
 
   struct GradedGoodwillieTower {
     std::function<GradedObj(unsigned int)> ggt_P;
@@ -126,11 +126,11 @@ struct Dim10TowerProofChainCase {
   };
 
   static GradedGoodwillieTower
-  make_graded_goodwillie_tower(unsigned int base_dim);
+  make_graded_goodwillie_tower(const unsigned int base_dim);
   static SigT<unsigned int, std::any>
-  graded_goodwillie_layers_stabilize(const unsigned int &base_dim);
+  graded_goodwillie_layers_stabilize(const unsigned int base_dim);
   static SigT<unsigned int, std::any>
-  graded_goodwillie_P_stabilizes(unsigned int base_dim);
+  graded_goodwillie_P_stabilizes(const unsigned int base_dim);
   static inline const GradedGoodwillieTower dim10_tower =
       make_graded_goodwillie_tower(10u);
   static inline const SigT<unsigned int, std::any> dim10_layers_stabilize =
@@ -150,7 +150,7 @@ struct Dim10TowerProofChainCase {
   static std::pair<std::pair<std::pair<IsIntegerValued, EventuallyZero>,
                              SigT<unsigned int, std::any>>,
                    SigT<unsigned int, std::any>>
-  graded_complete_proof_chain(const unsigned int &base_dim);
+  graded_complete_proof_chain(const unsigned int base_dim);
 
   struct GoodwillieProofChain {
     EventuallyZero gc_eventually_zero;
@@ -166,7 +166,7 @@ struct Dim10TowerProofChainCase {
   };
 
   static GoodwillieProofChain
-  make_goodwillie_proof_chain(const unsigned int &base_dim);
+  make_goodwillie_proof_chain(const unsigned int base_dim);
   static inline const GoodwillieProofChain dim10_chain =
       make_goodwillie_proof_chain(10u);
   static inline const std::pair<

@@ -147,10 +147,9 @@ struct EffectPoly {
   static std::string test_lift_string();
   static bool test_lift_bool();
   /// 3. Monadic when / guard
-  static void when_(const bool &b, std::monostate action);
-  static void test_when();
-  /// 4. Monadic unless
-  static void unless(const bool &b, std::monostate action);
+  static void when_(const bool b, std::monostate action);
+  static void test_when(); /// 4. Monadic unless
+  static void unless(const bool b, std::monostate action);
   static void test_unless();
   /// 5. Monadic sequence of list of actions
   static void sequence_void(const List<std::monostate> &actions);
@@ -168,7 +167,8 @@ struct EffectPoly {
     }
   }
 
-  static unsigned int sum_with_logging(unsigned int acc, unsigned int n);
+  static unsigned int sum_with_logging(const unsigned int acc,
+                                       const unsigned int n);
   static unsigned int test_fold();
   /// 7. Returning a pair from a monadic computation
   static std::pair<std::string, std::string> read_two_lines();

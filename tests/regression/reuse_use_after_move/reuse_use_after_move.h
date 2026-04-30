@@ -159,7 +159,7 @@ struct ReuseUseAfterMove {
   ///
   /// length(l) traverses l, hitting the null d_a1 field.
   /// Dereferencing null shared_ptr -> CRASH.
-  static mylist rewrite_head(mylist l, const bool &b);
+  static mylist rewrite_head(mylist l, const bool b);
   /// test1: rewrite_head on 1, 2, 3 with true.
   /// Expected: length 1,2,3 = 3, so result = 3, 2, 3.
   /// Bug: null dereference inside length.
@@ -176,7 +176,7 @@ struct ReuseUseAfterMove {
     }
   }();
   /// test2: Use sum instead of length — same bug pattern.
-  static mylist rewrite_head_sum(mylist l, const bool &b);
+  static mylist rewrite_head_sum(mylist l, const bool b);
   static inline const unsigned int test2 = []() {
     auto &&_sv0 = rewrite_head_sum(
         mylist::mycons(

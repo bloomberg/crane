@@ -41,7 +41,7 @@ List<unsigned int> LoopifySearchOpt::lis(const List<unsigned int> &l) {
 }
 
 List<unsigned int> LoopifySearchOpt::longest_run_fuel(
-    const unsigned int &fuel, List<unsigned int> current,
+    const unsigned int fuel, List<unsigned int> current,
     List<unsigned int> best, const List<unsigned int> &l) {
   List<unsigned int> _result;
   const List<unsigned int> *_loop_l = &l;
@@ -70,28 +70,17 @@ List<unsigned int> LoopifySearchOpt::longest_run_fuel(
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _loop_current.v_mut())) {
-          const List<unsigned int> *_next_l = d_a1.get();
-          List<unsigned int> _next_best = std::move(_loop_best);
-          List<unsigned int> _next_current =
+          _loop_l = d_a1.get();
+          _loop_current =
               List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
-          unsigned int _next_fuel = fuel_;
-          _loop_l = _next_l;
-          _loop_best = std::move(_next_best);
-          _loop_current = std::move(_next_current);
-          _loop_fuel = std::move(_next_fuel);
+          _loop_fuel = fuel_;
         } else {
           auto &[d_a00, d_a10] = std::get<typename List<unsigned int>::Cons>(
               _loop_current.v_mut());
           if (d_a0 == d_a00) {
-            const List<unsigned int> *_next_l = d_a1.get();
-            List<unsigned int> _next_best = std::move(_loop_best);
-            List<unsigned int> _next_current =
-                List<unsigned int>::cons(d_a0, _loop_current);
-            unsigned int _next_fuel = fuel_;
-            _loop_l = _next_l;
-            _loop_best = std::move(_next_best);
-            _loop_current = std::move(_next_current);
-            _loop_fuel = std::move(_next_fuel);
+            _loop_l = d_a1.get();
+            _loop_current = List<unsigned int>::cons(d_a0, _loop_current);
+            _loop_fuel = fuel_;
           } else {
             unsigned int len_curr = _loop_current.length();
             unsigned int len_best = _loop_best.length();
@@ -101,15 +90,11 @@ List<unsigned int> LoopifySearchOpt::longest_run_fuel(
             } else {
               new_best = std::move(_loop_best);
             }
-            const List<unsigned int> *_next_l = d_a1.get();
-            List<unsigned int> _next_best = std::move(new_best);
-            List<unsigned int> _next_current =
+            _loop_l = d_a1.get();
+            _loop_best = std::move(new_best);
+            _loop_current =
                 List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
-            unsigned int _next_fuel = fuel_;
-            _loop_l = _next_l;
-            _loop_best = std::move(_next_best);
-            _loop_current = std::move(_next_current);
-            _loop_fuel = std::move(_next_fuel);
+            _loop_fuel = fuel_;
           }
         }
       }
@@ -124,7 +109,7 @@ List<unsigned int> LoopifySearchOpt::longest_run(const List<unsigned int> &l) {
 }
 
 unsigned int LoopifySearchOpt::knapsack_fuel(
-    const unsigned int &fuel, const unsigned int &capacity,
+    const unsigned int fuel, const unsigned int capacity,
     const List<std::pair<unsigned int, unsigned int>> &items) {
   struct _Enter {
     const List<std::pair<unsigned int, unsigned int>> *items;
@@ -159,8 +144,8 @@ unsigned int LoopifySearchOpt::knapsack_fuel(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<std::pair<unsigned int, unsigned int>> &items = *(_f.items);
-      const unsigned int &capacity = _f.capacity;
-      const unsigned int &fuel = _f.fuel;
+      const unsigned int capacity = _f.capacity;
+      const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
       } else {
@@ -199,13 +184,13 @@ unsigned int LoopifySearchOpt::knapsack_fuel(
 }
 
 unsigned int LoopifySearchOpt::knapsack(
-    const unsigned int &capacity,
+    const unsigned int capacity,
     const List<std::pair<unsigned int, unsigned int>> &items) {
   return knapsack_fuel((items.length() * capacity), capacity, items);
 }
 
-bool LoopifySearchOpt::subset_sum_fuel(const unsigned int &fuel,
-                                       const unsigned int &target,
+bool LoopifySearchOpt::subset_sum_fuel(const unsigned int fuel,
+                                       const unsigned int target,
                                        const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
@@ -237,8 +222,8 @@ bool LoopifySearchOpt::subset_sum_fuel(const unsigned int &fuel,
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<unsigned int> &l = *(_f.l);
-      const unsigned int &target = _f.target;
-      const unsigned int &fuel = _f.fuel;
+      const unsigned int target = _f.target;
+      const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = false;
       } else {
@@ -270,7 +255,7 @@ bool LoopifySearchOpt::subset_sum_fuel(const unsigned int &fuel,
   return _result;
 }
 
-bool LoopifySearchOpt::subset_sum(const unsigned int &target,
+bool LoopifySearchOpt::subset_sum(const unsigned int target,
                                   const List<unsigned int> &l) {
   return subset_sum_fuel((l.length() * target), target, l);
 }
@@ -308,7 +293,7 @@ LoopifySearchOpt::majority(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       const unsigned int &cand = _result.first;
       const unsigned int &count = _result.second;
       if (d_a0 == cand) {
@@ -326,8 +311,8 @@ LoopifySearchOpt::majority(const List<unsigned int> &l) {
   return _result;
 }
 
-bool LoopifySearchOpt::binary_search_fuel(const unsigned int &fuel,
-                                          const unsigned int &target,
+bool LoopifySearchOpt::binary_search_fuel(const unsigned int fuel,
+                                          const unsigned int target,
                                           const List<unsigned int> &l) {
   bool _result;
   List<unsigned int> _loop_l = l;
@@ -391,10 +376,8 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int &fuel,
                 } else {
                   const auto &[d_a02, d_a12] =
                       std::get<typename List<unsigned int>::Cons>(_loop_xs.v());
-                  List<unsigned int> _next_xs = std::move(*(d_a12));
-                  unsigned int _next_n = n_;
-                  _loop_xs = std::move(_next_xs);
-                  _loop_n = std::move(_next_n);
+                  _loop_xs = std::move(*(d_a12));
+                  _loop_n = n_;
                 }
               }
             }
@@ -426,7 +409,7 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int &fuel,
               if (std::holds_alternative<_Enter>(_frame)) {
                 auto _f = std::move(std::get<_Enter>(_frame));
                 List<unsigned int> xs = std::move(_f.xs);
-                unsigned int n = std::move(_f.n);
+                unsigned int n = _f.n;
                 if (n <= 0) {
                   _result = List<unsigned int>::nil();
                 } else {
@@ -471,10 +454,8 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int &fuel,
                   auto &[d_a04, d_a14] =
                       std::get<typename List<unsigned int>::Cons>(
                           _loop_xs.v_mut());
-                  List<unsigned int> _next_xs = std::move(*(d_a14));
-                  unsigned int _next_n = n_;
-                  _loop_xs = std::move(_next_xs);
-                  _loop_n = std::move(_next_n);
+                  _loop_xs = std::move(*(d_a14));
+                  _loop_n = n_;
                 }
               }
             }
@@ -482,16 +463,12 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int &fuel,
           };
           right = drop((mid + 1u), _loop_l);
           if (target < mid_val) {
-            List<unsigned int> _next_l = std::move(left);
-            unsigned int _next_fuel = fuel_;
-            _loop_l = std::move(_next_l);
-            _loop_fuel = std::move(_next_fuel);
+            _loop_l = std::move(left);
+            _loop_fuel = fuel_;
           } else {
             if (mid_val < target) {
-              List<unsigned int> _next_l = std::move(right);
-              unsigned int _next_fuel = fuel_;
-              _loop_l = std::move(_next_l);
-              _loop_fuel = std::move(_next_fuel);
+              _loop_l = std::move(right);
+              _loop_fuel = fuel_;
             } else {
               _result = true;
               break;
@@ -504,7 +481,7 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int &fuel,
   return _result;
 }
 
-bool LoopifySearchOpt::binary_search(const unsigned int &target,
+bool LoopifySearchOpt::binary_search(const unsigned int target,
                                      const List<unsigned int> &l) {
   return binary_search_fuel(l.length(), target, l);
 }

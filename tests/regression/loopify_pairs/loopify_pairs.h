@@ -287,10 +287,8 @@ struct LoopifyPairs {
           _write = &std::get<typename list<std::pair<T1, T2>>::Cons>(
                         (*_write)->v_mut())
                         .d_a1;
-          const list<T2> *_next_l2 = d_a10.get();
-          const list<T1> *_next_l1 = d_a1.get();
-          _loop_l2 = _next_l2;
-          _loop_l1 = _next_l1;
+          _loop_l2 = d_a10.get();
+          _loop_l1 = d_a1.get();
           continue;
         }
       }
@@ -340,12 +338,9 @@ struct LoopifyPairs {
                      typename list<std::pair<T1, std::pair<T2, T3>>>::Cons>(
                      (*_write)->v_mut())
                      .d_a1;
-            const list<T3> *_next_l3 = d_a11.get();
-            const list<T2> *_next_l2 = d_a10.get();
-            const list<T1> *_next_l1 = d_a1.get();
-            _loop_l3 = _next_l3;
-            _loop_l2 = _next_l2;
-            _loop_l1 = _next_l1;
+            _loop_l3 = d_a11.get();
+            _loop_l2 = d_a10.get();
+            _loop_l1 = d_a1.get();
             continue;
           }
         }
@@ -356,7 +351,7 @@ struct LoopifyPairs {
 
   /// split_at n l splits at position n.
   template <typename T1>
-  static std::pair<list<T1>, list<T1>> split_at(const unsigned int &n,
+  static std::pair<list<T1>, list<T1>> split_at(const unsigned int n,
                                                 list<T1> l) {
     struct _Enter {
       list<T1> l;
@@ -380,7 +375,7 @@ struct LoopifyPairs {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         list<T1> l = std::move(_f.l);
-        const unsigned int &n = _f.n;
+        const unsigned int n = _f.n;
         if (n <= 0) {
           _result = std::make_pair(list<T1>::nil(), std::move(l));
         } else {
@@ -508,7 +503,7 @@ struct LoopifyPairs {
   /// partition3 pivot l three-way partition around pivot.
   static std::pair<list<unsigned int>,
                    std::pair<list<unsigned int>, list<unsigned int>>>
-  partition3(const unsigned int &pivot, const list<unsigned int> &l);
+  partition3(const unsigned int pivot, const list<unsigned int> &l);
   /// min_max l finds both min and max in one pass.
   static std::pair<unsigned int, unsigned int>
   min_max(const list<unsigned int> &l);
@@ -524,7 +519,7 @@ struct LoopifyPairs {
       MapsTo<std::pair<unsigned int, unsigned int>, unsigned int, unsigned int>
           F0>
   static std::pair<unsigned int, list<unsigned int>>
-  mapAccumL(F0 &&f, unsigned int acc, const list<unsigned int> &l) {
+  mapAccumL(F0 &&f, const unsigned int acc, const list<unsigned int> &l) {
     struct _Enter {
       const list<unsigned int> *l;
       unsigned int acc;
@@ -547,7 +542,7 @@ struct LoopifyPairs {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const list<unsigned int> &l = *(_f.l);
-        unsigned int acc = std::move(_f.acc);
+        const unsigned int acc = _f.acc;
         if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(acc, list<unsigned int>::nil());
         } else {
@@ -561,7 +556,7 @@ struct LoopifyPairs {
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        unsigned int y = std::move(_f.y);
+        unsigned int y = _f.y;
         const unsigned int &final_acc = _result.first;
         const list<unsigned int> &ys = _result.second;
         _result = std::make_pair(final_acc, list<unsigned int>::cons(y, ys));
@@ -572,7 +567,7 @@ struct LoopifyPairs {
 
   /// lookup_all key l finds all values associated with key.
   static list<unsigned int>
-  lookup_all(const unsigned int &key,
+  lookup_all(const unsigned int key,
              const list<std::pair<unsigned int, unsigned int>> &l);
   /// swap_pairs l swaps elements in each pair.
   static list<std::pair<unsigned int, unsigned int>>

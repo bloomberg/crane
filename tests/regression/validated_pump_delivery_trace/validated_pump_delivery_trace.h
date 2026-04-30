@@ -973,13 +973,13 @@ public:
 };
 
 struct Nat {
-  static unsigned int tail_add(const unsigned int &n, unsigned int m);
-  static unsigned int tail_addmul(unsigned int r, const unsigned int &n,
-                                  const unsigned int &m);
-  static unsigned int tail_mul(const unsigned int &n, const unsigned int &m);
-  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
+  static unsigned int tail_add(const unsigned int n, const unsigned int m);
+  static unsigned int tail_addmul(const unsigned int r, const unsigned int n,
+                                  const unsigned int m);
+  static unsigned int tail_mul(const unsigned int n, const unsigned int m);
+  static unsigned int of_uint_acc(const Uint &d, const unsigned int acc);
   static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
+  static unsigned int of_hex_uint_acc(const Uint0 &d, const unsigned int acc);
   static unsigned int of_hex_uint(const Uint0 &d);
   static unsigned int of_num_uint(const Uint1 &d);
 };
@@ -1292,7 +1292,7 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  static Minutes peak_time(const InsulinType itype, const unsigned int &_x);
+  static Minutes peak_time(const InsulinType itype, const unsigned int _x);
 
   struct BolusEvent {
     unsigned int be_dose_twentieths;
@@ -1305,37 +1305,36 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   };
 
-  static unsigned int div_ceil(const unsigned int &a, const unsigned int &b);
-  static bool event_time_valid(const unsigned int &now,
-                               const BolusEvent &event);
-  static bool history_times_valid(const unsigned int &now,
+  static unsigned int div_ceil(const unsigned int a, const unsigned int b);
+  static bool event_time_valid(const unsigned int now, const BolusEvent &event);
+  static bool history_times_valid(const unsigned int now,
                                   const List<BolusEvent> &events);
-  static bool history_sorted_from(const unsigned int &prev,
+  static bool history_sorted_from(const unsigned int prev,
                                   const List<BolusEvent> &events);
   static bool history_sorted_desc(const List<BolusEvent> &events);
-  static bool history_valid(const unsigned int &now,
+  static bool history_valid(const unsigned int now,
                             const List<BolusEvent> &events);
-  static unsigned int bilinear_iob_fraction(const unsigned int &elapsed,
-                                            const unsigned int &dia,
+  static unsigned int bilinear_iob_fraction(const unsigned int elapsed,
+                                            const unsigned int dia,
                                             const InsulinType itype);
-  static Insulin_twentieth bilinear_iob_from_bolus(const unsigned int &now,
+  static Insulin_twentieth bilinear_iob_from_bolus(const unsigned int now,
                                                    const BolusEvent &event,
-                                                   const unsigned int &dia,
+                                                   const unsigned int dia,
                                                    const InsulinType itype);
-  static Insulin_twentieth total_bilinear_iob(const unsigned int &now,
+  static Insulin_twentieth total_bilinear_iob(const unsigned int now,
                                               const List<BolusEvent> &events,
-                                              const unsigned int &dia,
+                                              const unsigned int dia,
                                               const InsulinType itype);
   static Mg_dL apply_sensor_margin(Mg_dL bg, const Mg_dL &target);
   static unsigned int adjusted_isf_tenths(const Mg_dL &bg,
-                                          unsigned int base_isf_tenths);
+                                          const unsigned int base_isf_tenths);
   static Insulin_twentieth
-  correction_twentieths_full(const unsigned int &_x, const Mg_dL &current_bg,
+  correction_twentieths_full(const unsigned int _x, const Mg_dL &current_bg,
                              const Mg_dL &target_bg,
-                             const unsigned int &base_isf_tenths);
+                             const unsigned int base_isf_tenths);
   static Insulin_twentieth apply_reverse_correction_twentieths(
-      unsigned int carb, const Mg_dL &current_bg, const Mg_dL &target_bg,
-      const unsigned int &isf_tenths);
+      const unsigned int carb, const Mg_dL &current_bg, const Mg_dL &target_bg,
+      const unsigned int isf_tenths);
 
   struct SuspendDecision {
     // TYPES
@@ -1442,25 +1441,25 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  static unsigned int predict_bg_drop_tenths(const unsigned int &iob_twentieths,
-                                             const unsigned int &isf_tenths);
+  static unsigned int predict_bg_drop_tenths(const unsigned int iob_twentieths,
+                                             const unsigned int isf_tenths);
   static unsigned int conservative_cob_rise(const Config &cfg,
-                                            const unsigned int &cob_grams);
+                                            const unsigned int cob_grams);
   static unsigned int
   predicted_eventual_bg_tenths(const Config &cfg, const Mg_dL &current_bg,
-                               const unsigned int &iob_twentieths,
-                               const unsigned int &cob_grams,
-                               const unsigned int &isf_tenths);
+                               const unsigned int iob_twentieths,
+                               const unsigned int cob_grams,
+                               const unsigned int isf_tenths);
   static SuspendDecision suspend_check_tenths_with_cob(
       const Config &cfg, const Mg_dL &current_bg,
-      const unsigned int &iob_twentieths, const unsigned int &cob_grams,
-      const unsigned int &isf_tenths, const unsigned int &proposed);
-  static Insulin_twentieth apply_suspend(unsigned int proposed,
+      const unsigned int iob_twentieths, const unsigned int cob_grams,
+      const unsigned int isf_tenths, const unsigned int proposed);
+  static Insulin_twentieth apply_suspend(const unsigned int proposed,
                                          const SuspendDecision &decision);
   static Insulin_twentieth
-  pediatric_max_twentieths(const unsigned int &weight_kg);
-  static Insulin_twentieth cap_pediatric(unsigned int bolus,
-                                         const unsigned int &weight_kg);
+  pediatric_max_twentieths(const unsigned int weight_kg);
+  static Insulin_twentieth cap_pediatric(const unsigned int bolus,
+                                         const unsigned int weight_kg);
 
   struct PrecisionParams {
     unsigned int prec_icr_tenths;
@@ -1500,16 +1499,15 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   };
 
-  static Insulin_twentieth
-  carb_bolus_twentieths(const unsigned int &carbs_g,
-                        const unsigned int &icr_tenths);
+  static Insulin_twentieth carb_bolus_twentieths(const unsigned int carbs_g,
+                                                 const unsigned int icr_tenths);
   static Insulin_twentieth
   calculate_precision_bolus(const PrecisionInput &input,
                             const PrecisionParams &params);
-  static bool time_reasonable(const unsigned int &now);
+  static bool time_reasonable(const unsigned int now);
   static bool history_extraction_safe(const List<BolusEvent> &events);
   static unsigned int iob_high_threshold(const Config &cfg);
-  static bool iob_dangerously_high(const unsigned int &iob);
+  static bool iob_dangerously_high(const unsigned int iob);
 
   struct PrecisionResult {
     // TYPES
@@ -1637,9 +1635,9 @@ struct ValidatedPumpDeliveryTraceCase {
   static inline const unsigned int prec_error_tdd_exceeded = 8u;
   static inline const unsigned int prec_error_iob_high = 9u;
   static inline const unsigned int prec_error_extraction_unsafe = 10u;
-  static bool bolus_too_soon(const unsigned int &now,
+  static bool bolus_too_soon(const unsigned int now,
                              const List<BolusEvent> &history);
-  static Insulin_twentieth cap_twentieths(unsigned int t);
+  static Insulin_twentieth cap_twentieths(const unsigned int t);
   static PrecisionResult
   validated_precision_bolus(PrecisionInput input,
                             const PrecisionParams &params);
@@ -1666,7 +1664,7 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   };
 
-  static unsigned int mmol_tenths_to_mg_dL(const unsigned int &mmol_tenths);
+  static unsigned int mmol_tenths_to_mg_dL(const unsigned int mmol_tenths);
   static PrecisionInput convert_mmol_input(const MmolPrecisionInput &input);
   static PrecisionResult validated_mmol_bolus(const MmolPrecisionInput &input,
                                               const PrecisionParams &params);
@@ -1719,10 +1717,10 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  static unsigned int round_down_to_increment(unsigned int t,
-                                              const unsigned int &increment);
+  static unsigned int round_down_to_increment(const unsigned int t,
+                                              const unsigned int increment);
   static Insulin_twentieth apply_rounding(const RoundingMode mode,
-                                          unsigned int t);
+                                          const unsigned int t);
   static std::optional<Insulin_twentieth>
   final_delivery(const RoundingMode mode, const PrecisionResult &result);
 
@@ -1742,12 +1740,11 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   };
 
-  static bool pump_can_deliver(const PumpState &state,
-                               const unsigned int &dose);
+  static bool pump_can_deliver(const PumpState &state, const unsigned int dose);
   static unsigned int reservoir_after_bolus(const PumpState &state,
-                                            const unsigned int &dose);
+                                            const unsigned int dose);
   static unsigned int option_nat_default(const std::optional<unsigned int> &x,
-                                         unsigned int d);
+                                         const unsigned int d);
   static bool pump_accepts_result(const PumpState &pump,
                                   const RoundingMode mode,
                                   const PrecisionResult &r);

@@ -1,7 +1,7 @@
 #include <recursive_monadic.h>
 
 /// 1. Simple recursive countdown with effect
-unsigned int RecursiveMonadic::countdown(const unsigned int &n) {
+unsigned int RecursiveMonadic::countdown(const unsigned int n) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -38,7 +38,7 @@ List<int64_t> RecursiveMonadic::collect_lengths(const List<std::string> &xs) {
 }
 
 /// 4. Recursive with two recursive calls (tree-like)
-unsigned int RecursiveMonadic::repeat_action(const unsigned int &n,
+unsigned int RecursiveMonadic::repeat_action(const unsigned int n,
                                              const std::string msg) {
   if (n <= 0) {
     return 0u;
@@ -51,7 +51,7 @@ unsigned int RecursiveMonadic::repeat_action(const unsigned int &n,
 }
 
 /// 6. Recursive with block template in each step
-List<std::string> RecursiveMonadic::read_n_lines(const unsigned int &n) {
+List<std::string> RecursiveMonadic::read_n_lines(const unsigned int n) {
   if (n <= 0) {
     return List<std::string>::nil();
   } else {
@@ -64,7 +64,7 @@ List<std::string> RecursiveMonadic::read_n_lines(const unsigned int &n) {
 }
 
 /// 7. Mutual-like: two functions calling each other via wrapper
-std::string RecursiveMonadic::even_action(const unsigned int &n) {
+std::string RecursiveMonadic::even_action(const unsigned int n) {
   if (n <= 0) {
     return "even";
   } else {
@@ -74,7 +74,7 @@ std::string RecursiveMonadic::even_action(const unsigned int &n) {
   }
 }
 
-std::string RecursiveMonadic::odd_action(const unsigned int &n) {
+std::string RecursiveMonadic::odd_action(const unsigned int n) {
   if (n <= 0) {
     return "odd";
   } else {

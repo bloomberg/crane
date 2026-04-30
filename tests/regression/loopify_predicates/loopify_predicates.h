@@ -221,7 +221,7 @@ struct LoopifyPredicates {
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        unsigned int d_a0 = std::move(_f.d_a0);
+        unsigned int d_a0 = _f.d_a0;
         const List<unsigned int> &yes = _result.first;
         const List<unsigned int> &no = _result.second;
         _result = std::make_pair(List<unsigned int>::cons(d_a0, yes), no);
@@ -270,7 +270,7 @@ struct LoopifyPredicates {
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        unsigned int d_a0 = std::move(_f.d_a0);
+        unsigned int d_a0 = _f.d_a0;
         const List<unsigned int> &before = _result.first;
         const List<unsigned int> &after = _result.second;
         _result = std::make_pair(List<unsigned int>::cons(d_a0, before), after);
@@ -389,9 +389,9 @@ struct LoopifyPredicates {
 
   template <MapsTo<bool, unsigned int> F0>
   static std::optional<unsigned int>
-  find_index_aux(F0 &&p, const List<unsigned int> &l, unsigned int idx) {
+  find_index_aux(F0 &&p, const List<unsigned int> &l, const unsigned int idx) {
     std::optional<unsigned int> _result;
-    unsigned int _loop_idx = std::move(idx);
+    unsigned int _loop_idx = idx;
     const List<unsigned int> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
@@ -405,10 +405,8 @@ struct LoopifyPredicates {
           _result = std::make_optional<unsigned int>(_loop_idx);
           break;
         } else {
-          unsigned int _next_idx = (_loop_idx + 1u);
-          const List<unsigned int> *_next_l = d_a1.get();
-          _loop_idx = std::move(_next_idx);
-          _loop_l = _next_l;
+          _loop_idx = (_loop_idx + 1u);
+          _loop_l = d_a1.get();
         }
       }
     }
@@ -422,8 +420,9 @@ struct LoopifyPredicates {
   }
 
   template <MapsTo<bool, unsigned int> F0>
-  static List<unsigned int>
-  find_indices_aux(F0 &&p, const List<unsigned int> &l, unsigned int idx) {
+  static List<unsigned int> find_indices_aux(F0 &&p,
+                                             const List<unsigned int> &l,
+                                             const unsigned int idx) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
     } else {
@@ -444,7 +443,7 @@ struct LoopifyPredicates {
   }
 
   template <MapsTo<bool, unsigned int, unsigned int> F0>
-  static List<unsigned int> delete_by(F0 &&eq, const unsigned int &x,
+  static List<unsigned int> delete_by(F0 &&eq, const unsigned int x,
                                       const List<unsigned int> &l) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -476,7 +475,7 @@ struct LoopifyPredicates {
     return std::move(*(_head));
   }
 
-  static List<unsigned int> remove_all(const unsigned int &x,
+  static List<unsigned int> remove_all(const unsigned int x,
                                        const List<unsigned int> &l);
 };
 

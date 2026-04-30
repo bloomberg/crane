@@ -1,7 +1,7 @@
 #include <record_closure_escape.h>
 
 unsigned int RecordClosureEscape::sum_values(const RecordClosureEscape::tree &t,
-                                             unsigned int x) {
+                                             const unsigned int x) {
   if (std::holds_alternative<typename RecordClosureEscape::tree::Leaf>(t.v())) {
     return x;
   } else {

@@ -38,7 +38,7 @@ unsigned int LoopifyNumericMisc::sum_abs(const List<unsigned int> &l) {
   return _result;
 }
 
-unsigned int LoopifyNumericMisc::alternating_ops(const unsigned int &n) {
+unsigned int LoopifyNumericMisc::alternating_ops(const unsigned int n) {
   struct _Enter {
     unsigned int n;
   };
@@ -64,7 +64,7 @@ unsigned int LoopifyNumericMisc::alternating_ops(const unsigned int &n) {
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int &n = _f.n;
+      const unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
       } else {
@@ -249,7 +249,8 @@ unsigned int LoopifyNumericMisc::sum_of_squares(const List<unsigned int> &l) {
   return _result;
 }
 
-unsigned int LoopifyNumericMisc::max_two(unsigned int a, unsigned int b) {
+unsigned int LoopifyNumericMisc::max_two(const unsigned int a,
+                                         const unsigned int b) {
   if (a < b) {
     return b;
   } else {
@@ -337,7 +338,7 @@ unsigned int LoopifyNumericMisc::list_min(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       unsigned int min_rest = _result;
       if (d_a0 < min_rest) {
         _result = d_a0;

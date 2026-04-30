@@ -178,10 +178,7 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        const List *_next_self = d_a1.get();
-        List<t_A> _next_m = std::move(_loop_m);
-        _loop_self = _next_self;
-        _loop_m = std::move(_next_m);
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -192,30 +189,30 @@ public:
 struct LoopifyListTransforms {
   static List<std::pair<unsigned int, unsigned int>>
   run_length_encode(const List<unsigned int> &l);
-  static List<unsigned int> prefix_sums(unsigned int acc,
+  static List<unsigned int> prefix_sums(const unsigned int acc,
                                         const List<unsigned int> &l);
   static List<std::pair<unsigned int, unsigned int>>
-  sliding_pairs_fuel(const unsigned int &fuel, const List<unsigned int> &l);
+  sliding_pairs_fuel(const unsigned int fuel, const List<unsigned int> &l);
   static List<std::pair<unsigned int, unsigned int>>
   sliding_pairs(const List<unsigned int> &l);
-  static unsigned int abs_diff(const unsigned int &x, const unsigned int &y);
-  static List<unsigned int> differences_fuel(const unsigned int &fuel,
+  static unsigned int abs_diff(const unsigned int x, const unsigned int y);
+  static List<unsigned int> differences_fuel(const unsigned int fuel,
                                              const List<unsigned int> &l);
   static List<unsigned int> differences(const List<unsigned int> &l);
-  static List<unsigned int> take(const unsigned int &n,
+  static List<unsigned int> take(const unsigned int n,
                                  const List<unsigned int> &l);
-  static List<unsigned int> drop(const unsigned int &n, List<unsigned int> l);
-  static List<List<unsigned int>> chunks_of_fuel(const unsigned int &fuel,
-                                                 const unsigned int &n,
+  static List<unsigned int> drop(const unsigned int n, List<unsigned int> l);
+  static List<List<unsigned int>> chunks_of_fuel(const unsigned int fuel,
+                                                 const unsigned int n,
                                                  const List<unsigned int> &l);
-  static List<List<unsigned int>> chunks_of(const unsigned int &n,
+  static List<List<unsigned int>> chunks_of(const unsigned int n,
                                             const List<unsigned int> &l);
-  static List<unsigned int> rotate_left_fuel(const unsigned int &fuel,
-                                             const unsigned int &n,
+  static List<unsigned int> rotate_left_fuel(const unsigned int fuel,
+                                             const unsigned int n,
                                              List<unsigned int> l);
-  static List<unsigned int> rotate_left(const unsigned int &n,
+  static List<unsigned int> rotate_left(const unsigned int n,
                                         const List<unsigned int> &l);
-  static List<unsigned int> uniq_sorted_fuel(const unsigned int &fuel,
+  static List<unsigned int> uniq_sorted_fuel(const unsigned int fuel,
                                              const List<unsigned int> &l);
   static List<unsigned int> uniq_sorted(const List<unsigned int> &l);
   static unsigned int step_sum(const List<unsigned int> &l);

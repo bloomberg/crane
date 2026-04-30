@@ -51,15 +51,16 @@ RecordFieldPatterns::first_coord(const RecordFieldPatterns::Point &p) {
 }
 
 unsigned int
-RecordFieldPatterns::scaled_sum(const unsigned int &scale,
+RecordFieldPatterns::scaled_sum(const unsigned int scale,
                                 const RecordFieldPatterns::ScaledPoint &sp) {
   unsigned int x = sp.sp_x;
   unsigned int y = sp.sp_y;
   return (scale * (x + y));
 }
 
-RecordFieldPatterns::Point RecordFieldPatterns::PointImpl::mk(unsigned int x,
-                                                              unsigned int x0) {
+RecordFieldPatterns::Point
+RecordFieldPatterns::PointImpl::mk(const unsigned int x,
+                                   const unsigned int x0) {
   return Point{x, x0};
 }
 
@@ -97,7 +98,7 @@ RecordFieldPatterns::bounded_range(const RecordFieldPatterns::Bounded &b) {
 unsigned int
 RecordFieldPatterns::sum_px(const List<RecordFieldPatterns::Point> &points) {
   return points.template fold_left<unsigned int>(
-      [](const unsigned int &acc, const RecordFieldPatterns::Point &p) {
+      [](const unsigned int acc, const RecordFieldPatterns::Point &p) {
         return (acc + p.px);
       },
       0u);

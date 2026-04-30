@@ -1,10 +1,10 @@
 #include <skiplist.h>
 
-bool skiplist_test::nat_lt(const unsigned int &_x0, const unsigned int &_x1) {
+bool skiplist_test::nat_lt(const unsigned int _x0, const unsigned int _x1) {
   return _x0 < _x1;
 }
 
-bool skiplist_test::nat_eq(const unsigned int &_x0, const unsigned int &_x1) {
+bool skiplist_test::nat_eq(const unsigned int _x0, const unsigned int _x1) {
   return _x0 == _x1;
 }
 

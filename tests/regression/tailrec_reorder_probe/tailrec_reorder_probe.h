@@ -229,10 +229,8 @@ struct TailrecReorderProbe {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<T1>::Mycons>(_loop_l->v());
-        mylist<T1> _next_acc = mylist<T1>::mycons(d_a0, std::move(_loop_acc));
-        const mylist<T1> *_next_l = d_a1.get();
-        _loop_acc = std::move(_next_acc);
-        _loop_l = _next_l;
+        _loop_acc = mylist<T1>::mycons(d_a0, std::move(_loop_acc));
+        _loop_l = d_a1.get();
       }
     }
     return _result;
@@ -289,7 +287,7 @@ struct TailrecReorderProbe {
   }
 
   static inline const unsigned int test_rev = mylist_sum<unsigned int>(
-      [](unsigned int x) { return x; },
+      [](const unsigned int x) { return x; },
       my_reverse<unsigned int>(mylist<unsigned int>::mycons(
           1u, mylist<unsigned int>::mycons(
                   2u, mylist<unsigned int>::mycons(
@@ -303,8 +301,9 @@ struct TailrecReorderProbe {
         mylist<unsigned int>::mynil(), mylist<unsigned int>::mynil());
     const mylist<unsigned int> &a = _cs.first;
     const mylist<unsigned int> &b = _cs.second;
-    return (mylist_sum<unsigned int>([](unsigned int x) { return x; }, a) +
-            mylist_sum<unsigned int>([](unsigned int x) { return x; }, b));
+    return (
+        mylist_sum<unsigned int>([](const unsigned int x) { return x; }, a) +
+        mylist_sum<unsigned int>([](const unsigned int x) { return x; }, b));
   }();
   /// Tail-recursive function where the recursive argument is a COMPLEX
   /// expression involving multiple pattern variables.
@@ -312,7 +311,7 @@ struct TailrecReorderProbe {
                                     const mylist<unsigned int> &l2,
                                     mylist<unsigned int> acc);
   static inline const unsigned int test_weave = mylist_sum<unsigned int>(
-      [](unsigned int x) { return x; },
+      [](const unsigned int x) { return x; },
       weave(mylist<unsigned int>::mycons(
                 1u, mylist<unsigned int>::mycons(
                         3u, mylist<unsigned int>::mynil())),

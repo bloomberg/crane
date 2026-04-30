@@ -408,7 +408,7 @@ struct JumpTargets {
     layout clone() const { return layout{(*(this)).base_, (*(this)).code_}; }
   };
 
-  static bool addr_in_region(const unsigned int &addr, const layout &l);
+  static bool addr_in_region(const unsigned int addr, const layout &l);
   static bool in_layout(const layout &l, const instr_region &i);
   static inline const bool test_region_check =
       in_layout(layout{16u, 32u}, instr_region::jun_reg(40u));

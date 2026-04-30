@@ -1,6 +1,6 @@
 #include <mutual_recursion.h>
 
-bool MutualRecursion::is_even(const unsigned int &n) {
+bool MutualRecursion::is_even(const unsigned int n) {
   if (n <= 0) {
     return true;
   } else {
@@ -9,7 +9,7 @@ bool MutualRecursion::is_even(const unsigned int &n) {
   }
 }
 
-bool MutualRecursion::is_odd(const unsigned int &n) {
+bool MutualRecursion::is_odd(const unsigned int n) {
   if (n <= 0) {
     return false;
   } else {

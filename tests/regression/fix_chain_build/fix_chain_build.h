@@ -21,7 +21,7 @@ struct FixChainBuild {
   /// and step itself. When build_chain returns, the stack frame
   /// is destroyed, and the returned closure holds dangling references.
   static std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
-  build_chain(unsigned int n);
+  build_chain(const unsigned int n);
   /// test1: build_chain(1) = (1, step1).
   /// step1(0) = 1.
   /// step1(2) = S(prev(step1(1))) = S(prev(S(prev(step1(0)))))

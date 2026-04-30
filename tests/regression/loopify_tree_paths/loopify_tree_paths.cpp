@@ -1,7 +1,8 @@
 #include <loopify_tree_paths.h>
 
 List<List<unsigned int>>
-LoopifyTreePaths::map_cons(unsigned int x, const List<List<unsigned int>> &ll) {
+LoopifyTreePaths::map_cons(const unsigned int x,
+                           const List<List<unsigned int>> &ll) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
   const List<List<unsigned int>> *_loop_ll = &ll;

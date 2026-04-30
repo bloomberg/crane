@@ -19,7 +19,7 @@ struct LetIn {
     return (x + y);
   }();
   static inline const unsigned int shadowed_let = 3u;
-  static unsigned int let_in_fun(const unsigned int &n);
+  static unsigned int let_in_fun(const unsigned int n);
   static inline const unsigned int let_fun = []() {
     unsigned int x = 5u;
     return (x + 1u);

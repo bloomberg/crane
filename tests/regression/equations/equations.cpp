@@ -1,6 +1,6 @@
 #include <equations.h>
 
-bool PeanoNat::even(const unsigned int &n) {
+bool PeanoNat::even(const unsigned int n) {
   if (n <= 0) {
     return true;
   } else {
@@ -14,7 +14,7 @@ bool PeanoNat::even(const unsigned int &n) {
   }
 }
 
-unsigned int PeanoNat::div2(const unsigned int &n) {
+unsigned int PeanoNat::div2(const unsigned int n) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -33,8 +33,9 @@ unsigned int Equations::gcd(const std::pair<unsigned int, unsigned int> &x) {
       x, [](const std::pair<unsigned int, unsigned int> &y) { return gcd(y); });
 }
 
-unsigned int Equations::gcd_unfold_clause_3(unsigned int n, unsigned int n0,
-                                            const bool &refine) {
+unsigned int Equations::gcd_unfold_clause_3(const unsigned int n,
+                                            const unsigned int n0,
+                                            const bool refine) {
   if (refine) {
     return gcd(std::make_pair(
         (n + 1),
@@ -102,13 +103,13 @@ Equations::gcd_graph_correct(const std::pair<unsigned int, unsigned int> &x) {
   }
 }
 
-unsigned int Equations::collatz_steps(const unsigned int &x) {
+unsigned int Equations::collatz_steps(const unsigned int x) {
   return collatz_steps_functional(
-      x, [](const unsigned int &y) { return collatz_steps(y); });
+      x, [](const unsigned int y) { return collatz_steps(y); });
 }
 
-unsigned int Equations::collatz_steps_unfold_clause_3(const unsigned int &n,
-                                                      const bool &refine) {
+unsigned int Equations::collatz_steps_unfold_clause_3(const unsigned int n,
+                                                      const bool refine) {
   if (refine) {
     return (collatz_steps(PeanoNat::div2(n)) + 1);
   } else {
@@ -116,7 +117,7 @@ unsigned int Equations::collatz_steps_unfold_clause_3(const unsigned int &n,
   }
 }
 
-unsigned int Equations::collatz_steps_unfold(const unsigned int &n) {
+unsigned int Equations::collatz_steps_unfold(const unsigned int n) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -131,7 +132,7 @@ unsigned int Equations::collatz_steps_unfold(const unsigned int &n) {
 }
 
 Equations::collatz_steps_graph
-Equations::collatz_steps_graph_correct(const unsigned int &x) {
+Equations::collatz_steps_graph_correct(const unsigned int x) {
   if (x <= 0) {
     return collatz_steps_graph::collatz_steps_graph_equation_1();
   } else {

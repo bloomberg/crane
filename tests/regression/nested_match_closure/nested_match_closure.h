@@ -202,7 +202,7 @@ struct NestedMatchClosure {
   /// After the function returns, BOTH the pattern variables AND the
   /// function parameter are dead.
   static std::optional<std::function<unsigned int(unsigned int)>>
-  make_param_combiner(const tree &t, unsigned int base);
+  make_param_combiner(const tree &t, const unsigned int base);
   /// test3: Node (Node Leaf 5 Leaf) 10 (Node Leaf 15 Leaf), base=1000
   /// go(0) = 1000 + 10 + 5 + 15 = 1030
   /// go(3) = 1030 + 3 = 1033

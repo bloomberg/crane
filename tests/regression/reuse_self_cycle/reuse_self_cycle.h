@@ -152,7 +152,7 @@ struct ReuseSelfCycle {
   /// 2. mycons branch tail is mycons with arity 2 = 2
   /// 3. mycons is index 0 -> List.hd picks it
   /// 4. use_count() == 1 for fresh values
-  static mylist prepend_self(mylist l, const bool &b);
+  static mylist prepend_self(mylist l, const bool b);
   /// test1: prepend_self(1, 2, true) should produce 1, 1, 2.
   /// In Rocq: mycons 1 (mycons 1 (mycons 2 mynil)), length = 3.
   /// With reuse bug: mycons 1 -> itself (cycle), length = infinite loop.

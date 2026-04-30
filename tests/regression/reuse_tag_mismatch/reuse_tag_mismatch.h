@@ -120,7 +120,7 @@ struct ReuseTagMismatch {
   /// - GoUp/GoDown are the same inductive (direction)
   /// - Both have arity 1
   /// But GoUp and GoDown are DIFFERENT constructors.
-  static direction id_or_flip(direction d, const bool &flip_flag);
+  static direction id_or_flip(direction d, const bool flip_flag);
   /// test1: flip GoUp 42 -> should be GoDown 42.
   /// Match on the result:
   /// - GoUp _ => 1 (wrong, reuse bug would make this match)

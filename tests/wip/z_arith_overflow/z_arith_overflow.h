@@ -830,13 +830,13 @@ public:
 };
 
 struct Nat {
-  static unsigned int tail_add(const unsigned int &n, unsigned int m);
-  static unsigned int tail_addmul(unsigned int r, const unsigned int &n,
-                                  const unsigned int &m);
-  static unsigned int tail_mul(const unsigned int &n, const unsigned int &m);
-  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
+  static unsigned int tail_add(const unsigned int n, const unsigned int m);
+  static unsigned int tail_addmul(const unsigned int r, const unsigned int n,
+                                  const unsigned int m);
+  static unsigned int tail_mul(const unsigned int n, const unsigned int m);
+  static unsigned int of_uint_acc(const Uint &d, const unsigned int acc);
   static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
+  static unsigned int of_hex_uint_acc(const Uint0 &d, const unsigned int acc);
   static unsigned int of_hex_uint(const Uint0 &d);
   static unsigned int of_num_uint(const Uint1 &d);
 };

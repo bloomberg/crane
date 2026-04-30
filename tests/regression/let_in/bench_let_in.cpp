@@ -1,6 +1,6 @@
 #include <bench_let_in.h>
 
-unsigned int BenchLetIn::swap_snd(unsigned int a, unsigned int b) {
+unsigned int BenchLetIn::swap_snd(const unsigned int a, const unsigned int b) {
   BenchLetIn::pair<unsigned int, unsigned int> p =
       pair<unsigned int, unsigned int>::pair0(a, b);
   auto &[d_a0, d_a1] =
@@ -9,7 +9,8 @@ unsigned int BenchLetIn::swap_snd(unsigned int a, unsigned int b) {
   return d_a1;
 }
 
-unsigned int BenchLetIn::add_via_pair(unsigned int a, unsigned int b) {
+unsigned int BenchLetIn::add_via_pair(const unsigned int a,
+                                      const unsigned int b) {
   BenchLetIn::pair<unsigned int, unsigned int> p =
       pair<unsigned int, unsigned int>::pair0(a, b);
   auto &[d_a0, d_a1] =
@@ -18,8 +19,9 @@ unsigned int BenchLetIn::add_via_pair(unsigned int a, unsigned int b) {
   return (d_a0 + d_a1);
 }
 
-unsigned int BenchLetIn::nested_swap(unsigned int a, unsigned int b,
-                                     unsigned int c, unsigned int d) {
+unsigned int BenchLetIn::nested_swap(const unsigned int a, const unsigned int b,
+                                     const unsigned int c,
+                                     const unsigned int d) {
   BenchLetIn::pair<unsigned int, unsigned int> p1 =
       pair<unsigned int, unsigned int>::pair0(a, b);
   BenchLetIn::pair<unsigned int, unsigned int> p2 =
@@ -33,7 +35,7 @@ unsigned int BenchLetIn::nested_swap(unsigned int a, unsigned int b,
   return (d_a0 + d_a10);
 }
 
-unsigned int BenchLetIn::sum_via_pairs(unsigned int n) {
+unsigned int BenchLetIn::sum_via_pairs(const unsigned int n) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -47,7 +49,8 @@ unsigned int BenchLetIn::sum_via_pairs(unsigned int n) {
   }
 }
 
-unsigned int BenchLetIn::mid3(unsigned int a, unsigned int b, unsigned int c) {
+unsigned int BenchLetIn::mid3(const unsigned int a, const unsigned int b,
+                              const unsigned int c) {
   BenchLetIn::triple<unsigned int, unsigned int, unsigned int> t =
       triple<unsigned int, unsigned int, unsigned int>::triple0(a, b, c);
   auto &[d_a0, d_a1, d_a2] =
@@ -56,7 +59,8 @@ unsigned int BenchLetIn::mid3(unsigned int a, unsigned int b, unsigned int c) {
   return d_a1;
 }
 
-unsigned int BenchLetIn::sum3(unsigned int a, unsigned int b, unsigned int c) {
+unsigned int BenchLetIn::sum3(const unsigned int a, const unsigned int b,
+                              const unsigned int c) {
   BenchLetIn::triple<unsigned int, unsigned int, unsigned int> t =
       triple<unsigned int, unsigned int, unsigned int>::triple0(a, b, c);
   auto &[d_a0, d_a1, d_a2] =
@@ -65,8 +69,8 @@ unsigned int BenchLetIn::sum3(unsigned int a, unsigned int b, unsigned int c) {
   return (d_a0 + (d_a1 + d_a2));
 }
 
-unsigned int BenchLetIn::chain_pairs(unsigned int a, unsigned int b,
-                                     unsigned int c) {
+unsigned int BenchLetIn::chain_pairs(const unsigned int a, const unsigned int b,
+                                     const unsigned int c) {
   BenchLetIn::pair<unsigned int, unsigned int> p1 =
       pair<unsigned int, unsigned int>::pair0(a, b);
   auto &[d_a0, d_a1] =

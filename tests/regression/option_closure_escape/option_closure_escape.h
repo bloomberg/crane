@@ -146,7 +146,7 @@ struct OptionClosureEscape {
     }
   }
 
-  static unsigned int sum_values(const tree &t, unsigned int x);
+  static unsigned int sum_values(const tree &t, const unsigned int x);
   /// BUG: pair_escape stores a & lambda in a pair.
   /// The lambda captures parameter t by reference.
   /// When pair_escape returns, t is destroyed → dangling.

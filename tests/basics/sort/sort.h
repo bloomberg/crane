@@ -190,9 +190,9 @@ public:
 };
 
 struct Compare_dec {
-  static bool le_lt_dec(const unsigned int &n, const unsigned int &m);
-  static bool le_gt_dec(const unsigned int &_x0, const unsigned int &_x1);
-  static bool le_dec(const unsigned int &n, const unsigned int &m);
+  static bool le_lt_dec(const unsigned int n, const unsigned int m);
+  static bool le_gt_dec(const unsigned int _x0, const unsigned int _x1);
+  static bool le_dec(const unsigned int n, const unsigned int m);
 };
 
 struct Sort {
@@ -298,7 +298,7 @@ struct Sort {
     }
   }
 
-  static Sig<List<unsigned int>> sort_cons_prog(unsigned int a,
+  static Sig<List<unsigned int>> sort_cons_prog(const unsigned int a,
                                                 const List<unsigned int> &_x,
                                                 const List<unsigned int> &l_);
   static Sig<List<unsigned int>> isort(const List<unsigned int> &l);
@@ -308,8 +308,8 @@ struct Sort {
                                             const List<unsigned int> &l1,
                                             const List<unsigned int> &l2);
   static Sig<List<unsigned int>> msort(const List<unsigned int> &_x0);
-  static Sig<List<unsigned int>> pair_merge_prog(const unsigned int &_x,
-                                                 const unsigned int &_x0,
+  static Sig<List<unsigned int>> pair_merge_prog(const unsigned int _x,
+                                                 const unsigned int _x0,
                                                  const List<unsigned int> &_x1,
                                                  const List<unsigned int> &l_,
                                                  const List<unsigned int> &l_0);

@@ -10,30 +10,30 @@ unsigned int stmtest::io_basic_counter() {
   return stm::atomically([&] { return stm_basic_counter(std::monostate{}); });
 }
 
-unsigned int stmtest::stm_inc(const unsigned int &x) {
+unsigned int stmtest::stm_inc(const unsigned int x) {
   stm::TVar<unsigned int> c = stm::newTVar(x);
   STMDefs::template modifyTVar<unsigned int>(
-      c, [](unsigned int n) { return (n + 1); });
+      c, [](const unsigned int n) { return (n + 1); });
   return stm::readTVar(c);
 }
 
-unsigned int stmtest::io_inc(const unsigned int &x) {
+unsigned int stmtest::io_inc(const unsigned int x) {
   return stm::atomically([&] { return stm_inc(x); });
 }
 
-unsigned int stmtest::stm_add_self(unsigned int x) {
+unsigned int stmtest::stm_add_self(const unsigned int x) {
   stm::TVar<unsigned int> c = stm::newTVar(x);
   unsigned int v = stm::readTVar(c);
   stm::writeTVar(c, (v + x));
   return stm::readTVar(c);
 }
 
-unsigned int stmtest::io_add_self(const unsigned int &x) {
+unsigned int stmtest::io_add_self(const unsigned int x) {
   return stm::atomically([&] { return stm_add_self(x); });
 }
 
 void stmtest::stm_enqueue(const stm::TVar<List<unsigned int>> q,
-                          unsigned int x) {
+                          const unsigned int x) {
   List<unsigned int> xs = stm::readTVar(q);
   stm::writeTVar(q, std::move(xs).app(List<unsigned int>::cons(
                         x, List<unsigned int>::nil())));
@@ -53,17 +53,17 @@ unsigned int stmtest::stm_dequeue(const stm::TVar<List<unsigned int>> q) {
 }
 
 unsigned int stmtest::stm_tryDequeue(const stm::TVar<List<unsigned int>> q,
-                                     const unsigned int &dflt) {
+                                     const unsigned int dflt) {
   return stm::orElse<unsigned int>(stm_dequeue(q), dflt);
 }
 
-unsigned int stmtest::stm_queue_roundtrip(unsigned int x) {
+unsigned int stmtest::stm_queue_roundtrip(const unsigned int x) {
   stm::TVar<List<unsigned int>> q = stm::newTVar(List<unsigned int>::nil());
   stm_enqueue(q, x);
   return stm_dequeue(q);
 }
 
-unsigned int stmtest::io_queue_roundtrip(const unsigned int &x) {
+unsigned int stmtest::io_queue_roundtrip(const unsigned int x) {
   return stm::atomically([&] { return stm_queue_roundtrip(x); });
 }
 

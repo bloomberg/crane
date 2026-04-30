@@ -353,7 +353,7 @@ struct Cotree {
   }
 
   template <typename T1>
-  static List<T1> list_of_colist(const unsigned int &fuel, const colist<T1> l) {
+  static List<T1> list_of_colist(const unsigned int fuel, const colist<T1> l) {
     if (fuel <= 0) {
       return List<T1>::nil();
     } else {
@@ -368,7 +368,7 @@ struct Cotree {
   }
 
   template <typename T1>
-  static tree<T1> tree_of_cotree(const unsigned int &fuel, const cotree<T1> t) {
+  static tree<T1> tree_of_cotree(const unsigned int fuel, const cotree<T1> t) {
     const auto &[d_a0, d_a1] = std::get<typename cotree<T1>::Conode>(t.v());
     if (fuel <= 0) {
       return tree<T1>::node(d_a0, List<tree<T1>>::nil());
@@ -412,12 +412,12 @@ struct Cotree {
   static inline const unsigned int test_doubled_root =
       sample_cotree
           .template comap_cotree<unsigned int>(
-              [](const unsigned int &n) { return (n * 2u); })
+              [](const unsigned int n) { return (n * 2u); })
           .root();
-  static colist<unsigned int> nats(unsigned int n);
+  static colist<unsigned int> nats(const unsigned int n);
   static inline const List<unsigned int> test_first_five =
       list_of_colist<unsigned int>(5u, nats(0u));
-  static colist<unsigned int> binary_children(const unsigned int &n);
+  static colist<unsigned int> binary_children(const unsigned int n);
   static inline const cotree<unsigned int> binary_tree =
       unfold_cotree<unsigned int>(binary_children, 0u);
   static inline const unsigned int test_binary_root = binary_tree.root();

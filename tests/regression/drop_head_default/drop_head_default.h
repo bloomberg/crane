@@ -126,7 +126,7 @@ public:
 
 struct DropHeadDefault {
   template <typename T1>
-  static List<T1> drop(const unsigned int &n, List<T1> l) {
+  static List<T1> drop(const unsigned int n, List<T1> l) {
     if (n <= 0) {
       return l;
     } else {
@@ -141,7 +141,7 @@ struct DropHeadDefault {
   }
 
   static unsigned int head_after_drop(const List<unsigned int> &rom,
-                                      const unsigned int &addr);
+                                      const unsigned int addr);
   static inline const unsigned int t = head_after_drop(
       List<unsigned int>::cons(
           5u, List<unsigned int>::cons(

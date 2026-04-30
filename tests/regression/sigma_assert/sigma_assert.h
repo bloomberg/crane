@@ -10,7 +10,7 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct PeanoNat {
-  static unsigned int div2(const unsigned int &n);
+  static unsigned int div2(const unsigned int n);
 };
 
 struct SigmaAssert {

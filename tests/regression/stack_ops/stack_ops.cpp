@@ -45,7 +45,7 @@ StackOps::pop_stack_acc(StackOps::state_with_acc s) {
 }
 
 StackOps::state_basic StackOps::push_stack(const StackOps::state_basic &s,
-                                           unsigned int addr) {
+                                           const unsigned int addr) {
   auto &&_sv = s.stack_basic;
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
     return state_basic{
@@ -80,7 +80,7 @@ unsigned int StackOps::top_or_zero(const StackOps::state_basic &s) {
 }
 
 StackOps::state_basic StackOps::push_stack_cap(const StackOps::state_basic &s,
-                                               unsigned int addr) {
+                                               const unsigned int addr) {
   List<unsigned int> new_stack = [&]() {
     auto &&_sv = s.stack_basic;
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {

@@ -39,7 +39,7 @@ unsigned int LoopifyListWindows::len(const List<unsigned int> &l) {
 }
 
 List<List<unsigned int>>
-LoopifyListWindows::map_cons_helper(unsigned int x,
+LoopifyListWindows::map_cons_helper(const unsigned int x,
                                     const List<List<unsigned int>> &ll) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
@@ -67,7 +67,7 @@ LoopifyListWindows::map_cons_helper(unsigned int x,
   return std::move(*(_head));
 }
 
-List<unsigned int> LoopifyListWindows::drop(const unsigned int &m,
+List<unsigned int> LoopifyListWindows::drop(const unsigned int m,
                                             List<unsigned int> xs) {
   List<unsigned int> _result;
   List<unsigned int> _loop_xs = std::move(xs);
@@ -85,10 +85,8 @@ List<unsigned int> LoopifyListWindows::drop(const unsigned int &m,
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_xs.v_mut());
-        List<unsigned int> _next_xs = std::move(*(d_a1));
-        unsigned int _next_m = m_;
-        _loop_xs = std::move(_next_xs);
-        _loop_m = std::move(_next_m);
+        _loop_xs = std::move(*(d_a1));
+        _loop_m = m_;
       }
     }
   }
@@ -96,7 +94,7 @@ List<unsigned int> LoopifyListWindows::drop(const unsigned int &m,
 }
 
 std::pair<List<unsigned int>, List<unsigned int>>
-LoopifyListWindows::span_eq(const unsigned int &first, List<unsigned int> lst) {
+LoopifyListWindows::span_eq(const unsigned int first, List<unsigned int> lst) {
   struct _Enter {
     List<unsigned int> lst;
   };
@@ -134,7 +132,7 @@ LoopifyListWindows::span_eq(const unsigned int &first, List<unsigned int> lst) {
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       const List<unsigned int> &s = _result.first;
       const List<unsigned int> &r = _result.second;
       _result = std::make_pair(List<unsigned int>::cons(d_a0, s), r);
@@ -307,7 +305,7 @@ List<List<unsigned int>> LoopifyListWindows::tails(List<unsigned int> l) {
   return std::move(*(_head));
 }
 
-List<unsigned int> LoopifyListWindows::take(const unsigned int &n,
+List<unsigned int> LoopifyListWindows::take(const unsigned int n,
                                             const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -334,10 +332,8 @@ List<unsigned int> LoopifyListWindows::take(const unsigned int &n,
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        const List<unsigned int> *_next_l = d_a1.get();
-        unsigned int _next_n = n_;
-        _loop_l = _next_l;
-        _loop_n = std::move(_next_n);
+        _loop_l = d_a1.get();
+        _loop_n = n_;
         continue;
       }
     }
@@ -346,8 +342,7 @@ List<unsigned int> LoopifyListWindows::take(const unsigned int &n,
 }
 
 List<List<unsigned int>>
-LoopifyListWindows::windows_fuel(const unsigned int &fuel,
-                                 const unsigned int &n,
+LoopifyListWindows::windows_fuel(const unsigned int fuel, const unsigned int n,
                                  const List<unsigned int> &l) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
@@ -380,10 +375,8 @@ LoopifyListWindows::windows_fuel(const unsigned int &fuel,
           _write = &std::get<typename List<List<unsigned int>>::Cons>(
                         (*_write)->v_mut())
                         .d_a1;
-          const List<unsigned int> *_next_l = d_a1.get();
-          unsigned int _next_fuel = fuel_;
-          _loop_l = _next_l;
-          _loop_fuel = std::move(_next_fuel);
+          _loop_l = d_a1.get();
+          _loop_fuel = fuel_;
           continue;
         }
       }
@@ -393,13 +386,12 @@ LoopifyListWindows::windows_fuel(const unsigned int &fuel,
 }
 
 List<List<unsigned int>>
-LoopifyListWindows::windows(const unsigned int &n,
-                            const List<unsigned int> &l) {
+LoopifyListWindows::windows(const unsigned int n, const List<unsigned int> &l) {
   return windows_fuel(len(l), n, l);
 }
 
 List<List<unsigned int>>
-LoopifyListWindows::chunks_fuel(const unsigned int &fuel, const unsigned int &n,
+LoopifyListWindows::chunks_fuel(const unsigned int fuel, const unsigned int n,
                                 const List<unsigned int> &l) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
@@ -426,10 +418,8 @@ LoopifyListWindows::chunks_fuel(const unsigned int &fuel, const unsigned int &n,
         _write = &std::get<typename List<List<unsigned int>>::Cons>(
                       (*_write)->v_mut())
                       .d_a1;
-        List<unsigned int> _next_l = std::move(rest);
-        unsigned int _next_fuel = fuel_;
-        _loop_l = std::move(_next_l);
-        _loop_fuel = std::move(_next_fuel);
+        _loop_l = std::move(rest);
+        _loop_fuel = fuel_;
         continue;
       }
     }
@@ -438,12 +428,12 @@ LoopifyListWindows::chunks_fuel(const unsigned int &fuel, const unsigned int &n,
 }
 
 List<List<unsigned int>>
-LoopifyListWindows::chunks(const unsigned int &n, const List<unsigned int> &l) {
+LoopifyListWindows::chunks(const unsigned int n, const List<unsigned int> &l) {
   return chunks_fuel(len(l), n, l);
 }
 
 List<List<unsigned int>>
-LoopifyListWindows::group_fuel(const unsigned int &fuel,
+LoopifyListWindows::group_fuel(const unsigned int fuel,
                                const List<unsigned int> &l) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
@@ -474,10 +464,8 @@ LoopifyListWindows::group_fuel(const unsigned int &fuel,
         _write = &std::get<typename List<List<unsigned int>>::Cons>(
                       (*_write)->v_mut())
                       .d_a1;
-        List<unsigned int> _next_l = rest;
-        unsigned int _next_fuel = fuel_;
-        _loop_l = std::move(_next_l);
-        _loop_fuel = std::move(_next_fuel);
+        _loop_l = rest;
+        _loop_fuel = fuel_;
         continue;
       }
     }

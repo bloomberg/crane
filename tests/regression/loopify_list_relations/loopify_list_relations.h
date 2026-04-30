@@ -175,7 +175,7 @@ struct LoopifyListRelations {
                           const List<unsigned int> &_x1);
   static List<unsigned int>
   find_sublists_aux(const List<unsigned int> &needle,
-                    const List<unsigned int> &haystack, unsigned int idx);
+                    const List<unsigned int> &haystack, const unsigned int idx);
   static List<unsigned int> find_sublists(const List<unsigned int> &needle,
                                           const List<unsigned int> &haystack);
   static bool list_eq(const List<unsigned int> &l1,
@@ -189,7 +189,7 @@ struct LoopifyListRelations {
        const List<unsigned int> &l3);
   static List<unsigned int> interleave(List<unsigned int> l1,
                                        List<unsigned int> l2);
-  static List<unsigned int> merge_fuel(const unsigned int &fuel,
+  static List<unsigned int> merge_fuel(const unsigned int fuel,
                                        List<unsigned int> l1,
                                        List<unsigned int> l2);
   static List<unsigned int> merge(const List<unsigned int> &l1,

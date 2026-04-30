@@ -5,7 +5,7 @@ Coinductive::stream Coinductive::zeros() {
       []() -> Coinductive::stream { return stream::cons(0u, zeros()); });
 }
 
-Coinductive::stream Coinductive::count_from(unsigned int n) {
+Coinductive::stream Coinductive::count_from(const unsigned int n) {
   return stream::lazy_([=]() mutable -> Coinductive::stream {
     return stream::cons(n, count_from((n + 1)));
   });
@@ -33,7 +33,7 @@ Coinductive::stream Coinductive::interleave(const Coinductive::stream s1,
   });
 }
 
-Coinductive::tree Coinductive::infinite_tree(unsigned int n) {
+Coinductive::tree Coinductive::infinite_tree(const unsigned int n) {
   return tree::lazy_([=]() mutable -> Coinductive::tree {
     return tree::node(n, infinite_tree((n + 1u)), infinite_tree((n + 2u)));
   });

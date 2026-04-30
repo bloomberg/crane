@@ -246,12 +246,12 @@ public:
 };
 
 struct SigmaTypes {
-  static SigT<unsigned int, std::any> nat_with_double(const unsigned int &n);
-  static Sig<unsigned int> positive_succ(unsigned int n);
-  static unsigned int get_positive(const unsigned int &n);
-  static Sig<unsigned int> double_positive(const unsigned int &n);
-  static unsigned int use_nat_double(const unsigned int &n);
-  static List<unsigned int> positives_up_to(const unsigned int &k);
+  static SigT<unsigned int, std::any> nat_with_double(const unsigned int n);
+  static Sig<unsigned int> positive_succ(const unsigned int n);
+  static unsigned int get_positive(const unsigned int n);
+  static Sig<unsigned int> double_positive(const unsigned int n);
+  static unsigned int use_nat_double(const unsigned int n);
+  static List<unsigned int> positives_up_to(const unsigned int k);
   static inline const unsigned int test_double_5 = use_nat_double(5u);
   static inline const unsigned int test_positive_3 = get_positive(3u);
   static inline const unsigned int test_double_pos = []() {

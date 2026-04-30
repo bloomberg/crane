@@ -226,7 +226,8 @@ public:
 };
 
 struct ListDef {
-  static List<unsigned int> seq(unsigned int start, const unsigned int &len);
+  static List<unsigned int> seq(const unsigned int start,
+                                const unsigned int len);
 };
 
 struct ToString {
@@ -377,7 +378,7 @@ struct TopologicalSort {
   template <typename T1, MapsTo<bool, T1, T1> F0>
   static T1
   cycle_entry_aux(F0 &&eqb_node, const List<std::pair<T1, List<T1>>> &graph0,
-                  List<T1> seens, const T1 elem, const unsigned int &counter) {
+                  List<T1> seens, const T1 elem, const unsigned int counter) {
     if (contains<T1>(eqb_node, elem, seens)) {
       return elem;
     } else {
@@ -417,7 +418,7 @@ struct TopologicalSort {
   template <typename T1, MapsTo<bool, T1, T1> F0>
   static List<T1>
   cycle_extract_aux(F0 &&eqb_node, List<std::pair<T1, List<T1>>> graph0,
-                    const unsigned int &counter, const T1 elem, List<T1> cycl) {
+                    const unsigned int counter, const T1 elem, List<T1> cycl) {
     if (counter <= 0) {
       return cycl;
     } else {
@@ -460,7 +461,7 @@ struct TopologicalSort {
   static order<T1>
   topological_sort_aux(F0 &&eqb_node,
                        const List<std::pair<T1, List<T1>>> &graph0,
-                       const unsigned int &counter) {
+                       const unsigned int counter) {
     if (counter <= 0) {
       return List<List<T1>>::nil();
     } else {

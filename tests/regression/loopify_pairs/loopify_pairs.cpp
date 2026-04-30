@@ -43,8 +43,8 @@ LoopifyPairs::unzip(
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int x = std::move(_f.x);
-      unsigned int y = std::move(_f.y);
+      unsigned int x = _f.x;
+      unsigned int y = _f.y;
       const LoopifyPairs::list<unsigned int> &xs = _result.first;
       const LoopifyPairs::list<unsigned int> &ys = _result.second;
       _result = std::make_pair(list<unsigned int>::cons(x, xs),
@@ -58,7 +58,7 @@ LoopifyPairs::unzip(
 std::pair<LoopifyPairs::list<unsigned int>,
           std::pair<LoopifyPairs::list<unsigned int>,
                     LoopifyPairs::list<unsigned int>>>
-LoopifyPairs::partition3(const unsigned int &pivot,
+LoopifyPairs::partition3(const unsigned int pivot,
                          const LoopifyPairs::list<unsigned int> &l) {
   struct _Enter {
     const LoopifyPairs::list<unsigned int> *l;
@@ -99,8 +99,8 @@ LoopifyPairs::partition3(const unsigned int &pivot,
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
-      const unsigned int &pivot = _f.pivot;
+      unsigned int d_a0 = _f.d_a0;
+      const unsigned int pivot = _f.pivot;
       const LoopifyPairs::list<unsigned int> &lt = _result.first;
       const std::pair<LoopifyPairs::list<unsigned int>,
                       LoopifyPairs::list<unsigned int>> &p = _result.second;
@@ -164,7 +164,7 @@ LoopifyPairs::min_max(const LoopifyPairs::list<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       const unsigned int &mn = _result.first;
       const unsigned int &mx = _result.second;
       _result =
@@ -209,7 +209,7 @@ LoopifyPairs::sum_and_count(const LoopifyPairs::list<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       const unsigned int &s = _result.first;
       const unsigned int &c = _result.second;
       _result = std::make_pair((d_a0 + s), (c + 1));
@@ -253,7 +253,7 @@ LoopifyPairs::sum_prod_count(const LoopifyPairs::list<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       const unsigned int &s = _result.first;
       const std::pair<unsigned int, unsigned int> &p0 = _result.second;
       const unsigned int &p = p0.first;
@@ -266,7 +266,7 @@ LoopifyPairs::sum_prod_count(const LoopifyPairs::list<unsigned int> &l) {
 
 /// lookup_all key l finds all values associated with key.
 LoopifyPairs::list<unsigned int> LoopifyPairs::lookup_all(
-    const unsigned int &key,
+    const unsigned int key,
     const LoopifyPairs::list<std::pair<unsigned int, unsigned int>> &l) {
   std::unique_ptr<LoopifyPairs::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyPairs::list<unsigned int>> *_write = &_head;

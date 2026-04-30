@@ -140,10 +140,7 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        const List *_next_self = d_a1.get();
-        List<t_A> _next_m = std::move(_loop_m);
-        _loop_self = _next_self;
-        _loop_m = std::move(_next_m);
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -154,16 +151,16 @@ public:
 /// Consolidated list generator functions.
 struct LoopifyGenerators {
   /// cycle n l repeats the list n times: cycle 2 1,2 -> 1,2,1,2.
-  static List<unsigned int> cycle(const unsigned int &n,
+  static List<unsigned int> cycle(const unsigned int n,
                                   const List<unsigned int> &l);
 
   /// iterate f n x applies f repeatedly n times: iterate (+1) 3 5 -> 5,6,7.
   template <MapsTo<unsigned int, unsigned int> F0>
-  static List<unsigned int> iterate(F0 &&f, const unsigned int &n,
-                                    unsigned int x) {
+  static List<unsigned int> iterate(F0 &&f, const unsigned int n,
+                                    const unsigned int x) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
-    unsigned int _loop_x = std::move(x);
+    unsigned int _loop_x = x;
     unsigned int _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
@@ -178,10 +175,8 @@ struct LoopifyGenerators {
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        unsigned int _next_x = f(_loop_x);
-        unsigned int _next_n = m;
-        _loop_x = std::move(_next_x);
-        _loop_n = std::move(_next_n);
+        _loop_x = f(_loop_x);
+        _loop_n = m;
         continue;
       }
     }
@@ -219,10 +214,8 @@ struct LoopifyGenerators {
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          const List<unsigned int> *_next_l2 = d_a10.get();
-          const List<unsigned int> *_next_l1 = d_a1.get();
-          _loop_l2 = _next_l2;
-          _loop_l1 = _next_l1;
+          _loop_l2 = d_a10.get();
+          _loop_l1 = d_a1.get();
           continue;
         }
       }
@@ -233,26 +226,26 @@ struct LoopifyGenerators {
   /// zip_longest l1 l2 default zips, using default for missing elements.
   static List<std::pair<unsigned int, unsigned int>>
   zip_longest_aux(const List<unsigned int> &l1, const List<unsigned int> &l2,
-                  unsigned int default0, const unsigned int &fuel);
+                  const unsigned int default0, const unsigned int fuel);
   static unsigned int len_impl(const List<unsigned int> &l);
   static List<std::pair<unsigned int, unsigned int>>
   zip_longest(const List<unsigned int> &l1, const List<unsigned int> &l2,
-              const unsigned int &default0);
+              const unsigned int default0);
   /// build_list n builds tree-like list structure: build_list(4) -> 2,4,2.
-  static List<unsigned int> build_list_fuel(const unsigned int &fuel,
-                                            const unsigned int &n);
-  static List<unsigned int> build_list(const unsigned int &n);
+  static List<unsigned int> build_list_fuel(const unsigned int fuel,
+                                            const unsigned int n);
+  static List<unsigned int> build_list(const unsigned int n);
   /// take n l returns first n elements.
-  static List<unsigned int> take(const unsigned int &n,
+  static List<unsigned int> take(const unsigned int n,
                                  const List<unsigned int> &l);
   /// repeat x n creates list with n copies of x.
-  static List<unsigned int> repeat(unsigned int x, const unsigned int &n);
+  static List<unsigned int> repeat(const unsigned int x, const unsigned int n);
 
   /// unfold f n init unfolds a list from seed value.
   template <MapsTo<std::pair<unsigned int, unsigned int>, unsigned int> F1>
-  static List<unsigned int> unfold_fuel(const unsigned int &fuel, F1 &&f,
-                                        const unsigned int &n,
-                                        const unsigned int &seed) {
+  static List<unsigned int> unfold_fuel(const unsigned int fuel, F1 &&f,
+                                        const unsigned int n,
+                                        const unsigned int seed) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
     unsigned int _loop_seed = seed;
@@ -279,13 +272,9 @@ struct LoopifyGenerators {
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          unsigned int _next_seed = next_seed;
-          unsigned int _next_n =
-              (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-          unsigned int _next_fuel = g;
-          _loop_seed = std::move(_next_seed);
-          _loop_n = std::move(_next_n);
-          _loop_fuel = std::move(_next_fuel);
+          _loop_seed = next_seed;
+          _loop_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
+          _loop_fuel = g;
           continue;
         }
       }
@@ -294,15 +283,15 @@ struct LoopifyGenerators {
   }
 
   template <MapsTo<std::pair<unsigned int, unsigned int>, unsigned int> F0>
-  static List<unsigned int> unfold(F0 &&f, const unsigned int &n,
-                                   const unsigned int &seed) {
+  static List<unsigned int> unfold(F0 &&f, const unsigned int n,
+                                   const unsigned int seed) {
     return unfold_fuel(100u, f, n, seed);
   }
 
   /// tabulate n f generates f 0, f 1, ..., f (n-1) (same as init_list but
   /// different naming).
   template <MapsTo<unsigned int, unsigned int> F1>
-  static List<unsigned int> tabulate(unsigned int n, F1 &&f) {
+  static List<unsigned int> tabulate(const unsigned int n, F1 &&f) {
     std::function<List<unsigned int>(unsigned int)> go;
     go = [&](unsigned int i) -> List<unsigned int> {
       struct _Enter {
@@ -325,7 +314,7 @@ struct LoopifyGenerators {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          unsigned int i = std::move(_f.i);
+          unsigned int i = _f.i;
           if (i <= 0) {
             _result = List<unsigned int>::nil();
           } else {
@@ -344,11 +333,11 @@ struct LoopifyGenerators {
   }
 
   /// Helper: replicate single element n times.
-  static List<unsigned int> replicate_single(unsigned int x,
-                                             const unsigned int &n);
+  static List<unsigned int> replicate_single(const unsigned int x,
+                                             const unsigned int n);
   /// replicate_each n l replicates each element n times: replicate_each 2 1,2
   /// -> 1,1,2,2.
-  static List<unsigned int> replicate_each(const unsigned int &n,
+  static List<unsigned int> replicate_each(const unsigned int n,
                                            const List<unsigned int> &l);
 };
 

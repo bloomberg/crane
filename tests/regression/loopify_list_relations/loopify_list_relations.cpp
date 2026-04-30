@@ -75,10 +75,8 @@ bool LoopifyListRelations::is_suffix_of(const List<unsigned int> &l1,
           } else {
             auto &[d_a0, d_a1] =
                 std::get<typename List<unsigned int>::Cons>(_loop_xs.v_mut());
-            List<unsigned int> _next_xs = std::move(*(d_a1));
-            unsigned int _next_n = n_;
-            _loop_xs = std::move(_next_xs);
-            _loop_n = std::move(_next_n);
+            _loop_xs = std::move(*(d_a1));
+            _loop_n = n_;
           }
         }
       }
@@ -112,10 +110,8 @@ bool LoopifyListRelations::is_suffix_of(const List<unsigned int> &l1,
             const auto &[d_a01, d_a11] =
                 std::get<typename List<unsigned int>::Cons>(_loop_b.v());
             if (d_a00 == d_a01) {
-              List<unsigned int> _next_b = std::move(*(d_a11));
-              List<unsigned int> _next_a = std::move(*(d_a10));
-              _loop_b = std::move(_next_b);
-              _loop_a = std::move(_next_a);
+              _loop_b = std::move(*(d_a11));
+              _loop_a = std::move(*(d_a10));
             } else {
               _result = false;
               break;
@@ -166,10 +162,10 @@ bool LoopifyListRelations::is_infix_of(const List<unsigned int> &_x0,
 List<unsigned int>
 LoopifyListRelations::find_sublists_aux(const List<unsigned int> &needle,
                                         const List<unsigned int> &haystack,
-                                        unsigned int idx) {
+                                        const unsigned int idx) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  unsigned int _loop_idx = std::move(idx);
+  unsigned int _loop_idx = idx;
   const List<unsigned int> *_loop_haystack = &haystack;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
@@ -187,16 +183,12 @@ LoopifyListRelations::find_sublists_aux(const List<unsigned int> &needle,
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        unsigned int _next_idx = (_loop_idx + 1u);
-        const List<unsigned int> *_next_haystack = d_a1.get();
-        _loop_idx = std::move(_next_idx);
-        _loop_haystack = _next_haystack;
+        _loop_idx = (_loop_idx + 1u);
+        _loop_haystack = d_a1.get();
         continue;
       } else {
-        unsigned int _next_idx = (_loop_idx + 1u);
-        const List<unsigned int> *_next_haystack = d_a1.get();
-        _loop_idx = std::move(_next_idx);
-        _loop_haystack = _next_haystack;
+        _loop_idx = (_loop_idx + 1u);
+        _loop_haystack = d_a1.get();
         continue;
       }
     }
@@ -296,10 +288,8 @@ unsigned int LoopifyListRelations::list_compare(const List<unsigned int> &l1,
             _result = 2u;
             break;
           } else {
-            const List<unsigned int> *_next_l2 = d_a10.get();
-            const List<unsigned int> *_next_l1 = d_a1.get();
-            _loop_l2 = _next_l2;
-            _loop_l1 = _next_l1;
+            _loop_l2 = d_a10.get();
+            _loop_l1 = d_a1.get();
           }
         }
       }
@@ -343,10 +333,8 @@ LoopifyListRelations::zip(const List<unsigned int> &l1,
                  typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                  (*_write)->v_mut())
                  .d_a1;
-        const List<unsigned int> *_next_l2 = d_a10.get();
-        const List<unsigned int> *_next_l1 = d_a1.get();
-        _loop_l2 = _next_l2;
-        _loop_l1 = _next_l1;
+        _loop_l2 = d_a10.get();
+        _loop_l1 = d_a1.get();
         continue;
       }
     }
@@ -409,12 +397,9 @@ LoopifyListRelations::zip3(const List<unsigned int> &l1,
               std::pair<unsigned int, unsigned int>, unsigned int>>::Cons>(
                         (*_write)->v_mut())
                         .d_a1;
-          const List<unsigned int> *_next_l3 = d_a11.get();
-          const List<unsigned int> *_next_l2 = d_a10.get();
-          const List<unsigned int> *_next_l1 = d_a1.get();
-          _loop_l3 = _next_l3;
-          _loop_l2 = _next_l2;
-          _loop_l1 = _next_l1;
+          _loop_l3 = d_a11.get();
+          _loop_l2 = d_a10.get();
+          _loop_l1 = d_a1.get();
           continue;
         }
       }
@@ -456,10 +441,8 @@ List<unsigned int> LoopifyListRelations::interleave(List<unsigned int> l1,
                  std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1->v_mut())
                  .d_a1;
-        List<unsigned int> _next_l2 = std::move(*(d_a10));
-        List<unsigned int> _next_l1 = std::move(*(d_a1));
-        _loop_l2 = std::move(_next_l2);
-        _loop_l1 = std::move(_next_l1);
+        _loop_l2 = std::move(*(d_a10));
+        _loop_l1 = std::move(*(d_a1));
         continue;
       }
     }
@@ -467,7 +450,7 @@ List<unsigned int> LoopifyListRelations::interleave(List<unsigned int> l1,
   return std::move(*(_head));
 }
 
-List<unsigned int> LoopifyListRelations::merge_fuel(const unsigned int &fuel,
+List<unsigned int> LoopifyListRelations::merge_fuel(const unsigned int fuel,
                                                     List<unsigned int> l1,
                                                     List<unsigned int> l2) {
   std::unique_ptr<List<unsigned int>> _head{};
@@ -503,10 +486,8 @@ List<unsigned int> LoopifyListRelations::merge_fuel(const unsigned int &fuel,
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            List<unsigned int> _next_l1 = std::move(*(d_a1));
-            unsigned int _next_fuel = fuel_;
-            _loop_l1 = std::move(_next_l1);
-            _loop_fuel = std::move(_next_fuel);
+            _loop_l1 = std::move(*(d_a1));
+            _loop_fuel = fuel_;
             continue;
           } else {
             auto _cell = std::make_unique<List<unsigned int>>(
@@ -515,10 +496,8 @@ List<unsigned int> LoopifyListRelations::merge_fuel(const unsigned int &fuel,
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            List<unsigned int> _next_l2 = std::move(*(d_a10));
-            unsigned int _next_fuel = fuel_;
-            _loop_l2 = std::move(_next_l2);
-            _loop_fuel = std::move(_next_fuel);
+            _loop_l2 = std::move(*(d_a10));
+            _loop_fuel = fuel_;
             continue;
           }
         }
@@ -591,10 +570,7 @@ List<unsigned int> LoopifyListRelations::union_(const List<unsigned int> &l1,
             };
             return member(d_a0, _loop_l2);
           }()) {
-        List<unsigned int> _next_l2 = std::move(_loop_l2);
-        List<unsigned int> _next_l1 = d_a1_value;
-        _loop_l2 = std::move(_next_l2);
-        _loop_l1 = std::move(_next_l1);
+        _loop_l1 = d_a1_value;
         continue;
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
@@ -603,10 +579,7 @@ List<unsigned int> LoopifyListRelations::union_(const List<unsigned int> &l1,
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        List<unsigned int> _next_l2 = std::move(_loop_l2);
-        List<unsigned int> _next_l1 = d_a1_value;
-        _loop_l2 = std::move(_next_l2);
-        _loop_l1 = std::move(_next_l1);
+        _loop_l1 = d_a1_value;
         continue;
       }
     }

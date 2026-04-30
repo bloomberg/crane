@@ -12,7 +12,7 @@ concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct UnitType {
   static inline const std::monostate unit_val = std::monostate{};
-  static void return_unit(const unsigned int &_x);
+  static void return_unit(const unsigned int _x);
   static unsigned int take_unit(const std::monostate &_x);
   static unsigned int match_unit(const std::monostate &u);
 

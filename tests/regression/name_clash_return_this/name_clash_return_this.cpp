@@ -4,7 +4,7 @@
 /// argument itself. The function takes shape as input, so it gets
 /// methodified. In the Blue branch, `s` becomes `this`.
 NameClashReturnThis::shape
-NameClashReturnThis::maybe_transform(const bool &flag,
+NameClashReturnThis::maybe_transform(const bool flag,
                                      NameClashReturnThis::shape s) {
   if (flag) {
     if (std::holds_alternative<typename NameClashReturnThis::shape::Circle>(

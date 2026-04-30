@@ -139,10 +139,7 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        const List *_next_self = d_a1.get();
-        List<t_A> _next_m = std::move(_loop_m);
-        _loop_self = _next_self;
-        _loop_m = std::move(_next_m);
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -187,7 +184,7 @@ struct LoopifySorting {
     return _result;
   }
 
-  static List<unsigned int> insert(unsigned int x, List<unsigned int> l);
+  static List<unsigned int> insert(const unsigned int x, List<unsigned int> l);
   static List<unsigned int> insertion_sort(const List<unsigned int> &l);
 
   template <typename T1>
@@ -243,26 +240,26 @@ struct LoopifySorting {
     return _result;
   }
 
-  static List<unsigned int> merge_fuel(const unsigned int &fuel,
+  static List<unsigned int> merge_fuel(const unsigned int fuel,
                                        List<unsigned int> l1,
                                        List<unsigned int> l2);
   static List<unsigned int> merge(const List<unsigned int> &l1,
                                   const List<unsigned int> &l2);
-  static List<unsigned int> merge_sort_fuel(const unsigned int &fuel,
+  static List<unsigned int> merge_sort_fuel(const unsigned int fuel,
                                             List<unsigned int> l);
   static List<unsigned int> merge_sort(const List<unsigned int> &l);
   static std::pair<List<unsigned int>, List<unsigned int>>
-  partition(const unsigned int &pivot, const List<unsigned int> &l);
-  static List<unsigned int> quicksort_fuel(const unsigned int &fuel,
+  partition(const unsigned int pivot, const List<unsigned int> &l);
+  static List<unsigned int> quicksort_fuel(const unsigned int fuel,
                                            List<unsigned int> l);
   static List<unsigned int> quicksort(const List<unsigned int> &l);
-  static bool is_sorted_aux(const unsigned int &prev,
+  static bool is_sorted_aux(const unsigned int prev,
                             const List<unsigned int> &l);
   static bool is_sorted(const List<unsigned int> &l);
 
   /// merge_by cmp merges with custom comparator.
   template <MapsTo<bool, unsigned int, unsigned int> F1>
-  static List<unsigned int> merge_by_fuel(const unsigned int &fuel, F1 &&cmp,
+  static List<unsigned int> merge_by_fuel(const unsigned int fuel, F1 &&cmp,
                                           List<unsigned int> l1,
                                           List<unsigned int> l2) {
     if (fuel <= 0) {
@@ -303,8 +300,8 @@ struct LoopifySorting {
   /// remove_duplicates removes consecutive duplicates from sorted list.
   static List<unsigned int> remove_duplicates(const List<unsigned int> &l);
   /// uniq_sorted variant that preserves order.
-  static List<unsigned int> uniq_sorted_aux(const unsigned int &prev,
-                                            const bool &seen,
+  static List<unsigned int> uniq_sorted_aux(const unsigned int prev,
+                                            const bool seen,
                                             const List<unsigned int> &l);
   static List<unsigned int> uniq_sorted(const List<unsigned int> &l);
 };

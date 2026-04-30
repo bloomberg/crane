@@ -271,7 +271,7 @@ struct MapPartialApp {
 
   static unsigned int tree_sum(const tree &t);
   /// wrap: takes tree and nat, builds Node with leaves.
-  static tree wrap(tree t, unsigned int v);
+  static tree wrap(tree t, const unsigned int v);
   /// Sum a list of nats.
   static unsigned int sum_list(const List<unsigned int> &l);
   /// BUG HYPOTHESIS: Create a partial application (wrap t), store it,
@@ -297,9 +297,8 @@ struct MapPartialApp {
               1u,
               List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())))
-              .template map<unsigned int>([=](const unsigned int &v) mutable {
-                return tree_sum(f(v));
-              });
+              .template map<unsigned int>(
+                  [=](const unsigned int v) mutable { return tree_sum(f(v)); });
       return sum_list(std::move(results));
     }();
   }();
@@ -317,7 +316,7 @@ struct MapPartialApp {
               1u,
               List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())))
-              .template map<unsigned int>([=](const unsigned int &v) mutable {
+              .template map<unsigned int>([=](const unsigned int v) mutable {
                 return tree_sum(p.first(v));
               });
       return sum_list(std::move(results));
@@ -335,13 +334,13 @@ struct MapPartialApp {
       List<unsigned int> r1 =
           List<unsigned int>::cons(
               1u, List<unsigned int>::cons(2u, List<unsigned int>::nil()))
-              .template map<unsigned int>([=](const unsigned int &v) mutable {
+              .template map<unsigned int>([=](const unsigned int v) mutable {
                 return tree_sum(f1(v));
               });
       List<unsigned int> r2 =
           List<unsigned int>::cons(
               3u, List<unsigned int>::cons(4u, List<unsigned int>::nil()))
-              .template map<unsigned int>([=](const unsigned int &v) mutable {
+              .template map<unsigned int>([=](const unsigned int v) mutable {
                 return tree_sum(f2(v));
               });
       return (sum_list(std::move(r1)) + sum_list(std::move(r2)));

@@ -14,8 +14,8 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct PeanoNat {
-  static bool even(const unsigned int &n);
-  static unsigned int div2(const unsigned int &n);
+  static bool even(const unsigned int n);
+  static unsigned int div2(const unsigned int n);
 };
 
 template <typename I, typename
@@ -30,8 +30,8 @@ concept FunctionalInduction = requires {
 
 struct Equations {
   template <MapsTo<unsigned int, std::pair<unsigned int, unsigned int>> F3>
-  static unsigned int gcd_clause_3(unsigned int n, unsigned int n0,
-                                   const bool &refine, F3 &&gcd0) {
+  static unsigned int gcd_clause_3(const unsigned int n, const unsigned int n0,
+                                   const bool refine, F3 &&gcd0) {
     if (refine) {
       return gcd0(std::make_pair(
           (n + 1),
@@ -62,8 +62,9 @@ struct Equations {
   }
 
   static unsigned int gcd(const std::pair<unsigned int, unsigned int> &x);
-  static unsigned int gcd_unfold_clause_3(unsigned int n, unsigned int n0,
-                                          const bool &refine);
+  static unsigned int gcd_unfold_clause_3(const unsigned int n,
+                                          const unsigned int n0,
+                                          const bool refine);
   static unsigned int
   gcd_unfold(const std::pair<unsigned int, unsigned int> &p);
   struct gcd_graph;
@@ -254,7 +255,7 @@ struct Equations {
             MapsTo<T1, unsigned int> F1, typename F2, typename F3, typename F4>
   static T1 gcd_graph_mut(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                           std::pair<unsigned int, unsigned int> _x0,
-                          unsigned int _x1, gcd_graph _x2) {
+                          const unsigned int _x1, gcd_graph _x2) {
     std::function<T1(std::pair<unsigned int, unsigned int>, unsigned int,
                      gcd_graph)>
         f4;
@@ -321,8 +322,10 @@ struct Equations {
   template <typename T1 = void, typename T2, typename F0, typename F1,
             typename F2, typename F3, typename F4>
   static T2 gcd_clause_3_graph_mut(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                                   unsigned int _x0, unsigned int _x1, bool _x2,
-                                   unsigned int _x3, gcd_clause_3_graph _x4) {
+                                   const unsigned int _x0,
+                                   const unsigned int _x1, const bool _x2,
+                                   const unsigned int _x3,
+                                   gcd_clause_3_graph _x4) {
     std::function<T1(std::pair<unsigned int, unsigned int>, unsigned int,
                      gcd_graph)>
         f4;
@@ -390,7 +393,7 @@ struct Equations {
             MapsTo<T1, unsigned int> F1, typename F2, typename F3, typename F4>
   static T1 gcd_graph_rect(F0 &&_x0, F1 &&_x1, F2 &&_x2, F3 &&_x3, F4 &&_x4,
                            const std::pair<unsigned int, unsigned int> &_x5,
-                           const unsigned int &_x6, const gcd_graph &_x7) {
+                           const unsigned int _x6, const gcd_graph &_x7) {
     return gcd_graph_mut<T1, T2>(_x0, _x1, _x2, _x3, _x4, _x5, _x6, _x7);
   }
 
@@ -405,19 +408,19 @@ struct Equations {
                      std::pair<unsigned int, unsigned int> p) {
     return gcd_graph_mut(
         f, f0,
-        [=](const unsigned int &, const unsigned int &,
-            const gcd_clause_3_graph &, const T1 x) mutable {
+        [=](const unsigned int, const unsigned int, const gcd_clause_3_graph &,
+            const T1 x) mutable {
           const unsigned int &_x2 = p.first;
           const unsigned int &_x3 = p.second;
           return x;
         },
-        [=](const unsigned int &n1, const unsigned int &n2,
+        [=](const unsigned int n1, const unsigned int n2,
             const gcd_graph &) mutable {
           const unsigned int &_x0 = p.first;
           const unsigned int &_x1 = p.second;
           return [=](T1 _pa0) mutable { return f2(n1, n2, _pa0); };
         },
-        [=](const unsigned int &n1, const unsigned int &n2,
+        [=](const unsigned int n1, const unsigned int n2,
             const gcd_graph &) mutable {
           const unsigned int &_x0 = p.first;
           const unsigned int &_x1 = p.second;
@@ -448,8 +451,8 @@ struct Equations {
           std::function<unsigned int(std::pair<unsigned int, unsigned int>)>>);
 
   template <MapsTo<unsigned int, unsigned int> F2>
-  static unsigned int collatz_steps_clause_3(const unsigned int &n,
-                                             const bool &refine,
+  static unsigned int collatz_steps_clause_3(const unsigned int n,
+                                             const bool refine,
                                              F2 &&collatz_steps0) {
     if (refine) {
       return (collatz_steps0(PeanoNat::div2(n)) + 1);
@@ -459,7 +462,7 @@ struct Equations {
   }
 
   template <MapsTo<unsigned int, unsigned int> F1>
-  static unsigned int collatz_steps_functional(const unsigned int &n,
+  static unsigned int collatz_steps_functional(const unsigned int n,
                                                F1 &&collatz_steps0) {
     if (n <= 0) {
       return 0u;
@@ -475,10 +478,10 @@ struct Equations {
     }
   }
 
-  static unsigned int collatz_steps(const unsigned int &x);
-  static unsigned int collatz_steps_unfold_clause_3(const unsigned int &n,
-                                                    const bool &refine);
-  static unsigned int collatz_steps_unfold(const unsigned int &n);
+  static unsigned int collatz_steps(const unsigned int x);
+  static unsigned int collatz_steps_unfold_clause_3(const unsigned int n,
+                                                    const bool refine);
+  static unsigned int collatz_steps_unfold(const unsigned int n);
   struct collatz_steps_graph;
   struct collatz_steps_clause_3_graph;
 
@@ -674,7 +677,8 @@ struct Equations {
   template <typename T1, typename T2 = void, typename F2, typename F3,
             typename F4>
   static T1 collatz_steps_graph_mut(const T1 f, const T1 f0, F2 &&f1, F3 &&f2,
-                                    F4 &&f3, unsigned int _x0, unsigned int _x1,
+                                    F4 &&f3, const unsigned int _x0,
+                                    const unsigned int _x1,
                                     collatz_steps_graph _x2) {
     std::function<T1(unsigned int, unsigned int, collatz_steps_graph)> f4;
     std::function<T2(unsigned int, bool, unsigned int,
@@ -727,10 +731,11 @@ struct Equations {
             MapsTo<T1, unsigned int, collatz_steps_clause_3_graph, T2> F2,
             MapsTo<T2, unsigned int, collatz_steps_graph, T1> F3,
             MapsTo<T2, unsigned int, collatz_steps_graph, T1> F4>
-  static T2 collatz_steps_clause_3_graph_mut(const T1 f, const T1 f0, F2 &&f1,
-                                             F3 &&f2, F4 &&f3, unsigned int _x0,
-                                             bool _x1, unsigned int _x2,
-                                             collatz_steps_clause_3_graph _x3) {
+  static T2
+  collatz_steps_clause_3_graph_mut(const T1 f, const T1 f0, F2 &&f1, F3 &&f2,
+                                   F4 &&f3, const unsigned int _x0,
+                                   const bool _x1, const unsigned int _x2,
+                                   collatz_steps_clause_3_graph _x3) {
     std::function<T1(unsigned int, unsigned int, collatz_steps_graph)> f4;
     std::function<T2(unsigned int, bool, unsigned int,
                      collatz_steps_clause_3_graph)>
@@ -781,28 +786,27 @@ struct Equations {
   template <typename T1, typename T2 = void, typename F2, typename F3,
             typename F4>
   static T1 collatz_steps_graph_rect(const T1 _x0, const T1 _x1, F2 &&_x2,
-                                     F3 &&_x3, F4 &&_x4,
-                                     const unsigned int &_x5,
-                                     const unsigned int &_x6,
+                                     F3 &&_x3, F4 &&_x4, const unsigned int _x5,
+                                     const unsigned int _x6,
                                      const collatz_steps_graph &_x7) {
     return collatz_steps_graph_mut<T1, T2>(_x0, _x1, _x2, _x3, _x4, _x5, _x6,
                                            _x7);
   }
 
-  static collatz_steps_graph collatz_steps_graph_correct(const unsigned int &x);
+  static collatz_steps_graph collatz_steps_graph_correct(const unsigned int x);
 
   template <typename T1, MapsTo<T1, unsigned int, T1> F2,
             MapsTo<T1, unsigned int, T1> F3>
   static T1 collatz_steps_elim(const T1 f, const T1 f0, F2 &&f2, F3 &&f3,
-                               const unsigned int &n) {
+                               const unsigned int n) {
     return collatz_steps_graph_mut(
         f, f0,
-        [](const unsigned int &, const collatz_steps_clause_3_graph &,
+        [](const unsigned int, const collatz_steps_clause_3_graph &,
            const T1 x) { return x; },
-        [=](const unsigned int &n0, const collatz_steps_graph &) mutable {
+        [=](const unsigned int n0, const collatz_steps_graph &) mutable {
           return [=](T1 _pa0) mutable { return f2(n0, _pa0); };
         },
-        [=](const unsigned int &n0, const collatz_steps_graph &) mutable {
+        [=](const unsigned int n0, const collatz_steps_graph &) mutable {
           return [=](T1 _pa0) mutable { return f3(n0, _pa0); };
         },
         n, collatz_steps(n), collatz_steps_graph_correct(n));
@@ -812,7 +816,7 @@ struct Equations {
   static std::any FunctionalElimination_collatz_steps(const std::any _x0,
                                                       const std::any _x1,
                                                       F2 &&_x2, F3 &&_x3,
-                                                      const unsigned int &_x4) {
+                                                      const unsigned int _x4) {
     return collatz_steps_elim<F2>(_x0, _x1, _x2, _x3, _x4);
   }
 

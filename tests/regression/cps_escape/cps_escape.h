@@ -125,7 +125,7 @@ struct CpsEscape {
 
     /// CPS-style: take a tree, produce a continuation (nat -> nat)
     /// that adds tree_sum to its argument. The continuation captures t.
-    unsigned int make_adder(const unsigned int &x) const {
+    unsigned int make_adder(const unsigned int x) const {
       return ((*(this)).tree_sum() + x);
     }
 

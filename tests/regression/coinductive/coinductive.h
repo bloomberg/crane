@@ -50,7 +50,7 @@ struct Coinductive {
   };
 
   static stream zeros();
-  static stream count_from(unsigned int n);
+  static stream count_from(const unsigned int n);
   static unsigned int hd(const stream s);
   static stream tl(const stream s);
 
@@ -115,7 +115,7 @@ struct Coinductive {
     const variant_t &v() const { return d_lazyV_.force(); }
   };
 
-  static tree infinite_tree(unsigned int n);
+  static tree infinite_tree(const unsigned int n);
 };
 
 #endif // INCLUDED_COINDUCTIVE

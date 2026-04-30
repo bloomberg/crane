@@ -142,7 +142,7 @@ struct ConstrainedPoly {
   static inline const bool test_snd = test_pair.usnd;
   static inline const UOption<unsigned int> test_umap =
       uoption_map<unsigned int, unsigned int>(
-          [](const unsigned int &n) { return (n + 1u); },
+          [](const unsigned int n) { return (n + 1u); },
           UOption<unsigned int>::usome(9u));
 };
 

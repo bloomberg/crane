@@ -1,7 +1,7 @@
 #include <loopify_list_subsequences.h>
 
 List<List<unsigned int>>
-LoopifyListSubsequences::map_cons_helper(unsigned int x,
+LoopifyListSubsequences::map_cons_helper(const unsigned int x,
                                          const List<List<unsigned int>> &ll) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
@@ -57,7 +57,7 @@ List<List<unsigned int>> LoopifyListSubsequences::tails(List<unsigned int> l) {
 }
 
 List<List<unsigned int>>
-LoopifyListSubsequences::inits_fuel(const unsigned int &fuel,
+LoopifyListSubsequences::inits_fuel(const unsigned int fuel,
                                     const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
@@ -81,7 +81,7 @@ LoopifyListSubsequences::inits_fuel(const unsigned int &fuel,
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<unsigned int> &l = *(_f.l);
-      const unsigned int &fuel = _f.fuel;
+      const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<List<unsigned int>>::cons(
             List<unsigned int>::nil(), List<List<unsigned int>>::nil());
@@ -99,7 +99,7 @@ LoopifyListSubsequences::inits_fuel(const unsigned int &fuel,
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       List<List<unsigned int>> rest = _result;
       _result = List<List<unsigned int>>::cons(
           List<unsigned int>::nil(), map_cons_helper(d_a0, std::move(rest)));
@@ -148,7 +148,7 @@ LoopifyListSubsequences::init_list(const List<unsigned int> &l) {
 }
 
 List<unsigned int> LoopifyListSubsequences::snoc(const List<unsigned int> &l,
-                                                 unsigned int x) {
+                                                 const unsigned int x) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
@@ -196,7 +196,7 @@ unsigned int LoopifyListSubsequences::last_elem(const List<unsigned int> &l) {
   return _result;
 }
 
-unsigned int LoopifyListSubsequences::nth_elem(const unsigned int &n,
+unsigned int LoopifyListSubsequences::nth_elem(const unsigned int n,
                                                const List<unsigned int> &l) {
   unsigned int _result;
   const List<unsigned int> *_loop_l = &l;
@@ -213,11 +213,8 @@ unsigned int LoopifyListSubsequences::nth_elem(const unsigned int &n,
         _result = d_a0;
         break;
       } else {
-        const List<unsigned int> *_next_l = d_a1.get();
-        unsigned int _next_n =
-            (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-        _loop_l = _next_l;
-        _loop_n = std::move(_next_n);
+        _loop_l = d_a1.get();
+        _loop_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
       }
     }
   }
@@ -225,7 +222,7 @@ unsigned int LoopifyListSubsequences::nth_elem(const unsigned int &n,
 }
 
 std::pair<List<unsigned int>, List<unsigned int>>
-LoopifyListSubsequences::split_at(const unsigned int &n, List<unsigned int> l) {
+LoopifyListSubsequences::split_at(const unsigned int n, List<unsigned int> l) {
   struct _Enter {
     List<unsigned int> l;
     unsigned int n;
@@ -248,7 +245,7 @@ LoopifyListSubsequences::split_at(const unsigned int &n, List<unsigned int> l) {
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       List<unsigned int> l = std::move(_f.l);
-      const unsigned int &n = _f.n;
+      const unsigned int n = _f.n;
       if (n <= 0) {
         _result = std::make_pair(List<unsigned int>::nil(), std::move(l));
       } else {
@@ -266,7 +263,7 @@ LoopifyListSubsequences::split_at(const unsigned int &n, List<unsigned int> l) {
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       const List<unsigned int> &before = _result.first;
       const List<unsigned int> &after = _result.second;
       _result = std::make_pair(List<unsigned int>::cons(d_a0, before), after);

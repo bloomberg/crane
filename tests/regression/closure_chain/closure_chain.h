@@ -157,8 +157,8 @@ struct ClosureChain {
   /// BUG HYPOTHESIS: make_chain (S n') t creates a local binding
   /// f := make_chain n' t, then returns fun x => f (x + 1).
   /// If f is captured by &, it dies when make_chain returns.
-  static unsigned int make_chain(const unsigned int &n, const tree &t,
-                                 unsigned int _x0);
+  static unsigned int make_chain(const unsigned int n, const tree &t,
+                                 const unsigned int _x0);
   /// Test: make_chain 0 t 5 = tree_sum(t) + 5 = 10 + 5 = 15
   static inline const unsigned int chain_0 = []() {
     tree t = tree::node(tree::leaf(), 10u, tree::leaf());

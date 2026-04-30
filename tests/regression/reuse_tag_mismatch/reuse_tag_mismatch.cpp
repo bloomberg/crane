@@ -8,7 +8,7 @@
 /// But GoUp and GoDown are DIFFERENT constructors.
 ReuseTagMismatch::direction
 ReuseTagMismatch::id_or_flip(ReuseTagMismatch::direction d,
-                             const bool &flip_flag) {
+                             const bool flip_flag) {
   if (flip_flag) {
     if (std::holds_alternative<typename ReuseTagMismatch::direction::GoUp>(
             d.v_mut())) {

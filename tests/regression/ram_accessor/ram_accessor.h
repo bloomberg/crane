@@ -126,14 +126,14 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static List<T1> repeat(const T1 x, const unsigned int &n);
+  static List<T1> repeat(const T1 x, const unsigned int n);
   template <typename T1>
-  static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
 };
 
 struct RamAccessor {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int &n, const T1 x,
+  static List<T1> update_nth(const unsigned int n, const T1 x,
                              const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -231,37 +231,37 @@ struct RamAccessor {
             empty_ram,
             default_sel,
             ListDef::template repeat<unsigned int>(0u, 8u)};
-  static unsigned int get_main(const ram_reg &rg, const unsigned int &i);
-  static unsigned int get_stat(const ram_reg &rg, const unsigned int &i);
-  static ram_reg upd_main_in_reg(const ram_reg &rg, const unsigned int &i,
-                                 const unsigned int &v);
-  static ram_reg upd_stat_in_reg(const ram_reg &rg, const unsigned int &i,
-                                 const unsigned int &v);
-  static ram_reg get_regRAM(const ram_chip &ch, const unsigned int &r);
-  static ram_chip upd_reg_in_chip(const ram_chip &ch, const unsigned int &r,
+  static unsigned int get_main(const ram_reg &rg, const unsigned int i);
+  static unsigned int get_stat(const ram_reg &rg, const unsigned int i);
+  static ram_reg upd_main_in_reg(const ram_reg &rg, const unsigned int i,
+                                 const unsigned int v);
+  static ram_reg upd_stat_in_reg(const ram_reg &rg, const unsigned int i,
+                                 const unsigned int v);
+  static ram_reg get_regRAM(const ram_chip &ch, const unsigned int r);
+  static ram_chip upd_reg_in_chip(const ram_chip &ch, const unsigned int r,
                                   const ram_reg &rg);
-  static ram_chip upd_port_in_chip(const ram_chip &ch, const unsigned int &v);
-  static ram_chip get_chip(const ram_bank &bk, const unsigned int &c);
-  static ram_bank upd_chip_in_bank(const ram_bank &bk, const unsigned int &c,
+  static ram_chip upd_port_in_chip(const ram_chip &ch, const unsigned int v);
+  static ram_chip get_chip(const ram_bank &bk, const unsigned int c);
+  static ram_bank upd_chip_in_bank(const ram_bank &bk, const unsigned int c,
                                    const ram_chip &ch);
   static ram_bank get_bank_from_sys(const List<ram_bank> &sys,
-                                    const unsigned int &b);
-  static List<ram_bank> upd_bank_in_sys(const state &s, const unsigned int &b,
+                                    const unsigned int b);
+  static List<ram_bank> upd_bank_in_sys(const state &s, const unsigned int b,
                                         const ram_bank &bk);
   static ram_bank current_bank(const state &s);
   static ram_chip current_chip(const state &s);
   static ram_reg current_reg(const state &s);
   static unsigned int ram_read_main(const state &s);
   static List<ram_bank> ram_write_main_sys(const state &s,
-                                           const unsigned int &v);
+                                           const unsigned int v);
   static List<ram_bank> ram_write_status_sys(const state &s,
-                                             const unsigned int &idx,
-                                             const unsigned int &v);
+                                             const unsigned int idx,
+                                             const unsigned int v);
   static inline const unsigned int init_read = ram_read_main(init_state);
 };
 
 template <typename T1>
-List<T1> ListDef::repeat(const T1 x, const unsigned int &n) {
+List<T1> ListDef::repeat(const T1 x, const unsigned int n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {
@@ -271,7 +271,7 @@ List<T1> ListDef::repeat(const T1 x, const unsigned int &n) {
 }
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int &n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

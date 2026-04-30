@@ -22,12 +22,12 @@ CustomInlineBug::bug_option_pair(CustomInlineBug::State s) {
       std::make_pair(s, s.value));
 }
 
-CustomInlineBug::State CustomInlineBug::get_state(unsigned int n) {
+CustomInlineBug::State CustomInlineBug::get_state(const unsigned int n) {
   return State{n, n};
 }
 
 std::optional<unsigned int>
-CustomInlineBug::bug_some_of_call(const unsigned int &n) {
+CustomInlineBug::bug_some_of_call(const unsigned int n) {
   return std::make_optional<unsigned int>(get_state(n).value);
 }
 
@@ -37,7 +37,7 @@ CustomInlineBug::pair_simple(CustomInlineBug::State s) {
 }
 
 std::pair<CustomInlineBug::State, unsigned int>
-CustomInlineBug::pair_let(unsigned int n) {
+CustomInlineBug::pair_let(const unsigned int n) {
   CustomInlineBug::State s = State{n, n};
   return std::make_pair(s, s.value);
 }
@@ -50,7 +50,7 @@ CustomInlineBug::pair_nested(CustomInlineBug::State s) {
 }
 
 std::pair<CustomInlineBug::State, unsigned int>
-CustomInlineBug::pair_if(const bool &b, CustomInlineBug::State s) {
+CustomInlineBug::pair_if(const bool b, CustomInlineBug::State s) {
   if (b) {
     return std::make_pair(s, s.value);
   } else {
@@ -93,12 +93,12 @@ CustomInlineBug::make_pair(CustomInlineBug::State s) {
 }
 
 std::pair<CustomInlineBug::State, unsigned int>
-CustomInlineBug::outer_pair(unsigned int n) {
+CustomInlineBug::outer_pair(const unsigned int n) {
   return make_pair(State{n, n});
 }
 
 List<std::pair<CustomInlineBug::State, unsigned int>>
-CustomInlineBug::count_pairs(const unsigned int &n, CustomInlineBug::State s) {
+CustomInlineBug::count_pairs(const unsigned int n, CustomInlineBug::State s) {
   if (n <= 0) {
     return List<std::pair<CustomInlineBug::State, unsigned int>>::nil();
   } else {

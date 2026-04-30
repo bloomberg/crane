@@ -35,7 +35,7 @@ struct EffectHofVoid {
 
   /// 4. Apply callback conditionally
   template <MapsTo<void, std::string> F1>
-  static void apply_if(const bool &flag, F1 &&f, const std::string x) {
+  static void apply_if(const bool flag, F1 &&f, const std::string x) {
     if (flag) {
       f(x);
       return;
@@ -54,7 +54,7 @@ struct EffectHofVoid {
 
   template <MapsTo<void, std::string> F0>
   static unsigned int apply_n(F0 &&f, const std::string x,
-                              const unsigned int &n) {
+                              const unsigned int n) {
     if (n <= 0) {
       return 0u;
     } else {

@@ -84,11 +84,11 @@ struct BenchLetIn {
     }
   };
 
-  static unsigned int swap_snd(unsigned int a, unsigned int b);
-  static unsigned int add_via_pair(unsigned int a, unsigned int b);
-  static unsigned int nested_swap(unsigned int a, unsigned int b,
-                                  unsigned int c, unsigned int d);
-  static unsigned int sum_via_pairs(unsigned int n);
+  static unsigned int swap_snd(const unsigned int a, const unsigned int b);
+  static unsigned int add_via_pair(const unsigned int a, const unsigned int b);
+  static unsigned int nested_swap(const unsigned int a, const unsigned int b,
+                                  const unsigned int c, const unsigned int d);
+  static unsigned int sum_via_pairs(const unsigned int n);
 
   template <typename t_A, typename t_B, typename t_C> struct triple {
     // TYPES
@@ -167,10 +167,12 @@ struct BenchLetIn {
     }
   };
 
-  static unsigned int mid3(unsigned int a, unsigned int b, unsigned int c);
-  static unsigned int sum3(unsigned int a, unsigned int b, unsigned int c);
-  static unsigned int chain_pairs(unsigned int a, unsigned int b,
-                                  unsigned int c);
+  static unsigned int mid3(const unsigned int a, const unsigned int b,
+                           const unsigned int c);
+  static unsigned int sum3(const unsigned int a, const unsigned int b,
+                           const unsigned int c);
+  static unsigned int chain_pairs(const unsigned int a, const unsigned int b,
+                                  const unsigned int c);
   static inline const unsigned int test_swap = swap_snd(3u, 4u);
   static inline const unsigned int test_add = add_via_pair(3u, 4u);
   static inline const unsigned int test_nested = nested_swap(1u, 2u, 3u, 4u);

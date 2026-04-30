@@ -1,7 +1,7 @@
 #include <option_closure_escape.h>
 
 unsigned int OptionClosureEscape::sum_values(const OptionClosureEscape::tree &t,
-                                             unsigned int x) {
+                                             const unsigned int x) {
   if (std::holds_alternative<typename OptionClosureEscape::tree::Leaf>(t.v())) {
     return x;
   } else {
@@ -43,7 +43,7 @@ OptionClosureEscape::pair_escape(OptionClosureEscape::tree t) {
 std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
 OptionClosureEscape::match_pair(const OptionClosureEscape::tree &t) {
   if (std::holds_alternative<typename OptionClosureEscape::tree::Leaf>(t.v())) {
-    return std::make_pair([](unsigned int x) { return x; }, 0u);
+    return std::make_pair([](const unsigned int x) { return x; }, 0u);
   } else {
     const auto &[d_a0, d_a1, d_a2] =
         std::get<typename OptionClosureEscape::tree::Node>(t.v());

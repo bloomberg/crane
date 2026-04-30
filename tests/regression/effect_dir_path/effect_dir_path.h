@@ -154,7 +154,7 @@ struct EffectDirPath {
   static std::string create_and_report(const std::string path);
   /// 7. Recursive function counting list items from list_directory
   static unsigned int count_entries(const List<std::string> &dirs,
-                                    unsigned int acc);
+                                    const unsigned int acc);
   /// 8. remove_directory (returns bool but treated as unit in bind)
   static void cleanup(const std::string path);
 };

@@ -132,9 +132,9 @@ struct LoopifyAdvancedPatterns {
   static unsigned int nested_pattern(
       const List<std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>
           &l);
-  static unsigned int guard_accum(unsigned int acc,
+  static unsigned int guard_accum(const unsigned int acc,
                                   const List<unsigned int> &l);
-  static List<unsigned int> cons_computed(const unsigned int &n,
+  static List<unsigned int> cons_computed(const unsigned int n,
                                           const List<unsigned int> &l);
 
   struct shape {
@@ -250,8 +250,8 @@ struct LoopifyAdvancedPatterns {
   static unsigned int sum_shapes(const List<shape> &l);
   static std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
   count_by_shape(const List<shape> &l);
-  static List<unsigned int> replace_at(const unsigned int &idx,
-                                       unsigned int value,
+  static List<unsigned int> replace_at(const unsigned int idx,
+                                       const unsigned int value,
                                        const List<unsigned int> &l);
 };
 

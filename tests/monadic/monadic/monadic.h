@@ -151,12 +151,13 @@ struct Monadic {
     }
   }
 
-  static std::optional<unsigned int> safe_div(const unsigned int &n,
-                                              const unsigned int &m);
-  static std::optional<unsigned int> safe_sub(const unsigned int &n,
-                                              const unsigned int &m);
-  static std::optional<unsigned int>
-  div_then_sub(const unsigned int &a, const unsigned int &b, unsigned int c);
+  static std::optional<unsigned int> safe_div(const unsigned int n,
+                                              const unsigned int m);
+  static std::optional<unsigned int> safe_sub(const unsigned int n,
+                                              const unsigned int m);
+  static std::optional<unsigned int> div_then_sub(const unsigned int a,
+                                                  const unsigned int b,
+                                                  const unsigned int c);
   template <typename s, typename a>
   using State = std::function<std::pair<a, s>(s)>;
 
@@ -196,9 +197,9 @@ struct Monadic {
                acc,
            const T1) {
           return state_bind<unsigned int, unsigned int,
-                            unsigned int>(acc, [](const unsigned int &) {
+                            unsigned int>(acc, [](const unsigned int) {
             return state_bind<unsigned int, unsigned int, unsigned int>(
-                state_get<unsigned int>(), [](unsigned int n) {
+                state_get<unsigned int>(), [](const unsigned int n) {
                   return state_bind<unsigned int, std::monostate, unsigned int>(
                       state_put<unsigned int>((n + 1)),
                       [=](const std::monostate &) mutable {
@@ -214,12 +215,12 @@ struct Monadic {
       option_return<unsigned int>(42u);
   static inline const std::optional<unsigned int> test_bind_some =
       option_bind<unsigned int, unsigned int>(
-          std::make_optional<unsigned int>(10u), [](const unsigned int &x) {
+          std::make_optional<unsigned int>(10u), [](const unsigned int x) {
             return std::make_optional<unsigned int>((x + 1u));
           });
   static inline const std::optional<unsigned int> test_bind_none =
       option_bind<unsigned int, unsigned int>(
-          std::optional<unsigned int>(), [](const unsigned int &x) {
+          std::optional<unsigned int>(), [](const unsigned int x) {
             return std::make_optional<unsigned int>((x + 1u));
           });
   static inline const std::optional<unsigned int> test_safe_div_ok =

@@ -1,6 +1,6 @@
 #include <functor_comp.h>
 
-FunctorComp::Stack::t FunctorComp::Stack::push(unsigned int x,
+FunctorComp::Stack::t FunctorComp::Stack::push(const unsigned int x,
                                                List<unsigned int> s) {
   return List<unsigned int>::cons(x, std::move(s));
 }
@@ -22,7 +22,7 @@ unsigned int FunctorComp::Stack::size(const FunctorComp::Stack::t _x0) {
 }
 
 FunctorComp::Queue::t FunctorComp::Queue::push(
-    unsigned int x,
+    const unsigned int x,
     const std::pair<List<unsigned int>, List<unsigned int>> &q) {
   const List<unsigned int> &front = q.first;
   const List<unsigned int> &back = q.second;

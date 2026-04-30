@@ -15,7 +15,7 @@ struct MutualFixEscape {
   /// both functions through a pair.
   static std::pair<std::function<bool(unsigned int)>,
                    std::function<bool(unsigned int)>>
-  make_even_odd(const unsigned int &_x);
+  make_even_odd(const unsigned int _x);
   /// test1: even(4) = true, odd(3) = true. 1+1=2.
   static inline const unsigned int test1 = []() {
     return []() -> unsigned int {
@@ -37,7 +37,7 @@ struct MutualFixEscape {
   /// A mutual fixpoint that captures a parameter base.
   static std::pair<std::function<unsigned int(unsigned int)>,
                    std::function<unsigned int(unsigned int)>>
-  make_count_pair(unsigned int base);
+  make_count_pair(const unsigned int base);
   /// test3: count_even(0) = base = 10. count_odd(0) = 20.
   /// count_even(3) = 1+count_odd(2) = 1+(1+count_even(1))
   /// = 1+(1+(1+count_odd(0))) = 1+1+1+20 = 23.

@@ -23,14 +23,14 @@ struct JcnOps {
     }
   };
 
-  static bool jcn_condition(const state &s, const unsigned int &cond);
-  static unsigned int addr12_of_nat(const unsigned int &n);
+  static bool jcn_condition(const state &s, const unsigned int cond);
+  static unsigned int addr12_of_nat(const unsigned int n);
   static unsigned int pc_inc2(const state &s);
-  static unsigned int page_of(const unsigned int &p);
-  static unsigned int page_base(const unsigned int &p);
+  static unsigned int page_of(const unsigned int p);
+  static unsigned int page_base(const unsigned int p);
   static unsigned int base_for_next2(const state &s);
-  static unsigned int branch_target(const state &s, const unsigned int &cond,
-                                    const unsigned int &off);
+  static unsigned int branch_target(const state &s, const unsigned int cond,
+                                    const unsigned int off);
   static inline const unsigned int test_branch_target =
       branch_target(state{0u, true, false, 300u}, 2u, 17u);
   static inline const bool check_carry_clear_gate =

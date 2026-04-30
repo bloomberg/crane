@@ -165,19 +165,19 @@ public:
 
 struct LoopifyGrouping {
   static List<List<unsigned int>>
-  prepend_to_groups(unsigned int x, const bool &same,
+  prepend_to_groups(const unsigned int x, const bool same,
                     List<List<unsigned int>> groups);
-  static List<List<unsigned int>> group_fuel(const unsigned int &fuel,
+  static List<List<unsigned int>> group_fuel(const unsigned int fuel,
                                              const List<unsigned int> &l);
   static List<List<unsigned int>> group(const List<unsigned int> &l);
-  static bool elem(const unsigned int &x, const List<unsigned int> &l);
+  static bool elem(const unsigned int x, const List<unsigned int> &l);
   static List<unsigned int> nub(const List<unsigned int> &l);
-  static List<unsigned int> remove_elem(const unsigned int &x,
+  static List<unsigned int> remove_elem(const unsigned int x,
                                         const List<unsigned int> &l);
   static std::pair<std::pair<List<unsigned int>, List<unsigned int>>,
                    List<unsigned int>>
-  partition3(const unsigned int &pivot, const List<unsigned int> &l);
-  static unsigned int count_elem(const unsigned int &x,
+  partition3(const unsigned int pivot, const List<unsigned int> &l);
+  static unsigned int count_elem(const unsigned int x,
                                  const List<unsigned int> &l);
   static List<std::pair<unsigned int, unsigned int>>
   group_pairs(const List<unsigned int> &l);

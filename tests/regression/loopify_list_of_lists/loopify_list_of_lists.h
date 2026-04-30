@@ -140,10 +140,7 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        const List *_next_self = d_a1.get();
-        List<t_A> _next_m = std::move(_loop_m);
-        _loop_self = _next_self;
-        _loop_m = std::move(_next_m);
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -158,7 +155,7 @@ struct LoopifyListOfLists {
   static List<List<unsigned int>> map_tl(const List<List<unsigned int>> &ll);
   static bool all_empty(const List<List<unsigned int>> &ll);
   static List<List<unsigned int>>
-  transpose_fuel(const unsigned int &fuel, const List<List<unsigned int>> &ll);
+  transpose_fuel(const unsigned int fuel, const List<List<unsigned int>> &ll);
   static unsigned int list_len(const List<unsigned int> &l);
   static unsigned int total_length(const List<List<unsigned int>> &ll);
   static List<List<unsigned int>> transpose(const List<List<unsigned int>> &ll);

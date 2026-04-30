@@ -1,8 +1,7 @@
 #include <loopify_list_generators.h>
 
 List<unsigned int>
-LoopifyListGenerators::cycle_fuel(const unsigned int &fuel,
-                                  const unsigned int &n,
+LoopifyListGenerators::cycle_fuel(const unsigned int fuel, const unsigned int n,
                                   const List<unsigned int> &l) {
   struct _Enter {
     unsigned int n;
@@ -25,8 +24,8 @@ LoopifyListGenerators::cycle_fuel(const unsigned int &fuel,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int &n = _f.n;
-      const unsigned int &fuel = _f.fuel;
+      const unsigned int n = _f.n;
+      const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -51,17 +50,17 @@ LoopifyListGenerators::cycle_fuel(const unsigned int &fuel,
   return _result;
 }
 
-List<unsigned int> LoopifyListGenerators::cycle(const unsigned int &n,
+List<unsigned int> LoopifyListGenerators::cycle(const unsigned int n,
                                                 const List<unsigned int> &l) {
   return cycle_fuel((n * l.length()), n, l);
 }
 
-List<unsigned int> LoopifyListGenerators::range(unsigned int start,
-                                                const unsigned int &count) {
+List<unsigned int> LoopifyListGenerators::range(const unsigned int start,
+                                                const unsigned int count) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_count = count;
-  unsigned int _loop_start = std::move(start);
+  unsigned int _loop_start = start;
   while (true) {
     if (_loop_count <= 0) {
       *(_write) =
@@ -74,18 +73,16 @@ List<unsigned int> LoopifyListGenerators::range(unsigned int start,
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      unsigned int _next_count = count_;
-      unsigned int _next_start = (_loop_start + 1u);
-      _loop_count = std::move(_next_count);
-      _loop_start = std::move(_next_start);
+      _loop_count = count_;
+      _loop_start = (_loop_start + 1u);
       continue;
     }
   }
   return std::move(*(_head));
 }
 
-List<unsigned int> LoopifyListGenerators::replicate_elem(const unsigned int &n,
-                                                         unsigned int x) {
+List<unsigned int> LoopifyListGenerators::replicate_elem(const unsigned int n,
+                                                         const unsigned int x) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_n = n;
@@ -109,7 +106,7 @@ List<unsigned int> LoopifyListGenerators::replicate_elem(const unsigned int &n,
 }
 
 List<unsigned int>
-LoopifyListGenerators::replicate_each(const unsigned int &n,
+LoopifyListGenerators::replicate_each(const unsigned int n,
                                       const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
@@ -150,12 +147,12 @@ LoopifyListGenerators::replicate_each(const unsigned int &n,
 }
 
 List<std::pair<unsigned int, unsigned int>>
-LoopifyListGenerators::enumerate_aux(unsigned int idx,
+LoopifyListGenerators::enumerate_aux(const unsigned int idx,
                                      const List<unsigned int> &l) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
-  unsigned int _loop_idx = std::move(idx);
+  unsigned int _loop_idx = idx;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
@@ -174,10 +171,8 @@ LoopifyListGenerators::enumerate_aux(unsigned int idx,
           &std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                (*_write)->v_mut())
                .d_a1;
-      const List<unsigned int> *_next_l = d_a1.get();
-      unsigned int _next_idx = (_loop_idx + 1u);
-      _loop_l = _next_l;
-      _loop_idx = std::move(_next_idx);
+      _loop_l = d_a1.get();
+      _loop_idx = (_loop_idx + 1u);
       continue;
     }
   }

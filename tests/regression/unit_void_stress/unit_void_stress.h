@@ -125,11 +125,11 @@ public:
 };
 
 struct UnitVoidStress {
-  static void consume(const unsigned int &n);
-  static void discard(const unsigned int &_x);
+  static void consume(const unsigned int n);
+  static void discard(const unsigned int _x);
   static std::pair<unsigned int, std::monostate>
-  pair_with_void_call(const unsigned int &n);
-  static std::optional<std::monostate> some_void_call(const unsigned int &n);
+  pair_with_void_call(const unsigned int n);
+  static std::optional<std::monostate> some_void_call(const unsigned int n);
   static inline const List<std::monostate> list_void_calls =
       List<std::monostate>::cons(
           []() {
@@ -142,22 +142,22 @@ struct UnitVoidStress {
                 return std::monostate{};
               }(),
               List<std::monostate>::nil()));
-  static void id_void_call(const unsigned int &_x0);
+  static void id_void_call(const unsigned int _x0);
   static std::pair<unsigned int, std::monostate>
-  pair_with_discard(unsigned int n);
-  static void store_and_call(const unsigned int &_x0);
+  pair_with_discard(const unsigned int n);
+  static void store_and_call(const unsigned int _x0);
   static std::pair<unsigned int, std::monostate>
-  pair_via_let(const unsigned int &n);
-  static void cond_void(const bool &b, const unsigned int &n);
-  static void match_nat_void(const unsigned int &n);
+  pair_via_let(const unsigned int n);
+  static void cond_void(const bool b, const unsigned int n);
+  static void match_nat_void(const unsigned int n);
   static std::pair<std::pair<unsigned int, std::monostate>, unsigned int>
-  nested_pair_void(unsigned int n);
+  nested_pair_void(const unsigned int n);
   static std::optional<std::pair<unsigned int, std::monostate>>
-  option_pair_void(unsigned int n);
+  option_pair_void(const unsigned int n);
   static std::pair<unsigned int, unsigned int>
-  let_void_then_pair(unsigned int n);
-  static unsigned int seq_voids_value(const unsigned int &_x);
-  static unsigned int void_in_one_branch(const bool &b, unsigned int n);
+  let_void_then_pair(const unsigned int n);
+  static unsigned int seq_voids_value(const unsigned int _x);
+  static unsigned int void_in_one_branch(const bool b, const unsigned int n);
 
   template <typename T1, MapsTo<void, T1> F0>
   static List<std::monostate> map_void(F0 &&f, const List<T1> &l) {
@@ -182,7 +182,7 @@ struct UnitVoidStress {
 
   template <MapsTo<void, unsigned int> F0>
   static std::optional<std::monostate>
-  apply_void_to_option(F0 &&f, const unsigned int &n) {
+  apply_void_to_option(F0 &&f, const unsigned int n) {
     return std::make_optional<std::monostate>([=]() mutable {
       f(n);
       return std::monostate{};
@@ -201,7 +201,7 @@ struct UnitVoidStress {
       std::make_pair(std::monostate{}, std::monostate{});
 
   template <typename T1, MapsTo<T1, unsigned int> F0>
-  static T1 apply_result(F0 &&f, unsigned int _x0) {
+  static T1 apply_result(F0 &&f, const unsigned int _x0) {
     return f(_x0);
   }
 
@@ -216,7 +216,8 @@ struct UnitVoidStress {
   }();
 
   template <typename T1, MapsTo<T1, unsigned int> F0>
-  static std::pair<unsigned int, T1> apply_in_pair(F0 &&f, unsigned int n) {
+  static std::pair<unsigned int, T1> apply_in_pair(F0 &&f,
+                                                   const unsigned int n) {
     return std::make_pair(n, f(n));
   }
 
@@ -227,8 +228,8 @@ struct UnitVoidStress {
             return std::monostate{};
           },
           5u);
-  static void even_void(const unsigned int &n);
-  static void odd_void(const unsigned int &n);
+  static void even_void(const unsigned int n);
+  static void odd_void(const unsigned int n);
   static inline const std::monostate test_mutual_void = []() {
     even_void(10u);
     return std::monostate{};

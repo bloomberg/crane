@@ -134,7 +134,7 @@ struct EffectComplexReturn {
   /// 1. Effect returning a pair
   static std::pair<std::string, std::string> read_pair();
   /// 2. Effect returning an option
-  static std::optional<std::string> maybe_read(const bool &do_read);
+  static std::optional<std::string> maybe_read(const bool do_read);
   /// 3. Void effect followed by value effect
   static std::string print_then_read(const std::string prompt);
   /// 4. Multiple effects with different return types
@@ -142,7 +142,7 @@ struct EffectComplexReturn {
   /// 5. Clock effect in arithmetic
   static int64_t elapsed_ms();
   /// 6. Effect result used to build a list
-  static List<std::string> read_n(const unsigned int &n);
+  static List<std::string> read_n(const unsigned int n);
   /// 7. Env effect result used in conditional
   static std::string env_or_prompt(const std::string name);
 };

@@ -19,22 +19,22 @@ enum class Comparison { e_EQ, e_LT, e_GT };
 
 struct CountDown {
   /// Single effect then recurse: effect ;; recursive_call
-  static void count_down(const unsigned int &n);
+  static void count_down(const unsigned int n);
   /// Two effects then recurse: effect ;; effect ;; recursive_call
-  static void two_prints(const unsigned int &n);
+  static void two_prints(const unsigned int n);
   /// Read from user, echo back, then recurse
-  static void echo_loop(const unsigned int &n);
+  static void echo_loop(const unsigned int n);
   /// Effect in base case too: both branches do IO
-  static void announce(const unsigned int &n);
+  static void announce(const unsigned int n);
   /// Multiple arguments: two nat params, recurse on first
-  static void repeat_msg(const unsigned int &n, const std::string msg);
+  static void repeat_msg(const unsigned int n, const std::string msg);
   static void run_fixpoint();
   /// Helper: compare two strings
   static bool string_eq(const std::string s1, const std::string s2);
   static void co_count_down();
   static void co_two_prints();
   static void co_echo_loop();
-  static void co_announce(unsigned int round);
+  static void co_announce(const unsigned int round);
   static void co_repeat(const std::string msg);
 };
 

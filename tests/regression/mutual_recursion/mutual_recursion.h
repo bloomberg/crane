@@ -12,12 +12,14 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct MutualRecursion {
-  static bool even(const unsigned int &n);
-  static bool odd(const unsigned int &n);
-  static unsigned int sum_even_indices(const unsigned int &n, unsigned int acc);
-  static unsigned int sum_odd_indices(const unsigned int &n, unsigned int acc);
-  static unsigned int process_a(const unsigned int &n, unsigned int m);
-  static unsigned int process_b(const unsigned int &n, unsigned int m);
+  static bool even(const unsigned int n);
+  static bool odd(const unsigned int n);
+  static unsigned int sum_even_indices(const unsigned int n,
+                                       const unsigned int acc);
+  static unsigned int sum_odd_indices(const unsigned int n,
+                                      const unsigned int acc);
+  static unsigned int process_a(const unsigned int n, const unsigned int m);
+  static unsigned int process_b(const unsigned int n, const unsigned int m);
 
   struct expr {
     // TYPES
@@ -193,9 +195,9 @@ struct MutualRecursion {
   }
 
   static unsigned int eval_expr(const expr &e);
-  static unsigned int f1(const unsigned int &n);
-  static unsigned int f2(const unsigned int &n);
-  static unsigned int f3(const unsigned int &n);
+  static unsigned int f1(const unsigned int n);
+  static unsigned int f2(const unsigned int n);
+  static unsigned int f3(const unsigned int n);
   static inline const bool test_even = even(10u);
   static inline const unsigned int test_sum = sum_even_indices(5u, 0u);
   static inline const unsigned int test_eval =

@@ -1,7 +1,7 @@
 #include <opcode_operand_decode.h>
 
 OpcodeOperandDecode::Instruction
-OpcodeOperandDecode::decode(const unsigned int &b1, const unsigned int &) {
+OpcodeOperandDecode::decode(const unsigned int b1, const unsigned int) {
   unsigned int opcode = (16u ? b1 / 16u : 0);
   unsigned int operand = (16u ? b1 % 16u : b1);
   if (opcode <= 0) {

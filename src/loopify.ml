@@ -170,12 +170,15 @@ let rec is_trivially_copyable_type = function
     is_trivially_copyable_type t
   | Tdecltype _ -> true
   | Tvar _ -> true
-  | Tid (id, []) | Tid_external (id, []) ->
+  | Tid (id, ts) | Tid_external (id, ts) ->
     let s = Id.to_string id in
-    s = "unsigned int" || s = "int" || s = "bool" || s = "char"
-    || s = "double" || s = "float" || s = "size_t"
-    || s = "uint64_t" || s = "int64_t" || s = "uint32_t" || s = "int32_t"
-  | Tglob (r, _, _) -> Table.is_enum_inductive r
+    ( match ts with
+    | [] -> Table.is_trivially_copyable_cpp_name s
+    | _ ->
+      (s = "std::pair" || s = "std::optional")
+      && List.for_all is_trivially_copyable_type ts )
+  | Tglob (r, _, _) ->
+    Table.is_enum_inductive r || Table.is_custom_scalar_ref r
   | _ -> false
 
 (** {2 Mutual recursion table}
@@ -1107,19 +1110,22 @@ let assign_result_and_stop expr =
     null-ed before the old value is destroyed — making the move safe and
     reducing the cost from O(n) deep-copy to O(1). *)
 let make_shadow_updates shadow_params args =
+  let is_self_assign shadow_id arg =
+    match arg with
+    | CPPvar id when Id.equal id shadow_id -> true
+    | CPPmove (CPPvar id) when Id.equal id shadow_id -> true
+    | _ -> false
+  in
   let pairs =
     List.map
       (fun ((shadow_id, ty), arg) ->
         ((shadow_id, ty), tail_shadow_arg ty arg))
       (List.combine shadow_params args)
   in
-  (* Identify which params actually change *)
+  (* Identify which params actually change (filter self-assignments). *)
   let non_trivial =
     List.filter
-      (fun ((_shadow_id, _ty), arg) ->
-        match arg with
-        | CPPvar id when Id.equal id _shadow_id -> false
-        | _ -> true )
+      (fun ((shadow_id, _ty), arg) -> not (is_self_assign shadow_id arg))
       pairs
   in
   (* Choose the RHS expression for a shadow update.  When the next value is a
@@ -1135,11 +1141,31 @@ let make_shadow_updates shadow_params args =
     (* 0 or 1 assignment — no hazard possible, assign directly *)
     List.filter_map
       (fun ((shadow_id, ty), arg) ->
-        match arg with
-        | CPPvar id when Id.equal id shadow_id -> None
-        | _ -> Some (Sasgn (shadow_id, None, make_rhs ty arg)) )
+        if is_self_assign shadow_id arg then None
+        else Some (Sasgn (shadow_id, None, make_rhs ty arg)) )
       pairs
-  else (* 2+ assignments — use temporaries *)
+  else (* 2+ assignments — use temporaries only where needed *)
+    (* Check if expression [e] references variable [id]. *)
+    let rec expr_mentions id e =
+      match e with
+      | CPPvar v -> Id.equal v id
+      | _ ->
+        let found = ref false in
+        iter_expr_children
+          ~on_expr:(fun e' -> if expr_mentions id e' then found := true)
+          ~on_stmts:(fun _ -> ())
+          e;
+        !found
+    in
+    (* A variable needs a temporary iff some OTHER non-trivial assignment reads
+       it in its RHS. *)
+    let needs_temp shadow_id =
+      List.exists
+        (fun ((other_id, _), arg) ->
+          not (Id.equal other_id shadow_id)
+          && expr_mentions shadow_id arg)
+        non_trivial
+    in
     let temp_name (id : Id.t) : Id.t =
       let s = Id.to_string id in
       let base =
@@ -1156,27 +1182,45 @@ let make_shadow_updates shadow_params args =
       else
         Id.of_string ("_next_" ^ base)
     in
+    (* Phase 1: emit temp declarations for hazardous variables, and direct
+       assignments for non-hazardous ones. *)
     let temp_decls =
-      List.map
+      List.filter_map
         (fun ((shadow_id, ty), arg) ->
-          Sasgn (temp_name shadow_id, Some (strip_ref_and_const_type ty),
-                 make_rhs ty arg))
+          if needs_temp shadow_id then
+            Some (Sasgn (temp_name shadow_id, Some (strip_ref_and_const_type ty),
+                         make_rhs ty arg))
+          else
+            None)
         non_trivial
     in
-    let updates =
-      List.map
+    let direct_assigns =
+      List.filter_map
+        (fun ((shadow_id, ty), arg) ->
+          if needs_temp shadow_id then
+            None
+          else
+            Some (Sasgn (shadow_id, None, make_rhs ty arg)))
+        non_trivial
+    in
+    (* Phase 2: copy from temps back to loop variables. *)
+    let temp_updates =
+      List.filter_map
         (fun ((shadow_id, ty), _arg) ->
-          let rhs =
-            let stripped = strip_ref_and_const_type ty in
-            if is_trivially_copyable_type stripped then
-              CPPvar (temp_name shadow_id)
-            else
-              CPPmove (CPPvar (temp_name shadow_id))
-          in
-          Sexpr (CPPbinop ("=", CPPvar shadow_id, rhs)))
+          if needs_temp shadow_id then
+            let rhs =
+              let stripped = strip_ref_and_const_type ty in
+              if is_trivially_copyable_type stripped then
+                CPPvar (temp_name shadow_id)
+              else
+                CPPmove (CPPvar (temp_name shadow_id))
+            in
+            Some (Sexpr (CPPbinop ("=", CPPvar shadow_id, rhs)))
+          else
+            None)
         non_trivial
     in
-    temp_decls @ updates
+    temp_decls @ direct_assigns @ temp_updates
 
 (** {2 Generic return-statement rewriter}
 

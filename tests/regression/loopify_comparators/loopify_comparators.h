@@ -166,14 +166,15 @@ public:
 struct LoopifyComparators {
   static unsigned int maximum_by(const List<unsigned int> &l);
   static unsigned int minimum_by(const List<unsigned int> &l);
-  static List<unsigned int> merge_by_fuel(const unsigned int &fuel,
+  static List<unsigned int> merge_by_fuel(const unsigned int fuel,
                                           List<unsigned int> l1,
                                           List<unsigned int> l2);
   static List<unsigned int> merge_by(const List<unsigned int> &l1,
                                      const List<unsigned int> &l2);
-  static List<unsigned int> insert_sorted(unsigned int x, List<unsigned int> l);
+  static List<unsigned int> insert_sorted(const unsigned int x,
+                                          List<unsigned int> l);
   static List<unsigned int> insertion_sort(const List<unsigned int> &l);
-  static bool is_sorted_fuel(const unsigned int &fuel,
+  static bool is_sorted_fuel(const unsigned int fuel,
                              const List<unsigned int> &l);
   static bool is_sorted(const List<unsigned int> &l);
 };

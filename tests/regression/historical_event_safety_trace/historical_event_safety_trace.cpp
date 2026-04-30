@@ -9,7 +9,7 @@ bool HistoricalEventSafetyTraceCase::is_safe_bool(
 
 unsigned int HistoricalEventSafetyTraceCase::event_to_inflow(
     const List<HistoricalEventSafetyTraceCase::InflowRecord> &event,
-    unsigned int default_inflow, const unsigned int &t) {
+    const unsigned int default_inflow, const unsigned int t) {
   if (std::holds_alternative<
           typename List<HistoricalEventSafetyTraceCase::InflowRecord>::Nil>(
           event.v())) {
@@ -47,7 +47,7 @@ bool HistoricalEventSafetyTraceCase::all_tests_pass(
 
 unsigned int HistoricalEventSafetyTraceCase::stage_from_table(
     const List<std::pair<unsigned int, unsigned int>> &tbl,
-    unsigned int base_stage, const unsigned int &out) {
+    const unsigned int base_stage, const unsigned int out) {
   if (std::holds_alternative<
           typename List<std::pair<unsigned int, unsigned int>>::Nil>(tbl.v())) {
     return base_stage;
@@ -67,12 +67,12 @@ unsigned int HistoricalEventSafetyTraceCase::stage_from_table(
 }
 
 unsigned int
-HistoricalEventSafetyTraceCase::hist_witness_stage(const unsigned int &out) {
+HistoricalEventSafetyTraceCase::hist_witness_stage(const unsigned int out) {
   return (2u ? out / 2u : 0);
 }
 
 unsigned int HistoricalEventSafetyTraceCase::hist_witness_ctrl(
-    const HistoricalEventSafetyTraceCase::State &s, const unsigned int &) {
+    const HistoricalEventSafetyTraceCase::State &s, const unsigned int) {
   if (90u <= s.reservoir_level_cm) {
     return 100u;
   } else {
@@ -81,7 +81,7 @@ unsigned int HistoricalEventSafetyTraceCase::hist_witness_ctrl(
 }
 
 unsigned int HistoricalEventSafetyTraceCase::hoover_controller(
-    const HistoricalEventSafetyTraceCase::State &s, const unsigned int &) {
+    const HistoricalEventSafetyTraceCase::State &s, const unsigned int) {
   if (2000u <= s.reservoir_level_cm) {
     return 100u;
   } else {
@@ -102,22 +102,22 @@ unsigned int HistoricalEventSafetyTraceCase::hoover_controller(
 }
 
 unsigned int HistoricalEventSafetyTraceCase::hoover_stage_from_rating(
-    const unsigned int &out) {
+    const unsigned int out) {
   return stage_from_table(hoover_rating_table.mrt_table, 20u, out);
 }
 
 unsigned int
-HistoricalEventSafetyTraceCase::historical_lookup_1983(const unsigned int &t) {
+HistoricalEventSafetyTraceCase::historical_lookup_1983(const unsigned int t) {
   return event_to_inflow(flood_1983_inflows, 0u, t);
 }
 
 unsigned int
-HistoricalEventSafetyTraceCase::historical_lookup_2011(const unsigned int &t) {
+HistoricalEventSafetyTraceCase::historical_lookup_2011(const unsigned int t) {
   return event_to_inflow(flood_2011_inflows, 0u, t);
 }
 
 bool HistoricalEventSafetyTraceCase::witness_test_initial_safe_at(
-    const unsigned int &h) {
+    const unsigned int h) {
   return run_historical_test(hist_witness_plant, flood_1983_inflows, 0u,
                              hist_witness_ctrl, hist_witness_stage,
                              hist_witness_initial, h, 1983u)
@@ -125,24 +125,24 @@ bool HistoricalEventSafetyTraceCase::witness_test_initial_safe_at(
 }
 
 unsigned int HistoricalEventSafetyTraceCase::witness_test_peak_level_at(
-    const unsigned int &h) {
+    const unsigned int h) {
   return run_historical_test(hist_witness_plant, flood_2011_inflows, 0u,
                              hist_witness_ctrl, hist_witness_stage,
                              hist_witness_initial, h, 2011u)
       .tr_max_level;
 }
 
-unsigned int
-HistoricalEventSafetyTraceCase::hoover_controller_sample(unsigned int level) {
+unsigned int HistoricalEventSafetyTraceCase::hoover_controller_sample(
+    const unsigned int level) {
   return hoover_controller(State{level, 20u, 0u}, 0u);
 }
 
 unsigned int
-HistoricalEventSafetyTraceCase::hoover_stage_sample(const unsigned int &_x0) {
+HistoricalEventSafetyTraceCase::hoover_stage_sample(const unsigned int _x0) {
   return hoover_stage_from_rating(_x0);
 }
 
-unsigned int Nat::tail_add(const unsigned int &n, unsigned int m) {
+unsigned int Nat::tail_add(const unsigned int n, const unsigned int m) {
   if (n <= 0) {
     return m;
   } else {
@@ -151,8 +151,8 @@ unsigned int Nat::tail_add(const unsigned int &n, unsigned int m) {
   }
 }
 
-unsigned int Nat::tail_addmul(unsigned int r, const unsigned int &n,
-                              const unsigned int &m) {
+unsigned int Nat::tail_addmul(const unsigned int r, const unsigned int n,
+                              const unsigned int m) {
   if (n <= 0) {
     return r;
   } else {
@@ -161,11 +161,11 @@ unsigned int Nat::tail_addmul(unsigned int r, const unsigned int &n,
   }
 }
 
-unsigned int Nat::tail_mul(const unsigned int &n, const unsigned int &m) {
+unsigned int Nat::tail_mul(const unsigned int n, const unsigned int m) {
   return Nat::tail_addmul(0u, n, m);
 }
 
-unsigned int Nat::of_uint_acc(const Uint &d, unsigned int acc) {
+unsigned int Nat::of_uint_acc(const Uint &d, const unsigned int acc) {
   if (std::holds_alternative<typename Uint::Nil>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint::D0>(d.v())) {
@@ -215,7 +215,7 @@ unsigned int Nat::of_uint_acc(const Uint &d, unsigned int acc) {
 
 unsigned int Nat::of_uint(const Uint &d) { return Nat::of_uint_acc(d, 0u); }
 
-unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
+unsigned int Nat::of_hex_uint_acc(const Uint0 &d, const unsigned int acc) {
   if (std::holds_alternative<typename Uint0::Nil0>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint0::D10>(d.v())) {

@@ -37,7 +37,7 @@ unsigned int LoopifyComparators::maximum_by(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       unsigned int m = _result;
       if (m < d_a0) {
         _result = d_a0;
@@ -86,7 +86,7 @@ unsigned int LoopifyComparators::minimum_by(const List<unsigned int> &l) {
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       unsigned int m = _result;
       if (d_a0 < m) {
         _result = d_a0;
@@ -98,7 +98,7 @@ unsigned int LoopifyComparators::minimum_by(const List<unsigned int> &l) {
   return _result;
 }
 
-List<unsigned int> LoopifyComparators::merge_by_fuel(const unsigned int &fuel,
+List<unsigned int> LoopifyComparators::merge_by_fuel(const unsigned int fuel,
                                                      List<unsigned int> l1,
                                                      List<unsigned int> l2) {
   std::unique_ptr<List<unsigned int>> _head{};
@@ -134,10 +134,8 @@ List<unsigned int> LoopifyComparators::merge_by_fuel(const unsigned int &fuel,
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            List<unsigned int> _next_l1 = std::move(*(d_a1));
-            unsigned int _next_fuel = fuel_;
-            _loop_l1 = std::move(_next_l1);
-            _loop_fuel = std::move(_next_fuel);
+            _loop_l1 = std::move(*(d_a1));
+            _loop_fuel = fuel_;
             continue;
           } else {
             auto _cell = std::make_unique<List<unsigned int>>(
@@ -146,10 +144,8 @@ List<unsigned int> LoopifyComparators::merge_by_fuel(const unsigned int &fuel,
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            List<unsigned int> _next_l2 = std::move(*(d_a10));
-            unsigned int _next_fuel = fuel_;
-            _loop_l2 = std::move(_next_l2);
-            _loop_fuel = std::move(_next_fuel);
+            _loop_l2 = std::move(*(d_a10));
+            _loop_fuel = fuel_;
             continue;
           }
         }
@@ -166,7 +162,7 @@ List<unsigned int> LoopifyComparators::merge_by(const List<unsigned int> &l1,
   return merge_by_fuel((len1 + len2), l1, l2);
 }
 
-List<unsigned int> LoopifyComparators::insert_sorted(unsigned int x,
+List<unsigned int> LoopifyComparators::insert_sorted(const unsigned int x,
                                                      List<unsigned int> l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -238,7 +234,7 @@ LoopifyComparators::insertion_sort(const List<unsigned int> &l) {
   return _result;
 }
 
-bool LoopifyComparators::is_sorted_fuel(const unsigned int &fuel,
+bool LoopifyComparators::is_sorted_fuel(const unsigned int fuel,
                                         const List<unsigned int> &l) {
   bool _result;
   List<unsigned int> _loop_l = l;
@@ -265,11 +261,8 @@ bool LoopifyComparators::is_sorted_fuel(const unsigned int &fuel,
           const auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(_sv0.v());
           if (d_a0 <= d_a00) {
-            List<unsigned int> _next_l =
-                List<unsigned int>::cons(d_a00, *(d_a10));
-            unsigned int _next_fuel = fuel_;
-            _loop_l = std::move(_next_l);
-            _loop_fuel = std::move(_next_fuel);
+            _loop_l = List<unsigned int>::cons(d_a00, *(d_a10));
+            _loop_fuel = fuel_;
           } else {
             _result = false;
             break;

@@ -207,42 +207,42 @@ struct LoopifyPatterns {
   }
 
   /// multi_let n multiple sequential let bindings before recursion.
-  static unsigned int multi_let(const unsigned int &n);
+  static unsigned int multi_let(const unsigned int n);
   /// nested_if n deeply nested if-then-else with recursion at different depths.
-  static unsigned int nested_if_fuel(const unsigned int &fuel,
-                                     const unsigned int &n);
-  static unsigned int nested_if(const unsigned int &n);
+  static unsigned int nested_if_fuel(const unsigned int fuel,
+                                     const unsigned int n);
+  static unsigned int nested_if(const unsigned int n);
   /// deep_nest n deeply nested function application.
-  static unsigned int deep_nest(const unsigned int &n);
+  static unsigned int deep_nest(const unsigned int n);
   /// bool_chain n target multiple recursive calls in || chain.
-  static bool bool_chain_fuel(const unsigned int &fuel, const unsigned int &n,
-                              const unsigned int &target);
-  static bool bool_chain(const unsigned int &n, const unsigned int &target);
+  static bool bool_chain_fuel(const unsigned int fuel, const unsigned int n,
+                              const unsigned int target);
+  static bool bool_chain(const unsigned int n, const unsigned int target);
   /// chained_comp n boolean result with double recursion.
-  static bool chained_comp(const unsigned int &n);
+  static bool chained_comp(const unsigned int n);
   /// tuple_constr n recursive calls in multiple tuple positions.
   static std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
-  tuple_constr(const unsigned int &n);
+  tuple_constr(const unsigned int n);
   /// sum_prod_count l a_sum a_prod a_count multiple accumulator updates.
   static std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
-  sum_prod_count(const list<unsigned int> &l, unsigned int a_sum,
-                 unsigned int a_prod, unsigned int a_count);
+  sum_prod_count(const list<unsigned int> &l, const unsigned int a_sum,
+                 const unsigned int a_prod, const unsigned int a_count);
   /// split_by_sign l pos neg partition with dual accumulators.
   static std::pair<list<unsigned int>, list<unsigned int>>
-  split_by_sign_aux(const list<unsigned int> &l, const unsigned int &base,
+  split_by_sign_aux(const list<unsigned int> &l, const unsigned int base,
                     list<unsigned int> pos, list<unsigned int> neg);
   static std::pair<list<unsigned int>, list<unsigned int>>
-  split_by_sign(const list<unsigned int> &l, const unsigned int &base);
+  split_by_sign(const list<unsigned int> &l, const unsigned int base);
   /// guard_accum acc l multiple when-style guards with different logic.
-  static unsigned int guard_accum(unsigned int acc,
+  static unsigned int guard_accum(const unsigned int acc,
                                   const list<unsigned int> &l);
   /// cons_computed n l cons with conditional parameter change.
-  static list<unsigned int> cons_computed(const unsigned int &n,
+  static list<unsigned int> cons_computed(const unsigned int n,
                                           const list<unsigned int> &l);
   /// mod_pattern n recursive call in mod expression.
-  static unsigned int mod_pattern(const unsigned int &n);
+  static unsigned int mod_pattern(const unsigned int n);
   /// alternating_ops n alternating operations based on modulo.
-  static unsigned int alternating_ops(const unsigned int &n);
+  static unsigned int alternating_ops(const unsigned int n);
 
   /// max_by f l recursive max with function application.
   template <MapsTo<unsigned int, unsigned int> F0>
@@ -286,7 +286,7 @@ struct LoopifyPatterns {
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        unsigned int d_a0 = std::move(_f.d_a0);
+        unsigned int d_a0 = _f.d_a0;
         F0 f = _f.f;
         unsigned int rest_max = _result;
         unsigned int fx = f(d_a0);
@@ -301,15 +301,15 @@ struct LoopifyPatterns {
   }
 
   /// replace_at idx value l replace element at index.
-  static list<unsigned int> replace_at(const unsigned int &idx,
-                                       unsigned int value,
+  static list<unsigned int> replace_at(const unsigned int idx,
+                                       const unsigned int value,
                                        const list<unsigned int> &l);
   /// nested_pattern l three-element tuple pattern.
   static unsigned int nested_pattern(
       const list<std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>
           &l);
   /// let_nested n let with nested let in binding.
-  static unsigned int let_nested(const unsigned int &n);
+  static unsigned int let_nested(const unsigned int n);
 
   /// insert_everywhere x l insert element at all possible positions.
   template <typename T1>
@@ -397,7 +397,7 @@ struct LoopifyPatterns {
 
   /// merge_by cmp l1 l2 merge with custom comparator.
   template <MapsTo<unsigned int, unsigned int, unsigned int> F1>
-  static list<unsigned int> merge_by_fuel(const unsigned int &fuel, F1 &&cmp,
+  static list<unsigned int> merge_by_fuel(const unsigned int fuel, F1 &&cmp,
                                           list<unsigned int> l1,
                                           list<unsigned int> l2) {
     if (fuel <= 0) {
@@ -435,11 +435,11 @@ struct LoopifyPatterns {
   }
 
   /// process_twice l applies recursion twice: process(process(xs)).
-  static list<unsigned int> process_twice_fuel(const unsigned int &fuel,
+  static list<unsigned int> process_twice_fuel(const unsigned int fuel,
                                                list<unsigned int> l);
   static list<unsigned int> process_twice(const list<unsigned int> &l);
   /// as_guard l uses as-pattern with guard (length check).
-  static list<unsigned int> as_guard_fuel(const unsigned int &fuel,
+  static list<unsigned int> as_guard_fuel(const unsigned int fuel,
                                           const list<unsigned int> &l);
   static list<unsigned int> as_guard(const list<unsigned int> &l);
   /// quad_sum_pattern l pattern with 4-way split.
@@ -453,7 +453,7 @@ struct LoopifyPatterns {
   static list<unsigned int> double_append(const list<unsigned int> &l1,
                                           list<unsigned int> l2);
   /// process_twice_alt l applies transformation twice on recursive result.
-  static list<unsigned int> process_twice_alt_fuel(const unsigned int &fuel,
+  static list<unsigned int> process_twice_alt_fuel(const unsigned int fuel,
                                                    list<unsigned int> l);
   static list<unsigned int> process_twice_alt(const list<unsigned int> &l);
   /// sum_if_positive_else_double l conditional logic on each element.
@@ -536,7 +536,7 @@ struct LoopifyPatterns {
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        unsigned int d_a0 = std::move(_f.d_a0);
+        unsigned int d_a0 = _f.d_a0;
         F0 p = _f.p;
         F1 q = _f.q;
         const std::pair<list<unsigned int>, list<unsigned int>> &p0 =
@@ -570,7 +570,7 @@ struct LoopifyPatterns {
             MapsTo<unsigned int, unsigned int> F1>
   static list<unsigned int> filter_map_indexed_aux(F0 &&p, F1 &&f,
                                                    const list<unsigned int> &l,
-                                                   unsigned int idx) {
+                                                   const unsigned int idx) {
     if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
       return list<unsigned int>::nil();
     } else {

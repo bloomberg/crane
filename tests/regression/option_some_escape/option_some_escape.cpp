@@ -1,7 +1,7 @@
 #include <option_some_escape.h>
 
 unsigned int OptionSomeEscape::sum_values(const OptionSomeEscape::tree &t,
-                                          unsigned int x) {
+                                          const unsigned int x) {
   if (std::holds_alternative<typename OptionSomeEscape::tree::Leaf>(t.v())) {
     return x;
   } else {
@@ -41,7 +41,7 @@ OptionSomeEscape::option_escape(OptionSomeEscape::tree t) {
 
 unsigned int OptionSomeEscape::apply_option(
     const std::optional<std::function<unsigned int(unsigned int)>> &o,
-    unsigned int x) {
+    const unsigned int x) {
   if (o.has_value()) {
     const std::function<unsigned int(unsigned int)> &f = *o;
     return f(x);

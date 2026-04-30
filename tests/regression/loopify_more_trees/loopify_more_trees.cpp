@@ -340,7 +340,8 @@ LoopifyMoreTrees::sum_of_max_branches(const LoopifyMoreTrees::tree &t) {
 }
 
 LoopifyMoreTrees::tree
-LoopifyMoreTrees::insert_bst(unsigned int x, const LoopifyMoreTrees::tree &t) {
+LoopifyMoreTrees::insert_bst(const unsigned int x,
+                             const LoopifyMoreTrees::tree &t) {
   struct _Enter {
     const LoopifyMoreTrees::tree *t;
   };
@@ -452,10 +453,7 @@ List<unsigned int> LoopifyMoreTrees::append_lists(const List<unsigned int> &l1,
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      List<unsigned int> _next_l2 = std::move(_loop_l2);
-      const List<unsigned int> *_next_l1 = d_a1.get();
-      _loop_l2 = std::move(_next_l2);
-      _loop_l1 = _next_l1;
+      _loop_l1 = d_a1.get();
       continue;
     }
   }
@@ -564,10 +562,7 @@ LoopifyMoreTrees::append_trees(const List<LoopifyMoreTrees::tree> &l1,
       _write = &std::get<typename List<LoopifyMoreTrees::tree>::Cons>(
                     (*_write)->v_mut())
                     .d_a1;
-      List<LoopifyMoreTrees::tree> _next_l2 = std::move(_loop_l2);
-      const List<LoopifyMoreTrees::tree> *_next_l1 = d_a1.get();
-      _loop_l2 = std::move(_next_l2);
-      _loop_l1 = _next_l1;
+      _loop_l1 = d_a1.get();
       continue;
     }
   }
@@ -615,7 +610,7 @@ LoopifyMoreTrees::concat_map_children(const List<LoopifyMoreTrees::tree> &lt) {
 }
 
 List<List<unsigned int>>
-LoopifyMoreTrees::tree_levels_fuel(const unsigned int &fuel,
+LoopifyMoreTrees::tree_levels_fuel(const unsigned int fuel,
                                    const List<LoopifyMoreTrees::tree> &level) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
@@ -643,10 +638,8 @@ LoopifyMoreTrees::tree_levels_fuel(const unsigned int &fuel,
         _write = &std::get<typename List<List<unsigned int>>::Cons>(
                       (*_write)->v_mut())
                       .d_a1;
-        List<LoopifyMoreTrees::tree> _next_level = std::move(next);
-        unsigned int _next_fuel = fuel_;
-        _loop_level = std::move(_next_level);
-        _loop_fuel = std::move(_next_fuel);
+        _loop_level = std::move(next);
+        _loop_fuel = fuel_;
         continue;
       }
     }

@@ -190,7 +190,7 @@ struct HigherOrder {
 
   /// iterate n f x applies f to x a total of n times.
   template <typename T1, MapsTo<T1, T1> F1>
-  static T1 iterate(const unsigned int &n, F1 &&f, const T1 x) {
+  static T1 iterate(const unsigned int n, F1 &&f, const T1 x) {
     if (n <= 0) {
       return x;
     } else {
@@ -200,7 +200,7 @@ struct HigherOrder {
   }
 
   /// adder n returns a function that adds n to its argument.
-  static unsigned int adder(const unsigned int &_x0, const unsigned int &_x1);
+  static unsigned int adder(const unsigned int _x0, const unsigned int _x1);
 
   /// twice f returns a function that applies f two times.
   template <typename T1, MapsTo<T1, T1> F0>

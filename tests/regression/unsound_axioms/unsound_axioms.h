@@ -45,7 +45,7 @@ struct UnsoundAxioms {
   };
 
   static unsigned int extract_proof_computation(const ProofRec &pr);
-  static bool use_type_eq(unsigned int n);
+  static bool use_type_eq(const unsigned int n);
   static Rec impossible_rec();
   static unsigned int use_impossible(const std::monostate &_x);
   static unsigned int from_false(const Rec &_x);

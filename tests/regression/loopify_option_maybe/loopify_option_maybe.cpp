@@ -24,7 +24,7 @@ LoopifyOptionMaybe::find_even(const List<unsigned int> &l) {
 }
 
 std::optional<unsigned int>
-LoopifyOptionMaybe::find_greater(const unsigned int &threshold,
+LoopifyOptionMaybe::find_greater(const unsigned int threshold,
                                  const List<unsigned int> &l) {
   std::optional<unsigned int> _result;
   const List<unsigned int> *_loop_l = &l;
@@ -48,7 +48,7 @@ LoopifyOptionMaybe::find_greater(const unsigned int &threshold,
 }
 
 std::optional<unsigned int> LoopifyOptionMaybe::lookup(
-    const unsigned int &key,
+    const unsigned int key,
     const List<std::pair<unsigned int, unsigned int>> &l) {
   std::optional<unsigned int> _result;
   const List<std::pair<unsigned int, unsigned int>> *_loop_l = &l;
@@ -76,7 +76,7 @@ std::optional<unsigned int> LoopifyOptionMaybe::lookup(
 }
 
 List<unsigned int> LoopifyOptionMaybe::lookup_all(
-    const unsigned int &key,
+    const unsigned int key,
     const List<std::pair<unsigned int, unsigned int>> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -170,9 +170,9 @@ LoopifyOptionMaybe::catMaybes(const List<std::optional<unsigned int>> &l) {
 
 std::optional<unsigned int>
 LoopifyOptionMaybe::find_index_even_aux(const List<unsigned int> &l,
-                                        unsigned int idx) {
+                                        const unsigned int idx) {
   std::optional<unsigned int> _result;
-  unsigned int _loop_idx = std::move(idx);
+  unsigned int _loop_idx = idx;
   const List<unsigned int> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
@@ -186,10 +186,8 @@ LoopifyOptionMaybe::find_index_even_aux(const List<unsigned int> &l,
         _result = std::make_optional<unsigned int>(_loop_idx);
         break;
       } else {
-        unsigned int _next_idx = (_loop_idx + 1u);
-        const List<unsigned int> *_next_l = d_a1.get();
-        _loop_idx = std::move(_next_idx);
-        _loop_l = _next_l;
+        _loop_idx = (_loop_idx + 1u);
+        _loop_l = d_a1.get();
       }
     }
   }

@@ -252,7 +252,7 @@ struct LoopifyOption {
 
   /// nth_opt n l returns the nth element, or None for out of bounds.
   template <typename T1>
-  static std::optional<T1> nth_opt(const unsigned int &n, const list<T1> &l) {
+  static std::optional<T1> nth_opt(const unsigned int n, const list<T1> &l) {
     std::optional<T1> _result;
     const list<T1> *_loop_l = &l;
     unsigned int _loop_n = n;
@@ -267,11 +267,8 @@ struct LoopifyOption {
           _result = std::make_optional<T1>(d_a0);
           break;
         } else {
-          const list<T1> *_next_l = d_a1.get();
-          unsigned int _next_n =
-              (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-          _loop_l = _next_l;
-          _loop_n = std::move(_next_n);
+          _loop_l = d_a1.get();
+          _loop_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
         }
       }
     }
@@ -280,7 +277,7 @@ struct LoopifyOption {
 
   /// lookup_opt key l looks up key in an association list.
   static std::optional<unsigned int>
-  lookup_opt(const unsigned int &key,
+  lookup_opt(const unsigned int key,
              const list<std::pair<unsigned int, unsigned int>> &l);
 
   /// map_opt f l applies f and keeps only Some results.
@@ -303,9 +300,9 @@ struct LoopifyOption {
   /// find_index p l returns the index of the first match, or None.
   template <typename T1, MapsTo<bool, T1> F0>
   static std::optional<unsigned int> find_index_aux(F0 &&p, const list<T1> &l,
-                                                    unsigned int i) {
+                                                    const unsigned int i) {
     std::optional<unsigned int> _result;
-    unsigned int _loop_i = std::move(i);
+    unsigned int _loop_i = i;
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
@@ -318,10 +315,8 @@ struct LoopifyOption {
           _result = std::make_optional<unsigned int>(_loop_i);
           break;
         } else {
-          unsigned int _next_i = (_loop_i + 1);
-          const list<T1> *_next_l = d_a1.get();
-          _loop_i = std::move(_next_i);
-          _loop_l = _next_l;
+          _loop_i = (_loop_i + 1);
+          _loop_l = d_a1.get();
         }
       }
     }

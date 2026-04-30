@@ -1,7 +1,7 @@
 #include <loopify_list_generation.h>
 
-List<unsigned int> LoopifyListGeneration::replicate(const unsigned int &n,
-                                                    unsigned int x) {
+List<unsigned int> LoopifyListGeneration::replicate(const unsigned int n,
+                                                    const unsigned int x) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_n = n;
@@ -56,7 +56,7 @@ List<unsigned int> LoopifyListGeneration::stutter(const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-List<unsigned int> LoopifyListGeneration::cycle(const unsigned int &n,
+List<unsigned int> LoopifyListGeneration::cycle(const unsigned int n,
                                                 const List<unsigned int> &l) {
   struct _Enter {
     unsigned int n;
@@ -78,7 +78,7 @@ List<unsigned int> LoopifyListGeneration::cycle(const unsigned int &n,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int &n = _f.n;
+      const unsigned int n = _f.n;
       if (n <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -94,11 +94,11 @@ List<unsigned int> LoopifyListGeneration::cycle(const unsigned int &n,
   return _result;
 }
 
-List<unsigned int> LoopifyListGeneration::iterate(const unsigned int &n,
-                                                  unsigned int x) {
+List<unsigned int> LoopifyListGeneration::iterate(const unsigned int n,
+                                                  const unsigned int x) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  unsigned int _loop_x = std::move(x);
+  unsigned int _loop_x = x;
   unsigned int _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -112,10 +112,8 @@ List<unsigned int> LoopifyListGeneration::iterate(const unsigned int &n,
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      unsigned int _next_x = (_loop_x + 1u);
-      unsigned int _next_n = n_;
-      _loop_x = std::move(_next_x);
-      _loop_n = std::move(_next_n);
+      _loop_x = (_loop_x + 1u);
+      _loop_n = n_;
       continue;
     }
   }
@@ -166,9 +164,8 @@ List<unsigned int> LoopifyListGeneration::replicate_list(
   return _result;
 }
 
-List<unsigned int> LoopifyListGeneration::repeat_with_sep(unsigned int sep,
-                                                          const unsigned int &n,
-                                                          unsigned int x) {
+List<unsigned int> LoopifyListGeneration::repeat_with_sep(
+    const unsigned int sep, const unsigned int n, const unsigned int x) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_n = n;
@@ -205,12 +202,12 @@ List<unsigned int> LoopifyListGeneration::repeat_with_sep(unsigned int sep,
   return std::move(*(_head));
 }
 
-List<unsigned int> LoopifyListGeneration::range(unsigned int start,
-                                                const unsigned int &len) {
+List<unsigned int> LoopifyListGeneration::range(const unsigned int start,
+                                                const unsigned int len) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   unsigned int _loop_len = len;
-  unsigned int _loop_start = std::move(start);
+  unsigned int _loop_start = start;
   while (true) {
     if (_loop_len <= 0) {
       *(_write) =
@@ -223,10 +220,8 @@ List<unsigned int> LoopifyListGeneration::range(unsigned int start,
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      unsigned int _next_len = len_;
-      unsigned int _next_start = (_loop_start + 1u);
-      _loop_len = std::move(_next_len);
-      _loop_start = std::move(_next_start);
+      _loop_len = len_;
+      _loop_start = (_loop_start + 1u);
       continue;
     }
   }

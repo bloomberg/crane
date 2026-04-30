@@ -174,7 +174,7 @@ struct LoopifyCoindStream {
   }
 
   template <typename T1>
-  static List<T1> take(const unsigned int &n, const stream<T1> s) {
+  static List<T1> take(const unsigned int n, const stream<T1> s) {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
     stream<T1> _loop_s = s;
@@ -189,10 +189,8 @@ struct LoopifyCoindStream {
             typename List<T1>::Cons(hd<T1>(_loop_s), nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).d_a1;
-        stream<T1> _next_s = tl<T1>(_loop_s);
-        unsigned int _next_n = n_;
-        _loop_s = std::move(_next_s);
-        _loop_n = std::move(_next_n);
+        _loop_s = tl<T1>(_loop_s);
+        _loop_n = n_;
         continue;
       }
     }
@@ -232,10 +230,10 @@ struct LoopifyCoindStream {
   }
 
   static inline const stream<unsigned int> nats =
-      iterate<unsigned int>([](unsigned int x) { return (x + 1); }, 0u);
+      iterate<unsigned int>([](const unsigned int x) { return (x + 1); }, 0u);
   static inline const stream<unsigned int> doubled =
       smap<unsigned int, unsigned int>(
-          [](const unsigned int &n) { return (n * 2u); }, nats);
+          [](const unsigned int n) { return (n * 2u); }, nats);
   static inline const stream<unsigned int> sum_stream =
       zipWith<unsigned int, unsigned int, unsigned int>(
           [](unsigned int _x0, unsigned int _x1) -> unsigned int {

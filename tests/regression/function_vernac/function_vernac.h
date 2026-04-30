@@ -182,7 +182,7 @@ public:
 
 struct FunctionVernac {
   template <MapsTo<unsigned int, unsigned int> F0>
-  static unsigned int div2_F(F0 &&div3, const unsigned int &n) {
+  static unsigned int div2_F(F0 &&div3, const unsigned int n) {
     if (n <= 0) {
       return 0u;
     } else {
@@ -196,8 +196,8 @@ struct FunctionVernac {
     }
   }
 
-  static Sig<unsigned int> div2_terminate(const unsigned int &n);
-  static unsigned int div2(const unsigned int &n);
+  static Sig<unsigned int> div2_terminate(const unsigned int n);
+  static unsigned int div2(const unsigned int n);
 
   struct R_div2 {
     // TYPES
@@ -326,8 +326,8 @@ struct FunctionVernac {
     template <
         typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, unsigned int> F1,
         MapsTo<T1, unsigned int, unsigned int, unsigned int, R_div2, T1> F2>
-    T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int &,
-                  const unsigned int &) const {
+    T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int,
+                  const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename R_div2::R_div2_0>(_sv.v())) {
         const auto &[d_n] = std::get<typename R_div2::R_div2_0>(_sv.v());
@@ -346,8 +346,8 @@ struct FunctionVernac {
     template <
         typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, unsigned int> F1,
         MapsTo<T1, unsigned int, unsigned int, unsigned int, R_div2, T1> F2>
-    T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int &,
-                   const unsigned int &) const {
+    T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int,
+                   const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename R_div2::R_div2_0>(_sv.v())) {
         const auto &[d_n] = std::get<typename R_div2::R_div2_0>(_sv.v());
@@ -367,7 +367,7 @@ struct FunctionVernac {
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int> F1,
             MapsTo<T1, unsigned int, unsigned int, T1> F2>
-  static T1 div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int &n) {
+  static T1 div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int n) {
     std::function<T1(unsigned int, T1)> f2 =
         [=](unsigned int _pa0, T1 _pa1) mutable { return f1(n, _pa0, _pa1); };
     T1 f3 = std::any_cast<T1>(f0(n));
@@ -392,11 +392,11 @@ struct FunctionVernac {
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int> F1,
             MapsTo<T1, unsigned int, unsigned int, T1> F2>
-  static T1 div2_rec(F0 &&_x0, F1 &&_x1, F2 &&_x2, const unsigned int &_x3) {
+  static T1 div2_rec(F0 &&_x0, F1 &&_x1, F2 &&_x2, const unsigned int _x3) {
     return div2_rect<T1>(_x0, _x1, _x2, _x3);
   }
 
-  static R_div2 R_div2_correct(const unsigned int &n, const unsigned int &_res);
+  static R_div2 R_div2_correct(const unsigned int n, const unsigned int _res);
 
   template <MapsTo<unsigned int, List<unsigned int>> F0>
   static unsigned int list_sum_F(F0 &&list_sum0, const List<unsigned int> &l) {
@@ -532,7 +532,7 @@ struct FunctionVernac {
                      unsigned int, R_list_sum, T1>
                   F1>
     T1 R_list_sum_rec(F0 &&f, F1 &&f0, const List<unsigned int> &,
-                      const unsigned int &) const {
+                      const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(_sv.v())) {
         const auto &[d_l] =
@@ -551,7 +551,7 @@ struct FunctionVernac {
                      unsigned int, R_list_sum, T1>
                   F1>
     T1 R_list_sum_rect(F0 &&f, F1 &&f0, const List<unsigned int> &,
-                       const unsigned int &) const {
+                       const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(_sv.v())) {
         const auto &[d_l] =
@@ -597,7 +597,7 @@ struct FunctionVernac {
   }
 
   static R_list_sum R_list_sum_correct(const List<unsigned int> &l,
-                                       const unsigned int &_res);
+                                       const unsigned int _res);
   static inline const unsigned int test_div2 = div2(10u);
   static inline const unsigned int test_sum = list_sum(List<unsigned int>::cons(
       1u, List<unsigned int>::cons(

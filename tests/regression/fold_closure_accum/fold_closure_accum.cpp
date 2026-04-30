@@ -22,14 +22,14 @@ unsigned int FoldClosureAccum::tree_sum(const FoldClosureAccum::tree &t) {
 /// and dies when the fold step returns, creating a dangling chain.
 unsigned int
 FoldClosureAccum::compose_adders(const List<FoldClosureAccum::tree> &trees,
-                                 const unsigned int &_x0) {
+                                 const unsigned int _x0) {
   return trees.template fold_right<std::function<unsigned int(unsigned int)>>(
       [](FoldClosureAccum::tree t,
          const std::function<unsigned int(unsigned int)> acc)
           -> std::function<unsigned int(unsigned int)> {
-        return [=](const unsigned int &x) mutable {
+        return [=](const unsigned int x) mutable {
           return (acc(x) + tree_sum(t));
         };
       },
-      [](unsigned int x) { return x; })(_x0);
+      [](const unsigned int x) { return x; })(_x0);
 }

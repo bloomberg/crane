@@ -146,7 +146,7 @@ struct HofClosureEscape {
     }
   }
 
-  static unsigned int sum_values(const tree &t, unsigned int x);
+  static unsigned int sum_values(const tree &t, const unsigned int x);
 
   /// wrap_some is a helper that takes a function and wraps it in Some.
   /// The partial application happens at the CALL SITE of wrap_some,
@@ -165,7 +165,7 @@ struct HofClosureEscape {
   hof_escape(tree t);
   static unsigned int apply_option(
       const std::optional<std::function<unsigned int(unsigned int)>> &o,
-      unsigned int x); /// Clobber stack, then use the closure.
+      const unsigned int x); /// Clobber stack, then use the closure.
   static inline const unsigned int bug_hof_escape = []() {
     tree t1 = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                          tree::node(tree::leaf(), 30u, tree::leaf()));

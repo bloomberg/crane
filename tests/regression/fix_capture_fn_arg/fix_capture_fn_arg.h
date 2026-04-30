@@ -22,7 +22,7 @@ struct FixCaptureFnArg {
   /// destroyed std::function when it calls f.
   template <MapsTo<unsigned int, unsigned int> F0>
   static std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
-  make_transform(F0 &&f, unsigned int base) {
+  make_transform(F0 &&f, const unsigned int base) {
     auto go_impl = [=](auto &_self_go, unsigned int x) mutable -> unsigned int {
       if (x <= 0) {
         return f(base);
@@ -41,7 +41,7 @@ struct FixCaptureFnArg {
   /// go(3) = (5*2) + 3 = 13. Total = 10 + 13 = 23.
   static inline const unsigned int test1 = []() -> unsigned int {
     auto _cs =
-        make_transform([](const unsigned int &x) { return (x * 2u); }, 5u);
+        make_transform([](const unsigned int x) { return (x * 2u); }, 5u);
     const unsigned int &n = _cs.first;
     const std::function<unsigned int(unsigned int)> &g = _cs.second;
     return (n + g(3u));
@@ -49,7 +49,8 @@ struct FixCaptureFnArg {
   /// test2: make_transform(S, 10) = (11, go).
   /// go(5) = S(10) + 5 = 16. Total = 11 + 16 = 27.
   static inline const unsigned int test2 = []() -> unsigned int {
-    auto _cs = make_transform([](unsigned int x) { return (x + 1); }, 10u);
+    auto _cs =
+        make_transform([](const unsigned int x) { return (x + 1); }, 10u);
     const unsigned int &n = _cs.first;
     const std::function<unsigned int(unsigned int)> &g = _cs.second;
     return (n + g(5u));

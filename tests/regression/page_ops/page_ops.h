@@ -125,7 +125,7 @@ public:
 };
 
 struct Nat {
-  static unsigned int pow(const unsigned int &n, const unsigned int &m);
+  static unsigned int pow(const unsigned int n, const unsigned int m);
 };
 
 struct PageOps {
@@ -136,15 +136,15 @@ struct PageOps {
     state clone() const { return state{(*(this)).pc}; }
   };
 
-  static unsigned int addr12_of_nat(const unsigned int &n);
-  static unsigned int page_of(const unsigned int &p);
-  static unsigned int page_base(const unsigned int &p);
-  static unsigned int page_offset(const unsigned int &p);
+  static unsigned int addr12_of_nat(const unsigned int n);
+  static unsigned int page_of(const unsigned int p);
+  static unsigned int page_base(const unsigned int p);
+  static unsigned int page_offset(const unsigned int p);
   static unsigned int pc_inc1(const state &s);
   static unsigned int pc_inc2(const state &s);
   static unsigned int base_for_next1(const state &s);
   static unsigned int base_for_next2(const state &s);
-  static unsigned int recompose(const unsigned int &p);
+  static unsigned int recompose(const unsigned int p);
   static inline const unsigned int max_addr = ((
       (Nat::pow(2u, 12u) - 1u) > Nat::pow(2u, 12u) ? 0
                                                    : (Nat::pow(2u, 12u) - 1u)));
@@ -231,10 +231,10 @@ struct PageOps {
     }
   }
 
-  static instruction decode(const unsigned int &b1, const unsigned int &b2);
+  static instruction decode(const unsigned int b1, const unsigned int b2);
 
   template <typename T1>
-  static List<T1> drop(const unsigned int &n, List<T1> l) {
+  static List<T1> drop(const unsigned int n, List<T1> l) {
     if (n <= 0) {
       return l;
     } else {
@@ -249,7 +249,7 @@ struct PageOps {
   }
 
   static std::optional<std::pair<instruction, unsigned int>>
-  disassemble(const List<unsigned int> &rom, const unsigned int &addr);
+  disassemble(const List<unsigned int> &rom, const unsigned int addr);
   static inline const unsigned int test_page_base_alignment =
       (256u ? page_base(777u) % 256u : page_base(777u));
   static inline const unsigned int test_page_base_next_pc = []() {

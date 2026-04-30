@@ -165,11 +165,11 @@ public:
 
 struct LoopifyFolds {
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
-  static unsigned int fold_left(F0 &&f, unsigned int acc,
+  static unsigned int fold_left(F0 &&f, const unsigned int acc,
                                 const List<unsigned int> &l) {
     unsigned int _result;
     const List<unsigned int> *_loop_l = &l;
-    unsigned int _loop_acc = std::move(acc);
+    unsigned int _loop_acc = acc;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
@@ -178,10 +178,8 @@ struct LoopifyFolds {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-        const List<unsigned int> *_next_l = d_a1.get();
-        unsigned int _next_acc = f(_loop_acc, d_a0);
-        _loop_l = _next_l;
-        _loop_acc = std::move(_next_acc);
+        _loop_l = d_a1.get();
+        _loop_acc = f(_loop_acc, d_a0);
       }
     }
     return _result;
@@ -189,7 +187,7 @@ struct LoopifyFolds {
 
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
   static unsigned int fold_right(F0 &&f, const List<unsigned int> &l,
-                                 unsigned int acc) {
+                                 const unsigned int acc) {
     struct _Enter {
       const List<unsigned int> *l;
     };
@@ -228,12 +226,12 @@ struct LoopifyFolds {
   }
 
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
-  static List<unsigned int> scanl(F0 &&f, unsigned int acc,
+  static List<unsigned int> scanl(F0 &&f, const unsigned int acc,
                                   const List<unsigned int> &l) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
     const List<unsigned int> *_loop_l = &l;
-    unsigned int _loop_acc = std::move(acc);
+    unsigned int _loop_acc = acc;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
@@ -249,10 +247,8 @@ struct LoopifyFolds {
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        const List<unsigned int> *_next_l = d_a1.get();
-        unsigned int _next_acc = f(_loop_acc, d_a0);
-        _loop_l = _next_l;
-        _loop_acc = std::move(_next_acc);
+        _loop_l = d_a1.get();
+        _loop_acc = f(_loop_acc, d_a0);
         continue;
       }
     }
@@ -260,7 +256,7 @@ struct LoopifyFolds {
   }
 
   template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
-  static List<unsigned int> scanr(F0 &&f, unsigned int acc,
+  static List<unsigned int> scanr(F0 &&f, const unsigned int acc,
                                   const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::cons(acc, List<unsigned int>::nil());
@@ -279,7 +275,7 @@ struct LoopifyFolds {
   }
 
   template <MapsTo<unsigned int, unsigned int, unsigned int> F1>
-  static unsigned int foldl1_fuel(const unsigned int &fuel, F1 &&f,
+  static unsigned int foldl1_fuel(const unsigned int fuel, F1 &&f,
                                   const List<unsigned int> &l) {
     unsigned int _result;
     List<unsigned int> _loop_l = l;
@@ -305,11 +301,8 @@ struct LoopifyFolds {
           } else {
             const auto &[d_a00, d_a10] =
                 std::get<typename List<unsigned int>::Cons>(_sv0.v());
-            List<unsigned int> _next_l =
-                List<unsigned int>::cons(f(d_a0, d_a00), *(d_a10));
-            unsigned int _next_fuel = fuel_;
-            _loop_l = std::move(_next_l);
-            _loop_fuel = std::move(_next_fuel);
+            _loop_l = List<unsigned int>::cons(f(d_a0, d_a00), *(d_a10));
+            _loop_fuel = fuel_;
           }
         }
       }
@@ -371,7 +364,7 @@ struct LoopifyFolds {
       MapsTo<std::pair<unsigned int, unsigned int>, unsigned int, unsigned int>
           F0>
   static std::pair<unsigned int, List<unsigned int>>
-  map_accum(F0 &&f, unsigned int acc, const List<unsigned int> &l) {
+  map_accum(F0 &&f, const unsigned int acc, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
       unsigned int acc;
@@ -394,7 +387,7 @@ struct LoopifyFolds {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List<unsigned int> &l = *(_f.l);
-        unsigned int acc = std::move(_f.acc);
+        const unsigned int acc = _f.acc;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(acc, List<unsigned int>::nil());
         } else {
@@ -408,7 +401,7 @@ struct LoopifyFolds {
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        unsigned int y = std::move(_f.y);
+        unsigned int y = _f.y;
         const unsigned int &final_acc = _result.first;
         const List<unsigned int> &ys = _result.second;
         _result = std::make_pair(final_acc, List<unsigned int>::cons(y, ys));
@@ -418,11 +411,11 @@ struct LoopifyFolds {
   }
 
   template <MapsTo<unsigned int, unsigned int> F0>
-  static List<unsigned int> iterate_accum(F0 &&f, const unsigned int &n,
-                                          unsigned int x) {
+  static List<unsigned int> iterate_accum(F0 &&f, const unsigned int n,
+                                          const unsigned int x) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
-    unsigned int _loop_x = std::move(x);
+    unsigned int _loop_x = x;
     unsigned int _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
@@ -437,10 +430,8 @@ struct LoopifyFolds {
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        unsigned int _next_x = f(_loop_x);
-        unsigned int _next_n = n_;
-        _loop_x = std::move(_next_x);
-        _loop_n = std::move(_next_n);
+        _loop_x = f(_loop_x);
+        _loop_n = n_;
         continue;
       }
     }
@@ -448,8 +439,8 @@ struct LoopifyFolds {
   }
 
   template <MapsTo<std::pair<unsigned int, unsigned int>, unsigned int> F1>
-  static List<unsigned int> unfold_fuel(const unsigned int &fuel, F1 &&f,
-                                        const unsigned int &seed) {
+  static List<unsigned int> unfold_fuel(const unsigned int fuel, F1 &&f,
+                                        const unsigned int seed) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
     unsigned int _loop_seed = seed;
@@ -470,10 +461,8 @@ struct LoopifyFolds {
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        unsigned int _next_seed = next_seed;
-        unsigned int _next_fuel = fuel_;
-        _loop_seed = std::move(_next_seed);
-        _loop_fuel = std::move(_next_fuel);
+        _loop_seed = next_seed;
+        _loop_fuel = fuel_;
         continue;
       }
     }
@@ -481,8 +470,8 @@ struct LoopifyFolds {
   }
 
   template <MapsTo<std::pair<unsigned int, unsigned int>, unsigned int> F1>
-  static List<unsigned int> unfold(const unsigned int &_x0, F1 &&_x1,
-                                   const unsigned int &_x2) {
+  static List<unsigned int> unfold(const unsigned int _x0, F1 &&_x1,
+                                   const unsigned int _x2) {
     return unfold_fuel(_x0, _x1, _x2);
   }
 };

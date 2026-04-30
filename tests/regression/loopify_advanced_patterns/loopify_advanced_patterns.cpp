@@ -240,11 +240,11 @@ unsigned int LoopifyAdvancedPatterns::nested_pattern(
   return _result;
 }
 
-unsigned int LoopifyAdvancedPatterns::guard_accum(unsigned int acc,
+unsigned int LoopifyAdvancedPatterns::guard_accum(const unsigned int acc,
                                                   const List<unsigned int> &l) {
   unsigned int _result;
   const List<unsigned int> *_loop_l = &l;
-  unsigned int _loop_acc = std::move(acc);
+  unsigned int _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
@@ -254,22 +254,16 @@ unsigned int LoopifyAdvancedPatterns::guard_accum(unsigned int acc,
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (100u < d_a0) {
-        const List<unsigned int> *_next_l = d_a1.get();
-        unsigned int _next_acc = (_loop_acc * 2u);
-        _loop_l = _next_l;
-        _loop_acc = std::move(_next_acc);
+        _loop_l = d_a1.get();
+        _loop_acc = (_loop_acc * 2u);
       } else {
         if (50u < d_a0) {
-          const List<unsigned int> *_next_l = d_a1.get();
-          unsigned int _next_acc = (_loop_acc + d_a0);
-          _loop_l = _next_l;
-          _loop_acc = std::move(_next_acc);
+          _loop_l = d_a1.get();
+          _loop_acc = (_loop_acc + d_a0);
         } else {
           if (0u < d_a0) {
-            const List<unsigned int> *_next_l = d_a1.get();
-            unsigned int _next_acc = (_loop_acc + 1u);
-            _loop_l = _next_l;
-            _loop_acc = std::move(_next_acc);
+            _loop_l = d_a1.get();
+            _loop_acc = (_loop_acc + 1u);
           } else {
             _loop_l = d_a1.get();
           }
@@ -281,7 +275,7 @@ unsigned int LoopifyAdvancedPatterns::guard_accum(unsigned int acc,
 }
 
 List<unsigned int>
-LoopifyAdvancedPatterns::cons_computed(const unsigned int &n,
+LoopifyAdvancedPatterns::cons_computed(const unsigned int n,
                                        const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -307,10 +301,8 @@ LoopifyAdvancedPatterns::cons_computed(const unsigned int &n,
       *(_write) = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      const List<unsigned int> *_next_l = d_a1.get();
-      unsigned int _next_n = next_n;
-      _loop_l = _next_l;
-      _loop_n = std::move(_next_n);
+      _loop_l = d_a1.get();
+      _loop_n = next_n;
       continue;
     }
   }
@@ -438,7 +430,8 @@ LoopifyAdvancedPatterns::count_by_shape(
 }
 
 List<unsigned int>
-LoopifyAdvancedPatterns::replace_at(const unsigned int &idx, unsigned int value,
+LoopifyAdvancedPatterns::replace_at(const unsigned int idx,
+                                    const unsigned int value,
                                     const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -464,11 +457,8 @@ LoopifyAdvancedPatterns::replace_at(const unsigned int &idx, unsigned int value,
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        const List<unsigned int> *_next_l = d_a1.get();
-        unsigned int _next_idx =
-            (((_loop_idx - 1u) > _loop_idx ? 0 : (_loop_idx - 1u)));
-        _loop_l = _next_l;
-        _loop_idx = std::move(_next_idx);
+        _loop_l = d_a1.get();
+        _loop_idx = (((_loop_idx - 1u) > _loop_idx ? 0 : (_loop_idx - 1u)));
         continue;
       }
     }

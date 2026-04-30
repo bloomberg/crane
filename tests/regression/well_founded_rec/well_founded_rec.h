@@ -125,10 +125,10 @@ public:
 };
 
 struct WellFoundedRec {
-  static List<unsigned int> countdown_acc(unsigned int n);
-  static List<unsigned int> countdown(const unsigned int &_x0);
-  static unsigned int div2_wf(const unsigned int &x);
-  static unsigned int gcd_wf(const unsigned int &x, unsigned int b);
+  static List<unsigned int> countdown_acc(const unsigned int n);
+  static List<unsigned int> countdown(const unsigned int _x0);
+  static unsigned int div2_wf(const unsigned int x);
+  static unsigned int gcd_wf(const unsigned int x, const unsigned int b);
   static inline const unsigned int test_div2_0 = div2_wf(0u);
   static inline const unsigned int test_div2_1 = div2_wf(1u);
   static inline const unsigned int test_div2_7 = div2_wf(7u);

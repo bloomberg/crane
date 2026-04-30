@@ -256,15 +256,15 @@ struct UniversePoly {
 
   static inline const poption<unsigned int> test_map_some =
       poption_map<unsigned int, unsigned int>(
-          [](const unsigned int &n) { return (n + 1u); },
+          [](const unsigned int n) { return (n + 1u); },
           poption<unsigned int>::psome(5u));
   static inline const poption<unsigned int> test_map_none =
       poption_map<unsigned int, unsigned int>(
-          [](const unsigned int &n) { return (n + 1u); },
+          [](const unsigned int n) { return (n + 1u); },
           poption<unsigned int>::pnone());
   static inline const poption<unsigned int> test_bind =
       poption_bind<unsigned int, unsigned int>(
-          poption<unsigned int>::psome(3u), [](const unsigned int &n) {
+          poption<unsigned int>::psome(3u), [](const unsigned int n) {
             return poption<unsigned int>::psome((n + n));
           });
 

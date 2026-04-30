@@ -20,11 +20,11 @@ struct UnitMonostateErase {
   ///
   /// The if result has type itree ioE unit, but its value is discarded
   /// by ;;.  Crane should lower this to plain if control flow.
-  static void seq_if(const bool &b);
+  static void seq_if(const bool b);
   /// --- Example 2: sequenced if where both branches are effects ---
   ///
   /// Both branches produce itree ioE unit.  Should be a plain if.
-  static void seq_if_both(const bool &b);
+  static void seq_if_both(const bool b);
   /// --- Example 3: tail-position match returning unit ---
   ///
   /// A match on a custom type, all branches unit-typed, in tail
@@ -69,7 +69,7 @@ struct UnitMonostateErase {
   /// --- Example 4: match inside bind ---
   static void match_then_next(const Color c);
   /// --- Example 5: chained sequenced ifs ---
-  static void chained_ifs(const bool &b1, bool b2);
+  static void chained_ifs(const bool b1, const bool b2);
   /// --- Example 6: nested match-in-match ---
   static void nested_matches(const Color c1, const Color c2);
 };

@@ -61,7 +61,7 @@ ClosureEscapeMatch::nested_closure_opt(
           std::get<typename ClosureEscapeMatch::mylist<unsigned int>::Mycons>(
               b.v());
       return std::make_optional<std::function<unsigned int(unsigned int)>>(
-          [=](const unsigned int &n) mutable { return (d_a00 + n); });
+          [=](const unsigned int n) mutable { return (d_a00 + n); });
     }
   } else {
     const auto &[d_a0, d_a1] =
@@ -70,13 +70,13 @@ ClosureEscapeMatch::nested_closure_opt(
     if (std::holds_alternative<
             typename ClosureEscapeMatch::mylist<unsigned int>::Mynil>(b.v())) {
       return std::make_optional<std::function<unsigned int(unsigned int)>>(
-          [=](const unsigned int &n) mutable { return (d_a0 + n); });
+          [=](const unsigned int n) mutable { return (d_a0 + n); });
     } else {
       const auto &[d_a00, d_a10] =
           std::get<typename ClosureEscapeMatch::mylist<unsigned int>::Mycons>(
               b.v());
       return std::make_optional<std::function<unsigned int(unsigned int)>>(
-          [=](const unsigned int &n) mutable { return ((d_a0 + d_a00) + n); });
+          [=](const unsigned int n) mutable { return ((d_a0 + d_a00) + n); });
     }
   }
 }

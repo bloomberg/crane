@@ -123,7 +123,7 @@ struct ListClosureEscape {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    unsigned int sum_values(unsigned int x) const {
+    unsigned int sum_values(const unsigned int x) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return x;
@@ -276,7 +276,7 @@ struct ListClosureEscape {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    unsigned int apply_first(unsigned int x) const {
+    unsigned int apply_first(const unsigned int x) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
         return x;

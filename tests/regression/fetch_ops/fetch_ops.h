@@ -126,7 +126,7 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
 };
 
 struct FetchOps {
@@ -137,13 +137,13 @@ struct FetchOps {
     state clone() const { return state{(*(this)).rom.clone()}; }
   };
 
-  static unsigned int fetch_byte(const state &s, const unsigned int &addr);
+  static unsigned int fetch_byte(const state &s, const unsigned int addr);
   static inline const unsigned int fetch_default_test = fetch_byte(
       state{List<unsigned int>::cons(
           1u, List<unsigned int>::cons(2u, List<unsigned int>::nil()))},
       5u);
   static unsigned int fetch_byte_direct(const List<unsigned int> &rom_data,
-                                        const unsigned int &addr);
+                                        const unsigned int addr);
   static inline const unsigned int fetch_in_range_test = fetch_byte_direct(
       List<unsigned int>::cons(
           11u,
@@ -152,7 +152,7 @@ struct FetchOps {
       1u);
 
   template <typename T1>
-  static List<T1> drop(const unsigned int &n, List<T1> l) {
+  static List<T1> drop(const unsigned int n, List<T1> l) {
     if (n <= 0) {
       return l;
     } else {
@@ -167,7 +167,7 @@ struct FetchOps {
   }
 
   static std::pair<unsigned int, unsigned int>
-  fetch_pair(const List<unsigned int> &rom_data, const unsigned int &addr);
+  fetch_pair(const List<unsigned int> &rom_data, const unsigned int addr);
   static inline const unsigned int fetch_pair_test = []() {
     std::pair<unsigned int, unsigned int> p = fetch_pair(
         List<unsigned int>::cons(
@@ -178,7 +178,7 @@ struct FetchOps {
     return (p.first + p.second);
   }();
   static std::optional<std::pair<unsigned int, unsigned int>>
-  fetch_window(const List<unsigned int> &rom_data, const unsigned int &addr);
+  fetch_window(const List<unsigned int> &rom_data, const unsigned int addr);
   static inline const unsigned int fetch_window_test = []() -> unsigned int {
     auto _cs = fetch_window(
         List<unsigned int>::cons(
@@ -205,7 +205,7 @@ struct FetchOps {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int &n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

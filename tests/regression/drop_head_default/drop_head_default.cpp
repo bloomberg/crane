@@ -1,7 +1,7 @@
 #include <drop_head_default.h>
 
 unsigned int DropHeadDefault::head_after_drop(const List<unsigned int> &rom,
-                                              const unsigned int &addr) {
+                                              const unsigned int addr) {
   auto &&_sv = drop<unsigned int>(addr, rom);
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
     return 0u;

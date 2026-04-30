@@ -94,7 +94,7 @@ struct CountLoopTestTarget {
     }
   }
 
-  static instruction count_loop_test(unsigned int loop_addr);
+  static instruction count_loop_test(const unsigned int loop_addr);
   static unsigned int target_of(const instruction &i);
   static inline const unsigned int t = target_of(count_loop_test(37u));
 };

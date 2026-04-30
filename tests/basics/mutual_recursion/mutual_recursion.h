@@ -12,8 +12,8 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct MutualRecursion {
-  static bool is_even(const unsigned int &n);
-  static bool is_odd(const unsigned int &n);
+  static bool is_even(const unsigned int n);
+  static bool is_odd(const unsigned int n);
   template <typename t_A> struct tree;
   template <typename t_A> struct forest;
 

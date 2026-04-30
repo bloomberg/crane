@@ -15,7 +15,7 @@ concept MapsTo = std::is_invocable_v<F &, Args &...>;
 enum class Comparison { e_EQ, e_LT, e_GT };
 
 struct Nat {
-  static Comparison compare(const unsigned int &n, const unsigned int &m);
+  static Comparison compare(const unsigned int n, const unsigned int m);
 };
 
 template <typename M>
@@ -226,7 +226,7 @@ static_assert(BaseType<NatBase>);
 
 struct NatOrdered {
   using t = unsigned int;
-  static Comparison compare(const unsigned int &_x0, const unsigned int &_x1);
+  static Comparison compare(const unsigned int _x0, const unsigned int _x1);
 };
 
 static_assert(OrderedType<NatOrdered>);

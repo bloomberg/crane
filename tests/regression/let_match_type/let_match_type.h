@@ -16,19 +16,19 @@ concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct LetMatchType {
   /// 1. let-bound bool match returning nat
-  static unsigned int let_match_nat(const bool &b);
+  static unsigned int let_match_nat(const bool b);
   /// 2. let-bound nat match returning string — TRIGGERS std::any bug
-  static std::string let_match_string(const unsigned int &n);
+  static std::string let_match_string(const unsigned int n);
   /// 3. let-bound option match
   static unsigned int let_match_option(const std::optional<unsigned int> &o);
   /// 4. let-bound nested bool match
-  static unsigned int let_nested_bool(const bool &a, const bool &b);
+  static unsigned int let_nested_bool(const bool a, const bool b);
   /// 5. Multiple let-bound matches
-  static unsigned int multi_let_match(const bool &a, const bool &b);
+  static unsigned int multi_let_match(const bool a, const bool b);
   /// 6. let-bound match used in function argument
-  static unsigned int let_match_in_arg(const unsigned int &n);
+  static unsigned int let_match_in_arg(const unsigned int n);
   /// 7. let-bound match in monadic context
-  static std::string let_match_monadic(const bool &b);
+  static std::string let_match_monadic(const bool b);
   /// 8. let-bound match of custom type
   enum class Direction { e_NORTH, e_SOUTH, e_EAST, e_WEST };
 

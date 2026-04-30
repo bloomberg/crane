@@ -136,26 +136,26 @@ public:
 };
 
 struct Nat {
-  static bool even(const unsigned int &n);
+  static bool even(const unsigned int n);
 };
 
 struct CPS {
   static unsigned int
-  fact_cps(const unsigned int &n,
+  fact_cps(const unsigned int n,
            const std::function<unsigned int(unsigned int)> k) {
     if (n <= 0) {
       return k(1u);
     } else {
       unsigned int n_ = n - 1;
       return fact_cps(
-          n_, [=](const unsigned int &r) mutable { return k(((n_ + 1) * r)); });
+          n_, [=](const unsigned int r) mutable { return k(((n_ + 1) * r)); });
     }
   }
 
-  static unsigned int factorial(const unsigned int &n);
+  static unsigned int factorial(const unsigned int n);
 
   static unsigned int
-  fib_cps(const unsigned int &n,
+  fib_cps(const unsigned int n,
           const std::function<unsigned int(unsigned int)> k) {
     if (n <= 0) {
       return k(0u);
@@ -165,15 +165,15 @@ struct CPS {
         return k(1u);
       } else {
         unsigned int n_ = n1 - 1;
-        return fib_cps(n_, [=](unsigned int a) mutable {
+        return fib_cps(n_, [=](const unsigned int a) mutable {
           return fib_cps(
-              n1, [=](const unsigned int &b) mutable { return k((a + b)); });
+              n1, [=](const unsigned int b) mutable { return k((a + b)); });
         });
       }
     }
   }
 
-  static unsigned int fibonacci(const unsigned int &n);
+  static unsigned int fibonacci(const unsigned int n);
 
   struct tree {
     // TYPES
@@ -323,8 +323,8 @@ struct CPS {
       const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t.v());
       tree d_a0_value = *(d_a0);
       tree d_a1_value = *(d_a1);
-      return tree_sum_cps(d_a0_value, [=](unsigned int sl) mutable {
-        return tree_sum_cps(d_a1_value, [=](const unsigned int &sr) mutable {
+      return tree_sum_cps(d_a0_value, [=](const unsigned int sl) mutable {
+        return tree_sum_cps(d_a1_value, [=](const unsigned int sr) mutable {
           return k((sl + sr));
         });
       });
@@ -342,7 +342,7 @@ struct CPS {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
       List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
-      return sum_cps(d_a1_value, [=](const unsigned int &r) mutable {
+      return sum_cps(d_a1_value, [=](const unsigned int r) mutable {
         return k((d_a0 + r));
       });
     }

@@ -189,7 +189,7 @@ struct TypeApp {
 
   static inline const list<unsigned int> test_map =
       map<unsigned int, unsigned int>(
-          [](const unsigned int &x) { return (x + 1u); },
+          [](const unsigned int x) { return (x + 1u); },
           list<unsigned int>::cons(
               1u, list<unsigned int>::cons(
                       2u, list<unsigned int>::cons(
@@ -205,13 +205,12 @@ struct TypeApp {
   }
 
   static inline const unsigned int test_twice =
-      twice<unsigned int>([](const unsigned int &x) { return (x + 1u); }, 10u);
+      twice<unsigned int>([](const unsigned int x) { return (x + 1u); }, 10u);
 
   struct NatMonoid {
     using T = unsigned int;
     static inline const unsigned int empty = 0u;
-    static unsigned int append(const unsigned int &_x0,
-                               const unsigned int &_x1);
+    static unsigned int append(const unsigned int _x0, const unsigned int _x1);
   };
 
   template <Monoid M> struct UseMonoid {

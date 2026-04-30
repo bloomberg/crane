@@ -136,7 +136,7 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
 };
 
 struct BankLookupDefault {
@@ -163,7 +163,7 @@ struct BankLookupDefault {
 
   static inline const ram_chip empty_chip = ram_chip{0u};
   static inline const ram_bank empty_bank = ram_bank{List<ram_chip>::nil()};
-  static ram_bank get_bank(const state &s, const unsigned int &b);
+  static ram_bank get_bank(const state &s, const unsigned int b);
   static inline const state sample_state = state{List<ram_bank>::cons(
       ram_bank{List<ram_chip>::cons(empty_chip, List<ram_chip>::nil())},
       List<ram_bank>::nil())};
@@ -172,7 +172,7 @@ struct BankLookupDefault {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int &n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

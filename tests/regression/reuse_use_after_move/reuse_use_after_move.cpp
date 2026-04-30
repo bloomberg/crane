@@ -40,7 +40,7 @@ unsigned int ReuseUseAfterMove::sum(const ReuseUseAfterMove::mylist &l) {
 /// length(l) traverses l, hitting the null d_a1 field.
 /// Dereferencing null shared_ptr -> CRASH.
 ReuseUseAfterMove::mylist
-ReuseUseAfterMove::rewrite_head(ReuseUseAfterMove::mylist l, const bool &b) {
+ReuseUseAfterMove::rewrite_head(ReuseUseAfterMove::mylist l, const bool b) {
   if (b) {
     if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
             l.v_mut())) {
@@ -57,8 +57,7 @@ ReuseUseAfterMove::rewrite_head(ReuseUseAfterMove::mylist l, const bool &b) {
 
 /// test2: Use sum instead of length — same bug pattern.
 ReuseUseAfterMove::mylist
-ReuseUseAfterMove::rewrite_head_sum(ReuseUseAfterMove::mylist l,
-                                    const bool &b) {
+ReuseUseAfterMove::rewrite_head_sum(ReuseUseAfterMove::mylist l, const bool b) {
   if (b) {
     if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
             l.v_mut())) {

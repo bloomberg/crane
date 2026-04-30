@@ -266,20 +266,20 @@ struct ConstructorBugs {
     }
   };
 
-  static state get_state(unsigned int n);
+  static state get_state(const unsigned int n);
   static std::pair<std::pair<state, state>, unsigned int>
-  tuple_from_call(const unsigned int &n);
+  tuple_from_call(const unsigned int n);
   static std::pair<std::pair<state, unsigned int>,
                    std::pair<unsigned int, List<unsigned int>>>
   nested_tuples(state s);
   static std::pair<std::pair<state, unsigned int>, List<unsigned int>>
-  conditional_tuple(const bool &b, const unsigned int &n);
+  conditional_tuple(const bool b, const unsigned int n);
   static unsigned int extract_value(const state &s);
   static List<unsigned int> extract_data(const state &s);
   static std::pair<std::pair<state, unsigned int>, List<unsigned int>>
-  multi_call_tuple(const unsigned int &n);
+  multi_call_tuple(const unsigned int n);
   static std::pair<unsigned int, std::pair<state, unsigned int>>
-  pair_test(unsigned int n);
+  pair_test(const unsigned int n);
   static std::optional<std::pair<state, unsigned int>>
   match_test(const std::optional<state> &o);
   static List<state> list_test(state s);
@@ -288,7 +288,7 @@ struct ConstructorBugs {
                    List<unsigned int>>
   triple_proj(state s);
   static std::pair<state, unsigned int> inner_pair(state s);
-  static std::pair<state, unsigned int> outer_call(const unsigned int &n);
+  static std::pair<state, unsigned int> outer_call(const unsigned int n);
   static std::pair<
       std::pair<std::pair<std::pair<state, state>, unsigned int>, unsigned int>,
       List<unsigned int>>
@@ -318,8 +318,8 @@ struct ConstructorBugs {
                    std::pair<unsigned int, unsigned int>>
   nested_pairs(Inner i);
   static std::pair<Inner, Inner> pair_duplicate(Inner i);
-  static Inner mk_inner(unsigned int n);
-  static std::pair<Inner, unsigned int> pair_from_func(const unsigned int &n);
+  static Inner mk_inner(const unsigned int n);
+  static std::pair<Inner, unsigned int> pair_from_func(const unsigned int n);
   static std::optional<std::pair<Inner, unsigned int>>
   match_option_record(const std::optional<Inner> &o);
 
@@ -423,7 +423,7 @@ struct ConstructorBugs {
   static std::pair<std::pair<Outer, Inner>, unsigned int>
   deep_proj(const Container &c);
   static std::pair<List<Inner>, unsigned int> list_with_proj(Inner i);
-  static std::pair<Inner, unsigned int> tail_pair(Inner i, const bool &b);
+  static std::pair<Inner, unsigned int> tail_pair(Inner i, const bool b);
   static std::pair<std::pair<Inner, Inner>,
                    std::pair<unsigned int, unsigned int>>
   quad_tuple(Inner i);
@@ -451,13 +451,13 @@ struct ConstructorBugs {
   inline_triple(State s);
   static std::pair<std::pair<State, unsigned int>, unsigned int>
   inline_nested(State s);
-  static State get_state_inline(unsigned int n);
-  static std::pair<State, unsigned int> inline_from_call(const unsigned int &n);
+  static State get_state_inline(const unsigned int n);
+  static std::pair<State, unsigned int> inline_from_call(const unsigned int n);
   static std::pair<std::pair<State, unsigned int>, unsigned int>
-  same_call_multi_proj(const unsigned int &n);
+  same_call_multi_proj(const unsigned int n);
   static std::optional<std::pair<State, unsigned int>>
   inline_match(const std::optional<State> &o);
-  static std::pair<State, unsigned int> inline_if(const bool &b, State s);
+  static std::pair<State, unsigned int> inline_if(const bool b, State s);
 
   struct OuterInline {
     State outer_state;
@@ -479,14 +479,14 @@ struct ConstructorBugs {
   static std::pair<std::pair<unsigned int, State>, unsigned int>
   inline_pattern(State s);
   static List<std::pair<State, unsigned int>>
-  inline_recursive(const unsigned int &n, State s);
+  inline_recursive(const unsigned int n, State s);
   static std::pair<std::pair<std::pair<State, unsigned int>, unsigned int>,
                    std::pair<unsigned int, State>>
   inline_complex(State s);
   static std::pair<std::pair<State, State>,
                    std::pair<unsigned int, unsigned int>>
   inline_quad(State s);
-  static std::pair<State, unsigned int> inline_both_branches(const bool &b,
+  static std::pair<State, unsigned int> inline_both_branches(const bool b,
                                                              State s);
 
   template <MapsTo<unsigned int, State> F0>

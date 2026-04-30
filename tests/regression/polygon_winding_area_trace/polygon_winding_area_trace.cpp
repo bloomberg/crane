@@ -1,6 +1,6 @@
 #include <polygon_winding_area_trace.h>
 
-int64_t BinInt::pow_pos(const int64_t &z, unsigned int _x0) {
+int64_t BinInt::pow_pos(const int64_t z, const unsigned int _x0) {
   return Pos::template iter<int64_t>(
       [=](int64_t _x0) mutable -> int64_t { return (z * _x0); }, INT64_C(1),
       _x0);
@@ -35,7 +35,7 @@ Real PolygonWindingAreaTraceCase::lon_diff(const Real lon1, const Real lon2) {
 Real PolygonWindingAreaTraceCase::spherical_shoelace_aux(
     const List<PolygonWindingAreaTraceCase::Point> &pts,
     const List<PolygonWindingAreaTraceCase::Point> &all_pts,
-    const unsigned int &idx) {
+    const unsigned int idx) {
   if (std::holds_alternative<
           typename List<PolygonWindingAreaTraceCase::Point>::Nil>(pts.v())) {
     return Real::from_z(INT64_C(0));

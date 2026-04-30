@@ -21,7 +21,7 @@ std::string MatchMonadic::color_name(const Color c) {
 }
 
 /// 2. Match on bool inside a bind chain
-std::string MatchMonadic::conditional_read(const bool &b) {
+std::string MatchMonadic::conditional_read(const bool b) {
   if (b) {
     std::string line;
     std::getline(std::cin, line);
@@ -32,7 +32,7 @@ std::string MatchMonadic::conditional_read(const bool &b) {
 }
 
 /// 3. Nested match: match on result of another match
-std::string MatchMonadic::nested_match(const unsigned int &n, const bool &b) {
+std::string MatchMonadic::nested_match(const unsigned int n, const bool b) {
   std::string label;
   if (n <= 0) {
     label = "zero";
@@ -80,7 +80,7 @@ unsigned int MatchMonadic::tree_sum(const Tree<unsigned int> &t) {
 }
 
 /// 6. Match result used in bind
-std::string MatchMonadic::match_then_bind(const unsigned int &n) {
+std::string MatchMonadic::match_then_bind(const unsigned int n) {
   std::string tag;
   if (n <= 0) {
     tag = "A";
@@ -107,7 +107,7 @@ int64_t MatchMonadic::bind_then_match() {
 }
 
 /// 8. Multiple matches in sequence
-std::string MatchMonadic::multi_match(const bool &a, const bool &b) {
+std::string MatchMonadic::multi_match(const bool a, const bool b) {
   std::string x;
   if (a) {
     x = "A";

@@ -126,12 +126,12 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
 };
 
 struct IncXchNibble {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int &n, const T1 x,
+  static List<T1> update_nth(const unsigned int n, const T1 x,
                              const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -159,11 +159,11 @@ struct IncXchNibble {
     state clone() const { return state{(*(this)).regs.clone(), (*(this)).acc}; }
   };
 
-  static unsigned int get_reg(const state &s, const unsigned int &r);
-  static unsigned int nibble_of_nat(const unsigned int &n);
-  static unsigned int get_reg_pair(const state &s, const unsigned int &r);
-  static state execute_inc(const state &s, const unsigned int &r);
-  static state execute_xch(const state &s, const unsigned int &r);
+  static unsigned int get_reg(const state &s, const unsigned int r);
+  static unsigned int nibble_of_nat(const unsigned int n);
+  static unsigned int get_reg_pair(const state &s, const unsigned int r);
+  static state execute_inc(const state &s, const unsigned int r);
+  static state execute_xch(const state &s, const unsigned int r);
   static inline const state sample = state{
       List<unsigned int>::cons(
           2u,
@@ -206,7 +206,7 @@ struct IncXchNibble {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int &n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

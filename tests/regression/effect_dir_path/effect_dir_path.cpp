@@ -74,7 +74,7 @@ std::string EffectDirPath::create_and_report(const std::string path) {
 
 /// 7. Recursive function counting list items from list_directory
 unsigned int EffectDirPath::count_entries(const List<std::string> &dirs,
-                                          unsigned int acc) {
+                                          const unsigned int acc) {
   if (std::holds_alternative<typename List<std::string>::Nil>(dirs.v())) {
     return acc;
   } else {

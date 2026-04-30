@@ -126,7 +126,7 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
 };
 
 struct StepFetchDecodeExec {
@@ -223,8 +223,8 @@ struct StepFetchDecodeExec {
     }
   };
 
-  static unsigned int fetch_byte(const state &s, const unsigned int &addr);
-  static instruction decode(const unsigned int &b1, const unsigned int &b2);
+  static unsigned int fetch_byte(const state &s, const unsigned int addr);
+  static instruction decode(const unsigned int b1, const unsigned int b2);
   static state execute(const state &s, const instruction &i);
   static state step(const state &s);
   static inline const unsigned int t = []() {
@@ -239,7 +239,7 @@ struct StepFetchDecodeExec {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int &n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

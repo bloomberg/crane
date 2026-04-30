@@ -1,11 +1,11 @@
 #include <cps_closure_chain.h>
 
 unsigned int CpsClosureChain::tree_sum(const CpsClosureChain::tree &t) {
-  return tree_sum_cps(t, [](unsigned int x) { return x; });
+  return tree_sum_cps(t, [](const unsigned int x) { return x; });
 }
 
 /// Build a deep tree to stress the closure chain.
-CpsClosureChain::tree CpsClosureChain::build_left(unsigned int n) {
+CpsClosureChain::tree CpsClosureChain::build_left(const unsigned int n) {
   if (n <= 0) {
     return tree::leaf();
   } else {
@@ -14,7 +14,7 @@ CpsClosureChain::tree CpsClosureChain::build_left(unsigned int n) {
   }
 }
 
-CpsClosureChain::tree CpsClosureChain::build_right(unsigned int n) {
+CpsClosureChain::tree CpsClosureChain::build_right(const unsigned int n) {
   if (n <= 0) {
     return tree::leaf();
   } else {
@@ -23,7 +23,7 @@ CpsClosureChain::tree CpsClosureChain::build_right(unsigned int n) {
   }
 }
 
-CpsClosureChain::tree CpsClosureChain::build_balanced(unsigned int n) {
+CpsClosureChain::tree CpsClosureChain::build_balanced(const unsigned int n) {
   if (n <= 0) {
     return tree::leaf();
   } else {

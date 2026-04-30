@@ -1,7 +1,7 @@
 #include <loopify_special_recursion.h>
 
 List<unsigned int>
-LoopifySpecialRecursion::process_twice_fuel(const unsigned int &fuel,
+LoopifySpecialRecursion::process_twice_fuel(const unsigned int fuel,
                                             const List<unsigned int> &l) {
   struct _Enter {
     List<unsigned int> l;
@@ -32,7 +32,7 @@ LoopifySpecialRecursion::process_twice_fuel(const unsigned int &fuel,
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<unsigned int> &l = _f.l;
-      const unsigned int &fuel = _f.fuel;
+      const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -48,14 +48,14 @@ LoopifySpecialRecursion::process_twice_fuel(const unsigned int &fuel,
       }
     } else if (std::holds_alternative<_Cont1>(_frame)) {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
-      unsigned int fuel_ = std::move(_f.fuel_);
+      unsigned int d_a0 = _f.d_a0;
+      unsigned int fuel_ = _f.fuel_;
       List<unsigned int> first = _result;
       _stack.emplace_back(_Cont2{d_a0});
       _stack.emplace_back(_Enter{std::move(first), fuel_});
     } else {
       auto _f = std::move(std::get<_Cont2>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       List<unsigned int> second = _result;
       _result = List<unsigned int>::cons(d_a0, std::move(second));
     }
@@ -104,7 +104,7 @@ LoopifySpecialRecursion::double_append(const List<unsigned int> &l1,
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
+      unsigned int d_a0 = _f.d_a0;
       List<unsigned int> rest = _result;
       _result = List<unsigned int>::cons(d_a0, rest.app(rest));
     }
@@ -156,7 +156,8 @@ LoopifySpecialRecursion::remove_if_sum_even(const List<unsigned int> &l) {
 }
 
 List<unsigned int>
-LoopifySpecialRecursion::reverse_insert(unsigned int x, List<unsigned int> l) {
+LoopifySpecialRecursion::reverse_insert(const unsigned int x,
+                                        List<unsigned int> l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l = std::move(l);
@@ -241,7 +242,7 @@ List<unsigned int> LoopifySpecialRecursion::collect_sorted(
 
 unsigned int
 LoopifySpecialRecursion::sum_odd_indices_aux(const List<unsigned int> &l,
-                                             const unsigned int &idx) {
+                                             const unsigned int idx) {
   struct _Enter {
     unsigned int idx;
     const List<unsigned int> *l;
@@ -263,7 +264,7 @@ LoopifySpecialRecursion::sum_odd_indices_aux(const List<unsigned int> &l,
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int &idx = _f.idx;
+      const unsigned int idx = _f.idx;
       const List<unsigned int> &l = *(_f.l);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
@@ -291,7 +292,7 @@ LoopifySpecialRecursion::sum_odd_indices(const List<unsigned int> &l) {
 }
 
 unsigned int
-LoopifySpecialRecursion::categorize_by(const unsigned int &k,
+LoopifySpecialRecursion::categorize_by(const unsigned int k,
                                        const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
@@ -357,7 +358,7 @@ LoopifySpecialRecursion::categorize_by(const unsigned int &k,
 }
 
 List<unsigned int>
-LoopifySpecialRecursion::between(const unsigned int &lo, const unsigned int &hi,
+LoopifySpecialRecursion::between(const unsigned int lo, const unsigned int hi,
                                  const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;

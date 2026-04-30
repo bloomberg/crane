@@ -10,7 +10,7 @@ template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct TodoExtractConstantNoninline {
-  static unsigned int foreign_inc(const unsigned int &_x0);
+  static unsigned int foreign_inc(const unsigned int _x0);
   static inline const unsigned int test_value = foreign_inc(4u);
   static inline const unsigned int twice_value = foreign_inc(foreign_inc(2u));
 };

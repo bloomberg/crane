@@ -20,7 +20,7 @@ enum class Comparison { e_EQ, e_LT, e_GT };
 struct PingPong {
   /// Check if two strings are equal using PrimString.compare.
   static bool string_eq(const std::string s1, const std::string s2);
-  static void run_game(unsigned int round);
+  static void run_game(const unsigned int round);
   /// Entry point.
   static void play();
 };

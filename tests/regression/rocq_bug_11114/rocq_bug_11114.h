@@ -208,7 +208,7 @@ struct RocqBug11114 {
   static inline const pkg test_pkg =
       pkg{List<unsigned int>::cons(1u, List<unsigned int>::nil()), t::t0(2u)};
   static inline const pkg test_map =
-      map([](const unsigned int &x) { return (x + 1u); }, test_pkg);
+      map([](const unsigned int x) { return (x + 1u); }, test_pkg);
 };
 
 #endif // INCLUDED_ROCQ_BUG_11114

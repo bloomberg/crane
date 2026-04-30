@@ -224,21 +224,21 @@ struct HigherKinded {
       tree_size<unsigned int>(test_tree);
   static inline const Tree<unsigned int> test_tree_map =
       tree_map<unsigned int, unsigned int>(
-          [](const unsigned int &n) { return (n * 2u); }, test_tree);
+          [](const unsigned int n) { return (n * 2u); }, test_tree);
   static inline const std::optional<unsigned int> test_hk_option = hk_map(
       []<typename _T1>(auto &&d_a0,
                        const std::optional<_T1> &d_a1) -> decltype(auto) {
         return map_option<_T1, std::invoke_result_t<decltype(d_a0) &, _T1 &>>(
             std::forward<decltype(d_a0)>(d_a0), d_a1);
       },
-      [](const unsigned int &n) { return (n + 1u); },
+      [](const unsigned int n) { return (n + 1u); },
       std::make_optional<unsigned int>(5u));
   static inline const Tree<unsigned int> test_hk_tree = hk_map(
       []<typename _T1>(auto &&d_a0, const Tree<_T1> &d_a1) -> decltype(auto) {
         return tree_map<_T1, std::invoke_result_t<decltype(d_a0) &, _T1 &>>(
             std::forward<decltype(d_a0)>(d_a0), d_a1);
       },
-      [](const unsigned int &n) { return (n + 10u); }, test_tree);
+      [](const unsigned int n) { return (n + 10u); }, test_tree);
 };
 
 #endif // INCLUDED_HIGHER_KINDED

@@ -281,7 +281,7 @@ struct FoldClosureAccum {
   /// If captures are by reference, the previous closure is stack-local
   /// and dies when the fold step returns, creating a dangling chain.
   static unsigned int compose_adders(const List<tree> &trees,
-                                     const unsigned int &_x0);
+                                     const unsigned int _x0);
   /// Test: compose adders from 3 trees.
   /// t1 sums to 10, t2 sums to 20, t3 sums to 30.
   /// compose_adders t1; t2; t3 x = x + 30 + 20 + 10 = x + 60

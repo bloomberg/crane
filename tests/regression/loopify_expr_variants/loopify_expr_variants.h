@@ -139,10 +139,7 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        const List *_next_self = d_a1.get();
-        List<t_A> _next_m = std::move(_loop_m);
-        _loop_self = _next_self;
-        _loop_m = std::move(_next_m);
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -152,7 +149,7 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static List<T1> repeat(const T1 x, const unsigned int &n);
+  static List<T1> repeat(const T1 x, const unsigned int n);
 };
 
 struct LoopifyExprVariants {
@@ -2342,7 +2339,7 @@ struct LoopifyExprVariants {
 };
 
 template <typename T1>
-List<T1> ListDef::repeat(const T1 x, const unsigned int &n) {
+List<T1> ListDef::repeat(const T1 x, const unsigned int n) {
   std::unique_ptr<List<T1>> _head{};
   std::unique_ptr<List<T1>> *_write = &_head;
   unsigned int _loop_n = n;

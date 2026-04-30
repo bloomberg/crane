@@ -11,13 +11,13 @@ concept MapsTo = std::is_invocable_v<F &, Args &...>;
 struct ModpathEscapeCollision {
   struct A {
     struct Token_ {
-      static unsigned int f(unsigned int n);
+      static unsigned int f(const unsigned int n);
     };
   };
 
   struct B {
     struct Token_ {
-      static unsigned int g(unsigned int n);
+      static unsigned int g(const unsigned int n);
     };
   };
 

@@ -143,10 +143,10 @@ struct OppositePropertyTransferTraceCase {
   static inline const PreStableCategory sample_category =
       PreStableCategory{7u,
                         4u,
-                        [](const unsigned int &x) { return (x + 10u); },
-                        [](const unsigned int &x) { return (x + 3u); },
-                        [](const unsigned int &x) { return (x + 20u); },
-                        [](const unsigned int &x) { return (x + 5u); }};
+                        [](const unsigned int x) { return (x + 10u); },
+                        [](const unsigned int x) { return (x + 3u); },
+                        [](const unsigned int x) { return (x + 20u); },
+                        [](const unsigned int x) { return (x + 5u); }};
   static inline const is_right_semi_stable sample_right_stable =
       RightStableWitness{6u, 11u};
   static inline const satisfies_triangle_2 sample_triangle2 =

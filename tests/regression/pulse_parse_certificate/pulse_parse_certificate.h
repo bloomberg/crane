@@ -181,9 +181,9 @@ struct PulseParseCertificateCase {
     }
   }
 
-  static PulseClass classify_run_with_base(unsigned int base,
-                                           const unsigned int &n);
-  static List<PulseClass> classify_runs_with_base(unsigned int base,
+  static PulseClass classify_run_with_base(const unsigned int base,
+                                           const unsigned int n);
+  static List<PulseClass> classify_runs_with_base(const unsigned int base,
                                                   const List<unsigned int> &rs);
   static bool pulse_class_eqb(const PulseClass x, const PulseClass y);
   static bool pulse_class_list_eqb(const List<PulseClass> &xs,

@@ -37,7 +37,7 @@ unsigned int ReuseFnInBody::sum(const ReuseFnInBody::mylist &l) {
 /// is used through a DIFFERENT function (sum instead of length)
 /// AND combined with a pattern variable in an arithmetic expression.
 ReuseFnInBody::mylist ReuseFnInBody::prefix_sum(ReuseFnInBody::mylist l,
-                                                const bool &b) {
+                                                const bool b) {
   if (b) {
     if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(
             l.v_mut())) {

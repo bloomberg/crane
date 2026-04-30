@@ -218,9 +218,10 @@ struct NoMappingEventProbe {
   }
 
   static inline const unsigned int cell_size = 42u;
-  static void draw_hidden_tile(unsigned int x, unsigned int y);
-  static void draw_revealed_tile(unsigned int x, unsigned int y);
-  static void loop(unsigned int x, unsigned int y, const List<bool> &cells);
+  static void draw_hidden_tile(const unsigned int x, const unsigned int y);
+  static void draw_revealed_tile(const unsigned int x, const unsigned int y);
+  static void loop(const unsigned int x, const unsigned int y,
+                   const List<bool> &cells);
 };
 
 #endif // INCLUDED_NO_MAPPING_EVENT_PROBE

@@ -20,7 +20,7 @@ UnsoundAxioms::extract_proof_computation(const UnsoundAxioms::ProofRec &pr) {
   return (v + v2);
 }
 
-bool UnsoundAxioms::use_type_eq(unsigned int n) { return n; }
+bool UnsoundAxioms::use_type_eq(const unsigned int n) { return n; }
 
 UnsoundAxioms::Rec UnsoundAxioms::impossible_rec() {
   throw std::logic_error("unrealized axiom: "

@@ -206,7 +206,7 @@ struct CoindGuard {
   }
 
   template <typename T1>
-  static List<T1> take(const unsigned int &n, const Stream<T1> s) {
+  static List<T1> take(const unsigned int n, const Stream<T1> s) {
     if (n <= 0) {
       return List<T1>::nil();
     } else {
@@ -216,10 +216,10 @@ struct CoindGuard {
   }
 
   static inline const Stream<unsigned int> nats =
-      iterate<unsigned int>([](unsigned int x) { return (x + 1); }, 0u);
+      iterate<unsigned int>([](const unsigned int x) { return (x + 1); }, 0u);
   static inline const Stream<unsigned int> evens =
       smap<unsigned int, unsigned int>(
-          [](const unsigned int &n) { return (n * 2u); }, nats);
+          [](const unsigned int n) { return (n * 2u); }, nats);
   static inline const Stream<unsigned int> fibs =
       unfold<unsigned int, std::pair<unsigned int, unsigned int>>(
           [](const std::pair<unsigned int, unsigned int> &pat) {

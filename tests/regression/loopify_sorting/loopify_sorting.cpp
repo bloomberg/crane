@@ -1,7 +1,7 @@
 #include <loopify_sorting.h>
 
 /// Consolidated UNIQUE sorting algorithms and related operations.
-List<unsigned int> LoopifySorting::insert(unsigned int x,
+List<unsigned int> LoopifySorting::insert(const unsigned int x,
                                           List<unsigned int> l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -72,7 +72,7 @@ List<unsigned int> LoopifySorting::insertion_sort(const List<unsigned int> &l) {
   return _result;
 }
 
-List<unsigned int> LoopifySorting::merge_fuel(const unsigned int &fuel,
+List<unsigned int> LoopifySorting::merge_fuel(const unsigned int fuel,
                                               List<unsigned int> l1,
                                               List<unsigned int> l2) {
   std::unique_ptr<List<unsigned int>> _head{};
@@ -108,10 +108,8 @@ List<unsigned int> LoopifySorting::merge_fuel(const unsigned int &fuel,
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            List<unsigned int> _next_l1 = std::move(*(d_a1));
-            unsigned int _next_fuel = f;
-            _loop_l1 = std::move(_next_l1);
-            _loop_fuel = std::move(_next_fuel);
+            _loop_l1 = std::move(*(d_a1));
+            _loop_fuel = f;
             continue;
           } else {
             auto _cell = std::make_unique<List<unsigned int>>(
@@ -120,10 +118,8 @@ List<unsigned int> LoopifySorting::merge_fuel(const unsigned int &fuel,
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            List<unsigned int> _next_l2 = std::move(*(d_a10));
-            unsigned int _next_fuel = f;
-            _loop_l2 = std::move(_next_l2);
-            _loop_fuel = std::move(_next_fuel);
+            _loop_l2 = std::move(*(d_a10));
+            _loop_fuel = f;
             continue;
           }
         }
@@ -139,7 +135,7 @@ List<unsigned int> LoopifySorting::merge(const List<unsigned int> &l1,
                     l1, l2);
 }
 
-List<unsigned int> LoopifySorting::merge_sort_fuel(const unsigned int &fuel,
+List<unsigned int> LoopifySorting::merge_sort_fuel(const unsigned int fuel,
                                                    List<unsigned int> l) {
   struct _Enter {
     List<unsigned int> l;
@@ -169,7 +165,7 @@ List<unsigned int> LoopifySorting::merge_sort_fuel(const unsigned int &fuel,
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       List<unsigned int> l = std::move(_f.l);
-      const unsigned int &fuel = _f.fuel;
+      const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);
       } else {
@@ -210,7 +206,7 @@ List<unsigned int> LoopifySorting::merge_sort(const List<unsigned int> &l) {
 }
 
 std::pair<List<unsigned int>, List<unsigned int>>
-LoopifySorting::partition(const unsigned int &pivot,
+LoopifySorting::partition(const unsigned int pivot,
                           const List<unsigned int> &l) {
   struct _Enter {
     const List<unsigned int> *l;
@@ -246,8 +242,8 @@ LoopifySorting::partition(const unsigned int &pivot,
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      unsigned int d_a0 = std::move(_f.d_a0);
-      const unsigned int &pivot = _f.pivot;
+      unsigned int d_a0 = _f.d_a0;
+      const unsigned int pivot = _f.pivot;
       const List<unsigned int> &lo = _result.first;
       const List<unsigned int> &hi = _result.second;
       if (d_a0 <= pivot) {
@@ -260,7 +256,7 @@ LoopifySorting::partition(const unsigned int &pivot,
   return _result;
 }
 
-List<unsigned int> LoopifySorting::quicksort_fuel(const unsigned int &fuel,
+List<unsigned int> LoopifySorting::quicksort_fuel(const unsigned int fuel,
                                                   List<unsigned int> l) {
   struct _Enter {
     List<unsigned int> l;
@@ -292,7 +288,7 @@ List<unsigned int> LoopifySorting::quicksort_fuel(const unsigned int &fuel,
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       List<unsigned int> l = std::move(_f.l);
-      const unsigned int &fuel = _f.fuel;
+      const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);
       } else {
@@ -326,7 +322,7 @@ List<unsigned int> LoopifySorting::quicksort(const List<unsigned int> &l) {
   return quicksort_fuel(len_impl<unsigned int>(l), l);
 }
 
-bool LoopifySorting::is_sorted_aux(const unsigned int &prev,
+bool LoopifySorting::is_sorted_aux(const unsigned int prev,
                                    const List<unsigned int> &l) {
   bool _result;
   const List<unsigned int> *_loop_l = &l;
@@ -340,10 +336,8 @@ bool LoopifySorting::is_sorted_aux(const unsigned int &prev,
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_prev <= d_a0) {
-        const List<unsigned int> *_next_l = d_a1.get();
-        unsigned int _next_prev = d_a0;
-        _loop_l = _next_l;
-        _loop_prev = std::move(_next_prev);
+        _loop_l = d_a1.get();
+        _loop_prev = d_a0;
       } else {
         _result = false;
         break;
@@ -407,7 +401,7 @@ LoopifySorting::remove_duplicates(const List<unsigned int> &l) {
 
 /// uniq_sorted variant that preserves order.
 List<unsigned int>
-LoopifySorting::uniq_sorted_aux(const unsigned int &prev, const bool &seen,
+LoopifySorting::uniq_sorted_aux(const unsigned int prev, const bool seen,
                                 const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -425,12 +419,9 @@ LoopifySorting::uniq_sorted_aux(const unsigned int &prev, const bool &seen,
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_seen) {
         if (_loop_prev == d_a0) {
-          const List<unsigned int> *_next_l = d_a1.get();
-          bool _next_seen = true;
-          unsigned int _next_prev = d_a0;
-          _loop_l = _next_l;
-          _loop_seen = std::move(_next_seen);
-          _loop_prev = std::move(_next_prev);
+          _loop_l = d_a1.get();
+          _loop_seen = true;
+          _loop_prev = d_a0;
           continue;
         } else {
           auto _cell = std::make_unique<List<unsigned int>>(
@@ -439,12 +430,9 @@ LoopifySorting::uniq_sorted_aux(const unsigned int &prev, const bool &seen,
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          const List<unsigned int> *_next_l = d_a1.get();
-          bool _next_seen = true;
-          unsigned int _next_prev = d_a0;
-          _loop_l = _next_l;
-          _loop_seen = std::move(_next_seen);
-          _loop_prev = std::move(_next_prev);
+          _loop_l = d_a1.get();
+          _loop_seen = true;
+          _loop_prev = d_a0;
           continue;
         }
       } else {
@@ -454,12 +442,9 @@ LoopifySorting::uniq_sorted_aux(const unsigned int &prev, const bool &seen,
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        const List<unsigned int> *_next_l = d_a1.get();
-        bool _next_seen = true;
-        unsigned int _next_prev = d_a0;
-        _loop_l = _next_l;
-        _loop_seen = std::move(_next_seen);
-        _loop_prev = std::move(_next_prev);
+        _loop_l = d_a1.get();
+        _loop_seen = true;
+        _loop_prev = d_a0;
         continue;
       }
     }

@@ -250,7 +250,7 @@ template <typename T1> Nat _foo_aux(const T1 a, const Nat n) {
   return ListDef::template repeat<T1>(a, n).length();
 }
 
-Nat foo(Nat n, const bool &b);
+Nat foo(Nat n, const bool b);
 
 template <typename T1> List<T1> ListDef::repeat(const T1 x, const Nat &n) {
   if (std::holds_alternative<typename Nat::O>(n.v())) {

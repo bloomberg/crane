@@ -1,6 +1,6 @@
 #include <ack.h>
 
-unsigned int Ack::ack(unsigned int m, const unsigned int &n) {
+unsigned int Ack::ack(const unsigned int m, const unsigned int n) {
   std::function<unsigned int(unsigned int)> ack_m;
   ack_m = [&](unsigned int n0) -> unsigned int {
     if (m <= 0) {

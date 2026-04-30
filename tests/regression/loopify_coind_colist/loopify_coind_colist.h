@@ -184,7 +184,7 @@ struct LoopifyCoindColist {
   }
 
   template <typename T1>
-  static colist<T1> cotake(const unsigned int &n, const colist<T1> l) {
+  static colist<T1> cotake(const unsigned int n, const colist<T1> l) {
     if (n <= 0) {
       return colist<T1>::lazy_(
           []() -> colist<T1> { return colist<T1>::conil(); });
@@ -216,7 +216,7 @@ struct LoopifyCoindColist {
   }
 
   template <typename T1>
-  static List<T1> to_list(const unsigned int &fuel, const colist<T1> l) {
+  static List<T1> to_list(const unsigned int fuel, const colist<T1> l) {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
     colist<T1> _loop_l = l;
@@ -237,10 +237,8 @@ struct LoopifyCoindColist {
               typename List<T1>::Cons(d_a0, nullptr));
           *(_write) = std::move(_cell);
           _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).d_a1;
-          colist<T1> _next_l = std::move(*(d_a1));
-          unsigned int _next_fuel = f;
-          _loop_l = std::move(_next_l);
-          _loop_fuel = std::move(_next_fuel);
+          _loop_l = std::move(*(d_a1));
+          _loop_fuel = f;
           continue;
         }
       }
@@ -250,7 +248,7 @@ struct LoopifyCoindColist {
 
   static inline const List<unsigned int> test_comap = to_list<unsigned int>(
       5u, comap<unsigned int, unsigned int>(
-              [](const unsigned int &n) { return (n * 2u); },
+              [](const unsigned int n) { return (n * 2u); },
               from_list<unsigned int>(List<unsigned int>::cons(
                   1u, List<unsigned int>::cons(
                           2u, List<unsigned int>::cons(

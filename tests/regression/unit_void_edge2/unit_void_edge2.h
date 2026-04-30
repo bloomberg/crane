@@ -17,18 +17,18 @@ concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct UnitVoidEdge2 {
   static unsigned int take_unit(const std::monostate &_x);
-  static void opaque_unit(const unsigned int &_x);
-  static unsigned int let_use_as_arg(const unsigned int &n);
-  static void let_return_unit(const unsigned int &_x0);
-  static unsigned int let_match_unit(unsigned int n);
-  static unsigned int let_chain_use(const unsigned int &n);
-  static unsigned int let_use_in_if(const unsigned int &n, const bool &flag);
+  static void opaque_unit(const unsigned int _x);
+  static unsigned int let_use_as_arg(const unsigned int n);
+  static void let_return_unit(const unsigned int _x0);
+  static unsigned int let_match_unit(const unsigned int n);
+  static unsigned int let_chain_use(const unsigned int n);
+  static unsigned int let_use_in_if(const unsigned int n, const bool flag);
   static void mono_bind_return();
   static void mono_bind_rebind();
   static void mono_chain();
   static unsigned int mono_bind_match();
   static unsigned int mono_bind_opaque();
-  static void count_down_unit(const unsigned int &n);
+  static void count_down_unit(const unsigned int n);
   static inline const unsigned int call_fixpoint = 7u;
   static inline const unsigned int fixpoint_result_used = []() {
     count_down_unit(50u);
@@ -37,12 +37,12 @@ struct UnitVoidEdge2 {
   }();
 
   template <MapsTo<void, unsigned int> F0>
-  static unsigned int call_and_discard(F0 &&, unsigned int n) {
+  static unsigned int call_and_discard(F0 &&, const unsigned int n) {
     return n;
   }
 
   template <MapsTo<void, unsigned int> F0>
-  static unsigned int call_and_use(F0 &&f, const unsigned int &n) {
+  static unsigned int call_and_use(F0 &&f, const unsigned int n) {
     f(n);
     std::monostate x = std::monostate{};
     return take_unit(x);
@@ -55,9 +55,9 @@ struct UnitVoidEdge2 {
 
   static inline const unsigned int apply_take_unit =
       apply<std::monostate, unsigned int>(take_unit, std::monostate{});
-  static std::optional<std::monostate> make_some_unit(const bool &b);
+  static std::optional<std::monostate> make_some_unit(const bool b);
   static unsigned int use_option_unit(const std::optional<std::monostate> &o);
-  static unsigned int compose_option_unit(const bool &b1, const bool &b2);
+  static unsigned int compose_option_unit(const bool b1, const bool b2);
 
   template <typename t_A, typename t_B> struct pair {
     // TYPES
@@ -130,7 +130,8 @@ struct UnitVoidEdge2 {
     return f(d_a0, d_a1);
   }
 
-  static pair<unsigned int, std::monostate> make_nat_unit_pair(unsigned int n);
+  static pair<unsigned int, std::monostate>
+  make_nat_unit_pair(const unsigned int n);
 
   template <typename T1, typename T2> static T1 get_fst(const pair<T1, T2> &p) {
     const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p.v());

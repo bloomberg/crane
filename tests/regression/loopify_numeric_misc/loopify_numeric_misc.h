@@ -126,12 +126,12 @@ public:
 
 struct LoopifyNumericMisc {
   static unsigned int sum_abs(const List<unsigned int> &l);
-  static unsigned int alternating_ops(const unsigned int &n);
+  static unsigned int alternating_ops(const unsigned int n);
   static unsigned int count_even(const List<unsigned int> &l);
   static unsigned int count_odd(const List<unsigned int> &l);
   static unsigned int product(const List<unsigned int> &l);
   static unsigned int sum_of_squares(const List<unsigned int> &l);
-  static unsigned int max_two(unsigned int a, unsigned int b);
+  static unsigned int max_two(const unsigned int a, const unsigned int b);
   static unsigned int list_max(const List<unsigned int> &l);
   static unsigned int list_min(const List<unsigned int> &l);
 };

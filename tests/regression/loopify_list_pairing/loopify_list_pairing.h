@@ -171,11 +171,11 @@ struct LoopifyListPairing {
   static std::pair<List<unsigned int>, List<unsigned int>>
   partition(const List<unsigned int> &l);
   static List<std::pair<unsigned int, unsigned int>>
-  zip_longest_fuel(const unsigned int &fuel, const List<unsigned int> &l1,
-                   const List<unsigned int> &l2, unsigned int default0);
+  zip_longest_fuel(const unsigned int fuel, const List<unsigned int> &l1,
+                   const List<unsigned int> &l2, const unsigned int default0);
   static List<std::pair<unsigned int, unsigned int>>
   zip_longest(const List<unsigned int> &l1, const List<unsigned int> &l2,
-              const unsigned int &default0);
+              const unsigned int default0);
   static List<unsigned int> zipWith(const List<unsigned int> &l1,
                                     const List<unsigned int> &l2);
   static std::pair<List<unsigned int>, List<unsigned int>>

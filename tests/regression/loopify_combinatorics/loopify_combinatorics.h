@@ -140,10 +140,7 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        const List *_next_self = d_a1.get();
-        List<t_A> _next_m = std::move(_loop_m);
-        _loop_self = _next_self;
-        _loop_m = std::move(_next_m);
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -154,45 +151,44 @@ public:
 /// Consolidated combinatorial algorithms.
 struct LoopifyCombinatorics {
   /// remove x l removes first occurrence of x from list.
-  static List<unsigned int> remove(const unsigned int &x,
+  static List<unsigned int> remove(const unsigned int x,
                                    const List<unsigned int> &l);
   /// Helper: prepend x to each list in lsts.
   static List<List<unsigned int>>
-  map_cons(unsigned int x, const List<List<unsigned int>> &lsts);
+  map_cons(const unsigned int x, const List<List<unsigned int>> &lsts);
   /// perms_choices_fuel fuel choices orig generates permutations by iterating
   /// over choices.  Single self-recursive function that handles both the choice
   /// iteration and the recursive subproblem, enabling full loopification.
   /// The match on remaining is hoisted out of the let-binding so that all
   /// recursive calls appear at the top level of each branch.
   static List<List<unsigned int>>
-  perms_choices_fuel(const unsigned int &fuel,
-                     const List<unsigned int> &choices,
+  perms_choices_fuel(const unsigned int fuel, const List<unsigned int> &choices,
                      const List<unsigned int> &orig);
   /// permutations_fuel fuel l generates all permutations of a list.
   static List<List<unsigned int>>
-  permutations_fuel(const unsigned int &fuel, const List<unsigned int> &l);
+  permutations_fuel(const unsigned int fuel, const List<unsigned int> &l);
   static unsigned int len_list(const List<unsigned int> &l);
-  static unsigned int factorial_impl(const unsigned int &n);
+  static unsigned int factorial_impl(const unsigned int n);
   static List<List<unsigned int>> permutations(const List<unsigned int> &l);
   /// subsequences l generates all subsequences (subsets preserving order).
   static List<List<unsigned int>> subsequences(const List<unsigned int> &l);
   /// Helper for cartesian product.
   static List<std::pair<unsigned int, unsigned int>>
-  map_pairs(unsigned int y, const List<unsigned int> &l);
+  map_pairs(const unsigned int y, const List<unsigned int> &l);
   /// cartesian l1 l2 Cartesian product of two lists.
   static List<std::pair<unsigned int, unsigned int>>
   cartesian(const List<unsigned int> &l1, const List<unsigned int> &l2);
   /// power_set l generates the power set (all subsets).
   static List<List<unsigned int>> power_set(const List<unsigned int> &l);
   /// insert_everywhere x l inserts x at every position in l.
-  static List<List<unsigned int>> insert_everywhere(unsigned int x,
+  static List<List<unsigned int>> insert_everywhere(const unsigned int x,
                                                     List<unsigned int> l);
   /// Helper: check if element is in list.
-  static bool elem(const unsigned int &x, const List<unsigned int> &l);
+  static bool elem(const unsigned int x, const List<unsigned int> &l);
   /// Helper: list length.
   static unsigned int len_impl(const List<unsigned int> &l);
   /// dedup l removes all duplicates (keeps first occurrence).
-  static List<unsigned int> dedup_fuel(const unsigned int &fuel,
+  static List<unsigned int> dedup_fuel(const unsigned int fuel,
                                        const List<unsigned int> &l);
   static List<unsigned int> dedup(const List<unsigned int> &l);
 };

@@ -44,12 +44,12 @@ struct DensityPotentialTraceCase {
   static Real sample_N(const Real x);
   static inline const Real sample_mass = Real::from_z(INT64_C(3));
   static inline const Real sample_time = Real::from_z(INT64_C(2));
-  static Real density_radicand_at(const unsigned int &n);
-  static bool static_time_nonnegative_at(const unsigned int &n);
-  static bool density_radicand_nonnegative_at(const unsigned int &n);
-  static Real density_value_at(const unsigned int &n);
-  static bool density_value_nonnegative_at(const unsigned int &n);
-  static bool massive_potential_nonnegative_at(const unsigned int &n);
+  static Real density_radicand_at(const unsigned int n);
+  static bool static_time_nonnegative_at(const unsigned int n);
+  static bool density_radicand_nonnegative_at(const unsigned int n);
+  static Real density_value_at(const unsigned int n);
+  static bool density_value_nonnegative_at(const unsigned int n);
+  static bool massive_potential_nonnegative_at(const unsigned int n);
   static inline const bool sample_static_nonneg =
       static_time_nonnegative_at(1u);
   static inline const bool sample_density_radicand_nonneg =

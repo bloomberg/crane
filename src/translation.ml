@@ -2096,6 +2096,7 @@ let is_inductive_value_type = function
     | GlobRef.IndRef _ ->
       not (is_enum_inductive g)
       && not (Table.is_coinductive g)
+      && not (Table.is_custom_scalar_ref g)
     | _ -> false )
   | _ -> false
 

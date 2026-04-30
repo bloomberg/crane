@@ -140,10 +140,7 @@ public:
             typename List<t_A>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        const List *_next_self = d_a1.get();
-        List<t_A> _next_m = std::move(_loop_m);
-        _loop_self = _next_self;
-        _loop_m = std::move(_next_m);
+        _loop_self = d_a1.get();
         continue;
       }
     }
@@ -367,7 +364,7 @@ struct LoopifyTreePaths {
     }
 
     std::optional<List<unsigned int>>
-    find_path_sum(const unsigned int &acc, const unsigned int &target) const {
+    find_path_sum(const unsigned int acc, const unsigned int target) const {
       const tree *_self = this;
       auto &&_sv = *(_self);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
@@ -398,12 +395,12 @@ struct LoopifyTreePaths {
       }
     }
 
-    unsigned int count_paths_sum(const unsigned int &target) const {
+    unsigned int count_paths_sum(const unsigned int target) const {
       return (*(this)).count_paths_sum_aux(0u, target);
     }
 
-    unsigned int count_paths_sum_aux(const unsigned int &acc,
-                                     const unsigned int &target) const {
+    unsigned int count_paths_sum_aux(const unsigned int acc,
+                                     const unsigned int target) const {
       const tree *_self = this;
 
       struct _Enter {
@@ -434,7 +431,7 @@ struct LoopifyTreePaths {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          const unsigned int &acc = _f.acc;
+          const unsigned int acc = _f.acc;
           auto &&_sv = *(_self);
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             if (acc == target) {
@@ -638,7 +635,7 @@ struct LoopifyTreePaths {
     }
   };
 
-  static List<List<unsigned int>> map_cons(unsigned int x,
+  static List<List<unsigned int>> map_cons(const unsigned int x,
                                            const List<List<unsigned int>> &ll);
 
   struct bool_tree {

@@ -188,10 +188,8 @@ List<unsigned int> LoopifyAdvancedLists::interleave(List<unsigned int> l1,
                  std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1->v_mut())
                  .d_a1;
-        List<unsigned int> _next_l2 = std::move(*(d_a10));
-        List<unsigned int> _next_l1 = std::move(*(d_a1));
-        _loop_l2 = std::move(_next_l2);
-        _loop_l1 = std::move(_next_l1);
+        _loop_l2 = std::move(*(d_a10));
+        _loop_l1 = std::move(*(d_a1));
         continue;
       }
     }

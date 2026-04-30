@@ -224,10 +224,7 @@ struct LoopifyTmc {
             std::make_unique<list<T1>>(typename list<T1>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
         _write = &std::get<typename list<T1>::Cons>((*_write)->v_mut()).d_a1;
-        list<T1> _next_l2 = std::move(_loop_l2);
-        const list<T1> *_next_l1 = d_a1.get();
-        _loop_l2 = std::move(_next_l2);
-        _loop_l1 = _next_l1;
+        _loop_l1 = d_a1.get();
         continue;
       }
     }
@@ -299,7 +296,7 @@ struct LoopifyTmc {
 
   /// replicate n x creates n copies of x. Nat recursion producing list.
   template <typename T1>
-  static list<T1> replicate(const unsigned int &n, const T1 x) {
+  static list<T1> replicate(const unsigned int n, const T1 x) {
     std::unique_ptr<list<T1>> _head{};
     std::unique_ptr<list<T1>> *_write = &_head;
     unsigned int _loop_n = n;
@@ -321,8 +318,7 @@ struct LoopifyTmc {
   }
 
   /// range lo hi creates lo, lo+1, ..., hi-1.
-  static list<unsigned int> range(const unsigned int &lo,
-                                  const unsigned int &hi);
+  static list<unsigned int> range(const unsigned int lo, const unsigned int hi);
 
   /// zip_with f l1 l2 combines two lists element-wise. Two varying params.
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
@@ -348,10 +344,8 @@ struct LoopifyTmc {
               typename list<T3>::Cons(f(d_a0, d_a00), nullptr));
           *(_write) = std::move(_cell);
           _write = &std::get<typename list<T3>::Cons>((*_write)->v_mut()).d_a1;
-          const list<T2> *_next_l2 = d_a10.get();
-          const list<T1> *_next_l1 = d_a1.get();
-          _loop_l2 = _next_l2;
-          _loop_l1 = _next_l1;
+          _loop_l2 = d_a10.get();
+          _loop_l1 = d_a1.get();
           continue;
         }
       }
@@ -360,7 +354,7 @@ struct LoopifyTmc {
   }
 
   /// prefix_sums acc l computes running prefix sums.
-  static list<unsigned int> prefix_sums(const unsigned int &acc,
+  static list<unsigned int> prefix_sums(const unsigned int acc,
                                         const list<unsigned int> &l);
 
   /// stutter l duplicates each element: 1,2 -> 1,1,2,2. Nested TMC.

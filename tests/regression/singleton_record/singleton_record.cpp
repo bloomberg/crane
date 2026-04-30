@@ -19,6 +19,6 @@ SingletonRecord::double_wrapped(const SingletonRecord::wrapper &w) {
 
 unsigned int
 SingletonRecord::apply_wrapped(const SingletonRecord::fn_wrapper &w,
-                               const unsigned int &n) {
+                               const unsigned int n) {
   return w.fn(n);
 }

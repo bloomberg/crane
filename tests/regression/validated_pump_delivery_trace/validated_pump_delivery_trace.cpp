@@ -65,7 +65,7 @@ unsigned int ValidatedPumpDeliveryTraceCase::icr_activity_modifier(
 ValidatedPumpDeliveryTraceCase::Minutes
 ValidatedPumpDeliveryTraceCase::peak_time(
     const ValidatedPumpDeliveryTraceCase::InsulinType itype,
-    const unsigned int &) {
+    const unsigned int) {
   switch (itype) {
   case InsulinType::e_INSULIN_ASPART: {
     return 70u;
@@ -76,8 +76,8 @@ ValidatedPumpDeliveryTraceCase::peak_time(
   }
 }
 
-unsigned int ValidatedPumpDeliveryTraceCase::div_ceil(const unsigned int &a,
-                                                      const unsigned int &b) {
+unsigned int ValidatedPumpDeliveryTraceCase::div_ceil(const unsigned int a,
+                                                      const unsigned int b) {
   if (b == 0u) {
     return 0u;
   } else {
@@ -86,13 +86,13 @@ unsigned int ValidatedPumpDeliveryTraceCase::div_ceil(const unsigned int &a,
 }
 
 bool ValidatedPumpDeliveryTraceCase::event_time_valid(
-    const unsigned int &now,
+    const unsigned int now,
     const ValidatedPumpDeliveryTraceCase::BolusEvent &event) {
   return event.be_time_minutes <= now;
 }
 
 bool ValidatedPumpDeliveryTraceCase::history_times_valid(
-    const unsigned int &now,
+    const unsigned int now,
     const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events) {
   if (std::holds_alternative<
           typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Nil>(
@@ -107,7 +107,7 @@ bool ValidatedPumpDeliveryTraceCase::history_times_valid(
 }
 
 bool ValidatedPumpDeliveryTraceCase::history_sorted_from(
-    const unsigned int &prev,
+    const unsigned int prev,
     const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events) {
   if (std::holds_alternative<
           typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Nil>(
@@ -137,13 +137,13 @@ bool ValidatedPumpDeliveryTraceCase::history_sorted_desc(
 }
 
 bool ValidatedPumpDeliveryTraceCase::history_valid(
-    const unsigned int &now,
+    const unsigned int now,
     const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events) {
   return (history_times_valid(now, events) && history_sorted_desc(events));
 }
 
 unsigned int ValidatedPumpDeliveryTraceCase::bilinear_iob_fraction(
-    const unsigned int &elapsed, const unsigned int &dia,
+    const unsigned int elapsed, const unsigned int dia,
     const ValidatedPumpDeliveryTraceCase::InsulinType itype) {
   unsigned int pt = peak_time(itype, dia);
   if (dia == 0u) {
@@ -177,9 +177,9 @@ unsigned int ValidatedPumpDeliveryTraceCase::bilinear_iob_fraction(
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::bilinear_iob_from_bolus(
-    const unsigned int &now,
+    const unsigned int now,
     const ValidatedPumpDeliveryTraceCase::BolusEvent &event,
-    const unsigned int &dia,
+    const unsigned int dia,
     const ValidatedPumpDeliveryTraceCase::InsulinType itype) {
   if (now < event.be_time_minutes) {
     return 0u;
@@ -196,9 +196,9 @@ ValidatedPumpDeliveryTraceCase::bilinear_iob_from_bolus(
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::total_bilinear_iob(
-    const unsigned int &now,
+    const unsigned int now,
     const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events,
-    const unsigned int &dia,
+    const unsigned int dia,
     const ValidatedPumpDeliveryTraceCase::InsulinType itype) {
   if (std::holds_alternative<
           typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Nil>(
@@ -229,7 +229,7 @@ ValidatedPumpDeliveryTraceCase::apply_sensor_margin(
 
 unsigned int ValidatedPumpDeliveryTraceCase::adjusted_isf_tenths(
     const ValidatedPumpDeliveryTraceCase::Mg_dL &bg,
-    unsigned int base_isf_tenths) {
+    const unsigned int base_isf_tenths) {
   if (bg.mg_dL_val < 250u) {
     return base_isf_tenths;
   } else {
@@ -243,10 +243,9 @@ unsigned int ValidatedPumpDeliveryTraceCase::adjusted_isf_tenths(
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::correction_twentieths_full(
-    const unsigned int &,
-    const ValidatedPumpDeliveryTraceCase::Mg_dL &current_bg,
+    const unsigned int, const ValidatedPumpDeliveryTraceCase::Mg_dL &current_bg,
     const ValidatedPumpDeliveryTraceCase::Mg_dL &target_bg,
-    const unsigned int &base_isf_tenths) {
+    const unsigned int base_isf_tenths) {
   unsigned int eff_isf = adjusted_isf_tenths(current_bg, base_isf_tenths);
   if (eff_isf == 0u) {
     return 0u;
@@ -268,9 +267,10 @@ ValidatedPumpDeliveryTraceCase::correction_twentieths_full(
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::apply_reverse_correction_twentieths(
-    unsigned int carb, const ValidatedPumpDeliveryTraceCase::Mg_dL &current_bg,
+    const unsigned int carb,
+    const ValidatedPumpDeliveryTraceCase::Mg_dL &current_bg,
     const ValidatedPumpDeliveryTraceCase::Mg_dL &target_bg,
-    const unsigned int &isf_tenths) {
+    const unsigned int isf_tenths) {
   if (current_bg.mg_dL_val < target_bg.mg_dL_val) {
     unsigned int reverse_drop =
         (((target_bg.mg_dL_val - current_bg.mg_dL_val) > target_bg.mg_dL_val
@@ -293,7 +293,7 @@ ValidatedPumpDeliveryTraceCase::apply_reverse_correction_twentieths(
 }
 
 unsigned int ValidatedPumpDeliveryTraceCase::predict_bg_drop_tenths(
-    const unsigned int &iob_twentieths, const unsigned int &isf_tenths) {
+    const unsigned int iob_twentieths, const unsigned int isf_tenths) {
   if (isf_tenths == 0u) {
     return 0u;
   } else {
@@ -303,7 +303,7 @@ unsigned int ValidatedPumpDeliveryTraceCase::predict_bg_drop_tenths(
 
 unsigned int ValidatedPumpDeliveryTraceCase::conservative_cob_rise(
     const ValidatedPumpDeliveryTraceCase::Config &cfg,
-    const unsigned int &cob_grams) {
+    const unsigned int cob_grams) {
   return (100u ? ((cob_grams * cfg.cfg_conservative_cob_absorption_percent) *
                   cfg.cfg_bg_rise_per_gram) /
                      100u
@@ -313,8 +313,8 @@ unsigned int ValidatedPumpDeliveryTraceCase::conservative_cob_rise(
 unsigned int ValidatedPumpDeliveryTraceCase::predicted_eventual_bg_tenths(
     const ValidatedPumpDeliveryTraceCase::Config &cfg,
     const ValidatedPumpDeliveryTraceCase::Mg_dL &current_bg,
-    const unsigned int &iob_twentieths, const unsigned int &cob_grams,
-    const unsigned int &isf_tenths) {
+    const unsigned int iob_twentieths, const unsigned int cob_grams,
+    const unsigned int isf_tenths) {
   unsigned int drop = predict_bg_drop_tenths(iob_twentieths, isf_tenths);
   unsigned int rise = conservative_cob_rise(cfg, cob_grams);
   unsigned int bg_after_drop;
@@ -332,8 +332,8 @@ ValidatedPumpDeliveryTraceCase::SuspendDecision
 ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
     const ValidatedPumpDeliveryTraceCase::Config &cfg,
     const ValidatedPumpDeliveryTraceCase::Mg_dL &current_bg,
-    const unsigned int &iob_twentieths, const unsigned int &cob_grams,
-    const unsigned int &isf_tenths, const unsigned int &proposed) {
+    const unsigned int iob_twentieths, const unsigned int cob_grams,
+    const unsigned int isf_tenths, const unsigned int proposed) {
   if (isf_tenths == 0u) {
     return SuspendDecision::suspend_withhold();
   } else {
@@ -383,7 +383,7 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::apply_suspend(
-    unsigned int proposed,
+    const unsigned int proposed,
     const ValidatedPumpDeliveryTraceCase::SuspendDecision &decision) {
   if (std::holds_alternative<typename ValidatedPumpDeliveryTraceCase::
                                  SuspendDecision::Suspend_None>(decision.v())) {
@@ -406,13 +406,13 @@ ValidatedPumpDeliveryTraceCase::apply_suspend(
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::pediatric_max_twentieths(
-    const unsigned int &weight_kg) {
+    const unsigned int weight_kg) {
   return (weight_kg * 10u);
 }
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
-ValidatedPumpDeliveryTraceCase::cap_pediatric(unsigned int bolus,
-                                              const unsigned int &weight_kg) {
+ValidatedPumpDeliveryTraceCase::cap_pediatric(const unsigned int bolus,
+                                              const unsigned int weight_kg) {
   if (bolus <= pediatric_max_twentieths(weight_kg)) {
     return bolus;
   } else {
@@ -433,7 +433,7 @@ bool ValidatedPumpDeliveryTraceCase::prec_params_valid(
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::carb_bolus_twentieths(
-    const unsigned int &carbs_g, const unsigned int &icr_tenths) {
+    const unsigned int carbs_g, const unsigned int icr_tenths) {
   if (icr_tenths == 0u) {
     return 0u;
   } else {
@@ -478,7 +478,7 @@ ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
   }
 }
 
-bool ValidatedPumpDeliveryTraceCase::time_reasonable(const unsigned int &now) {
+bool ValidatedPumpDeliveryTraceCase::time_reasonable(const unsigned int now) {
   return now <= 525600u;
 }
 
@@ -497,12 +497,12 @@ unsigned int ValidatedPumpDeliveryTraceCase::iob_high_threshold(
 }
 
 bool ValidatedPumpDeliveryTraceCase::iob_dangerously_high(
-    const unsigned int &iob) {
+    const unsigned int iob) {
   return iob_high_threshold(default_config) <= iob;
 }
 
 bool ValidatedPumpDeliveryTraceCase::bolus_too_soon(
-    const unsigned int &now,
+    const unsigned int now,
     const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &history) {
   if (std::holds_alternative<
           typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Nil>(
@@ -523,7 +523,7 @@ bool ValidatedPumpDeliveryTraceCase::bolus_too_soon(
 }
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
-ValidatedPumpDeliveryTraceCase::cap_twentieths(unsigned int t) {
+ValidatedPumpDeliveryTraceCase::cap_twentieths(const unsigned int t) {
   if (t <= 500u) {
     return t;
   } else {
@@ -569,7 +569,7 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                   } else {
                     unsigned int tdd_current =
                         input.pi_bolus_history.template fold_left<unsigned int>(
-                            [=](unsigned int acc,
+                            [=](const unsigned int acc,
                                 const ValidatedPumpDeliveryTraceCase::BolusEvent
                                     &e) mutable {
                               if (((((input.pi_now - 1440u) > input.pi_now
@@ -661,7 +661,7 @@ ValidatedPumpDeliveryTraceCase::prec_result_twentieths(
 }
 
 unsigned int ValidatedPumpDeliveryTraceCase::mmol_tenths_to_mg_dL(
-    const unsigned int &mmol_tenths) {
+    const unsigned int mmol_tenths) {
   return (10u ? (mmol_tenths * 18u) / 10u : 0);
 }
 
@@ -687,7 +687,7 @@ ValidatedPumpDeliveryTraceCase::validated_mmol_bolus(
 }
 
 unsigned int ValidatedPumpDeliveryTraceCase::round_down_to_increment(
-    unsigned int t, const unsigned int &increment) {
+    const unsigned int t, const unsigned int increment) {
   if (increment == 0u) {
     return t;
   } else {
@@ -697,7 +697,8 @@ unsigned int ValidatedPumpDeliveryTraceCase::round_down_to_increment(
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::apply_rounding(
-    const ValidatedPumpDeliveryTraceCase::RoundingMode mode, unsigned int t) {
+    const ValidatedPumpDeliveryTraceCase::RoundingMode mode,
+    const unsigned int t) {
   switch (mode) {
   case RoundingMode::e_ROUNDTWENTIETH: {
     return t;
@@ -734,7 +735,7 @@ ValidatedPumpDeliveryTraceCase::final_delivery(
 
 bool ValidatedPumpDeliveryTraceCase::pump_can_deliver(
     const ValidatedPumpDeliveryTraceCase::PumpState &state,
-    const unsigned int &dose) {
+    const unsigned int dose) {
   return (((!(state.ps_occlusion_detected) &&
             dose <= state.ps_reservoir_twentieths) &&
            dose <= 500u) &&
@@ -743,7 +744,7 @@ bool ValidatedPumpDeliveryTraceCase::pump_can_deliver(
 
 unsigned int ValidatedPumpDeliveryTraceCase::reservoir_after_bolus(
     const ValidatedPumpDeliveryTraceCase::PumpState &state,
-    const unsigned int &dose) {
+    const unsigned int dose) {
   if (dose <= state.ps_reservoir_twentieths) {
     return (
         ((state.ps_reservoir_twentieths - dose) > state.ps_reservoir_twentieths
@@ -755,7 +756,7 @@ unsigned int ValidatedPumpDeliveryTraceCase::reservoir_after_bolus(
 }
 
 unsigned int ValidatedPumpDeliveryTraceCase::option_nat_default(
-    const std::optional<unsigned int> &x, unsigned int d) {
+    const std::optional<unsigned int> &x, const unsigned int d) {
   if (x.has_value()) {
     const unsigned int &v = *x;
     return v;
@@ -790,7 +791,7 @@ unsigned int ValidatedPumpDeliveryTraceCase::pump_reservoir_after_result(
   }
 }
 
-unsigned int Nat::tail_add(const unsigned int &n, unsigned int m) {
+unsigned int Nat::tail_add(const unsigned int n, const unsigned int m) {
   if (n <= 0) {
     return m;
   } else {
@@ -799,8 +800,8 @@ unsigned int Nat::tail_add(const unsigned int &n, unsigned int m) {
   }
 }
 
-unsigned int Nat::tail_addmul(unsigned int r, const unsigned int &n,
-                              const unsigned int &m) {
+unsigned int Nat::tail_addmul(const unsigned int r, const unsigned int n,
+                              const unsigned int m) {
   if (n <= 0) {
     return r;
   } else {
@@ -809,11 +810,11 @@ unsigned int Nat::tail_addmul(unsigned int r, const unsigned int &n,
   }
 }
 
-unsigned int Nat::tail_mul(const unsigned int &n, const unsigned int &m) {
+unsigned int Nat::tail_mul(const unsigned int n, const unsigned int m) {
   return Nat::tail_addmul(0u, n, m);
 }
 
-unsigned int Nat::of_uint_acc(const Uint &d, unsigned int acc) {
+unsigned int Nat::of_uint_acc(const Uint &d, const unsigned int acc) {
   if (std::holds_alternative<typename Uint::Nil>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint::D0>(d.v())) {
@@ -863,7 +864,7 @@ unsigned int Nat::of_uint_acc(const Uint &d, unsigned int acc) {
 
 unsigned int Nat::of_uint(const Uint &d) { return Nat::of_uint_acc(d, 0u); }
 
-unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
+unsigned int Nat::of_hex_uint_acc(const Uint0 &d, const unsigned int acc) {
   if (std::holds_alternative<typename Uint0::Nil0>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint0::D10>(d.v())) {

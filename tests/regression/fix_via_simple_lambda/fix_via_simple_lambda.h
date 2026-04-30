@@ -24,7 +24,7 @@ struct FixViaSimpleLambda {
   /// they escape INDIRECTLY by being captured in a simple lambda
   /// that is then stored in Some.
   static std::optional<std::function<unsigned int(unsigned int)>>
-  make_combined(const unsigned int &n);
+  make_combined(const unsigned int n);
   /// test1: base=42, double_add(5) = 42+10 = 52,
   /// triple_add(5) = 42+15 = 57. Total = 109.
   static inline const unsigned int test1 = []() -> unsigned int {

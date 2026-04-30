@@ -19,7 +19,7 @@ struct PrimProj {
 
   static point add_points(const point &p1, const point &p2);
   static inline const point origin = point{0u, 0u};
-  static point translate(const unsigned int &dx, const unsigned int &dy,
+  static point translate(const unsigned int dx, const unsigned int dy,
                          const point &p);
 };
 

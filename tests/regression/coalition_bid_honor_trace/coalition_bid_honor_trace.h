@@ -398,7 +398,7 @@ struct BinInt {
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int &n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
 };
 
 struct CoalitionBidHonorTraceCase {
@@ -591,7 +591,7 @@ struct CoalitionBidHonorTraceCase {
   };
 
   static unsigned int unit_skill(const Unit &u);
-  static unsigned int skill_bv_multiplier_num(const unsigned int &skill);
+  static unsigned int skill_bv_multiplier_num(const unsigned int skill);
   static unsigned int unit_base_bv(const Unit &u);
   static unsigned int unit_tech_bv(const Unit &u);
   static unsigned int unit_battle_value(const Unit &u);
@@ -683,7 +683,7 @@ struct CoalitionBidHonorTraceCase {
   };
 
   static Coalition update_coalition_force(const List<CoalitionMember> &c,
-                                          const unsigned int &idx,
+                                          const unsigned int idx,
                                           List<Unit> new_force);
 
   struct ForceBid {
@@ -1769,10 +1769,10 @@ struct CoalitionBidHonorTraceCase {
   using HonorEntry = std::pair<unsigned int, Honor>;
   using HonorLedger = List<HonorEntry>;
   static Honor ledger_lookup(const List<std::pair<unsigned int, Z>> &ledger,
-                             const unsigned int &warrior_id);
+                             const unsigned int warrior_id);
   static HonorLedger
   ledger_update_by_id(const List<std::pair<unsigned int, Z>> &ledger,
-                      unsigned int warrior_id, Z new_honor);
+                      const unsigned int warrior_id, Z new_honor);
   static HonorLedger
   update_honor(const List<std::pair<unsigned int, Z>> &ledger,
                const Commander &actor, const Z &delta);
@@ -1971,7 +1971,7 @@ struct CoalitionBidHonorTraceCase {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int &n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

@@ -1,18 +1,18 @@
 #include <fetch_ops.h>
 
 unsigned int FetchOps::fetch_byte(const FetchOps::state &s,
-                                  const unsigned int &addr) {
+                                  const unsigned int addr) {
   return ListDef::template nth<unsigned int>(addr, s.rom, 0u);
 }
 
 unsigned int FetchOps::fetch_byte_direct(const List<unsigned int> &rom_data,
-                                         const unsigned int &addr) {
+                                         const unsigned int addr) {
   return ListDef::template nth<unsigned int>(addr, rom_data, 0u);
 }
 
 std::pair<unsigned int, unsigned int>
 FetchOps::fetch_pair(const List<unsigned int> &rom_data,
-                     const unsigned int &addr) {
+                     const unsigned int addr) {
   auto &&_sv = drop<unsigned int>(addr, rom_data);
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
     return std::make_pair(0u, 0u);
@@ -32,7 +32,7 @@ FetchOps::fetch_pair(const List<unsigned int> &rom_data,
 
 std::optional<std::pair<unsigned int, unsigned int>>
 FetchOps::fetch_window(const List<unsigned int> &rom_data,
-                       const unsigned int &addr) {
+                       const unsigned int addr) {
   auto &&_sv = drop<unsigned int>(addr, rom_data);
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
     return std::optional<std::pair<unsigned int, unsigned int>>();
