@@ -4,6 +4,12 @@
    Extraction wrapper: re-imports the spreadsheet model from
    theories/Examples/Spreadsheet and emits Spreadsheet.h / Spreadsheet.cpp
    into this directory (via the dune coq.theory's -output-directory flag).
+
+   [Set Crane Loopify] is intentionally not enabled here: the current
+   Loopify pass interacts badly with the [visited] accumulator in
+   [eval_expr] (it's elided as if dead).  Plain recursion is fine for
+   the formula depths a spreadsheet hits in practice, and [fuel]
+   bounds total worst-case depth.
 *)
 From Crane.Examples.Spreadsheet Require Import Spreadsheet.
 Require Crane.Extraction.

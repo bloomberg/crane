@@ -8,15 +8,17 @@
 
    Cells hold either nothing, a signed integer literal, or a formula
    tree of arithmetic over cell references.  The evaluator is total:
-   it consumes a [fuel] argument and returns [None] when the formula
-   diverges (out of fuel, or division by zero).
+   it consumes a fuel parameter (a generous safety cap) and a
+   "visited" path so reference cycles are detected explicitly rather
+   than mistaken for legitimate deep formulas.
 
-   Extraction lives in [bin/spreadsheet/Spreadsheet.v] (for the
-   front-end binary) and [tests/basics/spreadsheet/Spreadsheet.v]
-   (for the regression test).  This file holds the model only.
+   Extraction lives in [bin/spreadsheet/Spreadsheet/Spreadsheet.v]
+   (for the front-end binary) and
+   [tests/basics/spreadsheet/Spreadsheet.v] (for the regression
+   test).  This file holds the model only.
 *)
 
-From Stdlib Require Import List BinInt.
+From Stdlib Require Import List BinInt PArray.
 From Corelib Require Import PrimInt63.
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Import Mapping.ZInt.
@@ -35,13 +37,14 @@ Record CellRef : Type := mkRef
   { ref_col : int
   ; ref_row : int }.
 
+Definition cellref_eqb (r1 r2 : CellRef) : bool :=
+  andb (PrimInt63.eqb (ref_col r1) (ref_col r2))
+       (PrimInt63.eqb (ref_row r1) (ref_row r2)).
+
 (* Linearise a (col, row) reference into the underlying array index. *)
 Definition cell_index (r : CellRef) : int :=
   PrimInt63.add (PrimInt63.mul (ref_row r) NUM_COLS) (ref_col r).
 
-(* Expression AST.  Cell values are signed integers ([Z]); refs index
-   other cells; arithmetic is the four basic operators with parentheses
-   handled by the AST shape. *)
 Inductive Expr : Type :=
   | EInt : Z -> Expr
   | ERef : CellRef -> Expr
@@ -66,37 +69,55 @@ Definition get_cell (s : Sheet) (r : CellRef) : Cell :=
 Definition set_cell (s : Sheet) (r : CellRef) (c : Cell) : Sheet :=
   PrimArray.set s (cell_index r) c.
 
-(* Total evaluator with fuel.  [None] means: out of fuel (e.g. a
-   reference cycle), or division by zero somewhere in the expression. *)
-Fixpoint eval_expr (fuel : nat) (s : Sheet) (e : Expr) : option Z :=
+(* Membership check on a path of CellRefs.  Used by [eval_expr] to
+   distinguish cycles (a ref already on the current evaluation path)
+   from legitimate deep chains. *)
+Fixpoint mem_cellref (r : CellRef) (xs : list CellRef) : bool :=
+  match xs with
+  | nil => false
+  | y :: ys => if cellref_eqb r y then true else mem_cellref r ys
+  end.
+
+(* Total evaluator with fuel and a visited-path.
+
+   [visited] tracks which cells the current evaluation chain has
+   already entered through an [ERef].  Re-encountering a ref on
+   [visited] means a cycle, so we return [None].  [fuel] is a
+   generous total-termination cap; it should only ever be exhausted
+   by adversarially deep expression trees.  Division by zero also
+   returns [None]. *)
+Fixpoint eval_expr (fuel : nat) (visited : list CellRef) (s : Sheet)
+                   (e : Expr) : option Z :=
   match fuel with
   | O => None
   | S fuel' =>
     match e with
     | EInt n => Some n
     | ERef r =>
-      match get_cell s r with
-      | CEmpty => Some 0%Z
-      | CLit n => Some n
-      | CForm e' => eval_expr fuel' s e'
-      end
+      if mem_cellref r visited then None
+      else
+        match get_cell s r with
+        | CEmpty => Some 0%Z
+        | CLit n => Some n
+        | CForm e' => eval_expr fuel' (r :: visited) s e'
+        end
     | EAdd a b =>
-      match eval_expr fuel' s a, eval_expr fuel' s b with
+      match eval_expr fuel' visited s a, eval_expr fuel' visited s b with
       | Some va, Some vb => Some (Z.add va vb)
       | _, _ => None
       end
     | ESub a b =>
-      match eval_expr fuel' s a, eval_expr fuel' s b with
+      match eval_expr fuel' visited s a, eval_expr fuel' visited s b with
       | Some va, Some vb => Some (Z.sub va vb)
       | _, _ => None
       end
     | EMul a b =>
-      match eval_expr fuel' s a, eval_expr fuel' s b with
+      match eval_expr fuel' visited s a, eval_expr fuel' visited s b with
       | Some va, Some vb => Some (Z.mul va vb)
       | _, _ => None
       end
     | EDiv a b =>
-      match eval_expr fuel' s a, eval_expr fuel' s b with
+      match eval_expr fuel' visited s a, eval_expr fuel' visited s b with
       | Some va, Some vb =>
         if Z.eqb vb 0%Z then None else Some (Z.div va vb)
       | _, _ => None
@@ -104,17 +125,22 @@ Fixpoint eval_expr (fuel : nat) (s : Sheet) (e : Expr) : option Z :=
     end
   end.
 
+(* Evaluate a cell.  Seeds the visited path with the cell itself so
+   self-references and short cycles are detected on the next [ERef]
+   step. *)
 Definition eval_cell (fuel : nat) (s : Sheet) (r : CellRef) : option Z :=
   match get_cell s r with
   | CEmpty => Some 0%Z
   | CLit n => Some n
-  | CForm e => eval_expr fuel s e
+  | CForm e => eval_expr fuel (r :: nil) s e
   end.
 
-Definition DEFAULT_FUEL : nat := 1000.
+(* A generous safety cap.  Real cycles are caught by the visited-set
+   check before fuel matters; fuel only stops adversarially deep
+   expression trees that exhaust grid traversal budget. *)
+Definition DEFAULT_FUEL : nat := 100000.
 
-(* Smoke value used by harness code during bring-up.  Fills A1=2, B1=3,
-   then computes C1 = (A1+B1) * 7. *)
+(* The smoke value: A1=2, B1=3, C1 = (A1+B1) * 7 = 35. *)
 Definition smoke : option Z :=
   let a1 := mkRef 0 0 in
   let b1 := mkRef 1 0 in
@@ -129,15 +155,8 @@ Definition smoke : option Z :=
 (* --- Theorems --------------------------------------------------------
 
    The model is a kernel — most of its theorems are statements about
-   the evaluator's behaviour on individual cell shapes.  We prove a
-   handful here; richer properties (frame preservation under [set_cell],
-   acyclicity bounds) live in a future iteration. *)
-
-(* The smoke value computes to [Some 35].  The proof is a closed
-   computation: vm_compute reduces through PrimArray's primitives and
-   the fuel-bounded recursion. *)
-Theorem smoke_computes : smoke = Some 35%Z.
-Proof. vm_compute. reflexivity. Qed.
+   the evaluator's behaviour or about set/get coherence on the
+   underlying persistent array. *)
 
 (* Reading an empty cell returns 0, regardless of fuel. *)
 Theorem eval_empty : forall s r fuel,
@@ -149,16 +168,42 @@ Theorem eval_lit : forall s r n fuel,
   get_cell s r = CLit n -> eval_cell fuel s r = Some n.
 Proof. intros s r n fuel H. unfold eval_cell. rewrite H. reflexivity. Qed.
 
-(* A cell whose formula references itself exhausts any fuel and returns
-   [None].  This is a closed computation: pick a concrete sheet whose
-   only filled cell is the self-reference, then [vm_compute]. *)
+(* set/get coherence: writing a cell then reading it back returns the
+   value, provided the index is in bounds for the underlying array. *)
+Theorem get_set_eq : forall s r c,
+  PrimInt63.ltb (cell_index r) (PrimArray.length s) = true ->
+  get_cell (set_cell s r c) r = c.
+Proof.
+  intros s r c Hbound.
+  unfold get_cell, set_cell.
+  exact (@get_set_same Cell s (cell_index r) c Hbound).
+Qed.
+
+(* Frame preservation: writing one cell does not disturb a different
+   cell, as long as the two refs hash to different array indices. *)
+Theorem get_set_neq : forall s r1 r2 c,
+  cell_index r1 <> cell_index r2 ->
+  get_cell (set_cell s r2 c) r1 = get_cell s r1.
+Proof.
+  intros s r1 r2 c Hneq.
+  unfold get_cell, set_cell.
+  exact (@get_set_other Cell s (cell_index r2) (cell_index r1) c
+    (fun H => Hneq (eq_sym H))).
+Qed.
+
+(* The smoke value computes to [Some 35]. *)
+Theorem smoke_computes : smoke = Some 35%Z.
+Proof. vm_compute. reflexivity. Qed.
+
+(* A cell whose formula references itself is detected as a cycle and
+   returns [None]. *)
 Theorem eval_self_cycle_diverges :
   let r := mkRef 0 0 in
   let s := set_cell new_sheet r (CForm (ERef r)) in
   eval_cell DEFAULT_FUEL s r = None.
 Proof. vm_compute. reflexivity. Qed.
 
-(* Division by zero in a formula returns [None]. *)
+(* Division by zero returns [None]. *)
 Theorem eval_divzero :
   let r := mkRef 0 0 in
   let s := set_cell new_sheet r

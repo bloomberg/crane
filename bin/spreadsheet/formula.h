@@ -10,6 +10,7 @@
 
 #include "Spreadsheet.h"
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -17,17 +18,24 @@
 namespace formula {
 
 // Parse a formula source string.  Accepts:
-//   * decimal integer literals, optionally signed (e.g. -42)
-//   * cell references in the form A1, Z99, etc. (column A..Z, row 1..)
+//   * decimal integer literals (overflow into int64 is rejected)
+//   * cell references: <letter(s)><1-based row>, bounds-checked
+//     against the kernel grid
 //   * binary operators + - * / with usual precedence
-//   * parentheses
+//   * parentheses, unary minus
 //
-// Returns std::nullopt if the string is not a valid formula.  Whitespace
-// is ignored.
+// Returns std::nullopt on any malformed input or out-of-range literal.
 std::optional<Spreadsheet::Expr> parse(std::string_view src);
 
-// Convert a (col, row) reference back to a label like "A1".  Used for
-// rendering the cell-name column of the grid.
+// Parse a plain (possibly negative) integer literal with optional
+// surrounding whitespace.  Rejects overflow into int64.  Returns true
+// on success.
+bool parse_int_literal(std::string_view src, int64_t& out);
+
+// "<col><row+1>", e.g. (0, 0) -> "A1", (701, 99) -> "ZZ100".
 std::string label_of(int64_t col, int64_t row);
+
+// Just the column letter(s), e.g. 0 -> "A", 26 -> "AA".
+std::string col_label(int64_t col);
 
 }  // namespace formula

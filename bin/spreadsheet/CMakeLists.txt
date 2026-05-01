@@ -65,3 +65,18 @@ target_include_directories(spreadsheet PRIVATE
 target_link_libraries(spreadsheet PRIVATE imgui)
 target_compile_options(spreadsheet PRIVATE
   -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable)
+
+# --- Parser unit tests (formula.cpp only) -----------------------------------
+
+add_executable(formula_test
+  formula_test.cpp
+  formula.cpp
+  ${GEN_DIR}/Spreadsheet.cpp)
+target_include_directories(formula_test PRIVATE
+  ${GEN_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${CRANE_THEORIES_CPP})
+target_compile_options(formula_test PRIVATE
+  -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable)
+enable_testing()
+add_test(NAME formula_test COMMAND formula_test)

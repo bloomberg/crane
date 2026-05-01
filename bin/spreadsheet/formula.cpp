@@ -5,6 +5,7 @@
 
 #include <cctype>
 #include <cstdint>
+#include <limits>
 
 namespace formula {
 namespace {
@@ -15,6 +16,14 @@ bool is_alpha(char c) {
 
 char upper(char c) {
   return (c >= 'a' && c <= 'z') ? static_cast<char>(c - 'a' + 'A') : c;
+}
+
+// Add a digit to a positive int64 accumulator; return false on overflow.
+bool accumulate_digit(int64_t& v, int digit) {
+  constexpr int64_t MAX = std::numeric_limits<int64_t>::max();
+  if (v > (MAX - digit) / 10) return false;
+  v = v * 10 + digit;
+  return true;
 }
 
 struct Parser {
@@ -113,7 +122,7 @@ struct Parser {
     int64_t v = 0;
     bool any = false;
     while (pos < src.size() && std::isdigit(static_cast<unsigned char>(src[pos]))) {
-      v = v * 10 + (src[pos] - '0');
+      if (!accumulate_digit(v, src[pos] - '0')) return std::nullopt;
       ++pos;
       any = true;
     }
@@ -139,7 +148,7 @@ struct Parser {
     int64_t row1 = 0;
     bool any = false;
     while (pos < src.size() && std::isdigit(static_cast<unsigned char>(src[pos]))) {
-      row1 = row1 * 10 + (src[pos] - '0');
+      if (!accumulate_digit(row1, src[pos] - '0')) return std::nullopt;
       ++pos;
       any = true;
     }
@@ -164,6 +173,24 @@ std::optional<Spreadsheet::Expr> parse(std::string_view src) {
   return e;
 }
 
+bool parse_int_literal(std::string_view src, int64_t& out) {
+  size_t i = 0;
+  while (i < src.size() && std::isspace(static_cast<unsigned char>(src[i]))) ++i;
+  bool neg = false;
+  if (i < src.size() && src[i] == '-') { neg = true; ++i; }
+  int64_t v = 0;
+  bool any = false;
+  while (i < src.size() && std::isdigit(static_cast<unsigned char>(src[i]))) {
+    if (!accumulate_digit(v, src[i] - '0')) return false;
+    ++i;
+    any = true;
+  }
+  while (i < src.size() && std::isspace(static_cast<unsigned char>(src[i]))) ++i;
+  if (!any || i != src.size()) return false;
+  out = neg ? -v : v;
+  return true;
+}
+
 std::string label_of(int64_t col, int64_t row) {
   std::string s;
   if (col < 26) {
@@ -174,6 +201,18 @@ std::string label_of(int64_t col, int64_t row) {
     s += static_cast<char>('A' + adj % 26);
   }
   s += std::to_string(row + 1);
+  return s;
+}
+
+std::string col_label(int64_t col) {
+  std::string s;
+  if (col < 26) {
+    s += static_cast<char>('A' + col);
+  } else {
+    int64_t adj = col - 26;
+    s += static_cast<char>('A' + adj / 26);
+    s += static_cast<char>('A' + adj % 26);
+  }
   return s;
 }
 
