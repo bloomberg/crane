@@ -540,3 +540,14 @@
   (alias runtest)
   (deps cotree.t.exe)
   (action (run ./cotree.t.exe))))
+
+(subdir spreadsheet
+ (rule
+  (targets spreadsheet.t.exe)
+  (deps Spreadsheet.vo spreadsheet.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} spreadsheet.t.exe spreadsheet.cpp spreadsheet.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps spreadsheet.t.exe)
+  (action (run ./spreadsheet.t.exe))))

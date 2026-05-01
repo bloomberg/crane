@@ -9,6 +9,14 @@
 namespace formula {
 namespace {
 
+bool is_alpha(char c) {
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
+char upper(char c) {
+  return (c >= 'a' && c <= 'z') ? static_cast<char>(c - 'a' + 'A') : c;
+}
+
 struct Parser {
   std::string_view src;
   size_t pos = 0;
@@ -79,7 +87,6 @@ struct Parser {
   std::optional<Spreadsheet::Expr> factor() {
     char c = peek();
     if (c == '-') {
-      // Unary minus: sugar for (0 - factor).
       ++pos;
       auto e = factor();
       if (!e) return std::nullopt;
@@ -95,11 +102,7 @@ struct Parser {
     if (std::isdigit(static_cast<unsigned char>(c))) {
       return parse_int();
     }
-    if (c >= 'A' && c <= 'Z') {
-      return parse_ref();
-    }
-    if (c >= 'a' && c <= 'z') {
-      // Lowercase cell letter, fold to upper.
+    if (is_alpha(c)) {
       return parse_ref();
     }
     return std::nullopt;
@@ -118,13 +121,21 @@ struct Parser {
     return Spreadsheet::Expr::eint(v);
   }
 
+  // Cell references: one or two letters followed by a 1-based row.
+  // Two-letter columns map A..Z (single) then AA, AB, ..., ZZ.
+  // Bounds-checked against Spreadsheet::NUM_COLS / NUM_ROWS so that
+  // out-of-grid references are rejected at parse time.
   std::optional<Spreadsheet::Expr> parse_ref() {
     skip_ws();
-    if (pos >= src.size()) return std::nullopt;
-    char letter = src[pos];
-    if (letter >= 'a' && letter <= 'z') letter = static_cast<char>(letter - 'a' + 'A');
-    if (letter < 'A' || letter > 'Z') return std::nullopt;
-    ++pos;
+    if (pos >= src.size() || !is_alpha(src[pos])) return std::nullopt;
+    char c1 = upper(src[pos++]);
+    int64_t col;
+    if (pos < src.size() && is_alpha(src[pos])) {
+      char c2 = upper(src[pos++]);
+      col = 26 + int64_t(c1 - 'A') * 26 + int64_t(c2 - 'A');
+    } else {
+      col = int64_t(c1 - 'A');
+    }
     int64_t row1 = 0;
     bool any = false;
     while (pos < src.size() && std::isdigit(static_cast<unsigned char>(src[pos]))) {
@@ -133,8 +144,11 @@ struct Parser {
       any = true;
     }
     if (!any || row1 < 1) return std::nullopt;
-    int64_t col = letter - 'A';
-    int64_t row = row1 - 1;  // 1-based to 0-based
+    int64_t row = row1 - 1;
+    if (col < 0 || col >= Spreadsheet::NUM_COLS ||
+        row < 0 || row >= Spreadsheet::NUM_ROWS) {
+      return std::nullopt;
+    }
     Spreadsheet::CellRef r{col, row};
     return Spreadsheet::Expr::eref(r);
   }
@@ -151,9 +165,14 @@ std::optional<Spreadsheet::Expr> parse(std::string_view src) {
 }
 
 std::string label_of(int64_t col, int64_t row) {
-  if (col < 0 || col > 25) return "?";
   std::string s;
-  s += static_cast<char>('A' + col);
+  if (col < 26) {
+    s += static_cast<char>('A' + col);
+  } else {
+    int64_t adj = col - 26;
+    s += static_cast<char>('A' + adj / 26);
+    s += static_cast<char>('A' + adj % 26);
+  }
   s += std::to_string(row + 1);
   return s;
 }

@@ -21,20 +21,22 @@
 
 namespace {
 
-constexpr int NUM_COLS = 26;
-constexpr int NUM_ROWS = 100;
+const int NUM_COLS = static_cast<int>(Spreadsheet::NUM_COLS);
+const int NUM_ROWS = static_cast<int>(Spreadsheet::NUM_ROWS);
 
-// Per-cell editing state.  Holds the source string the user is typing,
-// independent of the kernel's evaluated value.  When the user commits
-// (Enter or focus lost), we parse and write back into the kernel.
+// Per-cell editing state.  Holds the source string the user is typing
+// (independent of the kernel's evaluated value), plus a flag that records
+// whether the last commit failed to parse.  Setting [parse_error] makes
+// the cell render "#PARSE" in place of an evaluated value.
 struct EditBuf {
   std::array<char, 128> buf{};
+  bool parse_error = false;
 };
 
 class App {
  public:
   App() : sheet_(Spreadsheet::new_sheet) {
-    edits_.resize(NUM_COLS * NUM_ROWS);
+    edits_.resize(static_cast<size_t>(NUM_COLS) * NUM_ROWS);
   }
 
   void render() {
@@ -53,18 +55,28 @@ class App {
             ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoHide,
             32.0f);
         for (int c = 0; c < NUM_COLS; ++c) {
-          char label[2] = {static_cast<char>('A' + c), '\0'};
-          ImGui::TableSetupColumn(label, ImGuiTableColumnFlags_WidthFixed, 80.0f);
+          std::string label = formula::label_of(c, 0);
+          // label_of returns "<col><row+1>", strip the row part for headers.
+          while (!label.empty() &&
+                 std::isdigit(static_cast<unsigned char>(label.back()))) {
+            label.pop_back();
+          }
+          ImGui::TableSetupColumn(label.c_str(),
+              ImGuiTableColumnFlags_WidthFixed, 80.0f);
         }
         ImGui::TableHeadersRow();
 
-        for (int r = 0; r < NUM_ROWS; ++r) {
-          ImGui::TableNextRow();
-          ImGui::TableSetColumnIndex(0);
-          ImGui::Text("%d", r + 1);
-          for (int c = 0; c < NUM_COLS; ++c) {
-            ImGui::TableSetColumnIndex(c + 1);
-            cell_widget(c, r);
+        ImGuiListClipper clipper;
+        clipper.Begin(NUM_ROWS);
+        while (clipper.Step()) {
+          for (int r = clipper.DisplayStart; r < clipper.DisplayEnd; ++r) {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("%d", r + 1);
+            for (int c = 0; c < NUM_COLS; ++c) {
+              ImGui::TableSetColumnIndex(c + 1);
+              cell_widget(c, r);
+            }
           }
         }
         ImGui::EndTable();
@@ -79,7 +91,10 @@ class App {
       if (ImGui::BeginMenu("File")) {
         if (ImGui::MenuItem("New")) {
           sheet_ = Spreadsheet::new_sheet;
-          for (auto& e : edits_) e.buf[0] = '\0';
+          for (auto& e : edits_) {
+            e.buf[0] = '\0';
+            e.parse_error = false;
+          }
         }
         ImGui::EndMenu();
       }
@@ -88,45 +103,44 @@ class App {
             "Type a number to set a literal.\n"
             "Type =A1+B2 etc. to set a formula.\n"
             "Operators: + - * / and parentheses.\n"
-            "Empty input clears the cell.");
+            "Empty input clears the cell.\n"
+            "#PARSE - the formula didn't parse.\n"
+            "#ERR   - cycle, division by zero, or out of fuel.");
         ImGui::EndMenu();
       }
       ImGui::EndMenuBar();
     }
   }
 
-  int idx(int c, int r) const { return r * NUM_COLS + c; }
+  size_t idx(int c, int r) const {
+    return static_cast<size_t>(r) * NUM_COLS + c;
+  }
 
   void cell_widget(int c, int r) {
     EditBuf& eb = edits_[idx(c, r)];
 
-    ImGui::PushID(idx(c, r));
+    ImGui::PushID(static_cast<int>(idx(c, r)));
     ImGui::SetNextItemWidth(-FLT_MIN);
 
-    // The label shown when the cell is not focused: the evaluated value
-    // (or "#ERR" if the formula failed).  When focused, ImGui shows the
-    // raw source the user is editing.
     if (ImGui::InputText("##cell", eb.buf.data(), eb.buf.size(),
                          ImGuiInputTextFlags_EnterReturnsTrue |
                          ImGuiInputTextFlags_AutoSelectAll)) {
       commit(c, r);
     }
     bool focused = ImGui::IsItemActive();
+
     if (!focused) {
-      // Overlay the evaluated value on top of the input.  We do this by
-      // drawing text aligned to the same rect.  Simple approach: when the
-      // user is not editing, show the evaluated value via tooltip /
-      // overlay.  For minimum noise we show it directly when buf is empty
-      // for non-formula cells, otherwise show a separate display string.
       auto display = display_for(c, r, eb);
-      if (display && !focused) {
+      if (display) {
         ImVec2 rect_min = ImGui::GetItemRectMin();
         ImVec2 rect_max = ImGui::GetItemRectMax();
         ImDrawList* dl = ImGui::GetWindowDrawList();
-        // Overpaint with the cell's background colour, then write the
-        // evaluated value.  We use the BG and Text cols from the style.
         ImU32 bg = ImGui::GetColorU32(ImGuiCol_FrameBg);
         ImU32 fg = ImGui::GetColorU32(ImGuiCol_Text);
+        if (eb.parse_error || (display->size() >= 4 &&
+                                display->compare(0, 4, "#ERR") == 0)) {
+          fg = IM_COL32(220, 80, 80, 255);
+        }
         dl->AddRectFilled(rect_min, rect_max, bg);
         ImVec2 pad = ImGui::GetStyle().FramePadding;
         dl->AddText({rect_min.x + pad.x, rect_min.y + pad.y}, fg,
@@ -138,10 +152,12 @@ class App {
 
   // Build the string to display when the cell is not being edited.
   std::optional<std::string> display_for(int c, int r, const EditBuf& eb) {
+    if (eb.parse_error) return std::string("#PARSE");
+
     Spreadsheet::CellRef ref{static_cast<int64_t>(c), static_cast<int64_t>(r)};
     auto cell = Spreadsheet::get_cell(sheet_, ref);
     if (std::holds_alternative<Spreadsheet::Cell::CEmpty>(cell.v())) {
-      return std::nullopt;  // show the empty input
+      return std::nullopt;
     }
     auto val = Spreadsheet::eval_cell(Spreadsheet::DEFAULT_FUEL, sheet_, ref);
     if (!val) return std::string("#ERR");
@@ -157,22 +173,20 @@ class App {
 
     if (src.empty()) {
       sheet_ = Spreadsheet::set_cell(sheet_, ref, Spreadsheet::Cell::cempty());
+      eb.parse_error = false;
       return;
     }
     if (src.front() == '=') {
       auto e = formula::parse(src.substr(1));
       if (!e) {
-        // Leave the buffer alone but mark the cell as a literal "0" so
-        // the user can see something happened?  For now: keep the old
-        // value, surface the parse failure via tooltip.
-        // TODO(spreadsheet): persist parse-failure state per cell.
+        eb.parse_error = true;
         return;
       }
       sheet_ = Spreadsheet::set_cell(sheet_, ref,
           Spreadsheet::Cell::cform(std::move(*e)));
+      eb.parse_error = false;
       return;
     }
-    // Plain integer literal.
     int64_t v = 0;
     bool neg = false;
     size_t i = 0;
@@ -186,6 +200,9 @@ class App {
     if (any && i == src.size()) {
       sheet_ = Spreadsheet::set_cell(sheet_, ref,
           Spreadsheet::Cell::clit(neg ? -v : v));
+      eb.parse_error = false;
+    } else {
+      eb.parse_error = true;
     }
   }
 
@@ -225,7 +242,6 @@ int main() {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    // Cover the whole client area with the spreadsheet window.
     ImGuiViewport* vp = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(vp->WorkPos);
     ImGui::SetNextWindowSize(vp->WorkSize);

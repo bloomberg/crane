@@ -1,0 +1,15 @@
+; Coq theory for the spreadsheet front-end's extraction wrapper.
+;
+; Spreadsheet/Spreadsheet.v re-exports Crane.Examples.Spreadsheet.Spreadsheet
+; and calls Crane Extraction; the -output-directory flag, combined with the
+; subdir layout, makes the plugin write the resulting Spreadsheet.h /
+; Spreadsheet.cpp into bin/spreadsheet/Spreadsheet/ so the CMake build
+; can pick them up directly.
+(include_subdirs qualified)
+
+(coq.theory
+ (name CraneSpreadsheet)
+ (package rocq-crane)
+ (plugins rocq-crane.plugin)
+ (theories Stdlib Crane ITree ExtLib Paco)
+ (flags (:standard -output-directory %{project_root}/bin/spreadsheet)))
