@@ -125,7 +125,7 @@ LoopifyListWindows::span_eq(const unsigned int first, List<unsigned int> lst) {
             std::get<typename List<unsigned int>::Cons>(lst.v_mut());
         if (first == d_a0) {
           _stack.emplace_back(_Cont1{d_a0});
-          _stack.emplace_back(_Enter{*(d_a1)});
+          _stack.emplace_back(_Enter{std::move(*(d_a1))});
         } else {
           _result = std::make_pair(List<unsigned int>::nil(), lst);
         }

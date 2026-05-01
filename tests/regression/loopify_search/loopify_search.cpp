@@ -1047,10 +1047,10 @@ LoopifySearch::perms_choices_fuel(const unsigned int fuel,
                 _Resume1{map_cons(d_a0, List<List<unsigned int>>::cons(
                                             List<unsigned int>::nil(),
                                             List<List<unsigned int>>::nil()))});
-            _stack.emplace_back(_Enter{orig, *(d_a1), f});
+            _stack.emplace_back(_Enter{orig, std::move(*(d_a1)), f});
           } else {
             _stack.emplace_back(_After3{remaining, remaining, f, d_a0});
-            _stack.emplace_back(_Enter{orig, *(d_a1), f});
+            _stack.emplace_back(_Enter{orig, std::move(*(d_a1)), f});
           }
         }
       }

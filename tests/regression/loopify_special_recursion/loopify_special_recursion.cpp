@@ -43,7 +43,7 @@ LoopifySpecialRecursion::process_twice_fuel(const unsigned int fuel,
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
           _stack.emplace_back(_Cont1{d_a0, fuel_});
-          _stack.emplace_back(_Enter{*(d_a1), fuel_});
+          _stack.emplace_back(_Enter{std::move(*(d_a1)), fuel_});
         }
       }
     } else if (std::holds_alternative<_Cont1>(_frame)) {

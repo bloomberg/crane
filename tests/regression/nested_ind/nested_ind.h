@@ -613,7 +613,6 @@ struct NestedInd {
         return expr::lit(f(d_a0));
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
-        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         return expr::add([&]() {
           std::function<List<expr>(List<expr>)> aux;
           aux = [&](List<expr> l) -> List<expr> {
@@ -625,11 +624,10 @@ struct NestedInd {
               return List<expr>::cons(d_a0.lit_map(f), aux(*(d_a1)));
             }
           };
-          return aux(d_a0_value);
+          return aux(*(d_a0));
         }());
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
-        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         return expr::mul([&]() {
           std::function<List<expr>(List<expr>)> aux;
           aux = [&](List<expr> l) -> List<expr> {
@@ -641,7 +639,7 @@ struct NestedInd {
               return List<expr>::cons(d_a0.lit_map(f), aux(*(d_a1)));
             }
           };
-          return aux(d_a0_value);
+          return aux(*(d_a0));
         }());
       }
     }
@@ -653,7 +651,6 @@ struct NestedInd {
         return List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
-        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         std::function<List<unsigned int>(List<expr>)> aux;
         aux = [&](List<expr> l) -> List<unsigned int> {
           if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
@@ -664,10 +661,9 @@ struct NestedInd {
             return d_a00.literals().app(aux(*(d_a10)));
           }
         };
-        return aux(d_a0_value);
+        return aux(*(d_a0));
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
-        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         std::function<List<unsigned int>(List<expr>)> aux;
         aux = [&](List<expr> l) -> List<unsigned int> {
           if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
@@ -678,7 +674,7 @@ struct NestedInd {
             return d_a00.literals().app(aux(*(d_a10)));
           }
         };
-        return aux(d_a0_value);
+        return aux(*(d_a0));
       }
     }
 
@@ -688,7 +684,6 @@ struct NestedInd {
         return 0u;
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
-        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         return ([&]() {
           std::function<unsigned int(List<expr>)> aux;
           aux = [&](List<expr> l) -> unsigned int {
@@ -700,11 +695,10 @@ struct NestedInd {
               return std::max(d_a0.expr_depth(), aux(*(d_a1)));
             }
           };
-          return aux(d_a0_value);
+          return aux(*(d_a0));
         }() + 1);
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
-        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         return ([&]() {
           std::function<unsigned int(List<expr>)> aux;
           aux = [&](List<expr> l) -> unsigned int {
@@ -716,7 +710,7 @@ struct NestedInd {
               return std::max(d_a0.expr_depth(), aux(*(d_a1)));
             }
           };
-          return aux(d_a0_value);
+          return aux(*(d_a0));
         }() + 1);
       }
     }
@@ -727,7 +721,6 @@ struct NestedInd {
         return 1u;
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
-        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         return ([&]() {
           std::function<unsigned int(List<expr>)> aux;
           aux = [&](List<expr> l) -> unsigned int {
@@ -739,11 +732,10 @@ struct NestedInd {
               return (d_a0.expr_size() + aux(*(d_a1)));
             }
           };
-          return aux(d_a0_value);
+          return aux(*(d_a0));
         }() + 1);
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
-        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         return ([&]() {
           std::function<unsigned int(List<expr>)> aux;
           aux = [&](List<expr> l) -> unsigned int {
@@ -755,7 +747,7 @@ struct NestedInd {
               return (d_a0.expr_size() + aux(*(d_a1)));
             }
           };
-          return aux(d_a0_value);
+          return aux(*(d_a0));
         }() + 1);
       }
     }
@@ -767,7 +759,6 @@ struct NestedInd {
         return d_a0;
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
-        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         std::function<unsigned int(List<expr>)> sum_all;
         sum_all = [&](List<expr> l) -> unsigned int {
           if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
@@ -778,10 +769,9 @@ struct NestedInd {
             return (d_a00.eval() + sum_all(*(d_a10)));
           }
         };
-        return sum_all(d_a0_value);
+        return sum_all(*(d_a0));
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
-        List<expr> d_a0_value = List<NestedInd::expr>(*(d_a0));
         std::function<unsigned int(List<expr>)> prod_all;
         prod_all = [&](List<expr> l) -> unsigned int {
           if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
@@ -792,7 +782,7 @@ struct NestedInd {
             return (d_a00.eval() * prod_all(*(d_a10)));
           }
         };
-        return prod_all(d_a0_value);
+        return prod_all(*(d_a0));
       }
     }
 

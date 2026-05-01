@@ -58,7 +58,6 @@ List<unsigned int> LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-        List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
         std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
             filter_multiples;
         filter_multiples = [&](unsigned int p,
@@ -83,16 +82,16 @@ List<unsigned int> LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
               auto _f = std::move(std::get<_Enter>(_frame));
               List<unsigned int> rest = std::move(_f.rest);
               if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                      rest.v())) {
+                      rest.v_mut())) {
                 _result = List<unsigned int>::nil();
               } else {
-                const auto &[d_a00, d_a10] =
-                    std::get<typename List<unsigned int>::Cons>(rest.v());
+                auto &[d_a00, d_a10] =
+                    std::get<typename List<unsigned int>::Cons>(rest.v_mut());
                 if ((p ? d_a00 % p : d_a00) == 0u) {
-                  _stack.emplace_back(_Enter{*(d_a10)});
+                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
                 } else {
                   _stack.emplace_back(_Resume1{d_a00});
-                  _stack.emplace_back(_Enter{*(d_a10)});
+                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
                 }
               }
             } else {
@@ -108,7 +107,7 @@ List<unsigned int> LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l = filter_multiples(d_a0, d_a1_value);
+        _loop_l = filter_multiples(d_a0, *(d_a1));
         _loop_fuel = f;
         continue;
       }
@@ -285,7 +284,6 @@ List<unsigned int> LoopifyAlgorithms::nub_aux(const List<unsigned int> &l,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-        List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
         std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
             filter_out;
         filter_out = [&](unsigned int val,
@@ -310,16 +308,16 @@ List<unsigned int> LoopifyAlgorithms::nub_aux(const List<unsigned int> &l,
               auto _f = std::move(std::get<_Enter>(_frame));
               List<unsigned int> rest = std::move(_f.rest);
               if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                      rest.v())) {
+                      rest.v_mut())) {
                 _result = List<unsigned int>::nil();
               } else {
-                const auto &[d_a00, d_a10] =
-                    std::get<typename List<unsigned int>::Cons>(rest.v());
+                auto &[d_a00, d_a10] =
+                    std::get<typename List<unsigned int>::Cons>(rest.v_mut());
                 if (val == d_a00) {
-                  _stack.emplace_back(_Enter{*(d_a10)});
+                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
                 } else {
                   _stack.emplace_back(_Resume1{d_a00});
-                  _stack.emplace_back(_Enter{*(d_a10)});
+                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
                 }
               }
             } else {
@@ -336,7 +334,7 @@ List<unsigned int> LoopifyAlgorithms::nub_aux(const List<unsigned int> &l,
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
         _loop_fuel = f;
-        _loop_l = filter_out(d_a0, d_a1_value);
+        _loop_l = filter_out(d_a0, *(d_a1));
         continue;
       }
     }

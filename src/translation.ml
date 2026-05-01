@@ -5332,7 +5332,15 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       (* IIFE: lambda is invoked immediately, so reference captures are safe.
          Only check the lambda body for nested non-IIFE lambdas. *)
       List.exists stmt_has_lambda body
-    | CPPlambda _ -> true
+    | CPPlambda (_, _, _, true) ->
+      (* [=] value-capture: unique_ptr fields cannot be copied into the closure;
+         preextract into a value binding before the lambda. *)
+      true
+    | CPPlambda (_, _, body, false) ->
+      (* [&] ref-capture: unique_ptr fields are captured by reference, which is
+         fine — no copy. Check the body for nested [=] lambdas that would need
+         preextract. *)
+      List.exists stmt_has_lambda body
     | e ->
       let found = ref false in
       iter_expr_children

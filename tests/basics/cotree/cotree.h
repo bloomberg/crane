@@ -467,7 +467,6 @@ struct Cotree {
 
   template <typename T1> static unsigned int tree_size(const tree<T1> &t) {
     const auto &[d_a0, d_a1] = std::get<typename tree<T1>::Node>(t.v());
-    List<tree<T1>> d_a1_value = List<Cotree::tree<T1>>(*(d_a1));
     return ([&]() {
       std::function<unsigned int(List<tree<T1>>)> aux;
       aux = [&](List<tree<T1>> l) -> unsigned int {
@@ -479,7 +478,7 @@ struct Cotree {
           return (tree_size<T1>(d_a0) + aux(*(d_a1)));
         }
       };
-      return aux(d_a1_value);
+      return aux(*(d_a1));
     }() + 1);
   }
 

@@ -5273,6 +5273,49 @@ let adjust_frame_push_args frame_pointer_safe stmts =
     in
     List.map on_stmt stmts
 
+(** Rewrite [Smatch] nodes in [stmts] whose scrutinee is a value-type accessor
+    [param.v()] for any [param] in [owned_names], setting [smb_is_owned = true]
+    so that the printer emits [param.v_mut()] and [auto& [...]] structured
+    bindings.  This enables [std::move] of child [unique_ptr] fields when the
+    parameter was moved into the handler (not borrowed).
+
+    Does not recurse into lambda bodies — only into statement-level nesting
+    ([Sblock], [Sif], [Swhile], [Smatch] branch bodies, etc.). *)
+let make_owned_param_matches owned_names stmts =
+  let rec rewrite_stmts ss = List.map rewrite_stmt ss
+  and rewrite_stmt s =
+    match s with
+    | Smatch (branches, default) -> (
+      match branches with
+      | br :: _ ->
+        let is_owned_param =
+          (* Value-type inductives: scrutinee = CPPfun_call(CPPmember(id, "v"), []) *)
+          match br.smb_scrutinee with
+          | CPPfun_call (CPPmember (CPPvar id, v_id), [])
+            when Id.to_string v_id = "v" ->
+            List.exists (Id.equal id) owned_names
+          | _ -> false
+        in
+        let branches' =
+          List.map
+            (fun br ->
+              let body' = rewrite_stmts br.smb_body in
+              if is_owned_param then
+                { br with smb_is_owned = true; smb_body = body' }
+              else
+                { br with smb_body = body' })
+            branches
+        in
+        let default' = Option.map rewrite_stmts default in
+        Smatch (branches', default')
+      | [] -> s )
+    | s ->
+      (* Recurse into statement-level nesting.  [Fun.id] for the expression
+         mapper ensures we never descend into [CPPlambda] bodies. *)
+      map_stmt Fun.id rewrite_stmt Fun.id s
+  in
+  rewrite_stmts stmts
+
 (** Move non-trivial values into explicit continuation frames when ownership is
     already local to the loop dispatcher.
 
@@ -5283,9 +5326,11 @@ let adjust_frame_push_args frame_pointer_safe stmts =
     frame is pushed immediately after the continuation frame, so saving it by
     move avoids a deep copy.
 
-    This is deliberately conservative: it does not move arbitrary local
-    variables or dereferenced child pointers, because those need full liveness
-    and ownership proofs. *)
+    For [_Enter] frame pushes the rule is extended: child pointers dereferenced
+    by [CPPderef] (e.g. [*(d_a1)]) are also moved.  These arise from
+    [unique_ptr] fields of a value-type variant that has been matched with
+    [v_mut()] (after [make_owned_param_matches]), so the pointed-to value is
+    mutable and the current iteration is the only owner — moving is safe. *)
 let optimize_frame_push_args frame_field_types stmts =
   if frame_field_types = [] then stmts
   else
@@ -5304,7 +5349,7 @@ let optimize_frame_push_args frame_field_types stmts =
       | Tptr _ | Tvoid | Tauto | Tunknown | Ttodo | Tany | Tdecltype _
        |Tvar _ -> false
     in
-    let should_move ty arg =
+    let should_move ~is_enter ty arg =
       let stripped = strip_ref_and_const_type ty in
       worthwhile_move_type stripped
       &&
@@ -5312,12 +5357,17 @@ let optimize_frame_push_args frame_field_types stmts =
       | CPPmove _ -> false
       | CPPmember (CPPvar id, _) when Id.to_string id = "_f" -> true
       | CPPvar id when Id.to_string id = "_result" -> true
+      | CPPderef _ when is_enter ->
+        (* Dereferenced child pointer (e.g. *(d_a1)) in an _Enter push: safe to
+           move because the iteration that matched v_mut() is the sole owner. *)
+        true
       | _ -> false
     in
-    let adjust_args types args =
+    let adjust_args ~is_enter types args =
       if List.length types = List.length args then
         List.map2
-          (fun ty arg -> if should_move ty arg then CPPmove arg else arg)
+          (fun ty arg ->
+            if should_move ~is_enter ty arg then CPPmove arg else arg)
           types args
       else
         args
@@ -5326,9 +5376,11 @@ let optimize_frame_push_args frame_field_types stmts =
       | Sexpr (CPPfun_call (callee, [CPPstruct_id (name, targs, args)])) as s -> (
         match lookup (Id.to_string name) with
         | Some types ->
+          let is_enter = Id.to_string name = "_Enter" in
           Sexpr
             (CPPfun_call
-               (callee, [CPPstruct_id (name, targs, adjust_args types args)]))
+               (callee,
+                [CPPstruct_id (name, targs, adjust_args ~is_enter types args)]))
         | None -> map_stmt Fun.id on_stmt Fun.id s )
       | s -> map_stmt Fun.id on_stmt Fun.id s
     in
@@ -5658,6 +5710,36 @@ let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
   in
   let init_push =
     make_stack_init ~pointer_safe:pointer_safe_varying varying_params
+  in
+  (* Identify varying params that are moved into the Enter handler (not passed
+     as pointers).  For these, the Smatch scrutinee should use [v_mut()] so
+     that [unique_ptr] child fields are mutable and can be moved into the next
+     [_Enter] frame instead of being deep-copied.
+
+     Mirrors [make_param_copies.bind_field] exactly: use [strip_ref_type]
+     (not [strip_ref_and_const_type]) so that [const T&] params (which are
+     bound as [const T& id = _f.id], not moved) are excluded. *)
+  let owned_varying_names =
+    let pairs =
+      if pointer_safe_varying = [] then
+        List.map (fun p -> (false, p)) varying_params
+      else
+        List.map2 (fun s p -> (s, p)) pointer_safe_varying varying_params
+    in
+    List.filter_map
+      (fun (safe, (id, ty)) ->
+        if safe then None
+        else
+          let stripped = strip_ref_type ty in
+          match stripped with
+          | Tmod (TMconst, _) -> None  (* const-ref bind: not owned *)
+          | t when not (is_trivially_copyable_type t) -> Some id
+          | _ -> None)
+      pairs
+  in
+  let rewritten_body =
+    if owned_varying_names = [] then rewritten_body
+    else make_owned_param_matches owned_varying_names rewritten_body
   in
   (* Enter handler: copy frame fields to locals (only varying params; invariant
      params are captured directly from function scope) *)

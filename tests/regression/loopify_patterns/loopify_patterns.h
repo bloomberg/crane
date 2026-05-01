@@ -317,14 +317,15 @@ struct LoopifyPatterns {
   template <typename T1>
   static list<list<T1>> insert_everywhere(const T1 x, const list<T1> &l) {
     struct _Enter {
-      list<T1> l;
+      const list<T1> *l;
     };
 
     /// Continuation: saves [_s0, map_cons_h] across recursive call.
     struct _Resume1 {
-      decltype(list<T1>::cons(std::declval<const T1 &>(),
-                              list<T1>::cons(std::declval<T1 &>(),
-                                             std::declval<list<T1> &>()))) _s0;
+      decltype(list<T1>::cons(
+          std::declval<const T1 &>(),
+          list<T1>::cons(std::declval<T1 &>(),
+                         *(std::declval<std::unique_ptr<list<T1>> &>())))) _s0;
       std::function<list<list<T1>>(list<list<T1>>)> map_cons_h;
     };
 
@@ -332,20 +333,19 @@ struct LoopifyPatterns {
     list<list<T1>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     /// Frame dispatch: _Enter, _Resume1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = _f.l;
+        const list<T1> &l = *(_f.l);
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = list<list<T1>>::cons(list<T1>::cons(x, list<T1>::nil()),
                                          list<list<T1>>::nil());
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          list<T1> d_a1_value = *(d_a1);
           std::function<list<list<T1>>(list<list<T1>>)> map_cons_h;
           map_cons_h = [&](list<list<T1>> lsts) -> list<list<T1>> {
             struct _Enter {
@@ -368,13 +368,13 @@ struct LoopifyPatterns {
                 auto _f = std::move(std::get<_Enter>(_frame));
                 list<list<T1>> lsts = std::move(_f.lsts);
                 if (std::holds_alternative<typename list<list<T1>>::Nil>(
-                        lsts.v())) {
+                        lsts.v_mut())) {
                   _result = list<list<T1>>::nil();
                 } else {
-                  const auto &[d_a00, d_a10] =
-                      std::get<typename list<list<T1>>::Cons>(lsts.v());
+                  auto &[d_a00, d_a10] =
+                      std::get<typename list<list<T1>>::Cons>(lsts.v_mut());
                   _stack.emplace_back(_Resume1{list<T1>::cons(d_a0, d_a00)});
-                  _stack.emplace_back(_Enter{*(d_a10)});
+                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
                 }
               } else {
                 auto _f = std::move(std::get<_Resume1>(_frame));
@@ -383,9 +383,10 @@ struct LoopifyPatterns {
             }
             return _result;
           };
-          _stack.emplace_back(_Resume1{
-              list<T1>::cons(x, list<T1>::cons(d_a0, d_a1_value)), map_cons_h});
-          _stack.emplace_back(_Enter{d_a1_value});
+          _stack.emplace_back(
+              _Resume1{list<T1>::cons(x, list<T1>::cons(d_a0, *(d_a1))),
+                       std::move(map_cons_h)});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));

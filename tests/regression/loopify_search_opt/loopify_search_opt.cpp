@@ -415,13 +415,13 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int fuel,
                 } else {
                   unsigned int n_ = n - 1;
                   if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                          xs.v())) {
+                          xs.v_mut())) {
                     _result = List<unsigned int>::nil();
                   } else {
-                    const auto &[d_a03, d_a13] =
-                        std::get<typename List<unsigned int>::Cons>(xs.v());
+                    auto &[d_a03, d_a13] =
+                        std::get<typename List<unsigned int>::Cons>(xs.v_mut());
                     _stack.emplace_back(_Resume1{d_a03});
-                    _stack.emplace_back(_Enter{*(d_a13), n_});
+                    _stack.emplace_back(_Enter{std::move(*(d_a13)), n_});
                   }
                 }
               } else {

@@ -504,7 +504,7 @@ LoopifyTrees::tree_max(LoopifyTrees::tree<unsigned int> t1,
             max_val = d_a1;
           }
           _stack.emplace_back(_After2{*(d_a00), *(d_a0), max_val});
-          _stack.emplace_back(_Enter{*(d_a20), *(d_a2)});
+          _stack.emplace_back(_Enter{std::move(*(d_a20)), std::move(*(d_a2))});
         }
       }
     } else if (std::holds_alternative<_After2>(_frame)) {
@@ -1027,15 +1027,16 @@ LoopifyTrees::all_paths_sum(const LoopifyTrees::tree<unsigned int> &t) {
         LoopifyTrees::tree<unsigned int> tree0 = std::move(_f.tree0);
         unsigned int acc = _f.acc;
         if (std::holds_alternative<
-                typename LoopifyTrees::tree<unsigned int>::Leaf>(tree0.v())) {
+                typename LoopifyTrees::tree<unsigned int>::Leaf>(
+                tree0.v_mut())) {
           _result = acc;
         } else {
-          const auto &[d_a0, d_a1, d_a2] =
+          auto &[d_a0, d_a1, d_a2] =
               std::get<typename LoopifyTrees::tree<unsigned int>::Node>(
-                  tree0.v());
+                  tree0.v_mut());
           unsigned int new_acc = (acc + d_a1);
           _stack.emplace_back(_After2{*(d_a0), new_acc});
-          _stack.emplace_back(_Enter{*(d_a2), new_acc});
+          _stack.emplace_back(_Enter{std::move(*(d_a2)), new_acc});
         }
       } else if (std::holds_alternative<_After2>(_frame)) {
         auto _f = std::move(std::get<_After2>(_frame));

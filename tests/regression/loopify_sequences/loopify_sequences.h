@@ -244,7 +244,6 @@ struct LoopifySequences {
       return List<T1>::nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      List<T1> d_a1_value = List<T1>(*(d_a1));
       std::function<List<T1>(List<T1>)> go;
       go = [&](List<T1> rest) -> List<T1> {
         struct _Enter {
@@ -267,13 +266,13 @@ struct LoopifySequences {
           if (std::holds_alternative<_Enter>(_frame)) {
             auto _f = std::move(std::get<_Enter>(_frame));
             List<T1> rest = std::move(_f.rest);
-            if (std::holds_alternative<typename List<T1>::Nil>(rest.v())) {
+            if (std::holds_alternative<typename List<T1>::Nil>(rest.v_mut())) {
               _result = List<T1>::nil();
             } else {
-              const auto &[d_a00, d_a10] =
-                  std::get<typename List<T1>::Cons>(rest.v());
+              auto &[d_a00, d_a10] =
+                  std::get<typename List<T1>::Cons>(rest.v_mut());
               _stack.emplace_back(_Resume1{sep, d_a00});
-              _stack.emplace_back(_Enter{*(d_a10)});
+              _stack.emplace_back(_Enter{std::move(*(d_a10))});
             }
           } else {
             auto _f = std::move(std::get<_Resume1>(_frame));
@@ -282,7 +281,7 @@ struct LoopifySequences {
         }
         return _result;
       };
-      return List<T1>::cons(d_a0, go(d_a1_value));
+      return List<T1>::cons(d_a0, go(*(d_a1)));
     }
   } /// transpose l transposes a list of lists.
 
@@ -347,19 +346,19 @@ struct LoopifySequences {
                 auto _f = std::move(std::get<_Enter>(_frame));
                 List<List<T1>> l = std::move(_f.l);
                 if (std::holds_alternative<typename List<List<T1>>::Nil>(
-                        l.v())) {
+                        l.v_mut())) {
                   _result = List<T1>::nil();
                 } else {
-                  const auto &[d_a00, d_a10] =
-                      std::get<typename List<List<T1>>::Cons>(l.v());
+                  auto &[d_a00, d_a10] =
+                      std::get<typename List<List<T1>>::Cons>(l.v_mut());
                   if (std::holds_alternative<typename List<T1>::Nil>(
                           d_a00.v())) {
-                    _stack.emplace_back(_Enter{*(d_a10)});
+                    _stack.emplace_back(_Enter{std::move(*(d_a10))});
                   } else {
                     const auto &[d_a01, d_a11] =
                         std::get<typename List<T1>::Cons>(d_a00.v());
                     _stack.emplace_back(_Resume1{d_a01});
-                    _stack.emplace_back(_Enter{*(d_a10)});
+                    _stack.emplace_back(_Enter{std::move(*(d_a10))});
                   }
                 }
               } else {
@@ -391,19 +390,19 @@ struct LoopifySequences {
                 auto _f = std::move(std::get<_Enter>(_frame));
                 List<List<T1>> l = std::move(_f.l);
                 if (std::holds_alternative<typename List<List<T1>>::Nil>(
-                        l.v())) {
+                        l.v_mut())) {
                   _result = List<List<T1>>::nil();
                 } else {
-                  const auto &[d_a01, d_a11] =
-                      std::get<typename List<List<T1>>::Cons>(l.v());
+                  auto &[d_a01, d_a11] =
+                      std::get<typename List<List<T1>>::Cons>(l.v_mut());
                   if (std::holds_alternative<typename List<T1>::Nil>(
                           d_a01.v())) {
-                    _stack.emplace_back(_Enter{*(d_a11)});
+                    _stack.emplace_back(_Enter{std::move(*(d_a11))});
                   } else {
                     const auto &[d_a02, d_a12] =
                         std::get<typename List<T1>::Cons>(d_a01.v());
                     _stack.emplace_back(_Resume1{*(d_a12)});
-                    _stack.emplace_back(_Enter{*(d_a11)});
+                    _stack.emplace_back(_Enter{std::move(*(d_a11))});
                   }
                 }
               } else {

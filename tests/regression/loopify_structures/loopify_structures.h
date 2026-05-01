@@ -1158,7 +1158,7 @@ struct LoopifyStructures {
                 max_val = d_a0;
               }
               _stack.emplace_back(_After2{d_a1.get(), *(d_a10), max_val});
-              _stack.emplace_back(_Enter{d_a2.get(), *(d_a20)});
+              _stack.emplace_back(_Enter{d_a2.get(), std::move(*(d_a20))});
             }
           }
         } else if (std::holds_alternative<_After2>(_frame)) {

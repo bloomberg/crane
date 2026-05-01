@@ -1432,7 +1432,8 @@ LoopifyLists::split_at(const unsigned int n,
           _result = std::make_pair(list<unsigned int>::nil(), l);
         } else {
           _stack.emplace_back(_Cont1{d_a0});
-          _stack.emplace_back(_Enter{*(d_a1), (((n - 1u) > n ? 0 : (n - 1u)))});
+          _stack.emplace_back(
+              _Enter{std::move(*(d_a1)), (((n - 1u) > n ? 0 : (n - 1u)))});
         }
       }
     } else {

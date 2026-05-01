@@ -750,7 +750,7 @@ LoopifyPatterns::process_twice_fuel(const unsigned int fuel,
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                   l.v_mut());
           _stack.emplace_back(_Cont1{d_a0, f});
-          _stack.emplace_back(_Enter{*(d_a1), f});
+          _stack.emplace_back(_Enter{std::move(*(d_a1)), f});
         }
       }
     } else if (std::holds_alternative<_Cont1>(_frame)) {
@@ -1074,7 +1074,7 @@ LoopifyPatterns::process_twice_alt_fuel(const unsigned int fuel,
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                   l.v_mut());
           _stack.emplace_back(_Cont1{d_a0, f});
-          _stack.emplace_back(_Enter{*(d_a1), f});
+          _stack.emplace_back(_Enter{std::move(*(d_a1)), f});
         }
       }
     } else if (std::holds_alternative<_Cont1>(_frame)) {

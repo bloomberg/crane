@@ -407,13 +407,13 @@ struct LoopifyHofs {
             if (std::holds_alternative<_Enter>(_frame)) {
               auto _f = std::move(std::get<_Enter>(_frame));
               List<T2> l = std::move(_f.l);
-              if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
+              if (std::holds_alternative<typename List<T2>::Nil>(l.v_mut())) {
                 _result = List<std::pair<T1, T2>>::nil();
               } else {
-                const auto &[d_a0, d_a1] =
-                    std::get<typename List<T2>::Cons>(l.v());
+                auto &[d_a0, d_a1] =
+                    std::get<typename List<T2>::Cons>(l.v_mut());
                 _stack.emplace_back(_Resume1{std::make_pair(x, d_a0)});
-                _stack.emplace_back(_Enter{*(d_a1)});
+                _stack.emplace_back(_Enter{std::move(*(d_a1))});
               }
             } else {
               auto _f = std::move(std::get<_Resume1>(_frame));

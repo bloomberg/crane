@@ -273,7 +273,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(LoopifyMoreTrees::tree t1,
               std::get<typename LoopifyMoreTrees::tree::Node>(t2.v_mut());
           _stack.emplace_back(
               _After2{*(d_a00), *(d_a0), std::max(d_a1, d_a10)});
-          _stack.emplace_back(_Enter{*(d_a20), *(d_a2)});
+          _stack.emplace_back(_Enter{std::move(*(d_a20)), std::move(*(d_a2))});
         }
       }
     } else if (std::holds_alternative<_After2>(_frame)) {

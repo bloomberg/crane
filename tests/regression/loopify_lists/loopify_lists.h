@@ -371,13 +371,13 @@ struct LoopifyLists {
               auto _f = std::move(std::get<_Enter>(_frame));
               list<T1> l2 = std::move(_f.l2);
               list<T1> l1 = std::move(_f.l1);
-              if (std::holds_alternative<typename list<T1>::Nil>(l1.v())) {
+              if (std::holds_alternative<typename list<T1>::Nil>(l1.v_mut())) {
                 _result = std::move(l2);
               } else {
-                const auto &[d_a0, d_a1] =
-                    std::get<typename list<T1>::Cons>(l1.v());
+                auto &[d_a0, d_a1] =
+                    std::get<typename list<T1>::Cons>(l1.v_mut());
                 _stack.emplace_back(_Resume1{d_a0});
-                _stack.emplace_back(_Enter{std::move(l2), *(d_a1)});
+                _stack.emplace_back(_Enter{std::move(l2), std::move(*(d_a1))});
               }
             } else {
               auto _f = std::move(std::get<_Resume1>(_frame));
@@ -476,7 +476,7 @@ struct LoopifyLists {
   /// inits l returns all prefixes (complex recursion pattern).
   template <typename T1> static list<list<T1>> inits(const list<T1> &l) {
     struct _Enter {
-      list<T1> l;
+      const list<T1> *l;
     };
 
     /// Continuation: saves [_s0, map_cons] across recursive call.
@@ -489,20 +489,19 @@ struct LoopifyLists {
     list<list<T1>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     /// Frame dispatch: _Enter, _Resume1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = _f.l;
+        const list<T1> &l = *(_f.l);
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result =
               list<list<T1>>::cons(list<T1>::nil(), list<list<T1>>::nil());
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          list<T1> d_a1_value = *(d_a1);
           std::function<list<list<T1>>(list<list<T1>>)> map_cons;
           map_cons = [&](list<list<T1>> ys) -> list<list<T1>> {
             struct _Enter {
@@ -526,13 +525,13 @@ struct LoopifyLists {
                 auto _f = std::move(std::get<_Enter>(_frame));
                 list<list<T1>> ys = std::move(_f.ys);
                 if (std::holds_alternative<typename list<list<T1>>::Nil>(
-                        ys.v())) {
+                        ys.v_mut())) {
                   _result = list<list<T1>>::nil();
                 } else {
-                  const auto &[d_a0, d_a1] =
-                      std::get<typename list<list<T1>>::Cons>(ys.v());
+                  auto &[d_a0, d_a1] =
+                      std::get<typename list<list<T1>>::Cons>(ys.v_mut());
                   _stack.emplace_back(_Resume1{list<T1>::cons(d_a0, d_a0)});
-                  _stack.emplace_back(_Enter{*(d_a1)});
+                  _stack.emplace_back(_Enter{std::move(*(d_a1))});
                 }
               } else {
                 auto _f = std::move(std::get<_Resume1>(_frame));
@@ -542,7 +541,7 @@ struct LoopifyLists {
             return _result;
           };
           _stack.emplace_back(_Resume1{list<T1>::nil(), std::move(map_cons)});
-          _stack.emplace_back(_Enter{d_a1_value});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
@@ -654,13 +653,14 @@ struct LoopifyLists {
                 _result = list<T1>::nil();
               } else {
                 unsigned int m = k - 1;
-                if (std::holds_alternative<typename list<T1>::Nil>(lst.v())) {
+                if (std::holds_alternative<typename list<T1>::Nil>(
+                        lst.v_mut())) {
                   _result = list<T1>::nil();
                 } else {
-                  const auto &[d_a0, d_a1] =
-                      std::get<typename list<T1>::Cons>(lst.v());
+                  auto &[d_a0, d_a1] =
+                      std::get<typename list<T1>::Cons>(lst.v_mut());
                   _stack.emplace_back(_Resume1{d_a0});
-                  _stack.emplace_back(_Enter{*(d_a1), m});
+                  _stack.emplace_back(_Enter{std::move(*(d_a1)), m});
                 }
               }
             } else {
@@ -742,13 +742,12 @@ struct LoopifyLists {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           list<T1> l0 = std::move(_f.l0);
-          if (std::holds_alternative<typename list<T1>::Nil>(l0.v())) {
+          if (std::holds_alternative<typename list<T1>::Nil>(l0.v_mut())) {
             _result = 0u;
           } else {
-            const auto &[d_a0, d_a1] =
-                std::get<typename list<T1>::Cons>(l0.v());
+            auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l0.v_mut());
             _stack.emplace_back(_Resume1{});
-            _stack.emplace_back(_Enter{*(d_a1)});
+            _stack.emplace_back(_Enter{std::move(*(d_a1))});
           }
         } else {
           auto _f = std::move(std::get<_Resume1>(_frame));
@@ -930,12 +929,12 @@ struct LoopifyLists {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           list<T1> l = std::move(_f.l);
-          if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
+          if (std::holds_alternative<typename list<T1>::Nil>(l.v_mut())) {
             _result = 0u;
           } else {
-            const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
+            auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v_mut());
             _stack.emplace_back(_Resume1{});
-            _stack.emplace_back(_Enter{*(d_a1)});
+            _stack.emplace_back(_Enter{std::move(*(d_a1))});
           }
         } else {
           auto _f = std::move(std::get<_Resume1>(_frame));
@@ -1090,18 +1089,19 @@ struct LoopifyLists {
             if (std::holds_alternative<_Enter>(_frame)) {
               auto _f = std::move(std::get<_Enter>(_frame));
               list<list<T1>> l = std::move(_f.l);
-              if (std::holds_alternative<typename list<list<T1>>::Nil>(l.v())) {
+              if (std::holds_alternative<typename list<list<T1>>::Nil>(
+                      l.v_mut())) {
                 _result = list<T1>::nil();
               } else {
-                const auto &[d_a0, d_a1] =
-                    std::get<typename list<list<T1>>::Cons>(l.v());
+                auto &[d_a0, d_a1] =
+                    std::get<typename list<list<T1>>::Cons>(l.v_mut());
                 if (std::holds_alternative<typename list<T1>::Nil>(d_a0.v())) {
                   _result = list<T1>::nil();
                 } else {
                   const auto &[d_a00, d_a10] =
                       std::get<typename list<T1>::Cons>(d_a0.v());
                   _stack.emplace_back(_Resume1{d_a00});
-                  _stack.emplace_back(_Enter{*(d_a1)});
+                  _stack.emplace_back(_Enter{std::move(*(d_a1))});
                 }
               }
             } else {
@@ -1132,18 +1132,19 @@ struct LoopifyLists {
             if (std::holds_alternative<_Enter>(_frame)) {
               auto _f = std::move(std::get<_Enter>(_frame));
               list<list<T1>> l = std::move(_f.l);
-              if (std::holds_alternative<typename list<list<T1>>::Nil>(l.v())) {
+              if (std::holds_alternative<typename list<list<T1>>::Nil>(
+                      l.v_mut())) {
                 _result = list<list<T1>>::nil();
               } else {
-                const auto &[d_a00, d_a10] =
-                    std::get<typename list<list<T1>>::Cons>(l.v());
+                auto &[d_a00, d_a10] =
+                    std::get<typename list<list<T1>>::Cons>(l.v_mut());
                 if (std::holds_alternative<typename list<T1>::Nil>(d_a00.v())) {
                   _result = list<list<T1>>::nil();
                 } else {
                   const auto &[d_a01, d_a11] =
                       std::get<typename list<T1>::Cons>(d_a00.v());
                   _stack.emplace_back(_Resume1{*(d_a11)});
-                  _stack.emplace_back(_Enter{*(d_a10)});
+                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
                 }
               }
             } else {
@@ -1335,7 +1336,7 @@ struct LoopifyLists {
   /// flatten l flattens a list of lists.
   template <typename T1> static list<T1> flatten(const list<list<T1>> &l) {
     struct _Enter {
-      list<list<T1>> l;
+      const list<list<T1>> *l;
     };
 
     /// Continuation: saves [app, d_a0] across recursive call.
@@ -1348,20 +1349,19 @@ struct LoopifyLists {
     list<T1> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
     /// Frame dispatch: _Enter, _Resume1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<list<T1>> &l = _f.l;
+        const list<list<T1>> &l = *(_f.l);
         if (std::holds_alternative<typename list<list<T1>>::Nil>(l.v())) {
           _result = list<T1>::nil();
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename list<list<T1>>::Cons>(l.v());
-          list<list<T1>> d_a1_value = *(d_a1);
           std::function<list<T1>(list<T1>, list<T1>)> app;
           app = [&](list<T1> l1, list<T1> l2) -> list<T1> {
             struct _Enter {
@@ -1385,13 +1385,15 @@ struct LoopifyLists {
                 auto _f = std::move(std::get<_Enter>(_frame));
                 list<T1> l2 = std::move(_f.l2);
                 list<T1> l1 = std::move(_f.l1);
-                if (std::holds_alternative<typename list<T1>::Nil>(l1.v())) {
+                if (std::holds_alternative<typename list<T1>::Nil>(
+                        l1.v_mut())) {
                   _result = std::move(l2);
                 } else {
-                  const auto &[d_a00, d_a10] =
-                      std::get<typename list<T1>::Cons>(l1.v());
+                  auto &[d_a00, d_a10] =
+                      std::get<typename list<T1>::Cons>(l1.v_mut());
                   _stack.emplace_back(_Resume1{d_a00});
-                  _stack.emplace_back(_Enter{std::move(l2), *(d_a10)});
+                  _stack.emplace_back(
+                      _Enter{std::move(l2), std::move(*(d_a10))});
                 }
               } else {
                 auto _f = std::move(std::get<_Resume1>(_frame));
@@ -1401,7 +1403,7 @@ struct LoopifyLists {
             return _result;
           };
           _stack.emplace_back(_Resume1{std::move(app), d_a0});
-          _stack.emplace_back(_Enter{d_a1_value});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
@@ -1499,7 +1501,7 @@ struct LoopifyLists {
               std::get<typename list<unsigned int>::Cons>(l.v_mut());
           if (p(d_a0)) {
             _stack.emplace_back(_Cont1{d_a0});
-            _stack.emplace_back(_Enter{*(d_a1)});
+            _stack.emplace_back(_Enter{std::move(*(d_a1))});
           } else {
             _result = std::make_pair(list<unsigned int>::nil(), l);
           }
