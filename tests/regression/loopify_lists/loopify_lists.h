@@ -133,9 +133,10 @@ struct LoopifyLists {
       const list<T1> *l;
     };
 
-    /// Continuation: saves [_s0, d_a0] across recursive call.
+    /// Continuation: saves [f0, _s1, d_a0] across recursive call.
     struct _Resume1 {
-      list<T1> _s0;
+      F1 f0;
+      list<T1> _s1;
       T1 d_a0;
     };
 
@@ -155,12 +156,12 @@ struct LoopifyLists {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume1{*(d_a1), d_a0});
+          _stack.emplace_back(_Resume1{f0, *(d_a1), d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = f0(_f.d_a0, _f._s0, _result);
+        _result = _f.f0(_f.d_a0, _f._s1, _result);
       }
     }
     return _result;
@@ -173,9 +174,10 @@ struct LoopifyLists {
       const list<T1> *l;
     };
 
-    /// Continuation: saves [_s0, d_a0] across recursive call.
+    /// Continuation: saves [f0, _s1, d_a0] across recursive call.
     struct _Resume1 {
-      list<T1> _s0;
+      F1 f0;
+      list<T1> _s1;
       T1 d_a0;
     };
 
@@ -195,12 +197,12 @@ struct LoopifyLists {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume1{*(d_a1), d_a0});
+          _stack.emplace_back(_Resume1{f0, *(d_a1), d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = f0(_f.d_a0, _f._s0, _result);
+        _result = _f.f0(_f.d_a0, _f._s1, _result);
       }
     }
     return _result;
@@ -328,8 +330,9 @@ struct LoopifyLists {
       unsigned int n;
     };
 
-    /// Continuation: saves [l] across recursive call.
+    /// Continuation: saves [app, l] across recursive call.
     struct _Resume1 {
+      std::function<list<T1>(list<T1>, list<T1>)> app;
       list<T1> l;
     };
 
@@ -387,12 +390,12 @@ struct LoopifyLists {
           _result = list<T1>::nil();
         } else {
           unsigned int m = n - 1;
-          _stack.emplace_back(_Resume1{l});
+          _stack.emplace_back(_Resume1{std::move(app), l});
           _stack.emplace_back(_Enter{m});
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = app(_f.l, _result);
+        _result = _f.app(_f.l, _result);
       }
     }
     return _result;
@@ -476,9 +479,10 @@ struct LoopifyLists {
       list<T1> l;
     };
 
-    /// Continuation: saves [_s0] across recursive call.
+    /// Continuation: saves [_s0, map_cons] across recursive call.
     struct _Resume1 {
       decltype(list<T1>::nil()) _s0;
+      std::function<list<list<T1>>(list<list<T1>>)> map_cons;
     };
 
     using _Frame = std::variant<_Enter, _Resume1>;
@@ -537,12 +541,12 @@ struct LoopifyLists {
             }
             return _result;
           };
-          _stack.emplace_back(_Resume1{list<T1>::nil()});
+          _stack.emplace_back(_Resume1{list<T1>::nil(), std::move(map_cons)});
           _stack.emplace_back(_Enter{d_a1_value});
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = list<list<T1>>::cons(_f._s0, map_cons(_result));
+        _result = list<list<T1>>::cons(_f._s0, _f.map_cons(_result));
       }
     }
     return _result;
@@ -1334,8 +1338,9 @@ struct LoopifyLists {
       list<list<T1>> l;
     };
 
-    /// Continuation: saves [d_a0] across recursive call.
+    /// Continuation: saves [app, d_a0] across recursive call.
     struct _Resume1 {
+      std::function<list<T1>(list<T1>, list<T1>)> app;
       list<T1> d_a0;
     };
 
@@ -1395,12 +1400,12 @@ struct LoopifyLists {
             }
             return _result;
           };
-          _stack.emplace_back(_Resume1{d_a0});
+          _stack.emplace_back(_Resume1{std::move(app), d_a0});
           _stack.emplace_back(_Enter{d_a1_value});
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = app(_f.d_a0, _result);
+        _result = _f.app(_f.d_a0, _result);
       }
     }
     return _result;

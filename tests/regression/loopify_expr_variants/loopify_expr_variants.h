@@ -1740,9 +1740,10 @@ struct LoopifyExprVariants {
         bool_expr _s2;
       };
 
-      /// Continuation: saves [_s0] across recursive call.
+      /// Continuation: saves [f3, _s1] across recursive call.
       struct _Resume5 {
-        bool_expr _s0;
+        F4 f3;
+        bool_expr _s1;
       };
 
       using _Frame = std::variant<_Enter, _After2, _After4, _Combine1,
@@ -1778,7 +1779,7 @@ struct LoopifyExprVariants {
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0] = std::get<typename bool_expr::BNot>(_sv.v());
-            _stack.emplace_back(_Resume5{*(d_a0)});
+            _stack.emplace_back(_Resume5{f3, *(d_a0)});
             _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_After2>(_frame)) {
@@ -1799,7 +1800,7 @@ struct LoopifyExprVariants {
           _result = f2(_f._s2, _result, _f._s1, _f._result);
         } else {
           auto _f = std::move(std::get<_Resume5>(_frame));
-          _result = f3(_f._s0, _result);
+          _result = _f.f3(_f._s1, _result);
         }
       }
       return _result;
@@ -1847,9 +1848,10 @@ struct LoopifyExprVariants {
         bool_expr _s2;
       };
 
-      /// Continuation: saves [_s0] across recursive call.
+      /// Continuation: saves [f3, _s1] across recursive call.
       struct _Resume5 {
-        bool_expr _s0;
+        F4 f3;
+        bool_expr _s1;
       };
 
       using _Frame = std::variant<_Enter, _After2, _After4, _Combine1,
@@ -1885,7 +1887,7 @@ struct LoopifyExprVariants {
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0] = std::get<typename bool_expr::BNot>(_sv.v());
-            _stack.emplace_back(_Resume5{*(d_a0)});
+            _stack.emplace_back(_Resume5{f3, *(d_a0)});
             _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_After2>(_frame)) {
@@ -1906,7 +1908,7 @@ struct LoopifyExprVariants {
           _result = f2(_f._s2, _result, _f._s1, _f._result);
         } else {
           auto _f = std::move(std::get<_Resume5>(_frame));
-          _result = f3(_f._s0, _result);
+          _result = _f.f3(_f._s1, _result);
         }
       }
       return _result;
@@ -2224,9 +2226,10 @@ struct LoopifyExprVariants {
         list_expr _s2;
       };
 
-      /// Continuation: saves [_s0, d_a0] across recursive call.
+      /// Continuation: saves [f0, _s1, d_a0] across recursive call.
       struct _Resume1 {
-        list_expr _s0;
+        F1 f0;
+        list_expr _s1;
         unsigned int d_a0;
       };
 
@@ -2249,7 +2252,7 @@ struct LoopifyExprVariants {
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LCons>(_sv.v());
-            _stack.emplace_back(_Resume1{*(d_a1), d_a0});
+            _stack.emplace_back(_Resume1{f0, *(d_a1), d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename list_expr::LAppend>(
                          _sv.v())) {
@@ -2272,7 +2275,7 @@ struct LoopifyExprVariants {
           _result = f1(_f._s2, _result, _f._s1, _f._result);
         } else {
           auto _f = std::move(std::get<_Resume1>(_frame));
-          _result = f0(_f.d_a0, _f._s0, _result);
+          _result = _f.f0(_f.d_a0, _f._s1, _result);
         }
       }
       return _result;
@@ -2305,9 +2308,10 @@ struct LoopifyExprVariants {
         list_expr _s2;
       };
 
-      /// Continuation: saves [_s0, d_a0] across recursive call.
+      /// Continuation: saves [f0, _s1, d_a0] across recursive call.
       struct _Resume1 {
-        list_expr _s0;
+        F1 f0;
+        list_expr _s1;
         unsigned int d_a0;
       };
 
@@ -2330,7 +2334,7 @@ struct LoopifyExprVariants {
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LCons>(_sv.v());
-            _stack.emplace_back(_Resume1{*(d_a1), d_a0});
+            _stack.emplace_back(_Resume1{f0, *(d_a1), d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename list_expr::LAppend>(
                          _sv.v())) {
@@ -2353,7 +2357,7 @@ struct LoopifyExprVariants {
           _result = f1(_f._s2, _result, _f._s1, _f._result);
         } else {
           auto _f = std::move(std::get<_Resume1>(_frame));
-          _result = f0(_f.d_a0, _f._s0, _result);
+          _result = _f.f0(_f.d_a0, _f._s1, _result);
         }
       }
       return _result;

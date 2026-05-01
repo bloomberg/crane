@@ -604,8 +604,9 @@ struct LoopifyHofs {
       const List<unsigned int> *l;
     };
 
-    /// Continuation: saves [d_a0] across recursive call.
+    /// Continuation: saves [f, d_a0] across recursive call.
     struct _Resume1 {
+      F0 f;
       unsigned int d_a0;
     };
 
@@ -631,13 +632,13 @@ struct LoopifyHofs {
                   _sv.v())) {
             _result = d_a0;
           } else {
-            _stack.emplace_back(_Resume1{d_a0});
+            _stack.emplace_back(_Resume1{f, d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = f(_f.d_a0, _result);
+        _result = _f.f(_f.d_a0, _result);
       }
     }
     return _result;
@@ -1083,8 +1084,9 @@ struct LoopifyHofs {
       const List<unsigned int> *l;
     };
 
-    /// Continuation: saves [d_a0] across recursive call.
+    /// Continuation: saves [f, d_a0] across recursive call.
     struct _Resume1 {
+      F0 f;
       unsigned int d_a0;
     };
 
@@ -1105,12 +1107,12 @@ struct LoopifyHofs {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Resume1{d_a0});
+          _stack.emplace_back(_Resume1{f, d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = f(_f.d_a0, _result);
+        _result = _f.f(_f.d_a0, _result);
       }
     }
     return _result;

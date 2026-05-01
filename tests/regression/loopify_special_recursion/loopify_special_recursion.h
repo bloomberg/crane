@@ -338,8 +338,10 @@ struct LoopifySpecialRecursion {
       unsigned int n;
     };
 
-    /// Continuation: saves across recursive call.
-    struct _Resume1 {};
+    /// Continuation: saves [f] across recursive call.
+    struct _Resume1 {
+      F1 f;
+    };
 
     using _Frame = std::variant<_Enter, _Resume1>;
     unsigned int _result{};
@@ -357,12 +359,12 @@ struct LoopifySpecialRecursion {
           _result = x;
         } else {
           unsigned int n_ = n - 1;
-          _stack.emplace_back(_Resume1{});
+          _stack.emplace_back(_Resume1{f});
           _stack.emplace_back(_Enter{n_});
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = f(_result);
+        _result = _f.f(_result);
       }
     }
     return _result;

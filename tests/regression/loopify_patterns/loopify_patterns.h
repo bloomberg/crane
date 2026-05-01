@@ -132,9 +132,10 @@ struct LoopifyPatterns {
       const list<T1> *l;
     };
 
-    /// Continuation: saves [_s0, d_a0] across recursive call.
+    /// Continuation: saves [f0, _s1, d_a0] across recursive call.
     struct _Resume1 {
-      list<T1> _s0;
+      F1 f0;
+      list<T1> _s1;
       T1 d_a0;
     };
 
@@ -154,12 +155,12 @@ struct LoopifyPatterns {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume1{*(d_a1), d_a0});
+          _stack.emplace_back(_Resume1{f0, *(d_a1), d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = f0(_f.d_a0, _f._s0, _result);
+        _result = _f.f0(_f.d_a0, _f._s1, _result);
       }
     }
     return _result;
@@ -172,9 +173,10 @@ struct LoopifyPatterns {
       const list<T1> *l;
     };
 
-    /// Continuation: saves [_s0, d_a0] across recursive call.
+    /// Continuation: saves [f0, _s1, d_a0] across recursive call.
     struct _Resume1 {
-      list<T1> _s0;
+      F1 f0;
+      list<T1> _s1;
       T1 d_a0;
     };
 
@@ -194,12 +196,12 @@ struct LoopifyPatterns {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume1{*(d_a1), d_a0});
+          _stack.emplace_back(_Resume1{f0, *(d_a1), d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = f0(_f.d_a0, _f._s0, _result);
+        _result = _f.f0(_f.d_a0, _f._s1, _result);
       }
     }
     return _result;
@@ -318,11 +320,12 @@ struct LoopifyPatterns {
       list<T1> l;
     };
 
-    /// Continuation: saves [_s0] across recursive call.
+    /// Continuation: saves [_s0, map_cons_h] across recursive call.
     struct _Resume1 {
       decltype(list<T1>::cons(std::declval<const T1 &>(),
                               list<T1>::cons(std::declval<T1 &>(),
                                              std::declval<list<T1> &>()))) _s0;
+      std::function<list<list<T1>>(list<list<T1>>)> map_cons_h;
     };
 
     using _Frame = std::variant<_Enter, _Resume1>;
@@ -380,13 +383,13 @@ struct LoopifyPatterns {
             }
             return _result;
           };
-          _stack.emplace_back(
-              _Resume1{list<T1>::cons(x, list<T1>::cons(d_a0, d_a1_value))});
+          _stack.emplace_back(_Resume1{
+              list<T1>::cons(x, list<T1>::cons(d_a0, d_a1_value)), map_cons_h});
           _stack.emplace_back(_Enter{d_a1_value});
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = list<list<T1>>::cons(_f._s0, map_cons_h(_result));
+        _result = list<list<T1>>::cons(_f._s0, _f.map_cons_h(_result));
       }
     }
     return _result;

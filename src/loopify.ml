@@ -1980,6 +1980,15 @@ and decompose_funcall check f args =
     List.mapi (fun i a -> (i, count_calls_expr check a)) args
     |> List.filter (fun (_, c) -> c > 0)
   in
+  (* When [f] is a local variable ([CPPvar]), it must be saved in the
+     continuation frame — it is not guaranteed to be in scope when the
+     Resume handler fires.  Global/qualified function references are always
+     in scope and do not need saving. *)
+  let f_extra, n_f =
+    match f with
+    | CPPvar _ -> ([f], 1)
+    | _ -> ([], 0)
+  in
   match rec_indices with
   | [(rec_idx, 1)] ->
     (* Exactly one argument has exactly one recursive call *)
@@ -1992,17 +2001,19 @@ and decompose_funcall check f args =
     ( match decompose_single_call check rec_arg with
     | Some d ->
       (* The recursive call is nested deeper *)
-      let n_saved_before = List.length non_rec_args in
+      let n_saved_before = n_f + List.length non_rec_args in
       Some
         {
           d with
-          d_saved = non_rec_args @ d.d_saved;
+          d_saved = f_extra @ non_rec_args @ d.d_saved;
           d_saved_types =
-            List.map (fun _ -> Tunknown) non_rec_args @ d.d_saved_types;
+            List.map (fun _ -> Tunknown) (f_extra @ non_rec_args)
+            @ d.d_saved_types;
           d_rebuild =
             (fun saved result ->
+              let f' = if n_f > 0 then List.hd saved else f in
               let outer_saved =
-                List.filteri (fun i _ -> i < n_saved_before) saved
+                List.filteri (fun i _ -> i >= n_f && i < n_saved_before) saved
               in
               let inner_saved =
                 List.filteri (fun i _ -> i >= n_saved_before) saved
@@ -2016,7 +2027,7 @@ and decompose_funcall check f args =
                     let pos = if i < rec_idx then i else i - 1 in
                     List.nth outer_saved pos )
               in
-              CPPfun_call (f, new_args) );
+              CPPfun_call (f', new_args) );
         }
     | None ->
     (* Direct: f(non_rec..., RECURSE(args), non_rec...) *)
@@ -2024,20 +2035,25 @@ and decompose_funcall check f args =
     | Some cs ->
       Some
         {
-          d_saved = non_rec_args;
-          d_saved_types = List.map (fun _ -> Tunknown) non_rec_args;
+          d_saved = f_extra @ non_rec_args;
+          d_saved_types =
+            List.map (fun _ -> Tunknown) (f_extra @ non_rec_args);
           d_rec_args = cs.cs_args;
           d_rebuild =
             (fun saved result ->
+              let f' = if n_f > 0 then List.hd saved else f in
+              let rest_saved =
+                List.filteri (fun i _ -> i >= n_f) saved
+              in
               let new_args =
                 List.init (List.length args) (fun i ->
                   if i = rec_idx then
                     result
                   else
                     let pos = if i < rec_idx then i else i - 1 in
-                    List.nth saved pos )
+                    List.nth rest_saved pos )
               in
-              CPPfun_call (f, new_args) );
+              CPPfun_call (f', new_args) );
         }
     | None -> None )
   | _ -> None
@@ -3373,12 +3389,15 @@ let frame_fields ?(offset = 0) n =
     [unique_ptr<T>] is move-only, but the source may be a const reference
     from a borrowed pattern match.  We clone the value and wrap in
     [make_unique] to produce a new owned [unique_ptr<T>].
-    Non-unique_ptr expressions pass through unchanged. *)
+    Non-trivially-copyable types (e.g. [std::function], value-type inductives)
+    are moved into the frame — the source is always dead after the push.
+    Trivially-copyable types are copied cheaply. *)
 let clone_for_frame ty expr =
   match ty with
   | Tunique_ptr inner ->
     CPPfun_call (CPPmk_unique inner,
                  [CPPmethod_call (expr, Id.of_string "clone", [])])
+  | Tfun _ -> CPPmove expr
   | _ -> expr
 
 (** Apply [clone_for_frame] to parallel type and expression lists. *)
@@ -5025,8 +5044,18 @@ and rewrite_enter_stmts ctx stmts =
       | _ ->
         [Sasgn (id, ty_opt, e)] @ rewrite_enter_stmts ctx rest )
   | stmt :: rest ->
+    (* Extend the environment with any variable bound by this statement so
+       that [infer_saved_type] can resolve its type when processing [rest].
+       This is important when a local [std::function] (e.g. from [let fix])
+       is defined here and then used as the callee in a continuation. *)
+    let updated_env =
+      match stmt with
+      | Sasgn (id, Some ty, _) -> (id, ty) :: ctx.er_env
+      | Sdecl (id, ty) -> (id, ty) :: ctx.er_env
+      | _ -> ctx.er_env
+    in
     rewrite_enter_lambda_return ctx stmt
-    @ rewrite_enter_stmts ctx rest
+    @ rewrite_enter_stmts { ctx with er_env = updated_env } rest
 
 (** Rewrite a single non-tail recursive statement for the Enter handler.
 

@@ -130,9 +130,10 @@ struct LoopifyOption {
       const list<T1> *l;
     };
 
-    /// Continuation: saves [_s0, d_a0] across recursive call.
+    /// Continuation: saves [f0, _s1, d_a0] across recursive call.
     struct _Resume1 {
-      list<T1> _s0;
+      F1 f0;
+      list<T1> _s1;
       T1 d_a0;
     };
 
@@ -152,12 +153,12 @@ struct LoopifyOption {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume1{*(d_a1), d_a0});
+          _stack.emplace_back(_Resume1{f0, *(d_a1), d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = f0(_f.d_a0, _f._s0, _result);
+        _result = _f.f0(_f.d_a0, _f._s1, _result);
       }
     }
     return _result;
@@ -170,9 +171,10 @@ struct LoopifyOption {
       const list<T1> *l;
     };
 
-    /// Continuation: saves [_s0, d_a0] across recursive call.
+    /// Continuation: saves [f0, _s1, d_a0] across recursive call.
     struct _Resume1 {
-      list<T1> _s0;
+      F1 f0;
+      list<T1> _s1;
       T1 d_a0;
     };
 
@@ -192,12 +194,12 @@ struct LoopifyOption {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume1{*(d_a1), d_a0});
+          _stack.emplace_back(_Resume1{f0, *(d_a1), d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = f0(_f.d_a0, _f._s0, _result);
+        _result = _f.f0(_f.d_a0, _f._s1, _result);
       }
     }
     return _result;

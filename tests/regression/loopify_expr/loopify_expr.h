@@ -1127,9 +1127,10 @@ struct LoopifyExpr {
         expr _s4;
       };
 
-      /// Continuation: saves [_s0] across recursive call.
+      /// Continuation: saves [f0, _s1] across recursive call.
       struct _Resume1 {
-        expr _s0;
+        F1 f0;
+        expr _s1;
       };
 
       using _Frame = std::variant<_Enter, _After3, _After5, _After6, _After7,
@@ -1152,7 +1153,7 @@ struct LoopifyExpr {
             _result = f(d_a0);
           } else if (std::holds_alternative<typename expr::Succ>(_sv.v())) {
             const auto &[d_a0] = std::get<typename expr::Succ>(_sv.v());
-            _stack.emplace_back(_Resume1{*(d_a0)});
+            _stack.emplace_back(_Resume1{f0, *(d_a0)});
             _stack.emplace_back(_Enter{d_a0.get()});
           } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
             const auto &[d_a0, d_a1] = std::get<typename expr::Add>(_sv.v());
@@ -1201,7 +1202,7 @@ struct LoopifyExpr {
               f3(_f._s4, _result, _f._s3, _f._result_1, _f._s2, _f._result_0);
         } else {
           auto _f = std::move(std::get<_Resume1>(_frame));
-          _result = f0(_f._s0, _result);
+          _result = _f.f0(_f._s1, _result);
         }
       }
       return _result;
@@ -1279,9 +1280,10 @@ struct LoopifyExpr {
         expr _s4;
       };
 
-      /// Continuation: saves [_s0] across recursive call.
+      /// Continuation: saves [f0, _s1] across recursive call.
       struct _Resume1 {
-        expr _s0;
+        F1 f0;
+        expr _s1;
       };
 
       using _Frame = std::variant<_Enter, _After3, _After5, _After6, _After7,
@@ -1304,7 +1306,7 @@ struct LoopifyExpr {
             _result = f(d_a0);
           } else if (std::holds_alternative<typename expr::Succ>(_sv.v())) {
             const auto &[d_a0] = std::get<typename expr::Succ>(_sv.v());
-            _stack.emplace_back(_Resume1{*(d_a0)});
+            _stack.emplace_back(_Resume1{f0, *(d_a0)});
             _stack.emplace_back(_Enter{d_a0.get()});
           } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
             const auto &[d_a0, d_a1] = std::get<typename expr::Add>(_sv.v());
@@ -1353,7 +1355,7 @@ struct LoopifyExpr {
               f3(_f._s4, _result, _f._s3, _f._result_1, _f._s2, _f._result_0);
         } else {
           auto _f = std::move(std::get<_Resume1>(_frame));
-          _result = f0(_f._s0, _result);
+          _result = _f.f0(_f._s1, _result);
         }
       }
       return _result;
