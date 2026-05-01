@@ -10,9 +10,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -131,9 +128,8 @@ concept Magma = requires(typename I::carrier a0, typename I::carrier a1) {
   typename I::carrier;
   { I::op(a0, a1) } -> std::convertible_to<typename I::carrier>;
 };
-template <typename I>
-concept Monoid = requires (typename I::m_carrier a0, typename I::m_carrier
-a1) {
+template <typename I>concept Monoid = requires (typename I::m_carrier a0,
+typename I::m_carrier a1) {
   typename I::m_carrier;
   { I::m_op(a0,
 a1) } -> std::convertible_to<typename I::m_carrier>;

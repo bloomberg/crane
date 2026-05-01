@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct Uint {
   // TYPES
   struct Nil {};
@@ -965,8 +962,9 @@ struct HofTreeLoopify {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2,
-            MapsTo<T2, tree<T1>, T2, T1, tree<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, T1 &, tree<T1> &,
+                                   T2 &>
   static T2 tree_rect(const T2 f, F1 &&f0, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return f;
@@ -977,8 +975,9 @@ struct HofTreeLoopify {
     }
   }
 
-  template <typename T1, typename T2,
-            MapsTo<T2, tree<T1>, T2, T1, tree<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, T1 &, tree<T1> &,
+                                   T2 &>
   static T2 tree_rec(const T2 f, F1 &&f0, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return f;
@@ -991,7 +990,8 @@ struct HofTreeLoopify {
 
   static tree<unsigned int> depth_tree(const unsigned int n);
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static tree<T2> tree_map(F0 &&f, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return tree<T2>::leaf();
@@ -1002,7 +1002,8 @@ struct HofTreeLoopify {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T2, T1, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T2 &, T1 &, T2 &>
   static T2 tree_fold(const T2 base, F1 &&f, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return base;
@@ -1013,7 +1014,8 @@ struct HofTreeLoopify {
     }
   }
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static tree<T3> tree_zip_with(F0 &&f, const tree<T1> &t1,
                                 const tree<T2> &t2) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t1.v())) {
@@ -1033,8 +1035,8 @@ struct HofTreeLoopify {
     }
   }
 
-  template <typename T1, typename T2, typename T3,
-            MapsTo<std::pair<T3, T2>, T3, T1> F0>
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<std::pair<T3, T2>, F0 &, T3 &, T1 &>
   static std::pair<T3, tree<T2>> tree_map_accum(F0 &&f, const T3 acc,
                                                 const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {

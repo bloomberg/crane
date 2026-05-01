@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -316,8 +313,11 @@ struct EncodeOps {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F3,
-              MapsTo<T1, unsigned int> F4, MapsTo<T1, unsigned int> F5>
+    template <typename T1, typename F3, typename F4, typename F5>
+      requires std::is_invocable_r_v<T1, F3 &, unsigned int &,
+                                     unsigned int &> &&
+               std::is_invocable_r_v<T1, F4 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F5 &, unsigned int &>
     T1 instruction1_rec(const T1 f, const T1 f0, const T1 f1, F3 &&f2, F4 &&f3,
                         F5 &&f4, const T1 f5, const T1 f6, const T1 f7,
                         const T1 f8, const T1 f9) const {
@@ -351,8 +351,11 @@ struct EncodeOps {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F3,
-              MapsTo<T1, unsigned int> F4, MapsTo<T1, unsigned int> F5>
+    template <typename T1, typename F3, typename F4, typename F5>
+      requires std::is_invocable_r_v<T1, F3 &, unsigned int &,
+                                     unsigned int &> &&
+               std::is_invocable_r_v<T1, F4 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F5 &, unsigned int &>
     T1 instruction1_rect(const T1 f, const T1 f0, const T1 f1, F3 &&f2, F4 &&f3,
                          F5 &&f4, const T1 f5, const T1 f6, const T1 f7,
                          const T1 f8, const T1 f9) const {
@@ -472,7 +475,8 @@ struct EncodeOps {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instruction2_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction2::NOP2>(_sv.v())) {
@@ -483,7 +487,8 @@ struct EncodeOps {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instruction2_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction2::NOP2>(_sv.v())) {
@@ -577,7 +582,8 @@ struct EncodeOps {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instruction3_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction3::NOP3>(_sv.v())) {
@@ -588,7 +594,8 @@ struct EncodeOps {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instruction3_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction3::NOP3>(_sv.v())) {

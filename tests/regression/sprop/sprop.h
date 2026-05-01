@@ -7,9 +7,6 @@
 #include <type_traits>
 #include <utility>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct SPropTest {
   template <typename T1> static const T1 &sFalse_rect() {
     static const T1 v = []() { throw std::logic_error("absurd case"); }();

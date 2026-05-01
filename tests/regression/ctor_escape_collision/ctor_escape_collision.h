@@ -6,9 +6,6 @@
 #include <type_traits>
 #include <utility>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct CtorEscapeCollision {
   enum class Item { e_D_, e_D_0, e_D__, e_D__0, e_D__1, e_D__2 };
 

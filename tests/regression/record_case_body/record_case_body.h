@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct RecordCaseBody {
   struct Rec {
     unsigned int f1;
@@ -160,7 +157,8 @@ struct RecordCaseBody {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rect(const T2 f, F1 &&f0, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;
@@ -170,7 +168,8 @@ struct RecordCaseBody {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rec(const T2 f, F1 &&f0, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;

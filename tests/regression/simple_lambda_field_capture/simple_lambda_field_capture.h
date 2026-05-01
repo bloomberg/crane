@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct SimpleLambdaFieldCapture {
   /// Control test: a SIMPLE lambda (not a local fixpoint) captures
   /// pattern variables from a match on a value-type inductive.
@@ -148,7 +145,8 @@ struct SimpleLambdaFieldCapture {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, mylist, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
     T1 mylist_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
@@ -159,7 +157,8 @@ struct SimpleLambdaFieldCapture {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, mylist, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
     T1 mylist_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
@@ -220,14 +219,16 @@ struct SimpleLambdaFieldCapture {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
     T1 tag_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<typename tag::MkTag>(_sv.v());
       return f(d_a0);
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
     T1 tag_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<typename tag::MkTag>(_sv.v());

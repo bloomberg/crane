@@ -6,9 +6,6 @@
 #include <type_traits>
 #include <utility>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct PageAddress {
   static unsigned int addr12_of_nat(const unsigned int n);
   static unsigned int page_of(const unsigned int p);

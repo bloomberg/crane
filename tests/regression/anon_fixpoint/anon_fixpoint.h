@@ -7,9 +7,6 @@
 #include <type_traits>
 #include <utility>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct AnonFixpoint {
   static unsigned int sum_to(const unsigned int n);
   static unsigned int factorial(const unsigned int m);

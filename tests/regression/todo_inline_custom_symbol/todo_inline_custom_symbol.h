@@ -6,9 +6,6 @@
 #include <todo_inline_custom_symbol_support.h>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct TodoInlineCustomSymbol {
   static unsigned int alias(const unsigned int _x0);
   static unsigned int twice(const unsigned int n);

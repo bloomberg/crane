@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct Nat {
   // TYPES
   struct O {};
@@ -348,7 +345,8 @@ struct NestedTree {
                             std::pair<std::pair<Nat, Nat>,
                                       std::pair<Nat, Nat>>>>::leaf())));
 
-  template <typename T1, typename T2, MapsTo<List<T2>, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<List<T2>, F0 &, T1 &>
   static List<T2> lift(F0 &&f, const std::pair<T1, T1> &p) {
     const T1 &x = p.first;
     const T1 &y = p.second;
@@ -361,7 +359,8 @@ struct NestedTree {
   }
 };
 
-template <typename T1, typename T2, MapsTo<List<T2>, T1> F0>
+template <typename T1, typename T2, typename F0>
+  requires std::is_invocable_r_v<List<T2>, F0 &, T1 &>
 List<List<T2>> _flatten_tree_go(F0 &&f,
                                 const NestedTree::template tree<T1> t0) {
   if (std::holds_alternative<typename NestedTree::template tree<T1>::Leaf>(

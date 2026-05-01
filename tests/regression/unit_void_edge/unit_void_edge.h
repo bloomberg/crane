@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -135,13 +132,15 @@ struct UnitVoidEdge {
   }();
   static void count_down(const unsigned int n);
 
-  template <MapsTo<void, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, unsigned int &>
   static void apply_unit_fn(F0 &&f, const unsigned int _x0) {
     f(_x0);
     return;
   }
 
-  template <MapsTo<void, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, unsigned int &>
   static unsigned int map_to_unit(F0 &&, const unsigned int) {
     return 42u;
   }
@@ -179,7 +178,8 @@ struct UnitVoidEdge {
   static unsigned int double_match_unit(const std::monostate &u1,
                                         const std::monostate &u2);
 
-  template <MapsTo<void, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, unsigned int &>
   static void apply_and_discard(F0 &&f, const unsigned int _x0) {
     f(_x0);
     return;
@@ -212,7 +212,9 @@ struct UnitVoidEdge {
     return std::monostate{};
   }();
 
-  template <MapsTo<void, unsigned int> F0, MapsTo<void, bool> F1>
+  template <typename F0, typename F1>
+    requires std::is_invocable_r_v<void, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<void, F1 &, bool &>
   static void multi_void_callbacks(F0 &&, F1 &&, const unsigned int,
                                    const bool) {
     return;

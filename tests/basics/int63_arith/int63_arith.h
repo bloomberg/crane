@@ -6,9 +6,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct Int63Arith {
   static inline const int64_t i_zero = int64_t(0);
   static inline const int64_t i_one = int64_t(1);

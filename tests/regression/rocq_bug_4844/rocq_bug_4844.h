@@ -8,9 +8,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A, typename t_B> struct Sum {
   // TYPES
   struct Inl {
@@ -142,13 +139,15 @@ struct RocqBug4844 {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, Sum<ST, ST>> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, Sum<ST, ST> &>
   static T1 box_rect(const SomeType, F1 &&f, const box &b) {
     const auto &[d_a0] = std::get<typename box::Box0>(b.v());
     return f(d_a0);
   }
 
-  template <typename T1, MapsTo<T1, Sum<ST, ST>> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, Sum<ST, ST> &>
   static T1 box_rec(const SomeType, F1 &&f, const box &b) {
     const auto &[d_a0] = std::get<typename box::Box0>(b.v());
     return f(d_a0);

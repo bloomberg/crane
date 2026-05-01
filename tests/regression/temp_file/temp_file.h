@@ -9,9 +9,6 @@
 #include <type_traits>
 #include <unistd.h>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct TempFile {
   static std::string make_temp_file(const std::string prefix);
   static std::string make_temp_dir(const std::string prefix);

@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct LargeMutual {
   struct stmt;
   struct expr;
@@ -615,10 +612,12 @@ struct LargeMutual {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int, expr> F0,
-            MapsTo<T1, stmt, T1, stmt, T1> F1,
-            MapsTo<T1, bexpr, stmt, T1, stmt, T1> F2,
-            MapsTo<T1, bexpr, stmt, T1> F3>
+  template <typename T1, typename F0, typename F1, typename F2, typename F3>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, expr &> &&
+             std::is_invocable_r_v<T1, F1 &, stmt &, T1 &, stmt &, T1 &> &&
+             std::is_invocable_r_v<T1, F2 &, bexpr &, stmt &, T1 &, stmt &,
+                                   T1 &> &&
+             std::is_invocable_r_v<T1, F3 &, bexpr &, stmt &, T1 &>
   static T1 stmt_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, const T1 f3,
                       const stmt &s) {
     if (std::holds_alternative<typename stmt::SAssign>(s.v())) {
@@ -640,10 +639,12 @@ struct LargeMutual {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, expr> F0,
-            MapsTo<T1, stmt, T1, stmt, T1> F1,
-            MapsTo<T1, bexpr, stmt, T1, stmt, T1> F2,
-            MapsTo<T1, bexpr, stmt, T1> F3>
+  template <typename T1, typename F0, typename F1, typename F2, typename F3>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, expr &> &&
+             std::is_invocable_r_v<T1, F1 &, stmt &, T1 &, stmt &, T1 &> &&
+             std::is_invocable_r_v<T1, F2 &, bexpr &, stmt &, T1 &, stmt &,
+                                   T1 &> &&
+             std::is_invocable_r_v<T1, F3 &, bexpr &, stmt &, T1 &>
   static T1 stmt_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, const T1 f3,
                      const stmt &s) {
     if (std::holds_alternative<typename stmt::SAssign>(s.v())) {
@@ -665,10 +666,14 @@ struct LargeMutual {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1, MapsTo<T1, expr, T1, expr, T1> F2,
-            MapsTo<T1, expr, T1, expr, T1> F3,
-            MapsTo<T1, bexpr, expr, T1, expr, T1> F4>
+  template <typename T1, typename F0, typename F1, typename F2, typename F3,
+            typename F4>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F2 &, expr &, T1 &, expr &, T1 &> &&
+             std::is_invocable_r_v<T1, F3 &, expr &, T1 &, expr &, T1 &> &&
+             std::is_invocable_r_v<T1, F4 &, bexpr &, expr &, T1 &, expr &,
+                                   T1 &>
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                       const expr &e) {
     if (std::holds_alternative<typename expr::ENum>(e.v())) {
@@ -692,10 +697,14 @@ struct LargeMutual {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1, MapsTo<T1, expr, T1, expr, T1> F2,
-            MapsTo<T1, expr, T1, expr, T1> F3,
-            MapsTo<T1, bexpr, expr, T1, expr, T1> F4>
+  template <typename T1, typename F0, typename F1, typename F2, typename F3,
+            typename F4>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F2 &, expr &, T1 &, expr &, T1 &> &&
+             std::is_invocable_r_v<T1, F3 &, expr &, T1 &, expr &, T1 &> &&
+             std::is_invocable_r_v<T1, F4 &, bexpr &, expr &, T1 &, expr &,
+                                   T1 &>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                      const expr &e) {
     if (std::holds_alternative<typename expr::ENum>(e.v())) {
@@ -719,9 +728,13 @@ struct LargeMutual {
     }
   }
 
-  template <typename T1, MapsTo<T1, expr, expr> F2, MapsTo<T1, expr, expr> F3,
-            MapsTo<T1, bexpr, T1, bexpr, T1> F4,
-            MapsTo<T1, bexpr, T1, bexpr, T1> F5, MapsTo<T1, bexpr, T1> F6>
+  template <typename T1, typename F2, typename F3, typename F4, typename F5,
+            typename F6>
+    requires std::is_invocable_r_v<T1, F2 &, expr &, expr &> &&
+             std::is_invocable_r_v<T1, F3 &, expr &, expr &> &&
+             std::is_invocable_r_v<T1, F4 &, bexpr &, T1 &, bexpr &, T1 &> &&
+             std::is_invocable_r_v<T1, F5 &, bexpr &, T1 &, bexpr &, T1 &> &&
+             std::is_invocable_r_v<T1, F6 &, bexpr &, T1 &>
   static T1 bexpr_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
                        F5 &&f4, F6 &&f5, const bexpr &b) {
     if (std::holds_alternative<typename bexpr::BTrue>(b.v())) {
@@ -748,9 +761,13 @@ struct LargeMutual {
     }
   }
 
-  template <typename T1, MapsTo<T1, expr, expr> F2, MapsTo<T1, expr, expr> F3,
-            MapsTo<T1, bexpr, T1, bexpr, T1> F4,
-            MapsTo<T1, bexpr, T1, bexpr, T1> F5, MapsTo<T1, bexpr, T1> F6>
+  template <typename T1, typename F2, typename F3, typename F4, typename F5,
+            typename F6>
+    requires std::is_invocable_r_v<T1, F2 &, expr &, expr &> &&
+             std::is_invocable_r_v<T1, F3 &, expr &, expr &> &&
+             std::is_invocable_r_v<T1, F4 &, bexpr &, T1 &, bexpr &, T1 &> &&
+             std::is_invocable_r_v<T1, F5 &, bexpr &, T1 &, bexpr &, T1 &> &&
+             std::is_invocable_r_v<T1, F6 &, bexpr &, T1 &>
   static T1 bexpr_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
                       F5 &&f4, F6 &&f5, const bexpr &b) {
     if (std::holds_alternative<typename bexpr::BTrue>(b.v())) {

@@ -6,12 +6,10 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct FixHigherOrder {
   /// A wrapper function that takes a function and stores it in Some.
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static std::optional<std::function<unsigned int(unsigned int)>>
   wrap_fn(F0 &&f) {
     return std::make_optional<std::function<unsigned int(unsigned int)>>(f);
@@ -51,7 +49,8 @@ struct FixHigherOrder {
   }();
 
   /// Two layers of wrapping: fixpoint passed through two functions.
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static std::optional<std::optional<std::function<unsigned int(unsigned int)>>>
   double_wrap(F0 &&f) {
     return std::make_optional<

@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -227,8 +224,9 @@ struct JumpTargets {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instr_collection_rec(F0 &&f, F1 &&f0, const T1 f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_collection::JUN_coll>(
@@ -246,8 +244,9 @@ struct JumpTargets {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instr_collection_rect(F0 &&f, F1 &&f0, const T1 f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_collection::JUN_coll>(
@@ -367,8 +366,9 @@ struct JumpTargets {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instr_region_rec(F0 &&f, F1 &&f0, const T1 f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_region::JUN_reg>(_sv.v())) {
@@ -383,8 +383,9 @@ struct JumpTargets {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instr_region_rect(F0 &&f, F1 &&f0, const T1 f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_region::JUN_reg>(_sv.v())) {
@@ -499,8 +500,9 @@ struct JumpTargets {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instr_jms_rec(F0 &&f, F1 &&f0, const T1 f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_jms::JUN_jms>(_sv.v())) {
@@ -514,8 +516,9 @@ struct JumpTargets {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instr_jms_rect(F0 &&f, F1 &&f0, const T1 f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_jms::JUN_jms>(_sv.v())) {
@@ -620,8 +623,9 @@ struct JumpTargets {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instr_jun_rec(F0 &&f, F1 &&f0, const T1 f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_jun::JUN_jun>(_sv.v())) {
@@ -635,8 +639,9 @@ struct JumpTargets {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instr_jun_rect(F0 &&f, F1 &&f0, const T1 f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_jun::JUN_jun>(_sv.v())) {

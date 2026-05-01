@@ -10,9 +10,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -263,7 +260,8 @@ struct NestedInd {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, custom_list<t_A>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, t_A &, custom_list<t_A> &, T1 &>
     T1 custom_list_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename custom_list<t_A>::Cnil>(_sv.v())) {
@@ -275,7 +273,8 @@ struct NestedInd {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, custom_list<t_A>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, t_A &, custom_list<t_A> &, T1 &>
     T1 custom_list_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename custom_list<t_A>::Cnil>(_sv.v())) {
@@ -365,14 +364,16 @@ struct NestedInd {
       return d_a0;
     }
 
-    template <typename T1, MapsTo<T1, t_A, custom_list<rose<t_A>>> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &, custom_list<rose<t_A>> &>
     T1 rose_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose<t_A>::Node>(_sv.v());
       return f(d_a0, *(d_a1));
     }
 
-    template <typename T1, MapsTo<T1, t_A, custom_list<rose<t_A>>> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &, custom_list<rose<t_A>> &>
     T1 rose_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose<t_A>::Node>(_sv.v());
@@ -446,21 +447,94 @@ struct NestedInd {
 
     // ACCESSORS
     expr clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Lit>(_sv.v())) {
-        const auto &[d_a0] = std::get<Lit>(_sv.v());
-        return expr(Lit{d_a0});
-      } else if (std::holds_alternative<Add>(_sv.v())) {
-        const auto &[d_a0] = std::get<Add>(_sv.v());
-        return expr(
-            Add{d_a0 ? std::make_unique<List<NestedInd::expr>>(d_a0->clone())
-                     : nullptr});
-      } else {
-        const auto &[d_a0] = std::get<Mul>(_sv.v());
-        return expr(
-            Mul{d_a0 ? std::make_unique<List<NestedInd::expr>>(d_a0->clone())
-                     : nullptr});
+      expr _out{};
+
+      struct _CloneFrame {
+        const expr *_src;
+        expr *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const expr *_src = _frame._src;
+        expr *_dst = _frame._dst;
+        if (std::holds_alternative<Lit>(_src->v())) {
+          const auto &_alt = std::get<Lit>(_src->v());
+          _dst->d_v_ = Lit{_alt.d_a0};
+        } else if (std::holds_alternative<Add>(_src->v())) {
+          const auto &_alt = std::get<Add>(_src->v());
+          _dst->d_v_ = Add{_alt.d_a0 ? std::make_unique<List<NestedInd::expr>>()
+                                     : nullptr};
+          auto &_dst_alt = std::get<Add>(_dst->d_v_);
+          [&] {
+            if (_alt.d_a0) {
+              const List<NestedInd::expr> *_lsrc = _alt.d_a0.get();
+              List<NestedInd::expr> *_ldst = _dst_alt.d_a0.get();
+              while (
+                  std::holds_alternative<typename List<NestedInd::expr>::Cons>(
+                      _lsrc->v())) {
+                const auto &_lsrc_c =
+                    std::get<typename List<NestedInd::expr>::Cons>(_lsrc->v());
+                _ldst->v_mut() = typename List<NestedInd::expr>::Cons{
+                    NestedInd::expr{},
+                    _lsrc_c.d_a1 ? std::make_unique<List<NestedInd::expr>>()
+                                 : nullptr};
+                auto &_ldst_c = std::get<typename List<NestedInd::expr>::Cons>(
+                    _ldst->v_mut());
+                _stack.push_back({&_lsrc_c.d_a0, &_ldst_c.d_a0});
+                if (_lsrc_c.d_a1) {
+                  _lsrc = _lsrc_c.d_a1.get();
+                  _ldst = _ldst_c.d_a1.get();
+                } else {
+                  break;
+                }
+              }
+              if (std::holds_alternative<typename List<NestedInd::expr>::Nil>(
+                      _lsrc->v())) {
+                _ldst->v_mut() = typename List<NestedInd::expr>::Nil{};
+              }
+            }
+          }();
+        } else {
+          const auto &_alt = std::get<Mul>(_src->v());
+          _dst->d_v_ = Mul{_alt.d_a0 ? std::make_unique<List<NestedInd::expr>>()
+                                     : nullptr};
+          auto &_dst_alt = std::get<Mul>(_dst->d_v_);
+          [&] {
+            if (_alt.d_a0) {
+              const List<NestedInd::expr> *_lsrc = _alt.d_a0.get();
+              List<NestedInd::expr> *_ldst = _dst_alt.d_a0.get();
+              while (
+                  std::holds_alternative<typename List<NestedInd::expr>::Cons>(
+                      _lsrc->v())) {
+                const auto &_lsrc_c =
+                    std::get<typename List<NestedInd::expr>::Cons>(_lsrc->v());
+                _ldst->v_mut() = typename List<NestedInd::expr>::Cons{
+                    NestedInd::expr{},
+                    _lsrc_c.d_a1 ? std::make_unique<List<NestedInd::expr>>()
+                                 : nullptr};
+                auto &_ldst_c = std::get<typename List<NestedInd::expr>::Cons>(
+                    _ldst->v_mut());
+                _stack.push_back({&_lsrc_c.d_a0, &_ldst_c.d_a0});
+                if (_lsrc_c.d_a1) {
+                  _lsrc = _lsrc_c.d_a1.get();
+                  _ldst = _ldst_c.d_a1.get();
+                } else {
+                  break;
+                }
+              }
+              if (std::holds_alternative<typename List<NestedInd::expr>::Nil>(
+                      _lsrc->v())) {
+                _ldst->v_mut() = typename List<NestedInd::expr>::Nil{};
+              }
+            }
+          }();
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -475,12 +549,63 @@ struct NestedInd {
     }
 
     // MANIPULATORS
+    ~expr() {
+      std::vector<std::unique_ptr<expr>> _stack{};
+      auto _drain = [&](expr &_node) {
+        if (std::holds_alternative<Add>(_node.d_v_)) {
+          auto &_alt = std::get<Add>(_node.d_v_);
+          if (_alt.d_a0) {
+            auto *_lp = _alt.d_a0.get();
+            while (std::holds_alternative<typename List<NestedInd::expr>::Cons>(
+                _lp->v())) {
+              auto &_lc =
+                  std::get<typename List<NestedInd::expr>::Cons>(_lp->v_mut());
+              _stack.push_back(
+                  std::make_unique<NestedInd::expr>(std::move(_lc.d_a0)));
+              if (_lc.d_a1) {
+                _lp = _lc.d_a1.get();
+              } else {
+                break;
+              }
+            }
+          }
+        }
+        if (std::holds_alternative<Mul>(_node.d_v_)) {
+          auto &_alt = std::get<Mul>(_node.d_v_);
+          if (_alt.d_a0) {
+            auto *_lp = _alt.d_a0.get();
+            while (std::holds_alternative<typename List<NestedInd::expr>::Cons>(
+                _lp->v())) {
+              auto &_lc =
+                  std::get<typename List<NestedInd::expr>::Cons>(_lp->v_mut());
+              _stack.push_back(
+                  std::make_unique<NestedInd::expr>(std::move(_lc.d_a0)));
+              if (_lc.d_a1) {
+                _lp = _lc.d_a1.get();
+              } else {
+                break;
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <MapsTo<unsigned int, unsigned int> F0>
+    template <typename F0>
+      requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
     expr lit_map(F0 &&f) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -671,8 +796,10 @@ struct NestedInd {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, List<expr>> F1, MapsTo<T1, List<expr>> F2>
+    template <typename T1, typename F0, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, List<expr> &> &&
+               std::is_invocable_r_v<T1, F2 &, List<expr> &>
     T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -687,8 +814,10 @@ struct NestedInd {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, List<expr>> F1, MapsTo<T1, List<expr>> F2>
+    template <typename T1, typename F0, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, List<expr> &> &&
+               std::is_invocable_r_v<T1, F2 &, List<expr> &>
     T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename expr::Lit>(_sv.v())) {

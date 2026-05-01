@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -155,7 +152,8 @@ struct LoopifyGenerators {
                                   const List<unsigned int> &l);
 
   /// iterate f n x applies f repeatedly n times: iterate (+1) 3 5 -> 5,6,7.
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static List<unsigned int> iterate(F0 &&f, const unsigned int n,
                                     const unsigned int x) {
     std::unique_ptr<List<unsigned int>> _head{};
@@ -184,7 +182,9 @@ struct LoopifyGenerators {
   }
 
   /// zip_with f l1 l2 zips with a combining function.
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static List<unsigned int> zip_with(F0 &&f, const List<unsigned int> &l1,
                                      const List<unsigned int> &l2) {
     std::unique_ptr<List<unsigned int>> _head{};
@@ -242,7 +242,9 @@ struct LoopifyGenerators {
   static List<unsigned int> repeat(const unsigned int x, const unsigned int n);
 
   /// unfold f n init unfolds a list from seed value.
-  template <MapsTo<std::pair<unsigned int, unsigned int>, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<std::pair<unsigned int, unsigned int>, F1 &,
+                                   unsigned int &>
   static List<unsigned int> unfold_fuel(const unsigned int fuel, F1 &&f,
                                         const unsigned int n,
                                         const unsigned int seed) {
@@ -282,7 +284,9 @@ struct LoopifyGenerators {
     return std::move(*(_head));
   }
 
-  template <MapsTo<std::pair<unsigned int, unsigned int>, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<std::pair<unsigned int, unsigned int>, F0 &,
+                                   unsigned int &>
   static List<unsigned int> unfold(F0 &&f, const unsigned int n,
                                    const unsigned int seed) {
     return unfold_fuel(100u, f, n, seed);
@@ -290,7 +294,8 @@ struct LoopifyGenerators {
 
   /// tabulate n f generates f 0, f 1, ..., f (n-1) (same as init_list but
   /// different naming).
-  template <MapsTo<unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static List<unsigned int> tabulate(const unsigned int n, F1 &&f) {
     std::function<List<unsigned int>(unsigned int)> go;
     go = [&](unsigned int i) -> List<unsigned int> {

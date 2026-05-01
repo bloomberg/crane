@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct LoopifyMultiRecursion {
   static unsigned int mixed_arith_fuel(const unsigned int fuel,
                                        const unsigned int n);
@@ -157,9 +154,10 @@ struct LoopifyMultiRecursion {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0,
-      MapsTo<T1, quadtree, T1, quadtree, T1, quadtree, T1, quadtree, T1> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &, T1 &,
+                                   quadtree &, T1 &, quadtree &, T1 &>
   static T1 quadtree_rect(F0 &&f, F1 &&f0, const quadtree &q) {
     if (std::holds_alternative<typename quadtree::QLeaf>(q.v())) {
       const auto &[d_a0] = std::get<typename quadtree::QLeaf>(q.v());
@@ -174,9 +172,10 @@ struct LoopifyMultiRecursion {
     }
   }
 
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0,
-      MapsTo<T1, quadtree, T1, quadtree, T1, quadtree, T1, quadtree, T1> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &, T1 &,
+                                   quadtree &, T1 &, quadtree &, T1 &>
   static T1 quadtree_rec(F0 &&f, F1 &&f0, const quadtree &q) {
     if (std::holds_alternative<typename quadtree::QLeaf>(q.v())) {
       const auto &[d_a0] = std::get<typename quadtree::QLeaf>(q.v());

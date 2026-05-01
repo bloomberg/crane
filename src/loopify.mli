@@ -29,3 +29,13 @@ val transform_decl :
   pp_expr:(cpp_expr -> string) ->
   cpp_decl ->
   cpp_decl
+
+(** Pre-register a function definition for mutual recursion detection.
+    Call this for all functions in a mutual fixpoint group before any of
+    them are individually transformed, so that [transform_decl] can
+    detect and inline mutual calls. *)
+val register_fundef :
+  (GlobRef.t * cpp_type list) list ->
+  (Id.t * cpp_type) list ->
+  cpp_stmt list ->
+  unit

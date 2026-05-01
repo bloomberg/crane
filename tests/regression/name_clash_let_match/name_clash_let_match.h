@@ -7,9 +7,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct NameClashLetMatch {
   /// Tests for variable name clashes between let-bindings and match bindings.
   struct either {
@@ -144,8 +141,9 @@ struct NameClashLetMatch {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 either_rec(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename either::Left>(_sv.v())) {
@@ -157,8 +155,9 @@ struct NameClashLetMatch {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 either_rect(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename either::Left>(_sv.v())) {
@@ -240,8 +239,9 @@ struct NameClashLetMatch {
       return (((d_a0 + d_a1) + d_a2) + from_either);
     }
 
-    template <typename T1,
-              MapsTo<T1, unsigned int, unsigned int, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
+                                     unsigned int &>
     T1 triple_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =
@@ -249,8 +249,9 @@ struct NameClashLetMatch {
       return f(d_a0, d_a1, d_a2);
     }
 
-    template <typename T1,
-              MapsTo<T1, unsigned int, unsigned int, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
+                                     unsigned int &>
     T1 triple_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =

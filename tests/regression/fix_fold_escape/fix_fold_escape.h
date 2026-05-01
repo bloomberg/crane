@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -127,10 +124,10 @@ public:
 
 struct FixFoldEscape {
   /// Manual fold_left to avoid stdlib extraction complications.
-  template <
-      MapsTo<List<std::function<unsigned int(unsigned int)>>,
-             List<std::function<unsigned int(unsigned int)>>, unsigned int>
-          F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<
+        List<std::function<unsigned int(unsigned int)>>, F0 &,
+        List<std::function<unsigned int(unsigned int)>> &, unsigned int &>
   static List<std::function<unsigned int(unsigned int)>>
   fold_left(F0 &&f, List<std::function<unsigned int(unsigned int)>> acc,
             const List<unsigned int> &l) {

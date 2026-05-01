@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -125,7 +122,8 @@ public:
 };
 
 struct LoopifyPredicates {
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static List<unsigned int> take_while(F0 &&p, const List<unsigned int> &l) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -158,7 +156,8 @@ struct LoopifyPredicates {
     return std::move(*(_head));
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static List<unsigned int> drop_while(F0 &&p, List<unsigned int> l) {
     List<unsigned int> _result;
     List<unsigned int> _loop_l = std::move(l);
@@ -181,7 +180,8 @@ struct LoopifyPredicates {
     return _result;
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static std::pair<List<unsigned int>, List<unsigned int>>
   span(F0 &&p, List<unsigned int> l) {
     struct _Enter {
@@ -230,7 +230,8 @@ struct LoopifyPredicates {
     return _result;
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static std::pair<List<unsigned int>, List<unsigned int>>
   break_at(F0 &&p, List<unsigned int> l) {
     struct _Enter {
@@ -279,7 +280,8 @@ struct LoopifyPredicates {
     return _result;
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static List<unsigned int> filter(F0 &&p, const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
@@ -294,7 +296,8 @@ struct LoopifyPredicates {
     }
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static List<unsigned int> reject(F0 &&p, const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
@@ -309,7 +312,8 @@ struct LoopifyPredicates {
     }
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static bool forall_pred(F0 &&p, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -348,7 +352,8 @@ struct LoopifyPredicates {
     return _result;
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static bool exists_pred(F0 &&p, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -387,7 +392,8 @@ struct LoopifyPredicates {
     return _result;
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static std::optional<unsigned int>
   find_index_aux(F0 &&p, const List<unsigned int> &l, const unsigned int idx) {
     std::optional<unsigned int> _result;
@@ -413,13 +419,15 @@ struct LoopifyPredicates {
     return _result;
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static std::optional<unsigned int> find_index(F0 &&p,
                                                 const List<unsigned int> &l) {
     return find_index_aux(p, l, 0u);
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static List<unsigned int> find_indices_aux(F0 &&p,
                                              const List<unsigned int> &l,
                                              const unsigned int idx) {
@@ -437,12 +445,14 @@ struct LoopifyPredicates {
     }
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static List<unsigned int> find_indices(F0 &&p, const List<unsigned int> &l) {
     return find_indices_aux(p, l, 0u);
   }
 
-  template <MapsTo<bool, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &, unsigned int &>
   static List<unsigned int> delete_by(F0 &&eq, const unsigned int x,
                                       const List<unsigned int> &l) {
     std::unique_ptr<List<unsigned int>> _head{};

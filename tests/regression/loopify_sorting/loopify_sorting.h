@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -258,7 +255,8 @@ struct LoopifySorting {
   static bool is_sorted(const List<unsigned int> &l);
 
   /// merge_by cmp merges with custom comparator.
-  template <MapsTo<bool, unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<bool, F1 &, unsigned int &, unsigned int &>
   static List<unsigned int> merge_by_fuel(const unsigned int fuel, F1 &&cmp,
                                           List<unsigned int> l1,
                                           List<unsigned int> l2) {
@@ -290,7 +288,8 @@ struct LoopifySorting {
     }
   }
 
-  template <MapsTo<bool, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &, unsigned int &>
   static List<unsigned int> merge_by(F0 &&cmp, const List<unsigned int> &l1,
                                      const List<unsigned int> &l2) {
     return merge_by_fuel(

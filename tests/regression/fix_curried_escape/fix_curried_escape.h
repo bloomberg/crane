@@ -6,9 +6,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct FixCurriedEscape {
   /// A local fixpoint that escapes through an option wrapper,
   /// preventing Crane from uncurrying it away.

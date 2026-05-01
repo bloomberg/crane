@@ -10,9 +10,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -365,7 +362,9 @@ struct ComprehensivePatterns {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, S> F0, MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, S &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 Either_rec(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Either::Left_S>(_sv.v())) {
@@ -377,7 +376,9 @@ struct ComprehensivePatterns {
       }
     }
 
-    template <typename T1, MapsTo<T1, S> F0, MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, S &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 Either_rect(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Either::Left_S>(_sv.v())) {
@@ -524,7 +525,8 @@ struct ComprehensivePatterns {
   static unsigned int multi_positions(const NC &r);
   static unsigned int sum_proj(const unsigned int n, const NC &r);
 
-  template <MapsTo<unsigned int, NC> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, NC &>
   static unsigned int apply(F0 &&f, NC _x0) {
     return f(std::move(_x0));
   }
@@ -905,8 +907,10 @@ struct ComprehensivePatterns {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, Tree, T1, unsigned int, Tree, T1> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, Tree &, T1 &, unsigned int &,
+                                     Tree &, T1 &>
     T1 Tree_rec(F0 &&f, F1 &&f0) const {
       const Tree *_self = this;
 
@@ -966,8 +970,10 @@ struct ComprehensivePatterns {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, Tree, T1, unsigned int, Tree, T1> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, Tree &, T1 &, unsigned int &,
+                                     Tree &, T1 &>
     T1 Tree_rect(F0 &&f, F1 &&f0) const {
       const Tree *_self = this;
 
@@ -1108,7 +1114,8 @@ struct ComprehensivePatterns {
       }
     }
 
-    template <typename T1, MapsTo<T1, StateRO> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, StateRO &>
     T1 Container_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Container::Empty>(_sv.v())) {
@@ -1119,7 +1126,8 @@ struct ComprehensivePatterns {
       }
     }
 
-    template <typename T1, MapsTo<T1, StateRO> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, StateRO &>
     T1 Container_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Container::Empty>(_sv.v())) {

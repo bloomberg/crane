@@ -10,9 +10,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -176,18 +173,24 @@ public:
 
   /// This will be methodified on sseq because first arg is sseq A
   /// and the module is eponymous.
-  template <MapsTo<t_A, t_A> F0> t_A double_head(F0 &&f) const {
+  template <typename F0>
+    requires std::is_invocable_r_v<t_A, F0 &, t_A &>
+  t_A double_head(F0 &&f) const {
     return f(this->shead());
   }
 
-  template <MapsTo<t_A, t_A> F0> Sseq<t_A> smap(F0 &&f) const {
+  template <typename F0>
+    requires std::is_invocable_r_v<t_A, F0 &, t_A &>
+  Sseq<t_A> smap(F0 &&f) const {
     Sseq<t_A> _self = *(this);
     return Sseq<t_A>::lazy_([=]() mutable -> Sseq<t_A> {
       return Sseq<t_A>::scons(_self.double_head(f), _self.stail().smap(f));
     });
   }
 
-  template <MapsTo<t_A, t_A> F0> Sseq<t_A> smap_direct(F0 &&f) const {
+  template <typename F0>
+    requires std::is_invocable_r_v<t_A, F0 &, t_A &>
+  Sseq<t_A> smap_direct(F0 &&f) const {
     Sseq<t_A> _self = *(this);
     return Sseq<t_A>::lazy_([=]() mutable -> Sseq<t_A> {
       return Sseq<t_A>::scons(f(_self.shead()), _self.stail().smap_direct(f));

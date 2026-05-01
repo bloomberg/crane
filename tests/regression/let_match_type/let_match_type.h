@@ -11,9 +11,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct LetMatchType {
   /// 1. let-bound bool match returning nat
   static unsigned int let_match_nat(const bool b);

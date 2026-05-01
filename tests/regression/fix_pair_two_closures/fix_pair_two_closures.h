@@ -7,9 +7,6 @@
 #include <type_traits>
 #include <utility>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct FixPairTwoClosures {
   /// Two local fixpoints escape through a pair.
   ///

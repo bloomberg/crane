@@ -7,9 +7,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct BenchLetIn {
   template <typename t_A, typename t_B> struct pair {
     // TYPES
@@ -69,14 +66,18 @@ struct BenchLetIn {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, t_A, t_B> F0> T1 pair_rec(F0 &&f) const {
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
+    T1 pair_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
           std::get<typename pair<t_A, t_B>::Pair0>(_sv.v());
       return f(d_a0, d_a1);
     }
 
-    template <typename T1, MapsTo<T1, t_A, t_B> F0> T1 pair_rect(F0 &&f) const {
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
+    T1 pair_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
           std::get<typename pair<t_A, t_B>::Pair0>(_sv.v());
@@ -150,7 +151,8 @@ struct BenchLetIn {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, t_A, t_B, t_C> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &, t_C &>
     T1 triple_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =
@@ -158,7 +160,8 @@ struct BenchLetIn {
       return f(d_a0, d_a1, d_a2);
     }
 
-    template <typename T1, MapsTo<T1, t_A, t_B, t_C> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &, t_C &>
     T1 triple_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =

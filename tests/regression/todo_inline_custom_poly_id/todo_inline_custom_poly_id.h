@@ -6,9 +6,6 @@
 #include <todo_inline_custom_poly_id_support.h>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct TodoInlineCustomPolyId {
   static inline const unsigned int test_value = []() {
     unsigned int kept_nat = inline_id_impl(4u);

@@ -10,9 +10,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -181,7 +178,8 @@ public:
 };
 
 struct FunctionVernac {
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static unsigned int div2_F(F0 &&div3, const unsigned int n) {
     if (n <= 0) {
       return 0u;
@@ -323,9 +321,11 @@ struct FunctionVernac {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <
-        typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, unsigned int> F1,
-        MapsTo<T1, unsigned int, unsigned int, unsigned int, R_div2, T1> F2>
+    template <typename T1, typename F0, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &,
+                                     unsigned int &, R_div2 &, T1 &>
     T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int,
                   const unsigned int) const {
       auto &&_sv = *(this);
@@ -343,9 +343,11 @@ struct FunctionVernac {
       }
     }
 
-    template <
-        typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, unsigned int> F1,
-        MapsTo<T1, unsigned int, unsigned int, unsigned int, R_div2, T1> F2>
+    template <typename T1, typename F0, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &,
+                                     unsigned int &, R_div2 &, T1 &>
     T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int,
                    const unsigned int) const {
       auto &&_sv = *(this);
@@ -364,9 +366,11 @@ struct FunctionVernac {
     }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1,
-            MapsTo<T1, unsigned int, unsigned int, T1> F2>
+  template <typename T1, typename F0, typename F1, typename F2>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &,
+                                   T1 &>
   static T1 div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int n) {
     std::function<T1(unsigned int, T1)> f2 =
         [=](unsigned int _pa0, T1 _pa1) mutable { return f1(n, _pa0, _pa1); };
@@ -389,16 +393,19 @@ struct FunctionVernac {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1,
-            MapsTo<T1, unsigned int, unsigned int, T1> F2>
+  template <typename T1, typename F0, typename F1, typename F2>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &,
+                                   T1 &>
   static T1 div2_rec(F0 &&_x0, F1 &&_x1, F2 &&_x2, const unsigned int _x3) {
     return div2_rect<T1>(_x0, _x1, _x2, _x3);
   }
 
   static R_div2 R_div2_correct(const unsigned int n, const unsigned int _res);
 
-  template <MapsTo<unsigned int, List<unsigned int>> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, List<unsigned int> &>
   static unsigned int list_sum_F(F0 &&list_sum0, const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return 0u;
@@ -527,10 +534,11 @@ struct FunctionVernac {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, List<unsigned int>> F0,
-              MapsTo<T1, List<unsigned int>, unsigned int, List<unsigned int>,
-                     unsigned int, R_list_sum, T1>
-                  F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, List<unsigned int> &> &&
+               std::is_invocable_r_v<T1, F1 &, List<unsigned int> &,
+                                     unsigned int &, List<unsigned int> &,
+                                     unsigned int &, R_list_sum &, T1 &>
     T1 R_list_sum_rec(F0 &&f, F1 &&f0, const List<unsigned int> &,
                       const unsigned int) const {
       auto &&_sv = *(this);
@@ -546,10 +554,11 @@ struct FunctionVernac {
       }
     }
 
-    template <typename T1, MapsTo<T1, List<unsigned int>> F0,
-              MapsTo<T1, List<unsigned int>, unsigned int, List<unsigned int>,
-                     unsigned int, R_list_sum, T1>
-                  F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, List<unsigned int> &> &&
+               std::is_invocable_r_v<T1, F1 &, List<unsigned int> &,
+                                     unsigned int &, List<unsigned int> &,
+                                     unsigned int &, R_list_sum &, T1 &>
     T1 R_list_sum_rect(F0 &&f, F1 &&f0, const List<unsigned int> &,
                        const unsigned int) const {
       auto &&_sv = *(this);
@@ -566,9 +575,10 @@ struct FunctionVernac {
     }
   };
 
-  template <
-      typename T1, MapsTo<T1, List<unsigned int>> F0,
-      MapsTo<T1, List<unsigned int>, unsigned int, List<unsigned int>, T1> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, List<unsigned int> &> &&
+             std::is_invocable_r_v<T1, F1 &, List<unsigned int> &,
+                                   unsigned int &, List<unsigned int> &, T1 &>
   static T1 list_sum_rect(F0 &&f, F1 &&f0, const List<unsigned int> &l) {
     std::function<T1(unsigned int, List<unsigned int>, T1)> f1 =
         [=](unsigned int _pa0, List<unsigned int> _pa1, T1 _pa2) mutable {
@@ -589,9 +599,10 @@ struct FunctionVernac {
     }
   }
 
-  template <
-      typename T1, MapsTo<T1, List<unsigned int>> F0,
-      MapsTo<T1, List<unsigned int>, unsigned int, List<unsigned int>, T1> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, List<unsigned int> &> &&
+             std::is_invocable_r_v<T1, F1 &, List<unsigned int> &,
+                                   unsigned int &, List<unsigned int> &, T1 &>
   static T1 list_sum_rec(F0 &&_x0, F1 &&_x1, const List<unsigned int> &_x2) {
     return list_sum_rect<T1>(_x0, _x1, _x2);
   }

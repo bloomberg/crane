@@ -9,9 +9,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
+#include <vector>
 
 struct PeanoNat {
   static bool even(const unsigned int n);
@@ -19,8 +17,7 @@ struct PeanoNat {
 };
 
 template <typename I, typename
-t_A>
-concept FunctionalInduction = requires {
+t_A>concept FunctionalInduction = requires {
   typename I::fun_ind_prf_ty;
 } && (requires {
   { I::fun_ind_prf() } -> std::convertible_to<typename I::fun_ind_prf_ty>;
@@ -29,7 +26,9 @@ concept FunctionalInduction = requires {
 });
 
 struct Equations {
-  template <MapsTo<unsigned int, std::pair<unsigned int, unsigned int>> F3>
+  template <typename F3>
+    requires std::is_invocable_r_v<unsigned int, F3 &,
+                                   std::pair<unsigned int, unsigned int> &>
   static unsigned int gcd_clause_3(const unsigned int n, const unsigned int n0,
                                    const bool refine, F3 &&gcd0) {
     if (refine) {
@@ -43,7 +42,9 @@ struct Equations {
     }
   }
 
-  template <MapsTo<unsigned int, std::pair<unsigned int, unsigned int>> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &,
+                                   std::pair<unsigned int, unsigned int> &>
   static unsigned int
   gcd_functional(const std::pair<unsigned int, unsigned int> &p, F1 &&gcd0) {
     const unsigned int &n = p.first;
@@ -154,6 +155,45 @@ struct Equations {
     }
 
     // MANIPULATORS
+    ~gcd_graph() {
+      std::vector<std::unique_ptr<gcd_graph>> _stack{};
+      auto _drain = [&](gcd_graph &_node) {
+        if (std::holds_alternative<Gcd_graph_refinement_3>(_node.d_v_)) {
+          auto &_alt = std::get<Gcd_graph_refinement_3>(_node.d_v_);
+          if (_alt.d_hind) {
+            if (std::holds_alternative<typename Equations::gcd_clause_3_graph::
+                                           Gcd_clause_3_graph_equation_1>(
+                    _alt.d_hind->v())) {
+              auto &_palt = std::get<typename Equations::gcd_clause_3_graph::
+                                         Gcd_clause_3_graph_equation_1>(
+                  _alt.d_hind->v_mut());
+              if (_palt.d_hind) {
+                _stack.push_back(std::move(_palt.d_hind));
+              }
+            }
+            if (std::holds_alternative<typename Equations::gcd_clause_3_graph::
+                                           Gcd_clause_3_graph_equation_2>(
+                    _alt.d_hind->v())) {
+              auto &_palt = std::get<typename Equations::gcd_clause_3_graph::
+                                         Gcd_clause_3_graph_equation_2>(
+                  _alt.d_hind->v_mut());
+              if (_palt.d_hind) {
+                _stack.push_back(std::move(_palt.d_hind));
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
@@ -245,14 +285,60 @@ struct Equations {
     }
 
     // MANIPULATORS
+    ~gcd_clause_3_graph() {
+      std::vector<std::unique_ptr<gcd_clause_3_graph>> _stack{};
+      auto _drain = [&](gcd_clause_3_graph &_node) {
+        if (std::holds_alternative<Gcd_clause_3_graph_equation_1>(_node.d_v_)) {
+          auto &_alt = std::get<Gcd_clause_3_graph_equation_1>(_node.d_v_);
+          if (_alt.d_hind) {
+            if (std::holds_alternative<
+                    typename Equations::gcd_graph::Gcd_graph_refinement_3>(
+                    _alt.d_hind->v())) {
+              auto &_palt = std::get<
+                  typename Equations::gcd_graph::Gcd_graph_refinement_3>(
+                  _alt.d_hind->v_mut());
+              if (_palt.d_hind) {
+                _stack.push_back(std::move(_palt.d_hind));
+              }
+            }
+          }
+        }
+        if (std::holds_alternative<Gcd_clause_3_graph_equation_2>(_node.d_v_)) {
+          auto &_alt = std::get<Gcd_clause_3_graph_equation_2>(_node.d_v_);
+          if (_alt.d_hind) {
+            if (std::holds_alternative<
+                    typename Equations::gcd_graph::Gcd_graph_refinement_3>(
+                    _alt.d_hind->v())) {
+              auto &_palt = std::get<
+                  typename Equations::gcd_graph::Gcd_graph_refinement_3>(
+                  _alt.d_hind->v_mut());
+              if (_palt.d_hind) {
+                _stack.push_back(std::move(_palt.d_hind));
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2 = void, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1, typename F2, typename F3, typename F4>
+  template <typename T1, typename T2 = void, typename F0, typename F1,
+            typename F2, typename F3, typename F4>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 gcd_graph_mut(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                           std::pair<unsigned int, unsigned int> _x0,
                           const unsigned int _x1, gcd_graph _x2) {
@@ -389,8 +475,10 @@ struct Equations {
     return f5(_x0, _x1, _x2, _x3, _x4);
   }
 
-  template <typename T1, typename T2 = void, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1, typename F2, typename F3, typename F4>
+  template <typename T1, typename T2 = void, typename F0, typename F1,
+            typename F2, typename F3, typename F4>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 gcd_graph_rect(F0 &&_x0, F1 &&_x1, F2 &&_x2, F3 &&_x3, F4 &&_x4,
                            const std::pair<unsigned int, unsigned int> &_x5,
                            const unsigned int _x6, const gcd_graph &_x7) {
@@ -400,10 +488,13 @@ struct Equations {
   static gcd_graph
   gcd_graph_correct(const std::pair<unsigned int, unsigned int> &x);
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1,
-            MapsTo<T1, unsigned int, unsigned int, T1> F2,
-            MapsTo<T1, unsigned int, unsigned int, T1> F3>
+  template <typename T1, typename F0, typename F1, typename F2, typename F3>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &,
+                                   T1 &> &&
+             std::is_invocable_r_v<T1, F3 &, unsigned int &, unsigned int &,
+                                   T1 &>
   static T1 gcd_elim(F0 &&f, F1 &&f0, F2 &&f2, F3 &&f3,
                      std::pair<unsigned int, unsigned int> p) {
     return gcd_graph_mut(
@@ -450,7 +541,8 @@ struct Equations {
           FunctionalInduction_gcd,
           std::function<unsigned int(std::pair<unsigned int, unsigned int>)>>);
 
-  template <MapsTo<unsigned int, unsigned int> F2>
+  template <typename F2>
+    requires std::is_invocable_r_v<unsigned int, F2 &, unsigned int &>
   static unsigned int collatz_steps_clause_3(const unsigned int n,
                                              const bool refine,
                                              F2 &&collatz_steps0) {
@@ -461,7 +553,8 @@ struct Equations {
     }
   }
 
-  template <MapsTo<unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static unsigned int collatz_steps_functional(const unsigned int n,
                                                F1 &&collatz_steps0) {
     if (n <= 0) {
@@ -570,6 +663,50 @@ struct Equations {
     }
 
     // MANIPULATORS
+    ~collatz_steps_graph() {
+      std::vector<std::unique_ptr<collatz_steps_graph>> _stack{};
+      auto _drain = [&](collatz_steps_graph &_node) {
+        if (std::holds_alternative<Collatz_steps_graph_refinement_3>(
+                _node.d_v_)) {
+          auto &_alt = std::get<Collatz_steps_graph_refinement_3>(_node.d_v_);
+          if (_alt.d_hind) {
+            if (std::holds_alternative<
+                    typename Equations::collatz_steps_clause_3_graph::
+                        Collatz_steps_clause_3_graph_equation_1>(
+                    _alt.d_hind->v())) {
+              auto &_palt =
+                  std::get<typename Equations::collatz_steps_clause_3_graph::
+                               Collatz_steps_clause_3_graph_equation_1>(
+                      _alt.d_hind->v_mut());
+              if (_palt.d_hind) {
+                _stack.push_back(std::move(_palt.d_hind));
+              }
+            }
+            if (std::holds_alternative<
+                    typename Equations::collatz_steps_clause_3_graph::
+                        Collatz_steps_clause_3_graph_equation_2>(
+                    _alt.d_hind->v())) {
+              auto &_palt =
+                  std::get<typename Equations::collatz_steps_clause_3_graph::
+                               Collatz_steps_clause_3_graph_equation_2>(
+                      _alt.d_hind->v_mut());
+              if (_palt.d_hind) {
+                _stack.push_back(std::move(_palt.d_hind));
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
@@ -668,6 +805,54 @@ struct Equations {
     }
 
     // MANIPULATORS
+    ~collatz_steps_clause_3_graph() {
+      std::vector<std::unique_ptr<collatz_steps_clause_3_graph>> _stack{};
+      auto _drain = [&](collatz_steps_clause_3_graph &_node) {
+        if (std::holds_alternative<Collatz_steps_clause_3_graph_equation_1>(
+                _node.d_v_)) {
+          auto &_alt =
+              std::get<Collatz_steps_clause_3_graph_equation_1>(_node.d_v_);
+          if (_alt.d_hind) {
+            if (std::holds_alternative<typename Equations::collatz_steps_graph::
+                                           Collatz_steps_graph_refinement_3>(
+                    _alt.d_hind->v())) {
+              auto &_palt = std::get<typename Equations::collatz_steps_graph::
+                                         Collatz_steps_graph_refinement_3>(
+                  _alt.d_hind->v_mut());
+              if (_palt.d_hind) {
+                _stack.push_back(std::move(_palt.d_hind));
+              }
+            }
+          }
+        }
+        if (std::holds_alternative<Collatz_steps_clause_3_graph_equation_2>(
+                _node.d_v_)) {
+          auto &_alt =
+              std::get<Collatz_steps_clause_3_graph_equation_2>(_node.d_v_);
+          if (_alt.d_hind) {
+            if (std::holds_alternative<typename Equations::collatz_steps_graph::
+                                           Collatz_steps_graph_refinement_3>(
+                    _alt.d_hind->v())) {
+              auto &_palt = std::get<typename Equations::collatz_steps_graph::
+                                         Collatz_steps_graph_refinement_3>(
+                  _alt.d_hind->v_mut());
+              if (_palt.d_hind) {
+                _stack.push_back(std::move(_palt.d_hind));
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
@@ -727,10 +912,13 @@ struct Equations {
     return f4(_x0, _x1, _x2);
   }
 
-  template <typename T1, typename T2,
-            MapsTo<T1, unsigned int, collatz_steps_clause_3_graph, T2> F2,
-            MapsTo<T2, unsigned int, collatz_steps_graph, T1> F3,
-            MapsTo<T2, unsigned int, collatz_steps_graph, T1> F4>
+  template <typename T1, typename T2, typename F2, typename F3, typename F4>
+    requires std::is_invocable_r_v<T1, F2 &, unsigned int &,
+                                   collatz_steps_clause_3_graph &, T2 &> &&
+             std::is_invocable_r_v<T2, F3 &, unsigned int &,
+                                   collatz_steps_graph &, T1 &> &&
+             std::is_invocable_r_v<T2, F4 &, unsigned int &,
+                                   collatz_steps_graph &, T1 &>
   static T2
   collatz_steps_clause_3_graph_mut(const T1 f, const T1 f0, F2 &&f1, F3 &&f2,
                                    F4 &&f3, const unsigned int _x0,
@@ -795,8 +983,9 @@ struct Equations {
 
   static collatz_steps_graph collatz_steps_graph_correct(const unsigned int x);
 
-  template <typename T1, MapsTo<T1, unsigned int, T1> F2,
-            MapsTo<T1, unsigned int, T1> F3>
+  template <typename T1, typename F2, typename F3>
+    requires std::is_invocable_r_v<T1, F2 &, unsigned int &, T1 &> &&
+             std::is_invocable_r_v<T1, F3 &, unsigned int &, T1 &>
   static T1 collatz_steps_elim(const T1 f, const T1 f0, F2 &&f2, F3 &&f3,
                                const unsigned int n) {
     return collatz_steps_graph_mut(

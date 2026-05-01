@@ -10,9 +10,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A, typename t_P> struct SigT {
   // TYPES
   struct ExistT {

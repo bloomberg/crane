@@ -8,8 +8,6 @@
 #include <type_traits>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct StringMatch {
   static inline const std::string str_empty = "";

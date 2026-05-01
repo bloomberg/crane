@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 enum class Bool0 { e_TRUE0, e_FALSE0 };
 
 struct Nat {

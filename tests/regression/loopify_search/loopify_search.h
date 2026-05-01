@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -204,7 +201,9 @@ struct LoopifySearch {
 
   /// maximum_by cmp l finds maximum element by custom comparator.
   /// cmp x y returns: 0 if x=y, 1 if x>y, 2 if x<y
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static unsigned int maximum_by(F0 &&cmp, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -289,11 +288,12 @@ struct LoopifySearch {
   static bool subset_sum_fuel(const unsigned int fuel,
                               const unsigned int target,
                               const List<unsigned int> &l);
-  static bool subset_sum(const unsigned int target,
-                         const List<unsigned int> &l);
+  static bool
+  subset_sum(const unsigned int target,
+             const List<unsigned int> &l); /// Helper: filter predicate.
 
-  /// Helper: filter predicate.
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static List<unsigned int> filter_impl(F0 &&p, const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
@@ -344,7 +344,9 @@ struct LoopifySearch {
                                          const List<unsigned int> &l);
 
   /// Helper: map function over list and concatenate results.
-  template <MapsTo<List<List<unsigned int>>, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<List<List<unsigned int>>, F0 &,
+                                   unsigned int &>
   static List<List<unsigned int>> concat_map(F0 &&f,
                                              const List<unsigned int> &l) {
     struct _Enter {
@@ -525,8 +527,9 @@ struct LoopifySearch {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, btree, T1, btree, T1> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, btree &, T1 &, btree &, T1 &>
   static T1 btree_rect(F0 &&f, F1 &&f0, const btree &b) {
     if (std::holds_alternative<typename btree::BLeaf>(b.v())) {
       const auto &[d_a0] = std::get<typename btree::BLeaf>(b.v());
@@ -538,8 +541,9 @@ struct LoopifySearch {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, btree, T1, btree, T1> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, btree &, T1 &, btree &, T1 &>
   static T1 btree_rec(F0 &&f, F1 &&f0, const btree &b) {
     if (std::holds_alternative<typename btree::BLeaf>(b.v())) {
       const auto &[d_a0] = std::get<typename btree::BLeaf>(b.v());
@@ -549,10 +553,10 @@ struct LoopifySearch {
       return f0(*(d_a0), btree_rec<T1>(f, f0, *(d_a0)), *(d_a1),
                 btree_rec<T1>(f, f0, *(d_a1)));
     }
-  }
+  } /// or_search p t searches tree with || recursion.
 
-  /// or_search p t searches tree with || recursion.
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static bool or_search(F0 &&p, const btree &t) {
     if (std::holds_alternative<typename btree::BLeaf>(t.v())) {
       const auto &[d_a0] = std::get<typename btree::BLeaf>(t.v());
@@ -564,7 +568,8 @@ struct LoopifySearch {
   }
 
   /// find_indices p l finds all indices where predicate holds.
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static List<unsigned int> find_indices_aux(F0 &&p,
                                              const List<unsigned int> &l,
                                              const unsigned int idx) {
@@ -582,7 +587,8 @@ struct LoopifySearch {
     }
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static List<unsigned int> find_indices(F0 &&p, const List<unsigned int> &l) {
     return find_indices_aux(p, l, 0u);
   }

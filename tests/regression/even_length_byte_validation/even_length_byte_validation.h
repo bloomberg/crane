@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -123,7 +120,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
 
-  template <MapsTo<bool, t_A> F0> bool forallb(F0 &&f) const {
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, t_A &>
+  bool forallb(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return true;

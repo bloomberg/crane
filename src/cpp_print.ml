@@ -2214,17 +2214,11 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
   in
   fold_cmds (mt ()) cmds
 
-(** Print a template parameter type keyword (typename, concept constraint,
-    MapsTo). *)
+(** Print a template parameter type keyword (typename or concept constraint). *)
 let pp_template_type = function
   | TTtypename -> str "typename"
   | TTtypename_default _ -> str "typename"
-  | TTfun (dom, cod) ->
-    str "MapsTo<"
-    ++ pp_cpp_type false [] cod
-    ++ str ", "
-    ++ pp_list (pp_cpp_type false []) dom
-    ++ str ">"
+  | TTfun _ -> str "typename"
   | TTconcept concept -> pp_global Type concept
 
 (** Print a complete template parameter including name and optional default *)
@@ -2237,6 +2231,46 @@ let pp_template_param (tt, id) =
     ++ str " = "
     ++ pp_cpp_type false [] default_ty
   | _ -> pp_template_type tt ++ spc () ++ Id.print id
+
+(** Build a [requires] clause from template parameters that have [TTfun]
+    constraints.  Each [TTfun(dom, cod)] with parameter name [F] becomes
+    [std::is_invocable_r_v<cod, F &, dom1 &, dom2 &, ...>].  Returns [None]
+    when no [TTfun] parameters are present.  In BDE mode, uses
+    [bsl::is_invocable_r_v] instead. *)
+let pp_requires_of_tparams tparams =
+  let invocable_r =
+    if String.equal (Table.std_lib ()) "BDE" then "bsl::is_invocable_r_v"
+    else "std::is_invocable_r_v"
+  in
+  let clauses =
+    List.filter_map
+      (fun (tt, id) ->
+        match tt with
+        | TTfun (dom, cod) ->
+          require_header "type_traits";
+          let pp_ref ty = pp_cpp_type false [] ty ++ str " &" in
+          Some
+            ( str invocable_r ++ str "<"
+            ++ pp_cpp_type false [] cod
+            ++ str ", "
+            ++ Id.print id ++ str " &"
+            ++ List.fold_left
+                 (fun acc ty -> acc ++ str ", " ++ pp_ref ty)
+                 (mt ()) dom
+            ++ str ">" )
+        | _ -> None)
+      tparams
+  in
+  match clauses with
+  | [] -> None
+  | [c] -> Some (str "  requires " ++ c)
+  | _ ->
+    Some
+      ( str "  requires "
+      ++ List.hd clauses
+      ++ List.fold_left
+           (fun acc c -> acc ++ fnl () ++ str "      && " ++ c)
+           (mt ()) (List.tl clauses) )
 
 (** Render a doc comment as [///]-prefixed lines followed by a newline, or
     [mt ()] if no comment is registered for [name].  This is the single lookup
@@ -2343,7 +2377,11 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       | [] -> mt ()
       | _ ->
         let args = pp_list pp_template_param mf_tparams in
+        let req = pp_requires_of_tparams mf_tparams in
         str "template <" ++ args ++ str ">" ++ fnl ()
+        ++ ( match req with
+           | None -> mt ()
+           | Some r -> r ++ fnl () )
     in
     let doc_comment = pp_doc_comment_for_name (Id.to_string mf_name) in
     let qualifier =
@@ -2597,26 +2635,37 @@ and pp_cpp_decl_raw env = function
   | Dtemplate (temps, cstr, Dasgn (id, ty, e)) when render_ctx.rc_in_struct ->
     let args = pp_list pp_template_param temps in
     let expr_pp = wrap_any_cast_if_needed e (pp_cpp_expr env [] e) ty [] in
+    let req = pp_requires_of_tparams temps in
+    let cstr_pp = match (req, cstr) with
+      | None, None -> mt ()
+      | Some r, None -> r ++ fnl ()
+      | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
+      | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
+    in
     h (str "template <" ++ args ++ str ">")
-    ++ ( match cstr with
-    | None -> fnl ()
-    | Some c -> pp_cpp_expr env [] c ++ fnl () )
+    ++ cstr_pp
     ++ pp_meyers_singleton env id ty expr_pp
   | Dtemplate (temps, cstr, decl) ->
     let args = pp_list pp_template_param temps in
+    let req = pp_requires_of_tparams temps in
+    let cstr_pp = match (req, cstr) with
+      | None, None -> mt ()
+      | Some r, None -> r ++ fnl ()
+      | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
+      | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
+    in
     h (str "template <" ++ args ++ str ">")
-    ++ ( match cstr with
-    | None -> fnl ()
-    | Some c -> pp_cpp_expr env [] c ++ fnl () )
+    ++ cstr_pp
     ++ pp_cpp_decl_raw env decl
   | Dnspace (None, decls) ->
     let ds = pp_list_stmt (pp_cpp_decl_raw env) decls in
     h (str "namespace " ++ str "{") ++ fnl () ++ ds ++ fnl () ++ str "};"
   | Dnspace (Some id, decls) ->
     let struct_name_str =
-      match id with
-      | GlobRef.IndRef _ -> String.capitalize_ascii (str_global Type id)
-      | _ -> string_of_ppcmds (pp_global Type id)
+      Table.escape_reserved_struct_name
+        ( match id with
+        | GlobRef.IndRef _ -> String.capitalize_ascii (str_global Type id)
+        | _ -> string_of_ppcmds (pp_global Type id) )
     in
     let has_pending = Hashtbl.mem pending_wrapper_decls struct_name_str in
     ( match (decls, has_pending) with
@@ -2674,6 +2723,13 @@ and pp_cpp_decl_raw env = function
           (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
       in
       let args = pp_list pp_template_param temps in
+      let req = pp_requires_of_tparams temps in
+      let cstr_pp = match (req, cstr) with
+        | None, None -> mt ()
+        | Some r, None -> r ++ fnl ()
+        | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
+        | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
+      in
       let inherit_clause =
         if sft then
           let type_args = pp_list (fun (_, id) -> Id.print id) temps in
@@ -2686,9 +2742,7 @@ and pp_cpp_decl_raw env = function
           mt ()
       in
       h (str "template <" ++ args ++ str ">")
-      ++ ( match cstr with
-      | None -> fnl ()
-      | Some c -> pp_cpp_expr env [] c ++ fnl () )
+      ++ cstr_pp
       ++ str "struct "
       ++ struct_name
       ++ inherit_clause
@@ -2869,11 +2923,15 @@ and pp_cpp_decl_raw env = function
       | [] -> mt ()
       | _ ->
         let args = pp_list pp_template_param tparams in
+        let req = pp_requires_of_tparams tparams in
+        let cstr_pp = match (req, cstr) with
+          | None, None -> mt ()
+          | Some r, None -> r ++ fnl ()
+          | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
+          | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
+        in
         h (str "template <" ++ args ++ str ">")
-        ++
-        ( match cstr with
-        | None -> fnl ()
-        | Some c -> pp_cpp_expr env [] c ++ fnl () )
+        ++ cstr_pp
     in
     let inherit_clause =
       if sft then

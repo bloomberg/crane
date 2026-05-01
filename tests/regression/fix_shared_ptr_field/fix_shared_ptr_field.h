@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct FixSharedPtrField {
   /// A value-type inductive with recursive self-reference (shared_ptr).
   /// Pattern matching creates structured bindings to fields including
@@ -178,7 +175,8 @@ struct FixSharedPtrField {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, mylist, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
     T1 mylist_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
@@ -189,7 +187,8 @@ struct FixSharedPtrField {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, mylist, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
     T1 mylist_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
@@ -251,13 +250,15 @@ struct FixSharedPtrField {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, mylist> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, mylist &>
   static T1 wrapper_rect(F0 &&f, const wrapper &w) {
     const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
     return f(d_a0);
   }
 
-  template <typename T1, MapsTo<T1, mylist> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, mylist &>
   static T1 wrapper_rec(F0 &&f, const wrapper &w) {
     const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
     return f(d_a0);

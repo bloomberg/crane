@@ -7,9 +7,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct LargeEnum {
   enum class Color {
     e_RED,
@@ -268,8 +265,9 @@ struct LargeEnum {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F10>
+  template <typename T1, typename F0, typename F10>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F10 &, unsigned int &>
   static T1 tok_rect(F0 &&f, const T1 f0, const T1 f1, const T1 f2, const T1 f3,
                      const T1 f4, const T1 f5, const T1 f6, const T1 f7,
                      const T1 f8, F10 &&f9, const T1 f10, const tok &t) {
@@ -302,8 +300,9 @@ struct LargeEnum {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F10>
+  template <typename T1, typename F0, typename F10>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F10 &, unsigned int &>
   static T1 tok_rec(F0 &&f, const T1 f0, const T1 f1, const T1 f2, const T1 f3,
                     const T1 f4, const T1 f5, const T1 f6, const T1 f7,
                     const T1 f8, F10 &&f9, const T1 f10, const tok &t) {

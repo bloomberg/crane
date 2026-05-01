@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -537,15 +534,25 @@ struct GetPairBoundProp {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <
-      typename T1, MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2,
-      MapsTo<T1, unsigned int> F3, MapsTo<T1, unsigned int> F4,
-      MapsTo<T1, unsigned int> F5, MapsTo<T1, unsigned int> F6,
-      MapsTo<T1, unsigned int> F20, MapsTo<T1, unsigned int> F21,
-      MapsTo<T1, unsigned int, unsigned int> F22,
-      MapsTo<T1, unsigned int, unsigned int> F23, MapsTo<T1, unsigned int> F24,
-      MapsTo<T1, unsigned int> F25, MapsTo<T1, unsigned int> F26,
-      MapsTo<T1, unsigned int, unsigned int> F27, MapsTo<T1, unsigned int> F28>
+  template <typename T1, typename F1, typename F2, typename F3, typename F4,
+            typename F5, typename F6, typename F20, typename F21, typename F22,
+            typename F23, typename F24, typename F25, typename F26,
+            typename F27, typename F28>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F2 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F3 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F4 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F5 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F6 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F20 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F21 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F22 &, unsigned int &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F23 &, unsigned int &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F24 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F25 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F26 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F27 &, unsigned int &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F28 &, unsigned int &>
   static T1 instr_rect(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                        F6 &&f5, const T1 f6, const T1 f7, const T1 f8,
                        const T1 f9, const T1 f10, const T1 f11, const T1 f12,
@@ -629,15 +636,25 @@ struct GetPairBoundProp {
     }
   }
 
-  template <
-      typename T1, MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2,
-      MapsTo<T1, unsigned int> F3, MapsTo<T1, unsigned int> F4,
-      MapsTo<T1, unsigned int> F5, MapsTo<T1, unsigned int> F6,
-      MapsTo<T1, unsigned int> F20, MapsTo<T1, unsigned int> F21,
-      MapsTo<T1, unsigned int, unsigned int> F22,
-      MapsTo<T1, unsigned int, unsigned int> F23, MapsTo<T1, unsigned int> F24,
-      MapsTo<T1, unsigned int> F25, MapsTo<T1, unsigned int> F26,
-      MapsTo<T1, unsigned int, unsigned int> F27, MapsTo<T1, unsigned int> F28>
+  template <typename T1, typename F1, typename F2, typename F3, typename F4,
+            typename F5, typename F6, typename F20, typename F21, typename F22,
+            typename F23, typename F24, typename F25, typename F26,
+            typename F27, typename F28>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F2 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F3 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F4 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F5 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F6 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F20 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F21 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F22 &, unsigned int &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F23 &, unsigned int &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F24 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F25 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F26 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F27 &, unsigned int &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F28 &, unsigned int &>
   static T1 instr_rec(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                       F6 &&f5, const T1 f6, const T1 f7, const T1 f8,
                       const T1 f9, const T1 f10, const T1 f11, const T1 f12,

@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct NameClashNestedDeep {
   /// Deep nesting of pattern matches to stress name generation.
   /// Each level creates d_a0, d_a00, d_a01, etc.
@@ -117,7 +114,8 @@ struct NameClashNestedDeep {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int, mylist, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
   static T1 mylist_rect(const T1 f, F1 &&f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::MyNil>(m.v())) {
       return f;
@@ -127,7 +125,8 @@ struct NameClashNestedDeep {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, mylist, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
   static T1 mylist_rec(const T1 f, F1 &&f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::MyNil>(m.v())) {
       return f;

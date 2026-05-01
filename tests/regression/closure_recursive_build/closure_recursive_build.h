@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct ClosureRecursiveBuild {
   /// A list of closures, each one of which captures a different value.
   struct fn_list {
@@ -118,9 +115,9 @@ struct ClosureRecursiveBuild {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <
-      typename T1,
-      MapsTo<T1, std::function<unsigned int(unsigned int)>, fn_list, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<
+        T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &, T1 &>
   static T1 fn_list_rect(const T1 f, F1 &&f0, const fn_list &f1) {
     if (std::holds_alternative<typename fn_list::FNil>(f1.v())) {
       return f;
@@ -130,9 +127,9 @@ struct ClosureRecursiveBuild {
     }
   }
 
-  template <
-      typename T1,
-      MapsTo<T1, std::function<unsigned int(unsigned int)>, fn_list, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<
+        T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &, T1 &>
   static T1 fn_list_rec(const T1 f, F1 &&f0, const fn_list &f1) {
     if (std::holds_alternative<typename fn_list::FNil>(f1.v())) {
       return f;

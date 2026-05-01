@@ -1685,6 +1685,12 @@ let is_custom_scalar_ref (r : GlobRef.t) : bool =
   | Some s -> is_trivially_copyable_cpp_name s
   | None -> false
 
+let reserved_global_cpp_names =
+  [ "std"; "crane"; "persistent_array" ]
+
+let escape_reserved_struct_name s =
+  if List.mem s reserved_global_cpp_names then s ^ "_" else s
+
 let find_type_custom r = Refmap'.find r !customs
 
 let custom_matchs = Summary.ref Refmap'.empty ~name:"CraneExtrCustomMatchs"

@@ -5,9 +5,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct RecordProj {
   struct Point {
     unsigned int x;
@@ -33,7 +30,8 @@ struct RecordProj {
   static unsigned int complex_access(const ComplexRecord &c);
   static unsigned int nested_record_match(const Point &p1, const Point &p2);
 
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static unsigned int apply_to_field(F0 &&f, const Point &p) {
     unsigned int a = p.x;
     unsigned int b = p.y;

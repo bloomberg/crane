@@ -14,8 +14,6 @@
 #include <vector>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 template <typename t_A> struct List {
   // TYPES
@@ -132,7 +130,8 @@ public:
 
 struct EffectPoly {
   /// 1. Polymorphic monadic map
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static T2 map_result(F0 &&f, const T1 &m) {
     T1 a = m;
     return f(a);

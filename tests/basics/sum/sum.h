@@ -7,9 +7,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct Sum {
   template <typename t_A, typename t_B> struct either {
     // TYPES
@@ -88,7 +85,8 @@ struct Sum {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, t_B> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_B &>
     either<t_A, T1> map_right(F0 &&f) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
@@ -101,7 +99,8 @@ struct Sum {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &>
     either<T1, t_B> map_left(F0 &&f) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
@@ -123,7 +122,9 @@ struct Sum {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
+               std::is_invocable_r_v<T1, F1 &, t_B &>
     T1 either_rec(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
@@ -136,7 +137,9 @@ struct Sum {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
+               std::is_invocable_r_v<T1, F1 &, t_B &>
     T1 either_rect(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
@@ -255,8 +258,10 @@ struct Sum {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1,
-              MapsTo<T1, t_C> F2>
+    template <typename T1, typename F0, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
+               std::is_invocable_r_v<T1, F1 &, t_B &> &&
+               std::is_invocable_r_v<T1, F2 &, t_C &>
     T1 triple_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename triple<t_A, t_B, t_C>::First>(
@@ -276,8 +281,10 @@ struct Sum {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1,
-              MapsTo<T1, t_C> F2>
+    template <typename T1, typename F0, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
+               std::is_invocable_r_v<T1, F1 &, t_B &> &&
+               std::is_invocable_r_v<T1, F2 &, t_C &>
     T1 triple_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename triple<t_A, t_B, t_C>::First>(

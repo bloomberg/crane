@@ -12,8 +12,6 @@
 #include <variant>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct UnitVoidEdge2 {
   static unsigned int take_unit(const std::monostate &_x);
@@ -36,19 +34,22 @@ struct UnitVoidEdge2 {
     return take_unit(x);
   }();
 
-  template <MapsTo<void, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, unsigned int &>
   static unsigned int call_and_discard(F0 &&, const unsigned int n) {
     return n;
   }
 
-  template <MapsTo<void, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, unsigned int &>
   static unsigned int call_and_use(F0 &&f, const unsigned int n) {
     f(n);
     std::monostate x = std::monostate{};
     return take_unit(x);
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static T2 apply(F0 &&f, const T1 _x0) {
     return f(_x0);
   }
@@ -118,13 +119,15 @@ struct UnitVoidEdge2 {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static T3 pair_rect(F0 &&f, const pair<T1, T2> &p) {
     const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p.v());
     return f(d_a0, d_a1);
   }
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static T3 pair_rec(F0 &&f, const pair<T1, T2> &p) {
     const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p.v());
     return f(d_a0, d_a1);

@@ -14,9 +14,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -140,7 +137,8 @@ struct MonadicClosure {
   static int64_t capture_bind();
 
   /// 2. Higher-order function taking a pure callback
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static T2 apply_after_effect(F0 &&f, const T1 &m) {
     T1 x = m;
     return f(x);
@@ -151,7 +149,9 @@ struct MonadicClosure {
   static std::function<std::string(std::string)> make_greeter();
 
   /// 4. Passing effectful result to a HOF
-  template <MapsTo<int64_t, int64_t> F0> static int64_t with_length(F0 &&f) {
+  template <typename F0>
+    requires std::is_invocable_r_v<int64_t, F0 &, int64_t &>
+  static int64_t with_length(F0 &&f) {
     std::string line;
     std::getline(std::cin, line);
     return f(line.length());
@@ -162,7 +162,8 @@ struct MonadicClosure {
   static int64_t nested_capture();
 
   /// 6. Closure used in a fold-like pattern
-  template <MapsTo<bool, std::string> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, std::string &>
   static unsigned int count_matching(F0 &&pred, const List<std::string> &xs) {
     if (std::holds_alternative<typename List<std::string>::Nil>(xs.v())) {
       return 0u;

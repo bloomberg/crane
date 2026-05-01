@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -123,7 +120,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
 
-  template <MapsTo<bool, t_A> F0> bool existsb(F0 &&f) const {
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, t_A &>
+  bool existsb(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return false;
@@ -133,7 +132,8 @@ public:
     }
   }
 
-  template <typename T1, MapsTo<T1, t_A, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, t_A &, T1 &>
   T1 fold_right(F0 &&f, const T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
@@ -144,7 +144,8 @@ public:
     }
   }
 
-  template <typename T1, MapsTo<List<T1>, t_A> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<List<T1>, F0 &, t_A &>
   List<T1> flat_map(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
@@ -155,7 +156,9 @@ public:
     }
   }
 
-  template <typename T1, MapsTo<T1, t_A> F0> List<T1> map(F0 &&f) const {
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, t_A &>
+  List<T1> map(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return List<T1>::nil();
@@ -797,7 +800,8 @@ struct CoalitionBidHonorTraceCase {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 Prize_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Prize::PrizeHonor>(_sv.v())) {
@@ -809,7 +813,8 @@ struct CoalitionBidHonorTraceCase {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 Prize_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Prize::PrizeHonor>(_sv.v())) {
@@ -891,8 +896,10 @@ struct CoalitionBidHonorTraceCase {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &,
+                                     unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 Location_rec(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Location::LocPlanetSurface>(
@@ -907,8 +914,10 @@ struct CoalitionBidHonorTraceCase {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &,
+                                     unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 Location_rect(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Location::LocPlanetSurface>(
@@ -1032,7 +1041,8 @@ struct CoalitionBidHonorTraceCase {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 RefusalReason_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<
@@ -1045,7 +1055,8 @@ struct CoalitionBidHonorTraceCase {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 RefusalReason_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<
@@ -1214,10 +1225,16 @@ struct CoalitionBidHonorTraceCase {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, BatchallChallenge> F0,
-            MapsTo<T1, BatchallResponse> F1, MapsTo<T1, RefusalReason> F2,
-            MapsTo<T1, ForceBid> F3, MapsTo<T1, CoalitionMemberBid> F4,
-            MapsTo<T1, Side> F5, MapsTo<T1, Side> F7, MapsTo<T1, Side> F8>
+  template <typename T1, typename F0, typename F1, typename F2, typename F3,
+            typename F4, typename F5, typename F7, typename F8>
+    requires std::is_invocable_r_v<T1, F0 &, BatchallChallenge &> &&
+             std::is_invocable_r_v<T1, F1 &, BatchallResponse &> &&
+             std::is_invocable_r_v<T1, F2 &, RefusalReason &> &&
+             std::is_invocable_r_v<T1, F3 &, ForceBid &> &&
+             std::is_invocable_r_v<T1, F4 &, CoalitionMemberBid &> &&
+             std::is_invocable_r_v<T1, F5 &, Side &> &&
+             std::is_invocable_r_v<T1, F7 &, Side &> &&
+             std::is_invocable_r_v<T1, F8 &, Side &>
   static T1 ProtocolAction_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                                 F5 &&f4, const T1 f5, F7 &&f6, F8 &&f7,
                                 const ProtocolAction &p) {
@@ -1262,10 +1279,16 @@ struct CoalitionBidHonorTraceCase {
     }
   }
 
-  template <typename T1, MapsTo<T1, BatchallChallenge> F0,
-            MapsTo<T1, BatchallResponse> F1, MapsTo<T1, RefusalReason> F2,
-            MapsTo<T1, ForceBid> F3, MapsTo<T1, CoalitionMemberBid> F4,
-            MapsTo<T1, Side> F5, MapsTo<T1, Side> F7, MapsTo<T1, Side> F8>
+  template <typename T1, typename F0, typename F1, typename F2, typename F3,
+            typename F4, typename F5, typename F7, typename F8>
+    requires std::is_invocable_r_v<T1, F0 &, BatchallChallenge &> &&
+             std::is_invocable_r_v<T1, F1 &, BatchallResponse &> &&
+             std::is_invocable_r_v<T1, F2 &, RefusalReason &> &&
+             std::is_invocable_r_v<T1, F3 &, ForceBid &> &&
+             std::is_invocable_r_v<T1, F4 &, CoalitionMemberBid &> &&
+             std::is_invocable_r_v<T1, F5 &, Side &> &&
+             std::is_invocable_r_v<T1, F7 &, Side &> &&
+             std::is_invocable_r_v<T1, F8 &, Side &>
   static T1 ProtocolAction_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                                F5 &&f4, const T1 f5, F7 &&f6, F8 &&f7,
                                const ProtocolAction &p) {
@@ -1663,16 +1686,22 @@ struct CoalitionBidHonorTraceCase {
     }
   };
 
-  template <
-      typename T1, MapsTo<T1, BatchallChallenge> F1,
-      MapsTo<T1, BatchallChallenge, BatchallResponse> F2,
-      MapsTo<T1, BatchallChallenge, BatchallResponse, ForceBid, ForceBid,
-             std::optional<List<CoalitionMember>>,
-             std::optional<List<CoalitionMember>>, List<ForceBid>, ReadyStatus>
-          F3,
-      MapsTo<T1, BatchallChallenge, BatchallResponse, ForceBid, ForceBid> F4,
-      MapsTo<T1, BatchallChallenge, RefusalReason> F5,
-      MapsTo<T1, ProtocolAction> F6>
+  template <typename T1, typename F1, typename F2, typename F3, typename F4,
+            typename F5, typename F6>
+    requires std::is_invocable_r_v<T1, F1 &, BatchallChallenge &> &&
+             std::is_invocable_r_v<T1, F2 &, BatchallChallenge &,
+                                   BatchallResponse &> &&
+             std::is_invocable_r_v<T1, F3 &, BatchallChallenge &,
+                                   BatchallResponse &, ForceBid &, ForceBid &,
+                                   std::optional<List<CoalitionMember>> &,
+                                   std::optional<List<CoalitionMember>> &,
+                                   List<ForceBid> &, ReadyStatus &> &&
+             std::is_invocable_r_v<T1, F4 &, BatchallChallenge &,
+                                   BatchallResponse &, ForceBid &,
+                                   ForceBid &> &&
+             std::is_invocable_r_v<T1, F5 &, BatchallChallenge &,
+                                   RefusalReason &> &&
+             std::is_invocable_r_v<T1, F6 &, ProtocolAction &>
   static T1 BatchallPhase_rect(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                                F5 &&f4, F6 &&f5, const BatchallPhase &b) {
     if (std::holds_alternative<typename BatchallPhase::PhaseIdle>(b.v())) {
@@ -1714,16 +1743,22 @@ struct CoalitionBidHonorTraceCase {
     }
   }
 
-  template <
-      typename T1, MapsTo<T1, BatchallChallenge> F1,
-      MapsTo<T1, BatchallChallenge, BatchallResponse> F2,
-      MapsTo<T1, BatchallChallenge, BatchallResponse, ForceBid, ForceBid,
-             std::optional<List<CoalitionMember>>,
-             std::optional<List<CoalitionMember>>, List<ForceBid>, ReadyStatus>
-          F3,
-      MapsTo<T1, BatchallChallenge, BatchallResponse, ForceBid, ForceBid> F4,
-      MapsTo<T1, BatchallChallenge, RefusalReason> F5,
-      MapsTo<T1, ProtocolAction> F6>
+  template <typename T1, typename F1, typename F2, typename F3, typename F4,
+            typename F5, typename F6>
+    requires std::is_invocable_r_v<T1, F1 &, BatchallChallenge &> &&
+             std::is_invocable_r_v<T1, F2 &, BatchallChallenge &,
+                                   BatchallResponse &> &&
+             std::is_invocable_r_v<T1, F3 &, BatchallChallenge &,
+                                   BatchallResponse &, ForceBid &, ForceBid &,
+                                   std::optional<List<CoalitionMember>> &,
+                                   std::optional<List<CoalitionMember>> &,
+                                   List<ForceBid> &, ReadyStatus &> &&
+             std::is_invocable_r_v<T1, F4 &, BatchallChallenge &,
+                                   BatchallResponse &, ForceBid &,
+                                   ForceBid &> &&
+             std::is_invocable_r_v<T1, F5 &, BatchallChallenge &,
+                                   RefusalReason &> &&
+             std::is_invocable_r_v<T1, F6 &, ProtocolAction &>
   static T1 BatchallPhase_rec(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                               F5 &&f4, F6 &&f5, const BatchallPhase &b) {
     if (std::holds_alternative<typename BatchallPhase::PhaseIdle>(b.v())) {

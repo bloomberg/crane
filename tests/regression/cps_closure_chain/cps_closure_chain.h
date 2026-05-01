@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct CpsClosureChain {
   struct tree {
     // TYPES
@@ -124,7 +121,9 @@ struct CpsClosureChain {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                   tree &, T1 &>
   static T1 tree_rect(const T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -135,7 +134,9 @@ struct CpsClosureChain {
     }
   }
 
-  template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                   tree &, T1 &>
   static T1 tree_rec(const T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -197,7 +198,9 @@ struct CpsClosureChain {
   /// CPS fold: accumulates results through continuation chain.
   /// This creates closures that capture BOTH a pattern variable
   /// AND the accumulator function.
-  template <MapsTo<unsigned int, unsigned int, unsigned int, unsigned int> F2>
+  template <typename F2>
+    requires std::is_invocable_r_v<unsigned int, F2 &, unsigned int &,
+                                   unsigned int &, unsigned int &>
   static unsigned int
   tree_fold_cps(const tree &t, const unsigned int base, F2 &&combine,
                 const std::function<unsigned int(unsigned int)> k) {

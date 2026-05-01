@@ -11,9 +11,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil0 {};
@@ -126,7 +123,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
 
-  template <MapsTo<bool, t_A> F0> bool forallb(F0 &&f) const {
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, t_A &>
+  bool forallb(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil0>(_sv.v())) {
       return true;
@@ -136,7 +135,8 @@ public:
     }
   }
 
-  template <typename T1, MapsTo<T1, t_A, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, t_A &, T1 &>
   T1 fold_right(F0 &&f, const T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil0>(_sv.v())) {
@@ -158,7 +158,9 @@ public:
     }
   }
 
-  template <typename T1, MapsTo<T1, t_A> F0> List<T1> map(F0 &&f) const {
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, t_A &>
+  List<T1> map(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil0>(_sv.v())) {
       return List<T1>::nil0();
@@ -505,7 +507,8 @@ struct Vector {
 };
 
 struct Datatypes {
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static std::optional<T2> option_map(F0 &&f, const std::optional<T1> &o);
 };
 
@@ -717,18 +720,72 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     SumTree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<SumLeaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<SumLeaf>(_sv.v());
-        return SumTree(SumLeaf{d_a0.clone()});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<SumNode>(_sv.v());
-        return SumTree(SumNode{
-            d_a0.clone(),
-            d_a1 ? std::make_unique<List<PendantSumtreeRoundtripCase::SumTree>>(
-                       d_a1->clone())
-                 : nullptr});
+      SumTree _out{};
+
+      struct _CloneFrame {
+        const SumTree *_src;
+        SumTree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const SumTree *_src = _frame._src;
+        SumTree *_dst = _frame._dst;
+        if (std::holds_alternative<SumLeaf>(_src->v())) {
+          const auto &_alt = std::get<SumLeaf>(_src->v());
+          _dst->d_v_ = SumLeaf{_alt.d_a0.clone()};
+        } else {
+          const auto &_alt = std::get<SumNode>(_src->v());
+          _dst->d_v_ = SumNode{
+              _alt.d_a0.clone(),
+              _alt.d_a1 ? std::make_unique<
+                              List<PendantSumtreeRoundtripCase::SumTree>>()
+                        : nullptr};
+          auto &_dst_alt = std::get<SumNode>(_dst->d_v_);
+          [&] {
+            if (_alt.d_a1) {
+              const List<PendantSumtreeRoundtripCase::SumTree> *_lsrc =
+                  _alt.d_a1.get();
+              List<PendantSumtreeRoundtripCase::SumTree> *_ldst =
+                  _dst_alt.d_a1.get();
+              while (std::holds_alternative<typename List<
+                         PendantSumtreeRoundtripCase::SumTree>::Cons0>(
+                  _lsrc->v())) {
+                const auto &_lsrc_c = std::get<
+                    typename List<PendantSumtreeRoundtripCase::SumTree>::Cons0>(
+                    _lsrc->v());
+                _ldst->v_mut() =
+                    typename List<PendantSumtreeRoundtripCase::SumTree>::Cons0{
+                        PendantSumtreeRoundtripCase::SumTree{},
+                        _lsrc_c.d_a1
+                            ? std::make_unique<
+                                  List<PendantSumtreeRoundtripCase::SumTree>>()
+                            : nullptr};
+                auto &_ldst_c = std::get<
+                    typename List<PendantSumtreeRoundtripCase::SumTree>::Cons0>(
+                    _ldst->v_mut());
+                _stack.push_back({&_lsrc_c.d_a0, &_ldst_c.d_a0});
+                if (_lsrc_c.d_a1) {
+                  _lsrc = _lsrc_c.d_a1.get();
+                  _ldst = _ldst_c.d_a1.get();
+                } else {
+                  break;
+                }
+              }
+              if (std::holds_alternative<typename List<
+                      PendantSumtreeRoundtripCase::SumTree>::Nil0>(
+                      _lsrc->v())) {
+                _ldst->v_mut() =
+                    typename List<PendantSumtreeRoundtripCase::SumTree>::Nil0{};
+              }
+            }
+          }();
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -742,14 +799,51 @@ struct PendantSumtreeRoundtripCase {
     }
 
     // MANIPULATORS
+    ~SumTree() {
+      std::vector<std::unique_ptr<SumTree>> _stack{};
+      auto _drain = [&](SumTree &_node) {
+        if (std::holds_alternative<SumNode>(_node.d_v_)) {
+          auto &_alt = std::get<SumNode>(_node.d_v_);
+          if (_alt.d_a1) {
+            auto *_lp = _alt.d_a1.get();
+            while (std::holds_alternative<
+                   typename List<PendantSumtreeRoundtripCase::SumTree>::Cons0>(
+                _lp->v())) {
+              auto &_lc = std::get<
+                  typename List<PendantSumtreeRoundtripCase::SumTree>::Cons0>(
+                  _lp->v_mut());
+              _stack.push_back(
+                  std::make_unique<PendantSumtreeRoundtripCase::SumTree>(
+                      std::move(_lc.d_a0)));
+              if (_lc.d_a1) {
+                _lp = _lc.d_a1.get();
+              } else {
+                break;
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, CertifiedPendant> F1,
-            MapsTo<T1, CertifiedPendant, List<SumTree>> F2>
+  template <typename T1, typename F1, typename F2>
+    requires std::is_invocable_r_v<T1, F1 &, CertifiedPendant &> &&
+             std::is_invocable_r_v<T1, F2 &, CertifiedPendant &,
+                                   List<SumTree> &>
   static T1 SumTree_rect(const unsigned int, F1 &&f, F2 &&f0,
                          const SumTree &s) {
     if (std::holds_alternative<typename SumTree::SumLeaf>(s.v())) {
@@ -761,8 +855,10 @@ struct PendantSumtreeRoundtripCase {
     }
   }
 
-  template <typename T1, MapsTo<T1, CertifiedPendant> F1,
-            MapsTo<T1, CertifiedPendant, List<SumTree>> F2>
+  template <typename T1, typename F1, typename F2>
+    requires std::is_invocable_r_v<T1, F1 &, CertifiedPendant &> &&
+             std::is_invocable_r_v<T1, F2 &, CertifiedPendant &,
+                                   List<SumTree> &>
   static T1 SumTree_rec(const unsigned int, F1 &&f, F2 &&f0, const SumTree &s) {
     if (std::holds_alternative<typename SumTree::SumLeaf>(s.v())) {
       const auto &[d_a0] = std::get<typename SumTree::SumLeaf>(s.v());
@@ -871,7 +967,8 @@ struct PendantSumtreeRoundtripCase {
       ledger_values(sample_ledger).forallb(option_nat_is_some);
 };
 
-template <typename T1, typename T2, MapsTo<T2, T1> F0>
+template <typename T1, typename T2, typename F0>
+  requires std::is_invocable_r_v<T2, F0 &, T1 &>
 std::optional<T2> Datatypes::option_map(F0 &&f, const std::optional<T1> &o) {
   if (o.has_value()) {
     const T1 &a = *o;

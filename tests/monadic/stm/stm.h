@@ -12,9 +12,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -139,12 +136,14 @@ public:
 };
 
 struct STMDefs {
-  template <typename T1, MapsTo<T1, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, T1 &>
   static void modifyTVar(const stm::TVar<T1> a, F1 &&f);
 };
 
 struct stmtest {
-  template <typename T1, MapsTo<bool, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<bool, F1 &, T1 &>
   static T1 readOrRetry(const stm::TVar<T1> tv, F1 &&ok) {
     T1 x = stm::readTVar(tv);
     if (ok(x)) {
@@ -171,7 +170,8 @@ struct stmtest {
   static unsigned int io_orElse_retry_example();
 };
 
-template <typename T1, MapsTo<T1, T1> F1>
+template <typename T1, typename F1>
+  requires std::is_invocable_r_v<T1, F1 &, T1 &>
 void STMDefs::modifyTVar(const stm::TVar<T1> a, F1 &&f) {
   T1 val = stm::readTVar(a);
   stm::writeTVar(a, f(val));

@@ -18,13 +18,6 @@ concept convertible_to = bsl::is_convertible<From, To>::value;
 template <class T, class U>
 concept same_as = bsl::is_same<T, U>::value && bsl::is_same<U, T>::value;
 
-template <class F, class R, class... Args>
-concept MapsTo = requires(F &f, Args &...a) {
-  {
-    bsl::invoke(static_cast<F &>(f), static_cast<Args &>(a)...)
-  } -> convertible_to<R>;
-};
-
 struct Nat {
   // TYPES
   struct O {};
@@ -105,7 +98,8 @@ public:
   inline variant_t &v_mut() { return d_v_; }
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
-  template <typename T1, MapsTo<T1, Nat, T1> F1>
+  template <typename T1, typename F1>
+    requires bsl::is_invocable_r_v<T1, F1 &, Nat &, T1 &>
   T1 nat_rect(const T1 f, F1 &&f0) const {
     auto &&_sv = *(this);
     if (bsl::holds_alternative<typename Nat::O>(_sv.v())) {
@@ -115,7 +109,8 @@ public:
       return f0(*(d_n), (*(d_n)).template nat_rect<T1>(f, f0));
     }
   }
-  template <typename T1, MapsTo<T1, Nat, T1> F1>
+  template <typename T1, typename F1>
+    requires bsl::is_invocable_r_v<T1, F1 &, Nat &, T1 &>
   T1 nat_rec(const T1 f, F1 &&f0) const {
     auto &&_sv = *(this);
     if (bsl::holds_alternative<typename Nat::O>(_sv.v())) {

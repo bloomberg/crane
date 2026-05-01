@@ -8,8 +8,6 @@
 #include <type_traits>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 template <typename I, typename t_A>
 concept Eq = requires(t_A a0, t_A a1) {

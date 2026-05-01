@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -274,7 +271,9 @@ struct LoopifyTrees {
     const variant_t &v() const { return d_v_; }
 
     /// tree_map f t applies f to all values in tree.
-    template <typename T1, MapsTo<T1, t_A> F0> tree<T1> tree_map(F0 &&f) const {
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &>
+    tree<T1> tree_map(F0 &&f) const {
       const tree *_self = this;
 
       struct _Enter {
@@ -686,7 +685,9 @@ struct LoopifyTrees {
       }
     }
 
-    template <typename T1, MapsTo<T1, tree<t_A>, T1, t_A, tree<t_A>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree<t_A> &, T1 &, t_A &,
+                                     tree<t_A> &, T1 &>
     T1 tree_rec(const T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -745,7 +746,9 @@ struct LoopifyTrees {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, tree<t_A>, T1, t_A, tree<t_A>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree<t_A> &, T1 &, t_A &,
+                                     tree<t_A> &, T1 &>
     T1 tree_rect(const T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -1028,9 +1031,9 @@ struct LoopifyTrees {
       return _result;
     }
 
-    template <
-        typename T1,
-        MapsTo<T1, ternary, T1, ternary, T1, ternary, T1, unsigned int> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, ternary &, T1 &, ternary &, T1 &,
+                                     ternary &, T1 &, unsigned int &>
     T1 ternary_rec(const T1 f, F1 &&f0) const {
       const ternary *_self = this;
 
@@ -1113,9 +1116,9 @@ struct LoopifyTrees {
       return _result;
     }
 
-    template <
-        typename T1,
-        MapsTo<T1, ternary, T1, ternary, T1, ternary, T1, unsigned int> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, ternary &, T1 &, ternary &, T1 &,
+                                     ternary &, T1 &, unsigned int &>
     T1 ternary_rect(const T1 f, F1 &&f0) const {
       const ternary *_self = this;
 
@@ -1235,11 +1238,56 @@ struct LoopifyTrees {
 
     // ACCESSORS
     rose clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<RNode>(_sv.v());
-      return rose(RNode{
-          d_a0, d_a1 ? std::make_unique<List<LoopifyTrees::rose>>(d_a1->clone())
-                     : nullptr});
+      rose _out{};
+
+      struct _CloneFrame {
+        const rose *_src;
+        rose *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const rose *_src = _frame._src;
+        rose *_dst = _frame._dst;
+        const auto &_alt = std::get<RNode>(_src->v());
+        _dst->d_v_ = RNode{
+            _alt.d_a0,
+            _alt.d_a1 ? std::make_unique<List<LoopifyTrees::rose>>() : nullptr};
+        auto &_dst_alt = std::get<RNode>(_dst->d_v_);
+        [&] {
+          if (_alt.d_a1) {
+            const List<LoopifyTrees::rose> *_lsrc = _alt.d_a1.get();
+            List<LoopifyTrees::rose> *_ldst = _dst_alt.d_a1.get();
+            while (
+                std::holds_alternative<typename List<LoopifyTrees::rose>::Cons>(
+                    _lsrc->v())) {
+              const auto &_lsrc_c =
+                  std::get<typename List<LoopifyTrees::rose>::Cons>(_lsrc->v());
+              _ldst->v_mut() = typename List<LoopifyTrees::rose>::Cons{
+                  LoopifyTrees::rose{},
+                  _lsrc_c.d_a1 ? std::make_unique<List<LoopifyTrees::rose>>()
+                               : nullptr};
+              auto &_ldst_c = std::get<typename List<LoopifyTrees::rose>::Cons>(
+                  _ldst->v_mut());
+              _stack.push_back({&_lsrc_c.d_a0, &_ldst_c.d_a0});
+              if (_lsrc_c.d_a1) {
+                _lsrc = _lsrc_c.d_a1.get();
+                _ldst = _ldst_c.d_a1.get();
+              } else {
+                break;
+              }
+            }
+            if (std::holds_alternative<typename List<LoopifyTrees::rose>::Nil>(
+                    _lsrc->v())) {
+              _ldst->v_mut() = typename List<LoopifyTrees::rose>::Nil{};
+            }
+          }
+        }();
+      }
+      return _out;
     }
 
     // CREATORS
@@ -1249,6 +1297,39 @@ struct LoopifyTrees {
     }
 
     // MANIPULATORS
+    ~rose() {
+      std::vector<std::unique_ptr<rose>> _stack{};
+      auto _drain = [&](rose &_node) {
+        if (std::holds_alternative<RNode>(_node.d_v_)) {
+          auto &_alt = std::get<RNode>(_node.d_v_);
+          if (_alt.d_a1) {
+            auto *_lp = _alt.d_a1.get();
+            while (
+                std::holds_alternative<typename List<LoopifyTrees::rose>::Cons>(
+                    _lp->v())) {
+              auto &_lc = std::get<typename List<LoopifyTrees::rose>::Cons>(
+                  _lp->v_mut());
+              _stack.push_back(
+                  std::make_unique<LoopifyTrees::rose>(std::move(_lc.d_a0)));
+              if (_lc.d_a1) {
+                _lp = _lc.d_a1.get();
+              } else {
+                break;
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
@@ -1270,7 +1351,8 @@ struct LoopifyTrees {
     }
 
     /// rose_map f t applies f to all values in a rose tree.
-    template <MapsTo<unsigned int, unsigned int> F0>
+    template <typename F0>
+      requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
     rose rose_map(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
@@ -1284,14 +1366,16 @@ struct LoopifyTrees {
       return (d_a0 + sum_rose_list_fuel(1000u, *(d_a1)));
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, List<rose>> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, List<rose> &>
     T1 rose_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
       return f(d_a0, *(d_a1));
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, List<rose>> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, List<rose> &>
     T1 rose_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
@@ -1305,7 +1389,8 @@ struct LoopifyTrees {
                                          const List<rose> &cs);
 
   /// Helper: map function over all values in a list of rose trees.
-  template <MapsTo<unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static List<rose> map_rose_list_fuel(const unsigned int fuel, F1 &&f,
                                        const List<rose> &cs) {
     if (fuel <= 0) {
@@ -1365,7 +1450,8 @@ struct LoopifyTrees {
   static List<unsigned int> collect_sorted(const tree<unsigned int> &t);
 
   /// or_search p t searches tree for element satisfying predicate.
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static bool or_search(F0 &&p, const tree<unsigned int> &t) {
     if (std::holds_alternative<typename tree<unsigned int>::Leaf>(t.v())) {
       return false;
@@ -1672,9 +1758,10 @@ struct LoopifyTrees {
       return _result;
     }
 
-    template <
-        typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, quadtree, T1, quadtree, T1, quadtree, T1, quadtree, T1> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &,
+                                     T1 &, quadtree &, T1 &, quadtree &, T1 &>
     T1 quadtree_rec(F0 &&f, F1 &&f0) const {
       const quadtree *_self = this;
 
@@ -1779,9 +1866,10 @@ struct LoopifyTrees {
       return _result;
     }
 
-    template <
-        typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, quadtree, T1, quadtree, T1, quadtree, T1, quadtree, T1> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &,
+                                     T1 &, quadtree &, T1 &, quadtree &, T1 &>
     T1 quadtree_rect(F0 &&f, F1 &&f0) const {
       const quadtree *_self = this;
 
@@ -2127,8 +2215,10 @@ struct LoopifyTrees {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, simple_tree, T1, simple_tree, T1> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, simple_tree &, T1 &,
+                                     simple_tree &, T1 &>
     T1 simple_tree_rec(F0 &&f, F1 &&f0) const {
       const simple_tree *_self = this;
 
@@ -2185,8 +2275,10 @@ struct LoopifyTrees {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, simple_tree, T1, simple_tree, T1> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, simple_tree &, T1 &,
+                                     simple_tree &, T1 &>
     T1 simple_tree_rect(F0 &&f, F1 &&f0) const {
       const simple_tree *_self = this;
 

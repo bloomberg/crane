@@ -146,6 +146,19 @@ let pp_decl = function
       let defs =
         List.filter (fun (_, _, l) -> l == []) (gen_dfuns (rv, defs, typs))
       in
+      (* Pre-register all Dfix functions for mutual recursion detection before
+         any of them are individually loopified via pp_cpp_decl/maybe_loopify.
+         Without this, the first function rendered can't see the second in the
+         mutual table, so mutual inlining fails. *)
+      List.iter
+        (fun (ds, _env, _) ->
+          match ds with
+          | Dfundef (names, _, params, body, _) ->
+            Loopify.register_fundef names params body
+          | Dtemplate (_, _, Dfundef (names, _, params, body, _)) ->
+            Loopify.register_fundef names params body
+          | _ -> () )
+        defs;
       pp_list_stmt (fun (ds, env, _) -> pp_cpp_decl env ds) defs
 
 (** Render inductive type header (.h file).
@@ -490,10 +503,25 @@ let pp_cpp_ind_header kn ind =
               if Translation.type_is_erased ret_cpp then
                 register_method_returns_any r )
             methods;
+          let mutual_partners =
+            if is_mutual then
+              let partners = ref [] in
+              for j = Array.length ind.ind_packets - 1 downto 0 do
+                if j <> i then begin
+                  let pj = ind.ind_packets.(j) in
+                  partners :=
+                    (names.(j), cnames.(j), pj.ip_types,
+                     pj.ip_consarg_names) :: !partners
+                end
+              done;
+              !partners
+            else []
+          in
           let decl =
             gen_ind_header_v2
               ~is_mutual
               ~consarg_names:p.ip_consarg_names
+              ~mutual_partners
               param_vars
               names.(i)
               cnames.(i)

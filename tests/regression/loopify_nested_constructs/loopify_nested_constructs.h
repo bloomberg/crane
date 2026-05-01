@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct LoopifyNestedConstructs {
   static unsigned int multi_let(const unsigned int n);
   static unsigned int nested_if_fuel(const unsigned int fuel,

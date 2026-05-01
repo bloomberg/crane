@@ -7,9 +7,6 @@
 #include <stdexcept>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 enum class Unit { e_TT };
 template <typename M>
 concept TRIVIAL = requires { typename M::t; };

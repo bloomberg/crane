@@ -9,9 +9,6 @@
 #include <string>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct BindEtaReduced {
   /// Bug case 1: bind with a callback as continuation.
   /// get_line is bound, then f is applied to the result.
@@ -26,7 +23,8 @@ struct BindEtaReduced {
   }
 
   /// Bug case 2: same with a pure callback.
-  template <MapsTo<std::string, std::string> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<std::string, F0 &, std::string &>
   static std::string transform(F0 &&f) {
     std::string line;
     std::getline(std::cin, line);

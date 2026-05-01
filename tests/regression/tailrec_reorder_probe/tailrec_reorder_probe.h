@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct TailrecReorderProbe {
   /// Custom list to control exact code generation.
   template <typename t_A> struct mylist {
@@ -127,7 +124,8 @@ struct TailrecReorderProbe {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, MapsTo<T2, T1, mylist<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
   static T2 mylist_rect(const T2 f, F1 &&f0, const mylist<T1> &m) {
     struct _Enter {
       const mylist<T1> *m;
@@ -167,7 +165,8 @@ struct TailrecReorderProbe {
     return _result;
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1, mylist<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
   static T2 mylist_rec(const T2 f, F1 &&f0, const mylist<T1> &m) {
     struct _Enter {
       const mylist<T1> *m;
@@ -247,7 +246,8 @@ struct TailrecReorderProbe {
   dual_accum(const mylist<unsigned int> &l, mylist<unsigned int> acc1,
              mylist<unsigned int> acc2);
 
-  template <typename T1, MapsTo<unsigned int, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, T1 &>
   static unsigned int mylist_sum(F0 &&f, const mylist<T1> &l) {
     struct _Enter {
       const mylist<T1> *l;

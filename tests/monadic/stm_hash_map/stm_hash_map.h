@@ -14,9 +14,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -178,7 +175,8 @@ template <typename K, typename V> struct CHT {
     }
   }
 
-  template <MapsTo<V, std::optional<V>> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<V, F1 &, std::optional<V> &>
   V stm_update(const K k, F1 &&f) const {
     stm::TVar<List<std::pair<K, V>>> b = (*(this)).bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
@@ -220,7 +218,8 @@ template <typename K, typename V> struct CHT {
     return stm::atomically([&] { return (*(this)).stm_delete(k); });
   }
 
-  template <MapsTo<V, std::optional<V>> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<V, F1 &, std::optional<V> &>
   V hash_update(const K k, F1 &&f) const {
     return stm::atomically([&] { return (*(this)).stm_update(k, f); });
   }
@@ -229,7 +228,8 @@ template <typename K, typename V> struct CHT {
     return stm::atomically([&] { return (*(this)).stm_get_or(k, dflt); });
   }
 
-  template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static std::optional<T2> assoc_lookup(F0 &&eqb, const T1 k,
                                         const List<std::pair<T1, T2>> &xs) {
     if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(xs.v())) {
@@ -247,7 +247,8 @@ template <typename K, typename V> struct CHT {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<std::pair<T1, T2>>
   assoc_insert_or_replace(F0 &&eqb, const T1 k, const T2 v,
                           const List<std::pair<T1, T2>> &xs) {
@@ -270,7 +271,8 @@ template <typename K, typename V> struct CHT {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static std::pair<std::optional<T2>, List<std::pair<T1, T2>>>
   assoc_remove(F0 &&eqb, const T1 k, List<std::pair<T1, T2>> xs) {
     if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(
@@ -312,8 +314,9 @@ template <typename K, typename V> struct CHT {
     return f(static_cast<unsigned int>(num));
   }
 
-  template <typename T1, typename T2, MapsTo<bool, T1, T1> F0,
-            MapsTo<int64_t, T1> F1>
+  template <typename T1, typename T2, typename F0, typename F1>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &> &&
+             std::is_invocable_r_v<int64_t, F1 &, T1 &>
   static CHT<T1, T2> new_hash(F0 &&eqb, F1 &&hash, const int64_t requested) {
     int64_t n = std::max<int64_t>(requested, 1);
     std::vector<stm::TVar<List<std::pair<T1, T2>>>> bs =

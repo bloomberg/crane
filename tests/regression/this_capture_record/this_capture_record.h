@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct ThisCaptureRecord {
   /// A methodified function stores this-capturing closures in a
   /// Rocq record (not option/pair/fn_list). The record fields hold
@@ -140,7 +137,9 @@ struct ThisCaptureRecord {
       }
     }
 
-    template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                     tree &, T1 &>
     T1 tree_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
@@ -152,7 +151,9 @@ struct ThisCaptureRecord {
       }
     }
 
-    template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                     tree &, T1 &>
     T1 tree_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
@@ -215,14 +216,16 @@ struct ThisCaptureRecord {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
     T1 tag_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<typename tag::MkTag>(_sv.v());
       return f(d_a0);
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
     T1 tag_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<typename tag::MkTag>(_sv.v());

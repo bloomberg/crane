@@ -6,9 +6,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
+#include <vector>
 
 struct EvenOdd {
   struct even_list;
@@ -53,15 +51,44 @@ struct EvenOdd {
 
     // ACCESSORS
     even_list clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<ENil>(_sv.v())) {
-        return even_list(ENil{});
-      } else {
-        const auto &[d_a0, d_a1] = std::get<ECons>(_sv.v());
-        return even_list(ECons{
-            d_a0, d_a1 ? std::make_unique<EvenOdd::odd_list>(d_a1->clone())
-                       : nullptr});
+      even_list _out{};
+
+      struct _CloneFrame {
+        const even_list *_src;
+        even_list *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const even_list *_src = _frame._src;
+        even_list *_dst = _frame._dst;
+        if (std::holds_alternative<ENil>(_src->v())) {
+          _dst->d_v_ = ENil{};
+        } else {
+          const auto &_alt = std::get<ECons>(_src->v());
+          _dst->d_v_ =
+              ECons{_alt.d_a0, _alt.d_a1 ? std::make_unique<EvenOdd::odd_list>()
+                                         : nullptr};
+          auto &_dst_alt = std::get<ECons>(_dst->d_v_);
+          if (_alt.d_a1) {
+            if (std::holds_alternative<typename EvenOdd::odd_list::OCons>(
+                    _alt.d_a1->v())) {
+              const auto &_psrc =
+                  std::get<typename EvenOdd::odd_list::OCons>(_alt.d_a1->v());
+              auto &_pdst = std::get<typename EvenOdd::odd_list::OCons>(
+                  _dst_alt.d_a1->v_mut());
+              if (_psrc.d_a1) {
+                _pdst.d_a1 = std::make_unique<EvenOdd::even_list>();
+                _stack.push_back({_psrc.d_a1.get(), _pdst.d_a1.get()});
+              }
+            }
+          }
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -73,6 +100,33 @@ struct EvenOdd {
     }
 
     // MANIPULATORS
+    ~even_list() {
+      std::vector<std::unique_ptr<even_list>> _stack{};
+      auto _drain = [&](even_list &_node) {
+        if (std::holds_alternative<ECons>(_node.d_v_)) {
+          auto &_alt = std::get<ECons>(_node.d_v_);
+          if (_alt.d_a1) {
+            if (std::holds_alternative<typename EvenOdd::odd_list::OCons>(
+                    _alt.d_a1->v())) {
+              auto &_palt = std::get<typename EvenOdd::odd_list::OCons>(
+                  _alt.d_a1->v_mut());
+              if (_palt.d_a1) {
+                _stack.push_back(std::move(_palt.d_a1));
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
@@ -128,6 +182,33 @@ struct EvenOdd {
     }
 
     // MANIPULATORS
+    ~odd_list() {
+      std::vector<std::unique_ptr<odd_list>> _stack{};
+      auto _drain = [&](odd_list &_node) {
+        if (std::holds_alternative<OCons>(_node.d_v_)) {
+          auto &_alt = std::get<OCons>(_node.d_v_);
+          if (_alt.d_a1) {
+            if (std::holds_alternative<typename EvenOdd::even_list::ECons>(
+                    _alt.d_a1->v())) {
+              auto &_palt = std::get<typename EvenOdd::even_list::ECons>(
+                  _alt.d_a1->v_mut());
+              if (_palt.d_a1) {
+                _stack.push_back(std::move(_palt.d_a1));
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS

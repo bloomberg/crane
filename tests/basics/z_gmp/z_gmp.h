@@ -6,9 +6,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct ZGMPTest {
   static mpz_class add_test(const mpz_class &_x0, const mpz_class &_x1);
   static mpz_class mul_test(const mpz_class &_x0, const mpz_class &_x1);

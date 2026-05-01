@@ -6,9 +6,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct Option {
   static inline const std::optional<unsigned int> some_val =
       std::make_optional<unsigned int>(5u);

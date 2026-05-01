@@ -13,8 +13,6 @@
 #include <vector>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 template <typename t_A> struct List {
   // TYPES
@@ -131,14 +129,15 @@ public:
 
 struct EffectHigherOrder {
   /// 1. Higher-order function with effectful callback
-  template <MapsTo<void, std::string> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, std::string &>
   static void apply_effect(F0 &&f, const std::string _x0) {
     f(_x0);
     return;
-  }
+  } /// 2. Map-like function over a list with effects
 
-  /// 2. Map-like function over a list with effects
-  template <MapsTo<void, std::string> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, std::string &>
   static void for_each_str(F0 &&f, const List<std::string> &xs) {
     if (std::holds_alternative<typename List<std::string>::Nil>(xs.v())) {
       return;
@@ -158,10 +157,10 @@ struct EffectHigherOrder {
       return _r;
     }();
     return f(_bind_result);
-  }
+  } /// 4. Nested bind in callback
 
-  /// 4. Nested bind in callback
-  template <MapsTo<std::string, std::string> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<std::string, F0 &, std::string &>
   static std::string transform_input(F0 &&f) {
     std::string line;
     std::getline(std::cin, line);

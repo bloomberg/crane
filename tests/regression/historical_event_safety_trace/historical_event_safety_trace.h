@@ -10,9 +10,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -1039,9 +1036,11 @@ struct HistoricalEventSafetyTraceCase {
     }
   };
 
-  template <MapsTo<unsigned int, unsigned int> F0,
-            MapsTo<unsigned int, State, unsigned int> F1,
-            MapsTo<unsigned int, unsigned int> F2>
+  template <typename F0, typename F1, typename F2>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<unsigned int, F1 &, State &,
+                                   unsigned int &> &&
+             std::is_invocable_r_v<unsigned int, F2 &, unsigned int &>
   static State step_hist(F0 &&inflow, F1 &&ctrl, F2 &&stage_fn,
                          const PlantConfig &pconf, const State &s,
                          const unsigned int t) {
@@ -1057,9 +1056,11 @@ struct HistoricalEventSafetyTraceCase {
     return State{new_level, new_stage, ctrl(s, t)};
   }
 
-  template <MapsTo<unsigned int, unsigned int> F0,
-            MapsTo<unsigned int, State, unsigned int> F1,
-            MapsTo<unsigned int, unsigned int> F2>
+  template <typename F0, typename F1, typename F2>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<unsigned int, F1 &, State &,
+                                   unsigned int &> &&
+             std::is_invocable_r_v<unsigned int, F2 &, unsigned int &>
   static std::pair<std::pair<State, unsigned int>, unsigned int>
   simulate_with_max(F0 &&inflow, F1 &&ctrl, F2 &&stage_fn,
                     const PlantConfig &pconf, const unsigned int horizon,
@@ -1076,8 +1077,10 @@ struct HistoricalEventSafetyTraceCase {
     }
   }
 
-  template <MapsTo<unsigned int, State, unsigned int> F3,
-            MapsTo<unsigned int, unsigned int> F4>
+  template <typename F3, typename F4>
+    requires std::is_invocable_r_v<unsigned int, F3 &, State &,
+                                   unsigned int &> &&
+             std::is_invocable_r_v<unsigned int, F4 &, unsigned int &>
   static TestResult
   run_historical_test(const PlantConfig &pconf, List<InflowRecord> event,
                       const unsigned int default_inflow, F3 &&ctrl,

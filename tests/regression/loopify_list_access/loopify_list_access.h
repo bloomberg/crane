@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -140,7 +137,8 @@ struct LoopifyListAccess {
   lookup_all(const unsigned int key,
              const List<std::pair<unsigned int, unsigned int>> &l);
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static unsigned int find(F0 &&p, const List<unsigned int> &l) {
     unsigned int _result;
     const List<unsigned int> *_loop_l = &l;
@@ -165,7 +163,8 @@ struct LoopifyListAccess {
 
   static unsigned int count(const unsigned int x, const List<unsigned int> &l);
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static unsigned int count_matching(F0 &&p, const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return 0u;

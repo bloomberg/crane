@@ -6,9 +6,6 @@
 #include <type_traits>
 #include <utility>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct NatModZero {
   /// In Rocq, Nat.modulo n 0 = n — perfectly defined.
   /// But NatIntStd maps Nat.modulo to (%a0 % %a1) with

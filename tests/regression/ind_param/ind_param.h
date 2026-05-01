@@ -8,9 +8,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename M>
 concept Container = requires {
   typename M::elem;
@@ -84,8 +81,9 @@ struct IndParam {
       const variant_t &v() const { return d_v_; }
     };
 
-    template <typename T1, MapsTo<T1, typename C::t> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, typename C::t &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     static T1 result_rect(F0 &&f, F1 &&f0, const result &r) {
       if (std::holds_alternative<typename result::Ok>(r.v())) {
         const auto &[d_a0] = std::get<typename result::Ok>(r.v());
@@ -96,8 +94,9 @@ struct IndParam {
       }
     }
 
-    template <typename T1, MapsTo<T1, typename C::t> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, typename C::t &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     static T1 result_rec(F0 &&f, F1 &&f0, const result &r) {
       if (std::holds_alternative<typename result::Ok>(r.v())) {
         const auto &[d_a0] = std::get<typename result::Ok>(r.v());
@@ -213,8 +212,9 @@ struct IndParam {
       const variant_t &v() const { return d_v_; }
     };
 
-    template <typename T1, MapsTo<T1, unsigned int> F1,
-              MapsTo<T1, unsigned int, unsigned int> F2>
+    template <typename T1, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &>
     static T1 t_rect(const T1 f, F1 &&f0, F2 &&f1, const t &t0) {
       if (std::holds_alternative<typename t::Empty>(t0.v())) {
         return f;
@@ -227,8 +227,9 @@ struct IndParam {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F1,
-              MapsTo<T1, unsigned int, unsigned int> F2>
+    template <typename T1, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &>
     static T1 t_rec(const T1 f, F1 &&f0, F2 &&f1, const t &t0) {
       if (std::holds_alternative<typename t::Empty>(t0.v())) {
         return f;

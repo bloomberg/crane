@@ -6,9 +6,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct Coercions {
   static unsigned int bool_to_nat(const bool b);
   static unsigned int add_bool(const unsigned int n, const bool b);

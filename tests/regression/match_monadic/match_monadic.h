@@ -14,8 +14,6 @@
 #include <vector>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 /// A simple custom inductive for testing
 enum class Color { e_RED, e_GREEN, e_BLUE }; /// A parameterized inductive

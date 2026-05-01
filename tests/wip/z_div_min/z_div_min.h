@@ -7,9 +7,6 @@
 #include <type_traits>
 #include <utility>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct ZDivMin {
   /// Build INT64_MIN = -9223372036854775808 via Z.opp(Z.of_nat ...)
   static inline const int64_t neg_max = (-INT64_C(9223372036854775807));

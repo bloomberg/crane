@@ -7,9 +7,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct ReuseTagMismatch {
   /// BUG HYPOTHESIS: The reuse optimization mutates variant fields in-place
   /// when use_count() == 1 and the tail constructor has the same arity
@@ -90,8 +87,9 @@ struct ReuseTagMismatch {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 direction_rect(F0 &&f, F1 &&f0, const direction &d) {
     if (std::holds_alternative<typename direction::GoUp>(d.v())) {
       const auto &[d_a0] = std::get<typename direction::GoUp>(d.v());
@@ -102,8 +100,9 @@ struct ReuseTagMismatch {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 direction_rec(F0 &&f, F1 &&f0, const direction &d) {
     if (std::holds_alternative<typename direction::GoUp>(d.v())) {
       const auto &[d_a0] = std::get<typename direction::GoUp>(d.v());

@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -206,6 +203,25 @@ struct DeepPatterns {
     }
 
     // MANIPULATORS
+    ~outer() {
+      std::vector<std::unique_ptr<outer>> _stack{};
+      auto _drain = [](outer &_node) {
+        if (std::holds_alternative<OLeft>(_node.d_v_)) {
+          auto &_alt = std::get<OLeft>(_node.d_v_);
+          if (_alt.d_a0) {
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
@@ -274,7 +290,9 @@ struct DeepPatterns {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, inner> F0, MapsTo<T1, unsigned int> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, inner &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 outer_rect(F0 &&f, F1 &&f0, const outer &o) {
     if (std::holds_alternative<typename outer::OLeft>(o.v())) {
       const auto &[d_a0] = std::get<typename outer::OLeft>(o.v());
@@ -285,7 +303,9 @@ struct DeepPatterns {
     }
   }
 
-  template <typename T1, MapsTo<T1, inner> F0, MapsTo<T1, unsigned int> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, inner &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 outer_rec(F0 &&f, F1 &&f0, const outer &o) {
     if (std::holds_alternative<typename outer::OLeft>(o.v())) {
       const auto &[d_a0] = std::get<typename outer::OLeft>(o.v());
@@ -296,7 +316,9 @@ struct DeepPatterns {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, bool> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, bool &>
   static T1 inner_rect(F0 &&f, F1 &&f0, const inner &i) {
     if (std::holds_alternative<typename inner::ILeft>(i.v())) {
       const auto &[d_a0] = std::get<typename inner::ILeft>(i.v());
@@ -307,7 +329,9 @@ struct DeepPatterns {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, bool> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, bool &>
   static T1 inner_rec(F0 &&f, F1 &&f0, const inner &i) {
     if (std::holds_alternative<typename inner::ILeft>(i.v())) {
       const auto &[d_a0] = std::get<typename inner::ILeft>(i.v());
@@ -382,14 +406,18 @@ struct DeepPatterns {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, t_A, t_B> F0> T1 pair_rec(F0 &&f) const {
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
+    T1 pair_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
           std::get<typename pair<t_A, t_B>::Pair0>(_sv.v());
       return f(d_a0, d_a1);
     }
 
-    template <typename T1, MapsTo<T1, t_A, t_B> F0> T1 pair_rect(F0 &&f) const {
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
+    T1 pair_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
           std::get<typename pair<t_A, t_B>::Pair0>(_sv.v());
@@ -510,7 +538,8 @@ struct DeepPatterns {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, t_A, mylist<t_A>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
     T1 mylist_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Nil>(_sv.v())) {
@@ -522,7 +551,8 @@ struct DeepPatterns {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, mylist<t_A>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
     T1 mylist_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Nil>(_sv.v())) {

@@ -9,9 +9,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 enum class Bool0 { e_TRUE0, e_FALSE0 };
 
 template <typename t_A> struct Sig {
@@ -69,7 +66,9 @@ public:
 };
 
 struct RocqBug10757 {
-  template <typename T1, MapsTo<Bool0, T1, T1> F0, MapsTo<T1, T1> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<Bool0, F0 &, T1 &, T1 &> &&
+             std::is_invocable_r_v<T1, F1 &, T1 &>
   static Sig<T1>
   iterate_func(F0 &&beq, F1 &&f,
                const T1 x) { // Precondition: (exists _ : le x (F x), forall z :
@@ -100,7 +99,9 @@ struct RocqBug10757 {
     }
   }
 
-  template <typename T1, MapsTo<Bool0, T1, T1> F0, MapsTo<T1, T1> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<Bool0, F0 &, T1 &, T1 &> &&
+             std::is_invocable_r_v<T1, F1 &, T1 &>
   static Sig<T1> iterate(F0 &&beq, F1 &&f, const T1 x) {
     return iterate_func(beq, f, Sig<T1>::exist(x));
   }

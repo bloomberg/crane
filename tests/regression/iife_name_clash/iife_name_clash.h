@@ -7,9 +7,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct IifeNameClash {
   struct wrapper {
     // TYPES
@@ -70,7 +67,8 @@ struct IifeNameClash {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
   static T1 wrapper_rect(F0 &&f, const T1 f0, const wrapper &w) {
     if (std::holds_alternative<typename wrapper::Wrap>(w.v())) {
       const auto &[d_n] = std::get<typename wrapper::Wrap>(w.v());
@@ -80,7 +78,8 @@ struct IifeNameClash {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
   static T1 wrapper_rec(F0 &&f, const T1 f0, const wrapper &w) {
     if (std::holds_alternative<typename wrapper::Wrap>(w.v())) {
       const auto &[d_n] = std::get<typename wrapper::Wrap>(w.v());

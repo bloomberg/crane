@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -348,7 +345,8 @@ struct LoopifyPolymorphic {
     return _result;
   }
 
-  template <typename T1, MapsTo<bool, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static List<T1> poly_filter(F0 &&p, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return List<T1>::nil();
@@ -362,7 +360,8 @@ struct LoopifyPolymorphic {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static List<T2> poly_map(F0 &&f, const List<T1> &l) {
     std::unique_ptr<List<T2>> _head{};
     std::unique_ptr<List<T2>> *_write = &_head;
@@ -471,7 +470,8 @@ struct LoopifyPolymorphic {
     return _result;
   }
 
-  template <typename T1, MapsTo<bool, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::pair<List<T1>, List<T1>> poly_partition(F0 &&p,
                                                       const List<T1> &l) {
     struct _Enter {
@@ -520,7 +520,8 @@ struct LoopifyPolymorphic {
     return _result;
   }
 
-  template <typename T1, MapsTo<bool, T1, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static bool poly_member(F0 &&eq, const T1 x, const List<T1> &l) {
     bool _result;
     const List<T1> *_loop_l = &l;
@@ -578,18 +579,21 @@ struct LoopifyPolymorphic {
   static bool nat_eq(const unsigned int _x0, const unsigned int _x1);
   static bool is_even(const unsigned int x);
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static List<unsigned int> nat_filter(F0 &&_x0,
                                        const List<unsigned int> &_x1) {
     return poly_filter<unsigned int>(_x0, _x1);
   }
 
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static List<unsigned int> nat_map(F0 &&_x0, const List<unsigned int> &_x1) {
     return poly_map<unsigned int, unsigned int>(_x0, _x1);
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static std::pair<List<unsigned int>, List<unsigned int>>
   nat_partition(F0 &&_x0, const List<unsigned int> &_x1) {
     return poly_partition<unsigned int>(_x0, _x1);

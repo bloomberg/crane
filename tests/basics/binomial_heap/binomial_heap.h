@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -239,7 +236,9 @@ struct BinomialHeap {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int, tree, T1, tree, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, tree &, T1 &,
+                                   tree &, T1 &>
   static T1 tree_rect(F0 &&f, const T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
@@ -250,7 +249,9 @@ struct BinomialHeap {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, tree, T1, tree, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, tree &, T1 &,
+                                   tree &, T1 &>
   static T1 tree_rec(F0 &&f, const T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());

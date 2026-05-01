@@ -9,9 +9,6 @@
 #include <type_traits>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct EffectBareVoid {
   /// 1. Bare print_endline as function body (no bind, no Ret)
   static void just_print(const std::string msg);

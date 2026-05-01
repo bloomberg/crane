@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 enum class Bool0 { e_TRUE0, e_FALSE0 };
 
 struct Nat {
@@ -547,8 +544,10 @@ struct Levenshtein {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, Ascii, String> F0,
-              MapsTo<T1, Ascii, String> F1, MapsTo<T1, Ascii, Ascii, String> F2>
+    template <typename T1, typename F0, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F0 &, Ascii &, String &> &&
+               std::is_invocable_r_v<T1, F1 &, Ascii &, String &> &&
+               std::is_invocable_r_v<T1, F2 &, Ascii &, Ascii &, String &>
     T1 edit_rec(F0 &&f, F1 &&f0, F2 &&f1, const String &,
                 const String &) const {
       auto &&_sv = *(this);
@@ -565,8 +564,10 @@ struct Levenshtein {
       }
     }
 
-    template <typename T1, MapsTo<T1, Ascii, String> F0,
-              MapsTo<T1, Ascii, String> F1, MapsTo<T1, Ascii, Ascii, String> F2>
+    template <typename T1, typename F0, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F0 &, Ascii &, String &> &&
+               std::is_invocable_r_v<T1, F1 &, Ascii &, String &> &&
+               std::is_invocable_r_v<T1, F2 &, Ascii &, Ascii &, String &>
     T1 edit_rect(F0 &&f, F1 &&f0, F2 &&f1, const String &,
                  const String &) const {
       auto &&_sv = *(this);
@@ -768,8 +769,11 @@ struct Levenshtein {
                            chain::skip(c, s1, s2, n, std::move(*(this))));
     }
 
-    template <typename T1, MapsTo<T1, Ascii, String, String, Nat, chain, T1> F1,
-              MapsTo<T1, String, String, String, Nat, edit, chain, T1> F2>
+    template <typename T1, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F1 &, Ascii &, String &, String &,
+                                     Nat &, chain &, T1 &> &&
+               std::is_invocable_r_v<T1, F2 &, String &, String &, String &,
+                                     Nat &, edit &, chain &, T1 &>
     T1 chain_rec(const T1 f, F1 &&f0, F2 &&f1, const String &, const String &,
                  const Nat &) const {
       auto &&_sv = *(this);
@@ -788,8 +792,11 @@ struct Levenshtein {
       }
     }
 
-    template <typename T1, MapsTo<T1, Ascii, String, String, Nat, chain, T1> F1,
-              MapsTo<T1, String, String, String, Nat, edit, chain, T1> F2>
+    template <typename T1, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F1 &, Ascii &, String &, String &,
+                                     Nat &, chain &, T1 &> &&
+               std::is_invocable_r_v<T1, F2 &, String &, String &, String &,
+                                     Nat &, edit &, chain &, T1 &>
     T1 chain_rect(const T1 f, F1 &&f0, F2 &&f1, const String &, const String &,
                   const Nat &) const {
       auto &&_sv = *(this);
@@ -827,7 +834,8 @@ struct Levenshtein {
   static chain deletes_chain_empty(const String &s);
   static chain aux_both_empty(const String &_x, const String &_x0);
 
-  template <typename T1, MapsTo<Nat, T1> F3>
+  template <typename T1, typename F3>
+    requires std::is_invocable_r_v<Nat, F3 &, T1 &>
   static T1 min3_app(const T1 x, const T1 y, const T1 z, F3 &&f) {
     Nat n1 = f(x);
     Nat n2 = f(y);

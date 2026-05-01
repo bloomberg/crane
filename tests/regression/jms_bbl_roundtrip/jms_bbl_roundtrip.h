@@ -6,9 +6,6 @@
 #include <type_traits>
 #include <utility>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct JmsBblRoundtrip {
   struct state {
     unsigned int pc;

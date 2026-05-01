@@ -6,9 +6,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
+#include <vector>
 
 struct MutualIndexed {
   struct EvenTree;
@@ -54,16 +52,45 @@ struct MutualIndexed {
 
     // ACCESSORS
     EvenTree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<ELeaf>(_sv.v())) {
-        return EvenTree(ELeaf{});
-      } else {
-        const auto &[d_n, d_a1, d_a2] = std::get<ENode>(_sv.v());
-        return EvenTree(
-            ENode{d_n, d_a1,
-                  d_a2 ? std::make_unique<MutualIndexed::OddTree>(d_a2->clone())
-                       : nullptr});
+      EvenTree _out{};
+
+      struct _CloneFrame {
+        const EvenTree *_src;
+        EvenTree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const EvenTree *_src = _frame._src;
+        EvenTree *_dst = _frame._dst;
+        if (std::holds_alternative<ELeaf>(_src->v())) {
+          _dst->d_v_ = ELeaf{};
+        } else {
+          const auto &_alt = std::get<ENode>(_src->v());
+          _dst->d_v_ = ENode{
+              _alt.d_n, _alt.d_a1,
+              _alt.d_a2 ? std::make_unique<MutualIndexed::OddTree>() : nullptr};
+          auto &_dst_alt = std::get<ENode>(_dst->d_v_);
+          if (_alt.d_a2) {
+            if (std::holds_alternative<typename MutualIndexed::OddTree::ONode>(
+                    _alt.d_a2->v())) {
+              const auto &_psrc =
+                  std::get<typename MutualIndexed::OddTree::ONode>(
+                      _alt.d_a2->v());
+              auto &_pdst = std::get<typename MutualIndexed::OddTree::ONode>(
+                  _dst_alt.d_a2->v_mut());
+              if (_psrc.d_a2) {
+                _pdst.d_a2 = std::make_unique<MutualIndexed::EvenTree>();
+                _stack.push_back({_psrc.d_a2.get(), _pdst.d_a2.get()});
+              }
+            }
+          }
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -75,6 +102,33 @@ struct MutualIndexed {
     }
 
     // MANIPULATORS
+    ~EvenTree() {
+      std::vector<std::unique_ptr<EvenTree>> _stack{};
+      auto _drain = [&](EvenTree &_node) {
+        if (std::holds_alternative<ENode>(_node.d_v_)) {
+          auto &_alt = std::get<ENode>(_node.d_v_);
+          if (_alt.d_a2) {
+            if (std::holds_alternative<typename MutualIndexed::OddTree::ONode>(
+                    _alt.d_a2->v())) {
+              auto &_palt = std::get<typename MutualIndexed::OddTree::ONode>(
+                  _alt.d_a2->v_mut());
+              if (_palt.d_a2) {
+                _stack.push_back(std::move(_palt.d_a2));
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
@@ -132,13 +186,42 @@ struct MutualIndexed {
     }
 
     // MANIPULATORS
+    ~OddTree() {
+      std::vector<std::unique_ptr<OddTree>> _stack{};
+      auto _drain = [&](OddTree &_node) {
+        if (std::holds_alternative<ONode>(_node.d_v_)) {
+          auto &_alt = std::get<ONode>(_node.d_v_);
+          if (_alt.d_a2) {
+            if (std::holds_alternative<typename MutualIndexed::EvenTree::ENode>(
+                    _alt.d_a2->v())) {
+              auto &_palt = std::get<typename MutualIndexed::EvenTree::ENode>(
+                  _alt.d_a2->v_mut());
+              if (_palt.d_a2) {
+                _stack.push_back(std::move(_palt.d_a2));
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int, OddTree> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &,
+                                   OddTree &>
   static T1 EvenTree_rect(const T1 f, F1 &&f0, const unsigned int,
                           const EvenTree &e) {
     if (std::holds_alternative<typename EvenTree::ELeaf>(e.v())) {
@@ -149,7 +232,9 @@ struct MutualIndexed {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int, OddTree> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &,
+                                   OddTree &>
   static T1 EvenTree_rec(const T1 f, F1 &&f0, const unsigned int,
                          const EvenTree &e) {
     if (std::holds_alternative<typename EvenTree::ELeaf>(e.v())) {
@@ -160,13 +245,17 @@ struct MutualIndexed {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int, EvenTree> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
+                                   EvenTree &>
   static T1 OddTree_rect(F0 &&f, const unsigned int, const OddTree &o) {
     const auto &[d_n, d_a1, d_a2] = std::get<typename OddTree::ONode>(o.v());
     return f(d_n, d_a1, *(d_a2));
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int, EvenTree> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
+                                   EvenTree &>
   static T1 OddTree_rec(F0 &&f, const unsigned int, const OddTree &o) {
     const auto &[d_n, d_a1, d_a2] = std::get<typename OddTree::ONode>(o.v());
     return f(d_n, d_a1, *(d_a2));

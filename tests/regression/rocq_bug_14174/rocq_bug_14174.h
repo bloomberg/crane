@@ -11,9 +11,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 enum class Bool0 { e_TRUE0, e_FALSE0 };
 
 struct Nat {
@@ -641,13 +638,17 @@ struct RocqBug14174 {
         return d_x;
       }
 
-      template <typename T1, MapsTo<T1, t_A> F0> T1 sig_rec(F0 &&f) const {
+      template <typename T1, typename F0>
+        requires std::is_invocable_r_v<T1, F0 &, t_A &>
+      T1 sig_rec(F0 &&f) const {
         auto &&_sv = *(this);
         const auto &[d_x] = std::get<typename sig<t_A>::Exist>(_sv.v());
         return f(d_x);
       }
 
-      template <typename T1, MapsTo<T1, t_A> F0> T1 sig_rect(F0 &&f) const {
+      template <typename T1, typename F0>
+        requires std::is_invocable_r_v<T1, F0 &, t_A &>
+      T1 sig_rect(F0 &&f) const {
         auto &&_sv = *(this);
         const auto &[d_x] = std::get<typename sig<t_A>::Exist>(_sv.v());
         return f(d_x);
@@ -743,13 +744,17 @@ struct RocqBug14174 {
         }());
       }
 
-      template <typename T1, MapsTo<T1, t_A> F0> T1 sig2_rec(F0 &&f) const {
+      template <typename T1, typename F0>
+        requires std::is_invocable_r_v<T1, F0 &, t_A &>
+      T1 sig2_rec(F0 &&f) const {
         auto &&_sv = *(this);
         const auto &[d_x] = std::get<typename sig2<t_A>::Exist2>(_sv.v());
         return f(d_x);
       }
 
-      template <typename T1, MapsTo<T1, t_A> F0> T1 sig2_rect(F0 &&f) const {
+      template <typename T1, typename F0>
+        requires std::is_invocable_r_v<T1, F0 &, t_A &>
+      T1 sig2_rect(F0 &&f) const {
         auto &&_sv = *(this);
         const auto &[d_x] = std::get<typename sig2<t_A>::Exist2>(_sv.v());
         return f(d_x);
@@ -861,7 +866,8 @@ struct RocqBug14174 {
         return d_x;
       }
 
-      template <typename T1, MapsTo<T1, t_A, t_P> F0>
+      template <typename T1, typename F0>
+        requires std::is_invocable_r_v<T1, F0 &, t_A &, t_P &>
       T1 sigT_rec(F0 &&f) const {
         auto &&_sv = *(this);
         const auto &[d_x, d_a1] =
@@ -869,7 +875,8 @@ struct RocqBug14174 {
         return f(d_x, d_a1);
       }
 
-      template <typename T1, MapsTo<T1, t_A, t_P> F0>
+      template <typename T1, typename F0>
+        requires std::is_invocable_r_v<T1, F0 &, t_A &, t_P &>
       T1 sigT_rect(F0 &&f) const {
         auto &&_sv = *(this);
         const auto &[d_x, d_a1] =
@@ -993,7 +1000,8 @@ struct RocqBug14174 {
             }());
       }
 
-      template <typename T1, MapsTo<T1, t_A, t_P, t_Q> F0>
+      template <typename T1, typename F0>
+        requires std::is_invocable_r_v<T1, F0 &, t_A &, t_P &, t_Q &>
       T1 sigT2_rec(F0 &&f) const {
         auto &&_sv = *(this);
         const auto &[d_x, d_a1, d_a2] =
@@ -1001,7 +1009,8 @@ struct RocqBug14174 {
         return f(d_x, d_a1, d_a2);
       }
 
-      template <typename T1, MapsTo<T1, t_A, t_P, t_Q> F0>
+      template <typename T1, typename F0>
+        requires std::is_invocable_r_v<T1, F0 &, t_A &, t_P &, t_Q &>
       T1 sigT2_rect(F0 &&f) const {
         auto &&_sv = *(this);
         const auto &[d_x, d_a1, d_a2] =
@@ -1157,7 +1166,8 @@ struct RocqBug14174 {
       // ACCESSORS
       const variant_t &v() const { return d_v_; }
 
-      template <typename T1, MapsTo<T1, t_A> F0>
+      template <typename T1, typename F0>
+        requires std::is_invocable_r_v<T1, F0 &, t_A &>
       T1 sumor_rec(F0 &&f, const T1 f0) const {
         auto &&_sv = *(this);
         if (std::holds_alternative<typename sumor<t_A>::Inleft>(_sv.v())) {
@@ -1168,7 +1178,8 @@ struct RocqBug14174 {
         }
       }
 
-      template <typename T1, MapsTo<T1, t_A> F0>
+      template <typename T1, typename F0>
+        requires std::is_invocable_r_v<T1, F0 &, t_A &>
       T1 sumor_rect(F0 &&f, const T1 f0) const {
         auto &&_sv = *(this);
         if (std::holds_alternative<typename sumor<t_A>::Inleft>(_sv.v())) {
@@ -1180,14 +1191,15 @@ struct RocqBug14174 {
       }
     };
 
-    template <typename T1, typename T2, MapsTo<sig<T2>, T1> F0>
+    template <typename T1, typename T2, typename F0>
+      requires std::is_invocable_r_v<sig<T2>, F0 &, T1 &>
     static sig<std::function<T2(T1)>> Choice(F0 &&h) {
       return sig<std::function<T2(T1)>>::exist(
           [=](const T1 z) mutable { return h(z).proj1_sig(); });
     }
 
-    template <typename T1, typename T2, typename T3,
-              MapsTo<sigT<T2, T3>, T1> F0>
+    template <typename T1, typename T2, typename T3, typename F0>
+      requires std::is_invocable_r_v<sigT<T2, T3>, F0 &, T1 &>
     static sigT<std::function<T2(T1)>, std::function<T3(T1)>> Choice2(F0 &&h) {
       return sigT<std::function<T2(T1)>, std::function<T3(T1)>>::existt(
           [=](const T1 z) mutable { return h(z).projT1(); },
@@ -1199,7 +1211,8 @@ struct RocqBug14174 {
           });
     }
 
-    template <typename T1, MapsTo<Sumbool, T1> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<Sumbool, F0 &, T1 &>
     static sig<std::function<Bool0(T1)>> bool_choice(F0 &&h) {
       return sig<std::function<Bool0(T1)>>::exist([=](const T1 z) mutable {
         switch (h(z)) {
@@ -1215,7 +1228,8 @@ struct RocqBug14174 {
       });
     }
 
-    template <typename T1, MapsTo<sig<T1>, T1> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<sig<T1>, F0 &, T1 &>
     static sig<std::function<T1(Nat)>> dependent_choice(F0 &&h, const T1 x0) {
       auto f_impl = [=](auto &_self_f, Nat n) mutable -> T1 {
         if (std::holds_alternative<typename Nat::O>(n.v())) {

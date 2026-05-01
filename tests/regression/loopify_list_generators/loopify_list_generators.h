@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -194,7 +191,8 @@ struct LoopifyListGenerators {
   static List<unsigned int> cycle(const unsigned int n,
                                   const List<unsigned int> &l);
 
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static List<unsigned int> iterate(F0 &&f, const unsigned int n,
                                     const unsigned int x) {
     std::unique_ptr<List<unsigned int>> _head{};
@@ -222,7 +220,8 @@ struct LoopifyListGenerators {
     return std::move(*(_head));
   }
 
-  template <MapsTo<unsigned int, unsigned int> F2>
+  template <typename F2>
+    requires std::is_invocable_r_v<unsigned int, F2 &, unsigned int &>
   static List<unsigned int> build_list_aux(const unsigned int n,
                                            const unsigned int idx, F2 &&f) {
     std::unique_ptr<List<unsigned int>> _head{};
@@ -250,12 +249,14 @@ struct LoopifyListGenerators {
     return std::move(*(_head));
   }
 
-  template <MapsTo<unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static List<unsigned int> build_list(const unsigned int n, F1 &&f) {
     return build_list_aux(n, 0u, f);
   }
 
-  template <MapsTo<unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static List<unsigned int> init_list(const unsigned int n, F1 &&f) {
     if (n <= 0) {
       return List<unsigned int>::nil();
@@ -311,7 +312,8 @@ struct LoopifyListGenerators {
   static List<unsigned int> replicate_each(const unsigned int n,
                                            const List<unsigned int> &l);
 
-  template <MapsTo<unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static List<unsigned int> tabulate(const unsigned int n, F1 &&f) {
     if (n <= 0) {
       return List<unsigned int>::nil();
@@ -359,7 +361,9 @@ struct LoopifyListGenerators {
     }
   }
 
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static List<unsigned int> zip_with(F0 &&f, const List<unsigned int> &l1,
                                      const List<unsigned int> &l2) {
     std::unique_ptr<List<unsigned int>> _head{};

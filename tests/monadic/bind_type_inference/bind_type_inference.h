@@ -12,9 +12,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -133,7 +130,8 @@ struct BindTypeInference {
 
   static int64_t test1();
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &>
   static T2 transform(const T1 &ma, F1 &&f) {
     T1 x = ma;
     return f(x);

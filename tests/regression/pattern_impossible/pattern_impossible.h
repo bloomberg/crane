@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct PatternImpossible {
   enum class Three { e_ONE, e_TWO, e_THREE0 };
 
@@ -160,8 +157,9 @@ struct PatternImpossible {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, nested, T1, nested, T1> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, nested &, T1 &, nested &, T1 &>
   static T1 nested_rect(F0 &&f, F1 &&f0, const nested &n) {
     if (std::holds_alternative<typename nested::Leaf>(n.v())) {
       const auto &[d_a0] = std::get<typename nested::Leaf>(n.v());
@@ -173,8 +171,9 @@ struct PatternImpossible {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, nested, T1, nested, T1> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, nested &, T1 &, nested &, T1 &>
   static T1 nested_rec(F0 &&f, F1 &&f0, const nested &n) {
     if (std::holds_alternative<typename nested::Leaf>(n.v())) {
       const auto &[d_a0] = std::get<typename nested::Leaf>(n.v());

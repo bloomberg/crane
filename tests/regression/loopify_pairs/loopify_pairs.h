@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 /// Consolidated UNIQUE pair/tuple operations.
 struct LoopifyPairs {
   template <typename t_A> struct list {
@@ -127,7 +124,8 @@ struct LoopifyPairs {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rect(const T2 f, F1 &&f0, const list<T1> &l) {
     struct _Enter {
       const list<T1> *l;
@@ -166,7 +164,8 @@ struct LoopifyPairs {
     return _result;
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rec(const T2 f, F1 &&f0, const list<T1> &l) {
     struct _Enter {
       const list<T1> *l;
@@ -206,7 +205,8 @@ struct LoopifyPairs {
   }
 
   /// partition p l splits into (satisfies p, doesn't satisfy p).
-  template <typename T1, MapsTo<bool, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::pair<list<T1>, list<T1>> partition(F0 &&p, const list<T1> &l) {
     struct _Enter {
       const list<T1> *l;
@@ -454,7 +454,8 @@ struct LoopifyPairs {
   }
 
   /// span p l splits at first element not satisfying p.
-  template <typename T1, MapsTo<bool, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::pair<list<T1>, list<T1>> span(F0 &&p, const list<T1> &l) {
     struct _Enter {
       const list<T1> *l;
@@ -515,9 +516,9 @@ struct LoopifyPairs {
   sum_prod_count(const list<unsigned int> &l);
 
   /// mapAccumL f acc l map with accumulator threading.
-  template <
-      MapsTo<std::pair<unsigned int, unsigned int>, unsigned int, unsigned int>
-          F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<std::pair<unsigned int, unsigned int>, F0 &,
+                                   unsigned int &, unsigned int &>
   static std::pair<unsigned int, list<unsigned int>>
   mapAccumL(F0 &&f, const unsigned int acc, const list<unsigned int> &l) {
     struct _Enter {

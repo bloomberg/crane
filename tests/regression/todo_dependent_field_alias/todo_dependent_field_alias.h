@@ -8,9 +8,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename I>
 concept Magma = requires(typename I::carrier a0, typename I::carrier a1) {
   typename I::carrier;

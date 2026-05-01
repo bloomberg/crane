@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -451,7 +448,8 @@ struct LoopifySequences {
                                         const List<unsigned int> &l);
 
   /// iterate f n x generates x, f x, f (f x), ... of length n.
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static List<unsigned int> iterate(F0 &&f, const unsigned int n,
                                     const unsigned int x) {
     std::unique_ptr<List<unsigned int>> _head{};
@@ -538,7 +536,8 @@ struct LoopifySequences {
   static List<unsigned int> lis(List<unsigned int> l);
 
   /// take_while p l takes elements while predicate holds.
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static List<unsigned int> take_while(F0 &&p, const List<unsigned int> &l) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -572,7 +571,8 @@ struct LoopifySequences {
   }
 
   /// drop_while p l drops elements while predicate holds.
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static List<unsigned int> drop_while(F0 &&p, const List<unsigned int> &l) {
     List<unsigned int> _result;
     const List<unsigned int> *_loop_l = &l;
@@ -615,7 +615,8 @@ struct LoopifySequences {
   static List<unsigned int> remove_if_sum_even(const List<unsigned int> &l);
 
   /// bool_all p l checks if all elements satisfy predicate (forall with &&).
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static bool bool_all(F0 &&p, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;

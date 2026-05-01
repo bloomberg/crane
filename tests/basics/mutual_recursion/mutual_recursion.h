@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct MutualRecursion {
   static bool is_even(const unsigned int n);
   static bool is_odd(const unsigned int n);
@@ -88,6 +85,35 @@ struct MutualRecursion {
     }
 
     // MANIPULATORS
+    ~tree() {
+      std::vector<std::unique_ptr<tree<t_A>>> _stack{};
+      auto _drain = [&](tree<t_A> &_node) {
+        if (std::holds_alternative<Node>(_node.d_v_)) {
+          auto &_alt = std::get<Node>(_node.d_v_);
+          if (_alt.d_a0) {
+            if (std::holds_alternative<
+                    typename MutualRecursion::forest<t_A>::Trees>(
+                    _alt.d_a0->v())) {
+              auto &_palt =
+                  std::get<typename MutualRecursion::forest<t_A>::Trees>(
+                      _alt.d_a0->v_mut());
+              if (_palt.d_a0) {
+                _stack.push_back(std::move(_palt.d_a0));
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
@@ -212,8 +238,9 @@ struct MutualRecursion {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0,
-            MapsTo<T2, forest<T1>> F1>
+  template <typename T1, typename T2, typename F0, typename F1>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &> &&
+             std::is_invocable_r_v<T2, F1 &, forest<T1> &>
   static T2 tree_rect(F0 &&f, F1 &&f0, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       const auto &[d_a0] = std::get<typename tree<T1>::Leaf>(t.v());
@@ -224,8 +251,9 @@ struct MutualRecursion {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0,
-            MapsTo<T2, forest<T1>> F1>
+  template <typename T1, typename T2, typename F0, typename F1>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &> &&
+             std::is_invocable_r_v<T2, F1 &, forest<T1> &>
   static T2 tree_rec(F0 &&f, F1 &&f0, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       const auto &[d_a0] = std::get<typename tree<T1>::Leaf>(t.v());
@@ -236,7 +264,8 @@ struct MutualRecursion {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, tree<T1>, forest<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, forest<T1> &, T2 &>
   static T2 forest_rect(const T2 f, F1 &&f0, const forest<T1> &f1) {
     if (std::holds_alternative<typename forest<T1>::Empty>(f1.v())) {
       return f;
@@ -246,7 +275,8 @@ struct MutualRecursion {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, tree<T1>, forest<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, forest<T1> &, T2 &>
   static T2 forest_rec(const T2 f, F1 &&f0, const forest<T1> &f1) {
     if (std::holds_alternative<typename forest<T1>::Empty>(f1.v())) {
       return f;

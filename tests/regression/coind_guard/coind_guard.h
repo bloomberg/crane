@@ -10,9 +10,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -173,14 +170,16 @@ struct CoindGuard {
     return Stream<T1>::lazy_([=]() mutable -> Stream<T1> { return *(d_a1); });
   }
 
-  template <typename T1, MapsTo<T1, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &>
   static Stream<T1> iterate(F0 &&f, const T1 x) {
     return Stream<T1>::lazy_([=]() mutable -> Stream<T1> {
       return Stream<T1>::cons(x, iterate<T1>(f, f(x)));
     });
   }
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static Stream<T3> zipWith(F0 &&f, const Stream<T1> s1, const Stream<T2> s2) {
     return Stream<T3>::lazy_([=]() mutable -> Stream<T3> {
       return Stream<T3>::cons(f(hd<T1>(s1), hd<T2>(s2)),
@@ -188,14 +187,16 @@ struct CoindGuard {
     });
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static Stream<T2> smap(F0 &&f, const Stream<T1> s) {
     return Stream<T2>::lazy_([=]() mutable -> Stream<T2> {
       return Stream<T2>::cons(f(hd<T1>(s)), smap<T1, T2>(f, tl<T1>(s)));
     });
   }
 
-  template <typename T1, typename T2, MapsTo<std::pair<T1, T2>, T2> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<std::pair<T1, T2>, F0 &, T2 &>
   static Stream<T1> unfold(F0 &&f, const T2 seed) {
     auto _cs = f(seed);
     const T1 &a = _cs.first;

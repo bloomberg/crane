@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 enum class Unit { e_TT };
 enum class Bool0 { e_TRUE0, e_FALSE0 };
 
@@ -189,15 +186,43 @@ struct RocqBug13581 {
 
     // ACCESSORS
     I<t_T> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<C>(_sv.v())) {
-        return I<t_T>(C{});
-      } else {
-        const auto &[d_a0] = std::get<D>(_sv.v());
-        return I<t_T>(
-            D{d_a0 ? std::make_unique<RocqBug13581::J<t_T>>(d_a0->clone())
-                   : nullptr});
+      I<t_T> _out{};
+
+      struct _CloneFrame {
+        const I<t_T> *_src;
+        I<t_T> *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const I<t_T> *_src = _frame._src;
+        I<t_T> *_dst = _frame._dst;
+        if (std::holds_alternative<C>(_src->v())) {
+          _dst->d_v_ = C{};
+        } else {
+          const auto &_alt = std::get<D>(_src->v());
+          _dst->d_v_ =
+              D{_alt.d_a0 ? std::make_unique<RocqBug13581::J<t_T>>() : nullptr};
+          auto &_dst_alt = std::get<D>(_dst->d_v_);
+          if (_alt.d_a0) {
+            if (std::holds_alternative<typename RocqBug13581::J<t_T>::E>(
+                    _alt.d_a0->v())) {
+              const auto &_psrc =
+                  std::get<typename RocqBug13581::J<t_T>::E>(_alt.d_a0->v());
+              auto &_pdst = std::get<typename RocqBug13581::J<t_T>::E>(
+                  _dst_alt.d_a0->v_mut());
+              if (_psrc.d_a0) {
+                _pdst.d_a0 = std::make_unique<RocqBug13581::I<t_T>>();
+                _stack.push_back({_psrc.d_a0.get(), _pdst.d_a0.get()});
+              }
+            }
+          }
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -218,6 +243,33 @@ struct RocqBug13581 {
     }
 
     // MANIPULATORS
+    ~I() {
+      std::vector<std::unique_ptr<I<t_T>>> _stack{};
+      auto _drain = [&](I<t_T> &_node) {
+        if (std::holds_alternative<D>(_node.d_v_)) {
+          auto &_alt = std::get<D>(_node.d_v_);
+          if (_alt.d_a0) {
+            if (std::holds_alternative<typename RocqBug13581::J<t_T>::E>(
+                    _alt.d_a0->v())) {
+              auto &_palt = std::get<typename RocqBug13581::J<t_T>::E>(
+                  _alt.d_a0->v_mut());
+              if (_palt.d_a0) {
+                _stack.push_back(std::move(_palt.d_a0));
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
@@ -276,13 +328,41 @@ struct RocqBug13581 {
     }
 
     // MANIPULATORS
+    ~J() {
+      std::vector<std::unique_ptr<J<t_T>>> _stack{};
+      auto _drain = [&](J<t_T> &_node) {
+        if (std::holds_alternative<E>(_node.d_v_)) {
+          auto &_alt = std::get<E>(_node.d_v_);
+          if (_alt.d_a0) {
+            if (std::holds_alternative<typename RocqBug13581::I<t_T>::D>(
+                    _alt.d_a0->v())) {
+              auto &_palt = std::get<typename RocqBug13581::I<t_T>::D>(
+                  _alt.d_a0->v_mut());
+              if (_palt.d_a0) {
+                _stack.push_back(std::move(_palt.d_a0));
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, MapsTo<T2, J<T1>> F3>
+  template <typename T1, typename T2, typename F3>
+    requires std::is_invocable_r_v<T2, F3 &, J<T1> &>
   static T2 I_rect(const T1, const T1, const T2 f, F3 &&f0, const Nat &,
                    const I<T1> &i) {
     if (std::holds_alternative<typename I<T1>::C>(i.v())) {
@@ -293,7 +373,8 @@ struct RocqBug13581 {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, J<T1>> F3>
+  template <typename T1, typename T2, typename F3>
+    requires std::is_invocable_r_v<T2, F3 &, J<T1> &>
   static T2 I_rec(const T1, const T1, const T2 f, F3 &&f0, const Nat &,
                   const I<T1> &i) {
     if (std::holds_alternative<typename I<T1>::C>(i.v())) {
@@ -304,13 +385,15 @@ struct RocqBug13581 {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, I<T1>> F2>
+  template <typename T1, typename T2, typename F2>
+    requires std::is_invocable_r_v<T2, F2 &, I<T1> &>
   static T2 J_rect(const T1, const T1, F2 &&f, const Bool0, const J<T1> &j) {
     const auto &[d_a0] = std::get<typename J<T1>::E>(j.v());
     return f(*(d_a0));
   }
 
-  template <typename T1, typename T2, MapsTo<T2, I<T1>> F2>
+  template <typename T1, typename T2, typename F2>
+    requires std::is_invocable_r_v<T2, F2 &, I<T1> &>
   static T2 J_rec(const T1, const T1, F2 &&f, const Bool0, const J<T1> &j) {
     const auto &[d_a0] = std::get<typename J<T1>::E>(j.v());
     return f(*(d_a0));

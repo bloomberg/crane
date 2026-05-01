@@ -5,9 +5,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct Lambda {
   static unsigned int simple_lambda(const unsigned int x);
   static unsigned int multi_arg(const unsigned int _x0, const unsigned int _x1);
@@ -20,7 +17,8 @@ struct Lambda {
     return (x * 2u);
   }();
 
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static unsigned int apply_fn(F0 &&f, const unsigned int _x0) {
     return f(_x0);
   }

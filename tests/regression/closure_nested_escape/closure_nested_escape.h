@@ -7,9 +7,6 @@
 #include <type_traits>
 #include <utility>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct ClosureNestedEscape {
   /// A function takes a nat and returns a PAIR of fixpoints, both
   /// capturing the same parameter.

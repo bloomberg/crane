@@ -6,9 +6,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename I, typename t_A>
 concept Boxed = requires {
   { I::boxed_default() } -> std::convertible_to<t_A>;

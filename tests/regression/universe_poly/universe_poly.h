@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -214,7 +211,8 @@ struct UniversePoly {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &>
   static T2 poption_rect(const T2 f, F1 &&f0, const poption<T1> &p) {
     if (std::holds_alternative<typename poption<T1>::Pnone>(p.v())) {
       return f;
@@ -224,7 +222,8 @@ struct UniversePoly {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &>
   static T2 poption_rec(const T2 f, F1 &&f0, const poption<T1> &p) {
     if (std::holds_alternative<typename poption<T1>::Pnone>(p.v())) {
       return f;
@@ -234,7 +233,8 @@ struct UniversePoly {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static poption<T2> poption_map(F0 &&f, const poption<T1> &o) {
     if (std::holds_alternative<typename poption<T1>::Pnone>(o.v())) {
       return poption<T2>::pnone();
@@ -244,7 +244,8 @@ struct UniversePoly {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<poption<T2>, T1> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<poption<T2>, F1 &, T1 &>
   static poption<T2> poption_bind(const poption<T1> &o, F1 &&f) {
     if (std::holds_alternative<typename poption<T1>::Pnone>(o.v())) {
       return poption<T2>::pnone();

@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -196,9 +193,11 @@ struct Compare_dec {
 };
 
 struct Sort {
-  template <typename T1, typename T2,
-            MapsTo<std::pair<List<T1>, List<T1>>, List<T1>> F0,
-            MapsTo<T2, T1> F2, MapsTo<T2, List<T1>, T2, T2> F3>
+  template <typename T1, typename T2, typename F0, typename F2, typename F3>
+    requires std::is_invocable_r_v<std::pair<List<T1>, List<T1>>, F0 &,
+                                   List<T1> &> &&
+             std::is_invocable_r_v<T2, F2 &, T1 &> &&
+             std::is_invocable_r_v<T2, F3 &, List<T1> &, T2 &, T2 &>
   static T2 div_conq(F0 &&splitF, const T2 x, F2 &&x0, F3 &&x1,
                      const List<T1> &ls) {
     bool s = Compare_dec::le_lt_dec(2u, ls.length());
@@ -237,14 +236,17 @@ struct Sort {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F1,
-            MapsTo<T2, List<T1>, T2, T2> F2>
+  template <typename T1, typename T2, typename F1, typename F2>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &> &&
+             std::is_invocable_r_v<T2, F2 &, List<T1> &, T2 &, T2 &>
   static T2 div_conq_split(const T2 x, F1 &&_x0, F2 &&_x1, List<T1> _x2) {
     return div_conq<T1, T2>(split<T1>, x, _x0, _x1, std::move(_x2));
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F1, MapsTo<T2, T1, T1> F2,
-            MapsTo<T2, T1, T1, List<T1>, T2, T2> F3>
+  template <typename T1, typename T2, typename F1, typename F2, typename F3>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &> &&
+             std::is_invocable_r_v<T2, F2 &, T1 &, T1 &> &&
+             std::is_invocable_r_v<T2, F3 &, T1 &, T1 &, List<T1> &, T2 &, T2 &>
   static T2 div_conq_pair(const T2 x, F1 &&x0, F2 &&x1, F3 &&x2,
                           const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -263,7 +265,8 @@ struct Sort {
     }
   }
 
-  template <typename T1, MapsTo<bool, T1, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static std::pair<List<T1>, List<T1>> split_pivot(F0 &&le_dec0, const T1 pivot,
                                                    const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -281,8 +284,9 @@ struct Sort {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<bool, T1, T1> F0,
-            MapsTo<T2, T1, List<T1>, T2, T2> F2>
+  template <typename T1, typename T2, typename F0, typename F2>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &> &&
+             std::is_invocable_r_v<T2, F2 &, T1 &, List<T1> &, T2 &, T2 &>
   static T2 div_conq_pivot(F0 &&le_dec0, const T2 x, F2 &&x0,
                            const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {

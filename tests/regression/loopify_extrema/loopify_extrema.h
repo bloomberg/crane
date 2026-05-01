@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -131,7 +128,8 @@ struct LoopifyExtrema {
   static std::pair<unsigned int, unsigned int>
   minmax(const List<unsigned int> &l);
 
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static unsigned int max_by(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -186,7 +184,8 @@ struct LoopifyExtrema {
     return _result;
   }
 
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static unsigned int min_by(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -241,7 +240,8 @@ struct LoopifyExtrema {
     return _result;
   }
 
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static unsigned int argmax(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -297,7 +297,8 @@ struct LoopifyExtrema {
     return _result;
   }
 
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static unsigned int argmin(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -358,7 +359,8 @@ struct LoopifyExtrema {
   static bool all_equal(const List<unsigned int> &l);
   static bool is_sorted(const List<unsigned int> &l);
 
-  template <MapsTo<bool, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &, unsigned int &>
   static bool adjacent_all(F0 &&p, const List<unsigned int> &l) {
     bool _result;
     const List<unsigned int> *_loop_l = &l;

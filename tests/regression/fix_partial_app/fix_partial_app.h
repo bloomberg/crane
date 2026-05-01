@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct FixPartialApp {
   struct tree {
     // TYPES
@@ -124,7 +121,9 @@ struct FixPartialApp {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                   tree &, T1 &>
   static T1 tree_rect(const T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -135,7 +134,9 @@ struct FixPartialApp {
     }
   }
 
-  template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                   tree &, T1 &>
   static T1 tree_rec(const T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -206,7 +207,8 @@ struct FixPartialApp {
   }();
 
   /// More complex: partial app of tree_map, a structure-preserving function.
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static tree tree_map(F0 &&f, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return tree::leaf();

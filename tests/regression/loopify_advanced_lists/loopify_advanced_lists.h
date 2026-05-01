@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -157,7 +154,8 @@ struct LoopifyAdvancedLists {
                                        List<unsigned int> l2);
   static List<unsigned int> concat_lists(const List<List<unsigned int>> &ll);
 
-  template <MapsTo<List<unsigned int>, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<List<unsigned int>, F0 &, unsigned int &>
   static List<unsigned int> flat_map(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -196,7 +194,8 @@ struct LoopifyAdvancedLists {
     return _result;
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static bool all_satisfy(F0 &&p, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -235,7 +234,8 @@ struct LoopifyAdvancedLists {
     return _result;
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static bool any_satisfy(F0 &&p, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -274,7 +274,8 @@ struct LoopifyAdvancedLists {
     return _result;
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static std::optional<unsigned int> find_first(F0 &&p,
                                                 const List<unsigned int> &l) {
     std::optional<unsigned int> _result;

@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename M>
 concept Elem = requires {
   typename M::t;
@@ -84,7 +81,8 @@ template <Elem E> struct Container {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 maybe_rect(const T1 f, F1 &&f0, const maybe &m) {
     if (std::holds_alternative<typename maybe::Nothing>(m.v())) {
       return f;
@@ -94,7 +92,8 @@ template <Elem E> struct Container {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 maybe_rec(const T1 f, F1 &&f0, const maybe &m) {
     if (std::holds_alternative<typename maybe::Nothing>(m.v())) {
       return f;
@@ -207,7 +206,8 @@ template <Elem E> struct Container {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, maybe, mlist, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, maybe &, mlist &, T1 &>
   static T1 mlist_rect(const T1 f, F1 &&f0, const mlist &m) {
     if (std::holds_alternative<typename mlist::MNil>(m.v())) {
       return f;
@@ -217,7 +217,8 @@ template <Elem E> struct Container {
     }
   }
 
-  template <typename T1, MapsTo<T1, maybe, mlist, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, maybe &, mlist &, T1 &>
   static T1 mlist_rec(const T1 f, F1 &&f0, const mlist &m) {
     if (std::holds_alternative<typename mlist::MNil>(m.v())) {
       return f;
@@ -289,7 +290,9 @@ template <Elem E> struct Container {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, maybe> F0, MapsTo<T1, mlist> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, maybe &> &&
+             std::is_invocable_r_v<T1, F1 &, mlist &>
   static T1 mtree_rect(F0 &&f, F1 &&f0, const mtree &m) {
     if (std::holds_alternative<typename mtree::Leaf>(m.v())) {
       const auto &[d_a0] = std::get<typename mtree::Leaf>(m.v());
@@ -300,7 +303,9 @@ template <Elem E> struct Container {
     }
   }
 
-  template <typename T1, MapsTo<T1, maybe> F0, MapsTo<T1, mlist> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, maybe &> &&
+             std::is_invocable_r_v<T1, F1 &, mlist &>
   static T1 mtree_rec(F0 &&f, F1 &&f0, const mtree &m) {
     if (std::holds_alternative<typename mtree::Leaf>(m.v())) {
       const auto &[d_a0] = std::get<typename mtree::Leaf>(m.v());

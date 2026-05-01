@@ -8,9 +8,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct ValueTypeMatchFix {
   /// A non-recursive inductive (will be a value type).
   struct triple {
@@ -66,15 +63,17 @@ struct ValueTypeMatchFix {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1,
-            MapsTo<T1, unsigned int, unsigned int, unsigned int> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
+                                   unsigned int &>
   static T1 triple_rect(F0 &&f, const triple &t) {
     const auto &[d_a0, d_a1, d_a2] = std::get<typename triple::MkTriple>(t.v());
     return f(d_a0, d_a1, d_a2);
   }
 
-  template <typename T1,
-            MapsTo<T1, unsigned int, unsigned int, unsigned int> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
+                                   unsigned int &>
   static T1 triple_rec(F0 &&f, const triple &t) {
     const auto &[d_a0, d_a1, d_a2] = std::get<typename triple::MkTriple>(t.v());
     return f(d_a0, d_a1, d_a2);

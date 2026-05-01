@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct FixMoveCapture {
   /// BUG HYPOTHESIS: dead-after analysis vs fixpoint & capture.
   ///
@@ -130,7 +127,8 @@ struct FixMoveCapture {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int, mylist, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
   static T1 mylist_rect(const T1 f0, F1 &&f1, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mynil>(m.v())) {
       return f0;
@@ -140,7 +138,8 @@ struct FixMoveCapture {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, mylist, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
   static T1 mylist_rec(const T1 f0, F1 &&f1, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mynil>(m.v())) {
       return f0;

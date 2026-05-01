@@ -5,9 +5,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct OptionLetNoneBug {
   static inline const std::optional<bool> bug = std::optional<bool>();
 };

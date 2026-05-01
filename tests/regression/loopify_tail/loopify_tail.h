@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct LoopifyTail {
   template <typename t_A> struct list {
     // TYPES
@@ -126,7 +123,8 @@ struct LoopifyTail {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rect(const T2 f, F1 &&f0, const list<T1> &l) {
     struct _Enter {
       const list<T1> *l;
@@ -165,7 +163,8 @@ struct LoopifyTail {
     return _result;
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rec(const T2 f, F1 &&f0, const list<T1> &l) {
     struct _Enter {
       const list<T1> *l;
@@ -252,7 +251,8 @@ struct LoopifyTail {
   nth(const unsigned int n, const list<unsigned int> &l,
       const unsigned int default0); /// Tail-recursive: fold_left
 
-  template <typename T1, typename T2, MapsTo<T2, T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T2 &, T1 &>
   static T2 fold_left(F0 &&f, const T2 acc, const list<T1> &l) {
     T2 _result;
     const list<T1> *_loop_l = &l;

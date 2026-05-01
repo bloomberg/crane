@@ -10,9 +10,6 @@
 #include <string>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct BlockTemplateEdge {
   /// 1. Block template result used immediately in if-then-else
   static std::string block_in_if();

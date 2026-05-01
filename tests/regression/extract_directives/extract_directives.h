@@ -6,9 +6,6 @@
 #include <stdexcept>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct ExtractDirectives {
   static unsigned int offset(const unsigned int base, const unsigned int x);
   static unsigned int scale(const unsigned int base, const unsigned int x);

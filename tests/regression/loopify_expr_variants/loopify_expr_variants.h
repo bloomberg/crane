@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -420,9 +417,12 @@ struct LoopifyExprVariants {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, cond_expr, T1, cond_expr, T1> F1,
-              MapsTo<T1, cond_expr, T1, cond_expr, T1, cond_expr, T1> F2>
+    template <typename T1, typename F0, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, cond_expr &, T1 &, cond_expr &,
+                                     T1 &> &&
+               std::is_invocable_r_v<T1, F2 &, cond_expr &, T1 &, cond_expr &,
+                                     T1 &, cond_expr &, T1 &>
     T1 cond_expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       const cond_expr *_self = this;
 
@@ -530,9 +530,12 @@ struct LoopifyExprVariants {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, cond_expr, T1, cond_expr, T1> F1,
-              MapsTo<T1, cond_expr, T1, cond_expr, T1, cond_expr, T1> F2>
+    template <typename T1, typename F0, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, cond_expr &, T1 &, cond_expr &,
+                                     T1 &> &&
+               std::is_invocable_r_v<T1, F2 &, cond_expr &, T1 &, cond_expr &,
+                                     T1 &, cond_expr &, T1 &>
     T1 cond_expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       const cond_expr *_self = this;
 
@@ -950,10 +953,14 @@ struct LoopifyExprVariants {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, arith_expr, T1, arith_expr, T1> F1,
-              MapsTo<T1, arith_expr, T1, arith_expr, T1> F2,
-              MapsTo<T1, arith_expr, T1, arith_expr, T1> F3>
+    template <typename T1, typename F0, typename F1, typename F2, typename F3>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, arith_expr &, T1 &, arith_expr &,
+                                     T1 &> &&
+               std::is_invocable_r_v<T1, F2 &, arith_expr &, T1 &, arith_expr &,
+                                     T1 &> &&
+               std::is_invocable_r_v<T1, F3 &, arith_expr &, T1 &, arith_expr &,
+                                     T1 &>
     T1 arith_expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const arith_expr *_self = this;
 
@@ -1068,10 +1075,14 @@ struct LoopifyExprVariants {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, arith_expr, T1, arith_expr, T1> F1,
-              MapsTo<T1, arith_expr, T1, arith_expr, T1> F2,
-              MapsTo<T1, arith_expr, T1, arith_expr, T1> F3>
+    template <typename T1, typename F0, typename F1, typename F2, typename F3>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, arith_expr &, T1 &, arith_expr &,
+                                     T1 &> &&
+               std::is_invocable_r_v<T1, F2 &, arith_expr &, T1 &, arith_expr &,
+                                     T1 &> &&
+               std::is_invocable_r_v<T1, F3 &, arith_expr &, T1 &, arith_expr &,
+                                     T1 &>
     T1 arith_expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const arith_expr *_self = this;
 
@@ -1688,9 +1699,12 @@ struct LoopifyExprVariants {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, bool_expr, T1, bool_expr, T1> F2,
-              MapsTo<T1, bool_expr, T1, bool_expr, T1> F3,
-              MapsTo<T1, bool_expr, T1> F4>
+    template <typename T1, typename F2, typename F3, typename F4>
+      requires std::is_invocable_r_v<T1, F2 &, bool_expr &, T1 &, bool_expr &,
+                                     T1 &> &&
+               std::is_invocable_r_v<T1, F3 &, bool_expr &, T1 &, bool_expr &,
+                                     T1 &> &&
+               std::is_invocable_r_v<T1, F4 &, bool_expr &, T1 &>
     T1 bool_expr_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       const bool_expr *_self = this;
 
@@ -1791,9 +1805,12 @@ struct LoopifyExprVariants {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, bool_expr, T1, bool_expr, T1> F2,
-              MapsTo<T1, bool_expr, T1, bool_expr, T1> F3,
-              MapsTo<T1, bool_expr, T1> F4>
+    template <typename T1, typename F2, typename F3, typename F4>
+      requires std::is_invocable_r_v<T1, F2 &, bool_expr &, T1 &, bool_expr &,
+                                     T1 &> &&
+               std::is_invocable_r_v<T1, F3 &, bool_expr &, T1 &, bool_expr &,
+                                     T1 &> &&
+               std::is_invocable_r_v<T1, F4 &, bool_expr &, T1 &>
     T1 bool_expr_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2,
                       F4 &&f3) const {
       const bool_expr *_self = this;
@@ -2180,9 +2197,12 @@ struct LoopifyExprVariants {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, list_expr, T1> F1,
-              MapsTo<T1, list_expr, T1, list_expr, T1> F2,
-              MapsTo<T1, unsigned int, unsigned int> F3>
+    template <typename T1, typename F1, typename F2, typename F3>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &, list_expr &,
+                                     T1 &> &&
+               std::is_invocable_r_v<T1, F2 &, list_expr &, T1 &, list_expr &,
+                                     T1 &> &&
+               std::is_invocable_r_v<T1, F3 &, unsigned int &, unsigned int &>
     T1 list_expr_rec(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const list_expr *_self = this;
 
@@ -2258,9 +2278,12 @@ struct LoopifyExprVariants {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, list_expr, T1> F1,
-              MapsTo<T1, list_expr, T1, list_expr, T1> F2,
-              MapsTo<T1, unsigned int, unsigned int> F3>
+    template <typename T1, typename F1, typename F2, typename F3>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &, list_expr &,
+                                     T1 &> &&
+               std::is_invocable_r_v<T1, F2 &, list_expr &, T1 &, list_expr &,
+                                     T1 &> &&
+               std::is_invocable_r_v<T1, F3 &, unsigned int &, unsigned int &>
     T1 list_expr_rect(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const list_expr *_self = this;
 

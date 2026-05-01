@@ -7,32 +7,39 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct DensityPotentialTraceCase {
-  template <MapsTo<Real, Real> F0, MapsTo<Real, Real> F1>
+  template <typename F0, typename F1>
+    requires std::is_invocable_r_v<Real, F0 &, Real &> &&
+             std::is_invocable_r_v<Real, F1 &, Real &>
   static Real lapse(F0 &&f, F1 &&mu, const Real x) {
     return f(mu(x));
   }
 
-  template <MapsTo<Real, Real> F0, MapsTo<Real, Real> F1>
+  template <typename F0, typename F1>
+    requires std::is_invocable_r_v<Real, F0 &, Real &> &&
+             std::is_invocable_r_v<Real, F1 &, Real &>
   static Real proper_time_static(F0 &&f, F1 &&mu, const Real x, const Real t) {
     return (lapse(f, mu, x) * t);
   }
 
-  template <MapsTo<Real, Real> F0, MapsTo<Real, Real> F1, MapsTo<Real, Real> F2,
-            MapsTo<Real, Real> F3>
+  template <typename F0, typename F1, typename F2, typename F3>
+    requires std::is_invocable_r_v<Real, F0 &, Real &> &&
+             std::is_invocable_r_v<Real, F1 &, Real &> &&
+             std::is_invocable_r_v<Real, F2 &, Real &> &&
+             std::is_invocable_r_v<Real, F3 &, Real &>
   static Real proper_time_density_path(F0 &&f, F1 &&mu, F2 &&gamma, F3 &&v,
                                        const Real t) {
     return r_sqrt((r_pow(lapse(f, mu, gamma(t)), 2u) - r_pow(v(t), 2u)));
   }
 
-  template <MapsTo<Real, Real> F0> static Real V_eff(F0 &&n, const Real x) {
+  template <typename F0>
+    requires std::is_invocable_r_v<Real, F0 &, Real &>
+  static Real V_eff(F0 &&n, const Real x) {
     return r_inv((n(x) * n(x)));
   }
 
-  template <MapsTo<Real, Real> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<Real, F0 &, Real &>
   static Real V_eff_massive(F0 &&n, const Real m, const Real x) {
     return (r_pow(m, 2u) * V_eff(n, x));
   }

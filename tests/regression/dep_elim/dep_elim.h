@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -240,8 +237,9 @@ struct DepElim {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int, fin, T1> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &, fin &, T1 &>
     T1 fin_rec(F0 &&f, F1 &&f0, const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename fin::FZ>(_sv.v())) {
@@ -253,8 +251,9 @@ struct DepElim {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int, fin, T1> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &, fin &, T1 &>
     T1 fin_rect(F0 &&f, F1 &&f0, const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename fin::FZ>(_sv.v())) {
@@ -404,7 +403,8 @@ struct DepElim {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, t_A &>
     vec<T1> vec_map(const unsigned int, F1 &&f) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
@@ -428,7 +428,9 @@ struct DepElim {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, t_A, vec<t_A>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &, t_A &,
+                                     vec<t_A> &, T1 &>
     T1 vec_rec(const T1 f, F1 &&f0, const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
@@ -441,7 +443,9 @@ struct DepElim {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, t_A, vec<t_A>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &, t_A &,
+                                     vec<t_A> &, T1 &>
     T1 vec_rect(const T1 f, F1 &&f0, const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
@@ -525,7 +529,8 @@ struct DepElim {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
     T1 avail_rec(F0 &&f, const T1 f0, const bool) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename avail::Present>(_sv.v())) {
@@ -536,7 +541,8 @@ struct DepElim {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
     T1 avail_rect(F0 &&f, const T1 f0, const bool) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename avail::Present>(_sv.v())) {

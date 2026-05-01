@@ -6,9 +6,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename I, typename t_A>
 concept HasNorm = requires(t_A a0) {
   { I::norm(a0) } -> std::convertible_to<unsigned int>;

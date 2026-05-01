@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct HigherOrder {
   /// A simple polymorphic list type.
   template <typename t_A> struct list {
@@ -127,7 +124,8 @@ struct HigherOrder {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rect(const T2 f, F1 &&f0, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;
@@ -137,7 +135,8 @@ struct HigherOrder {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rec(const T2 f, F1 &&f0, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;
@@ -148,7 +147,8 @@ struct HigherOrder {
   }
 
   /// map f l applies f to each element of l, producing a new list.
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static list<T2> map(F0 &&f, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return list<T2>::nil();
@@ -160,7 +160,8 @@ struct HigherOrder {
 
   /// foldr f z l folds l from the right using f with initial
   /// accumulator z.
-  template <typename T1, typename T2, MapsTo<T2, T1, T2> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &, T2 &>
   static T2 foldr(F0 &&f, const T2 z, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return z;
@@ -172,7 +173,8 @@ struct HigherOrder {
 
   /// foldl f z l folds l from the left using f with initial
   /// accumulator z. This is tail-recursive.
-  template <typename T1, typename T2, MapsTo<T2, T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T2 &, T1 &>
   static T2 foldl(F0 &&f, const T2 z, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return z;
@@ -189,7 +191,8 @@ struct HigherOrder {
   }
 
   /// iterate n f x applies f to x a total of n times.
-  template <typename T1, MapsTo<T1, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, T1 &>
   static T1 iterate(const unsigned int n, F1 &&f, const T1 x) {
     if (n <= 0) {
       return x;
@@ -203,13 +206,15 @@ struct HigherOrder {
   static unsigned int adder(const unsigned int _x0, const unsigned int _x1);
 
   /// twice f returns a function that applies f two times.
-  template <typename T1, MapsTo<T1, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &>
   static T1 twice(F0 &&f, const T1 x) {
     return f(f(x));
   }
 
   /// pipe x f applies f to x, simulating a pipeline operator.
-  template <typename T1, typename T2, MapsTo<T2, T1> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &>
   static T2 pipe(const T1 x, F1 &&f) {
     return f(x);
   }

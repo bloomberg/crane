@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -123,7 +120,8 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
 
-  template <typename T1, MapsTo<T1, t_A, List<t_A>, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, t_A &, List<t_A> &, T1 &>
   T1 list_rect(const T1 f, F1 &&f0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
@@ -134,7 +132,8 @@ public:
     }
   }
 
-  template <typename T1, MapsTo<T1, t_A, List<t_A>, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, t_A &, List<t_A> &, T1 &>
   T1 list_rec(const T1 f, F1 &&f0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
@@ -185,7 +184,9 @@ public:
     }
   }
 
-  template <typename T1, MapsTo<T1, t_A> F0> List<T1> map(F0 &&f) const {
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, t_A &>
+  List<T1> map(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return List<T1>::nil();

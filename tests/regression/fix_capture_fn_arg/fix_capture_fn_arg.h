@@ -7,9 +7,6 @@
 #include <type_traits>
 #include <utility>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct FixCaptureFnArg {
   /// A local fixpoint captures a FUNCTION argument AND is returned
   /// through a pair (preventing uncurrying).
@@ -20,7 +17,8 @@ struct FixCaptureFnArg {
   /// returns, f (the std::function object), base, and the local
   /// go are all destroyed. The returned closure dereferences a
   /// destroyed std::function when it calls f.
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
   make_transform(F0 &&f, const unsigned int base) {
     auto go_impl = [=](auto &_self_go, unsigned int x) mutable -> unsigned int {

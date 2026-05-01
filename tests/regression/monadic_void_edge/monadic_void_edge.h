@@ -13,8 +13,6 @@
 #include <vector>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 template <typename t_A> struct List {
   // TYPES
@@ -146,7 +144,8 @@ struct MonadicVoidEdge {
   static void deeply_nested_void();
 
   /// 8. Higher-order: pass a monadic void function as callback
-  template <MapsTo<void, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, unsigned int &>
   static void apply_effect(F0 &&f, const unsigned int _x0) {
     f(_x0);
     return;

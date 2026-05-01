@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct LoopifyOption {
   template <typename t_A> struct list {
     // TYPES
@@ -126,7 +123,8 @@ struct LoopifyOption {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rect(const T2 f, F1 &&f0, const list<T1> &l) {
     struct _Enter {
       const list<T1> *l;
@@ -165,7 +163,8 @@ struct LoopifyOption {
     return _result;
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rec(const T2 f, F1 &&f0, const list<T1> &l) {
     struct _Enter {
       const list<T1> *l;
@@ -205,7 +204,8 @@ struct LoopifyOption {
   }
 
   /// find_opt p l returns the first element satisfying p, or None.
-  template <typename T1, MapsTo<bool, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::optional<T1> find_opt(F0 &&p, const list<T1> &l) {
     std::optional<T1> _result;
     const list<T1> *_loop_l = &l;
@@ -281,7 +281,8 @@ struct LoopifyOption {
              const list<std::pair<unsigned int, unsigned int>> &l);
 
   /// map_opt f l applies f and keeps only Some results.
-  template <typename T1, typename T2, MapsTo<std::optional<T2>, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<std::optional<T2>, F0 &, T1 &>
   static list<T2> map_opt(F0 &&f, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return list<T2>::nil();
@@ -298,7 +299,8 @@ struct LoopifyOption {
   }
 
   /// find_index p l returns the index of the first match, or None.
-  template <typename T1, MapsTo<bool, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::optional<unsigned int> find_index_aux(F0 &&p, const list<T1> &l,
                                                     const unsigned int i) {
     std::optional<unsigned int> _result;
@@ -323,7 +325,8 @@ struct LoopifyOption {
     return _result;
   }
 
-  template <typename T1, MapsTo<bool, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::optional<unsigned int> find_index(F0 &&p, const list<T1> &l) {
     return find_index_aux<T1>(p, l, 0u);
   }

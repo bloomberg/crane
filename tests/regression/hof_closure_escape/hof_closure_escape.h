@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct HofClosureEscape {
   struct tree {
     // TYPES
@@ -124,7 +121,9 @@ struct HofClosureEscape {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                   tree &, T1 &>
   static T1 tree_rect(const T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -135,7 +134,9 @@ struct HofClosureEscape {
     }
   }
 
-  template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                   tree &, T1 &>
   static T1 tree_rec(const T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -151,7 +152,8 @@ struct HofClosureEscape {
   /// wrap_some is a helper that takes a function and wraps it in Some.
   /// The partial application happens at the CALL SITE of wrap_some,
   /// so the & lambda is created by the caller and passed through.
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static std::optional<std::function<unsigned int(unsigned int)>>
   wrap_some(F0 &&f) {
     return std::make_optional<std::function<unsigned int(unsigned int)>>(f);

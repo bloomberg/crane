@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -418,10 +415,15 @@ struct InstructionClassifiers {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2,
-              MapsTo<T1, unsigned int> F3, MapsTo<T1, unsigned int> F4,
-              MapsTo<T1, unsigned int> F5, MapsTo<T1, unsigned int> F6>
+    template <typename T1, typename F0, typename F1, typename F2, typename F3,
+              typename F4, typename F5, typename F6>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F2 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F3 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F4 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F5 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F6 &, unsigned int &>
     T1 instr_acc_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                      F6 &&f5, const T1 f6, const T1 f7, const T1 f8,
                      const T1 f9, const T1 f10, const T1 f11, const T1 f12,
@@ -492,10 +494,15 @@ struct InstructionClassifiers {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2,
-              MapsTo<T1, unsigned int> F3, MapsTo<T1, unsigned int> F4,
-              MapsTo<T1, unsigned int> F5, MapsTo<T1, unsigned int> F6>
+    template <typename T1, typename F0, typename F1, typename F2, typename F3,
+              typename F4, typename F5, typename F6>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F2 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F3 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F4 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F5 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F6 &, unsigned int &>
     T1 instr_acc_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                       F6 &&f5, const T1 f6, const T1 f7, const T1 f8,
                       const T1 f9, const T1 f10, const T1 f11, const T1 f12,
@@ -702,7 +709,8 @@ struct InstructionClassifiers {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F7>
+    template <typename T1, typename F7>
+      requires std::is_invocable_r_v<T1, F7 &, unsigned int &>
     T1 instr_ram_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                      const T1 f3, const T1 f4, const T1 f5, F7 &&f6) const {
       auto &&_sv = *(this);
@@ -726,7 +734,8 @@ struct InstructionClassifiers {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F7>
+    template <typename T1, typename F7>
+      requires std::is_invocable_r_v<T1, F7 &, unsigned int &>
     T1 instr_ram_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                       const T1 f3, const T1 f4, const T1 f5, F7 &&f6) const {
       auto &&_sv = *(this);
@@ -907,10 +916,16 @@ struct InstructionClassifiers {
       }
     }
 
-    template <
-        typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, unsigned int> F1,
-        MapsTo<T1, unsigned int, unsigned int> F2, MapsTo<T1, unsigned int> F3,
-        MapsTo<T1, unsigned int, unsigned int> F4, MapsTo<T1, unsigned int> F6>
+    template <typename T1, typename F0, typename F1, typename F2, typename F3,
+              typename F4, typename F6>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F2 &, unsigned int &,
+                                     unsigned int &> &&
+               std::is_invocable_r_v<T1, F3 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F4 &, unsigned int &,
+                                     unsigned int &> &&
+               std::is_invocable_r_v<T1, F6 &, unsigned int &>
     T1 instr_regs_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, const T1 f4,
                       F6 &&f5) const {
       auto &&_sv = *(this);
@@ -939,10 +954,16 @@ struct InstructionClassifiers {
       }
     }
 
-    template <
-        typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, unsigned int> F1,
-        MapsTo<T1, unsigned int, unsigned int> F2, MapsTo<T1, unsigned int> F3,
-        MapsTo<T1, unsigned int, unsigned int> F4, MapsTo<T1, unsigned int> F6>
+    template <typename T1, typename F0, typename F1, typename F2, typename F3,
+              typename F4, typename F6>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F2 &, unsigned int &,
+                                     unsigned int &> &&
+               std::is_invocable_r_v<T1, F3 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F4 &, unsigned int &,
+                                     unsigned int &> &&
+               std::is_invocable_r_v<T1, F6 &, unsigned int &>
     T1 instr_regs_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, const T1 f4,
                        F6 &&f5) const {
       auto &&_sv = *(this);
@@ -1139,11 +1160,17 @@ struct InstructionClassifiers {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2,
-              MapsTo<T1, unsigned int> F3, MapsTo<T1, unsigned int> F4,
-              MapsTo<T1, unsigned int, unsigned int> F5,
-              MapsTo<T1, unsigned int> F6>
+    template <typename T1, typename F0, typename F1, typename F2, typename F3,
+              typename F4, typename F5, typename F6>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &,
+                                     unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F2 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F3 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F4 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F5 &, unsigned int &,
+                                     unsigned int &> &&
+               std::is_invocable_r_v<T1, F6 &, unsigned int &>
     T1 instr_jump_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                       F6 &&f5, const T1 f6) const {
       auto &&_sv = *(this);
@@ -1177,11 +1204,17 @@ struct InstructionClassifiers {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2,
-              MapsTo<T1, unsigned int> F3, MapsTo<T1, unsigned int> F4,
-              MapsTo<T1, unsigned int, unsigned int> F5,
-              MapsTo<T1, unsigned int> F6>
+    template <typename T1, typename F0, typename F1, typename F2, typename F3,
+              typename F4, typename F5, typename F6>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &,
+                                     unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F2 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F3 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F4 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F5 &, unsigned int &,
+                                     unsigned int &> &&
+               std::is_invocable_r_v<T1, F6 &, unsigned int &>
     T1 instr_jump_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                        F6 &&f5, const T1 f6) const {
       auto &&_sv = *(this);

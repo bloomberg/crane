@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 enum class Comparison { e_EQ, e_LT, e_GT };
 
 struct Positive {
@@ -349,7 +346,8 @@ struct Pos {
                                  const Positive &y);
   static Comparison compare(const Positive &_x0, const Positive &_x1);
 
-  template <typename T1, MapsTo<T1, T1, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 iter_op(F0 &&op, const Positive &p, const T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[d_a0] = std::get<typename Positive::XI>(p.v());
@@ -371,7 +369,8 @@ struct Coq_Pos {
   static Positive add_carry(const Positive &x, const Positive &y);
   static Positive mul(const Positive &x, Positive y);
 
-  template <typename T1, MapsTo<T1, T1, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 iter_op(F0 &&op, const Positive &p, const T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[d_a0] = std::get<typename Positive::XI>(p.v());

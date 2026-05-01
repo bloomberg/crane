@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct HigherKinded {
   template <typename T1, typename T2 = void, typename T3 = void, typename F0,
             typename F1>
@@ -144,8 +141,9 @@ struct HigherKinded {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0,
-            MapsTo<T2, Tree<T1>, T2, Tree<T1>, T2> F1>
+  template <typename T1, typename T2, typename F0, typename F1>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &> &&
+             std::is_invocable_r_v<T2, F1 &, Tree<T1> &, T2 &, Tree<T1> &, T2 &>
   static T2 Tree_rect(F0 &&f, F1 &&f0, const Tree<T1> &t) {
     if (std::holds_alternative<typename Tree<T1>::Leaf>(t.v())) {
       const auto &[d_a0] = std::get<typename Tree<T1>::Leaf>(t.v());
@@ -157,8 +155,9 @@ struct HigherKinded {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0,
-            MapsTo<T2, Tree<T1>, T2, Tree<T1>, T2> F1>
+  template <typename T1, typename T2, typename F0, typename F1>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &> &&
+             std::is_invocable_r_v<T2, F1 &, Tree<T1> &, T2 &, Tree<T1> &, T2 &>
   static T2 Tree_rec(F0 &&f, F1 &&f0, const Tree<T1> &t) {
     if (std::holds_alternative<typename Tree<T1>::Leaf>(t.v())) {
       const auto &[d_a0] = std::get<typename Tree<T1>::Leaf>(t.v());
@@ -170,7 +169,8 @@ struct HigherKinded {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static Tree<T2> tree_map(F0 &&f, const Tree<T1> &t) {
     if (std::holds_alternative<typename Tree<T1>::Leaf>(t.v())) {
       const auto &[d_a0] = std::get<typename Tree<T1>::Leaf>(t.v());
@@ -182,7 +182,9 @@ struct HigherKinded {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0, MapsTo<T2, T2, T2> F1>
+  template <typename T1, typename T2, typename F0, typename F1>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &> &&
+             std::is_invocable_r_v<T2, F1 &, T2 &, T2 &>
   static T2 tree_fold(F0 &&leaf_f, F1 &&branch_f, const Tree<T1> &t) {
     if (std::holds_alternative<typename Tree<T1>::Leaf>(t.v())) {
       const auto &[d_a0] = std::get<typename Tree<T1>::Leaf>(t.v());
@@ -205,7 +207,8 @@ struct HigherKinded {
         t);
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static std::optional<T2> map_option(F0 &&f, const std::optional<T1> &o) {
     if (o.has_value()) {
       const T1 &x = *o;

@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct WhereClause {
   struct Expr {
     // TYPES
@@ -182,9 +179,10 @@ struct WhereClause {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, Expr, T1, Expr, T1> F1,
-              MapsTo<T1, Expr, T1, Expr, T1> F2>
+    template <typename T1, typename F0, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, Expr &, T1 &, Expr &, T1 &> &&
+               std::is_invocable_r_v<T1, F2 &, Expr &, T1 &, Expr &, T1 &>
     T1 Expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Expr::Num>(_sv.v())) {
@@ -201,9 +199,10 @@ struct WhereClause {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, Expr, T1, Expr, T1> F1,
-              MapsTo<T1, Expr, T1, Expr, T1> F2>
+    template <typename T1, typename F0, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, Expr &, T1 &, Expr &, T1 &> &&
+               std::is_invocable_r_v<T1, F2 &, Expr &, T1 &, Expr &, T1 &>
     T1 Expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Expr::Num>(_sv.v())) {
@@ -410,8 +409,10 @@ struct WhereClause {
       }
     }
 
-    template <typename T1, MapsTo<T1, BExpr, T1, BExpr, T1> F2,
-              MapsTo<T1, BExpr, T1, BExpr, T1> F3, MapsTo<T1, BExpr, T1> F4>
+    template <typename T1, typename F2, typename F3, typename F4>
+      requires std::is_invocable_r_v<T1, F2 &, BExpr &, T1 &, BExpr &, T1 &> &&
+               std::is_invocable_r_v<T1, F3 &, BExpr &, T1 &, BExpr &, T1 &> &&
+               std::is_invocable_r_v<T1, F4 &, BExpr &, T1 &>
     T1 BExpr_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename BExpr::BTrue>(_sv.v())) {
@@ -432,8 +433,10 @@ struct WhereClause {
       }
     }
 
-    template <typename T1, MapsTo<T1, BExpr, T1, BExpr, T1> F2,
-              MapsTo<T1, BExpr, T1, BExpr, T1> F3, MapsTo<T1, BExpr, T1> F4>
+    template <typename T1, typename F2, typename F3, typename F4>
+      requires std::is_invocable_r_v<T1, F2 &, BExpr &, T1 &, BExpr &, T1 &> &&
+               std::is_invocable_r_v<T1, F3 &, BExpr &, T1 &, BExpr &, T1 &> &&
+               std::is_invocable_r_v<T1, F4 &, BExpr &, T1 &>
     T1 BExpr_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename BExpr::BTrue>(_sv.v())) {
@@ -621,9 +624,11 @@ struct WhereClause {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, AExpr, T1, AExpr, T1> F1,
-              MapsTo<T1, BExpr, AExpr, T1, AExpr, T1> F2>
+    template <typename T1, typename F0, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, AExpr &, T1 &, AExpr &, T1 &> &&
+               std::is_invocable_r_v<T1, F2 &, BExpr &, AExpr &, T1 &, AExpr &,
+                                     T1 &>
     T1 AExpr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename AExpr::ANum>(_sv.v())) {
@@ -640,9 +645,11 @@ struct WhereClause {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, AExpr, T1, AExpr, T1> F1,
-              MapsTo<T1, BExpr, AExpr, T1, AExpr, T1> F2>
+    template <typename T1, typename F0, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, AExpr &, T1 &, AExpr &, T1 &> &&
+               std::is_invocable_r_v<T1, F2 &, BExpr &, AExpr &, T1 &, AExpr &,
+                                     T1 &>
     T1 AExpr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename AExpr::ANum>(_sv.v())) {

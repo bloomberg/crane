@@ -7,9 +7,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct NameClashCtorField {
   /// Fields named like structured binding names: d_a0, d_a1
   struct clash1 {
@@ -69,14 +66,16 @@ struct NameClashCtorField {
       return (d_d_a0 + d_d_a1);
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 clash1_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(_sv.v());
       return f(d_d_a0, d_d_a1);
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 clash1_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(_sv.v());
@@ -159,8 +158,9 @@ struct NameClashCtorField {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 clash2_rec(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename clash2::C2a>(_sv.v())) {
@@ -172,8 +172,9 @@ struct NameClashCtorField {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 clash2_rect(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename clash2::C2a>(_sv.v())) {
@@ -244,14 +245,16 @@ struct NameClashCtorField {
       return pair_ind::mkpair(d_a1, d_a0);
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 pair_ind_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(_sv.v());
       return f(d_a0, d_a1);
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 pair_ind_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(_sv.v());
@@ -331,7 +334,8 @@ struct NameClashCtorField {
     }
   };
 
-  template <typename T1, MapsTo<T1, pair_ind> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, pair_ind &>
   static T1 box_rect(F0 &&f, const T1 f0, const box &b) {
     if (std::holds_alternative<typename box::Box0>(b.v())) {
       const auto &[d_a0] = std::get<typename box::Box0>(b.v());
@@ -341,7 +345,8 @@ struct NameClashCtorField {
     }
   }
 
-  template <typename T1, MapsTo<T1, pair_ind> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, pair_ind &>
   static T1 box_rec(F0 &&f, const T1 f0, const box &b) {
     if (std::holds_alternative<typename box::Box0>(b.v())) {
       const auto &[d_a0] = std::get<typename box::Box0>(b.v());

@@ -7,9 +7,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct NameClashReturnThis {
   /// Test: match-as-expression where one branch returns the scrutinee itself.
   /// When methodified, this becomes `return this` which is a raw pointer,
@@ -81,8 +78,9 @@ struct NameClashReturnThis {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int, unsigned int> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
   static T1 shape_rect(F0 &&f, F1 &&f0, const shape &s) {
     if (std::holds_alternative<typename shape::Circle>(s.v())) {
       const auto &[d_a0] = std::get<typename shape::Circle>(s.v());
@@ -93,8 +91,9 @@ struct NameClashReturnThis {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int, unsigned int> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
   static T1 shape_rec(F0 &&f, F1 &&f0, const shape &s) {
     if (std::holds_alternative<typename shape::Circle>(s.v())) {
       const auto &[d_a0] = std::get<typename shape::Circle>(s.v());

@@ -9,11 +9,7 @@
 #include <type_traits>
 #include <utility>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
-template <typename I>
-concept Pack = requires (typename I::carrier
+template <typename I>concept Pack = requires (typename I::carrier
 a0) {
   typename I::carrier;
   { I::step(a0) } -> std::convertible_to<typename I::carrier>;

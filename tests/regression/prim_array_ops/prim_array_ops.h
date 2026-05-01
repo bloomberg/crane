@@ -7,9 +7,6 @@
 #include <persistent_array.h>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct PrimArrayOps {
   static inline const persistent_array<int64_t> test1 =
       persistent_array<int64_t>(int64_t(5), int64_t(12));

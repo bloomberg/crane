@@ -7,9 +7,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct Currying {
   static unsigned int add3(const unsigned int a, const unsigned int b,
                            const unsigned int c);
@@ -76,24 +73,28 @@ struct Currying {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static T3 pair_rect(F0 &&f, const pair<T1, T2> &p) {
     const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p.v());
     return f(d_a0, d_a1);
   }
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static T3 pair_rec(F0 &&f, const pair<T1, T2> &p) {
     const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p.v());
     return f(d_a0, d_a1);
   }
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, pair<T1, T2>> F0>
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<T3, F0 &, pair<T1, T2> &>
   static T3 curry(F0 &&f, const T1 a, const T2 b) {
     return f(pair<T1, T2>::pair0(a, b));
   }
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static T3 uncurry(F0 &&f, const pair<T1, T2> &p) {
     const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p.v());
     return f(d_a0, d_a1);
@@ -105,7 +106,8 @@ struct Currying {
   static unsigned int
   uncurried_add3(const pair<unsigned int, pair<unsigned int, unsigned int>> &p);
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static T3 flip(F0 &&f, const T2 b, const T1 a) {
     return f(a, b);
   }

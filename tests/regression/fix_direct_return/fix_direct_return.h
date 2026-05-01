@@ -6,9 +6,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct FixDirectReturn {
   /// A local fixpoint is captured by an outer lambda and returned.
   /// Crane can't uncurry here because the fixpoint is used as a VALUE
@@ -18,7 +15,8 @@ struct FixDirectReturn {
   /// outer lambda uses = capture (via return_captures_by_value),
   /// the COPY of add (a std::function) inside the outer lambda
   /// still holds & references to the destroyed stack variables.
-  template <MapsTo<unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static unsigned int make_callback(const unsigned int base, F1 &&_x0) {
     return [=]() mutable {
       auto add_impl = [=](auto &_self_add,

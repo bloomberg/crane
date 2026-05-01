@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 /// Tests for Tail Modulo Cons (TMC) loopification optimization.
 /// Functions where the recursive call is wrapped in a single constructor
 /// should be optimized to use O(1) extra space via destination-passing style.
@@ -129,7 +126,8 @@ struct LoopifyTmc {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rect(const T2 f, F1 &&f0, const list<T1> &l) {
     struct _Enter {
       const list<T1> *l;
@@ -168,7 +166,8 @@ struct LoopifyTmc {
     return _result;
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rec(const T2 f, F1 &&f0, const list<T1> &l) {
     struct _Enter {
       const list<T1> *l;
@@ -232,7 +231,8 @@ struct LoopifyTmc {
   }
 
   /// map f l applies f to every element. TMC with element transform.
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static list<T2> map(F0 &&f, const list<T1> &l) {
     std::unique_ptr<list<T2>> _head{};
     std::unique_ptr<list<T2>> *_write = &_head;
@@ -256,7 +256,8 @@ struct LoopifyTmc {
   }
 
   /// filter f l keeps elements satisfying f. Mixed tail + TMC branches.
-  template <typename T1, MapsTo<bool, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static list<T1> filter(F0 &&f, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return list<T1>::nil();
@@ -321,7 +322,8 @@ struct LoopifyTmc {
   static list<unsigned int> range(const unsigned int lo, const unsigned int hi);
 
   /// zip_with f l1 l2 combines two lists element-wise. Two varying params.
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static list<T3> zip_with(F0 &&f, const list<T1> &l1, const list<T2> &l2) {
     std::unique_ptr<list<T3>> _head{};
     std::unique_ptr<list<T3>> *_write = &_head;

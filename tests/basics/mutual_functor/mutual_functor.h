@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename M>
 concept Elem = requires {
   typename M::t;
@@ -89,6 +86,33 @@ template <Elem E> struct MutualTree {
     }
 
     // MANIPULATORS
+    ~tree() {
+      std::vector<std::unique_ptr<tree>> _stack{};
+      auto _drain = [&](tree &_node) {
+        if (std::holds_alternative<Node>(_node.d_v_)) {
+          auto &_alt = std::get<Node>(_node.d_v_);
+          if (_alt.d_a1) {
+            if (std::holds_alternative<typename MutualTree::forest::FCons>(
+                    _alt.d_a1->v())) {
+              auto &_palt = std::get<typename MutualTree::forest::FCons>(
+                  _alt.d_a1->v_mut());
+              if (_palt.d_a0) {
+                _stack.push_back(std::move(_palt.d_a0));
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
@@ -200,8 +224,9 @@ template <Elem E> struct MutualTree {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int, forest> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &, forest &>
   static T1 tree_rect(F0 &&f, F1 &&f0, const tree &t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
       const auto &[d_a0] = std::get<typename tree::Leaf>(t0.v());
@@ -212,8 +237,9 @@ template <Elem E> struct MutualTree {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int, forest> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &, forest &>
   static T1 tree_rec(F0 &&f, F1 &&f0, const tree &t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
       const auto &[d_a0] = std::get<typename tree::Leaf>(t0.v());
@@ -224,7 +250,8 @@ template <Elem E> struct MutualTree {
     }
   }
 
-  template <typename T1, MapsTo<T1, tree, forest, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, forest &, T1 &>
   static T1 forest_rect(const T1 f, F1 &&f0, const forest &f1) {
     if (std::holds_alternative<typename forest::FNil>(f1.v())) {
       return f;
@@ -234,7 +261,8 @@ template <Elem E> struct MutualTree {
     }
   }
 
-  template <typename T1, MapsTo<T1, tree, forest, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, forest &, T1 &>
   static T1 forest_rec(const T1 f, F1 &&f0, const forest &f1) {
     if (std::holds_alternative<typename forest::FNil>(f1.v())) {
       return f;

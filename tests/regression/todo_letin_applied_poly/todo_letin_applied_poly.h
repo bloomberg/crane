@@ -5,9 +5,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct TodoLetinAppliedPoly {
   static inline const unsigned int demo_nat = 7u;
   static inline const bool demo_bool = true;

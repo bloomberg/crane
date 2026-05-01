@@ -7,9 +7,6 @@
 #include <type_traits>
 #include <utility>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct FixChainBuild {
   /// Recursive construction of a closure chain. Each level creates a
   /// local fixpoint that captures the current n AND the previous

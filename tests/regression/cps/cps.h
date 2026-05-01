@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -287,8 +284,9 @@ struct CPS {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, tree, T1, tree, T1> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, tree &, T1 &, tree &, T1 &>
   static T1 tree_rect(F0 &&f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       const auto &[d_a0] = std::get<typename tree::Leaf>(t.v());
@@ -300,8 +298,9 @@ struct CPS {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, tree, T1, tree, T1> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, tree &, T1 &, tree &, T1 &>
   static T1 tree_rec(F0 &&f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       const auto &[d_a0] = std::get<typename tree::Leaf>(t.v());
@@ -350,7 +349,8 @@ struct CPS {
 
   static unsigned int list_sum(const List<unsigned int> &l);
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static unsigned int partition_cps(
       F0 &&p, const List<unsigned int> &l,
       const std::function<unsigned int(List<unsigned int>, List<unsigned int>)>

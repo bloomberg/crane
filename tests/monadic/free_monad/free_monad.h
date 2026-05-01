@@ -10,9 +10,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 enum class Unit { e_TT };
 
 struct FreeMonad {
@@ -105,7 +102,8 @@ struct FreeMonad {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename F0, typename F1, MapsTo<T1, std::string> F3>
+  template <typename T1, typename F0, typename F1, typename F3>
+    requires std::is_invocable_r_v<T1, F3 &, std::string &>
   static T1 IO_rect(F0 &&f, F1 &&f0, const T1 f1, F3 &&f2, const IO &i) {
     if (std::holds_alternative<typename IO::Pure>(i.v())) {
       const auto &[d_a] = std::get<typename IO::Pure>(i.v());
@@ -126,7 +124,8 @@ struct FreeMonad {
     }
   }
 
-  template <typename T1, typename F0, typename F1, MapsTo<T1, std::string> F3>
+  template <typename T1, typename F0, typename F1, typename F3>
+    requires std::is_invocable_r_v<T1, F3 &, std::string &>
   static T1 IO_rec(F0 &&f, F1 &&f0, const T1 f1, F3 &&f2, const IO &i) {
     if (std::holds_alternative<typename IO::Pure>(i.v())) {
       const auto &[d_a] = std::get<typename IO::Pure>(i.v());

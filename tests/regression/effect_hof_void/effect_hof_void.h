@@ -10,19 +10,17 @@
 #include <type_traits>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct EffectHofVoid {
   /// 1. Apply a void callback
-  template <MapsTo<void, std::string> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, std::string &>
   static void apply_void(F0 &&f, const std::string _x0) {
     f(_x0);
     return;
-  }
+  } /// 2. Apply a void callback then return a value
 
-  /// 2. Apply a void callback then return a value
-  template <MapsTo<void, std::string> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, std::string &>
   static std::string apply_then_return(F0 &&f, const std::string x) {
     f(x);
     return x;
@@ -34,7 +32,8 @@ struct EffectHofVoid {
   }
 
   /// 4. Apply callback conditionally
-  template <MapsTo<void, std::string> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<void, F1 &, std::string &>
   static void apply_if(const bool flag, F1 &&f, const std::string x) {
     if (flag) {
       f(x);
@@ -42,17 +41,19 @@ struct EffectHofVoid {
     } else {
       return;
     }
-  }
+  } /// 5. Chain two void callbacks
 
-  /// 5. Chain two void callbacks
-  template <MapsTo<void, std::string> F0, MapsTo<void, std::string> F1>
+  template <typename F0, typename F1>
+    requires std::is_invocable_r_v<void, F0 &, std::string &> &&
+             std::is_invocable_r_v<void, F1 &, std::string &>
   static void chain_void(F0 &&f, F1 &&g, const std::string x) {
     f(x);
     g(x);
     return;
   } /// 6. Apply a callback N times
 
-  template <MapsTo<void, std::string> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, std::string &>
   static unsigned int apply_n(F0 &&f, const std::string x,
                               const unsigned int n) {
     if (n <= 0) {

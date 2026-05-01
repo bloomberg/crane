@@ -9,9 +9,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct ExistentialClosureProbe {
   /// Type-indexed inductive wrapping a value of erased type.
   /// The type index A is erased to std::any by Crane.

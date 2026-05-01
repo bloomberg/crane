@@ -5,9 +5,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct BoolOps {
   static inline const bool bool_true = true;
   static inline const bool bool_false = false;

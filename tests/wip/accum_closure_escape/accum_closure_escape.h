@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct AccumClosureEscape {
   /// This test explores closure escape through ACCUMULATOR patterns,
   /// which are different from the direct-return-in-constructor pattern
@@ -146,7 +143,8 @@ struct AccumClosureEscape {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, mylist<t_A>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
     T1 mylist_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
@@ -158,7 +156,8 @@ struct AccumClosureEscape {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, mylist<t_A>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
     T1 mylist_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
@@ -313,7 +312,9 @@ struct AccumClosureEscape {
       }
     }
 
-    template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                     tree &, T1 &>
     T1 tree_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::TLeaf>(_sv.v())) {
@@ -326,7 +327,9 @@ struct AccumClosureEscape {
       }
     }
 
-    template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                     tree &, T1 &>
     T1 tree_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::TLeaf>(_sv.v())) {

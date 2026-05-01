@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -124,7 +121,8 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
 
-  template <typename T1, MapsTo<T1, T1, t_A> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
   T1 fold_left(F0 &&f, const T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
@@ -141,7 +139,8 @@ struct Monadic {
     return std::make_optional<T1>(x);
   }
 
-  template <typename T1, typename T2, MapsTo<std::optional<T2>, T1> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<std::optional<T2>, F1 &, T1 &>
   static std::optional<T2> option_bind(const std::optional<T1> &ma, F1 &&f) {
     if (ma.has_value()) {
       const T1 &a = *ma;
@@ -166,7 +165,8 @@ struct Monadic {
     return [=](const T1 s) mutable { return std::make_pair(x, s); };
   }
 
-  template <typename T1, typename T2, typename T3, MapsTo<State<T1, T3>, T2> F1>
+  template <typename T1, typename T2, typename T3, typename F1>
+    requires std::is_invocable_r_v<State<T1, T3>, F1 &, T2 &>
   static State<T1, T3> state_bind(const State<T1, T2> ma, F1 &&f) {
     return [=](const T1 s) mutable {
       auto _cs = ma(s);

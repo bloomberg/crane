@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -123,7 +120,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
 
-  template <MapsTo<bool, t_A> F0> bool forallb(F0 &&f) const {
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, t_A &>
+  bool forallb(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return true;
@@ -133,7 +132,8 @@ public:
     }
   }
 
-  template <typename T1, MapsTo<T1, T1, t_A> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
   T1 fold_left(F0 &&f, const T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
@@ -1206,7 +1206,8 @@ struct ValidatedPumpDeliveryTraceCase {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F2>
+    template <typename T1, typename F2>
+      requires std::is_invocable_r_v<T1, F2 &, unsigned int &>
     T1 FaultStatus_rec(const T1 f, const T1 f0, F2 &&f1, const T1 f2,
                        const T1 f3) const {
       auto &&_sv = *(this);
@@ -1228,7 +1229,8 @@ struct ValidatedPumpDeliveryTraceCase {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F2>
+    template <typename T1, typename F2>
+      requires std::is_invocable_r_v<T1, F2 &, unsigned int &>
     T1 FaultStatus_rect(const T1 f, const T1 f0, F2 &&f1, const T1 f2,
                         const T1 f3) const {
       auto &&_sv = *(this);
@@ -1411,7 +1413,8 @@ struct ValidatedPumpDeliveryTraceCase {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 SuspendDecision_rect(const T1 f, F1 &&f0, const T1 f1,
                                  const SuspendDecision &s) {
     if (std::holds_alternative<typename SuspendDecision::Suspend_None>(s.v())) {
@@ -1426,7 +1429,8 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 SuspendDecision_rec(const T1 f, F1 &&f0, const T1 f1,
                                 const SuspendDecision &s) {
     if (std::holds_alternative<typename SuspendDecision::Suspend_None>(s.v())) {
@@ -1599,8 +1603,9 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int, bool> F0,
-            MapsTo<T1, unsigned int> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, bool &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 PrecisionResult_rect(F0 &&f, F1 &&f0, const PrecisionResult &p) {
     if (std::holds_alternative<typename PrecisionResult::PrecOK>(p.v())) {
       const auto &[d_a0, d_a1] =
@@ -1612,8 +1617,9 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, bool> F0,
-            MapsTo<T1, unsigned int> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, bool &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 PrecisionResult_rec(F0 &&f, F1 &&f0, const PrecisionResult &p) {
     if (std::holds_alternative<typename PrecisionResult::PrecOK>(p.v())) {
       const auto &[d_a0, d_a1] =

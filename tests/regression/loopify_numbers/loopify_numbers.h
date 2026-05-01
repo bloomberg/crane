@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -199,7 +196,8 @@ struct LoopifyNumbers {
 
   /// church n f x applies function f to x exactly n times.
   /// Tests recursive higher-order function application.
-  template <MapsTo<unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static unsigned int church(const unsigned int n, F1 &&f,
                              const unsigned int x) {
     unsigned int _result;
@@ -224,7 +222,8 @@ struct LoopifyNumbers {
 
   /// nest_apply n f x nests function application: f(f(...f(x))).
   /// Similar to church but emphasizes nested call structure.
-  template <MapsTo<unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static unsigned int nest_apply(const unsigned int n, F1 &&f,
                                  const unsigned int x) {
     struct _Enter {

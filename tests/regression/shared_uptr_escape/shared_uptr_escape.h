@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct SharedUptrEscape {
   struct tree {
     // TYPES
@@ -160,7 +157,9 @@ struct SharedUptrEscape {
       }
     }
 
-    template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                     tree &, T1 &>
     T1 tree_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
@@ -172,7 +171,9 @@ struct SharedUptrEscape {
       }
     }
 
-    template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                     tree &, T1 &>
     T1 tree_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
@@ -248,13 +249,15 @@ struct SharedUptrEscape {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, tree> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, tree &>
   static T1 wrapper_rect(F0 &&f, const wrapper &w) {
     const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
     return f(d_a0);
   }
 
-  template <typename T1, MapsTo<T1, tree> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, tree &>
   static T1 wrapper_rec(F0 &&f, const wrapper &w) {
     const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
     return f(d_a0);

@@ -9,9 +9,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct Coinductive {
   struct stream {
     // TYPES
@@ -54,7 +51,8 @@ struct Coinductive {
   static unsigned int hd(const stream s);
   static stream tl(const stream s);
 
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static stream smap(F0 &&f, const stream s) {
     const auto &[d_a0, d_a1] = std::get<typename stream::Cons>(s.v());
     return stream::lazy_([=]() mutable -> stream {

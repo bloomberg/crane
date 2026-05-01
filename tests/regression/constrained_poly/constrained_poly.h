@@ -7,9 +7,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct ConstrainedPoly {
   template <typename T1> static T1 poly_id(const T1 x) { return x; }
 
@@ -102,7 +99,8 @@ struct ConstrainedPoly {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static T2 UOption_rect(F0 &&f, const T2 f0, const UOption<T1> &u) {
     if (std::holds_alternative<typename UOption<T1>::USome>(u.v())) {
       const auto &[d_a0] = std::get<typename UOption<T1>::USome>(u.v());
@@ -112,7 +110,8 @@ struct ConstrainedPoly {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static T2 UOption_rec(F0 &&f, const T2 f0, const UOption<T1> &u) {
     if (std::holds_alternative<typename UOption<T1>::USome>(u.v())) {
       const auto &[d_a0] = std::get<typename UOption<T1>::USome>(u.v());
@@ -122,7 +121,8 @@ struct ConstrainedPoly {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static UOption<T2> uoption_map(F0 &&f, const UOption<T1> &o) {
     if (std::holds_alternative<typename UOption<T1>::USome>(o.v())) {
       const auto &[d_a0] = std::get<typename UOption<T1>::USome>(o.v());

@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -320,9 +317,11 @@ struct Matcher {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, int64_t> F1,
-            MapsTo<T1, regexp, T1, regexp, T1> F3,
-            MapsTo<T1, regexp, T1, regexp, T1> F4, MapsTo<T1, regexp, T1> F6>
+  template <typename T1, typename F1, typename F3, typename F4, typename F6>
+    requires std::is_invocable_r_v<T1, F1 &, int64_t &> &&
+             std::is_invocable_r_v<T1, F3 &, regexp &, T1 &, regexp &, T1 &> &&
+             std::is_invocable_r_v<T1, F4 &, regexp &, T1 &, regexp &, T1 &> &&
+             std::is_invocable_r_v<T1, F6 &, regexp &, T1 &>
   static T1 regexp_rect(const T1 f, F1 &&f0, const T1 f1, F3 &&f2, F4 &&f3,
                         const T1 f4, F6 &&f5, const regexp &r) {
     if (std::holds_alternative<typename regexp::Any>(r.v())) {
@@ -348,9 +347,11 @@ struct Matcher {
     }
   }
 
-  template <typename T1, MapsTo<T1, int64_t> F1,
-            MapsTo<T1, regexp, T1, regexp, T1> F3,
-            MapsTo<T1, regexp, T1, regexp, T1> F4, MapsTo<T1, regexp, T1> F6>
+  template <typename T1, typename F1, typename F3, typename F4, typename F6>
+    requires std::is_invocable_r_v<T1, F1 &, int64_t &> &&
+             std::is_invocable_r_v<T1, F3 &, regexp &, T1 &, regexp &, T1 &> &&
+             std::is_invocable_r_v<T1, F4 &, regexp &, T1 &, regexp &, T1 &> &&
+             std::is_invocable_r_v<T1, F6 &, regexp &, T1 &>
   static T1 regexp_rec(const T1 f, F1 &&f0, const T1 f1, F3 &&f2, F4 &&f3,
                        const T1 f4, F6 &&f5, const regexp &r) {
     if (std::holds_alternative<typename regexp::Any>(r.v())) {

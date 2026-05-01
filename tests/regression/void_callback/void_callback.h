@@ -13,8 +13,6 @@
 #include <vector>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 template <typename t_A> struct List {
   // TYPES
@@ -131,7 +129,8 @@ public:
 
 struct VoidCallback {
   /// 1. Pure HOF with void callback — the callback returns unit
-  template <MapsTo<void, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, unsigned int &>
   static void for_each(F0 &&f, const List<unsigned int> &xs) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
       return;
@@ -152,7 +151,8 @@ struct VoidCallback {
   }();
 
   /// 2. Monadic for-each: callback returns itree ioE unit
-  template <MapsTo<void, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, unsigned int &>
   static void for_each_m(F0 &&f, const List<unsigned int> &xs) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
       return;
@@ -171,7 +171,8 @@ struct VoidCallback {
   static inline const unsigned int use_side_effect = 42u;
 
   /// 4. Callback that ignores argument and returns nat
-  template <MapsTo<void, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, unsigned int &>
   static unsigned int ignore_and_count(F0 &&f, const List<unsigned int> &xs) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
       return 0u;
@@ -190,7 +191,8 @@ struct VoidCallback {
               2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))));
 
   /// 5. Nested void callbacks
-  template <MapsTo<void, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, unsigned int &>
   static void apply_twice(F0 &&f, const unsigned int _x0) {
     f(_x0);
     return;
@@ -202,7 +204,8 @@ struct VoidCallback {
   }();
 
   /// 6. Void function as argument to polymorphic function
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static T2 apply_to(F0 &&f, const T1 _x0) {
     return f(_x0);
   }

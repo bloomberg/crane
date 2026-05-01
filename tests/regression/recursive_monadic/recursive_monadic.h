@@ -14,8 +14,6 @@
 #include <vector>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 template <typename t_A> struct List {
   // TYPES
@@ -142,7 +140,8 @@ struct RecursiveMonadic {
                                     const std::string msg);
 
   /// 5. Recursive with match in the middle
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static List<unsigned int> filter_print(F0 &&pred,
                                          const List<unsigned int> &xs) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
@@ -167,7 +166,8 @@ struct RecursiveMonadic {
   static std::string odd_action(const unsigned int n);
 
   /// 8. Recursive option-returning function
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static std::optional<unsigned int> find_first(F0 &&pred,
                                                 const List<unsigned int> &xs) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {

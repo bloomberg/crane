@@ -13,8 +13,6 @@
 #include <variant>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct EffectBindAction {
   /// 1. Bool match inside bind action: one branch block template

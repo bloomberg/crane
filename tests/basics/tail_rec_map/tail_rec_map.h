@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -145,7 +142,8 @@ public:
   }
 };
 
-template <typename T1, typename T2, MapsTo<T2, T1> F0>
+template <typename T1, typename T2, typename F0>
+  requires std::is_invocable_r_v<T2, F0 &, T1 &>
 List<T2> better_map(F0 &&f, const List<T1> &l) {
   std::function<List<T2>(List<T1>, List<T2>)> go;
   go = [&](List<T1> l0, List<T2> acc) -> List<T2> {

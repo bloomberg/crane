@@ -6,9 +6,6 @@
 #include <todo_extract_constant_noninline_support.h>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct TodoExtractConstantNoninline {
   static unsigned int foreign_inc(const unsigned int _x0);
   static inline const unsigned int test_value = foreign_inc(4u);

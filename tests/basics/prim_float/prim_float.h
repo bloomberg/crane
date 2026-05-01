@@ -7,9 +7,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct PrimFloat {
   static inline const double f_zero = 0x0p+0;
   static inline const double f_one = 0x1p+0;

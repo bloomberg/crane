@@ -12,8 +12,6 @@
 #include <vector>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 template <typename t_A> struct List {
   // TYPES
@@ -133,7 +131,8 @@ struct EffectRecursiveList {
   static List<std::string> read_n_lines(const unsigned int n);
 
   /// 2. Map a function over a list with effects
-  template <MapsTo<void, std::string> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, std::string &>
   static void map_effect(F0 &&f, const List<std::string> &xs) {
     if (std::holds_alternative<typename List<std::string>::Nil>(xs.v())) {
       return;

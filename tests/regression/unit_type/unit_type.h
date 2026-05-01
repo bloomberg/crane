@@ -7,9 +7,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct UnitType {
   static inline const std::monostate unit_val = std::monostate{};
   static void return_unit(const unsigned int _x);
@@ -75,13 +72,15 @@ struct UnitType {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static T3 pair_rect(F0 &&f, const pair<T1, T2> &p) {
     const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p.v());
     return f(d_a0, d_a1);
   }
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static T3 pair_rec(F0 &&f, const pair<T1, T2> &p) {
     const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p.v());
     return f(d_a0, d_a1);

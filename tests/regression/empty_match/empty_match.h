@@ -8,9 +8,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct EmptyMatch {
   struct empty {
     empty() = delete;
@@ -108,8 +105,9 @@ struct EmptyMatch {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1> F0,
-            MapsTo<T3, T2> F1>
+  template <typename T1, typename T2, typename T3, typename F0, typename F1>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &> &&
+             std::is_invocable_r_v<T3, F1 &, T2 &>
   static T3 either_rect(F0 &&f, F1 &&f0, const either<T1, T2> &e) {
     if (std::holds_alternative<typename either<T1, T2>::Left>(e.v())) {
       const auto &[d_a0] = std::get<typename either<T1, T2>::Left>(e.v());
@@ -120,8 +118,9 @@ struct EmptyMatch {
     }
   }
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1> F0,
-            MapsTo<T3, T2> F1>
+  template <typename T1, typename T2, typename T3, typename F0, typename F1>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &> &&
+             std::is_invocable_r_v<T3, F1 &, T2 &>
   static T3 either_rec(F0 &&f, F1 &&f0, const either<T1, T2> &e) {
     if (std::holds_alternative<typename either<T1, T2>::Left>(e.v())) {
       const auto &[d_a0] = std::get<typename either<T1, T2>::Left>(e.v());

@@ -8,9 +8,6 @@
 #include <type_traits>
 #include <utility>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct Nat {
   static inline const unsigned int one = 1u;
 };

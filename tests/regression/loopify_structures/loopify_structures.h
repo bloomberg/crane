@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -190,17 +187,66 @@ struct LoopifyStructures {
 
     // ACCESSORS
     nested clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Elem>(_sv.v())) {
-        const auto &[d_a0] = std::get<Elem>(_sv.v());
-        return nested(Elem{d_a0});
-      } else {
-        const auto &[d_a0] = std::get<NList>(_sv.v());
-        return nested(
-            NList{d_a0 ? std::make_unique<List<LoopifyStructures::nested>>(
-                             d_a0->clone())
-                       : nullptr});
+      nested _out{};
+
+      struct _CloneFrame {
+        const nested *_src;
+        nested *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const nested *_src = _frame._src;
+        nested *_dst = _frame._dst;
+        if (std::holds_alternative<Elem>(_src->v())) {
+          const auto &_alt = std::get<Elem>(_src->v());
+          _dst->d_v_ = Elem{_alt.d_a0};
+        } else {
+          const auto &_alt = std::get<NList>(_src->v());
+          _dst->d_v_ = NList{
+              _alt.d_a0 ? std::make_unique<List<LoopifyStructures::nested>>()
+                        : nullptr};
+          auto &_dst_alt = std::get<NList>(_dst->d_v_);
+          [&] {
+            if (_alt.d_a0) {
+              const List<LoopifyStructures::nested> *_lsrc = _alt.d_a0.get();
+              List<LoopifyStructures::nested> *_ldst = _dst_alt.d_a0.get();
+              while (std::holds_alternative<
+                     typename List<LoopifyStructures::nested>::Cons>(
+                  _lsrc->v())) {
+                const auto &_lsrc_c =
+                    std::get<typename List<LoopifyStructures::nested>::Cons>(
+                        _lsrc->v());
+                _ldst->v_mut() = typename List<LoopifyStructures::nested>::Cons{
+                    LoopifyStructures::nested{},
+                    _lsrc_c.d_a1
+                        ? std::make_unique<List<LoopifyStructures::nested>>()
+                        : nullptr};
+                auto &_ldst_c =
+                    std::get<typename List<LoopifyStructures::nested>::Cons>(
+                        _ldst->v_mut());
+                _stack.push_back({&_lsrc_c.d_a0, &_ldst_c.d_a0});
+                if (_lsrc_c.d_a1) {
+                  _lsrc = _lsrc_c.d_a1.get();
+                  _ldst = _ldst_c.d_a1.get();
+                } else {
+                  break;
+                }
+              }
+              if (std::holds_alternative<
+                      typename List<LoopifyStructures::nested>::Nil>(
+                      _lsrc->v())) {
+                _ldst->v_mut() =
+                    typename List<LoopifyStructures::nested>::Nil{};
+              }
+            }
+          }();
+        }
       }
+      return _out;
     }
 
     // CREATORS
@@ -211,6 +257,39 @@ struct LoopifyStructures {
     }
 
     // MANIPULATORS
+    ~nested() {
+      std::vector<std::unique_ptr<nested>> _stack{};
+      auto _drain = [&](nested &_node) {
+        if (std::holds_alternative<NList>(_node.d_v_)) {
+          auto &_alt = std::get<NList>(_node.d_v_);
+          if (_alt.d_a0) {
+            auto *_lp = _alt.d_a0.get();
+            while (std::holds_alternative<
+                   typename List<LoopifyStructures::nested>::Cons>(_lp->v())) {
+              auto &_lc =
+                  std::get<typename List<LoopifyStructures::nested>::Cons>(
+                      _lp->v_mut());
+              _stack.push_back(std::make_unique<LoopifyStructures::nested>(
+                  std::move(_lc.d_a0)));
+              if (_lc.d_a1) {
+                _lp = _lc.d_a1.get();
+              } else {
+                break;
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
@@ -251,8 +330,9 @@ struct LoopifyStructures {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, List<nested>> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, List<nested> &>
     T1 nested_rec(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename nested::Elem>(_sv.v())) {
@@ -264,8 +344,9 @@ struct LoopifyStructures {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, List<nested>> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, List<nested> &>
     T1 nested_rect(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename nested::Elem>(_sv.v())) {
@@ -422,7 +503,8 @@ struct LoopifyStructures {
     const variant_t &v() const { return d_v_; }
 
     /// quad_map f t applies function to all leaves.
-    template <MapsTo<unsigned int, unsigned int> F0>
+    template <typename F0>
+      requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
     quadtree quad_map(F0 &&f) const {
       const quadtree *_self = this;
 
@@ -617,9 +699,10 @@ struct LoopifyStructures {
       return _result;
     }
 
-    template <
-        typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, quadtree, T1, quadtree, T1, quadtree, T1, quadtree, T1> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &,
+                                     T1 &, quadtree &, T1 &, quadtree &, T1 &>
     T1 quadtree_rec(F0 &&f, F1 &&f0) const {
       const quadtree *_self = this;
 
@@ -724,9 +807,10 @@ struct LoopifyStructures {
       return _result;
     }
 
-    template <
-        typename T1, MapsTo<T1, unsigned int> F0,
-        MapsTo<T1, quadtree, T1, quadtree, T1, quadtree, T1, quadtree, T1> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &,
+                                     T1 &, quadtree &, T1 &, quadtree &, T1 &>
     T1 quadtree_rect(F0 &&f, F1 &&f0) const {
       const quadtree *_self = this;
 
@@ -833,7 +917,8 @@ struct LoopifyStructures {
   };
 
   /// find_opt p l finds first element satisfying predicate, returns option.
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static std::optional<unsigned int> find_opt(F0 &&p,
                                               const List<unsigned int> &l) {
     std::optional<unsigned int> _result;
@@ -858,7 +943,9 @@ struct LoopifyStructures {
   }
 
   /// map_opt f l maps option-returning function and filters out Nones.
-  template <MapsTo<std::optional<unsigned int>, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<std::optional<unsigned int>, F0 &,
+                                   unsigned int &>
   static List<unsigned int> map_opt(F0 &&f, const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
@@ -873,11 +960,11 @@ struct LoopifyStructures {
         return map_opt(f, *(d_a1));
       }
     }
-  }
+  } /// filter_map p f l filters and maps in one pass.
 
-  /// filter_map p f l filters and maps in one pass.
-  template <MapsTo<bool, unsigned int> F0,
-            MapsTo<unsigned int, unsigned int> F1>
+  template <typename F0, typename F1>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static List<unsigned int> filter_map(F0 &&p, F1 &&f,
                                        const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
@@ -1086,8 +1173,10 @@ struct LoopifyStructures {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int, ltree, T1, ltree, T1> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &, ltree &, T1 &,
+                                     ltree &, T1 &>
     T1 ltree_rec(F0 &&f, F1 &&f0) const {
       const ltree *_self = this;
 
@@ -1147,8 +1236,10 @@ struct LoopifyStructures {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int, ltree, T1, ltree, T1> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &, ltree &, T1 &,
+                                     ltree &, T1 &>
     T1 ltree_rect(F0 &&f, F1 &&f0) const {
       const ltree *_self = this;
 

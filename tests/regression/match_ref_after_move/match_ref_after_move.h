@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct MatchRefAfterMove {
   /// This test exercises patterns where a value is destructured
   /// and then the original is also used, testing move/reference
@@ -142,7 +139,8 @@ struct MatchRefAfterMove {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, mylist<t_A>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
     T1 mylist_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
@@ -154,7 +152,8 @@ struct MatchRefAfterMove {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, mylist<t_A>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
     T1 mylist_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
@@ -226,7 +225,8 @@ struct MatchRefAfterMove {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, t_A, t_B> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
     T1 mypair_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
@@ -234,7 +234,8 @@ struct MatchRefAfterMove {
       return f(d_a0, d_a1);
     }
 
-    template <typename T1, MapsTo<T1, t_A, t_B> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
     T1 mypair_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
@@ -304,7 +305,9 @@ struct MatchRefAfterMove {
 
   /// Pattern 5: CPS with explicit continuation that captures from match.
   /// The continuation is a SIMPLE lambda, not a fixpoint.
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &,
+                                   unsigned int &>
   static unsigned int match_with_cont(const mylist<unsigned int> &l, F1 &&k) {
     if (std::holds_alternative<typename mylist<unsigned int>::Mynil>(l.v())) {
       return k(0u, 0u);
@@ -403,7 +406,9 @@ struct MatchRefAfterMove {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
+               std::is_invocable_r_v<T1, F1 &, t_B &>
     T1 either_rec(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
@@ -416,7 +421,9 @@ struct MatchRefAfterMove {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
+               std::is_invocable_r_v<T1, F1 &, t_B &>
     T1 either_rect(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {

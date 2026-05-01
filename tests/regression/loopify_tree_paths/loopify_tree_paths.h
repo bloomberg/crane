@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -516,7 +513,9 @@ struct LoopifyTreePaths {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                     tree &, T1 &>
     T1 tree_rec(const T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -575,7 +574,9 @@ struct LoopifyTreePaths {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                     tree &, T1 &>
     T1 tree_rect(const T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -752,7 +753,9 @@ struct LoopifyTreePaths {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <MapsTo<bool, unsigned int> F0> bool and_search(F0 &&p) const {
+    template <typename F0>
+      requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
+    bool and_search(F0 &&p) const {
       const bool_tree *_self = this;
 
       struct _Enter {
@@ -803,7 +806,9 @@ struct LoopifyTreePaths {
       return _result;
     }
 
-    template <MapsTo<bool, unsigned int> F0> bool or_search(F0 &&p) const {
+    template <typename F0>
+      requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
+    bool or_search(F0 &&p) const {
       const bool_tree *_self = this;
 
       struct _Enter {
@@ -854,8 +859,10 @@ struct LoopifyTreePaths {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, bool_tree, T1, bool_tree, T1> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, bool_tree &, T1 &, bool_tree &,
+                                     T1 &>
     T1 bool_tree_rec(F0 &&f, F1 &&f0) const {
       const bool_tree *_self = this;
 
@@ -912,8 +919,10 @@ struct LoopifyTreePaths {
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, bool_tree, T1, bool_tree, T1> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, bool_tree &, T1 &, bool_tree &,
+                                     T1 &>
     T1 bool_tree_rect(F0 &&f, F1 &&f0) const {
       const bool_tree *_self = this;
 

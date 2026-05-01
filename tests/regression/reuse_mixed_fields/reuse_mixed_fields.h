@@ -7,9 +7,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct ReuseMixedFields {
   /// Two constructors with same arity but different field types.
   struct payload {
@@ -80,8 +77,9 @@ struct ReuseMixedFields {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
-            MapsTo<T1, unsigned int, unsigned int> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
   static T1 payload_rect(F0 &&f, F1 &&f0, const payload &p) {
     if (std::holds_alternative<typename payload::AsNat>(p.v())) {
       const auto &[d_a0, d_a1] = std::get<typename payload::AsNat>(p.v());
@@ -92,8 +90,9 @@ struct ReuseMixedFields {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
-            MapsTo<T1, unsigned int, unsigned int> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
   static T1 payload_rec(F0 &&f, F1 &&f0, const payload &p) {
     if (std::holds_alternative<typename payload::AsNat>(p.v())) {
       const auto &[d_a0, d_a1] = std::get<typename payload::AsNat>(p.v());

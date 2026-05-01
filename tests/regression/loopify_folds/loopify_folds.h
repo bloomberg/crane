@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -164,7 +161,9 @@ public:
 };
 
 struct LoopifyFolds {
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static unsigned int fold_left(F0 &&f, const unsigned int acc,
                                 const List<unsigned int> &l) {
     unsigned int _result;
@@ -185,7 +184,9 @@ struct LoopifyFolds {
     return _result;
   }
 
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static unsigned int fold_right(F0 &&f, const List<unsigned int> &l,
                                  const unsigned int acc) {
     struct _Enter {
@@ -225,7 +226,9 @@ struct LoopifyFolds {
     return _result;
   }
 
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static List<unsigned int> scanl(F0 &&f, const unsigned int acc,
                                   const List<unsigned int> &l) {
     std::unique_ptr<List<unsigned int>> _head{};
@@ -255,7 +258,9 @@ struct LoopifyFolds {
     return std::move(*(_head));
   }
 
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static List<unsigned int> scanr(F0 &&f, const unsigned int acc,
                                   const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
@@ -274,7 +279,9 @@ struct LoopifyFolds {
     }
   }
 
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &,
+                                   unsigned int &>
   static unsigned int foldl1_fuel(const unsigned int fuel, F1 &&f,
                                   const List<unsigned int> &l) {
     unsigned int _result;
@@ -310,12 +317,16 @@ struct LoopifyFolds {
     return _result;
   }
 
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static unsigned int foldl1(F0 &&f, const List<unsigned int> &l) {
     return foldl1_fuel(l.length(), f, l);
   }
 
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static unsigned int foldr1(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -360,9 +371,9 @@ struct LoopifyFolds {
     return _result;
   }
 
-  template <
-      MapsTo<std::pair<unsigned int, unsigned int>, unsigned int, unsigned int>
-          F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<std::pair<unsigned int, unsigned int>, F0 &,
+                                   unsigned int &, unsigned int &>
   static std::pair<unsigned int, List<unsigned int>>
   map_accum(F0 &&f, const unsigned int acc, const List<unsigned int> &l) {
     struct _Enter {
@@ -410,7 +421,8 @@ struct LoopifyFolds {
     return _result;
   }
 
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static List<unsigned int> iterate_accum(F0 &&f, const unsigned int n,
                                           const unsigned int x) {
     std::unique_ptr<List<unsigned int>> _head{};
@@ -438,7 +450,9 @@ struct LoopifyFolds {
     return std::move(*(_head));
   }
 
-  template <MapsTo<std::pair<unsigned int, unsigned int>, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<std::pair<unsigned int, unsigned int>, F1 &,
+                                   unsigned int &>
   static List<unsigned int> unfold_fuel(const unsigned int fuel, F1 &&f,
                                         const unsigned int seed) {
     std::unique_ptr<List<unsigned int>> _head{};
@@ -469,7 +483,9 @@ struct LoopifyFolds {
     return std::move(*(_head));
   }
 
-  template <MapsTo<std::pair<unsigned int, unsigned int>, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<std::pair<unsigned int, unsigned int>, F1 &,
+                                   unsigned int &>
   static List<unsigned int> unfold(const unsigned int _x0, F1 &&_x1,
                                    const unsigned int _x2) {
     return unfold_fuel(_x0, _x1, _x2);

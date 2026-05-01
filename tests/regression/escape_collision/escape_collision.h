@@ -5,9 +5,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct EscapeCollision {
   static unsigned int double_(const unsigned int n);
   static unsigned int double_0(const unsigned int n);

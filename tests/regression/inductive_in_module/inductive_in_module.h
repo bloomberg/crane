@@ -7,9 +7,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct InductiveInModule {
   struct Inner {
     enum class Color { e_RED, e_GREEN, e_BLUE };
@@ -127,7 +124,8 @@ struct InductiveInModule {
         const variant_t &v() const { return d_v_; }
       };
 
-      template <typename T1, typename T2, MapsTo<T2, T1> F1>
+      template <typename T1, typename T2, typename F1>
+        requires std::is_invocable_r_v<T2, F1 &, T1 &>
       static T2 option_rect(const T2 f, F1 &&f0, const option<T1> &o) {
         if (std::holds_alternative<typename option<T1>::None>(o.v())) {
           return f;
@@ -137,7 +135,8 @@ struct InductiveInModule {
         }
       }
 
-      template <typename T1, typename T2, MapsTo<T2, T1> F1>
+      template <typename T1, typename T2, typename F1>
+        requires std::is_invocable_r_v<T2, F1 &, T1 &>
       static T2 option_rec(const T2 f, F1 &&f0, const option<T1> &o) {
         if (std::holds_alternative<typename option<T1>::None>(o.v())) {
           return f;

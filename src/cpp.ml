@@ -357,7 +357,12 @@ let rec pp_structure_elem ~is_header f = function
         ++ str "};" )
   | l, SEmodule m ->
     let mp = MPdot (top_visible_mp (), l) in
-    let name = pp_modname mp in
+    let name =
+      let raw = pp_modname mp in
+      let s = Pp.string_of_ppcmds raw in
+      let escaped = Table.escape_reserved_struct_name s in
+      if String.equal s escaped then raw else str escaped
+    in
     let mod_pp =
       match m.ml_mod_expr with
       | MEfunctor _ ->
@@ -1262,6 +1267,23 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
     | _ -> ([], [], [])
   in
   let all_results = List.map process_sel func_sels in
+  (* Pre-register all Dfix function definitions for mutual recursion detection.
+     When functions from a mutual fixpoint (Dfix) are rendered individually,
+     each gets loopified independently via maybe_loopify.  Without
+     pre-registration, the second function can't see the first in the mutual
+     table because the first was already rendered. *)
+  List.iter
+    (fun (_, defs, _) ->
+      List.iter
+        (fun (ds, _env) ->
+          match ds with
+          | Dfundef (names, _, params, body, _) ->
+            Loopify.register_fundef names params body
+          | Dtemplate (_, _, Dfundef (names, _, params, body, _)) ->
+            Loopify.register_fundef names params body
+          | _ -> () )
+        defs )
+    all_results;
   let all_lifted = List.concat_map (fun (_, _, l) -> l) all_results in
   let render_sel_specs (specs, _, _) =
     match specs with
@@ -1479,7 +1501,7 @@ let do_struct_with_decl_tracking ~is_header f s =
                sel
         in
         if has_child_collision then (
-          let parent_name = String.capitalize_ascii (string_of_modfile mp) in
+          let parent_name = Table.escape_reserved_struct_name (String.capitalize_ascii (string_of_modfile mp)) in
           let is_colliding_child l se =
             let child_name = String.capitalize_ascii (Label.to_string l) in
             match Hashtbl.find_opt global_inductive_names child_name with
@@ -1667,7 +1689,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       let main_module_name =
         match List.rev wrapper_names with
         | ((mp, _sel), None) :: _ ->
-          Some (String.capitalize_ascii (string_of_modfile mp))
+          Some (Table.escape_reserved_struct_name (String.capitalize_ascii (string_of_modfile mp)))
         | _ -> None
       in
       let rendered_lifted =

@@ -10,8 +10,6 @@
 #include <vector>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct Nat {
   // TYPES
@@ -228,7 +226,8 @@ struct PString {
   static std::string nat_to_string(const Nat &n);
   static int nat_to_int(const Nat &n);
 
-  template <typename T1, MapsTo<std::string, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<std::string, F0 &, T1 &>
   static std::string list_to_string(F0 &&p, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return "[]";

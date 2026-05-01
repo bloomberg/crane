@@ -13,8 +13,6 @@
 #include <vector>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 template <typename t_A> struct List {
   // TYPES
@@ -150,8 +148,9 @@ public:
 };
 
 struct ToString {
-  template <typename T1, typename T2, MapsTo<std::string, T1> F0,
-            MapsTo<std::string, T2> F1>
+  template <typename T1, typename T2, typename F0, typename F1>
+    requires std::is_invocable_r_v<std::string, F0 &, T1 &> &&
+             std::is_invocable_r_v<std::string, F1 &, T2 &>
   static std::string pair_to_string(F0 &&p1, F1 &&p2,
                                     const std::pair<T1, T2> &x) {
     const T1 &a = x.first;
@@ -159,7 +158,8 @@ struct ToString {
     return "("s + p1(a) + ", "s + p2(b) + ")"s;
   }
 
-  template <typename T1, MapsTo<std::string, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<std::string, F0 &, T1 &>
   static std::string intersperse(F0 &&p, const std::string sep,
                                  const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -175,7 +175,8 @@ struct ToString {
     }
   }
 
-  template <typename T1, MapsTo<std::string, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<std::string, F0 &, T1 &>
   static std::string list_to_string(F0 &&p, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return "[]";
@@ -218,7 +219,8 @@ struct Tokenizer {
     return list_to_vec_h<T1>(l.rev());
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static std::vector<T2> list_to_vec_map_h(F0 &&f, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return {};
@@ -230,7 +232,8 @@ struct Tokenizer {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static std::vector<T2> list_to_vec_map(F0 &&f, const List<T1> &l) {
     return list_to_vec_map_h<T1, T2>(f, l.rev());
   }

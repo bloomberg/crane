@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -159,7 +156,8 @@ struct UnitVoidStress {
   static unsigned int seq_voids_value(const unsigned int _x);
   static unsigned int void_in_one_branch(const bool b, const unsigned int n);
 
-  template <typename T1, MapsTo<void, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<void, F0 &, T1 &>
   static List<std::monostate> map_void(F0 &&f, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return List<std::monostate>::nil();
@@ -180,7 +178,8 @@ struct UnitVoidStress {
           List<unsigned int>::cons(
               1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())));
 
-  template <MapsTo<void, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, unsigned int &>
   static std::optional<std::monostate>
   apply_void_to_option(F0 &&f, const unsigned int n) {
     return std::make_optional<std::monostate>([=]() mutable {
@@ -200,7 +199,8 @@ struct UnitVoidStress {
   static inline const std::pair<std::monostate, std::monostate> make_unit_pair =
       std::make_pair(std::monostate{}, std::monostate{});
 
-  template <typename T1, MapsTo<T1, unsigned int> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
   static T1 apply_result(F0 &&f, const unsigned int _x0) {
     return f(_x0);
   }
@@ -215,7 +215,8 @@ struct UnitVoidStress {
     return std::monostate{};
   }();
 
-  template <typename T1, MapsTo<T1, unsigned int> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
   static std::pair<unsigned int, T1> apply_in_pair(F0 &&f,
                                                    const unsigned int n) {
     return std::make_pair(n, f(n));

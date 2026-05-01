@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -385,7 +382,9 @@ struct ConstructorBugs {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, Inner> F0, MapsTo<T1, unsigned int> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, Inner &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 MySum_rect(F0 &&f, F1 &&f0, const MySum &m) {
     if (std::holds_alternative<typename MySum::Left>(m.v())) {
       const auto &[d_a0] = std::get<typename MySum::Left>(m.v());
@@ -396,7 +395,9 @@ struct ConstructorBugs {
     }
   }
 
-  template <typename T1, MapsTo<T1, Inner> F0, MapsTo<T1, unsigned int> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, Inner &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 MySum_rec(F0 &&f, F1 &&f0, const MySum &m) {
     if (std::holds_alternative<typename MySum::Left>(m.v())) {
       const auto &[d_a0] = std::get<typename MySum::Left>(m.v());
@@ -489,7 +490,8 @@ struct ConstructorBugs {
   static std::pair<State, unsigned int> inline_both_branches(const bool b,
                                                              State s);
 
-  template <MapsTo<unsigned int, State> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, State &>
   static std::pair<std::pair<State, unsigned int>, unsigned int>
   apply_twice(F0 &&f, State s) {
     return std::make_pair(std::make_pair(s, f(s)), f(s));

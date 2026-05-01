@@ -7,9 +7,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct NameClashScrutinee {
   enum class Color { e_RED, e_GREEN, e_BLUE };
 
@@ -179,8 +176,9 @@ struct NameClashScrutinee {
       return (color_val + shape_val);
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
     T1 shape_rec(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename shape::Circle>(_sv.v())) {
@@ -192,8 +190,9 @@ struct NameClashScrutinee {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
     T1 shape_rect(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename shape::Circle>(_sv.v())) {
@@ -310,7 +309,8 @@ struct NameClashScrutinee {
     }
   };
 
-  template <typename T1, MapsTo<T1, Color, shape> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, Color &, shape &>
   static T1 wrapper_rect(F0 &&f, const T1 f0, const wrapper &w) {
     if (std::holds_alternative<typename wrapper::Wrap>(w.v())) {
       const auto &[d_a0, d_a1] = std::get<typename wrapper::Wrap>(w.v());
@@ -320,7 +320,8 @@ struct NameClashScrutinee {
     }
   }
 
-  template <typename T1, MapsTo<T1, Color, shape> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, Color &, shape &>
   static T1 wrapper_rec(F0 &&f, const T1 f0, const wrapper &w) {
     if (std::holds_alternative<typename wrapper::Wrap>(w.v())) {
       const auto &[d_a0, d_a1] = std::get<typename wrapper::Wrap>(w.v());

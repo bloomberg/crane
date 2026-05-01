@@ -7,9 +7,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct ZIntTest {
   static int64_t add_test(const int64_t _x0, const int64_t _x1);
   static int64_t mul_test(const int64_t _x0, const int64_t _x1);

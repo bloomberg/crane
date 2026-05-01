@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct PolyInductive {
   template <typename t_A> struct pbox {
     // TYPES
@@ -71,13 +68,17 @@ struct PolyInductive {
       return d_a0;
     }
 
-    template <typename T1, MapsTo<T1, t_A> F0> T1 pbox_rec(F0 &&f) const {
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &>
+    T1 pbox_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<typename pbox<t_A>::PBox>(_sv.v());
       return f(d_a0);
     }
 
-    template <typename T1, MapsTo<T1, t_A> F0> T1 pbox_rect(F0 &&f) const {
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &>
+    T1 pbox_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<typename pbox<t_A>::PBox>(_sv.v());
       return f(d_a0);
@@ -157,14 +158,17 @@ struct PolyInductive {
       return d_a0;
     }
 
-    template <typename T1, MapsTo<T1, t_A, t_B> F0> T1 ppair_rec(F0 &&f) const {
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
+    T1 ppair_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
           std::get<typename ppair<t_A, t_B>::PPair>(_sv.v());
       return f(d_a0, d_a1);
     }
 
-    template <typename T1, MapsTo<T1, t_A, t_B> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
     T1 ppair_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
@@ -250,7 +254,8 @@ struct PolyInductive {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &>
     pmaybe<T1> pmaybe_map(F0 &&f) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(_sv.v())) {
@@ -261,7 +266,8 @@ struct PolyInductive {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, t_A &>
     T1 pmaybe_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(_sv.v())) {
@@ -272,7 +278,8 @@ struct PolyInductive {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, t_A &>
     T1 pmaybe_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(_sv.v())) {
@@ -419,8 +426,10 @@ struct PolyInductive {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A> F0,
-              MapsTo<T1, ptree<t_A>, T1, ptree<t_A>, T1> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
+               std::is_invocable_r_v<T1, F1 &, ptree<t_A> &, T1 &, ptree<t_A> &,
+                                     T1 &>
     T1 ptree_rec(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename ptree<t_A>::PLeaf>(_sv.v())) {
@@ -434,8 +443,10 @@ struct PolyInductive {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A> F0,
-              MapsTo<T1, ptree<t_A>, T1, ptree<t_A>, T1> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
+               std::is_invocable_r_v<T1, F1 &, ptree<t_A> &, T1 &, ptree<t_A> &,
+                                     T1 &>
     T1 ptree_rect(F0 &&f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename ptree<t_A>::PLeaf>(_sv.v())) {

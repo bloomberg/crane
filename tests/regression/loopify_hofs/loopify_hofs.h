@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -190,7 +187,8 @@ public:
 struct LoopifyHofs {
   /// foldl1 f l folds from left with no initial value. Returns 0 for empty
   /// list.
-  template <typename T1, MapsTo<T1, T1, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 foldl1_aux(F0 &&f, const T1 acc, const List<T1> &l) {
     T1 _result;
     const List<T1> *_loop_l = &l;
@@ -209,7 +207,8 @@ struct LoopifyHofs {
     return _result;
   }
 
-  template <typename T1, MapsTo<T1, T1, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 foldl1(F0 &&f, const T1 default0, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -220,7 +219,8 @@ struct LoopifyHofs {
   }
 
   /// forall_ p l checks if all elements satisfy predicate p.
-  template <typename T1, MapsTo<bool, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static bool forall_(F0 &&p, const List<T1> &l) {
     bool _result;
     const List<T1> *_loop_l = &l;
@@ -243,7 +243,8 @@ struct LoopifyHofs {
   }
 
   /// exists_fn p l checks if any element satisfies predicate p.
-  template <typename T1, MapsTo<bool, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static bool exists_fn(F0 &&p, const List<T1> &l) {
     bool _result;
     const List<T1> *_loop_l = &l;
@@ -266,7 +267,8 @@ struct LoopifyHofs {
   }
 
   /// drop_while p l drops elements while predicate holds.
-  template <typename T1, MapsTo<bool, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static List<T1> drop_while(F0 &&p, const List<T1> &l) {
     List<T1> _result;
     const List<T1> *_loop_l = &l;
@@ -289,7 +291,8 @@ struct LoopifyHofs {
   }
 
   /// take_while p l takes elements while predicate holds.
-  template <typename T1, MapsTo<bool, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static List<T1> take_while(F0 &&p, const List<T1> &l) {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
@@ -318,7 +321,8 @@ struct LoopifyHofs {
   }
 
   /// flat_map f l maps f and flattens results.
-  template <typename T1, typename T2, MapsTo<List<T2>, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<List<T2>, F0 &, T1 &>
   static List<T2> flat_map(F0 &&f, const List<T1> &l) {
     struct _Enter {
       const List<T1> *l;
@@ -435,7 +439,8 @@ struct LoopifyHofs {
   }
 
   /// find_indices p l finds all indices where p is true.
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static List<unsigned int>
   find_indices_aux(F0 &&p, const List<unsigned int> &l, const unsigned int i) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
@@ -452,13 +457,15 @@ struct LoopifyHofs {
     }
   }
 
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static List<unsigned int> find_indices(F0 &&p, const List<unsigned int> &l) {
     return find_indices_aux(p, l, 0u);
   }
 
   /// delete_by eq x l deletes first element equal to x.
-  template <MapsTo<bool, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &, unsigned int &>
   static List<unsigned int> delete_by(F0 &&eq, const unsigned int x,
                                       const List<unsigned int> &l) {
     std::unique_ptr<List<unsigned int>> _head{};
@@ -500,7 +507,9 @@ struct LoopifyHofs {
              const List<std::pair<unsigned int, unsigned int>> &l);
 
   /// scanl f acc l scan from left with accumulator.
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static List<unsigned int> scanl(F0 &&f, const unsigned int acc,
                                   const List<unsigned int> &l) {
     std::unique_ptr<List<unsigned int>> _head{};
@@ -531,7 +540,9 @@ struct LoopifyHofs {
   }
 
   /// scanl1 f l like scanl but no initial value, uses first element.
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &,
+                                   unsigned int &>
   static List<unsigned int> scanl1_fuel(const unsigned int fuel, F1 &&f,
                                         List<unsigned int> l) {
     std::unique_ptr<List<unsigned int>> _head{};
@@ -577,13 +588,17 @@ struct LoopifyHofs {
     return std::move(*(_head));
   }
 
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static List<unsigned int> scanl1(F0 &&f, const List<unsigned int> &l) {
     return scanl1_fuel(l.length(), f, l);
   }
 
   /// foldr1 f l fold right with no initial value.
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static unsigned int foldr1(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -633,7 +648,9 @@ struct LoopifyHofs {
                                    const List<unsigned int> &l);
 
   /// scanr f acc l scan from right.
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static List<unsigned int> scanr(F0 &&f, const unsigned int acc,
                                   const List<unsigned int> &l) {
     struct _Enter {
@@ -679,10 +696,11 @@ struct LoopifyHofs {
       }
     }
     return _result;
-  }
+  } /// scanr1 f l scanr with no initial value.
 
-  /// scanr1 f l scanr with no initial value.
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static List<unsigned int> scanr1(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -734,7 +752,8 @@ struct LoopifyHofs {
   }
 
   /// mapcat f l maps f and concatenates results (concat_map).
-  template <typename T1, MapsTo<List<T1>, unsigned int> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<List<T1>, F0 &, unsigned int &>
   static List<T1> mapcat(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -774,7 +793,9 @@ struct LoopifyHofs {
   }
 
   /// map_maybe f l maps f and filters out None results.
-  template <MapsTo<std::optional<unsigned int>, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<std::optional<unsigned int>, F0 &,
+                                   unsigned int &>
   static List<unsigned int> map_maybe(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -825,7 +846,8 @@ struct LoopifyHofs {
   }
 
   /// bool_all p l checks if all elements satisfy p (same as forall_).
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static bool bool_all(F0 &&p, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -865,7 +887,9 @@ struct LoopifyHofs {
   }
 
   /// merge_by cmp l1 l2 merges two lists using comparison function.
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &,
+                                   unsigned int &>
   static List<unsigned int> merge_by_fuel(const unsigned int fuel, F1 &&cmp,
                                           List<unsigned int> l1,
                                           List<unsigned int> l2) {
@@ -897,14 +921,17 @@ struct LoopifyHofs {
     }
   }
 
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static List<unsigned int> merge_by(F0 &&cmp, const List<unsigned int> &l1,
                                      const List<unsigned int> &l2) {
     return merge_by_fuel((l1.length() + l2.length()), cmp, l1, l2);
   }
 
   /// max_by f l finds element with maximum f value.
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static unsigned int max_by(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -960,7 +987,8 @@ struct LoopifyHofs {
   }
 
   /// iterate f n x generates x, f(x), f(f(x)), ... of length n.
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static List<unsigned int> iterate(F0 &&f, const unsigned int n,
                                     const unsigned int x) {
     std::unique_ptr<List<unsigned int>> _head{};
@@ -989,7 +1017,9 @@ struct LoopifyHofs {
   }
 
   /// maximum_by cmp l finds maximum element by comparison function.
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static unsigned int maximum_by(F0 &&cmp, const List<unsigned int> &l) {
     struct _Enter {
       const List<unsigned int> *l;
@@ -1044,7 +1074,9 @@ struct LoopifyHofs {
   }
 
   /// fold_right f l acc folds from the right.
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static unsigned int fold_right(F0 &&f, const List<unsigned int> &l,
                                  const unsigned int acc) {
     struct _Enter {
@@ -1085,7 +1117,8 @@ struct LoopifyHofs {
   }
 
   /// partition p l partitions list into (satisfies p, doesn't satisfy p).
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static std::pair<List<unsigned int>, List<unsigned int>>
   partition(F0 &&p, const List<unsigned int> &l) {
     struct _Enter {
@@ -1152,7 +1185,8 @@ struct LoopifyHofs {
 
   /// any p l checks if any element satisfies predicate (same as exists_fn but
   /// different name).
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static bool any(F0 &&p, const List<unsigned int> &l) {
     bool _result;
     const List<unsigned int> *_loop_l = &l;
@@ -1177,7 +1211,8 @@ struct LoopifyHofs {
 
   /// all p l checks if all elements satisfy predicate (same as forall_ but
   /// different name).
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static bool all(F0 &&p, const List<unsigned int> &l) {
     bool _result;
     const List<unsigned int> *_loop_l = &l;
@@ -1201,7 +1236,8 @@ struct LoopifyHofs {
   }
 
   /// filter_not p l filters elements that don't satisfy predicate.
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static List<unsigned int> filter_not(F0 &&p, const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
@@ -1217,7 +1253,8 @@ struct LoopifyHofs {
   }
 
   /// span_split p l splits at first element that doesn't satisfy p.
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static std::pair<List<unsigned int>, List<unsigned int>>
   span_split(F0 &&p, const List<unsigned int> &l) {
     struct _Enter {
@@ -1267,7 +1304,8 @@ struct LoopifyHofs {
   }
 
   /// group_by_eq eq l groups consecutive elements by equality function.
-  template <MapsTo<bool, unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<bool, F1 &, unsigned int &, unsigned int &>
   static List<List<unsigned int>>
   group_by_eq_fuel(const unsigned int fuel, F1 &&eq,
                    const List<unsigned int> &l) {
@@ -1312,7 +1350,8 @@ struct LoopifyHofs {
     }
   }
 
-  template <MapsTo<bool, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &, unsigned int &>
   static List<List<unsigned int>> group_by_eq(F0 &&eq,
                                               const List<unsigned int> &l) {
     return group_by_eq_fuel(l.length(), eq, l);
@@ -1322,9 +1361,9 @@ struct LoopifyHofs {
   static List<List<unsigned int>> power_set(const List<unsigned int> &l);
 
   /// map_accum_l f acc l maps with accumulator threading.
-  template <
-      MapsTo<std::pair<unsigned int, unsigned int>, unsigned int, unsigned int>
-          F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<std::pair<unsigned int, unsigned int>, F0 &,
+                                   unsigned int &, unsigned int &>
   static std::pair<unsigned int, List<unsigned int>>
   map_accum_l(F0 &&f, const unsigned int acc, const List<unsigned int> &l) {
     struct _Enter {

@@ -6,9 +6,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct ClosureLetEscape {
   /// A local fixpoint captures a LET-BINDING (not a function parameter)
   /// and escapes through Some (std::optional).

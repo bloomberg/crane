@@ -6,9 +6,6 @@
 #include <type_traits>
 #include <utility>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct EnumSwitchQualified {
   struct Outer {
     enum class Color { e_RED, e_BLUE };

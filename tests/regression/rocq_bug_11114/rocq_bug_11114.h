@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -174,13 +171,15 @@ struct RocqBug11114 {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 t_rect(const List<unsigned int> &, F1 &&f, const t &t0) {
     const auto &[d_k] = std::get<typename t::T0>(t0.v());
     return f(d_k);
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 t_rec(const List<unsigned int> &, F1 &&f, const t &t0) {
     const auto &[d_k] = std::get<typename t::T0>(t0.v());
     return f(d_k);
@@ -196,7 +195,8 @@ struct RocqBug11114 {
     }
   };
 
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static pkg map(F0 &&f, const pkg &p) {
     return pkg{p._sig, [=]() mutable {
                  auto &&_sv = p._t;

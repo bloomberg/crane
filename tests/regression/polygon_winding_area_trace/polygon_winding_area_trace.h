@@ -10,9 +10,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -137,7 +134,8 @@ public:
 };
 
 struct Pos {
-  template <typename T1, MapsTo<T1, T1> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &>
   static T1 iter(F0 &&f, const T1 x, const unsigned int n) {
     if (n == 1u) {
       return f(x);

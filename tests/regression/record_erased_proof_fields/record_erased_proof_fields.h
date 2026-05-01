@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -123,7 +120,8 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
 
-  template <typename T1, MapsTo<T1, T1, t_A> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
   T1 fold_left(F0 &&f, const T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
@@ -274,7 +272,9 @@ struct RecordErasedProofFieldsCase {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, ItemKind> F0, MapsTo<T1, ItemKind> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, ItemKind &> &&
+             std::is_invocable_r_v<T1, F1 &, ItemKind &>
   static T1 StoredTag_rect(F0 &&f, F1 &&f0, const StoredTag &s) {
     if (std::holds_alternative<typename StoredTag::TagPrimary>(s.v())) {
       const auto &[d_a0] = std::get<typename StoredTag::TagPrimary>(s.v());
@@ -285,7 +285,9 @@ struct RecordErasedProofFieldsCase {
     }
   }
 
-  template <typename T1, MapsTo<T1, ItemKind> F0, MapsTo<T1, ItemKind> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, ItemKind &> &&
+             std::is_invocable_r_v<T1, F1 &, ItemKind &>
   static T1 StoredTag_rec(F0 &&f, F1 &&f0, const StoredTag &s) {
     if (std::holds_alternative<typename StoredTag::TagPrimary>(s.v())) {
       const auto &[d_a0] = std::get<typename StoredTag::TagPrimary>(s.v());

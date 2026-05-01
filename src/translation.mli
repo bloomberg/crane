@@ -170,6 +170,7 @@ val gen_ind_header :
 val gen_ind_header_v2 :
   ?is_mutual:bool ->
   ?consarg_names:Id.t option list array ->
+  ?mutual_partners:(GlobRef.t * GlobRef.t array * ml_type list array * Id.t option list array) list ->
   variable list ->
   GlobRef.t ->
   GlobRef.t array ->

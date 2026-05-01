@@ -30,9 +30,13 @@ exception TODO
     @return the factory method name as a string *)
 let factory_name_of_ctor ?(type_name = "") ctor_struct_name =
   let lc = String.lowercase_ascii ctor_struct_name in
+  let reserved_generated_names =
+    [ "v"; "v_mut"; "clone"; "variant_t" ]
+  in
   let collides =
     Id.Set.mem (Id.of_string lc) (get_keywords ())
     || lc = String.lowercase_ascii type_name
+    || List.mem lc reserved_generated_names
   in
   if collides then ctor_struct_name ^ "_"
   else lc
@@ -824,6 +828,26 @@ let is_option_global g =
   let n = Common.pp_global_name Type g in
   String.equal n "option" || String.equal n "Option"
 
+let is_prod_global g =
+  let n = Common.pp_global_name Type g in
+  String.equal n "prod" || String.equal n "Prod"
+
+let is_list_global g =
+  let n = Common.pp_global_name Type g in
+  String.equal n "list"
+
+(** Return the (nil_struct_name, cons_struct_name) for a list-like inductive
+    by looking up its constructor refs via {!ctor_struct_name_of_ref}.
+    Assumes the inductive has exactly 2 constructors: nil first, cons second. *)
+let list_ctor_struct_names (g : GlobRef.t) : string * string =
+  match g with
+  | GlobRef.IndRef (kn, i) ->
+    let nil_ref = GlobRef.ConstructRef ((kn, i), 1) in
+    let cons_ref = GlobRef.ConstructRef ((kn, i), 2) in
+    ( ctor_struct_name_of_ref nil_ref,
+      ctor_struct_name_of_ref cons_ref )
+  | _ -> ("Nil", "Cons")
+
 (** Render a simple C++ expression to a string for use in raw C++ fragments.
     Returns [None] for compound expressions that cannot be reduced to a
     simple identifier or dereference chain. *)
@@ -908,6 +932,51 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
   if src_ty = dst_ty then
     (* ---- Same type: deep-copy ---- *)
     match src_ty with
+    | Tunique_ptr (Tglob (g, [Tunique_ptr inner], e)) when is_option_global g ->
+      (* unique_ptr<optional<unique_ptr<T>>>: deep clone through optional *)
+      let inner_s = render inner in
+      let opt_uptr_s = render (Tglob (g, [Tunique_ptr inner], e)) in
+      let ty_s = render src_ty in
+      with_expr_s ~lambda_ty:ty_s
+        ~make_body:(fun s ->
+          s ^ " ? std::make_unique<" ^ opt_uptr_s ^ ">(" ^
+          mk_opt_uptr_clone inner_s ("(*" ^ s ^ ")") ^
+          ") : nullptr")
+    | Tunique_ptr (Tglob (g, [Tunique_ptr fst_inner; snd_ty], e))
+      when is_prod_global g ->
+      (* unique_ptr<pair<unique_ptr<T>, U>>: deep clone first element *)
+      let fst_inner_s = render fst_inner in
+      let pair_s = render (Tglob (g, [Tunique_ptr fst_inner; snd_ty], e)) in
+      let ty_s = render src_ty in
+      with_expr_s ~lambda_ty:ty_s
+        ~make_body:(fun s ->
+          s ^ " ? std::make_unique<" ^ pair_s ^
+          ">(std::make_pair(" ^
+          mk_uptr_clone fst_inner_s (s ^ "->first") ^
+          ", " ^ s ^ "->second" ^
+          ")) : nullptr")
+    | Tunique_ptr (Tglob (g, [fst_ty; Tunique_ptr snd_inner], e))
+      when is_prod_global g ->
+      (* unique_ptr<pair<U, unique_ptr<T>>>: deep clone second element *)
+      let snd_inner_s = render snd_inner in
+      let pair_s = render (Tglob (g, [fst_ty; Tunique_ptr snd_inner], e)) in
+      let ty_s = render src_ty in
+      with_expr_s ~lambda_ty:ty_s
+        ~make_body:(fun s ->
+          s ^ " ? std::make_unique<" ^ pair_s ^
+          ">(std::make_pair(" ^
+          s ^ "->first, " ^
+          mk_uptr_clone snd_inner_s (s ^ "->second") ^
+          ")) : nullptr")
+    | Tunique_ptr (Tglob (g, [elem_ty], e))
+      when is_list_global g ->
+      (* unique_ptr<List<T>>: clone uses List's own clone() *)
+      let list_s = render (Tglob (g, [elem_ty], e)) in
+      let ty_s = render src_ty in
+      with_expr_s ~lambda_ty:ty_s
+        ~make_body:(fun s ->
+          s ^ " ? std::make_unique<" ^ list_s ^ ">(" ^ s ^
+          "->clone()) : nullptr")
     | Tunique_ptr inner ->
       (* unique_ptr<T>: null-safe via ->clone() *)
       let inner_s = render inner in
@@ -1388,8 +1457,8 @@ let filter_erased_type_args tys =
     constructor itself becomes Tany/dummy_type, but it may be nested inside a
     function type like (A -> B) -> F A -> F B. Used by gen_dfun and
     gen_decl_for_pp to detect function params whose type variables cannot be
-    deduced by C++ and should therefore use plain TTtypename instead of a MapsTo
-    constraint. *)
+    deduced by C++ and should therefore use plain TTtypename instead of a
+    TTfun (is_invocable_v) constraint. *)
 let rec has_hkt_erasure = function
   | Minicpp.Tany -> true
   | t when is_cpp_dummy_type t -> true
@@ -4249,7 +4318,7 @@ and eta_fun env f args =
     in
     (* Non-substituted parameter types: used to detect whether a callback's
        codomain is a type variable (needs adapter wrapping) vs concrete unit
-       (C++ definition already uses void in MapsTo constraint). *)
+       (C++ definition already uses void in the is_invocable_v requires clause). *)
     let fn_param_ml_tys_orig =
       let rec collect = function
         | Miniml.Tarr (t, rest) ->
@@ -4315,7 +4384,7 @@ and eta_fun env f args =
          is [B -> A -> A]; when [A = nat -> nat], the lambda
          [fun t acc => fun x => body] has 3 binders but the parameter has
          only 2 arrows.  Flattening all 3 into a single C++ lambda produces
-         a 3-arg function, which doesn't match the 2-arg [MapsTo] concept.
+         a 3-arg function, which doesn't match the 2-arg is_invocable_v constraint.
 
          Fix: insert an [MLmagic] barrier after the expected number of
          binders so that [collect_lams] in [gen_expr] stops there.  The
@@ -4458,10 +4527,10 @@ and eta_fun env f args =
       (* Void-ified function reference passed as callback to polymorphic
          HOF where the ORIGINAL (non-substituted) parameter codomain is a
          type variable (not concrete unit).  The C++ definition uses a
-         template type parameter for MapsTo (e.g. MapsTo<T1, unsigned int>),
-         so the void function needs wrapping to return std::monostate.
-         When the original codomain IS concrete unit, the C++ definition
-         already uses MapsTo<void, ...> which accepts void-returning fns. *)
+         template type parameter constrained with is_invocable_v, so the void
+         function needs wrapping to return std::monostate.  When the original
+         codomain IS concrete unit, the constraint uses void which already
+         accepts void-returning functions. *)
       | Some param_ty
         when (match ml_arg with
               | MLglob (r, _) | MLmagic (MLglob (r, _)) -> is_void_ified_ref r
@@ -9094,7 +9163,7 @@ let get_tvar_indices t = List.map fst (get_tvars_indexed t)
     params are excluded because gen_dfun converts them to auto-deduced Fn&&
     template parameters, hiding their original Rocq-level type variables from
     C++ template argument deduction. Used by both gen_dfun (to decide whether a
-    function param should get a MapsTo constraint or plain TTtypename) and
+    function param should get an is_invocable_v constraint or plain TTtypename) and
     gen_decl_for_pp (to filter out phantom tvars from the template param list).
 *)
 let primary_tvar_indices dom cod =
@@ -9193,7 +9262,7 @@ and tvar_subst_stmt (tvars : Id.t list) (s : cpp_stmt) : cpp_stmt =
    self-recursive call sites.
 
    Higher-order function parameters are normally emitted as C++ template
-   parameters constrained with a [MapsTo] concept, preserving the exact lambda
+   parameters constrained with [is_invocable_v], preserving the exact lambda
    type for inlining.  However, when a recursive call passes a *different*
    expression (not the parameter variable itself) for a function-typed parameter,
    each recursion level creates a new template instantiation with a distinct type,
@@ -9651,15 +9720,16 @@ let gen_dfun n b cty ty temps =
   (* Promote forwarded function-typed parameters to C++ template parameters.
 
      Function-typed parameters (those with C++ type [Tmod(TMconst, Tfun(...))])
-     are normally promoted to template parameters with [MapsTo] concept
-     constraints.  This replaces [const std::function<R(Args...)>] with a
-     template type variable [F&&], giving the compiler the exact lambda
+     are normally promoted to template parameters with [std::is_invocable_v]
+     requires-clause constraints.  This replaces [const std::function<R(Args...)>]
+     with a template type variable [F&&], giving the compiler the exact lambda
      type so it can inline the call body — no type-erasure overhead.
 
      For example, [tree_rect]'s two function parameters become:
 
-       template <MapsTo<T1, unsigned int> F0,
-                 MapsTo<T1, shared_ptr<tree>, T1, shared_ptr<tree>, T1> F1>
+       template <typename F0, typename F1>
+         requires std::is_invocable_v<F0 &, unsigned int &>
+               && std::is_invocable_v<F1 &, shared_ptr<tree> &, T1 &, ...>
        static T1 tree_rect(F0 &&f, F1 &&f0, ...);
 
      This works for [tree_rect] because its recursive calls pass [f] and
@@ -9683,11 +9753,11 @@ let gen_dfun n b cty ty temps =
   (* Determine which tvars are "primary" — deducible from non-function domain
      params or the return type.  Function-typed params that reference tvars
      outside this set (e.g., erased HKT type variables) get TTtypename (no
-     MapsTo constraint) instead of TTfun, to avoid referencing template type
-     parameters that were filtered out as phantom by gen_decl_for_pp.
+     is_invocable_v constraint) instead of TTfun, to avoid referencing template
+     type parameters that were filtered out as phantom by gen_decl_for_pp.
      Similarly, function-typed params containing HKT erasure markers (Tany
      or dummy_type) also get TTtypename, since their type structure has been
-     partially erased and a MapsTo constraint would be malformed. *)
+     partially erased and an is_invocable_v constraint would be malformed. *)
   let primary = primary_tvar_indices dom cod in
   let fun_tys =
     List.filter_map
@@ -11574,6 +11644,7 @@ let ml_self_ref_is_uniform ~ind_ref ~cname ml_ty =
 let gen_ind_header_v2
     ?(is_mutual = false)
     ?(consarg_names = [||])
+    ?(mutual_partners = [])
     vars
     name
     cnames
@@ -11706,20 +11777,31 @@ let gen_ind_header_v2
                   Tid (cname_id, []) )
                 cnames ) )
       in
+      (* Collision detection: internal names must not equal the enclosing type name *)
+      let type_name_str = Common.pp_global_name Type name in
+      let escape_if_clashes base =
+        if String.equal base type_name_str then base ^ "_" else base
+      in
+      let variant_alias_name = escape_if_clashes "variant_t" in
       let variant_using =
-        (Fnested_using (Id.of_string "variant_t", variant_ty), VPublic, STypes)
+        (Fnested_using (Id.of_string variant_alias_name, variant_ty), VPublic, STypes)
       in
       let element_using = [] in
 
       (* 3. Private variant member: v_ for inductive, lazy_v_ for coinductive *)
-      let variant_member_name = if is_coinductive then "d_lazyV_" else "d_v_" in
+      let variant_member_name =
+        escape_if_clashes (if is_coinductive then "d_lazyV_" else "d_v_")
+      in
+      let variant_alias_id = Id.of_string variant_alias_name in
+      let variant_alias_ty = Tid (variant_alias_id, []) in
+      let vmn_id = Id.of_string variant_member_name in
       let variant_member_ty =
         if is_coinductive then
           Tid
             ( Id.of_string_soft "crane::lazy",
-              [Tid (Id.of_string "variant_t", [])] )
+              [variant_alias_ty] )
         else
-          Tid (Id.of_string "variant_t", [])
+          variant_alias_ty
       in
       let variant_member =
         ( Fvar (Id.of_string variant_member_name, variant_member_ty),
@@ -11743,14 +11825,14 @@ let gen_ind_header_v2
                     d_lazyV_(crane::lazy<variant_t>(variant_t(std::move(_v)))) *)
                  let init_expr =
                    CPPfun_call
-                     ( CPPvar (Id.of_string_soft "crane::lazy<variant_t>"),
+                     ( CPPvar (Id.of_string_soft ("crane::lazy<" ^ variant_alias_name ^ ">")),
                        [
                          CPPfun_call
-                           ( CPPvar (Id.of_string "variant_t"),
+                           ( CPPvar variant_alias_id,
                              [CPPmove (CPPvar param_name)] );
                        ] )
                  in
-                 let init_list = [(Id.of_string "d_lazyV_", init_expr)] in
+                 let init_list = [(vmn_id, init_expr)] in
                  ( Fconstructor ([(param_name, param_ty)], init_list, true),
                    VPublic,
                    SCreators )
@@ -11768,7 +11850,7 @@ let gen_ind_header_v2
                    else CPPvar param_name
                  in
                  let init_list =
-                   [(Id.of_string "d_v_", init_v)]
+                   [(vmn_id, init_v)]
                  in
                  ( Fconstructor ([(param_name, param_ty)], init_list, true),
                    VPublic,
@@ -11788,46 +11870,96 @@ let gen_ind_header_v2
           []
       in
 
+      (* Shared self-reference classification for iterative destructor and clone.
+         [is_direct_self_ref] checks if a ML type IS the self type directly.
+         [classify_ml_self_ref] extends this to detect self-references hidden
+         inside container types (option, pair, list). *)
+      let rec is_direct_self_ref = function
+        | Miniml.Tglob (r, args, _) ->
+          Environ.QGlobRef.equal Environ.empty_env r name
+          && List.length args = List.length vars
+          && List.for_all
+               (fun (j, arg) ->
+                 match arg with
+                 | Miniml.Tvar k | Miniml.Tvar' k -> k = j + 1
+                 | Miniml.Tmeta {contents = Some (Miniml.Tvar k)}
+                 | Miniml.Tmeta {contents = Some (Miniml.Tvar' k)} ->
+                   k = j + 1
+                 | _ -> false)
+               (List.mapi (fun j a -> (j, a)) args)
+        | Miniml.Tmeta {contents = Some t} -> is_direct_self_ref t
+        | _ -> false
+      in
+      let rec classify_ml_self_ref = function
+        | ml_ty when is_direct_self_ref ml_ty -> `Direct
+        | Miniml.Tglob (g, [arg], _)
+          when is_option_global g && is_direct_self_ref arg ->
+          `Optional
+        | Miniml.Tglob (g, [arg1; arg2], _) when is_prod_global g ->
+          ( match (is_direct_self_ref arg1, is_direct_self_ref arg2) with
+          | true, true -> `PairBoth
+          | true, false -> `PairFst
+          | false, true -> `PairSnd
+          | false, false -> `None )
+        | Miniml.Tglob (g, [arg], _)
+          when is_list_global g && is_direct_self_ref arg ->
+          `List g
+        | Miniml.Tmeta {contents = Some t} -> classify_ml_self_ref t
+        | _ -> `None
+      in
+      let is_any_self_ref ml_ty = classify_ml_self_ref ml_ty <> `None in
+
+      (* Detect direct references to a mutual partner.
+         Used to generate flattened iterative destructors/clones
+         that reach through mutual partners to extract self-refs. *)
+      let is_direct_ref_to partner_name = function
+        | Miniml.Tglob (r, _, _) ->
+          Environ.QGlobRef.equal Environ.empty_env r partner_name
+        | _ -> false
+      in
+      let rec is_direct_ref_to_any partners ml_ty =
+        match ml_ty with
+        | Miniml.Tmeta {contents = Some t} ->
+          is_direct_ref_to_any partners t
+        | _ ->
+          List.find_opt
+            (fun (pname, _, _, _) -> is_direct_ref_to pname ml_ty)
+            partners
+      in
+
       (* Value-type inductives store direct recursive fields as
          [std::unique_ptr].  The default destructor recursively destroys a deep
          list/tree through the C++ call stack, which overflows on the deep
-         regression tests.  For direct self-recursive fields, drain those
-         pointers iteratively before the variant is destroyed. *)
+         regression tests.  For self-recursive fields (direct or wrapped in
+         optional/pair), drain those pointers iteratively before the variant
+         is destroyed. *)
       let iterative_destructor =
         if is_coinductive then []
         else
-          let rec is_direct_self_ref = function
-            | Miniml.Tglob (r, args, _) ->
-              Environ.QGlobRef.equal Environ.empty_env r name
-              && List.length args = List.length vars
-              && List.for_all
-                   (fun (j, arg) ->
-                     match arg with
-                     | Miniml.Tvar k | Miniml.Tvar' k -> k = j + 1
-                     | Miniml.Tmeta {contents = Some (Miniml.Tvar k)}
-                     | Miniml.Tmeta {contents = Some (Miniml.Tvar' k)} ->
-                       k = j + 1
-                     | _ -> false)
-                   (List.mapi (fun j a -> (j, a)) args)
-            | Miniml.Tmeta {contents = Some t} -> is_direct_self_ref t
-            | _ -> false
+          let render_q_destr ty =
+            render_cpp_type_for_raw_template (qualify_inductives ty)
+          in
+          let self_s_destr = render_q_destr self_ty in
+          let list_self_s_destr =
+            render_q_destr (Tid_external (Id.of_string_soft "List", [self_ty]))
           in
           let ctor_moves =
             Array.to_list
               (Array.mapi
                  (fun i tys_list ->
-                   let recursive_fields =
+                   let classified_fields =
                      List.filter_map
                        (fun (j, ty) ->
-                         if is_direct_self_ref ty then
+                         match classify_ml_self_ref ty with
+                         | `None -> None
+                         | cls ->
                            let cname =
                              ctor_struct_name_of_ref ~fallback_idx:i cnames.(i)
                            in
-                           Some (lookup_ctor_field_name cname j)
-                         else None)
+                           Some (lookup_ctor_field_name cname j, cls))
                        (List.mapi (fun j ty -> (j, ty)) tys_list)
                    in
-                   match recursive_fields with
+                   match classified_fields with
                    | [] -> None
                    | fields ->
                      let ctor_id =
@@ -11837,38 +11969,282 @@ let gen_ind_header_v2
                      let node_id = Id.of_string "_node" in
                      let alt_id = Id.of_string "_alt" in
                      let stack_id = Id.of_string "_stack" in
-                     let d_v_id = Id.of_string "d_v_" in
+                     let push_expr e =
+                       Sexpr
+                         (CPPdot_method_call
+                            ( CPPvar stack_id,
+                              Id.of_string "push_back",
+                              [CPPmove e] ))
+                     in
                      let body =
                        Sasgn
                          ( alt_id,
                            Some (Tref Tauto),
                            CPPstd_get
                              ( ctor_ty,
-                               Some (CPPmember (CPPvar node_id, d_v_id)) ) )
-                       :: List.map
-                            (fun field ->
-                              let field_expr =
+                               Some (CPPmember (CPPvar node_id, vmn_id)) ) )
+                       :: List.concat_map
+                            (fun (field, cls) ->
+                              let fe =
                                 CPPmember (CPPvar alt_id, field)
                               in
-                              Sif_then
-                                ( field_expr,
-                                  [ Sexpr
-                                      (CPPdot_method_call
-                                         ( CPPvar stack_id,
-                                           Id.of_string "push_back",
-                                           [CPPmove field_expr] )) ] ))
+                              match cls with
+                              | `Direct ->
+                                [Sif_then (fe, [push_expr fe])]
+                              | `Optional ->
+                                (* unique_ptr<optional<unique_ptr<Self>>>:
+                                   move inner unique_ptr out *)
+                                [Sif_then
+                                   ( CPPbinop ("&&", fe, CPPderef fe),
+                                     [push_expr
+                                        (CPPderef (CPPderef fe))] )]
+                              | `PairFst ->
+                                [Sif_then
+                                   ( CPPbinop ("&&", fe,
+                                       CPParrow (fe, Id.of_string "first")),
+                                     [push_expr
+                                        (CPParrow (fe,
+                                           Id.of_string "first"))] )]
+                              | `PairSnd ->
+                                [Sif_then
+                                   ( CPPbinop ("&&", fe,
+                                       CPParrow (fe, Id.of_string "second")),
+                                     [push_expr
+                                        (CPParrow (fe,
+                                           Id.of_string "second"))] )]
+                              | `PairBoth ->
+                                [Sif_then
+                                   ( CPPbinop ("&&", fe,
+                                       CPParrow (fe, Id.of_string "first")),
+                                     [push_expr
+                                        (CPParrow (fe,
+                                           Id.of_string "first"))] );
+                                 Sif_then
+                                   ( CPPbinop ("&&", fe,
+                                       CPParrow (fe, Id.of_string "second")),
+                                     [push_expr
+                                        (CPParrow (fe,
+                                           Id.of_string "second"))] )]
+                              | `List list_g ->
+                                (* unique_ptr<List<Self>>: walk list spine,
+                                   move each by-value element into
+                                   make_unique and push.  Must reference
+                                   stack_id via AST so lambda capture
+                                   analysis detects it. *)
+                                let ls = list_self_s_destr in
+                                let ss = self_s_destr in
+                                let fes =
+                                  Id.to_string alt_id ^ "."
+                                  ^ Id.to_string field
+                                in
+                                let (_nil_s, cons_s) =
+                                  list_ctor_struct_names list_g
+                                in
+                                (* Use direct push_back without
+                                   CPPmove since the arg is already an
+                                   rvalue temporary *)
+                                let push_rval e =
+                                  Sexpr
+                                    (CPPdot_method_call
+                                       ( CPPvar stack_id,
+                                         Id.of_string "push_back",
+                                         [e] ))
+                                in
+                                [Sif_then (fe,
+                                   [ Sraw ("auto* _lp = " ^ fes ^ ".get();");
+                                     Swhile (
+                                       CPPraw (
+                                         "std::holds_alternative<typename "
+                                         ^ ls ^ "::" ^ cons_s
+                                         ^ ">(_lp->v())"),
+                                       [ Sraw (
+                                           "auto& _lc = std::get<typename "
+                                           ^ ls ^ "::" ^ cons_s
+                                           ^ ">(_lp->v_mut());");
+                                         push_rval
+                                           (CPPraw (
+                                              "std::make_unique<" ^ ss
+                                              ^ ">(std::move(_lc.d_a0))"));
+                                         Sraw (
+                                           "if (_lc.d_a1) {"
+                                           ^ " _lp = _lc.d_a1.get();"
+                                           ^ " } else { break; }") ]) ])]
+                              | `None -> [])
                             fields
                      in
                      Some
                        (Sif_then
                           ( CPPfun_call
                               ( CPPstd_holds_alternative ctor_ty,
-                                [CPPmember (CPPvar node_id, d_v_id)] ),
+                                [CPPmember (CPPvar node_id, vmn_id)] ),
                             body )))
                  tys)
               |> List.filter_map Fun.id
           in
-          match ctor_moves with
+          (* If no self-refs but mutual partners have back-refs to us,
+             generate a flattened mutual iterative destructor. *)
+          let mutual_ctor_moves =
+            if ctor_moves <> [] || mutual_partners = [] then []
+            else
+              (* For each constructor of self, find unique_ptr<partner>
+                 fields. For each partner, check if it has unique_ptr<self>
+                 back-references. Generate drain code that flattens the
+                 mutual step: reach through the partner to extract
+                 unique_ptr<self> children. *)
+              Array.to_list
+                (Array.mapi
+                   (fun i tys_list ->
+                     let mutual_fields =
+                       List.filter_map
+                         (fun (j, ty) ->
+                           match is_direct_ref_to_any mutual_partners ty with
+                           | Some (pname, pcnames, ptys, pconsarg_names) ->
+                             let cname =
+                               ctor_struct_name_of_ref ~fallback_idx:i
+                                 cnames.(i)
+                             in
+                             let field =
+                               lookup_ctor_field_name cname j
+                             in
+                             Some (field, pname, pcnames, ptys,
+                                   pconsarg_names)
+                           | None -> None)
+                         (List.mapi (fun j ty -> (j, ty)) tys_list)
+                     in
+                     match mutual_fields with
+                     | [] -> None
+                     | fields ->
+                       let ctor_id =
+                         ctor_struct_id_of_ref ~fallback_idx:i cnames.(i)
+                       in
+                       let ctor_ty = Tid (ctor_id, []) in
+                       let node_id = Id.of_string "_node" in
+                       let alt_id = Id.of_string "_alt" in
+                       let stack_id = Id.of_string "_stack" in
+                       let body =
+                         Sasgn
+                           ( alt_id,
+                             Some (Tref Tauto),
+                             CPPstd_get
+                               ( ctor_ty,
+                                 Some (CPPmember
+                                         (CPPvar node_id, vmn_id)) ) )
+                         :: List.concat_map
+                              (fun (field, _pname, pcnames, ptys,
+                                    pconsarg_names) ->
+                                let fes =
+                                  Id.to_string alt_id ^ "."
+                                  ^ Id.to_string field
+                                in
+                                (* For each partner constructor, find
+                                   back-refs to self and generate drain *)
+                                let partner_drains =
+                                  Array.to_list
+                                    (Array.mapi
+                                       (fun pi ptys_list ->
+                                         let back_refs =
+                                           List.filter_map
+                                             (fun (pj, pty) ->
+                                               if is_direct_self_ref pty
+                                               then begin
+                                                 let pcname =
+                                                   ctor_struct_name_of_ref
+                                                     ~fallback_idx:pi
+                                                     pcnames.(pi)
+                                                 in
+                                                 let pfield =
+                                                   lookup_ctor_field_name
+                                                     pcname pj
+                                                 in
+                                                 Some pfield
+                                               end
+                                               else None)
+                                             (List.mapi
+                                                (fun pj pty -> (pj, pty))
+                                                ptys_list)
+                                         in
+                                         match back_refs with
+                                         | [] -> None
+                                         | pfields ->
+                                           let pctor_id =
+                                             ctor_struct_id_of_ref
+                                               ~fallback_idx:pi pcnames.(pi)
+                                           in
+                                           let partner_s =
+                                             render_q_destr
+                                               (Tglob
+                                                  (_pname, ty_vars, []))
+                                           in
+                                           let pctor_s =
+                                             Id.to_string pctor_id
+                                           in
+                                           let _ = pconsarg_names in
+                                           Some (partner_s, pctor_s,
+                                                 pfields))
+                                       ptys)
+                                  |> List.filter_map Fun.id
+                                in
+                                (* Generate: if (field) { for each partner
+                                   ctor with back-refs, drain them } *)
+                                let fe = CPPmember
+                                  (CPPvar alt_id, field)
+                                in
+                                let drain_stmts =
+                                  List.concat_map
+                                    (fun (partner_s, pctor_s, pfields) ->
+                                      let guard =
+                                        "std::holds_alternative<typename "
+                                        ^ partner_s ^ "::" ^ pctor_s
+                                        ^ ">(" ^ fes ^ "->v())"
+                                      in
+                                      let get_alt =
+                                        "auto& _palt = std::get<typename "
+                                        ^ partner_s ^ "::" ^ pctor_s
+                                        ^ ">(" ^ fes ^ "->v_mut());"
+                                      in
+                                      let field_drains =
+                                        List.map
+                                          (fun pf ->
+                                            let pfs =
+                                              "_palt."
+                                              ^ Id.to_string pf
+                                            in
+                                            Sif_then (
+                                              CPPraw pfs,
+                                              [Sexpr
+                                                (CPPdot_method_call
+                                                  ( CPPvar stack_id,
+                                                    Id.of_string
+                                                      "push_back",
+                                                    [CPPraw (
+                                                       "std::move("
+                                                       ^ pfs ^ ")")])
+                                                )]))
+                                          pfields
+                                      in
+                                      [Sif_then (
+                                         CPPraw guard,
+                                         Sraw get_alt
+                                         :: field_drains)])
+                                    partner_drains
+                                in
+                                [Sif_then (fe, drain_stmts)])
+                              fields
+                       in
+                       Some
+                         (Sif_then
+                            ( CPPfun_call
+                                ( CPPstd_holds_alternative ctor_ty,
+                                  [CPPmember
+                                     (CPPvar node_id, vmn_id)] ),
+                              body )))
+                   tys)
+                |> List.filter_map Fun.id
+          in
+          let all_moves =
+            if ctor_moves <> [] then ctor_moves else mutual_ctor_moves
+          in
+          match all_moves with
           | [] -> []
           | moves ->
             let stack_id = Id.of_string "_stack" in
@@ -11922,14 +12298,13 @@ let gen_ind_header_v2
       let lazy_ctor =
         if is_coinductive then
           let param_name = Id.of_string "_thunk" in
-          let variant_t_ty = Tid (Id.of_string "variant_t", []) in
-          let param_ty = Tfun ([], variant_t_ty) in
+          let param_ty = Tfun ([], variant_alias_ty) in
           let init_expr =
             CPPfun_call
-              ( CPPvar (Id.of_string_soft "crane::lazy<variant_t>"),
+              ( CPPvar (Id.of_string_soft ("crane::lazy<" ^ variant_alias_name ^ ">")),
                 [CPPmove (CPPvar param_name)] )
           in
-          let init_list = [(Id.of_string "d_lazyV_", init_expr)] in
+          let init_list = [(vmn_id, init_expr)] in
           [
             ( Fconstructor ([(param_name, param_ty)], init_list, true),
               VPublic,
@@ -12125,11 +12500,10 @@ let gen_ind_header_v2
           let lazy_name = Id.of_string "lazy_" in
           let thunk_param_ty = Tfun ([], self_ty) in
           let params = [(Id.of_string "thunk", thunk_param_ty)] in
-          let variant_t_ty = Tid (Id.of_string "variant_t", []) in
           let adapter_lambda =
             CPPlambda
               ( [],
-                Some variant_t_ty,
+                Some variant_alias_ty,
                 [
                   Sasgn
                     ( Id.of_string "_tmp",
@@ -12147,7 +12521,7 @@ let gen_ind_header_v2
           in
           let thunk_arg =
             CPPfun_call
-              ( CPPvar (Id.of_string_soft "std::function<variant_t()>"),
+              ( CPPvar (Id.of_string_soft ("std::function<" ^ variant_alias_name ^ "()>")),
                 [adapter_lambda] )
           in
           let ctor_expr =
@@ -12168,24 +12542,7 @@ let gen_ind_header_v2
           []
         else
           let clone_id = Id.of_string "clone" in
-          let d_v_id = Id.of_string "d_v_" in
           let other_id = Id.of_string "_other" in
-          let rec is_direct_self_ref = function
-            | Miniml.Tglob (r, args, _) ->
-              Environ.QGlobRef.equal Environ.empty_env r name
-              && List.length args = List.length vars
-              && List.for_all
-                   (fun (j, arg) ->
-                     match arg with
-                     | Miniml.Tvar k | Miniml.Tvar' k -> k = j + 1
-                     | Miniml.Tmeta {contents = Some (Miniml.Tvar k)}
-                     | Miniml.Tmeta {contents = Some (Miniml.Tvar' k)} ->
-                       k = j + 1
-                     | _ -> false)
-                   (List.mapi (fun j a -> (j, a)) args)
-            | Miniml.Tmeta {contents = Some t} -> is_direct_self_ref t
-            | _ -> false
-          in
           let mk_clone_branches target_tvar_ids target_cpp_tys =
             Array.to_list
               (Array.mapi
@@ -12290,11 +12647,31 @@ let gen_ind_header_v2
                    })
                  tys)
           in
-          let has_direct_self_ref =
-            Array.exists (List.exists is_direct_self_ref) tys
+          let has_any_self_ref_field =
+            Array.exists (List.exists is_any_self_ref) tys
+          in
+          (* For mutual clone, only trigger iterative clone for a type
+             when its mutual partner has back-refs to self AND the
+             partner has exactly one constructor (so a default-constructed
+             placeholder has the right variant).  Types whose partner has
+             multiple constructors use recursive clone instead — safe
+             because the partner's iterative clone handles the chain. *)
+          let has_mutual_ref_field_with_backref =
+            mutual_partners <> []
+            && List.for_all (fun (_, pcnames, _, _) ->
+                 Array.length pcnames = 1) mutual_partners
+            && Array.exists
+                 (List.exists (fun ty ->
+                    match is_direct_ref_to_any mutual_partners ty with
+                    | Some (_pname, _pcnames, ptys, _) ->
+                      (* Check if partner has any field that refs self *)
+                      Array.exists
+                        (List.exists is_direct_self_ref) ptys
+                    | None -> false))
+                 tys
           in
           let clone_method =
-            if has_direct_self_ref then
+            if has_any_self_ref_field || has_mutual_ref_field_with_backref then
               let out_id = Id.of_string "_out" in
               let frame_id = Id.of_string "_CloneFrame" in
               let stack_id = Id.of_string "_stack" in
@@ -12350,36 +12727,132 @@ let gen_ind_header_v2
                              (field_id, ty, source_ty, target_ty))
                            tys_list
                        in
+                       let render_q ty =
+                         render_cpp_type_for_raw_template (qualify_inductives ty)
+                       in
+                       let self_s = render_q self_ty in
                        let ctor_args =
                          List.map
                            (fun (field_id, ml_ty, source_ty, target_ty) ->
                              let field_expr = CPPmember (CPPvar alt_id, field_id) in
-                             if is_direct_self_ref ml_ty then
+                             let field_s =
+                               Id.to_string alt_id ^ "." ^ Id.to_string field_id
+                             in
+                             match classify_ml_self_ref ml_ty with
+                             | `Direct ->
                                CPPcond
                                  ( field_expr,
                                    CPPfun_call (CPPmk_unique self_ty, []),
                                    CPPnullptr )
-                             else
-                               gen_clone_field_expr
-                                 ~src_ty:source_ty ~dst_ty:target_ty field_expr)
+                             | `Optional ->
+                               let inner_s = match source_ty with
+                                 | Tunique_ptr inner -> render_q inner
+                                 | _ -> assert false
+                               in
+                               CPPraw (
+                                 field_s ^ " ? std::make_unique<" ^ inner_s
+                                 ^ ">((*" ^ field_s
+                                 ^ ") ? std::make_optional(std::make_unique<"
+                                 ^ self_s ^ ">()) : std::nullopt) : nullptr")
+                             | `PairFst ->
+                               let inner_s = match source_ty with
+                                 | Tunique_ptr inner -> render_q inner
+                                 | _ -> assert false
+                               in
+                               CPPraw (
+                                 field_s ^ " ? std::make_unique<" ^ inner_s
+                                 ^ ">(std::make_pair(" ^ field_s
+                                 ^ "->first ? std::make_unique<" ^ self_s
+                                 ^ ">() : nullptr, " ^ field_s
+                                 ^ "->second)) : nullptr")
+                             | `PairSnd ->
+                               let inner_s = match source_ty with
+                                 | Tunique_ptr inner -> render_q inner
+                                 | _ -> assert false
+                               in
+                               CPPraw (
+                                 field_s ^ " ? std::make_unique<" ^ inner_s
+                                 ^ ">(std::make_pair(" ^ field_s
+                                 ^ "->first, " ^ field_s
+                                 ^ "->second ? std::make_unique<" ^ self_s
+                                 ^ ">() : nullptr)) : nullptr")
+                             | `PairBoth ->
+                               let inner_s = match source_ty with
+                                 | Tunique_ptr inner -> render_q inner
+                                 | _ -> assert false
+                               in
+                               CPPraw (
+                                 field_s ^ " ? std::make_unique<" ^ inner_s
+                                 ^ ">(std::make_pair(" ^ field_s
+                                 ^ "->first ? std::make_unique<" ^ self_s
+                                 ^ ">() : nullptr, " ^ field_s
+                                 ^ "->second ? std::make_unique<" ^ self_s
+                                 ^ ">() : nullptr)) : nullptr")
+                             | `List _ ->
+                               let inner_s = match source_ty with
+                                 | Tunique_ptr inner -> render_q inner
+                                 | _ -> assert false
+                               in
+                               CPPraw (
+                                 field_s ^ " ? std::make_unique<" ^ inner_s
+                                 ^ ">() : nullptr")
+                             | `None ->
+                               (* Check for mutual partner reference.
+                                  Only use placeholder+push for single-
+                                  constructor partners; multi-constructor
+                                  partners need full clone to preserve
+                                  non-back-ref fields. *)
+                               ( match is_direct_ref_to_any
+                                         mutual_partners ml_ty with
+                               | Some (pname, pcnames, _, _)
+                                 when Array.length pcnames = 1 ->
+                                 let partner_ty =
+                                   Tglob (pname, ty_vars, [])
+                                 in
+                                 let partner_s = render_q partner_ty in
+                                 CPPraw (
+                                   field_s ^ " ? std::make_unique<"
+                                   ^ partner_s ^ ">() : nullptr")
+                               | _ ->
+                                 gen_clone_field_expr
+                                   ~src_ty:source_ty ~dst_ty:target_ty
+                                   field_expr ))
                            fields
                        in
                        let ctor_ty = Tid (cname_id, []) in
                        let assign =
                          Sassign_expr
-                           ( CPParrow (CPPvar dst_id, d_v_id),
+                           ( CPParrow (CPPvar dst_id, vmn_id),
                              CPPstruct_id (cname_id, [], ctor_args) )
                        in
-                       let recursive_fields =
+                       let classified_rec_fields =
                          List.filter_map
                            (fun (field_id, ml_ty, _, _) ->
-                             if is_direct_self_ref ml_ty then
-                               Some field_id
-                             else None)
+                             match classify_ml_self_ref ml_ty with
+                             | `None ->
+                               (* Only use Mutual handling for single-
+                                  constructor partners (placeholder+push).
+                                  Multi-constructor partners are cloned
+                                  via gen_clone_field_expr above. *)
+                               ( match is_direct_ref_to_any
+                                         mutual_partners ml_ty with
+                               | Some (_, pcnames, _, _) as partner_info
+                                 when Array.length pcnames = 1 ->
+                                 let pi = Option.get partner_info in
+                                 Some (field_id, `Mutual pi)
+                               | _ -> None )
+                             | cls -> Some (field_id, cls))
                            fields
                        in
+                       let push_frame src_ptr dst_ptr =
+                         Sexpr
+                           (CPPdot_method_call
+                              ( CPPvar stack_id,
+                                Id.of_string "push_back",
+                                [ CPPbraced [src_ptr; dst_ptr] ] ))
+                       in
                        let body =
-                         match recursive_fields with
+                         match classified_rec_fields with
                          | [] -> [assign]
                          | rec_fields ->
                            assign
@@ -12389,30 +12862,207 @@ let gen_ind_header_v2
                                   CPPstd_get
                                     ( ctor_ty,
                                       Some
-                                        (CPParrow (CPPvar dst_id, d_v_id)) ) )
-                           :: List.map
-                                (fun field_id ->
-                                  let src_field =
+                                        (CPParrow (CPPvar dst_id, vmn_id)) ) )
+                           :: List.concat_map
+                                (fun (field_id, cls) ->
+                                  let sf =
                                     CPPmember (CPPvar alt_id, field_id)
                                   in
-                                  let dst_field =
-                                    CPPmember (CPPvar dst_alt_id, field_id)
+                                  let get e =
+                                    CPPdot_method_call (e, Id.of_string "get", [])
                                   in
-                                  Sif_then
-                                    ( src_field,
-                                      [ Sexpr
-                                          (CPPdot_method_call
-                                             ( CPPvar stack_id,
-                                               Id.of_string "push_back",
-                                               [ CPPbraced
-                                                   [ CPPdot_method_call
-                                                       ( src_field,
-                                                         Id.of_string "get",
-                                                         [] );
-                                                     CPPdot_method_call
-                                                       ( dst_field,
-                                                         Id.of_string "get",
-                                                         [] ) ] ] )) ] ))
+                                  (* Raw field name strings for complex cases *)
+                                  let sfs =
+                                    Id.to_string alt_id ^ "."
+                                    ^ Id.to_string field_id
+                                  in
+                                  let dfs =
+                                    Id.to_string dst_alt_id ^ "."
+                                    ^ Id.to_string field_id
+                                  in
+                                  match cls with
+                                  | `Direct ->
+                                    let df =
+                                      CPPmember (CPPvar dst_alt_id, field_id)
+                                    in
+                                    [Sif_then
+                                       ( sf,
+                                         [ push_frame (get sf) (get df) ] )]
+                                  | `Optional ->
+                                    (* unique_ptr<optional<unique_ptr<Self>>>:
+                                       drill to inner unique_ptr, call .get *)
+                                    [Sif_then
+                                       ( CPPraw (sfs ^ " && *(" ^ sfs ^ ")"),
+                                         [ push_frame
+                                             (CPPraw ("(*(*(" ^ sfs ^ "))).get()"))
+                                             (CPPraw ("(*(*(" ^ dfs ^ "))).get()")) ] )]
+                                  | `PairFst ->
+                                    [Sif_then
+                                       ( CPPraw (sfs ^ " && " ^ sfs ^ "->first"),
+                                         [ push_frame
+                                             (CPPraw (sfs ^ "->first.get()"))
+                                             (CPPraw (dfs ^ "->first.get()")) ] )]
+                                  | `PairSnd ->
+                                    [Sif_then
+                                       ( CPPraw (sfs ^ " && " ^ sfs ^ "->second"),
+                                         [ push_frame
+                                             (CPPraw (sfs ^ "->second.get()"))
+                                             (CPPraw (dfs ^ "->second.get()")) ] )]
+                                  | `PairBoth ->
+                                    [Sif_then
+                                       ( CPPraw (sfs ^ " && " ^ sfs ^ "->first"),
+                                         [ push_frame
+                                             (CPPraw (sfs ^ "->first.get()"))
+                                             (CPPraw (dfs ^ "->first.get()")) ] );
+                                     Sif_then
+                                       ( CPPraw (sfs ^ " && " ^ sfs ^ "->second"),
+                                         [ push_frame
+                                             (CPPraw (sfs ^ "->second.get()"))
+                                             (CPPraw (dfs ^ "->second.get()")) ] )]
+                                  | `List list_g ->
+                                    (* unique_ptr<List<Self>>: walk source
+                                       list, build dest list spine with
+                                       placeholder elements, push frames *)
+                                    let ls = render_q
+                                      (Tid_external
+                                         (Id.of_string_soft "List", [self_ty]))
+                                    in
+                                    let (nil_s, cons_s) =
+                                      list_ctor_struct_names list_g
+                                    in
+                                    [Sexpr (CPPraw (
+                                      "[&]{ if (" ^ sfs ^ ") {"
+                                      ^ " const " ^ ls ^ "* _lsrc = "
+                                        ^ sfs ^ ".get();"
+                                      ^ " " ^ ls ^ "* _ldst = "
+                                        ^ dfs ^ ".get();"
+                                      ^ " while (std::holds_alternative<typename "
+                                        ^ ls ^ "::" ^ cons_s
+                                        ^ ">(_lsrc->v())) {"
+                                      ^ " const auto& _lsrc_c = std::get<typename "
+                                        ^ ls ^ "::" ^ cons_s
+                                        ^ ">(_lsrc->v());"
+                                      ^ " _ldst->v_mut() = typename "
+                                        ^ ls ^ "::" ^ cons_s ^ "{"
+                                        ^ self_s ^ "{},"
+                                        ^ " _lsrc_c.d_a1 ? std::make_unique<"
+                                        ^ ls ^ ">() : nullptr};"
+                                      ^ " auto& _ldst_c = std::get<typename "
+                                        ^ ls ^ "::" ^ cons_s
+                                        ^ ">(_ldst->v_mut());"
+                                      ^ " _stack.push_back({&_lsrc_c.d_a0,"
+                                        ^ " &_ldst_c.d_a0});"
+                                      ^ " if (_lsrc_c.d_a1) {"
+                                        ^ " _lsrc = _lsrc_c.d_a1.get();"
+                                        ^ " _ldst = _ldst_c.d_a1.get();"
+                                      ^ " } else { break; }"
+                                      ^ " }"
+                                      ^ " if (std::holds_alternative<typename "
+                                        ^ ls ^ "::" ^ nil_s
+                                        ^ ">(_lsrc->v())) {"
+                                      ^ " _ldst->v_mut() = typename "
+                                        ^ ls ^ "::" ^ nil_s ^ "{};"
+                                      ^ " }"
+                                      ^ " } }()"))]
+                                  | `Mutual (pname, pcnames, ptys,
+                                            _pconsarg_names) ->
+                                    (* unique_ptr<partner>: for each partner
+                                       ctor with back-refs to self, push
+                                       {self*, self*} frame pairs *)
+                                    let partner_ty =
+                                      Tglob (pname, ty_vars, [])
+                                    in
+                                    let partner_s = render_q partner_ty in
+                                    let ctor_pushes =
+                                      Array.to_list
+                                        (Array.mapi
+                                           (fun pi ptys_list ->
+                                             let pctor_name =
+                                               ctor_struct_name_of_ref
+                                                 ~fallback_idx:pi
+                                                 pcnames.(pi)
+                                             in
+                                             let pctor_s =
+                                               Id.to_string
+                                                 (ctor_struct_id_of_ref
+                                                    ~fallback_idx:pi
+                                                    pcnames.(pi))
+                                             in
+                                             let back_ref_fields =
+                                               List.filter_map
+                                                 (fun (pj, pty) ->
+                                                   if is_direct_self_ref pty
+                                                   then
+                                                     Some
+                                                       (lookup_ctor_field_name
+                                                          pctor_name pj)
+                                                   else None)
+                                                 (List.mapi
+                                                    (fun pj pty ->
+                                                       (pj, pty))
+                                                    ptys_list)
+                                             in
+                                             match back_ref_fields with
+                                             | [] -> None
+                                             | pfields ->
+                                               let guard =
+                                                 "std::holds_alternative"
+                                                 ^ "<typename " ^ partner_s
+                                                 ^ "::" ^ pctor_s ^ ">("
+                                                 ^ sfs ^ "->v())"
+                                               in
+                                               let get_src =
+                                                 "const auto& _psrc = "
+                                                 ^ "std::get<typename "
+                                                 ^ partner_s ^ "::"
+                                                 ^ pctor_s ^ ">("
+                                                 ^ sfs ^ "->v());"
+                                               in
+                                               let get_dst =
+                                                 "auto& _pdst = "
+                                                 ^ "std::get<typename "
+                                                 ^ partner_s ^ "::"
+                                                 ^ pctor_s ^ ">("
+                                                 ^ dfs ^ "->v_mut());"
+                                               in
+                                               let field_pushes =
+                                                 List.concat_map
+                                                   (fun pf ->
+                                                     let pfs =
+                                                       "_psrc."
+                                                       ^ Id.to_string pf
+                                                     in
+                                                     let pdf =
+                                                       "_pdst."
+                                                       ^ Id.to_string pf
+                                                     in
+                                                     [Sif_then (
+                                                        CPPraw pfs,
+                                                        [Sraw (pdf
+                                                           ^ " = std::make_unique<"
+                                                           ^ self_s ^ ">();");
+                                                         push_frame
+                                                           (CPPraw (pfs
+                                                              ^ ".get()"))
+                                                           (CPPraw (pdf
+                                                              ^ ".get()"
+                                                           ))])])
+                                                   pfields
+                                               in
+                                               Some (Sif_then (
+                                                 CPPraw guard,
+                                                 Sraw get_src
+                                                 :: Sraw get_dst
+                                                 :: field_pushes)))
+                                           ptys)
+                                      |> List.filter_map Fun.id
+                                    in
+                                    ( match ctor_pushes with
+                                    | [] -> []
+                                    | stmts ->
+                                      [Sif_then (
+                                         CPPraw sfs, stmts)] )
+                                  | `None -> [])
                                 rec_fields
                        in
                        {
@@ -12502,11 +13152,11 @@ let gen_ind_header_v2
               CPPmember
                 ( CPPfun_call
                     (CPPmember (CPPvar other_id, clone_id), []),
-                  d_v_id )
+                  vmn_id )
             in
             ( Fconstructor
                 ( [ (other_id, Tref (Tmod (TMconst, self_ty))) ],
-                  [(d_v_id, CPPmove cloned_v)],
+                  [(vmn_id, CPPmove cloned_v)],
                   false ),
               VPublic,
               SCreators )
@@ -12514,7 +13164,7 @@ let gen_ind_header_v2
           let move_ctor =
             ( Fconstructor
                 ( [(other_id, Tref (Tref self_ty))],
-                  [(d_v_id, CPPmove (CPPmember (CPPvar other_id, d_v_id)))],
+                  [(vmn_id, CPPmove (CPPmember (CPPvar other_id, vmn_id)))],
                   false ),
               VPublic,
               SCreators )
@@ -12528,11 +13178,11 @@ let gen_ind_header_v2
                   mf_params = [(other_id, Tref (Tmod (TMconst, self_ty)))];
                   mf_body =
                     [
-                      Sasgn (d_v_id, None,
+                      Sasgn (vmn_id, None,
                         CPPmove (CPPmember
                           (CPPfun_call
                             (CPPmember (CPPvar other_id, clone_id), []),
-                           d_v_id)));
+                           vmn_id)));
                       Sreturn (Some (CPPunop ("*", CPPthis)));
                     ];
                   mf_is_const = false;
@@ -12553,8 +13203,8 @@ let gen_ind_header_v2
                   mf_params = [(other_id, Tref (Tref self_ty))];
                   mf_body =
                     [
-                      Sasgn (d_v_id, None,
-                        CPPmove (CPPmember (CPPvar other_id, d_v_id)));
+                      Sasgn (vmn_id, None,
+                        CPPmove (CPPmember (CPPvar other_id, vmn_id)));
                       Sreturn (Some (CPPunop ("*", CPPthis)));
                     ];
                   mf_is_const = false;
@@ -12750,7 +13400,7 @@ let gen_ind_header_v2
                 match field_info with
                 | [] ->
                   Buffer.add_string buf
-                    ("  d_v_ = " ^ cname_s ^ "{};\n")
+                    ("  " ^ variant_member_name ^ " = " ^ cname_s ^ "{};\n")
                 | _ ->
                   let bindings =
                     String.concat ", "
@@ -12763,7 +13413,7 @@ let gen_ind_header_v2
                      ^ "] = std::get<" ^ source_ctor_s
                      ^ ">(_other.v());\n");
                   Buffer.add_string buf
-                    ("  d_v_ = " ^ cname_s ^ "{"
+                    ("  " ^ variant_member_name ^ " = " ^ cname_s ^ "{"
                      ^ String.concat ", " converted ^ "};\n")
               end
               else begin
@@ -12784,7 +13434,7 @@ let gen_ind_header_v2
                     match field_info with
                     | [] ->
                       Buffer.add_string buf
-                        ("    d_v_ = " ^ cname_s ^ "{};\n")
+                        ("    " ^ variant_member_name ^ " = " ^ cname_s ^ "{};\n")
                     | _ ->
                       let bindings =
                         String.concat ", "
@@ -12797,7 +13447,7 @@ let gen_ind_header_v2
                          ^ "] = std::get<" ^ source_ctor_s
                          ^ ">(_other.v());\n");
                       Buffer.add_string buf
-                        ("    d_v_ = " ^ cname_s ^ "{"
+                        ("    " ^ variant_member_name ^ " = " ^ cname_s ^ "{"
                          ^ String.concat ", " converted ^ "};\n"))
                   branches;
                 Buffer.add_string buf "  }\n"
@@ -12819,7 +13469,7 @@ let gen_ind_header_v2
                 mf_name = Id.of_string "v";
                 mf_tparams = [];
                 mf_ret_type =
-                  Tmod (TMconst, Tref (Tid (Id.of_string "variant_t", [])));
+                  Tmod (TMconst, Tref variant_alias_ty);
                 mf_params = [];
                 mf_body =
                   [
@@ -12827,7 +13477,7 @@ let gen_ind_header_v2
                       (Some
                          (CPPfun_call
                             ( CPPmember
-                                ( CPPvar (Id.of_string "d_lazyV_"),
+                                ( CPPvar vmn_id,
                                   Id.of_string "force" ),
                               [] ) ) );
                   ];
@@ -12845,9 +13495,9 @@ let gen_ind_header_v2
                 mf_name = Id.of_string "v";
                 mf_tparams = [];
                 mf_ret_type =
-                  Tmod (TMconst, Tref (Tid (Id.of_string "variant_t", [])));
+                  Tmod (TMconst, Tref variant_alias_ty);
                 mf_params = [];
-                mf_body = [Sreturn (Some (CPPvar (Id.of_string "d_v_")))];
+                mf_body = [Sreturn (Some (CPPvar vmn_id))];
                 mf_is_const = true;
                 mf_is_static = false;
                 mf_is_inline = false;
@@ -12870,9 +13520,9 @@ let gen_ind_header_v2
                 {
                   mf_name = Id.of_string "v_mut";
                   mf_tparams = [];
-                  mf_ret_type = Tref (Tid (Id.of_string "variant_t", []));
+                  mf_ret_type = Tref variant_alias_ty;
                   mf_params = [];
-                  mf_body = [Sreturn (Some (CPPvar (Id.of_string "d_v_")))];
+                  mf_body = [Sreturn (Some (CPPvar vmn_id))];
                   mf_is_const = false;
                   mf_is_static = false;
                   mf_is_inline = true;

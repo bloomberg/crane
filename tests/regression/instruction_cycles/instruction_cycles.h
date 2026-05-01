@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -123,7 +120,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
 
-  template <MapsTo<bool, t_A> F0> bool forallb(F0 &&f) const {
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, t_A &>
+  bool forallb(F0 &&f) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return true;
@@ -238,7 +237,8 @@ struct InstructionCycles {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 instruction1_rec(F0 &&f, const T1 f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction1::JCN1>(_sv.v())) {
@@ -250,7 +250,8 @@ struct InstructionCycles {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 instruction1_rect(F0 &&f, const T1 f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction1::JCN1>(_sv.v())) {
@@ -327,7 +328,8 @@ struct InstructionCycles {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
     T1 instruction2_rec(F0 &&f, const T1 f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction2::JMS2>(_sv.v())) {
@@ -338,7 +340,8 @@ struct InstructionCycles {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
     T1 instruction2_rect(F0 &&f, const T1 f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction2::JMS2>(_sv.v())) {
@@ -691,8 +694,9 @@ struct InstructionCycles {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F1,
-              MapsTo<T1, unsigned int> F2>
+    template <typename T1, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F2 &, unsigned int &>
     T1 instruction5_rec(const T1 f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction5::NOP5>(_sv.v())) {
@@ -706,8 +710,9 @@ struct InstructionCycles {
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F1,
-              MapsTo<T1, unsigned int> F2>
+    template <typename T1, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F2 &, unsigned int &>
     T1 instruction5_rect(const T1 f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction5::NOP5>(_sv.v())) {

@@ -7,9 +7,6 @@
 #include <type_traits>
 #include <utility>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 enum class Bool0 { e_TRUE0, e_FALSE0 };
 template <typename I, typename t_A>
 concept Factory = requires(t_A a0, t_A a1) {

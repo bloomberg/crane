@@ -9,9 +9,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 /// Complex control flow and pattern matching edge cases.
 struct LoopifyPatterns {
   template <typename t_A> struct list {
@@ -128,7 +125,8 @@ struct LoopifyPatterns {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rect(const T2 f, F1 &&f0, const list<T1> &l) {
     struct _Enter {
       const list<T1> *l;
@@ -167,7 +165,8 @@ struct LoopifyPatterns {
     return _result;
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1, list<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rec(const T2 f, F1 &&f0, const list<T1> &l) {
     struct _Enter {
       const list<T1> *l;
@@ -245,7 +244,8 @@ struct LoopifyPatterns {
   static unsigned int alternating_ops(const unsigned int n);
 
   /// max_by f l recursive max with function application.
-  template <MapsTo<unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static unsigned int max_by(F0 &&f, const list<unsigned int> &l) {
     struct _Enter {
       const list<unsigned int> *l;
@@ -396,7 +396,9 @@ struct LoopifyPatterns {
   static unsigned int list_len(const list<unsigned int> &l);
 
   /// merge_by cmp l1 l2 merge with custom comparator.
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &,
+                                   unsigned int &>
   static list<unsigned int> merge_by_fuel(const unsigned int fuel, F1 &&cmp,
                                           list<unsigned int> l1,
                                           list<unsigned int> l2) {
@@ -428,7 +430,9 @@ struct LoopifyPatterns {
     }
   }
 
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
+                                   unsigned int &>
   static list<unsigned int> merge_by(F0 &&cmp, const list<unsigned int> &l1,
                                      const list<unsigned int> &l2) {
     return merge_by_fuel((list_len(l1) + list_len(l2)), cmp, l1, l2);
@@ -460,7 +464,8 @@ struct LoopifyPatterns {
   static unsigned int sum_if_positive_else_double(const list<unsigned int> &l);
 
   /// take_until p l takes elements until predicate is true.
-  template <MapsTo<bool, unsigned int> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static list<unsigned int> take_until(F0 &&p, const list<unsigned int> &l) {
     std::unique_ptr<list<unsigned int>> _head{};
     std::unique_ptr<list<unsigned int>> *_write = &_head;
@@ -494,7 +499,9 @@ struct LoopifyPatterns {
   }
 
   /// partition_by p q l partitions into 3 categories based on two predicates.
-  template <MapsTo<bool, unsigned int> F0, MapsTo<bool, unsigned int> F1>
+  template <typename F0, typename F1>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<bool, F1 &, unsigned int &>
   static std::pair<std::pair<list<unsigned int>, list<unsigned int>>,
                    list<unsigned int>>
   partition_by(F0 &&p, F1 &&q, const list<unsigned int> &l) {
@@ -566,8 +573,10 @@ struct LoopifyPatterns {
                                               list<unsigned int> l2);
 
   /// filter_map_indexed p f l filters and maps with index.
-  template <MapsTo<bool, unsigned int, unsigned int> F0,
-            MapsTo<unsigned int, unsigned int> F1>
+  template <typename F0, typename F1>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &,
+                                   unsigned int &> &&
+             std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static list<unsigned int> filter_map_indexed_aux(F0 &&p, F1 &&f,
                                                    const list<unsigned int> &l,
                                                    const unsigned int idx) {
@@ -585,8 +594,10 @@ struct LoopifyPatterns {
     }
   }
 
-  template <MapsTo<bool, unsigned int, unsigned int> F0,
-            MapsTo<unsigned int, unsigned int> F1>
+  template <typename F0, typename F1>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &,
+                                   unsigned int &> &&
+             std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static list<unsigned int> filter_map_indexed(F0 &&p, F1 &&f,
                                                const list<unsigned int> &l) {
     return filter_map_indexed_aux(p, f, l, 0u);

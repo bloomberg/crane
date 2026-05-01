@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -138,7 +135,8 @@ struct LoopifyNumericSequences {
                                      const unsigned int n);
   static unsigned int staircase(const unsigned int n);
 
-  template <MapsTo<unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static unsigned int church(const unsigned int n, F1 &&f,
                              const unsigned int x) {
     unsigned int _result;

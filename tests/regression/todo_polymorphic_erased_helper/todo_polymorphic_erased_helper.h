@@ -5,9 +5,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename T1> T1 _anon_aux(const T1 x) { return x; }
 
 struct TodoPolymorphicErasedHelper {

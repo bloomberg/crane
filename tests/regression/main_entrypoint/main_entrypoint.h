@@ -11,8 +11,6 @@
 #include <variant>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct MainEntrypoint {
   static void main();

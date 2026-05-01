@@ -10,9 +10,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct Nat {
   // TYPES
   struct O {};
@@ -266,7 +263,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_lazyV_.force(); }
 
-  template <typename T1, MapsTo<T1, t_A> F0> Colist<T1> comap(F0 &&f) const {
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, t_A &>
+  Colist<T1> comap(F0 &&f) const {
     if (std::holds_alternative<typename Colist<t_A>::Conil>(this->v())) {
       return Colist<T1>::lazy_(
           []() -> Colist<T1> { return Colist<T1>::conil(); });

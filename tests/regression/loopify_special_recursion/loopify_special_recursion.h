@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -298,7 +295,9 @@ struct LoopifySpecialRecursion {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                   tree &, T1 &>
   static T1 tree_rect(const T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -309,7 +308,9 @@ struct LoopifySpecialRecursion {
     }
   }
 
-  template <typename T1, MapsTo<T1, tree, T1, unsigned int, tree, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                   tree &, T1 &>
   static T1 tree_rec(const T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -329,7 +330,8 @@ struct LoopifySpecialRecursion {
   static List<unsigned int> reverse_insert(const unsigned int x,
                                            List<unsigned int> l);
 
-  template <MapsTo<unsigned int, unsigned int> F1>
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static unsigned int nest_apply(const unsigned int n, F1 &&f,
                                  const unsigned int x) {
     struct _Enter {

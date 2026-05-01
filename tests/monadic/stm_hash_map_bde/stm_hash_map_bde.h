@@ -26,13 +26,6 @@ concept convertible_to = bsl::is_convertible<From, To>::value;
 template <class T, class U>
 concept same_as = bsl::is_same<T, U>::value && bsl::is_same<U, T>::value;
 
-template <class F, class R, class... Args>
-concept MapsTo = requires(F &f, Args &...a) {
-  {
-    bsl::invoke(static_cast<F &>(f), static_cast<Args &>(a)...)
-  } -> convertible_to<R>;
-};
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -168,7 +161,8 @@ template <typename K, typename V> struct CHT {
       return p.first;
     }
   }
-  template <MapsTo<V, bsl::optional<V>> F1>
+  template <typename F1>
+    requires bsl::is_invocable_r_v<V, F1 &, bsl::optional<V> &>
   V stm_update(const K k, F1 &&f) const {
     stm::TVar<List<bsl::pair<K, V>>> b = (*(this)).bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
@@ -205,14 +199,16 @@ template <typename K, typename V> struct CHT {
   bsl::optional<V> hash_delete(const K k) const {
     return stm::atomically([&] { return (*(this)).stm_delete(k); });
   }
-  template <MapsTo<V, bsl::optional<V>> F1>
+  template <typename F1>
+    requires bsl::is_invocable_r_v<V, F1 &, bsl::optional<V> &>
   V hash_update(const K k, F1 &&f) const {
     return stm::atomically([&] { return (*(this)).stm_update(k, f); });
   }
   V get_or(const K k, const V dflt) const {
     return stm::atomically([&] { return (*(this)).stm_get_or(k, dflt); });
   }
-  template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static bsl::optional<T2> assoc_lookup(F0 &&eqb, const T1 k,
                                         const List<bsl::pair<T1, T2>> &xs) {
     if (bsl::holds_alternative<typename List<bsl::pair<T1, T2>>::Nil>(xs.v())) {
@@ -229,7 +225,8 @@ template <typename K, typename V> struct CHT {
       }
     }
   }
-  template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<bsl::pair<T1, T2>>
   assoc_insert_or_replace(F0 &&eqb, const T1 k, const T2 v,
                           const List<bsl::pair<T1, T2>> &xs) {
@@ -251,7 +248,8 @@ template <typename K, typename V> struct CHT {
       }
     }
   }
-  template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static bsl::pair<bsl::optional<T2>, List<bsl::pair<T1, T2>>>
   assoc_remove(F0 &&eqb, const T1 k, List<bsl::pair<T1, T2>> xs) {
     if (bsl::holds_alternative<typename List<bsl::pair<T1, T2>>::Nil>(
@@ -291,8 +289,9 @@ template <typename K, typename V> struct CHT {
     };
     return f(static_cast<unsigned int>(num));
   }
-  template <typename T1, typename T2, MapsTo<bool, T1, T1> F0,
-            MapsTo<int64_t, T1> F1>
+  template <typename T1, typename T2, typename F0, typename F1>
+    requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &> &&
+             bsl::is_invocable_r_v<int64_t, F1 &, T1 &>
   static CHT<T1, T2> new_hash(F0 &&eqb, F1 &&hash, const int64_t requested) {
     int64_t n = bsl::max<int64_t>(requested, 1);
     bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>> bs =

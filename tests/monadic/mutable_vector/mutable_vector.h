@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct MutableVectorTest {
   static int64_t test1(const int64_t _x);
   static std::vector<int64_t> test2(const int64_t _x);

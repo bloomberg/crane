@@ -5,9 +5,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct TodoExplicitTypeAppAlias {
   template <typename T1> static T1 id(const T1 x) { return x; }
 

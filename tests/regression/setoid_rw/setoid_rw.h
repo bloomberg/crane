@@ -6,9 +6,6 @@
 #include <type_traits>
 #include <utility>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct SetoidRw {
   static unsigned int mod3(const unsigned int n);
   static unsigned int classify_mod3(const unsigned int n);

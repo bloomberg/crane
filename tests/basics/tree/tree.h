@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 enum class Bool0 { e_TRUE0, e_FALSE0 };
 
 struct Nat {
@@ -383,7 +380,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
 
-  template <typename T1, MapsTo<T1, Tree<t_A>, T1, t_A, Tree<t_A>, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, Tree<t_A> &, T1 &, t_A &,
+                                   Tree<t_A> &, T1 &>
   T1 tree_rect(const T1 f, F1 &&f0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
@@ -396,7 +395,9 @@ public:
     }
   }
 
-  template <typename T1, MapsTo<T1, Tree<t_A>, T1, t_A, Tree<t_A>, T1> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, Tree<t_A> &, T1 &, t_A &,
+                                   Tree<t_A> &, T1 &>
   T1 tree_rec(const T1 f, F1 &&f0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
@@ -458,7 +459,8 @@ public:
 
   /// Merge two trees t1 and t2 element-wise using combine.
   /// Subtrees beyond the shape of the other tree are truncated.
-  template <MapsTo<t_A, t_A, t_A> F0>
+  template <typename F0>
+    requires std::is_invocable_r_v<t_A, F0 &, t_A &, t_A &>
   Tree<t_A> merge(F0 &&combine, const Tree<t_A> &t2) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {

@@ -7,9 +7,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct NameClashBindingReuse {
   /// Test: structured binding names (d_a0 etc.) reused across matches.
   /// Particularly tricky when matches are NOT wrapped in IIFEs
@@ -104,7 +101,8 @@ struct NameClashBindingReuse {
       return (((d_a0 + d_a1) + d_a00) + d_a10);
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 pair_nat_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
@@ -112,7 +110,8 @@ struct NameClashBindingReuse {
       return f(d_a0, d_a1);
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 pair_nat_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
@@ -202,8 +201,9 @@ struct NameClashBindingReuse {
       return ((((d_a0 + d_a1) + d_a2) + d_a00) + d_a10);
     }
 
-    template <typename T1,
-              MapsTo<T1, unsigned int, unsigned int, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
+                                     unsigned int &>
     T1 triple_nat_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =
@@ -211,8 +211,9 @@ struct NameClashBindingReuse {
       return f(d_a0, d_a1, d_a2);
     }
 
-    template <typename T1,
-              MapsTo<T1, unsigned int, unsigned int, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
+                                     unsigned int &>
     T1 triple_nat_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =

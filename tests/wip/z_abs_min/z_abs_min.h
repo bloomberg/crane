@@ -7,9 +7,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct ZAbsMin {
   /// In Rocq, Z.abs is total: Z.abs z is always non-negative.
   /// ZInt maps Z.abs to std::abs(%a0) (from <cstdlib>).

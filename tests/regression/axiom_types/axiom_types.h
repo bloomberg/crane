@@ -10,9 +10,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct AxiomTypes {
   using MysteryType = std::any /* AXIOM TO BE REALIZED */;
   static MysteryType mystery_value();
@@ -99,8 +96,9 @@ struct AxiomTypes {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, MysteryType> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, MysteryType &>
   static T1 AxiomInductive_rect(F0 &&f, F1 &&f0, const AxiomInductive &a) {
     if (std::holds_alternative<typename AxiomInductive::AxConstr1>(a.v())) {
       const auto &[d_a0] = std::get<typename AxiomInductive::AxConstr1>(a.v());
@@ -111,8 +109,9 @@ struct AxiomTypes {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, MysteryType> F1>
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, MysteryType &>
   static T1 AxiomInductive_rec(F0 &&f, F1 &&f0, const AxiomInductive &a) {
     if (std::holds_alternative<typename AxiomInductive::AxConstr1>(a.v())) {
       const auto &[d_a0] = std::get<typename AxiomInductive::AxConstr1>(a.v());
@@ -240,7 +239,8 @@ struct AxiomTypes {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, t_A, list<t_A>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, t_A &, list<t_A> &, T1 &>
     T1 list_rec(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename list<t_A>::Nil>(_sv.v())) {
@@ -251,7 +251,8 @@ struct AxiomTypes {
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, list<t_A>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, t_A &, list<t_A> &, T1 &>
     T1 list_rect(const T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename list<t_A>::Nil>(_sv.v())) {

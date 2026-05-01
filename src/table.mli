@@ -538,6 +538,10 @@ val is_trivially_copyable_cpp_name : string -> bool
     a trivially-copyable scalar (e.g. [nat] → [unsigned int]). *)
 val is_custom_scalar_ref : GlobRef.t -> bool
 
+(** Append [_] to struct names that collide with C++ global names
+    (e.g. [std], [crane], [persistent_array]). *)
+val escape_reserved_struct_name : string -> string
+
 (** Find custom type extraction (imports and code). *)
 val find_type_custom : GlobRef.t -> string list * string
 

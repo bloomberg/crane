@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -237,27 +234,31 @@ struct MutualRecord {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int, List<employee>> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, List<employee> &>
   static T1 department_rect(F0 &&f, const department &d) {
     const auto &[d_a0, d_a1] =
         std::get<typename department::Mk_department>(d.v());
     return f(d_a0, *(d_a1));
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, List<employee>> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, List<employee> &>
   static T1 department_rec(F0 &&f, const department &d) {
     const auto &[d_a0, d_a1] =
         std::get<typename department::Mk_department>(d.v());
     return f(d_a0, *(d_a1));
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
   static T1 employee_rect(F0 &&f, const employee &e) {
     const auto &[d_a0, d_a1] = std::get<typename employee::Mk_employee>(e.v());
     return f(d_a0, d_a1);
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
   static T1 employee_rec(F0 &&f, const employee &e) {
     const auto &[d_a0, d_a1] = std::get<typename employee::Mk_employee>(e.v());
     return f(d_a0, d_a1);

@@ -7,9 +7,6 @@
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct MatchFallbackNat {
   struct maybe_nat {
     // TYPES
@@ -72,7 +69,8 @@ struct MatchFallbackNat {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
   static T1 maybe_nat_rect(F0 &&f, const T1 f0, const maybe_nat &m) {
     if (std::holds_alternative<typename maybe_nat::SomeNat>(m.v())) {
       const auto &[d_a0] = std::get<typename maybe_nat::SomeNat>(m.v());
@@ -82,7 +80,8 @@ struct MatchFallbackNat {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
   static T1 maybe_nat_rec(F0 &&f, const T1 f0, const maybe_nat &m) {
     if (std::holds_alternative<typename maybe_nat::SomeNat>(m.v())) {
       const auto &[d_a0] = std::get<typename maybe_nat::SomeNat>(m.v());

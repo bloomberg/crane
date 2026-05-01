@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -223,8 +220,9 @@ struct DisassembleOps {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F2,
-            MapsTo<T1, unsigned int> F3>
+  template <typename T1, typename F2, typename F3>
+    requires std::is_invocable_r_v<T1, F2 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F3 &, unsigned int &>
   static T1 instruction_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2,
                              const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {
@@ -240,8 +238,9 @@ struct DisassembleOps {
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F2,
-            MapsTo<T1, unsigned int> F3>
+  template <typename T1, typename F2, typename F3>
+    requires std::is_invocable_r_v<T1, F2 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F3 &, unsigned int &>
   static T1 instruction_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2,
                             const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {

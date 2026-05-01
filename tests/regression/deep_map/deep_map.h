@@ -8,9 +8,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 struct DeepMap {
   template <typename t_A> struct tree {
     // TYPES
@@ -136,8 +133,9 @@ struct DeepMap {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2,
-            MapsTo<T2, tree<T1>, T2, T1, tree<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, T1 &, tree<T1> &,
+                                   T2 &>
   static T2 tree_rect(const T2 f, F1 &&f0, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return f;
@@ -148,8 +146,9 @@ struct DeepMap {
     }
   }
 
-  template <typename T1, typename T2,
-            MapsTo<T2, tree<T1>, T2, T1, tree<T1>, T2> F1>
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, T1 &, tree<T1> &,
+                                   T2 &>
   static T2 tree_rec(const T2 f, F1 &&f0, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return f;
@@ -166,7 +165,8 @@ struct DeepMap {
                                         tree<unsigned int> acc);
 
   /// Recursive tree map — visits every node.
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static tree<T2> tmap(F0 &&f, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return tree<T2>::leaf();

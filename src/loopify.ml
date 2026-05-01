@@ -5680,9 +5680,21 @@ let body_calls_id target_id stmts =
     @return [true] if any call to a ref in [refs] is found *)
 let body_calls_any_ref refs body =
   let eq r sr = Environ.QGlobRef.equal Environ.empty_env r sr in
+  let label_of = function
+    | GlobRef.ConstRef c -> Some (Label.to_id (Constant.label c))
+    | GlobRef.VarRef v -> Some v
+    | _ -> None
+  in
   body_exists
     (function
       | CPPfun_call (CPPglob (r, _, _), _) when List.exists (eq r) refs -> true
+      | CPPfun_call (CPPvar id, _) ->
+        List.exists
+          (fun r ->
+            match label_of r with
+            | Some label -> Id.equal id label
+            | None -> false )
+          refs
       | _ -> false )
     body
 
@@ -5887,12 +5899,41 @@ let try_inline_mutual_into names body =
   match find_callee_in_stmts body with
   | None -> body
   | Some (callee_ref, callee_params, callee_body) ->
-    (* Generate fresh parameter names to avoid collision with outer function *)
-    let rename_map =
+    (* Collect all locally-declared IDs from a statement list, including
+       structured binding names from Smatch branches. *)
+    let rec collect_local_ids stmts =
+      List.concat_map collect_local_ids_stmt stmts
+    and collect_local_ids_stmt = function
+      | Sdecl (id, _) | Sdecl_init (id, _) -> [id]
+      | Sasgn (id, Some _, _) -> [id]
+      | Smatch (branches, default) ->
+        List.concat_map (fun br ->
+          let var_ids = match br.smb_var with Some id -> [id] | None -> [] in
+          let field_ids = List.map (fun (id, _, _) -> id) br.smb_field_bindings in
+          var_ids @ field_ids @ collect_local_ids br.smb_body
+        ) branches
+        @ (match default with Some ss -> collect_local_ids ss | None -> [])
+      | Sif (_, then_br, else_br) ->
+        collect_local_ids then_br @ collect_local_ids else_br
+      | Sblock ss -> collect_local_ids ss
+      | Swhile (_, ss) -> collect_local_ids ss
+      | _ -> []
+    in
+    (* Generate fresh names for parameters AND all local variables to avoid
+       collision with the outer function's bindings. *)
+    let param_rename_map =
       List.map
         (fun (pid, _ty) -> (pid, Id.of_string ("_inl_" ^ Id.to_string pid)))
         callee_params
     in
+    let local_ids = collect_local_ids callee_body in
+    let local_rename_map =
+      List.filter_map (fun id ->
+        if List.mem_assoc id param_rename_map then None
+        else Some (id, Id.of_string ("_inl_" ^ Id.to_string id)))
+        local_ids
+    in
+    let rename_map = param_rename_map @ local_rename_map in
     let fresh_params =
       List.map (fun (pid, ty) -> (List.assoc pid rename_map, ty)) callee_params
     in
@@ -5909,6 +5950,25 @@ let try_inline_mutual_into names body =
       match s with
       | Sasgn (id, ty, e) -> Sasgn (rename_var id, ty, rename_expr e)
       | Sdecl (id, ty) -> Sdecl (rename_var id, ty)
+      | Smatch (branches, default) ->
+        Smatch (
+          List.map (fun br ->
+            { smb_scrutinee = rename_expr br.smb_scrutinee;
+              smb_ctor_type = br.smb_ctor_type;
+              smb_var = Option.map rename_var br.smb_var;
+              smb_field_bindings =
+                List.map (fun (id, ty, u) -> (rename_var id, ty, u))
+                  br.smb_field_bindings;
+              smb_extra_conds = List.map rename_expr br.smb_extra_conds;
+              smb_reuse =
+                Option.map (fun (cond, rf, stmts) ->
+                  (rename_expr cond, rf, List.map rename_stmt stmts))
+                  br.smb_reuse;
+              smb_is_value_type = br.smb_is_value_type;
+              smb_is_owned = br.smb_is_owned;
+              smb_body = List.map rename_stmt br.smb_body })
+            branches,
+          Option.map (List.map rename_stmt) default)
       | _ -> map_stmt rename_expr rename_stmt Fun.id s
     in
     let fresh_body = List.map rename_stmt callee_body in
@@ -6422,13 +6482,15 @@ let transform_field ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
     B's body into A's call sites using {!generic_inline_stmts}.  After inlining,
     A becomes self-recursive and can be loopified normally. *)
 let try_inline_mutual_fields fields =
-  (* Extract Ffundef entries *)
+  (* Extract Ffundef and Fmethod entries uniformly as (name, ret_ty, params, body) *)
   let fundefs =
     List.filter_map
       (fun (f, _, _) ->
         match f with
         | Ffundef (name, ret_ty, params, body) ->
           Some (name, ret_ty, params, body)
+        | Fmethod mf ->
+          Some (mf.mf_name, mf.mf_ret_type, mf.mf_params, mf.mf_body)
         | _ -> None )
       fields
   in
@@ -6464,12 +6526,14 @@ let try_inline_mutual_fields fields =
       params = params_b;
       body = body_b;
     } in
-    (* Inline B into A *)
+    (* Inline B into A — works for both Ffundef and Fmethod *)
     List.map
       (fun (f, vis, tag) ->
         match f with
         | Ffundef (name, ret_ty, params, body) when Id.equal name name_a ->
           (Ffundef (name, ret_ty, params, generic_inline_stmts spec body), vis, tag)
+        | Fmethod mf when Id.equal mf.mf_name name_a ->
+          (Fmethod { mf with mf_body = generic_inline_stmts spec mf.mf_body }, vis, tag)
         | _ -> (f, vis, tag) )
       fields
 

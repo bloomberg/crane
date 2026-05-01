@@ -13,8 +13,6 @@
 #include <variant>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
 
 struct EffectNestedIo {
   /// 1. Block template result used inside constructor (Some)

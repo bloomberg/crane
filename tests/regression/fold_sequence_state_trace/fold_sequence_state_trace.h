@@ -10,9 +10,6 @@
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_v<F &, Args &...>;
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -204,13 +201,17 @@ struct FoldSequenceStateTraceCase {
       return d_a0;
     }
 
-    template <typename T1, MapsTo<T1, Line> F0> T1 Fold_rec(F0 &&f) const {
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, Line &>
+    T1 Fold_rec(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(_sv.v());
       return f(d_a0);
     }
 
-    template <typename T1, MapsTo<T1, Line> F0> T1 Fold_rect(F0 &&f) const {
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, Line &>
+    T1 Fold_rect(F0 &&f) const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(_sv.v());
       return f(d_a0);
@@ -336,10 +337,12 @@ struct FoldSequenceStateTraceCase {
     }
   };
 
-  template <typename T1,
-            MapsTo<T1, std::pair<Real, Real>, std::pair<Real, Real>> F0,
-            MapsTo<T1, std::pair<Real, Real>, std::pair<Real, Real>> F1,
-            MapsTo<T1, std::pair<Real, Real>, Line> F2>
+  template <typename T1, typename F0, typename F1, typename F2>
+    requires std::is_invocable_r_v<T1, F0 &, std::pair<Real, Real> &,
+                                   std::pair<Real, Real> &> &&
+             std::is_invocable_r_v<T1, F1 &, std::pair<Real, Real> &,
+                                   std::pair<Real, Real> &> &&
+             std::is_invocable_r_v<T1, F2 &, std::pair<Real, Real> &, Line &>
   static T1 FoldStep_rect(F0 &&f, F1 &&f0, F2 &&f1, const FoldStep &f2) {
     if (std::holds_alternative<typename FoldStep::FS_O1>(f2.v())) {
       const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O1>(f2.v());
@@ -353,10 +356,12 @@ struct FoldSequenceStateTraceCase {
     }
   }
 
-  template <typename T1,
-            MapsTo<T1, std::pair<Real, Real>, std::pair<Real, Real>> F0,
-            MapsTo<T1, std::pair<Real, Real>, std::pair<Real, Real>> F1,
-            MapsTo<T1, std::pair<Real, Real>, Line> F2>
+  template <typename T1, typename F0, typename F1, typename F2>
+    requires std::is_invocable_r_v<T1, F0 &, std::pair<Real, Real> &,
+                                   std::pair<Real, Real> &> &&
+             std::is_invocable_r_v<T1, F1 &, std::pair<Real, Real> &,
+                                   std::pair<Real, Real> &> &&
+             std::is_invocable_r_v<T1, F2 &, std::pair<Real, Real> &, Line &>
   static T1 FoldStep_rec(F0 &&f, F1 &&f0, F2 &&f1, const FoldStep &f2) {
     if (std::holds_alternative<typename FoldStep::FS_O1>(f2.v())) {
       const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O1>(f2.v());
